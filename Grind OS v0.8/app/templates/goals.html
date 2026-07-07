@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_theme }}">
+<head>
+    <meta charset="UTF-8">
+    <title>Goals</title>
+    <script>
+        // Hide the page until its goals are loaded so it fades in once, fully built.
+        document.documentElement.classList.add('js-fade');
+        // Pre-paint: guests fall back to their device theme (default light);
+        // logged-in users keep the server-injected theme (from users.json).
+        (function () {
+            try {
+                if (!localStorage.getItem('currentUser')) {
+                    document.documentElement.setAttribute('data-theme', localStorage.getItem('guestTheme') || 'light');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='goal.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tenor+Sans&family=Quicksand:wght@400;500;600&family=Lato:wght@300;400;700&family=Noto+Sans:wght@300;400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
+</head>
+<body class="{{ 'dark' if current_theme == 'dark' else 'classic' }}">
+
+    <!-- Theme selector (Light / Dark) -->
+    <div class="theme-selector-wrap">
+        <select id="themeSelect" aria-label="Theme">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+        </select>
+    </div>
+
+    <div class="goals-container">
+        <!-- Large glassmorphic container -->
+        <div class="blue-square">
+            <!-- Header Section -->
+            <div class="top-tab">
+                <h2>Set / View Your Goals</h2>
+                <button class="add-goal-btn" onclick="openGoalModal()">+ Add New Goal</button>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="stats-boxes">
+                <div class="stat-box active-box">
+                    <div class="stat-number" id="activeCount">0</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat-box completed-box">
+                    <div class="stat-number" id="completedCount">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+
+            <!-- Goals list section -->
+            <div class="goals-list-section">
+                <!-- Tab Navigation -->
+                <div class="tab-navigation">
+                    <button class="tab-btn active" id="btn-active" onclick="filterGoals('active')">Active</button>
+                    <button class="tab-btn" id="btn-all" onclick="filterGoals('all')">All Goals</button>
+                    <button class="tab-btn" id="btn-completed" onclick="filterGoals('completed')">Completed</button>
+                </div>
+
+                <div class="goals-list" id="goalsList">
+                    <div class="no-goals" id="noGoals">
+                        <p>No goals yet. Create your first goal to start tracking your progress!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating bottom navigation bar -->
+    <div class="bottom-nav">
+        <a href="{{ url_for('main.home') }}" class="nav-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+            Home
+        </a>
+        <a href="{{ url_for('main.dashboard') }}" class="nav-pill primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Dashboard
+        </a>
+        <a href="{{ url_for('main.calendar') }}" class="nav-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            Calendar
+        </a>
+        <a href="{{ url_for('main.growth') }}" class="nav-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg>
+            Growth
+        </a>
+    </div>
+
+    <div id="goalModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGoalModal()">&times;</span>
+            <h2 id="modalTitle">Add New Goal</h2>
+            <input type="hidden" id="editingGoalId" value="">
+            <label for="goalTitle">Goal Title</label>
+            <input type="text" id="goalTitle" placeholder="e.g., Complete 100 tasks">
+            <label for="goalDescription">Description (optional)</label>
+            <textarea id="goalDescription" placeholder="Describe your goal..." rows="3"></textarea>
+            <label for="goalType">Goal Type</label>
+            <select id="goalType" onchange="updateGoalTypeInputs()">
+                <option value="xp">XP Based</option>
+                <option value="streak">Streak Based</option>
+                <option value="tasks">Tasks Completed</option>
+            </select>
+            <label for="targetXP" id="targetXPLabel">Target XP</label>
+            <input type="number" id="targetXP" placeholder="e.g., 1000" min="1">
+            <label for="targetStreak" id="targetStreakLabel" style="display:none;">Target Streak (days)</label>
+            <input type="number" id="targetStreak" placeholder="e.g., 30" min="1" style="display:none;">
+            <label for="targetTasks" id="targetTasksLabel" style="display:none;">Target Tasks</label>
+            <input type="number" id="targetTasks" placeholder="e.g., 100" min="1" style="display:none;">
+            <label for="goalDeadline">Deadline (optional)</label>
+            <input type="date" id="goalDeadline">
+            <button onclick="saveGoal()" class="confirm-add-btn" id="saveGoalBtn">Add Goal</button>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
+            <h2>Delete Goal</h2>
+            <p>Are you sure you want to delete this goal? This action cannot be undone.</p>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button onclick="closeDeleteModal()" class="confirm-add-btn" style="background: #666;">Cancel</button>
+                <button onclick="confirmDelete()" class="confirm-add-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Completion Confirmation Modal -->
+    <div id="completionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCompletionModal()">&times;</span>
+            <h2>Complete Goal?</h2>
+            <p>The current xp needed to complete the goal is less than or equal to your current xp, are you sure you want to complete the goal?</p>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button onclick="closeCompletionModal()" class="confirm-add-btn" style="background: #666;">No</button>
+                <button onclick="confirmCompletion()" class="confirm-add-btn">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal More Time Modal -->
+    <div id="goalMoreTimeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGoalMoreTimeModal()">&times;</span>
+            <h2>Extend Goal Deadline</h2>
+            <label for="newGoalDeadline">New Deadline:</label>
+            <input type="date" id="newGoalDeadline" class="due-date-input">
+            <button onclick="updateGoalDeadline()" class="confirm-add-btn">Update Deadline</button>
+        </div>
+    </div>
+
+    <!-- Give Up Confirmation Modal -->
+    <div id="giveUpModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGiveUpModal()">&times;</span>
+            <h2>Give Up on Goal?</h2>
+            <p>Are you sure you want to give up on this goal? This will delete it permanently and cannot be undone.</p>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button onclick="closeGiveUpModal()" class="confirm-add-btn" style="background: #666;">No, Keep It</button>
+                <button onclick="confirmGiveUp()" class="confirm-add-btn">Yes, Give Up</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/javascript/page-fade.js"></script>
+    <script src="/static/javascript/goal.js"></script>
+    <script src="/static/javascript/goal-auto.js"></script>
+
+</body>
+</html>

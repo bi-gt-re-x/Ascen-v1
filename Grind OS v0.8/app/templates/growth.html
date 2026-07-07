@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_theme }}">
+<head>
+    <meta charset="UTF-8">
+    <title>Growth</title>
+    <script>
+        // Pre-paint: guests fall back to their device theme (default light);
+        // logged-in users keep the server-injected theme (from users.json).
+        (function () {
+            try {
+                if (!localStorage.getItem('currentUser')) {
+                    document.documentElement.setAttribute('data-theme', localStorage.getItem('guestTheme') || 'light');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='growth.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tenor+Sans&family=Quicksand:wght@400;500;600&family=Lato:wght@300;400;700&family=Noto+Sans:wght@300;400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
+</head>
+<body class="{{ 'dark' if current_theme == 'dark' else 'classic' }}">
+
+    <!-- Theme selector (Light / Dark) -->
+    <div class="theme-selector-wrap">
+        <select id="themeSelect" aria-label="Theme">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+        </select>
+    </div>
+
+    <div class="growth-container">
+        <div class="growth-card" id="growthCard">
+            <div class="card-header">
+                <h1>Growth Analytics</h1>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" onclick="switchTab('cumulative')" id="cumulative-tab">Cumulative Growth</button>
+                <button class="tab-btn" onclick="switchTab('daily')" id="daily-tab">Daily XP</button>
+                <button class="tab-btn" onclick="switchTab('average')" id="average-tab">Average Task XP Daily</button>
+            </div>
+            
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Cumulative Growth Tab -->
+                <div class="tab-pane active" id="cumulative-content">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Cumulative XP Progress Over Time</h2>
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Daily XP Tab -->
+                <div class="tab-pane" id="daily-content">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Daily XP Earned</h2>
+                        <canvas id="dailyXpChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Average Task XP Tab -->
+                <div class="tab-pane" id="average-content">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Average Task XP Per Day</h2>
+                        <canvas id="averageXpChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Open the Growth Ratings report card (wide, prominent) -->
+            <div class="see-ratings-wrap">
+                <button class="see-ratings-btn" onclick="showRatings()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg>
+                    See Growth Ratings
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Growth Ratings report card (shown via "See Growth Ratings") -->
+        <div class="ratings-view" id="ratingsView" style="display: none;">
+
+            <!-- Left column: Grade summary card -->
+            <div class="ratings-main">
+            <div class="grade-card" id="reportHero">
+                <h2 class="grade-card-title">Grade</h2>
+
+                <!-- Big grade letter (no box / outline) -->
+                <div class="grade-hero-badge grade-badge" id="overallGrade">–</div>
+                <p class="grade-unified">Unified Grade Score: <span id="overallScore">0</span>/100</p>
+
+                <!-- Metric breakdown table -->
+                <table class="grade-table">
+                    <thead>
+                        <tr><th>Metric</th><th>Raw Data</th><th>Points</th><th>Letter</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr id="card-productivity">
+                            <td class="gt-metric"><span class="gt-emoji">🚀</span> Productivity</td>
+                            <td id="key-productivity">–</td>
+                            <td id="score-productivity">0</td>
+                            <td><span class="grade-badge gt-badge" id="grade-productivity">–</span></td>
+                        </tr>
+                        <tr id="card-quality">
+                            <td class="gt-metric"><span class="gt-emoji">🎯</span> Quality</td>
+                            <td id="key-quality">–</td>
+                            <td id="score-quality">0</td>
+                            <td><span class="grade-badge gt-badge" id="grade-quality">–</span></td>
+                        </tr>
+                        <tr id="card-consistency">
+                            <td class="gt-metric"><span class="gt-emoji">🔥</span> Consistency</td>
+                            <td id="key-consistency">–</td>
+                            <td id="score-consistency">0</td>
+                            <td><span class="grade-badge gt-badge" id="grade-consistency">–</span></td>
+                        </tr>
+                        <tr id="card-efficiency">
+                            <td class="gt-metric"><span class="gt-emoji">⚡</span> Efficiency</td>
+                            <td id="key-efficiency">–</td>
+                            <td id="score-efficiency">0</td>
+                            <td><span class="grade-badge gt-badge" id="grade-efficiency">–</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- How it's calculated -->
+                <div class="grade-calc">
+                    <h3 class="grade-calc-title">How it's Calculated</h3>
+                    <p class="grade-calc-intro">Each metric is scored 0–100 from your real activity and given a letter grade. Your Unified Grade Score is the average of the four metric scores.</p>
+                    <ul class="grade-calc-list">
+                        <li><strong>Productivity</strong> — XP earned per active day.</li>
+                        <li><strong>Quality</strong> — average XP per completed task.</li>
+                        <li><strong>Consistency</strong> — share of days active since signup.</li>
+                        <li><strong>Efficiency</strong> — deadlines met and completion speed.</li>
+                    </ul>
+                    <p class="grade-formula">Overall = (Productivity + Quality + Consistency + Efficiency) ÷ 4</p>
+                </div>
+
+                <button class="grade-charts-btn" onclick="showGrowthCharts()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg>
+                    View XP Analytics
+                </button>
+            </div>
+            </div><!-- /.ratings-main -->
+
+            <!-- Right column: scoring breakdown detail cards -->
+            <aside class="ratings-scales" id="ratingsScales" aria-label="Scoring details">
+                <h2 class="details-title">Grades and Scoring Breakdown — Details</h2>
+
+                <div class="detail-card">
+                    <span class="detail-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="16 7 21 7 21 12"/><path d="M6 4l.6 1.9L8.5 6.5l-1.9.6L6 9l-.6-1.9L3.5 6.5l1.9-.6z"/></svg></span>
+                    <div class="detail-body">
+                        <h3>Productivity Tracking</h3>
+                        <p>Measures how much XP you earn on a typical day from completed tasks and active work sessions. Your score is your <strong>average daily XP ÷ 3</strong> (capped at 100), so averaging 300 XP per day earns a perfect 100. The more consistent daily output you put in, the higher this climbs.</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <span class="detail-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/><path d="M12 12l7-7"/><path d="M15 5h4v4"/></svg></span>
+                    <div class="detail-body">
+                        <h3>Quality Tracking</h3>
+                        <p>Reflects how challenging the tasks you complete are, measured by their average XP value. Your score is your <strong>average XP per task × 1.75</strong> (capped at 100), so roughly 57 XP per task earns a perfect 100. Taking on harder, higher-value work raises this over easy busywork.</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <span class="detail-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 3 14.5 9 21 9.3 16 13.6 17.8 20 12 16.3 6.2 20 8 13.6 3 9.3 9.5 9"/></svg></span>
+                    <div class="detail-body">
+                        <h3>Consistency Tracking</h3>
+                        <p>Tracks how reliably you show up over time. Your score is your <strong>active days ÷ total days since signup × 100</strong>, so being active on 18 of your first 24 days scores 75. Logging in and completing something on more days keeps this high.</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <span class="detail-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="5" rx="1.5"/><path d="M10 6.5h5a3 3 0 0 1 3 3V13"/><circle cx="18" cy="17" r="4"/><path d="M16.4 17l1.2 1.2 2.1-2.3"/></svg></span>
+                    <div class="detail-body">
+                        <h3>Efficiency Tracking</h3>
+                        <p>Rewards finishing on time and quickly. Your score is <strong>50% deadlines met + 50% speed</strong>, where speed comes from your average completion time (≤30 min scores 100, scaling down for slower tasks). Beating timers and hitting due dates both push this up.</p>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+
+        <!-- Floating bottom navigation bar -->
+        <nav class="bottom-nav">
+            <a href="{{ url_for('main.home') }}" class="nav-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+                Home
+            </a>
+            <a href="{{ url_for('main.dashboard') }}" class="nav-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Dashboard
+            </a>
+            <a href="{{ url_for('main.calendar') }}" class="nav-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                Calendar
+            </a>
+            <a href="{{ url_for('main.goals') }}" class="nav-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
+                Goals
+            </a>
+        </nav>
+    </div>
+
+    <script>
+        // Theme is applied globally by theme.js (sourced from users.json). We only
+        // need to repaint the canvas charts + sparkline when it changes, since they
+        // otherwise redraw only on tab switch/resize.
+        document.addEventListener('themechange', () => {
+            if (typeof window.initializeChart === 'function') {
+                const activeBtn = document.querySelector('#growthCard .tab-btn.active');
+                const activeTab = activeBtn ? activeBtn.id.replace('-tab', '') : 'cumulative';
+                window.initializeChart(activeTab);
+            }
+        });
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            // Hide all tab panes
+            const panes = document.querySelectorAll('.tab-pane');
+            panes.forEach(pane => {
+                pane.classList.remove('active');
+                // Remove fade-in class from all chart containers
+                const chartContainer = pane.querySelector('.chart-container');
+                if (chartContainer) {
+                    chartContainer.classList.remove('fade-in');
+                }
+            });
+            
+            // Remove active class from all tab buttons
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab pane
+            const selectedPane = document.getElementById(tabName + '-content');
+            selectedPane.classList.add('active');
+            
+            // Add active class to selected tab button
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add fade-in animation to the selected chart container
+            const chartContainer = selectedPane.querySelector('.chart-container');
+            if (chartContainer) {
+                // Trigger reflow to restart animation
+                void chartContainer.offsetWidth;
+                chartContainer.classList.add('fade-in');
+            }
+            
+            // Initialize chart for the active tab
+            setTimeout(() => {
+                initializeChart(tabName);
+            }, 100);
+        }
+
+        // Initialize default chart (theme itself is handled by theme.js)
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (typeof window.initializeChart === 'function') {
+                    window.initializeChart('cumulative');
+                }
+            }, 200);
+        });
+
+        // Return from the analytics charts to the Growth Ratings report card.
+        function showRatings() {
+            const growthCard = document.getElementById('growthCard');
+            const ratingsView = document.getElementById('ratingsView');
+
+            // Refresh the graded card from the backend (growth.js exposes this).
+            if (typeof window.loadGrowthRatings === 'function') {
+                window.loadGrowthRatings();
+            }
+
+            growthCard.style.transition = 'opacity 0.5s ease';
+            growthCard.style.opacity = '0';
+
+            setTimeout(() => {
+                growthCard.style.display = 'none';
+                ratingsView.style.display = 'flex';   /* two-column: content + scales */
+                ratingsView.style.opacity = '0';
+                setTimeout(() => {
+                    ratingsView.style.transition = 'opacity 0.5s ease';
+                    ratingsView.style.opacity = '1';
+                }, 50);
+            }, 500);
+        }
+
+        // Switch from the report card to the XP analytics charts.
+        function showGrowthCharts() {
+            const growthCard = document.getElementById('growthCard');
+            const ratingsView = document.getElementById('ratingsView');
+
+            ratingsView.style.transition = 'opacity 0.5s ease';
+            ratingsView.style.opacity = '0';
+
+            setTimeout(() => {
+                // Use flex (not block) so the card keeps its flex-column layout —
+                // otherwise the inline style clobbers the CSS and the bottom
+                // button stops anchoring.
+                ratingsView.style.display = 'none';
+                growthCard.style.display = 'flex';
+                growthCard.style.opacity = '0';
+
+                // The charts were sized while their card was hidden (0x0 canvas),
+                // so resize the buffers to their real box and redraw now that the
+                // card is visible.
+                const activeBtn = document.querySelector('#growthCard .tab-btn.active');
+                const activeTab = activeBtn ? activeBtn.id.replace('-tab', '') : 'cumulative';
+                if (typeof window.initializeChart === 'function') {
+                    window.initializeChart(activeTab);
+                }
+
+                setTimeout(() => {
+                    growthCard.style.transition = 'opacity 0.5s ease';
+                    growthCard.style.opacity = '1';
+                }, 50);
+            }, 500);
+        }
+    </script>
+
+    <script src="{{ url_for('static', filename='javascript/growth.js') }}"></script>
+
+</body>
+</html>

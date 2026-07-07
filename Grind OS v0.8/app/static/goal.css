@@ -1,0 +1,2142 @@
+/* Goals Page Styles */
+
+/* Single smooth page fade (JS-gated so the page never stays blank without JS).
+   The page loads hidden and reveals in one piece once its goals are ready. */
+html.js-fade body { opacity: 0; }
+html.js-fade.page-ready body { opacity: 1; transition: opacity 0.45s ease; }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+body {
+    min-height: 100vh;
+    font-family: 'Inter', 'Montserrat', sans-serif;
+    color: white;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Goals container */
+.goals-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px 20px 0 20px;
+}
+
+/* Large blue square - Main glassmorphic container */
+.blue-square {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(100, 200, 255, 0.3);
+    border-radius: 16px;
+    width: 1440px;
+    max-width: 1440px;
+    min-width: 1440px;
+    min-height: 860px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 0 60px rgba(100, 200, 255, 0.1);
+    animation: fadeIn 1s ease-out;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 50px 0 0 0;
+}
+
+/* Header Section */
+.top-tab {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-bottom: 1.5px solid rgba(100, 200, 255, 0.2);
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.top-tab h2 {
+    color: white;
+    font-size: 1.5em;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.add-goal-btn {
+    background: rgba(100, 200, 255, 0.2);
+    border: 1.5px solid rgba(100, 200, 255, 0.4);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.add-goal-btn:hover {
+    background: rgba(100, 200, 255, 0.3);
+    box-shadow: 0 4px 16px rgba(100, 200, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Glassmorphism effect */
+.glassmorphism {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Stats boxes */
+.stats-boxes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 30px;
+}
+
+.stat-box {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(100, 200, 255, 0.3);
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    animation: fadeIn 1.2s ease-out;
+}
+
+body.classic .stat-box {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+body.professional .stat-box {
+    background: rgba(227, 242, 253, 0.95);
+}
+
+body.vintage-paper .stat-box {
+    background: rgba(255, 248, 225, 0.95);
+}
+
+    background: rgba(10, 0, 20, 0.4);
+    backdrop-filter: blur(15px);
+    border: 1.5px solid rgba(255, 0, 255, 0.3);
+    padding: 30px;
+    box-shadow: 
+        0 0 20px rgba(255, 0, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+body.desert-solitude .stat-box {
+    background: rgba(255, 243, 224, 0.95);
+}
+
+body.arctic-aurora .stat-box {
+    background: rgba(237, 231, 246, 0.95);
+    border: 1.5px solid black;
+}
+
+body.retro-city .stat-box {
+    background: rgba(252, 228, 236, 0.95);
+}
+
+body.galactic-skies .stat-box {
+    background: rgba(232, 234, 246, 0.95);
+}
+
+body.platinum-gold .stat-box {
+    background: rgba(255, 248, 225, 0.95);
+}
+
+body.tropical-jungle .stat-box {
+    background: rgba(232, 245, 233, 0.95);
+}
+
+body.volcanic-ash .stat-box {
+    background: rgba(245, 245, 245, 0.95);
+}
+
+body.classic .stat-box {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+body.professional .stat-box {
+    background: rgba(227, 242, 253, 0.95);
+}
+
+body.vintage-paper .stat-box {
+    background: rgba(255, 248, 225, 0.95);
+}
+
+    background: rgba(10, 0, 20, 0.4);
+    backdrop-filter: blur(15px);
+    border: 1.5px solid rgba(255, 0, 255, 0.3);
+    padding: 30px;
+    box-shadow: 
+        0 0 20px rgba(255, 0, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+body.desert-solitude .stat-box {
+    background: rgba(255, 243, 224, 0.95);
+}
+
+body.arctic-aurora .stat-box {
+    background: rgba(237, 231, 246, 0.95);
+    border: 1.5px solid black;
+}
+
+body.retro-city .stat-box {
+    background: rgba(252, 228, 236, 0.95);
+}
+
+body.galactic-skies .stat-box {
+    background: rgba(232, 234, 246, 0.95);
+}
+
+body.platinum-gold .stat-box {
+    background: rgba(255, 248, 225, 0.95);
+}
+
+body.tropical-jungle .stat-box {
+    background: rgba(232, 245, 233, 0.95);
+}
+
+body.volcanic-ash .stat-box {
+    background: rgba(245, 245, 245, 0.95);
+}
+
+.stat-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.stat-number {
+    font-size: 2.5em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: rgba(100, 200, 255, 1);
+}
+
+.completed-box .stat-number {
+    color: rgba(100, 200, 255, 1);
+}
+
+.active-box .stat-number {
+    color: rgba(100, 200, 255, 1);
+}
+
+.stat-label {
+    font-size: 0.9em;
+    color: black;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Goals list section */
+.goals-list-section {
+    flex: 1;
+    padding: 0 30px 30px 30px;
+    min-height: 400px;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(100, 200, 255, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 12px 24px;
+    border-radius: 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover, .tab-btn.active {
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-color: rgba(100, 200, 255, 0.5);
+    border-bottom: 2px solid rgba(100, 200, 255, 0.8);
+}
+
+
+/* Floating bottom navigation bar */
+.bottom-nav {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(100, 200, 255, 0.3);
+    border-radius: 16px;
+    padding: 12px 30px;
+    display: flex;
+    gap: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+}
+
+.nav-pill {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1.5px solid rgba(100, 200, 255, 0.3);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+}
+
+.nav-pill:hover {
+    background: rgba(100, 200, 255, 0.4);
+    box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.nav-pill.primary {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(100, 200, 255, 0.3);
+    font-weight: 600;
+}
+
+.nav-pill.primary:hover {
+    background: rgba(100, 200, 255, 0.4);
+}
+
+/* Desert Solitude Theme for Bottom Navigation */
+body.desert-solitude .bottom-nav {
+    background: rgba(210, 180, 140, 0.4);
+    backdrop-filter: blur(10px);
+    border: 2px solid #5d4037;
+    box-shadow: 0 8px 32px rgba(93, 64, 55, 0.2);
+}
+
+body.desert-solitude .nav-pill {
+    background: rgba(210, 180, 140, 0.6);
+    border: 1.5px solid #5d4037;
+    color: #5d4037;
+}
+
+body.desert-solitude .nav-pill:hover {
+    background: #D18B67;
+    color: white;
+    border-color: #5d4037;
+    box-shadow: 0 0 15px rgba(209, 139, 103, 0.4);
+}
+
+body.desert-solitude .nav-pill.primary {
+    background: rgba(210, 180, 140, 0.6);
+    color: #5d4037;
+    border-color: #5d4037;
+}
+
+body.desert-solitude .nav-pill.primary:hover {
+    background: #D18B67;
+    color: white;
+    border-color: #5d4037;
+}
+
+/* Goals list */
+.goals-list {
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 200, 255, 0.3) transparent;
+}
+
+/* Custom scrollbar for webkit browsers */
+.goals-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.goals-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.goals-list::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 200, 255, 0.3);
+    border-radius: 4px;
+}
+
+.goals-list::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 200, 255, 0.5);
+}
+
+.no-goals {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 40px 20px;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+/* Goal item */
+.goal-item {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Completed goal styles */
+.goal-item.completed {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1.5px solid rgba(100, 255, 150, 0.4);
+    box-shadow: 0 4px 16px rgba(100, 255, 150, 0.1);
+}
+
+.goal-item.completed .goal-title {
+    color: #2e7d32;
+    text-decoration: none;
+}
+
+.goal-item.completed .goal-type-badge.completed {
+    background: rgba(46, 125, 50, 0.2);
+    border: 1.5px solid rgba(46, 125, 50, 0.4);
+    color: #2e7d32;
+}
+
+.goal-item.completed .progress-bar-fill.completed {
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+/* Overdue goal styling */
+.goal-item.overdue {
+    background: rgba(255, 0, 0, 0.3);
+    border: 3px solid #ff0000;
+    animation: goalOverduePulse 1s infinite;
+}
+
+@keyframes goalOverduePulse {
+    0%, 100% {
+        border-color: #ff0000;
+        box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+    }
+    50% {
+        border-color: #ff6666;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+    }
+}
+
+.goal-item.overdue .goal-title {
+    color: #ff6666;
+}
+
+.goal-item.overdue .goal-type-badge {
+    background: rgba(255, 0, 0, 0.2);
+    border-color: rgba(255, 0, 0, 0.4);
+    color: #ff6666;
+}
+
+.goal-item.overdue .progress-bar-fill {
+    background: linear-gradient(90deg, #ff0000, #ff6666);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+}
+
+.goal-utility-btn.give-up {
+    background: rgba(255, 0, 0, 0.2);
+    border: 1.5px solid rgba(255, 0, 0, 0.4);
+    color: #ff6666;
+}
+
+.goal-utility-btn.give-up:hover {
+    background: rgba(255, 0, 0, 0.3);
+    border-color: rgba(255, 0, 0, 0.6);
+}
+
+.goal-utility-btn.more-time {
+    background: rgba(100, 200, 255, 0.2);
+    border: 1.5px solid rgba(100, 200, 255, 0.4);
+    color: #64c8ff;
+}
+
+.goal-utility-btn.more-time:hover {
+    background: rgba(100, 200, 255, 0.3);
+    border-color: rgba(100, 200, 255, 0.6);
+}
+
+.goal-completed-badge {
+    background: rgba(46, 125, 50, 0.2);
+    border: 1.5px solid rgba(46, 125, 50, 0.4);
+    color: #2e7d32;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 0;
+    order: 3;
+}
+
+/* Goal completion animation */
+@keyframes goalComplete {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 8px 32px rgba(100, 255, 150, 0.4);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 16px rgba(100, 255, 150, 0.2);
+    }
+}
+
+.goal-item.completing {
+    animation: goalComplete 0.6s ease-out;
+}
+
+@keyframes shrinkToNothing {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+        max-height: 200px;
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.8);
+        max-height: 0;
+        padding: 0;
+        margin: 0;
+    }
+}
+
+.goal-item.shrinking {
+    animation: shrinkToNothing 0.5s ease-out forwards;
+}
+
+
+/* Goal header */
+.goal-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+}
+
+.goal-content {
+    text-align: center;
+    margin-bottom: 12px;
+    width: 100%;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.goal-title {
+    color: white;
+    font-size: 1.2em;
+    font-weight: 700;
+    margin: 0 auto 4px auto;
+    line-height: 1.3;
+    text-align: center;
+    display: block;
+    max-width: 80%;
+    position: relative;
+    z-index: 1;
+}
+
+.goal-description {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9em;
+    margin: 15px auto 12px auto;
+    text-align: center;
+    line-height: 1.4;
+    display: block;
+    max-width: 80%;
+    position: relative;
+    z-index: 1;
+}
+
+.goal-type-badge {
+    background: rgba(100, 200, 255, 0.3);
+    border: 1.5px solid rgba(100, 200, 255, 0.5);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 0;
+    flex-shrink: 0;
+}
+
+.goal-utility-buttons {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.goal-utility-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1.5px solid rgba(100, 200, 255, 0.3);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.goal-utility-btn:hover {
+    background: rgba(100, 200, 255, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(100, 200, 255, 0.2);
+}
+
+.goal-utility-btn.delete {
+    border-color: rgba(255, 100, 100, 0.5);
+}
+
+.goal-utility-btn.delete:hover {
+    background: rgba(255, 100, 100, 0.25);
+    border-color: rgba(255, 100, 100, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 100, 100, 0.2);
+}
+
+.goal-utility-btn.edit {
+    border-color: rgba(255, 200, 100, 0.5);
+}
+
+.goal-utility-btn.edit:hover {
+    background: rgba(255, 200, 100, 0.25);
+    border-color: rgba(255, 200, 100, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 200, 100, 0.2);
+}
+
+/* Goal description */
+.goal-description {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 15px 0;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+/* Goal stats */
+.goal-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    font-size: 0.85em;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.goal-xp {
+    color: rgba(100, 200, 255, 1);
+    font-weight: 700;
+    font-size: 0.9em;
+    order: 1;
+}
+
+.goal-deadline {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8em;
+    font-weight: 500;
+    order: 2;
+}
+
+/* Progress bar */
+.progress-bar-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    transition: width 0.5s ease;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(100, 200, 255, 0.5);
+}
+
+.progress-text {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+/* Goal controls */
+.goal-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.goal-controls input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1.5px solid rgba(100, 200, 255, 0.3);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100px;
+}
+
+.goal-controls input::placeholder {
+    color: black;
+}
+
+.goal-controls button {
+    background: rgba(100, 200, 255, 0.3);
+    border: 1.5px solid rgba(100, 200, 255, 0.5);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.goal-controls button:hover {
+    background: rgba(100, 200, 255, 0.4);
+    box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
+}
+
+/* Goal status */
+.goal-status {
+    text-align: center;
+    padding: 6px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.goal-status.active {
+    background: rgba(100, 200, 255, 0.2);
+    color: rgba(100, 200, 255, 1);
+}
+
+.goal-status.completed {
+    background: rgba(100, 255, 150, 0.2);
+    color: rgba(100, 255, 150, 1);
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 40px;
+    border-radius: 25px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 2px solid #1a237e;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.modal-content h2 {
+    color: #1a237e;
+    margin-bottom: 25px;
+    font-weight: bold;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: #1a237e;
+}
+
+/* Modal form */
+.modal-content label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: bold;
+    font-size: 0.95em;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="number"],
+.modal-content input[type="date"],
+.modal-content textarea,
+.modal-content select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1em;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+.modal-content select {
+    background-color: white;
+    color: #333;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    font-size: 1em;
+    padding: 12px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+.modal-content select option {
+    background-color: white;
+    color: #1a237e;
+}
+
+.modal-content input:focus,
+.modal-content textarea:focus,
+.modal-content select:focus {
+    outline: none;
+    border-color: #1a237e;
+}
+
+/* Invalid date input styling */
+.modal-content input.invalid-date,
+.modal-content input[type="date"].invalid-date {
+    border-color: #ff0000;
+    background-color: rgba(255, 0, 0, 0.1);
+    animation: invalidDatePulse 0.5s ease-in-out;
+}
+
+/* Invalid input styling for title and amounts */
+.modal-content input.invalid-input,
+.modal-content textarea.invalid-input {
+    border-color: #ff0000;
+    background-color: rgba(255, 0, 0, 0.1);
+    animation: invalidDatePulse 0.5s ease-in-out;
+}
+
+@keyframes invalidDatePulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+    }
+    50% {
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+}
+
+.modal-content textarea {
+    resize: vertical;
+    min-height: 80px;
+    background-color: white;
+}
+
+.confirm-add-btn {
+    width: 100%;
+    padding: 14px;
+    background: #1a237e;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.confirm-add-btn:hover {
+    background: #283593;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
+}
+
+/* Theme integration */
+body.classic .blue-square {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+}
+
+body.classic .top-tab h2,
+body.classic .goals-header h3 {
+    color: white;
+}
+
+body.professional .blue-square {
+    background: rgba(240, 240, 240, 0.95);
+    border: 2px solid black;
+}
+
+body.professional .top-tab h2,
+body.professional .goals-header h3 {
+    color: #333;
+}
+
+body.professional .modal-content {
+    border-color: #1565c0;
+}
+
+body.professional .modal-content h2 {
+    color: #1565c0;
+}
+
+body.professional .modal-content input:focus,
+body.professional .modal-content textarea:focus {
+    border-color: #1565c0;
+}
+
+body.professional .confirm-add-btn {
+    background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+}
+
+body.professional .confirm-add-btn:hover {
+    box-shadow: 0 8px 20px rgba(21, 101, 192, 0.4);
+}
+
+/* Consistent modal styling across all themes */
+body.classic .modal-content,
+body.vintage-paper .modal-content,
+body.desert-solitude .modal-content,
+body.arctic-aurora .modal-content,
+body.retro-city .modal-content,
+body.galactic-skies .modal-content,
+body.platinum-gold .modal-content,
+body.tropical-jungle .modal-content,
+body.volcanic-ash .modal-content {
+    background-color: white;
+    border: 2px solid #1a237e;
+}
+
+body.classic .modal-content h2,
+body.vintage-paper .modal-content h2,
+body.desert-solitude .modal-content h2,
+body.arctic-aurora .modal-content h2,
+body.retro-city .modal-content h2,
+body.galactic-skies .modal-content h2,
+body.platinum-gold .modal-content h2,
+body.tropical-jungle .modal-content h2,
+body.volcanic-ash .modal-content h2 {
+    color: #1a237e;
+}
+
+body.classic .modal-content label,
+body.vintage-paper .modal-content label,
+body.desert-solitude .modal-content label,
+body.arctic-aurora .modal-content label,
+body.retro-city .modal-content label,
+body.galactic-skies .modal-content label,
+body.platinum-gold .modal-content label,
+body.tropical-jungle .modal-content label,
+body.volcanic-ash .modal-content label {
+    color: #333;
+}
+
+body.classic .modal-content input,
+body.classic .modal-content textarea,
+body.classic .modal-content select,
+body.vintage-paper .modal-content input,
+body.vintage-paper .modal-content textarea,
+body.vintage-paper .modal-content select,
+body.desert-solitude .modal-content input,
+body.desert-solitude .modal-content textarea,
+body.desert-solitude .modal-content select,
+body.arctic-aurora .modal-content input,
+body.arctic-aurora .modal-content textarea,
+body.arctic-aurora .modal-content select,
+body.retro-city .modal-content input,
+body.retro-city .modal-content textarea,
+body.retro-city .modal-content select,
+body.galactic-skies .modal-content input,
+body.galactic-skies .modal-content textarea,
+body.galactic-skies .modal-content select,
+body.platinum-gold .modal-content input,
+body.platinum-gold .modal-content textarea,
+body.platinum-gold .modal-content select,
+body.tropical-jungle .modal-content input,
+body.tropical-jungle .modal-content textarea,
+body.tropical-jungle .modal-content select,
+body.volcanic-ash .modal-content input,
+body.volcanic-ash .modal-content textarea,
+body.volcanic-ash .modal-content select {
+    background-color: white;
+    color: #333;
+    border: 2px solid #e0e0e0;
+}
+
+body.classic .modal-content input:focus,
+body.classic .modal-content textarea:focus,
+body.classic .modal-content select:focus,
+body.vintage-paper .modal-content input:focus,
+body.vintage-paper .modal-content textarea:focus,
+body.vintage-paper .modal-content select:focus,
+body.desert-solitude .modal-content input:focus,
+body.desert-solitude .modal-content textarea:focus,
+body.desert-solitude .modal-content select:focus,
+body.arctic-aurora .modal-content input:focus,
+body.arctic-aurora .modal-content textarea:focus,
+body.arctic-aurora .modal-content select:focus,
+body.retro-city .modal-content input:focus,
+body.retro-city .modal-content textarea:focus,
+body.retro-city .modal-content select:focus,
+body.galactic-skies .modal-content input:focus,
+body.galactic-skies .modal-content textarea:focus,
+body.galactic-skies .modal-content select:focus,
+body.platinum-gold .modal-content input:focus,
+body.platinum-gold .modal-content textarea:focus,
+body.platinum-gold .modal-content select:focus,
+body.tropical-jungle .modal-content input:focus,
+body.tropical-jungle .modal-content textarea:focus,
+body.tropical-jungle .modal-content select:focus,
+body.volcanic-ash .modal-content input:focus,
+body.volcanic-ash .modal-content textarea:focus,
+body.volcanic-ash .modal-content select:focus {
+    border-color: #1a237e;
+}
+
+body.classic .confirm-add-btn,
+body.vintage-paper .confirm-add-btn,
+body.desert-solitude .confirm-add-btn,
+body.arctic-aurora .confirm-add-btn,
+body.retro-city .confirm-add-btn,
+body.galactic-skies .confirm-add-btn,
+body.platinum-gold .confirm-add-btn,
+body.tropical-jungle .confirm-add-btn,
+body.volcanic-ash .confirm-add-btn {
+    background: #1a237e;
+}
+
+body.classic .confirm-add-btn:hover,
+body.vintage-paper .confirm-add-btn:hover,
+body.desert-solitude .confirm-add-btn:hover,
+body.arctic-aurora .confirm-add-btn:hover,
+body.retro-city .confirm-add-btn:hover,
+body.galactic-skies .confirm-add-btn:hover,
+body.platinum-gold .confirm-add-btn:hover,
+body.tropical-jungle .confirm-add-btn:hover,
+body.volcanic-ash .confirm-add-btn:hover {
+    background: #283593;
+    box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
+}
+
+/* Additional professional theme styling for light gray background */
+body.professional .goal-item {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(12px);
+}
+
+body.professional .goal-item.completed {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1.5px solid rgba(76, 175, 80, 0.3);
+}
+
+body.professional .goal-title {
+    color: #333;
+}
+
+body.professional .goal-description {
+    color: #666;
+}
+
+body.professional .goal-xp {
+    color: #1565c0;
+}
+
+body.professional .goal-deadline {
+    color: #666;
+}
+
+body.professional .goal-type-badge {
+    background: rgba(21, 101, 192, 0.15);
+    border: 1.5px solid rgba(21, 101, 192, 0.3);
+    color: #1565c0;
+}
+
+body.professional .goal-utility-btn {
+    background: rgba(21, 101, 192, 0.08);
+    border: 1.5px solid rgba(21, 101, 192, 0.2);
+    color: #1565c0;
+}
+
+body.professional .goal-utility-btn:hover {
+    background: rgba(21, 101, 192, 0.15);
+    border-color: rgba(21, 101, 192, 0.4);
+}
+
+body.professional .goal-utility-btn.delete {
+    border-color: rgba(211, 47, 47, 0.3);
+    color: #d32f2f;
+}
+
+body.professional .goal-utility-btn.delete:hover {
+    background: rgba(211, 47, 47, 0.1);
+    border-color: rgba(211, 47, 47, 0.5);
+}
+
+body.professional .goal-utility-btn.edit {
+    border-color: rgba(245, 124, 0, 0.3);
+    color: #f57c00;
+}
+
+body.professional .goal-utility-btn.edit:hover {
+    background: rgba(245, 124, 0, 0.1);
+    border-color: rgba(245, 124, 0, 0.5);
+}
+
+body.professional .goal-completed-badge {
+    background: rgba(56, 142, 60, 0.15);
+    border: 1.5px solid rgba(56, 142, 60, 0.3);
+    color: #388e3c;
+}
+
+body.professional .progress-bar-container {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+body.professional .progress-text {
+    color: #666;
+}
+
+body.professional .goal-controls input {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1.5px solid rgba(21, 101, 192, 0.3);
+    color: #333;
+}
+
+body.professional .goal-controls button {
+    background: rgba(21, 101, 192, 0.2);
+    border: 1.5px solid rgba(21, 101, 192, 0.4);
+    color: #1565c0;
+}
+
+body.professional .goal-controls button:hover {
+    background: rgba(21, 101, 192, 0.3);
+}
+
+body.professional .tab-btn {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1.5px solid rgba(21, 101, 192, 0.3);
+    color: #1565c0;
+}
+
+body.professional .tab-btn:hover,
+body.professional .tab-btn.active {
+    background: rgba(21, 101, 192, 0.2);
+    color: #1565c0;
+    border-color: rgba(21, 101, 192, 0.5);
+    border-bottom: 2px solid rgba(21, 101, 192, 0.8);
+}
+
+body.professional .add-goal-btn {
+    background: rgba(21, 101, 192, 0.15);
+    border: 1.5px solid rgba(21, 101, 192, 0.3);
+    color: #1565c0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+body.professional .add-goal-btn:hover {
+    background: rgba(21, 101, 192, 0.25);
+    box-shadow: 0 4px 16px rgba(21, 101, 192, 0.2);
+    transform: translateY(-1px);
+}
+
+
+body.professional .no-goals {
+    color: #333;
+}
+
+body.vintage-paper .blue-square {
+    background: linear-gradient(135deg, #8d6e63 0%, #a1887f 50%, #bcaaa4 100%);
+}
+
+body.vintage-paper .top-tab h2,
+body.vintage-paper .goals-header h3 {
+    color: #3e2723;
+}
+
+    background: rgba(10, 0, 20, 0.5);
+    backdrop-filter: blur(15px);
+    border: 1.5px solid rgba(255, 0, 255, 0.3);
+    box-shadow: 
+        0 0 20px rgba(255, 0, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+    color: #ff00ff !important;
+    text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
+    font-size: 2.5em;
+    font-weight: bold;
+}
+
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 0.85em;
+    font-weight: 400;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
+    color: #ff00ff;
+    text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
+}
+
+    color: #00ffff;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+body.desert-solitude .blue-square {
+    background: linear-gradient(135deg, #ffcc80 0%, #ffab40 50%, #8d6e63 100%);
+}
+
+body.desert-solitude .top-tab h2,
+body.desert-solitude .goals-header h3 {
+    color: white;
+}
+
+body.arctic-aurora .blue-square {
+    background: linear-gradient(135deg, #b3e5fc 0%, #e1bee7 50%, #d1c4e9 100%);
+    border: 2px solid black;
+}
+
+body.arctic-aurora .top-tab h2,
+body.arctic-aurora .goals-header h3 {
+    color: white;
+}
+
+body.arctic-aurora .stat-number {
+    color: black !important;
+}
+
+body.arctic-aurora .stat-label {
+    color: black;
+}
+
+body.arctic-aurora .goal-title {
+    color: black;
+}
+
+body.arctic-aurora .goal-description {
+    color: black;
+}
+
+body.arctic-aurora .goal-xp {
+    color: black;
+}
+
+body.arctic-aurora .goal-deadline {
+    color: black;
+}
+
+body.arctic-aurora .goal-type-badge {
+    color: black;
+}
+
+body.arctic-aurora .goal-utility-btn {
+    color: black;
+}
+
+body.arctic-aurora .progress-text {
+    color: black;
+}
+
+body.arctic-aurora .goal-controls input {
+    color: black;
+}
+
+body.arctic-aurora .goal-controls button {
+    color: black;
+}
+
+body.arctic-aurora .progress-bar-fill {
+    background: linear-gradient(to right, #b39ddb, #9575cd);
+    box-shadow: 0 0 10px rgba(179, 157, 219, 0.5);
+}
+
+body.arctic-aurora .tab-btn {
+    color: black;
+}
+
+body.arctic-aurora .tab-btn:hover,
+body.arctic-aurora .tab-btn.active {
+    background: rgba(179, 157, 219, 0.2);
+    border-color: black;
+    color: black;
+}
+
+body.arctic-aurora .add-goal-btn {
+    background: rgba(179, 157, 219, 0.2);
+    border-color: black;
+    color: black;
+}
+
+body.arctic-aurora .add-goal-btn:hover {
+    background: rgba(179, 157, 219, 0.3);
+    box-shadow: 0 0 20px rgba(179, 157, 219, 0.3);
+}
+
+body.arctic-aurora .nav-pill {
+    border-color: black;
+}
+
+body.arctic-aurora .nav-pill:hover {
+    background: rgba(179, 157, 219, 0.2);
+    box-shadow: 0 0 15px rgba(179, 157, 219, 0.3);
+}
+
+body.arctic-aurora .nav-pill.primary {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: black;
+}
+
+body.arctic-aurora .goal-utility-btn {
+    border-color: black;
+}
+
+body.arctic-aurora .goal-utility-btn:hover {
+    background: rgba(179, 157, 219, 0.2);
+}
+
+body.arctic-aurora .goal-controls button {
+    background: rgba(179, 157, 219, 0.3);
+    border-color: black;
+}
+
+body.arctic-aurora .goal-controls button:hover {
+    background: rgba(179, 157, 219, 0.4);
+    box-shadow: 0 0 15px rgba(179, 157, 219, 0.3);
+}
+
+body.arctic-aurora .goal-status.active {
+    background: rgba(179, 157, 219, 0.2);
+    color: black;
+}
+
+body.arctic-aurora .goal-status.completed {
+    background: rgba(129, 199, 132, 0.2);
+    color: black;
+}
+
+body.arctic-aurora .goal-completed-badge {
+    color: black;
+}
+
+body.arctic-aurora .no-goals {
+    color: black;
+}
+
+body.retro-city .blue-square {
+    background: rgba(15, 15, 25, 0.7);
+    border: 1.5px solid rgba(255, 0, 255, 0.4);
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.2);
+}
+
+body.retro-city .top-tab h2,
+body.retro-city .goals-header h3 {
+    color: white;
+}
+
+body.galactic-skies .blue-square {
+    background: rgba(10, 12, 30, 0.4);
+    backdrop-filter: blur(20px);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+}
+
+body.galactic-skies .top-tab h2,
+body.galactic-skies .goals-header h3 {
+    color: white;
+}
+
+body.platinum-gold .blue-square {
+    background: rgba(255, 180, 100, 0.2);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+}
+
+body.platinum-gold .top-tab h2,
+body.platinum-gold .goals-header h3 {
+    color: white;
+}
+
+body.tropical-jungle .blue-square {
+    background: rgba(20, 40, 20, 0.5);
+    backdrop-filter: blur(15px);
+    border: 1.5px solid rgba(200, 255, 200, 0.2);
+}
+
+body.tropical-jungle .top-tab h2,
+body.tropical-jungle .goals-header h3 {
+    color: white;
+}
+
+body.volcanic-ash .blue-square {
+    background: rgba(20, 20, 22, 0.65);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255, 80, 0, 0.3);
+}
+
+body.volcanic-ash .top-tab h2,
+body.volcanic-ash .goals-header h3 {
+    color: white;
+}
+
+body.volcanic-ash .theme-selector select {
+    color: white;
+}
+
+    color: white;
+}
+
+/* Cyber Grid specific overrides for grouped selectors */
+    background: rgba(10, 0, 20, 0.85) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 1.5px solid rgba(255, 0, 255, 0.4) !important;
+    box-shadow: 
+        0 0 25px rgba(255, 0, 255, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+    color: #00ffff !important;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5) !important;
+}
+
+    color: #ffffff !important;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3) !important;
+}
+
+    background: rgba(10, 0, 20, 0.5) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1.5px solid rgba(255, 0, 255, 0.3) !important;
+    color: #ffffff !important;
+    box-shadow: 
+        0 0 10px rgba(255, 0, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+    border-color: rgba(255, 0, 255, 0.6) !important;
+    box-shadow: 
+        0 0 15px rgba(255, 0, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+    background: rgba(10, 0, 20, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1.5px solid rgba(255, 0, 255, 0.4) !important;
+    color: #ff00ff !important;
+    box-shadow: 
+        0 0 15px rgba(255, 0, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    text-shadow: 0 0 8px rgba(255, 0, 255, 0.5) !important;
+}
+
+    background: rgba(10, 0, 20, 0.8) !important;
+    border-color: rgba(255, 0, 255, 0.6) !important;
+    box-shadow: 
+        0 0 20px rgba(255, 0, 255, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+body.retro-city .theme-selector select {
+    color: white;
+}
+
+body.arctic-aurora .theme-selector select {
+    color: black;
+}
+
+body.classic .theme-selector select,
+body.professional .theme-selector select,
+body.vintage-paper .theme-selector select,
+body.desert-solitude .theme-selector select {
+    color: black;
+}
+
+body.classic .nav-pill,
+body.professional .nav-pill,
+body.vintage-paper .nav-pill,
+body.desert-solitude .nav-pill,
+body.arctic-aurora .nav-pill {
+    color: black;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .blue-square {
+        width: 100%;
+        max-width: 100%;
+        min-height: 500px;
+        margin-top: 0;
+    }
+
+    .top-tab h2 {
+        font-size: 1.2em;
+    }
+
+    .stats-boxes {
+        flex-direction: column;
+        gap: 15px;
+        padding: 30px 20px;
+    }
+
+    .stat-box {
+        min-width: auto;
+        padding: 20px;
+    }
+
+    .stat-number {
+        font-size: 2em;
+    }
+
+    .goals-list-section {
+        padding: 0 20px 20px 20px;
+    }
+
+    .goals-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .dashboard-bottom-btn {
+        padding: 12px 30px;
+        font-size: 14px;
+    }
+}
+
+/* ============================================================
+   CLEAN LIGHT RESKIN — black (#2C302E) + tan (#A38A70) on the
+   existing light background. Overrides the glassmorphic navy look.
+   ============================================================ */
+
+body { color: #2C302E; }
+
+/* Main container becomes a clean white card that fits the screen */
+body.classic .blue-square {
+    background: #ffffff;
+    backdrop-filter: none;
+    border: 1.5px solid #e6e8f0;
+    border-radius: 24px;
+    /* 15% smaller than before, both ways (was 96% wide / 100vh-150px tall) */
+    width: 81%;
+    min-width: 0;
+    max-width: 81%;
+    min-height: calc(85vh - 108px);
+    box-shadow: 0 12px 34px rgba(44, 48, 46, 0.08);
+    margin: 24px auto 0 auto;
+    overflow: visible;
+}
+
+/* Header */
+body.classic .top-tab {
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: 1.5px solid #eef0f4;
+    padding: 24px 32px;
+}
+
+body.classic .top-tab h2 {
+    color: #2C302E;
+    font-weight: 700;
+}
+
+body.classic .add-goal-btn {
+    background: #ffffff;
+    border: 1.5px solid #2C302E;
+    color: #2C302E;
+    border-radius: 10px;
+    box-shadow: none;
+    font-weight: 600;
+}
+
+body.classic .add-goal-btn:hover {
+    background: #2C302E;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(44, 48, 46, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Stat boxes */
+body.classic .stat-box {
+    background: #ffffff;
+    backdrop-filter: none;
+    border: 1.5px solid #e6e8f0;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(44, 48, 46, 0.06);
+}
+
+body.classic .stat-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(44, 48, 46, 0.12);
+}
+
+body.classic .stat-number { color: #2C302E; }
+body.classic .active-box .stat-number { color: #2C302E; }
+body.classic .completed-box .stat-number { color: #A38A70; }
+body.classic .stat-label { color: #6C757D; }
+
+/* Filter tabs */
+body.classic .tab-btn {
+    background: #ffffff;
+    backdrop-filter: none;
+    border: 1.5px solid #e6e8f0;
+    color: #6C757D;
+    border-radius: 999px;
+    padding: 9px 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+body.classic .tab-btn:hover {
+    background: #f6f2ec;
+    color: #2C302E;
+    border-color: #d8c8b4;
+    border-bottom: 1.5px solid #d8c8b4;
+}
+
+body.classic .tab-btn.active {
+    background: #f3ece2;
+    color: #2C302E;
+    border: 1.5px solid #A38A70;
+    border-bottom: 1.5px solid #A38A70;
+}
+
+/* Goals list + empty state */
+body.classic .no-goals { color: #6C757D; }
+
+/* Goal item card */
+body.classic .goal-item {
+    background: #ffffff;
+    backdrop-filter: none;
+    border: 1.5px solid #e6e8f0;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(44, 48, 46, 0.05);
+}
+
+body.classic .goal-item.completed {
+    background: #ffffff;
+    border-color: #A38A70;
+}
+
+body.classic .goal-title { color: #2C302E; }
+body.classic .goal-description { color: #6C757D; }
+body.classic .goal-metric { color: #2C302E; font-weight: 600; font-size: 0.9em; }
+body.classic .goal-deadline { color: #6C757D; }
+
+/* "XP" type badge — tan accent */
+body.classic .goal-type-badge {
+    background: rgba(163, 138, 112, 0.12);
+    border: 1.5px solid #A38A70;
+    color: #8a6f52;
+}
+
+/* Utility buttons (+1 / Edit / Delete) */
+body.classic .goal-utility-btn {
+    background: #ffffff;
+    border: 1.5px solid #e0e0e0;
+    color: #2C302E;
+    border-radius: 8px;
+    box-shadow: none;
+    font-weight: 600;
+}
+
+body.classic .goal-utility-btn:hover {
+    background: #f6f2ec;
+    border-color: #A38A70;
+    color: #2C302E;
+    transform: translateY(-1px);
+    box-shadow: none;
+}
+
+/* The "+1" button (no modifier class) gets a tan tint */
+body.classic .goal-utility-buttons .goal-utility-btn:not(.edit):not(.delete):not(.give-up):not(.more-time) {
+    border-color: #A38A70;
+    color: #8a6f52;
+}
+
+body.classic .goal-utility-btn.delete { border-color: #e0e0e0; color: #2C302E; }
+body.classic .goal-utility-btn.delete:hover {
+    background: #f9ecec;
+    border-color: #d98a8a;
+    color: #b23a3a;
+}
+
+/* Progress bar — black + tan gradient on a light track */
+body.classic .progress-bar-container {
+    background: #eceef3;
+    height: 8px;
+}
+
+body.classic .progress-bar-fill {
+    background: linear-gradient(90deg, #A38A70, #2C302E);
+    box-shadow: none;
+}
+
+body.classic .progress-text { color: #6C757D; }
+
+/* Goal controls */
+body.classic .goal-controls input {
+    background: #ffffff;
+    border: 1.5px solid #e0e0e0;
+    color: #2C302E;
+    border-radius: 8px;
+}
+
+body.classic .goal-controls input::placeholder { color: #9aa0b5; }
+
+body.classic .goal-controls button {
+    background: #2C302E;
+    border: 1.5px solid #2C302E;
+    color: #ffffff;
+    border-radius: 8px;
+}
+
+body.classic .goal-controls button:hover {
+    background: #A38A70;
+    border-color: #A38A70;
+    box-shadow: 0 4px 12px rgba(163, 138, 112, 0.3);
+}
+
+/* Bottom nav — clean white pill bar with icons */
+body.classic .bottom-nav {
+    background: #ffffff;
+    backdrop-filter: none;
+    border: 1.5px solid #e6e8f0;
+    border-radius: 999px;
+    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
+    padding: 8px 10px;
+    gap: 4px;
+}
+
+body.classic .nav-pill {
+    background: transparent;
+    border: none;
+    color: #5a6072;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-weight: 600;
+    gap: 8px;
+    min-width: 0;
+}
+
+body.classic .nav-pill svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+body.classic .nav-pill:hover {
+    background: #f6f2ec;
+    color: #2C302E;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Dashboard pill looks the same as the other nav pills */
+body.classic .nav-pill.primary { background: transparent; color: #5a6072; font-weight: 600; }
+body.classic .nav-pill.primary:hover { background: #f6f2ec; color: #2C302E; }
+
+/* Add New Goal popup — styled like the dashboard's Add Task popup */
+body.classic .modal-content {
+    background-color: #FFFFFF;
+    margin: 8% auto;
+    padding: 32px;
+    border: 1.5px solid #EAEAEA;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 500px;
+    color: #2C302E;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+body.classic .modal-content h2 {
+    margin: 0 0 24px 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #2C302E;
+}
+
+body.classic .close {
+    color: #A0A0A0;
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    float: none;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+body.classic .close:hover { color: #2C302E; }
+
+body.classic .modal-content label {
+    color: #6C757D;
+    font-weight: 500;
+    text-align: left;
+}
+
+body.classic .modal-content input[type="text"],
+body.classic .modal-content input[type="number"],
+body.classic .modal-content input[type="date"],
+body.classic .modal-content textarea,
+body.classic .modal-content select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 18px;
+    border: 1.5px solid #CCCCCC;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    color: #2C302E;
+    background-color: #FFFFFF;
+}
+
+body.classic .modal-content input:focus,
+body.classic .modal-content textarea:focus,
+body.classic .modal-content select:focus {
+    outline: none;
+    border-color: #2C302E;
+}
+
+body.classic .confirm-add-btn {
+    background: #2C302E;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px;
+}
+
+body.classic .confirm-add-btn:hover {
+    background: #454B48;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Let the goals list use the enlarged container; tan scrollbar (not blue) */
+body.classic .goals-list-section { min-height: 0; flex: 1; display: flex; flex-direction: column; }
+body.classic .goals-list,
+body.dark .goals-list {
+    max-height: calc(85vh - 330px);
+    scrollbar-color: #cfc3b2 transparent;
+}
+body.classic .goals-list::-webkit-scrollbar-thumb,
+body.dark .goals-list::-webkit-scrollbar-thumb {
+    background-color: #cfc3b2;
+}
+body.classic .goals-list::-webkit-scrollbar-thumb:hover,
+body.dark .goals-list::-webkit-scrollbar-thumb:hover {
+    background-color: #A38A70;
+}
+
+/* ============================================================
+   GOAL POP-IN / POP-AWAY (sleek, like the dashboard tasks)
+   ============================================================ */
+.goal-item {
+    animation: goalEnter 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.goal-item.removing {
+    animation: goalPopAway 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    overflow: hidden;
+    pointer-events: none;
+    transform-origin: center;
+    will-change: transform, opacity, max-height;
+}
+
+@keyframes goalEnter {
+    0%   { opacity: 0; transform: translateY(-10px) scale(0.98); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes goalPopAway {
+    0%   { opacity: 1; transform: translateY(0) scale(1); max-height: 400px; }
+    22%  { opacity: 1; transform: translateY(-2px) scale(1.025); }
+    55%  { opacity: 0; transform: translateY(-6px) scale(0.94); }
+    100% { opacity: 0; transform: translateY(-6px) scale(0.94); max-height: 0;
+           margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
+}
+
+/* ============================================================
+   THEME SELECTOR (fixed, top-right)
+   ============================================================ */
+.theme-selector-wrap {
+    position: fixed;
+    top: 18px;
+    right: 24px;
+    z-index: 300;
+}
+
+.theme-selector-wrap::after {
+    content: '';
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid #A38A70;
+    border-bottom: 2px solid #A38A70;
+    transform: translateY(-75%) rotate(45deg);
+    pointer-events: none;
+}
+
+#themeSelect {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: #ffffff;
+    border: 1.5px solid #e6e8f0;
+    border-radius: 999px;
+    padding: 9px 34px 9px 18px;
+    font: 600 13px 'Century Gothic', sans-serif;
+    color: #2C302E;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(44, 48, 46, 0.10);
+    outline: none;
+}
+
+/* ============================================================
+   DARK THEME
+   ============================================================ */
+body.dark {
+    background: #0D1117 !important;
+    color: #e6e8f0;
+}
+
+body.dark .blue-square {
+    background: #161B22;
+    backdrop-filter: none;
+    border: 1.5px solid #30363D;
+    border-radius: 24px;
+    width: 81%;
+    min-width: 0;
+    max-width: 81%;
+    min-height: calc(85vh - 108px);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
+    margin: 24px auto 0 auto;
+    overflow: visible;
+}
+
+body.dark .top-tab {
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: 1.5px solid #21262D;
+    padding: 24px 32px;
+}
+
+body.dark .top-tab h2 { color: #e6e8f0; font-weight: 700; }
+
+body.dark .add-goal-btn {
+    background: #21262D;
+    border: 1.5px solid #30363D;
+    color: #e6e8f0;
+    border-radius: 10px;
+    box-shadow: none;
+    font-weight: 600;
+}
+body.dark .add-goal-btn:hover { background: #A38A70; border-color: #A38A70; color: #0D1117; }
+
+body.dark .stat-box {
+    background: #1b2029;
+    backdrop-filter: none;
+    border: 1.5px solid #30363D;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+body.dark .stat-number { color: #e6e8f0; }
+body.dark .active-box .stat-number { color: #e6e8f0; }
+body.dark .completed-box .stat-number { color: #d8b489; }
+body.dark .stat-label { color: #9aa0b5; }
+
+body.dark .tab-btn {
+    background: #21262D;
+    backdrop-filter: none;
+    border: 1.5px solid #30363D;
+    color: #c9d1d9;
+    border-radius: 999px;
+    padding: 9px 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+body.dark .tab-btn:hover { background: #2a3038; color: #e6e8f0; border-color: #A38A70; border-bottom: 1.5px solid #A38A70; }
+body.dark .tab-btn.active { background: #A38A70; color: #0D1117; border: 1.5px solid #A38A70; border-bottom: 1.5px solid #A38A70; }
+
+body.dark .no-goals { color: #9aa0b5; }
+
+body.dark .goal-item {
+    background: #1b2029;
+    backdrop-filter: none;
+    border: 1.5px solid #30363D;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+body.dark .goal-item.completed { border-color: #A38A70; }
+body.dark .goal-title { color: #e6e8f0; }
+body.dark .goal-description { color: #9aa0b5; }
+body.dark .goal-metric { color: #e6e8f0; font-weight: 600; font-size: 0.9em; }
+body.dark .goal-deadline { color: #9aa0b5; }
+
+body.dark .goal-type-badge {
+    background: rgba(163, 138, 112, 0.18);
+    border: 1.5px solid #A38A70;
+    color: #d8b489;
+}
+
+body.dark .goal-utility-btn {
+    background: #21262D;
+    border: 1.5px solid #30363D;
+    color: #e6e8f0;
+    border-radius: 8px;
+    box-shadow: none;
+    font-weight: 600;
+}
+body.dark .goal-utility-btn:hover { background: #2a3038; border-color: #A38A70; color: #e6e8f0; }
+body.dark .goal-utility-buttons .goal-utility-btn:not(.edit):not(.delete):not(.give-up):not(.more-time) {
+    border-color: #A38A70;
+    color: #d8b489;
+}
+body.dark .goal-utility-btn.delete { border-color: #30363D; color: #e6e8f0; }
+body.dark .goal-utility-btn.delete:hover { background: #3a2323; border-color: #d98a8a; color: #ff9a9a; }
+
+body.dark .progress-bar-container { background: #21262D; height: 8px; }
+body.dark .progress-bar-fill { background: linear-gradient(90deg, #A38A70, #e6e8f0); box-shadow: none; }
+body.dark .progress-text { color: #9aa0b5; }
+
+body.dark .goal-controls input {
+    background: #0f141a;
+    border: 1.5px solid #30363D;
+    color: #e6e8f0;
+    border-radius: 8px;
+}
+body.dark .goal-controls input::placeholder { color: #6b7280; }
+body.dark .goal-controls button {
+    background: #A38A70;
+    border: 1.5px solid #A38A70;
+    color: #0D1117;
+    border-radius: 8px;
+}
+body.dark .goal-controls button:hover { background: #b89b80; border-color: #b89b80; }
+
+body.dark .bottom-nav {
+    background: #161B22;
+    backdrop-filter: none;
+    border: 1.5px solid #30363D;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+    border-radius: 999px;
+    padding: 8px 10px;
+    gap: 4px;
+}
+body.dark .nav-pill {
+    background: transparent;
+    border: none;
+    color: #c9d1d9;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-weight: 600;
+    gap: 8px;
+    min-width: 0;
+}
+body.dark .nav-pill svg { width: 16px; height: 16px; flex-shrink: 0; }
+body.dark .nav-pill:hover { background: #21262D; color: #e6e8f0; box-shadow: none; transform: none; }
+body.dark .nav-pill.primary { background: transparent; color: #c9d1d9; font-weight: 600; }
+body.dark .nav-pill.primary:hover { background: #21262D; color: #e6e8f0; }
+
+/* Dark modal (matches the dashboard's dark popup) */
+body.dark .modal-content {
+    background-color: #161B22;
+    border: 1.5px solid #30363D;
+    border-radius: 14px;
+    color: #e6e8f0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+body.dark .modal-content h2 { color: #e6e8f0; }
+body.dark .close { color: #8b949e; }
+body.dark .close:hover { color: #e6e8f0; }
+body.dark .modal-content label { color: #9aa0b5; }
+body.dark .modal-content input[type="text"],
+body.dark .modal-content input[type="number"],
+body.dark .modal-content input[type="date"],
+body.dark .modal-content textarea,
+body.dark .modal-content select {
+    background-color: #0f141a;
+    border: 1.5px solid #30363D;
+    color: #e6e8f0;
+}
+body.dark .modal-content input:focus,
+body.dark .modal-content textarea:focus,
+body.dark .modal-content select:focus { border-color: #A38A70; }
+body.dark .confirm-add-btn { background: #A38A70; color: #0D1117; }
+body.dark .confirm-add-btn:hover { background: #b89b80; }
+
+/* Theme selector in dark */
+body.dark #themeSelect {
+    background: #161B22;
+    border-color: #30363D;
+    color: #e6e8f0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}

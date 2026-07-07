@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Dashboard</title>
+    <script>
+        // Pre-paint: logged-in users keep the server-injected theme (from users.json);
+        // guests fall back to their device choice (default light). Avoids a flash.
+        (function () {
+            try {
+                if (!localStorage.getItem('currentUser')) {
+                    document.documentElement.setAttribute('data-theme', localStorage.getItem('guestTheme') || 'light');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='javascript/api.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='javascript/main.js') }}" defer></script>
+</head>
+<body>
+
+    <header class="site-nav">
+        <div class="nav-inner">
+            <a href="#" class="brand" aria-label="Ascen home">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="Ascen logo">
+            </a>
+            <div class="nav-right">
+                <select id="themeSelect" class="theme-select" aria-label="Theme">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <div class="account-row">
+        <div id="authContainer">
+            <div class="auth-buttons" id="authButtons">
+                <button id="loginBtn" class="auth-btn">Log In</button>
+                <button id="signupBtn" class="auth-btn auth-btn-primary">Sign Up</button>
+            </div>
+            <div class="user-greeting hidden" id="userGreeting">
+                <span id="greetingText">Hello, User</span>
+                <button id="logoutBtn" class="logout-btn">Log Out</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="home-main">
+
+        <!-- Hero banner -->
+        <section class="hero-banner">
+            <div class="hero-text">
+                <div class="hero-meta">
+                    <span class="date-container" id="dateDisplay"></span>
+                    <button id="calendarBtn" class="pill-btn"><span class="pill-icon">&#128197;</span> Calendar</button>
+                </div>
+                <h1 class="hero-title">Ascen</h1>
+                <p class="hero-subtitle">The Ultimate App for Productivity, Growth, and Success</p>
+                <button id="dashboardBtn" class="cta-btn"><span class="cta-icon">&#9783;</span> Go to Dashboard</button>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+                <span class="hero-emoji">&#128197;</span>
+            </div>
+        </section>
+
+        <!-- Feature cards -->
+        <div class="feature-cards">
+            <article class="feature-card">
+                <div class="feature-art feature-art-teal" aria-hidden="true">
+                    <span class="feature-emoji">&#128203;</span>
+                </div>
+                <div class="feature-body">
+                    <h2>Task Management</h2>
+                    <p>Organize your study schedule with our intuitive task manager. Set priorities, add descriptions, and track your progress effortlessly.</p>
+                    <a href="{{ url_for('main.dashboard') }}" class="card-link">Go to Dashboard <span class="arrow">&#8594;</span></a>
+                </div>
+            </article>
+
+            <article class="feature-card">
+                <div class="feature-art feature-art-light" aria-hidden="true">
+                    <span class="feature-emoji">&#127793;</span>
+                </div>
+                <div class="feature-body">
+                    <h2>Growth &amp; Progress</h2>
+                    <p>View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.</p>
+                    <a href="{{ url_for('main.growth') }}" class="card-link">Go to Growth <span class="arrow">&#8594;</span></a>
+                </div>
+            </article>
+        </div>
+
+        <!-- Quick links bar -->
+        <div class="quick-links">
+            <a href="{{ url_for('main.calendar') }}" class="quick-link">
+                <span class="quick-icon">&#128197;</span>
+                <span class="quick-text">
+                    <strong>Go to Calendar</strong>
+                    <small>Schedule and view your study calendar</small>
+                </span>
+                <span class="quick-chevron">&#8250;</span>
+            </a>
+            <a href="{{ url_for('main.goals') }}" class="quick-link">
+                <span class="quick-icon">&#128681;</span>
+                <span class="quick-text">
+                    <strong>Go to Goals</strong>
+                    <small>Set goals to keep up motivation and give yourself larger objectives to achieve</small>
+                </span>
+                <span class="quick-chevron">&#8250;</span>
+            </a>
+            <span class="quick-link quick-link-disabled">
+                <span class="quick-icon">&#10024;</span>
+                <span class="quick-text">
+                    <strong>Coming Soon</strong>
+                    <small>More features to be added</small>
+                </span>
+                <span class="quick-chevron">&#8250;</span>
+            </span>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="company-info">
+                <div class="logo-placeholder">SD</div>
+                <span class="company-name">Study Dashboard Inc.</span>
+            </div>
+
+            <p class="credits-text">Powered by JetBrains, Gemini, ChatGPT, and Lovable AI</p>
+
+            <div class="copyright">
+                &copy; 2023 Study Dashboard Inc. All rights reserved. | <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a> | <a href="{{ url_for('main.terms_of_service') }}">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal hidden">
+        <div class="modal-content">
+            <span id="closeModalBtn" class="close">&times;</span>
+            <h2 id="authTitle">Sign Up</h2>
+
+            <form id="authForm">
+                <input type="text" id="username" placeholder="Username" required aria-label="Username">
+                <input type="password" id="password" placeholder="Password" required aria-label="Password">
+                <input type="password" id="confirmPassword" placeholder="Confirm Password" class="hidden" aria-label="Confirm Password">
+                <button type="submit" id="submitBtn" class="submit-btn">Submit</button>
+            </form>
+            <p id="authMessage"></p>
+        </div>
+    </div>
+
+    <!-- Hidden data for JS to use URLs -->
+    <div id="urls"
+         data-calendar="{{ url_for('main.calendar') }}"
+         data-dashboard="{{ url_for('main.dashboard') }}"
+         style="display:none;"></div>
+
+</body>
+</html>

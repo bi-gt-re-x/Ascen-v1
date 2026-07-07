@@ -1,0 +1,9782 @@
+﻿// Calendar JavaScript
+
+
+
+
+
+
+
+let currentDate = new Date();
+
+
+
+let currentMonth = currentDate.getMonth();
+
+
+
+let currentYear = currentDate.getFullYear();
+
+
+
+let selectedDate = null;
+
+
+
+
+
+
+
+const monthNames = [
+
+
+
+    "January", "February", "March", "April", "May", "June",
+
+
+
+    "July", "August", "September", "October", "November", "December"
+
+
+
+];
+
+
+
+
+
+
+
+// Store content for each date
+
+
+
+const dateContent = {};
+
+
+
+
+
+
+
+// Store hidden placeholder tasks information
+
+
+
+const hiddenPlaceholderTasks = {
+
+
+
+    permanentlyDeleted: [], // Array of task names that are permanently deleted
+
+
+
+    timePeriodDeletions: [], // Array of {task, startDate, endDate}
+
+
+
+    dayOfMonthDeletions: [], // Array of {task, days: [1,2,3...]}
+
+
+
+    dayOfWeekDeletions: [] // Array of {task, days: [0,1,2...]}
+
+
+
+};
+
+
+
+
+
+
+
+// Store dashboard tasks that should appear on calendar
+
+
+
+const dashboardTasks = [];
+
+
+
+
+
+
+
+// Make removeDashboardTaskFromCalendar globally accessible
+
+
+
+window.removeDashboardTaskFromCalendar = function(taskId) {
+
+
+
+    const taskIndex = dashboardTasks.findIndex(t => t.id === taskId);
+
+
+
+    let taskName = '';
+
+
+
+    if (taskIndex !== -1) {
+
+
+
+        taskName = dashboardTasks[taskIndex].name;
+
+
+
+        dashboardTasks.splice(taskIndex, 1);
+
+
+
+    }
+
+
+
+    
+
+
+
+    Object.keys(dateContent).forEach(dateStr => {
+
+
+
+        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+            dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(
+
+
+
+                ts => !(ts.isDashboardTask && ts.dashboardTaskId === taskId)
+
+
+
+            );
+
+
+
+            
+
+
+
+            // Remove subtasks matching this task
+
+
+
+            dateContent[dateStr].timestamps.forEach(ts => {
+
+
+
+                if (ts.subtasks && taskName) {
+
+
+
+                    ts.subtasks = ts.subtasks.filter(st => !st.includes(taskName));
+
+
+
+                    if (ts.subtasks.length === 0) {
+
+
+
+                        ts.hasSubtasks = false;
+
+
+
+                        delete ts.subtasks;
+
+
+
+                    }
+
+
+
+                }
+
+
+
+            });
+
+
+
+        }
+
+
+
+    });
+
+
+
+    
+
+
+
+    saveCalendarData();
+
+
+
+    
+
+
+
+    // Refresh calendar if currently viewing any date
+
+
+
+    if (selectedDate) {
+
+
+
+        updateBottomSection(selectedDate);
+
+
+
+    }
+
+
+
+};
+
+
+
+
+
+
+
+// Load calendar data from localStorage
+
+
+
+function loadCalendarData() {
+
+
+
+    const savedData = localStorage.getItem('calendarData');
+
+
+
+    if (savedData) {
+
+
+
+        try {
+
+
+
+            const parsed = JSON.parse(savedData);
+
+
+
+            Object.assign(dateContent, parsed);
+
+
+
+        } catch (e) {
+
+
+
+            console.error('Error loading calendar data:', e);
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Load hidden placeholder tasks data
+
+
+
+    const hiddenData = localStorage.getItem('hiddenPlaceholderTasks');
+
+
+
+    if (hiddenData) {
+
+
+
+        try {
+
+
+
+            const parsed = JSON.parse(hiddenData);
+
+
+
+            Object.assign(hiddenPlaceholderTasks, parsed);
+
+
+
+        } catch (e) {
+
+
+
+            console.error('Error loading hidden placeholder tasks:', e);
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Load dashboard tasks data
+
+
+
+    const dashboardData = localStorage.getItem('dashboardTasks');
+
+
+
+    if (dashboardData) {
+
+
+
+        try {
+
+
+
+            const parsed = JSON.parse(dashboardData);
+
+
+
+            dashboardTasks.length = 0;
+
+
+
+            dashboardTasks.push(...parsed);
+
+
+
+        } catch (e) {
+
+
+
+            console.error('Error loading dashboard tasks:', e);
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    console.log('Calendar data loaded successfully');
+
+
+
+}
+
+
+
+
+
+
+
+function migrateAllSubtasks() {
+
+
+
+    let migrated = false;
+
+
+
+    Object.keys(dateContent).forEach(dateStr => {
+
+
+
+        const content = dateContent[dateStr];
+
+
+
+        if (content && content.timestamps) {
+
+
+
+            content.timestamps.forEach(section => {
+
+
+
+                if (section.subtasks && section.subtasks.length > 0) {
+
+
+
+                    section.subtasks.forEach((subtask, subIndex) => {
+
+
+
+                        if (typeof subtask === 'string') {
+
+
+
+                            section.subtasks[subIndex] = {
+
+
+
+                                text: subtask,
+
+
+
+                                xp: 10 // Default XP for migrated subtasks
+
+
+
+                            };
+
+
+
+                            migrated = true;
+
+
+
+                            console.log('Migrated string subtask to object:', subtask);
+
+
+
+                        }
+
+
+
+                    });
+
+
+
+                }
+
+
+
+            });
+
+
+
+        }
+
+
+
+    });
+
+
+
+    
+
+
+
+    if (migrated) {
+
+
+
+        saveCalendarData();
+
+
+
+        console.log('Migration completed and saved');
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+// Save calendar data to localStorage
+
+
+
+function saveCalendarData() {
+
+
+
+    // Filter out empty subtasks before saving
+
+
+
+    const cleanedDateContent = {};
+
+
+
+    Object.keys(dateContent).forEach(dateStr => {
+
+
+
+        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+            cleanedDateContent[dateStr] = {
+
+
+
+                timestamps: dateContent[dateStr].timestamps.map(ts => {
+
+
+
+                    if (ts.subtasks && ts.subtasks.length > 0) {
+
+
+
+                        // Filter out empty subtasks
+
+
+
+                        const filteredSubtasks = ts.subtasks.filter(st => {
+                            if (typeof st === 'string') {
+                                return st && st.trim() !== '';
+                            } else if (typeof st === 'object' && st.text) {
+                                return st.text.trim() !== '';
+                            }
+                            return false;
+                        });
+
+
+
+                        if (filteredSubtasks.length === 0) {
+
+
+
+                            // If all subtasks are empty, remove subtasks array and hasSubtasks flag
+
+
+
+                            const { subtasks, hasSubtasks, ...rest } = ts;
+
+
+
+                            return rest;
+
+
+
+                        } else {
+
+
+
+                            // Update with filtered subtasks
+
+
+
+                            return { ...ts, subtasks: filteredSubtasks };
+
+
+
+                        }
+
+
+
+                    }
+
+
+
+                    return ts;
+
+
+
+                }),
+
+
+
+                focus: dateContent[dateStr].focus // Preserve focus value
+
+
+
+            };
+
+
+
+        }
+
+
+
+    });
+
+
+
+    
+
+
+
+    localStorage.setItem('calendarData', JSON.stringify(cleanedDateContent));
+
+
+
+    localStorage.setItem('hiddenPlaceholderTasks', JSON.stringify(hiddenPlaceholderTasks));
+
+
+
+    localStorage.setItem('dashboardTasks', JSON.stringify(dashboardTasks));
+
+
+
+}
+
+
+
+
+
+
+
+// Reset calendar data to defaults
+
+
+
+function resetCalendarData() {
+
+
+
+    localStorage.removeItem('calendarData');
+
+
+
+    localStorage.removeItem('hiddenPlaceholderTasks');
+
+
+
+    localStorage.removeItem('dashboardTasks');
+
+
+
+    Object.keys(dateContent).forEach(key => {
+
+
+
+        delete dateContent[key];
+
+
+
+    });
+
+
+
+    hiddenPlaceholderTasks.permanentlyDeleted = [];
+
+
+
+    hiddenPlaceholderTasks.timePeriodDeletions = [];
+
+
+
+    hiddenPlaceholderTasks.dayOfMonthDeletions = [];
+
+
+
+    hiddenPlaceholderTasks.dayOfWeekDeletions = [];
+
+
+
+    dashboardTasks.length = 0;
+
+
+
+    console.log('Calendar data reset to defaults');
+
+
+
+}
+
+
+
+
+
+
+
+// Generate default timestamps (8am to 10pm split into 5 sections, plus Sleep Time)
+
+
+
+function generateDefaultTimestamps() {
+
+
+
+    return [
+
+
+
+        { startTime: '22:00', endTime: '08:00', task: 'Sleep Time' },
+
+
+
+        { startTime: '08:00', endTime: '12:00', task: 'Morning session' },
+
+
+
+        { startTime: '12:00', endTime: '15:00', task: 'Afternoon session' },
+
+
+
+        { startTime: '15:00', endTime: '18:00', task: 'Late afternoon session' },
+
+
+
+        { startTime: '18:00', endTime: '20:00', task: 'Evening session' },
+
+
+
+        { startTime: '20:00', endTime: '22:00', task: 'Night session' }
+
+
+
+    ];
+
+
+
+}
+
+
+
+
+
+
+
+// Check if a task is a placeholder (default) task
+
+
+
+function isPlaceholderTask(taskName) {
+
+
+
+    const placeholderTasks = [
+
+
+
+        'Sleep Time',
+
+
+
+        'Morning session',
+
+
+
+        'Afternoon session',
+
+
+
+        'Late afternoon session',
+
+
+
+        'Evening session',
+
+
+
+        'Night session'
+
+
+
+    ];
+
+
+
+    return placeholderTasks.includes(taskName);
+
+
+
+}
+
+
+
+
+
+
+
+// Helper function to find the event that contains a given time
+
+
+
+function findEventForTime(timestamps, hours, minutes) {
+
+
+
+    const timeInMinutes = hours * 60 + minutes;
+
+
+
+    
+
+
+
+    for (const ts of timestamps) {
+
+
+
+        const startParts = ts.startTime.split(':').map(Number);
+
+
+
+        const endParts = ts.endTime.split(':').map(Number);
+
+
+
+        
+
+
+
+        let startMinutes = startParts[0] * 60 + startParts[1];
+
+
+
+        let endMinutes = endParts[0] * 60 + endParts[1];
+
+
+
+        
+
+
+
+        // Handle overnight events (e.g., 22:00 to 08:00)
+
+
+
+        if (endMinutes < startMinutes) {
+
+
+
+            // Event spans midnight
+
+
+
+            if (timeInMinutes >= startMinutes || timeInMinutes < endMinutes) {
+
+
+
+                return ts;
+
+
+
+            }
+
+
+
+        } else {
+
+
+
+            // Normal event within same day
+
+
+
+            if (timeInMinutes >= startMinutes && timeInMinutes < endMinutes) {
+
+
+
+                return ts;
+
+
+
+            }
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    return null;
+
+
+
+}
+
+
+
+
+
+
+
+// Calculate daily intensity based on task difficulty and number of tasks
+
+
+
+// Intensity is based ONLY on dashboard tasks (tasks with due dates from backend)
+
+
+
+// Formula: (total_task_difficulty / 10) * number_of_tasks
+
+
+
+// It is NOT affected by subtasks or manual calendar tasks
+
+
+
+// Intensity decreases as tasks are completed
+
+
+
+function calculateDailyIntensity(dateStr) {
+
+
+
+    console.log('calculateDailyIntensity called for date:', dateStr);
+
+
+
+    
+
+
+
+    // Parse the dateStr to normalize it (handle both "2026-5-26" and "2026-05-26" formats)
+
+
+
+    const dateParts = dateStr.split('-').map(Number);
+
+
+
+    const targetDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+
+
+
+    targetDate.setHours(0, 0, 0, 0); // Normalize to midnight
+
+
+
+    
+
+
+
+    const tasksForDay = dashboardTasks.filter(task => {
+
+
+
+        if (!task.due_date) return false;
+
+
+
+        const dueDate = new Date(task.due_date);
+
+
+
+        dueDate.setHours(0, 0, 0, 0); // Normalize to midnight
+
+
+
+        
+
+
+
+        // Compare dates by year, month, and day
+
+
+
+        return dueDate.getFullYear() === targetDate.getFullYear() &&
+
+
+
+               dueDate.getMonth() === targetDate.getMonth() &&
+
+
+
+               dueDate.getDate() === targetDate.getDate();
+
+
+
+    });
+
+
+
+    
+
+
+
+    console.log('Tasks for day:', tasksForDay);
+
+
+
+    
+
+
+
+    if (tasksForDay.length === 0) {
+
+
+
+        console.log('No tasks for this day, returning 0%');
+
+
+
+        return { taskCount: 0, avgXP: 0, percentage: 0 };
+
+
+
+    }
+
+
+
+    
+
+
+
+    const totalXP = tasksForDay.reduce((sum, task) => sum + (task.xp || task.xp_reward || 0), 0);
+
+
+
+    const avgXP = totalXP / tasksForDay.length;
+
+
+
+    
+
+
+
+    // Calculate intensity percentage using formula: (total_task_difficulty / 10) * number_of_tasks
+
+
+
+    const currentPercentage = (totalXP / 10) * tasksForDay.length;
+
+
+
+    const roundedPercentage = Math.min(Math.round(currentPercentage), 100);
+
+
+
+    
+
+
+
+    console.log('Total XP:', totalXP, 'Task count:', tasksForDay.length, 'Calculated percentage:', roundedPercentage);
+
+
+
+    
+
+
+
+    return {
+
+
+
+        taskCount: tasksForDay.length,
+
+
+
+        avgXP: Math.round(avgXP),
+
+
+
+        percentage: roundedPercentage
+
+
+
+    };
+
+
+
+}
+
+
+
+
+
+
+
+// Get intensity color based on percentage (green -> yellow -> red)
+
+
+
+function getIntensityColor(percentage) {
+
+
+
+    if (percentage >= 80) return 'linear-gradient(90deg, #ff4444, #ff6666)'; // Red
+
+
+
+    if (percentage >= 60) return 'linear-gradient(90deg, #ffbb33, #ffcc66)'; // Yellow
+
+
+
+    return 'linear-gradient(90deg, #4CAF50, #8BC34A)'; // Green
+
+
+
+}
+
+
+
+
+
+
+
+// Add a dashboard task to the calendar
+
+
+
+function addDashboardTaskToCalendar(task) {
+
+
+
+    // Add created_at timestamp if not present
+
+
+
+    if (!task.created_at) {
+
+
+
+        task.created_at = new Date().toISOString();
+
+
+
+    }
+
+
+
+    
+
+
+
+    if (!task.due_date) return;
+
+
+
+    
+
+
+
+    const dueDate = new Date(task.due_date);
+
+
+
+    const dateStr = `${dueDate.getFullYear()}-${dueDate.getMonth() + 1}-${dueDate.getDate()}`;
+
+
+
+    const hours = dueDate.getHours();
+
+
+
+    const minutes = dueDate.getMinutes();
+
+
+
+    
+
+
+
+    // Convert to 24-hour format string
+
+
+
+    const startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+
+
+    
+
+
+
+    // Calculate end time (assume 1 hour duration)
+
+
+
+    const endTimeDate = new Date(dueDate.getTime() + 60 * 60 * 1000);
+
+
+
+    const endTime = `${endTimeDate.getHours().toString().padStart(2, '0')}:${endTimeDate.getMinutes().toString().padStart(2, '0')}`;
+
+
+
+    
+
+
+
+    // Check if task already exists in dashboardTasks
+
+
+
+    const existingIndex = dashboardTasks.findIndex(t => t.id === task.id);
+
+
+
+    if (existingIndex === -1) {
+
+
+
+        dashboardTasks.push(task);
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Add to dateContent
+
+
+
+    if (!dateContent[dateStr]) {
+
+
+
+        dateContent[dateStr] = { timestamps: [] };
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Check if this task already exists in the date
+
+
+
+    const existingTimestamp = dateContent[dateStr].timestamps.find(
+
+
+
+        ts => ts.isDashboardTask && ts.dashboardTaskId === task.id
+
+
+
+    );
+
+
+
+    
+
+
+
+    if (!existingTimestamp) {
+
+
+
+        // Format time for display (12-hour format)
+
+
+
+        const displayHours = hours % 12 || 12;
+
+
+
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+
+
+
+        const displayTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+
+
+        
+
+
+
+        // Find the event that contains this task's due time
+
+
+
+        const targetEvent = findEventForTime(dateContent[dateStr].timestamps, hours, minutes);
+
+
+
+        
+
+
+
+        if (targetEvent) {
+
+
+
+            // Add as subtask to the matching time-based event
+
+
+
+            if (!targetEvent.subtasks) {
+
+
+
+                targetEvent.subtasks = [];
+
+
+
+            }
+
+
+
+            const taskXP = task.xp || task.xp_reward || task.difficulty || 0;
+
+
+
+            console.log('Adding dashboard task subtask with XP:', taskXP, 'for task:', task.name, 'Task object:', JSON.stringify(task));
+
+
+
+            targetEvent.subtasks.push({
+
+
+
+                text: `${task.name} due at ${displayTime}`,
+
+
+
+                xp: taskXP,
+
+
+
+                taskId: task.id
+
+
+
+            });
+
+
+
+            targetEvent.hasSubtasks = true;
+
+
+
+        } else if (dateContent[dateStr].timestamps.length > 0) {
+
+
+
+            // Fallback: add to first available event if no time match found
+
+
+
+            const firstEvent = dateContent[dateStr].timestamps[0];
+
+
+
+            if (!firstEvent.subtasks) {
+
+
+
+                firstEvent.subtasks = [];
+
+
+
+            }
+
+
+
+            const taskXP = task.xp || task.xp_reward || task.difficulty || 0;
+
+
+
+            console.log('Adding dashboard task subtask (fallback) with XP:', taskXP, 'for task:', task.name, 'Task object:', JSON.stringify(task));
+
+
+
+            firstEvent.subtasks.push({
+
+
+
+                text: `${task.name} due at ${displayTime}`,
+
+
+
+                xp: taskXP,
+
+
+
+                taskId: task.id
+
+
+
+            });
+
+
+
+            firstEvent.hasSubtasks = true;
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    saveCalendarData();
+
+
+
+    
+
+
+
+    // Refresh calendar if currently viewing this date
+
+
+
+    if (selectedDate) {
+
+
+
+        const selectedDateStr = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
+
+
+
+        if (selectedDateStr === dateStr) {
+
+
+
+            updateBottomSection(selectedDate);
+
+
+
+        }
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+// Make function globally accessible
+
+
+
+window.addDashboardTaskToCalendar = addDashboardTaskToCalendar;
+
+
+
+
+
+
+
+// Clear all dashboard tasks from calendar
+
+
+
+function clearAllDashboardTasks() {
+
+
+
+    dashboardTasks.length = 0;
+
+
+
+    
+
+
+
+    Object.keys(dateContent).forEach(dateStr => {
+
+
+
+        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+            dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(
+
+
+
+                ts => !ts.isDashboardTask
+
+
+
+            );
+
+
+
+        }
+
+
+
+    });
+
+
+
+    
+
+
+
+    saveCalendarData();
+
+
+
+    console.log('All dashboard tasks cleared from calendar');
+
+
+
+}
+
+
+
+
+
+
+
+// Check if a placeholder task should be hidden for a specific date
+
+
+
+function shouldHidePlaceholderTask(taskName, dateStr) {
+
+
+
+    const dateParts = dateStr.split('-').map(Number);
+
+
+
+    const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+
+
+
+    const dayOfMonth = date.getDate();
+
+
+
+    const dayOfWeek = date.getDay();
+
+
+
+
+
+
+
+    // Check if permanently deleted
+
+
+
+    if (hiddenPlaceholderTasks.permanentlyDeleted.includes(taskName)) {
+
+
+
+        return true;
+
+
+
+    }
+
+
+
+
+
+
+
+    // Check if deleted for a time period
+
+
+
+    for (const deletion of hiddenPlaceholderTasks.timePeriodDeletions) {
+
+
+
+        if (deletion.task === taskName) {
+
+
+
+            const startDate = new Date(deletion.startDate);
+
+
+
+            const endDate = new Date(deletion.endDate);
+
+
+
+            if (date >= startDate && date <= endDate) {
+
+
+
+                return true;
+
+
+
+            }
+
+
+
+        }
+
+
+
+    }
+
+
+
+
+
+
+
+    // Check if deleted for specific days of month
+
+
+
+    for (const deletion of hiddenPlaceholderTasks.dayOfMonthDeletions) {
+
+
+
+        if (deletion.task === taskName && deletion.days.includes(dayOfMonth)) {
+
+
+
+            return true;
+
+
+
+        }
+
+
+
+    }
+
+
+
+
+
+
+
+    // Check if deleted for specific days of week
+
+
+
+    for (const deletion of hiddenPlaceholderTasks.dayOfWeekDeletions) {
+
+
+
+        if (deletion.task === taskName && deletion.days.includes(dayOfWeek)) {
+
+
+
+            return true;
+
+
+
+        }
+
+
+
+    }
+
+
+
+
+
+
+
+    return false;
+
+
+
+}
+
+
+
+
+
+
+
+function initializeCalendar() {
+
+
+
+    console.log('Initializing calendar...');
+
+
+
+    
+
+
+
+    // Load saved calendar data
+
+
+
+    loadCalendarData();
+
+    // Fetch backend task statuses to get accurate completion states
+    fetchBackendTaskStatuses();
+
+    // Check for stored task completions from dashboard and apply them
+    const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]');
+    if (completedTasks.length > 0) {
+        console.log('📅 Found stored completions from dashboard:', completedTasks);
+        // Apply completions to dashboardTasks and dateContent
+        completedTasks.forEach(taskId => {
+            const task = dashboardTasks.find(t => String(t.id) === String(taskId));
+            if (task) {
+                task.completed = true;
+                console.log('✅ Applied completion to dashboardTask:', task.name);
+            }
+            // Also update dateContent
+            Object.keys(dateContent).forEach(dateStr => {
+                if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+                    dateContent[dateStr].timestamps.forEach(section => {
+                        if (section.subtasks && section.subtasks.length > 0) {
+                            section.subtasks.forEach(subtask => {
+                                if (typeof subtask === 'object' && String(subtask.taskId) === String(taskId)) {
+                                    subtask.completed = true;
+                                    console.log('✅ Applied completion to subtask on', dateStr, ':', subtask.text);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        // Clear the stored completions after applying
+        localStorage.removeItem('completedTasks');
+        console.log('📅 Cleared stored completions after applying');
+        saveCalendarData();
+    }
+
+
+
+    
+
+
+
+    console.log('Calendar data loaded. Rendering calendar...');
+
+
+
+    
+
+
+
+    renderCalendar(currentMonth, currentYear);
+
+
+
+    
+
+
+
+    console.log('Calendar rendered. Auto-selecting today\'s date...');
+
+
+
+    
+
+
+
+    // Auto-select today's date after calendar is fully rendered
+
+
+
+    setTimeout(() => {
+
+
+
+        const today = new Date();
+
+
+
+        const dateStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+
+
+
+        const dayElement = document.querySelector(`[data-date="${dateStr}"]`);
+
+
+
+        
+
+
+
+        if (dayElement) {
+
+
+
+            console.log('Auto-selecting today\'s date:', dateStr);
+
+
+
+            selectDate(dateStr, dayElement);
+
+
+
+        } else {
+
+
+
+            console.log('Could not find today\'s date element:', dateStr);
+
+
+
+        }
+
+
+
+    }, 200);
+
+
+
+}
+
+
+
+
+
+
+
+function renderCalendar(month, year) {
+
+
+
+    const monthYearElement = document.getElementById('monthYear');
+
+
+
+    const calendarDaysElement = document.getElementById('calendarDays');
+
+
+
+    
+
+
+
+    // Update month/year display
+
+
+
+    monthYearElement.textContent = `${monthNames[month]} ${year}`;
+
+
+
+    
+
+
+
+    // Clear previous days
+
+
+
+    calendarDaysElement.innerHTML = '';
+
+
+
+    
+
+
+
+    // Get first day of the month and total days in the month
+
+
+
+    const firstDay = new Date(year, month, 1).getDay();
+
+
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+
+
+    
+
+
+
+    // Get today's date for highlighting
+
+
+
+    const today = new Date();
+
+
+
+    const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+
+
+
+    
+
+
+
+    // Add empty cells for days before the first day of the month
+
+
+
+    for (let i = 0; i < firstDay; i++) {
+
+
+
+        const emptyDay = document.createElement('div');
+
+
+
+        emptyDay.className = 'calendar-day empty';
+
+
+
+        calendarDaysElement.appendChild(emptyDay);
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Add days of the month
+
+
+
+    for (let day = 1; day <= daysInMonth; day++) {
+
+
+
+        const dayElement = document.createElement('div');
+
+
+
+        dayElement.className = 'calendar-day';
+
+
+
+        
+
+
+
+        // Store date data
+
+
+
+        const dateStr = `${year}-${month + 1}-${day}`;
+
+
+
+        dayElement.dataset.date = dateStr;
+
+
+
+        
+
+
+
+        const dayNumber = document.createElement('span');
+
+
+
+        dayNumber.className = 'day-number';
+
+
+
+        dayNumber.textContent = day;
+
+
+
+        dayElement.appendChild(dayNumber);
+
+
+
+        
+
+
+
+        // Highlight today's date
+
+
+
+        if (isCurrentMonth && day === today.getDate()) {
+
+
+
+            dayElement.classList.add('today');
+
+
+
+        }
+
+
+
+        
+
+
+
+        // Highlight selected date
+
+
+
+        if (selectedDate === dateStr) {
+
+
+
+            dayElement.classList.add('selected');
+
+
+
+        }
+
+
+
+        
+
+
+
+        // Add click handler for date selection
+
+
+
+        dayElement.addEventListener('click', function() {
+
+
+
+            selectDate(dateStr, dayElement);
+
+
+
+        });
+
+
+
+        
+
+
+
+        calendarDaysElement.appendChild(dayElement);
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function selectDate(dateStr, element) {
+
+
+
+    // Remove selected class from all days
+
+
+
+    const allDays = document.querySelectorAll('.calendar-day');
+
+
+
+    allDays.forEach(day => {
+
+
+
+        if (!day.classList.contains('empty')) {
+
+
+
+            day.classList.remove('selected');
+
+
+
+        }
+
+
+
+    });
+
+
+
+    
+
+
+
+    // Add selected class to clicked day
+
+
+
+    element.classList.add('selected');
+
+
+
+    selectedDate = dateStr;
+
+
+
+    
+
+
+
+    console.log('selectDate called with dateStr:', dateStr);
+
+
+
+    console.log('Current dashboardTasks:', dashboardTasks);
+
+
+
+    
+
+
+
+    // Get or create content for this date
+
+
+
+    if (!dateContent[dateStr]) {
+
+
+
+        // Generate default content for this date
+
+
+
+        const dateParts = dateStr.split('-');
+
+
+
+        const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+
+
+
+        const dayOfWeek = date.getDay();
+
+
+
+        
+
+
+
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+
+
+        const dayName = dayNames[dayOfWeek];
+
+
+
+        
+
+
+
+        // Generate default timestamps (8am to 10pm split into 5 sections)
+
+
+
+        const timestamps = generateDefaultTimestamps();
+
+
+
+        
+
+
+
+        // Filter out hidden placeholder tasks
+
+
+
+        const filteredTimestamps = timestamps.filter(ts => {
+
+
+
+            if (isPlaceholderTask(ts.task)) {
+
+
+
+                return !shouldHidePlaceholderTask(ts.task, dateStr);
+
+
+
+            }
+
+
+
+            return true;
+
+
+
+        });
+
+
+
+        
+
+
+
+        dateContent[dateStr] = {
+
+
+
+            timestamps: filteredTimestamps
+
+
+
+        };
+
+
+
+    } else {
+
+
+
+        // If content exists, also filter out hidden placeholder tasks
+
+
+
+        dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(ts => {
+
+
+
+            if (isPlaceholderTask(ts.task)) {
+
+
+
+                return !shouldHidePlaceholderTask(ts.task, dateStr);
+
+
+
+            }
+
+
+
+            return true;
+
+
+
+        });
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Add dashboard tasks for this date
+
+
+
+    dashboardTasks.forEach(task => {
+
+
+
+        if (task.due_date) {
+
+
+
+            const dueDate = new Date(task.due_date);
+
+
+
+            const taskDateStr = `${dueDate.getFullYear()}-${dueDate.getMonth() + 1}-${dueDate.getDate()}`;
+
+
+
+            
+
+
+
+            console.log('Checking task:', task.name, 'due date:', task.due_date, 'taskDateStr:', taskDateStr, 'selected dateStr:', dateStr);
+
+
+
+            
+
+
+
+            if (taskDateStr === dateStr) {
+
+
+
+                const hours = dueDate.getHours();
+
+
+
+                const minutes = dueDate.getMinutes();
+
+
+
+                const startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+
+
+                
+
+
+
+                // Format time for display (12-hour format)
+
+
+
+                const displayHours = hours % 12 || 12;
+
+
+
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+
+
+
+                const displayTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+
+
+                
+
+
+
+                // Calculate end time (assume 1 hour duration)
+
+
+
+                const endTimeDate = new Date(dueDate.getTime() + 60 * 60 * 1000);
+
+
+
+                const endTime = `${endTimeDate.getHours().toString().padStart(2, '0')}:${endTimeDate.getMinutes().toString().padStart(2, '0')}`;
+
+
+
+                
+
+
+
+                // Check if this task already exists in the date (as timestamp or subtask)
+
+
+
+                const existingTimestamp = dateContent[dateStr].timestamps.find(
+
+
+
+                    ts => ts.isDashboardTask && ts.dashboardTaskId === task.id
+
+
+
+                );
+
+
+
+                
+
+
+
+                // Also check if task already exists as a subtask
+
+
+
+                let existingSubtask = false;
+
+
+
+                dateContent[dateStr].timestamps.forEach(ts => {
+
+
+
+                    if (ts.subtasks && ts.subtasks.some(st => st.taskId === task.id)) {
+
+
+
+                        existingSubtask = true;
+
+
+
+                    }
+
+
+
+                });
+
+
+
+                
+
+
+
+                if (!existingTimestamp && !existingSubtask) {
+
+
+
+                    // Format time for display (12-hour format)
+
+
+
+                    const displayHours = hours % 12 || 12;
+
+
+
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+
+
+
+                    const displayTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+
+
+                    
+
+
+
+                    // Find the event that contains this task's due time
+
+
+
+                    const targetEvent = findEventForTime(dateContent[dateStr].timestamps, hours, minutes);
+
+
+
+                    
+
+
+
+                    if (targetEvent) {
+
+
+
+                        // Add as subtask to the matching time-based event
+
+
+
+                        if (!targetEvent.subtasks) {
+
+
+
+                            targetEvent.subtasks = [];
+
+
+
+                        }
+
+
+
+                        targetEvent.subtasks.push({
+
+
+
+                            text: `${task.name} due at ${displayTime}`,
+
+
+
+                            xp: task.xp || task.xp_reward || task.difficulty || 0,
+
+
+
+                            taskId: task.id
+
+
+
+                        });
+
+
+
+                        targetEvent.hasSubtasks = true;
+
+
+
+                    } else if (dateContent[dateStr].timestamps.length > 0) {
+
+
+
+                        // Fallback: add to first available event if no time match found
+
+
+
+                        const firstEvent = dateContent[dateStr].timestamps[0];
+
+
+
+                        if (!firstEvent.subtasks) {
+
+
+
+                            firstEvent.subtasks = [];
+
+
+
+                        }
+
+
+
+                        firstEvent.subtasks.push({
+
+
+
+                            text: `${task.name} due at ${displayTime}`,
+
+
+
+                            xp: task.xp || task.xp_reward || task.difficulty || 0,
+
+
+
+                            taskId: task.id
+
+
+
+                        });
+
+
+
+                        firstEvent.hasSubtasks = true;
+
+
+
+                    }
+
+
+
+                }
+
+
+
+            }
+
+
+
+        } else {
+
+
+
+            // Task without due date - add to timestamp where it was created
+
+
+
+            // Use the task's created_at timestamp if available, otherwise use current time
+
+
+
+            const createdAt = task.created_at ? new Date(task.created_at) : new Date();
+
+
+
+            const taskDateStr = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`;
+
+
+
+            
+
+
+
+            if (taskDateStr === dateStr) {
+
+
+
+                const hours = createdAt.getHours();
+
+
+
+                const minutes = createdAt.getMinutes();
+
+
+
+                
+
+
+
+                // Format time for display (12-hour format)
+
+
+
+                const displayHours = hours % 12 || 12;
+
+
+
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+
+
+
+                const displayTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+
+
+                
+
+
+
+                // Check if this task already exists as a subtask
+
+
+
+                let existingSubtask = false;
+
+
+
+                dateContent[dateStr].timestamps.forEach(ts => {
+
+
+
+                    if (ts.subtasks && ts.subtasks.some(st => st.taskId === task.id)) {
+
+
+
+                        existingSubtask = true;
+
+
+
+                    }
+
+
+
+                });
+
+
+
+                
+
+
+
+                if (!existingSubtask) {
+
+
+
+                    // Find the event that contains this task's creation time
+
+
+
+                    const targetEvent = findEventForTime(dateContent[dateStr].timestamps, hours, minutes);
+
+
+
+                    
+
+
+
+                    if (targetEvent) {
+
+
+
+                        // Add as subtask to the matching time-based event
+
+
+
+                        if (!targetEvent.subtasks) {
+
+
+
+                            targetEvent.subtasks = [];
+
+
+
+                        }
+
+
+
+                        targetEvent.subtasks.push({
+
+
+
+                            text: `${task.name} created at ${displayTime}`,
+
+
+
+                            xp: task.xp || task.xp_reward || task.difficulty || 0,
+
+
+
+                            taskId: task.id
+
+
+
+                        });
+
+
+
+                        targetEvent.hasSubtasks = true;
+
+
+
+                    } else if (dateContent[dateStr].timestamps.length > 0) {
+
+
+
+                        // Fallback: add to first available event if no time match found
+
+
+
+                        const firstEvent = dateContent[dateStr].timestamps[0];
+
+
+
+                        if (!firstEvent.subtasks) {
+
+
+
+                            firstEvent.subtasks = [];
+
+
+
+                        }
+
+
+
+                        firstEvent.subtasks.push({
+
+
+
+                            text: `${task.name} created at ${displayTime}`,
+
+
+
+                            xp: task.xp || task.xp_reward || task.difficulty || 0,
+
+
+
+                            taskId: task.id
+
+
+
+                        });
+
+
+
+                        firstEvent.hasSubtasks = true;
+
+
+
+                    }
+
+
+
+                }
+
+
+
+            }
+
+
+
+        }
+
+
+
+    });
+
+
+
+    
+
+
+
+    // Check for conflicts
+
+
+
+    checkForConflicts();
+
+
+
+    
+
+
+
+    // Update the bottom section with the date's content
+
+
+
+    updateBottomSection(dateStr);
+
+
+
+    
+
+
+
+    console.log('Selected date:', dateStr);
+
+
+
+}
+
+
+
+
+
+
+
+function generateTasksForDay(dayOfWeek) {
+
+
+
+    const taskTemplates = [
+
+
+
+        // Sunday (0)
+
+
+
+        [
+
+
+
+            'Task 1: Plan the week ahead',
+
+
+
+            'Task 2: Review weekly goals',
+
+
+
+            'Task 3: Self-care time',
+
+
+
+            'Task 4: Prepare for Monday'
+
+
+
+        ],
+
+
+
+        // Monday (1)
+
+
+
+        [
+
+
+
+            'Task 1: Start new project',
+
+
+
+            'Task 2: Team standup meeting',
+
+
+
+            'Task 3: Prioritize tasks',
+
+
+
+            'Task 4: Set weekly objectives'
+
+
+
+        ],
+
+
+
+        // Tuesday (2)
+
+
+
+        [
+
+
+
+            'Task 1: Deep work session',
+
+
+
+            'Task 2: Code review',
+
+
+
+            'Task 3: Documentation update',
+
+
+
+            'Task 4: Progress check'
+
+
+
+        ],
+
+
+
+        // Wednesday (3)
+
+
+
+        [
+
+
+
+            'Task 1: Mid-week review',
+
+
+
+            'Task 2: Client meeting',
+
+
+
+            'Task 3: Sprint planning',
+
+
+
+            'Task 4: Team collaboration'
+
+
+
+        ],
+
+
+
+        // Thursday (4)
+
+
+
+        [
+
+
+
+            'Task 1: Feature development',
+
+
+
+            'Task 2: Bug fixing',
+
+
+
+            'Task 3: Testing session',
+
+
+
+            'Task 4: Code optimization'
+
+
+
+        ],
+
+
+
+        // Friday (5)
+
+
+
+        [
+
+
+
+            'Task 1: Weekly wrap-up',
+
+
+
+            'Task 2: Deploy changes',
+
+
+
+            'Task 3: Team retrospective',
+
+
+
+            'Task 4: Plan weekend work'
+
+
+
+        ],
+
+
+
+        // Saturday (6)
+
+
+
+        [
+
+
+
+            'Task 1: Learning session',
+
+
+
+            'Task 2: Side project work',
+
+
+
+            'Task 3: Skill development',
+
+
+
+            'Task 4: Rest and recharge'
+
+
+
+        ]
+
+
+
+    ];
+
+
+
+    
+
+
+
+    return taskTemplates[dayOfWeek];
+
+
+
+}
+
+
+
+
+
+
+
+function updateBottomSection(dateStr) {
+
+
+
+    const content = dateContent[dateStr];
+
+
+
+    if (!content) return;
+
+
+
+    
+
+
+
+    // Sort timestamps chronologically
+
+
+
+    if (content.timestamps && content.timestamps.length > 0) {
+
+
+
+        content.timestamps.sort((a, b) => {
+
+
+
+            const timeA = a.startTime.split(':').map(Number);
+
+
+
+            const timeB = b.startTime.split(':').map(Number);
+
+
+
+            return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+
+
+
+        });
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Update tasks list with timestamps
+
+
+
+    const tasksList = document.getElementById('dailyTasks');
+
+
+
+    tasksList.innerHTML = '';
+
+
+
+    
+
+
+
+    // Calculate daily intensity
+
+
+
+    const intensity = calculateDailyIntensity(dateStr);
+
+
+
+    
+
+
+
+    // Add intensity bar and focus input above events
+
+
+
+    const intensityContainer = document.createElement('div');
+
+
+
+    intensityContainer.className = 'daily-intensity-container';
+
+
+
+    
+
+
+
+    const intensityBarWrapper = document.createElement('div');
+
+
+
+    intensityBarWrapper.className = 'daily-intensity-bar-wrapper';
+
+
+
+    intensityBarWrapper.style.flex = '0 0 70%';
+
+
+
+    intensityBarWrapper.style.position = 'relative';
+
+
+
+    
+
+
+
+    const intensityBar = document.createElement('div');
+
+
+
+    intensityBar.className = 'daily-intensity-bar';
+
+
+
+    if (intensity.taskCount > 0) {
+
+
+
+        const percentage = intensity.percentage;
+
+
+
+        intensityBar.style.width = `${percentage}%`;
+
+
+
+        intensityBar.style.background = getIntensityColor(percentage);
+
+
+
+        intensityBar.title = `${intensity.taskCount} tasks, avg ${intensity.avgXP} XP`;
+
+
+
+        console.log('Setting bar width to:', percentage + '%');
+
+
+
+    } else {
+
+
+
+        intensityBar.style.width = '100%';
+
+
+
+        intensityBar.style.background = '#ccc';
+
+
+
+        intensityBar.style.display = 'flex';
+
+
+
+        intensityBar.style.alignItems = 'center';
+
+
+
+        intensityBar.style.justifyContent = 'center';
+
+
+
+        intensityBar.textContent = "There's no tasks (left) to do today!";
+
+
+
+        intensityBar.style.color = '#666';
+
+
+
+        intensityBar.style.fontSize = '14px';
+
+
+
+        console.log('No tasks, showing message in intensity bar');
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Add intensity marker
+
+
+
+    const intensityMarker = document.createElement('div');
+
+
+
+    intensityMarker.className = 'daily-intensity-marker';
+
+
+
+    if (intensity.taskCount > 0) {
+
+
+
+        // Position marker at the right edge of the bar
+
+
+
+        intensityMarker.style.left = `${intensity.percentage}%`;
+
+
+
+        intensityMarker.style.transform = 'translateX(-50%)'; // Center marker on the bar edge
+
+
+
+        intensityMarker.textContent = `${intensity.percentage}%`;
+
+
+
+    } else {
+
+
+
+        intensityMarker.style.display = 'none';
+
+
+
+    }
+
+
+
+    
+
+
+
+    intensityBarWrapper.appendChild(intensityBar);
+
+
+
+    intensityBarWrapper.appendChild(intensityMarker);
+
+
+
+    
+
+
+
+    const focusInput = document.createElement('input');
+
+
+
+    focusInput.type = 'text';
+
+
+
+    focusInput.className = 'daily-focus-input';
+
+
+
+    focusInput.placeholder = 'Today\'s focus...';
+
+
+
+    focusInput.value = content.focus || '';
+
+
+
+    
+
+
+
+    console.log('Focus input created with value:', content.focus);
+
+
+
+    
+
+
+
+    // Save focus on any change
+
+
+
+    focusInput.addEventListener('input', (e) => {
+
+
+
+        console.log('Focus input changed to:', e.target.value);
+
+
+
+        content.focus = e.target.value;
+
+
+
+        saveCalendarData();
+
+
+
+    });
+
+
+
+    
+
+
+
+    focusInput.addEventListener('blur', (e) => {
+
+
+
+        console.log('Focus input blurred, saving:', e.target.value);
+
+
+
+        content.focus = e.target.value;
+
+
+
+        saveCalendarData();
+
+
+
+    });
+
+
+
+    
+
+
+
+    intensityContainer.appendChild(intensityBarWrapper);
+
+
+
+    intensityContainer.appendChild(focusInput);
+
+
+
+    tasksList.appendChild(intensityContainer);
+
+
+
+    
+
+
+
+    if (content.timestamps && content.timestamps.length > 0) {
+
+
+
+        content.timestamps.forEach((section, index) => {
+
+
+
+            const li = document.createElement('li');
+
+
+
+            li.className = 'task-section';
+
+
+
+            
+
+
+
+            // Add priority color coding based on XP (only if not dashboard task and no subtasks)
+
+
+
+            if (!section.isDashboardTask && !section.hasSubtasks) {
+
+
+
+                const sectionXP = section.xp || 0;
+
+
+
+                if (sectionXP >= 75) {
+
+
+
+                    li.classList.add('priority-high');
+
+
+
+                } else if (sectionXP >= 40) {
+
+
+
+                    li.classList.add('priority-medium');
+
+
+
+                } else if (sectionXP >= 10) {
+
+
+
+                    li.classList.add('priority-low');
+
+
+
+                }
+
+
+
+            }
+
+
+
+            
+
+
+
+            // Add completion styling (green when completed, yellow when in progress)
+
+
+
+            if (section.completed) {
+
+
+
+                li.classList.add('task-completed');
+
+
+
+            } else {
+
+
+
+                li.classList.add('task-in-progress');
+
+
+
+            }
+
+
+
+            
+
+
+
+            if (section.hasConflict) {
+
+
+
+                li.classList.add('conflict');
+
+
+
+                console.log('Adding conflict class to section', index, section.startTime, '-', section.endTime);
+
+
+
+            }
+
+
+
+            
+
+
+
+            // Disable editing for dashboard tasks
+
+
+
+            const editButton = section.isDashboardTask ? '' : `<button class="edit-section-btn" onclick="editTaskSection(${index})">Edit</button>`;
+
+
+
+            const removeButton = section.isDashboardTask ? '' : `<button class="remove-section-btn" onclick="removeTaskSection(${index})">×</button>`;
+
+
+
+            const readonlyAttr = section.isDashboardTask ? 'readonly' : '';
+
+
+
+            const timeReadonlyAttr = section.isDashboardTask ? 'disabled' : '';
+
+
+
+            const inProgressBadge = '';
+
+
+
+            
+
+
+
+            // Check if this section has sub-tasks
+
+
+
+            const hasSubtasks = section.subtasks && section.subtasks.length > 0;
+
+
+
+            
+
+
+
+            // Add has-subtasks class if there are subtasks
+
+
+
+            if (hasSubtasks) {
+
+
+
+                li.classList.add('has-subtasks');
+
+
+
+            }
+
+
+
+            
+
+
+
+            li.innerHTML = `
+
+
+
+                <div class="timestamp-section">
+
+
+
+                    <input type="time" class="start-time" value="${section.startTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'startTime', this.value)">
+
+
+
+                    <span>-</span>
+
+
+
+                    <input type="time" class="end-time" value="${section.endTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'endTime', this.value)">
+
+
+
+                    <input type="text" class="task-input-inline" value="${section.task}" placeholder="What will you do..." ${readonlyAttr} onchange="updateTimestamp(${index}, 'task', this.value)">
+
+
+
+                    ${inProgressBadge}
+
+
+
+                    ${editButton}
+
+
+
+                    ${removeButton}
+
+
+
+                </div>
+
+
+
+                ${hasSubtasks ? `
+
+
+
+                    <ul class="subtasks-list">
+
+
+
+                        ${section.subtasks.map((subtask, subIndex) => {
+
+
+
+                            // Handle both string and object subtasks
+
+
+
+                            const subtaskText = typeof subtask === 'object' ? subtask.text : subtask;
+
+
+
+                            const subtaskXP = typeof subtask === 'object' ? subtask.xp : 0;
+
+
+
+                            const isDashboardTask = typeof subtask === 'object' && subtask.taskId;
+
+
+
+                            
+
+
+
+                            console.log('Subtask:', subtaskText, 'XP:', subtaskXP, 'Type:', typeof subtask);
+
+
+
+                            
+
+
+
+                            // Determine priority color based on XP (blue 10-40, yellow 40-75, red 75+)
+
+
+
+                            let priorityClass = '';
+
+
+
+                            let difficultyLabel = '';
+
+
+
+                            if (subtaskXP >= 75) {
+
+
+
+                                priorityClass = 'priority-high';
+
+
+
+                                difficultyLabel = 'Hard';
+
+
+
+                            } else if (subtaskXP >= 40) {
+
+
+
+                                priorityClass = 'priority-medium';
+
+
+
+                                difficultyLabel = 'Medium';
+
+
+
+                            } else if (subtaskXP >= 10) {
+
+
+
+                                priorityClass = 'priority-low';
+
+
+
+                                difficultyLabel = 'Easy';
+
+
+
+                            }
+
+
+
+                            
+
+
+
+                            console.log('Priority class for subtask:', priorityClass);
+
+
+
+                            
+
+
+
+                            // Check if subtask is completed - pull from backend as source of truth
+                            let subtaskCompleted = false;
+                            let subtaskExpired = false;
+                            let subtaskTimeout = false;
+                            if (typeof subtask === 'object' && subtask.taskId) {
+                                // Check cached backend task status first
+                                if (window.backendTaskStatuses && window.backendTaskStatuses[subtask.taskId]) {
+                                    subtaskCompleted = window.backendTaskStatuses[subtask.taskId].completed;
+                                    subtaskExpired = window.backendTaskStatuses[subtask.taskId].timer_expired || false;
+                                    subtaskTimeout = window.backendTaskStatuses[subtask.taskId].status === 'timeout';
+                                    console.log('🔍 Cached backend task status:', { taskId: subtask.taskId, completed: subtaskCompleted, expired: subtaskExpired, timeout: subtaskTimeout });
+                                } else {
+                                    // Fallback to local subtask.completed
+                                    subtaskCompleted = subtask.completed || false;
+                                    subtaskExpired = subtask.timer_expired || false;
+                                    subtaskTimeout = subtask.status === 'timeout';
+                                    console.log('🔍 Using local subtask.completed (no cache):', { subtaskText: subtask.text, subtaskCompleted, subtaskExpired, subtaskTimeout });
+                                }
+                            }
+
+
+
+                            
+
+
+
+                            // Don't allow removing dashboard task subtasks
+
+
+
+                            const removeButton = isDashboardTask ? '' : `<button class="remove-subtask-btn" onclick="removeSubtask(${index}, ${subIndex})">×</button>`;
+
+
+
+                            const taskLabel = isDashboardTask ? `<span class="task-label">Task</span>` : '';
+
+
+
+                            
+
+
+
+                            // Add XP and difficulty labels for dashboard tasks
+
+
+
+                            const xpDifficultyLabel = isDashboardTask ? `<span class="xp-difficulty-label">${subtaskXP} XP - ${difficultyLabel}</span>` : '';
+
+
+
+                            const subtaskInProgressBadge = subtaskTimeout && isDashboardTask ? `<span class="timeout-badge">TIME'S UP</span>` : subtaskExpired && isDashboardTask ? `<span class="expired-badge">TIME'S UP!</span>` : (!subtaskCompleted && isDashboardTask) ? `<span class="in-progress-badge">In Progress</span>` : (subtaskCompleted && isDashboardTask) ? `<span class="completed-badge">COMPLETED</span>` : '';
+
+                            console.log("Rendering:", subtask.taskId, "completed=", subtask.completed, "subtaskCompleted=", subtaskCompleted);
+                            console.log('Subtask rendering:', { subtaskText, isDashboardTask, subtaskCompleted, priority: priorityClass, badge: subtaskInProgressBadge });
+
+
+
+                            
+
+
+
+                            const finalClass = `subtask-item ${priorityClass} ${subtaskTimeout ? 'task-timeout' : (subtaskExpired ? 'task-expired' : (subtaskCompleted ? 'task-completed' : 'task-in-progress'))}`;
+
+
+
+                            console.log('Final subtask class:', finalClass, 'Badge:', subtaskInProgressBadge);
+
+
+
+                            
+
+
+
+                            return `
+
+
+
+                            <li class="${finalClass}">
+
+
+
+                                <span class="bullet">•</span>
+
+
+
+                                <input type="text" class="subtask-input" value="${subtaskText}" placeholder="Add a subtask..." onchange="updateSubtask(${index}, ${subIndex}, this.value)" ${isDashboardTask ? 'readonly' : ''}>
+
+
+
+                                ${subtaskInProgressBadge}
+
+                                ${taskLabel}
+
+
+
+                                ${xpDifficultyLabel}
+
+
+
+                                ${removeButton}
+
+
+
+                            </li>
+
+
+
+                            `;
+
+
+
+                        }).join('')}
+
+
+
+                        <li class="add-subtask-item">
+
+
+
+                            <button class="add-subtask-btn" onclick="addSubtask(${index})">+ Add subtask</button>
+
+
+
+                        </li>
+
+
+
+                    </ul>
+
+
+
+                ` : `
+
+
+
+                    <button class="add-subtask-btn-small" onclick="addSubtask(${index})">+ Add subtask</button>
+
+
+
+                `}
+
+
+
+            `;
+
+
+
+            tasksList.appendChild(li);
+
+
+
+        });
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Calculate total tasks and completed tasks
+
+
+
+    let totalTasks = 0;
+
+
+
+    let completedTasks = 0;
+
+
+
+    
+
+
+
+    if (content.timestamps && content.timestamps.length > 0) {
+
+
+
+        content.timestamps.forEach(section => {
+
+
+
+            // Count main task (if it's not a placeholder)
+
+
+
+            if (!isPlaceholderTask(section.task)) {
+
+
+
+                totalTasks++;
+
+
+
+                // Check backend status cache for main task completion
+                let mainTaskCompleted = section.completed;
+                if (section.isDashboardTask && section.taskId) {
+                    if (window.backendTaskStatuses && window.backendTaskStatuses[section.taskId]) {
+                        mainTaskCompleted = window.backendTaskStatuses[section.taskId].completed;
+                    }
+                }
+
+                if (mainTaskCompleted) {
+
+
+
+                    completedTasks++;
+
+
+
+                }
+
+
+
+            }
+
+
+
+            
+
+
+
+            // Count subtasks
+
+
+
+            if (section.subtasks && section.subtasks.length > 0) {
+
+
+
+                section.subtasks.forEach(subtask => {
+
+
+
+                    const subtaskText = typeof subtask === 'object' ? subtask.text : subtask;
+
+
+
+                    // Check backend status cache for completion status
+                    let subtaskCompleted = false;
+                    if (typeof subtask === 'object' && subtask.taskId) {
+                        if (window.backendTaskStatuses && window.backendTaskStatuses[subtask.taskId]) {
+                            subtaskCompleted = window.backendTaskStatuses[subtask.taskId].completed;
+                        } else {
+                            // Fallback to local subtask.completed
+                            subtaskCompleted = subtask.completed || false;
+                        }
+                    } else if (typeof subtask === 'object') {
+                        subtaskCompleted = subtask.completed || false;
+                    }
+
+
+
+                    const isDashboardTask = typeof subtask === 'object' && (subtask.taskId !== undefined || subtask.isDashboardTask);
+
+
+
+                    // Only count dashboard subtasks
+
+
+
+                    if (subtaskText && subtaskText.trim() !== '' && isDashboardTask) {
+
+
+
+                        totalTasks++;
+
+
+
+                        if (subtaskCompleted) {
+
+
+
+                            completedTasks++;
+
+
+
+                        }
+
+
+
+                    }
+
+
+
+                });
+
+
+
+            }
+
+
+
+        });
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Calculate percentage
+
+
+
+    const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+
+
+    
+
+
+
+    // Display task counter at the bottom
+
+
+
+    const taskCounter = document.getElementById('taskCounter');
+
+
+
+    if (taskCounter) {
+
+
+
+        taskCounter.innerHTML = `<strong>Total tasks:</strong> ${totalTasks} | <strong>Completed:</strong> ${completedTasks} (${percentage}%)`;
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function updateTimestamp(index, field, value) {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    const timestamps = dateContent[selectedDate].timestamps;
+
+
+
+    timestamps[index][field] = value;
+
+
+
+    
+
+
+
+    // Ensure XP value is set for priority color coding
+
+
+
+    if (!timestamps[index].xp) {
+
+
+
+        timestamps[index].xp = 10; // Default XP for user-created tasks
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Check for conflicts and update UI
+
+
+
+    checkForConflicts();
+
+
+
+    
+
+
+
+    // Update the UI
+
+
+
+    updateBottomSection(selectedDate);
+
+
+
+    
+
+
+
+    // Save to localStorage
+
+
+
+    saveCalendarData();
+
+
+
+}
+
+
+
+
+
+
+
+function addSubtask(index) {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    const timestamps = dateContent[selectedDate].timestamps;
+
+
+
+    if (!timestamps[index].subtasks) {
+
+
+
+        timestamps[index].subtasks = [];
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Add subtask as object with default XP for priority color coding
+
+
+
+    timestamps[index].subtasks.push({
+
+
+
+        text: '',
+
+
+
+        xp: 10 // Default XP for user-created subtasks
+
+
+
+    });
+
+
+
+    
+
+
+
+    // Add has-subtasks class to remove priority border
+
+
+
+    timestamps[index].hasSubtasks = true;
+
+
+
+    
+
+
+
+    // Update the UI
+
+
+
+    updateBottomSection(selectedDate);
+
+
+
+    
+
+
+
+    // Save to localStorage
+
+
+
+    saveCalendarData();
+
+
+
+}
+
+
+
+
+
+
+
+function removeSubtask(index, subIndex) {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    const timestamps = dateContent[selectedDate].timestamps;
+
+
+
+    if (timestamps[index].subtasks) {
+
+
+
+        // Check if this is a dashboard task subtask - don't allow removal
+
+
+
+        const subtask = timestamps[index].subtasks[subIndex];
+
+
+
+        const isDashboardTask = typeof subtask === 'object' && subtask.taskId;
+
+
+
+        
+
+
+
+        if (isDashboardTask) {
+
+
+
+            console.log('Cannot remove dashboard task subtask');
+
+
+
+            return; // Don't remove dashboard task subtasks
+
+
+
+        }
+
+
+
+        
+
+
+
+        timestamps[index].subtasks.splice(subIndex, 1);
+
+
+
+        
+
+
+
+        // Remove has-subtasks class if no more subtasks or if all subtasks are empty
+
+
+
+        if (timestamps[index].subtasks.length === 0 || timestamps[index].subtasks.every(st => !st || (typeof st === 'string' ? st.trim() === '' : st.text.trim() === ''))) {
+
+
+
+            timestamps[index].hasSubtasks = false;
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Save to localStorage
+
+
+
+    saveCalendarData();
+
+
+
+    
+
+
+
+    // Update the UI (this will recalculate intensity but should use stored max)
+
+
+
+    updateBottomSection(selectedDate);
+
+
+
+}
+
+
+
+
+
+
+
+function updateSubtask(index, subIndex, value) {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    const timestamps = dateContent[selectedDate].timestamps;
+
+
+
+    if (timestamps[index].subtasks) {
+
+
+
+        // Check if this is a dashboard task subtask - don't allow editing
+
+
+
+        const subtask = timestamps[index].subtasks[subIndex];
+
+
+
+        const isDashboardTask = typeof subtask === 'object' && subtask.taskId;
+
+
+
+        
+
+
+
+        if (isDashboardTask) {
+
+
+
+            console.log('Cannot edit dashboard task subtask');
+
+
+
+            return; // Don't edit dashboard task subtasks
+
+
+
+        }
+
+
+
+        
+
+
+
+        // Convert string subtasks to objects with XP for priority color coding
+
+
+
+        if (typeof subtask === 'string') {
+
+
+
+            timestamps[index].subtasks[subIndex] = {
+
+
+
+                text: value,
+
+
+
+                xp: 10 // Default XP for user-created subtasks
+
+
+
+            };
+
+
+
+        } else {
+
+
+
+            timestamps[index].subtasks[subIndex].text = value;
+
+
+
+        }
+
+
+
+        
+
+
+
+        // Remove has-subtasks class if all subtasks are empty
+
+
+
+        if (timestamps[index].subtasks.every(st => !st || (typeof st === 'string' ? st.trim() === '' : st.text.trim() === ''))) {
+
+
+
+            timestamps[index].hasSubtasks = false;
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Save to localStorage
+
+
+
+    saveCalendarData();
+
+
+
+}
+
+
+
+
+
+
+
+function checkForConflicts() {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    const timestamps = dateContent[selectedDate].timestamps;
+
+
+
+    
+
+
+
+    // Parse time string to minutes
+
+
+
+    function timeToMinutes(timeStr) {
+
+
+
+        const [hours, minutes] = timeStr.split(':').map(Number);
+
+
+
+        return hours * 60 + minutes;
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Reset all conflict flags
+
+
+
+    timestamps.forEach(section => {
+
+
+
+        section.hasConflict = false;
+
+
+
+    });
+
+
+
+    
+
+
+
+    console.log('Checking conflicts for', timestamps.length, 'sections');
+
+
+
+    
+
+
+
+    // Check if any section has same start and end time
+
+
+
+    timestamps.forEach(section => {
+
+
+
+        if (section.startTime === section.endTime) {
+
+
+
+            section.hasConflict = true;
+
+
+
+            console.log('*** SAME START/END TIME DETECTED ***', section.startTime);
+
+
+
+        }
+
+
+
+    });
+
+
+
+    
+
+
+
+    // Only check for identical timeframes if there are at least 2 sections
+
+
+
+    if (timestamps.length < 2) return;
+
+
+
+    
+
+
+
+    // Check for identical timeframes between different sections
+
+
+
+    for (let i = 0; i < timestamps.length; i++) {
+
+
+
+        for (let j = i + 1; j < timestamps.length; j++) {
+
+
+            
+            const section1 = timestamps[i];
+
+
+
+            const section2 = timestamps[j];
+
+
+
+            
+
+
+
+            const start1 = timeToMinutes(section1.startTime);
+
+
+
+            const end1 = timeToMinutes(section1.endTime);
+
+
+
+            const start2 = timeToMinutes(section2.startTime);
+
+
+
+            const end2 = timeToMinutes(section2.endTime);
+
+
+
+            
+
+
+
+            console.log(`Comparing section ${i} (${section1.startTime}-${section1.endTime}) with section ${j} (${section2.startTime}-${section2.endTime})`);
+
+
+
+            
+
+
+
+            // Only mark as conflict if timeframes are identical (same start AND same end)
+
+
+
+            if (start1 === start2 && end1 === end2) {
+
+
+
+                section1.hasConflict = true;
+
+
+
+                section2.hasConflict = true;
+
+
+
+                console.log('*** IDENTICAL TIMEFRAME DETECTED ***');
+
+
+
+            }
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    console.log('Conflict check complete. Conflicts:', timestamps.map((s, i) => i + ': ' + (s.hasConflict ? 'YES' : 'NO')).join(', '));
+
+
+
+}
+
+
+
+
+
+
+
+function addTaskSection() {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    // Show the modal instead of immediately adding
+
+
+
+    openAddSectionModal();
+
+
+
+}
+
+
+
+
+
+
+
+function openAddSectionModal() {
+
+
+
+    const modal = document.getElementById('addSectionModal');
+
+
+
+    modal.style.display = 'block';
+
+
+
+    
+
+
+
+    // Generate monthly days checkboxes
+
+
+
+    generateMonthlyDays();
+
+
+
+    
+
+
+
+    // Populate time dropdowns
+
+
+
+    populateTimeDropdowns();
+
+
+
+    
+
+
+
+    // Reset form fields
+
+
+
+    document.getElementById('timeframeName').value = '';
+
+
+
+    
+
+
+
+    // Reset time dropdowns to empty (no default time)
+
+
+
+    document.getElementById('startHour').value = '';
+
+
+
+    document.getElementById('startMinute').value = '';
+
+
+
+    document.getElementById('startAmPm').value = 'AM';
+
+
+
+    document.getElementById('endHour').value = '';
+
+
+
+    document.getElementById('endMinute').value = '';
+
+
+
+    document.getElementById('endAmPm').value = 'AM';
+
+
+
+    
+
+
+
+    // Reset recurrence options
+
+
+
+    document.querySelectorAll('input[name="recurrenceType"]').forEach(radio => {
+
+
+
+        radio.checked = (radio.value === 'none');
+
+
+
+    });
+
+
+
+    document.getElementById('weeklyOptions').style.display = 'none';
+
+
+
+    document.getElementById('monthlyOptions').style.display = 'none';
+
+
+
+    
+
+
+
+    // Uncheck all checkboxes
+
+
+
+    document.querySelectorAll('input[name="dayOfWeek"]').forEach(cb => cb.checked = false);
+
+
+
+    document.querySelectorAll('input[name="dayOfMonth"]').forEach(cb => cb.checked = false);
+
+
+
+    
+
+
+
+    // Add event listeners for recurrence type changes
+
+
+
+    document.querySelectorAll('input[name="recurrenceType"]').forEach(radio => {
+
+
+
+        radio.addEventListener('change', handleRecurrenceTypeChange);
+
+
+
+    });
+
+
+
+    
+
+
+
+    // Add event listeners to clear invalid styling on input
+
+
+
+    document.getElementById('timeframeName').addEventListener('input', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+    document.getElementById('startHour').addEventListener('change', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+    document.getElementById('startMinute').addEventListener('change', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+    document.getElementById('endHour').addEventListener('change', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+    document.getElementById('endMinute').addEventListener('change', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+}
+
+
+
+
+
+
+
+function populateTimeDropdowns() {
+
+
+
+    // Populate hour dropdowns (1-12)
+
+
+
+    const startHour = document.getElementById('startHour');
+
+
+
+    const endHour = document.getElementById('endHour');
+
+
+
+    
+
+
+
+    startHour.innerHTML = '';
+
+
+
+    endHour.innerHTML = '';
+
+
+
+    
+
+
+
+    // Add empty option at the beginning
+
+
+
+    startHour.innerHTML += '<option value="">--</option>';
+
+
+
+    endHour.innerHTML += '<option value="">--</option>';
+
+
+
+    
+
+
+
+    for (let i = 1; i <= 12; i++) {
+
+
+
+        const hourStr = i.toString();
+
+
+
+        startHour.innerHTML += `<option value="${hourStr}">${hourStr}</option>`;
+
+
+
+        endHour.innerHTML += `<option value="${hourStr}">${hourStr}</option>`;
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Populate minute dropdowns (00-59)
+
+
+
+    const startMinute = document.getElementById('startMinute');
+
+
+
+    const endMinute = document.getElementById('endMinute');
+
+
+
+    
+
+
+
+    startMinute.innerHTML = '';
+
+
+
+    endMinute.innerHTML = '';
+
+
+
+    
+
+
+
+    // Add empty option at the beginning
+
+
+
+    startMinute.innerHTML += '<option value="">--</option>';
+
+
+
+    endMinute.innerHTML += '<option value="">--</option>';
+
+
+
+    
+
+
+
+    for (let i = 0; i <= 59; i++) {
+
+
+
+        const minuteStr = i.toString().padStart(2, '0');
+
+
+
+        startMinute.innerHTML += `<option value="${minuteStr}">${minuteStr}</option>`;
+
+
+
+        endMinute.innerHTML += `<option value="${minuteStr}">${minuteStr}</option>`;
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function setTimeFrom24Hour(prefix, time24) {
+
+
+
+    const [hours24, minutes] = time24.split(':').map(Number);
+
+
+
+    
+
+
+
+    let hours12 = hours24 % 12;
+
+
+
+    if (hours12 === 0) hours12 = 12;
+
+
+
+    
+
+
+
+    const ampm = hours24 >= 12 ? 'PM' : 'AM';
+
+
+
+    
+
+
+
+    document.getElementById(prefix + 'Hour').value = hours12.toString();
+
+
+
+    document.getElementById(prefix + 'Minute').value = minutes.toString().padStart(2, '0');
+
+
+
+    document.getElementById(prefix + 'AmPm').value = ampm;
+
+
+
+}
+
+
+
+
+
+
+
+function getTimeTo24Hour(prefix) {
+
+
+
+    const hour = parseInt(document.getElementById(prefix + 'Hour').value);
+
+
+
+    const minute = document.getElementById(prefix + 'Minute').value;
+
+
+
+    const ampm = document.getElementById(prefix + 'AmPm').value;
+
+
+
+    
+
+
+
+    let hours24 = hour;
+
+
+
+    if (ampm === 'PM' && hour !== 12) {
+
+
+
+        hours24 += 12;
+
+
+
+    } else if (ampm === 'AM' && hour === 12) {
+
+
+
+        hours24 = 0;
+
+
+
+    }
+
+
+
+    
+
+
+
+    return `${hours24.toString().padStart(2, '0')}:${minute}`;
+
+
+
+}
+
+
+
+
+
+
+
+function closeAddSectionModal() {
+
+
+
+    const modal = document.getElementById('addSectionModal');
+
+
+
+    modal.style.display = 'none';
+
+
+
+}
+
+
+
+
+
+
+
+function handleRecurrenceTypeChange(event) {
+
+
+
+    const recurrenceType = event.target.value;
+
+
+
+    
+
+
+
+    document.getElementById('weeklyOptions').style.display = 'none';
+
+
+
+    document.getElementById('monthlyOptions').style.display = 'none';
+
+
+
+    
+
+
+
+    if (recurrenceType === 'weekly') {
+
+
+
+        document.getElementById('weeklyOptions').style.display = 'block';
+
+
+
+    } else if (recurrenceType === 'monthly') {
+
+
+
+        document.getElementById('monthlyOptions').style.display = 'block';
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function generateMonthlyDays() {
+
+
+
+    const container = document.getElementById('monthlyDaysContainer');
+
+
+
+    container.innerHTML = '';
+
+
+
+    
+
+
+
+    for (let i = 1; i <= 31; i++) {
+
+
+
+        const label = document.createElement('label');
+
+
+
+        label.innerHTML = `<input type="checkbox" name="dayOfMonth" value="${i}"> ${i}`;
+
+
+
+        container.appendChild(label);
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function confirmAddSection() {
+
+
+
+    const timeframeName = document.getElementById('timeframeName').value.trim();
+
+
+
+    const startTime = getTimeTo24Hour('start');
+
+
+
+    const endTime = getTimeTo24Hour('end');
+
+
+
+    const recurrenceType = document.querySelector('input[name="recurrenceType"]:checked').value;
+
+
+
+    
+
+
+
+    // Clear previous invalid styling
+
+
+
+    clearInvalidStyling('add');
+
+
+
+    
+
+
+
+    let isValid = true;
+
+
+
+    
+
+
+
+    console.log('Confirm add section:', { timeframeName, startTime, endTime, recurrenceType, selectedDate });
+
+
+
+    console.log('Current timestamps before add:', dateContent[selectedDate].timestamps);
+
+
+
+    
+
+
+
+    if (!timeframeName) {
+
+
+
+        document.getElementById('timeframeName').classList.add('invalid-input');
+
+
+
+        isValid = false;
+
+
+
+    }
+
+
+
+    
+
+
+
+    if (!startTime || !endTime) {
+
+
+
+        if (!startTime) {
+
+
+
+            document.getElementById('startHour').classList.add('invalid-input');
+
+
+
+            document.getElementById('startMinute').classList.add('invalid-input');
+
+
+
+        }
+
+
+
+        if (!endTime) {
+
+
+
+            document.getElementById('endHour').classList.add('invalid-input');
+
+
+
+            document.getElementById('endMinute').classList.add('invalid-input');
+
+
+
+        }
+
+
+
+        isValid = false;
+
+
+
+    }
+
+
+
+    
+
+
+
+    if (startTime === endTime) {
+
+
+
+        document.getElementById('startHour').classList.add('invalid-input');
+
+
+
+        document.getElementById('startMinute').classList.add('invalid-input');
+
+
+
+        document.getElementById('endHour').classList.add('invalid-input');
+
+
+
+        document.getElementById('endMinute').classList.add('invalid-input');
+
+
+
+        isValid = false;
+
+
+
+    }
+
+
+
+    
+
+
+
+    if (!isValid) return;
+
+
+
+    
+
+
+
+    // Get selected days based on recurrence type
+
+
+
+    let selectedDays = [];
+
+
+
+    if (recurrenceType === 'weekly') {
+
+
+
+        selectedDays = Array.from(document.querySelectorAll('input[name="dayOfWeek"]:checked'))
+
+
+
+            .map(cb => parseInt(cb.value));
+
+
+
+    } else if (recurrenceType === 'monthly') {
+
+
+
+        selectedDays = Array.from(document.querySelectorAll('input[name="dayOfMonth"]:checked'))
+
+
+
+            .map(cb => parseInt(cb.value));
+
+
+
+    }
+
+
+
+    
+
+
+
+    console.log('Selected days for recurrence:', selectedDays);
+
+
+
+    
+
+
+
+    if (recurrenceType !== 'none' && selectedDays.length === 0) {
+
+
+
+        document.getElementById('weeklyOptions').classList.add('invalid-input');
+
+
+
+        document.getElementById('monthlyOptions').classList.add('invalid-input');
+
+
+
+        return;
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Check if selected date matches recurrence pattern
+
+
+
+    const selectedDateParts = selectedDate.split('-').map(Number);
+
+
+
+    const selectedDateObj = new Date(selectedDateParts[0], selectedDateParts[1] - 1, selectedDateParts[2]);
+
+
+
+    let selectedDateMatches = true;
+
+
+
+    
+
+
+
+    if (recurrenceType === 'weekly') {
+
+
+
+        const selectedDayOfWeek = selectedDateObj.getDay();
+
+
+
+        selectedDateMatches = selectedDays.includes(selectedDayOfWeek);
+
+
+
+        console.log('Selected date day of week:', selectedDayOfWeek, 'matches:', selectedDateMatches);
+
+
+
+    } else if (recurrenceType === 'monthly') {
+
+
+
+        const selectedDayOfMonth = selectedDateParts[2];
+
+
+
+        selectedDateMatches = selectedDays.includes(selectedDayOfMonth);
+
+
+
+        console.log('Selected date day of month:', selectedDayOfMonth, 'matches:', selectedDateMatches);
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Add the section to the selected date only if it matches recurrence pattern or if no recurrence
+
+
+
+    const newSection = {
+
+
+
+        startTime: startTime,
+
+
+
+        endTime: endTime,
+
+
+
+        task: timeframeName,
+
+
+
+        recurrence: recurrenceType,
+
+
+
+        recurrenceDays: selectedDays,
+
+
+
+        xp: 10 // Default XP for user-created tasks
+
+
+
+    };
+
+
+
+    
+
+
+
+    if (recurrenceType === 'none' || selectedDateMatches) {
+
+
+
+        dateContent[selectedDate].timestamps.push(newSection);
+
+
+
+        console.log('Added section to selected date');
+
+
+
+    } else {
+
+
+
+        console.log('Did not add section to selected date (does not match recurrence pattern)');
+
+
+
+    }
+
+
+
+    
+
+
+
+    console.log('Current timestamps after push:', dateContent[selectedDate].timestamps);
+
+
+
+    
+
+
+
+    // If recurrence is set, add to other dates
+
+
+
+    if (recurrenceType !== 'none' && selectedDays.length > 0) {
+
+
+
+        console.log('Calling addRecurringSections with:', recurrenceType, selectedDays);
+
+
+
+        addRecurringSections(newSection, recurrenceType, selectedDays);
+
+
+
+    } else {
+
+
+
+        console.log('Not adding recurring sections. recurrenceType:', recurrenceType, 'selectedDays.length:', selectedDays.length);
+
+
+
+    }
+
+
+
+    
+
+
+
+    console.log('Current timestamps after recurrence:', dateContent[selectedDate].timestamps);
+
+
+
+    
+
+
+
+    // Check for conflicts
+
+
+
+    checkForConflicts();
+
+
+
+    
+
+
+
+    // Update the UI
+
+
+
+    updateBottomSection(selectedDate);
+
+
+
+    
+
+
+
+    console.log('Final timestamps after UI update:', dateContent[selectedDate].timestamps);
+
+
+
+    
+
+
+
+    // Save to localStorage
+
+
+
+    saveCalendarData();
+
+
+
+    
+
+
+
+    // Close the modal
+
+
+
+    closeAddSectionModal();
+
+
+
+}
+
+
+
+
+
+
+
+function clearInvalidStyling(modalType) {
+
+
+
+    if (modalType === 'add') {
+
+
+
+        document.getElementById('timeframeName').classList.remove('invalid-input');
+
+
+
+        document.getElementById('startHour').classList.remove('invalid-input');
+
+
+
+        document.getElementById('startMinute').classList.remove('invalid-input');
+
+
+
+        document.getElementById('endHour').classList.remove('invalid-input');
+
+
+
+        document.getElementById('endMinute').classList.remove('invalid-input');
+
+
+
+        document.getElementById('weeklyOptions').classList.remove('invalid-input');
+
+
+
+        document.getElementById('monthlyOptions').classList.remove('invalid-input');
+
+
+
+    } else if (modalType === 'edit') {
+
+
+
+        document.getElementById('editTimeframeName').classList.remove('invalid-input');
+
+
+
+        document.getElementById('editStartHour').classList.remove('invalid-input');
+
+
+
+        document.getElementById('editStartMinute').classList.remove('invalid-input');
+
+
+
+        document.getElementById('editEndHour').classList.remove('invalid-input');
+
+
+
+        document.getElementById('editEndMinute').classList.remove('invalid-input');
+
+
+
+        document.getElementById('editWeeklyOptions').classList.remove('invalid-input');
+
+
+
+        document.getElementById('editMonthlyOptions').classList.remove('invalid-input');
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function addRecurringSections(section, recurrenceType, selectedDays) {
+
+
+
+    const selectedDateParts = selectedDate.split('-').map(Number);
+
+
+
+    const startYear = selectedDateParts[0];
+
+
+
+    const startMonth = selectedDateParts[1];
+
+
+
+    
+
+
+
+    console.log('Adding recurring sections:', { recurrenceType, selectedDays, startYear, startMonth });
+
+
+
+    
+
+
+
+    // Calculate end date (12 months from start)
+
+
+
+    const endDate = new Date(startYear, startMonth - 1 + 12, 0);
+
+
+
+    const endYear = endDate.getFullYear();
+
+
+
+    const endMonth = endDate.getMonth() + 1;
+
+
+
+    
+
+
+
+    console.log('Recurrence period:', { startYear, startMonth, endYear, endMonth });
+
+
+
+    
+
+
+
+    let addedCount = 0;
+
+
+
+    
+
+
+
+    if (recurrenceType === 'weekly') {
+
+
+
+        // Add to all selected days of the week for the next 12 months
+
+
+
+        for (let year = startYear; year <= endYear; year++) {
+
+
+
+            const monthStart = (year === startYear) ? startMonth : 1;
+
+
+
+            const monthEnd = (year === endYear) ? endMonth : 12;
+
+
+
+            
+
+
+
+            for (let month = monthStart; month <= monthEnd; month++) {
+
+
+
+                const daysInMonth = new Date(year, month, 0).getDate();
+
+
+
+                
+
+
+
+                for (let day = 1; day <= daysInMonth; day++) {
+
+
+
+                    const date = new Date(year, month - 1, day);
+
+
+
+                    const dayOfWeek = date.getDay();
+
+
+
+                    
+
+
+
+                    if (selectedDays.includes(dayOfWeek)) {
+
+
+
+                        const dateStr = `${year}-${month}-${day}`;
+
+
+
+                        
+
+
+
+                        // Skip the selected date (it's handled separately)
+
+
+
+                        if (dateStr === selectedDate) {
+
+
+
+                            console.log(`Skipping selected date ${dateStr} in addRecurringSections`);
+
+
+
+                            continue;
+
+
+
+                        }
+
+
+
+                        
+
+
+
+                        // Log existing timestamps before adding
+
+
+
+                        const beforeCount = dateContent[dateStr] ? dateContent[dateStr].timestamps.length : 0;
+
+
+
+                        console.log(`Date ${dateStr} before: ${beforeCount} tasks`);
+
+
+
+                        
+
+
+
+                        if (!dateContent[dateStr]) {
+
+
+
+                            // Generate default timestamps (placeholder timeframes) for new dates
+
+
+
+                            const timestamps = generateDefaultTimestamps();
+
+
+
+                            dateContent[dateStr] = { timestamps: timestamps };
+
+
+
+                        }
+
+
+
+                        
+
+
+
+                        // Check if section already exists
+
+
+
+                        const exists = dateContent[dateStr].timestamps.some(
+
+
+
+                            ts => ts.startTime === section.startTime && 
+
+
+
+                                  ts.endTime === section.endTime && 
+
+
+
+                                  ts.task === section.task
+
+
+
+                        );
+
+
+
+                        
+
+
+
+                        if (!exists) {
+
+
+
+                            // Preserve existing timestamps (including placeholder timeframes)
+
+
+
+                            const existingTimestamps = dateContent[dateStr].timestamps;
+
+
+
+                            dateContent[dateStr].timestamps = existingTimestamps;
+
+
+
+                            
+
+
+
+                            dateContent[dateStr].timestamps.push({
+
+
+
+                                ...section,
+
+
+
+                                recurrence: 'weekly',
+
+
+
+                                recurrenceDays: selectedDays
+
+
+
+                            });
+
+
+
+                            console.log('Added weekly recurring section to:', dateStr);
+
+
+
+                            addedCount++;
+
+
+
+                            
+
+
+
+                            // Log after adding
+
+
+
+                            const afterCount = dateContent[dateStr].timestamps.length;
+
+
+
+                            console.log(`Date ${dateStr} after: ${afterCount} tasks`);
+
+
+
+                        }
+
+
+
+                    }
+
+
+
+                }
+
+
+
+            }
+
+
+
+        }
+
+
+
+    } else if (recurrenceType === 'monthly') {
+
+
+
+        // Add to selected days of the month for the next 12 months
+
+
+
+        for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
+
+
+
+            const targetDate = new Date(startYear, startMonth - 1 + monthOffset, 1);
+
+
+
+            const year = targetDate.getFullYear();
+
+
+
+            const month = targetDate.getMonth() + 1;
+
+
+
+            
+
+
+
+            selectedDays.forEach(day => {
+
+
+
+                const daysInMonth = new Date(year, month, 0).getDate();
+
+
+
+                if (day <= daysInMonth) {
+
+
+
+                    const dateStr = `${year}-${month}-${day}`;
+
+
+
+                    
+
+
+
+                    // Skip the selected date (it's handled separately)
+
+
+
+                    if (dateStr === selectedDate) {
+
+
+
+                        console.log(`Skipping selected date ${dateStr} in addRecurringSections`);
+
+
+
+                        return;
+
+
+
+                    }
+
+
+
+                    
+
+
+
+                    // Log existing timestamps before adding
+
+
+
+                    const beforeCount = dateContent[dateStr] ? dateContent[dateStr].timestamps.length : 0;
+
+
+
+                    console.log(`Date ${dateStr} before: ${beforeCount} tasks`);
+
+
+
+                    
+
+
+
+                    if (!dateContent[dateStr]) {
+
+
+
+                        // Generate default timestamps (placeholder timeframes) for new dates
+
+
+
+                        const timestamps = generateDefaultTimestamps();
+
+
+
+                        dateContent[dateStr] = { timestamps: timestamps };
+
+
+
+                    }
+
+
+
+                    
+
+
+
+                    // Check if section already exists
+
+
+
+                    const exists = dateContent[dateStr].timestamps.some(
+
+
+
+                        ts => ts.startTime === section.startTime && 
+
+
+
+                              ts.endTime === section.endTime && 
+
+
+
+                              ts.task === section.task
+
+
+
+                    );
+
+
+
+                    
+
+
+
+                    if (!exists) {
+
+
+
+                        // Preserve existing timestamps (including placeholder timeframes)
+
+
+
+                        const existingTimestamps = dateContent[dateStr].timestamps;
+
+
+
+                        dateContent[dateStr].timestamps = existingTimestamps;
+
+
+
+                        
+
+
+
+                        dateContent[dateStr].timestamps.push({
+
+
+
+                            ...section,
+
+
+
+                            recurrence: 'monthly',
+
+
+
+                            recurrenceDays: selectedDays
+
+
+
+                        });
+
+
+
+                        console.log('Added monthly recurring section to:', dateStr);
+
+
+
+                        addedCount++;
+
+
+
+                        
+
+
+
+                        // Log after adding
+
+
+
+                        const afterCount = dateContent[dateStr].timestamps.length;
+
+
+
+                        console.log(`Date ${dateStr} after: ${afterCount} tasks`);
+
+
+
+                    }
+
+
+
+                }
+
+
+
+            });
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    console.log('Finished adding recurring sections. Total added:', addedCount);
+
+
+
+    console.log('Total dates in dateContent:', Object.keys(dateContent).length);
+
+
+
+}
+
+
+
+
+
+
+
+function removeTaskSection(index) {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    // Only remove the task from the selected date, not from recurring dates
+
+
+
+    dateContent[selectedDate].timestamps.splice(index, 1);
+
+
+
+    
+
+
+
+    // Check for conflicts
+
+
+
+    checkForConflicts();
+
+
+
+    
+
+
+
+    updateBottomSection(selectedDate);
+
+
+
+    
+
+
+
+    // Save to localStorage
+
+
+
+    saveCalendarData();
+
+
+
+}
+
+
+
+
+
+
+
+let editingSectionIndex = null;
+
+
+
+let deletingSectionIndex = null;
+
+
+
+
+
+
+
+function editTaskSection(index) {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    editingSectionIndex = index;
+
+
+
+    const section = dateContent[selectedDate].timestamps[index];
+
+
+
+    
+
+
+
+    // Open edit modal
+
+
+
+    openEditSectionModal(section);
+
+
+
+}
+
+
+
+
+
+
+
+function removeTaskSection(index) {
+
+
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    deletingSectionIndex = index;
+
+
+
+    const section = dateContent[selectedDate].timestamps[index];
+
+
+
+    
+
+
+
+    // Open delete modal
+
+
+
+    openDeleteModal(section);
+
+
+
+}
+
+
+
+
+
+
+
+function openDeleteModal(section) {
+
+
+
+    const modal = document.getElementById('deleteModal');
+
+
+
+    modal.style.display = 'block';
+
+
+
+    
+
+
+
+    // Check if this is a placeholder task
+
+
+
+    const isPlaceholder = isPlaceholderTask(section.task);
+
+
+
+    
+
+
+
+    // Hide all options first
+
+
+
+    document.getElementById('placeholderDeleteOptions').style.display = 'none';
+
+
+
+    document.getElementById('timePeriodOptions').style.display = 'none';
+
+
+
+    document.getElementById('customDeleteOptions').style.display = 'none';
+
+
+
+    document.getElementById('recurrenceDeleteOptions').style.display = 'none';
+
+
+
+    document.getElementById('datesDeleteOptions').style.display = 'none';
+
+
+
+    document.getElementById('daysDeleteOptions').style.display = 'none';
+
+
+
+    
+
+
+
+    if (isPlaceholder) {
+
+
+
+        // Show placeholder delete options
+
+
+
+        document.getElementById('deleteModalTitle').textContent = 'Delete Placeholder Task';
+
+
+
+        document.getElementById('placeholderDeleteOptions').style.display = 'block';
+
+
+
+        
+
+
+
+        // Reset placeholder delete options
+
+
+
+        document.querySelector('input[name="placeholderDeleteOption"][value="permanent"]').checked = true;
+
+
+
+        document.getElementById('timePeriodOptions').style.display = 'none';
+
+
+
+        document.getElementById('placeholderRecurrenceOptions').style.display = 'none';
+
+
+
+        document.getElementById('placeholderDatesOptions').style.display = 'none';
+
+
+
+        document.getElementById('placeholderDaysOptions').style.display = 'none';
+
+
+
+        
+
+
+
+        // Uncheck all checkboxes
+
+
+
+        document.querySelectorAll('input[name="placeholderDeleteDayOfWeek"]').forEach(cb => cb.checked = false);
+
+
+
+        
+
+
+
+        // Add event listener for placeholder delete option change
+
+
+
+        document.querySelectorAll('input[name="placeholderDeleteOption"]').forEach(radio => {
+
+
+
+            radio.removeEventListener('change', handlePlaceholderDeleteOptionChange);
+
+
+
+            radio.addEventListener('change', handlePlaceholderDeleteOptionChange);
+
+
+
+        });
+
+
+
+        
+
+
+
+        // Add event listeners for placeholder recurrence type changes
+
+
+
+        document.querySelectorAll('input[name="placeholderRecurrenceType"]').forEach(radio => {
+
+
+
+            radio.removeEventListener('change', handlePlaceholderRecurrenceTypeChange);
+
+
+
+            radio.addEventListener('change', handlePlaceholderRecurrenceTypeChange);
+
+
+
+        });
+
+
+
+        
+
+
+
+        // Generate placeholder dates for deletion
+
+
+
+        generatePlaceholderDates(section);
+
+
+
+    } else {
+
+
+
+        // Show custom task delete options
+
+
+
+        document.getElementById('deleteModalTitle').textContent = 'Delete Task';
+
+
+
+        document.getElementById('customDeleteOptions').style.display = 'block';
+
+
+
+        
+
+
+
+        // Reset form
+
+
+
+        document.querySelector('input[name="deleteOption"][value="individual"]').checked = true;
+
+
+
+        document.getElementById('recurrenceDeleteOptions').style.display = 'none';
+
+
+
+        document.getElementById('datesDeleteOptions').style.display = 'none';
+
+
+
+        document.getElementById('daysDeleteOptions').style.display = 'none';
+
+
+
+        
+
+
+
+        // Uncheck all checkboxes
+
+
+
+        document.querySelectorAll('input[name="deleteDayOfWeek"]').forEach(cb => cb.checked = false);
+
+
+
+        
+
+
+
+        // Add event listeners for delete option changes
+
+
+
+        document.querySelectorAll('input[name="deleteOption"]').forEach(radio => {
+
+
+
+            radio.removeEventListener('change', handleDeleteOptionChange);
+
+
+
+            radio.addEventListener('change', handleDeleteOptionChange);
+
+
+
+        });
+
+
+
+        
+
+
+
+        // Add event listeners for recurrence delete type changes
+
+
+
+        document.querySelectorAll('input[name="recurrenceDeleteType"]').forEach(radio => {
+
+
+
+            radio.removeEventListener('change', handleRecurrenceDeleteTypeChange);
+
+
+
+            radio.addEventListener('change', handleRecurrenceDeleteTypeChange);
+
+
+
+        });
+
+
+
+        
+
+
+
+        // Generate dates for deletion if the section has recurrence
+
+
+
+        if (section.recurrence && section.recurrence !== 'none') {
+
+
+
+            generateDeleteDates(section);
+
+
+
+        }
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function closeDeleteModal() {
+
+
+
+    const modal = document.getElementById('deleteModal');
+
+
+
+    modal.style.display = 'none';
+
+
+
+    deletingSectionIndex = null;
+
+
+
+}
+
+
+
+
+
+
+
+function handleDeleteOptionChange(event) {
+
+
+
+    const deleteOption = event.target.value;
+
+
+
+    
+
+
+
+    if (deleteOption === 'individual') {
+
+
+
+        document.getElementById('recurrenceDeleteOptions').style.display = 'none';
+
+
+
+        document.getElementById('datesDeleteOptions').style.display = 'none';
+
+
+
+        document.getElementById('daysDeleteOptions').style.display = 'none';
+
+
+
+    } else if (deleteOption === 'recurrences') {
+
+
+
+        document.getElementById('recurrenceDeleteOptions').style.display = 'block';
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function handleRecurrenceDeleteTypeChange(event) {
+
+
+
+    const recurrenceDeleteType = event.target.value;
+
+
+
+    
+
+
+
+    if (recurrenceDeleteType === 'dates') {
+
+
+
+        document.getElementById('datesDeleteOptions').style.display = 'block';
+
+
+
+        document.getElementById('daysDeleteOptions').style.display = 'none';
+
+
+
+    } else if (recurrenceDeleteType === 'days') {
+
+
+
+        document.getElementById('datesDeleteOptions').style.display = 'none';
+
+
+
+        document.getElementById('daysDeleteOptions').style.display = 'block';
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function handlePlaceholderDeleteOptionChange(event) {
+
+
+
+    const deleteOption = event.target.value;
+
+
+
+    
+
+
+
+    document.getElementById('timePeriodOptions').style.display = 'none';
+
+
+
+    document.getElementById('placeholderRecurrenceOptions').style.display = 'none';
+
+
+
+    document.getElementById('placeholderDatesOptions').style.display = 'none';
+
+
+
+    document.getElementById('placeholderDaysOptions').style.display = 'none';
+
+
+
+    
+
+
+
+    if (deleteOption === 'permanent') {
+
+
+
+        // No additional options needed
+
+
+
+    } else if (deleteOption === 'temporary') {
+
+
+
+        document.getElementById('timePeriodOptions').style.display = 'block';
+
+
+
+    } else if (deleteOption === 'recurrences') {
+
+
+
+        document.getElementById('placeholderRecurrenceOptions').style.display = 'block';
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function handlePlaceholderRecurrenceTypeChange(event) {
+
+
+
+    const recurrenceType = event.target.value;
+
+
+
+    
+
+
+
+    if (recurrenceType === 'dates') {
+
+
+
+        document.getElementById('placeholderDatesOptions').style.display = 'block';
+
+
+
+        document.getElementById('placeholderDaysOptions').style.display = 'none';
+
+
+
+    } else if (recurrenceType === 'days') {
+
+
+
+        document.getElementById('placeholderDatesOptions').style.display = 'none';
+
+
+
+        document.getElementById('placeholderDaysOptions').style.display = 'block';
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function deletePlaceholderTaskPermanently(section) {
+
+
+
+    // Add to permanently deleted list
+
+
+
+    if (!hiddenPlaceholderTasks.permanentlyDeleted.includes(section.task)) {
+
+
+
+        hiddenPlaceholderTasks.permanentlyDeleted.push(section.task);
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Remove from all existing dates
+
+
+
+    Object.keys(dateContent).forEach(dateStr => {
+
+
+
+        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+            dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(
+
+
+
+                ts => !(ts.task === section.task &&
+
+
+
+                       ts.startTime === section.startTime &&
+
+
+
+                       ts.endTime === section.endTime)
+
+
+
+            );
+
+
+
+        }
+
+
+
+    });
+
+
+
+    console.log('Deleted placeholder task permanently:', section.task);
+
+
+
+}
+
+
+
+
+
+
+
+function deletePlaceholderTaskForPeriod(section, months) {
+
+
+
+    // Add time period deletion rule
+
+
+
+    const selectedDateParts = selectedDate.split('-').map(Number);
+
+
+
+    const startDate = new Date(selectedDateParts[0], selectedDateParts[1] - 1, selectedDateParts[2]);
+
+
+
+    const endDate = new Date(startDate);
+
+
+
+    endDate.setMonth(endDate.getMonth() + months);
+
+
+
+    
+
+
+
+    // Remove existing time period deletion for this task if any
+
+
+
+    hiddenPlaceholderTasks.timePeriodDeletions = hiddenPlaceholderTasks.timePeriodDeletions.filter(
+
+
+
+        d => d.task !== section.task
+
+
+
+    );
+
+
+
+    
+
+
+
+    // Add new time period deletion rule
+
+
+
+    hiddenPlaceholderTasks.timePeriodDeletions.push({
+
+
+
+        task: section.task,
+
+
+
+        startDate: startDate.toISOString().split('T')[0],
+
+
+
+        endDate: endDate.toISOString().split('T')[0]
+
+
+
+    });
+
+
+
+    
+
+
+
+    // Remove from all existing dates within the time period
+
+
+
+    Object.keys(dateContent).forEach(dateStr => {
+
+
+
+        const dateParts = dateStr.split('-').map(Number);
+
+
+
+        const currentDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+
+
+
+        
+
+
+
+        // Check if this date is within the time period
+
+
+
+        if (currentDate >= startDate && currentDate <= endDate) {
+
+
+
+            if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+                dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(
+
+
+
+                    ts => !(ts.task === section.task &&
+
+
+
+                           ts.startTime === section.startTime &&
+
+
+
+                           ts.endTime === section.endTime)
+
+
+
+                );
+
+
+
+                console.log('Deleted placeholder task from:', dateStr);
+
+
+
+            }
+
+
+
+        }
+
+
+
+    });
+
+
+
+    console.log('Deleted placeholder task for', months, 'months:', section.task);
+
+
+
+}
+
+
+
+
+
+
+
+function generatePlaceholderDates(section) {
+
+
+
+    const container = document.getElementById('placeholderDatesContainer');
+
+
+
+    container.innerHTML = '';
+
+
+
+    
+
+
+
+    // Generate days 1-31
+
+
+
+    for (let i = 1; i <= 31; i++) {
+
+
+
+        const label = document.createElement('label');
+
+
+
+        label.innerHTML = `<input type="checkbox" name="placeholderDeleteDate" value="${i}"> ${i}`;
+
+
+
+        container.appendChild(label);
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function generateDeleteDates(section) {
+
+
+
+    const container = document.getElementById('datesDeleteContainer');
+
+
+
+    container.innerHTML = '';
+
+
+
+    
+
+
+
+    // Generate days 1-31
+
+
+
+    for (let i = 1; i <= 31; i++) {
+
+
+
+        const label = document.createElement('label');
+
+
+
+        label.innerHTML = `<input type="checkbox" name="deleteDate" value="${i}"> ${i}`;
+
+
+
+        container.appendChild(label);
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+let deleteConfirmed = false;
+
+
+
+
+
+
+
+function confirmDelete() {
+
+
+
+    deleteConfirmed = true;
+
+
+
+    alert('Delete confirmed. Click "Done" to complete the deletion.');
+
+
+
+}
+
+
+
+
+
+
+
+function doneDelete() {
+
+
+
+    if (deletingSectionIndex === null || !selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    const section = dateContent[selectedDate].timestamps[deletingSectionIndex];
+
+
+
+    const isPlaceholder = isPlaceholderTask(section.task);
+
+
+
+    
+
+
+
+    if (isPlaceholder) {
+
+
+
+        // Handle placeholder task deletion
+
+
+
+        const placeholderDeleteOption = document.querySelector('input[name="placeholderDeleteOption"]:checked').value;
+
+
+
+        
+
+
+
+        if (placeholderDeleteOption === 'permanent') {
+
+
+
+            // Delete permanently from all dates
+
+
+
+            deletePlaceholderTaskPermanently(section);
+
+
+
+        } else if (placeholderDeleteOption === 'temporary') {
+
+
+
+            // Delete for a specific time period
+
+
+
+            const timePeriod = parseInt(document.querySelector('input[name="timePeriod"]:checked').value);
+
+
+
+            deletePlaceholderTaskForPeriod(section, timePeriod);
+
+
+
+        } else if (placeholderDeleteOption === 'recurrences') {
+
+
+
+            // Handle recurrence deletion for placeholder tasks
+
+
+
+            const placeholderRecurrenceType = document.querySelector('input[name="placeholderRecurrenceType"]:checked').value;
+
+
+
+            
+
+
+
+            if (placeholderRecurrenceType === 'dates') {
+
+
+
+                // Delete from specific days of month
+
+
+
+                const selectedDays = Array.from(document.querySelectorAll('input[name="placeholderDeleteDate"]:checked'))
+
+
+
+                    .map(cb => parseInt(cb.value));
+
+
+
+                
+
+
+
+                // Remove existing day of month deletion for this task if any
+
+
+
+                hiddenPlaceholderTasks.dayOfMonthDeletions = hiddenPlaceholderTasks.dayOfMonthDeletions.filter(
+
+
+
+                    d => d.task !== section.task
+
+
+
+                );
+
+
+
+                
+
+
+
+                // Add new day of month deletion rule
+
+
+
+                hiddenPlaceholderTasks.dayOfMonthDeletions.push({
+
+
+
+                    task: section.task,
+
+
+
+                    days: selectedDays
+
+
+
+                });
+
+
+
+                
+
+
+
+                // Remove from all existing dates that match the selected days
+
+
+
+                Object.keys(dateContent).forEach(dateStr => {
+
+
+
+                    const dateParts = dateStr.split('-').map(Number);
+
+
+
+                    const dayOfMonth = dateParts[2];
+
+
+
+                    
+
+
+
+                    if (selectedDays.includes(dayOfMonth)) {
+
+
+
+                        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+                            dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(
+
+
+
+                                ts => !(ts.task === section.task &&
+
+
+
+                                       ts.startTime === section.startTime &&
+
+
+
+                                       ts.endTime === section.endTime)
+
+
+
+                            );
+
+
+
+                            console.log('Deleted placeholder task from:', dateStr);
+
+
+
+                        }
+
+
+
+                    }
+
+
+
+                });
+
+
+
+            } else if (placeholderRecurrenceType === 'days') {
+
+
+
+                // Delete from specific days of week
+
+
+
+                const selectedDays = Array.from(document.querySelectorAll('input[name="placeholderDeleteDayOfWeek"]:checked'))
+
+
+
+                    .map(cb => parseInt(cb.value));
+
+
+
+                
+
+
+
+                // Remove existing day of week deletion for this task if any
+
+
+
+                hiddenPlaceholderTasks.dayOfWeekDeletions = hiddenPlaceholderTasks.dayOfWeekDeletions.filter(
+
+
+
+                    d => d.task !== section.task
+
+
+
+                );
+
+
+
+                
+
+
+
+                // Add new day of week deletion rule
+
+
+
+                hiddenPlaceholderTasks.dayOfWeekDeletions.push({
+
+
+
+                    task: section.task,
+
+
+
+                    days: selectedDays
+
+
+
+                });
+
+
+
+                
+
+
+
+                // Remove from all existing dates that match the selected days
+
+
+
+                Object.keys(dateContent).forEach(dateStr => {
+
+
+
+                    if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+                        const dateParts = dateStr.split('-').map(Number);
+
+
+
+                        const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+
+
+
+                        const dayOfWeek = date.getDay();
+
+
+
+                        
+
+
+
+                        if (selectedDays.includes(dayOfWeek)) {
+
+
+
+                            dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(
+
+
+
+                                ts => !(ts.task === section.task &&
+
+
+
+                                       ts.startTime === section.startTime &&
+
+
+
+                                       ts.endTime === section.endTime)
+
+
+
+                            );
+
+
+
+                            console.log('Deleted placeholder task from:', dateStr);
+
+
+
+                        }
+
+
+
+                    }
+
+
+
+                });
+
+
+
+            }
+
+
+
+        }
+
+
+
+    } else {
+
+
+
+        // Handle custom task deletion
+
+
+
+        const deleteOption = document.querySelector('input[name="deleteOption"]:checked').value;
+
+
+
+        
+
+
+
+        if (deleteOption === 'individual') {
+
+
+
+            // Delete only the individual task on this date
+
+
+
+            dateContent[selectedDate].timestamps.splice(deletingSectionIndex, 1);
+
+
+
+        } else if (deleteOption === 'recurrences') {
+
+
+
+            const recurrenceDeleteType = document.querySelector('input[name="recurrenceDeleteType"]:checked').value;
+
+
+
+            
+
+
+
+            if (recurrenceDeleteType === 'dates') {
+
+
+
+                // Delete from specific days of month
+
+
+
+                const selectedDays = Array.from(document.querySelectorAll('input[name="deleteDate"]:checked'))
+
+
+
+                    .map(cb => parseInt(cb.value));
+
+
+
+                
+
+
+
+                // Get the selected date to determine the starting point
+
+
+
+                const selectedDateParts = selectedDate.split('-').map(Number);
+
+
+
+                const startDate = new Date(selectedDateParts[0], selectedDateParts[1] - 1, selectedDateParts[2]);
+
+
+
+                
+
+
+
+                // Delete from the next 12 months
+
+
+
+                for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
+
+
+
+                    const targetDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthOffset, 1);
+
+
+
+                    const year = targetDate.getFullYear();
+
+
+
+                    const month = targetDate.getMonth() + 1;
+
+
+
+                    const daysInMonth = new Date(year, month, 0).getDate();
+
+
+
+                    
+
+
+
+                    selectedDays.forEach(day => {
+
+
+
+                        // Only delete if the day exists in this month
+
+
+
+                        if (day <= daysInMonth) {
+
+
+
+                            const dateStr = `${year}-${month}-${day}`;
+
+
+
+                            
+
+
+
+                            if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+                                dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(
+
+
+
+                                    ts => !(ts.task === section.task &&
+
+
+
+                                           ts.startTime === section.startTime &&
+
+
+
+                                           ts.endTime === section.endTime)
+
+
+
+                                );
+
+
+
+                            }
+
+
+
+                        }
+
+
+
+                    });
+
+
+
+                }
+
+
+
+            } else if (recurrenceDeleteType === 'days') {
+
+
+
+                // Delete from specific days of week
+
+
+
+                const selectedDays = Array.from(document.querySelectorAll('input[name="deleteDayOfWeek"]:checked'))
+
+
+
+                    .map(cb => parseInt(cb.value));
+
+
+
+                
+
+
+
+                Object.keys(dateContent).forEach(dateStr => {
+
+
+
+                    if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+                        const dateParts = dateStr.split('-').map(Number);
+
+
+
+                        const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+
+
+
+                        const dayOfWeek = date.getDay();
+
+
+
+                        
+
+
+
+                        if (selectedDays.includes(dayOfWeek)) {
+
+
+
+                            dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(
+
+
+
+                                ts => !(ts.task === section.task && 
+
+
+
+                                       ts.startTime === section.startTime && 
+
+
+
+                                       ts.endTime === section.endTime)
+
+
+
+                            );
+
+
+
+                        }
+
+
+
+                    }
+
+
+
+                });
+
+
+
+            }
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Check for conflicts
+
+
+
+    checkForConflicts();
+
+
+
+    
+
+
+
+    // Update the UI
+
+
+
+    updateBottomSection(selectedDate);
+
+
+
+    
+
+
+
+    // Save to localStorage
+
+
+
+    saveCalendarData();
+
+
+
+    
+
+
+
+    // Close the modal
+
+
+
+    closeDeleteModal();
+
+
+
+}
+
+
+
+
+
+
+
+function openEditSectionModal(section) {
+
+
+
+    const modal = document.getElementById('editSectionModal');
+
+
+
+    modal.style.display = 'block';
+
+
+
+    
+
+
+
+    // Populate time dropdowns
+
+
+
+    populateEditTimeDropdowns();
+
+
+
+    
+
+
+
+    // Generate monthly days checkboxes
+
+
+
+    generateEditMonthlyDays();
+
+
+
+    
+
+
+
+    // Set form values
+
+
+
+    document.getElementById('editTimeframeName').value = section.task;
+
+
+
+    setTimeFrom24HourEdit('editStart', section.startTime);
+
+
+
+    setTimeFrom24HourEdit('editEnd', section.endTime);
+
+
+
+    
+
+
+
+    // Set recurrence type
+
+
+
+    const recurrenceType = section.recurrence || 'none';
+
+
+
+    document.querySelectorAll('input[name="editRecurrenceType"]').forEach(radio => {
+
+
+
+        radio.checked = (radio.value === recurrenceType);
+
+
+
+    });
+
+
+
+    
+
+
+
+    // Show/hide recurrence options
+
+
+
+    document.getElementById('editWeeklyOptions').style.display = 'none';
+
+
+
+    document.getElementById('editMonthlyOptions').style.display = 'none';
+
+
+
+    
+
+
+
+    if (recurrenceType === 'weekly') {
+
+
+
+        document.getElementById('editWeeklyOptions').style.display = 'block';
+
+
+
+        // Check selected days of week
+
+
+
+        if (section.recurrenceDays && section.recurrenceDays.length > 0) {
+
+
+
+            document.querySelectorAll('input[name="editDayOfWeek"]').forEach(cb => {
+
+
+
+                cb.checked = section.recurrenceDays.includes(parseInt(cb.value));
+
+
+
+            });
+
+
+
+        }
+
+
+
+    } else if (recurrenceType === 'monthly') {
+
+
+
+        document.getElementById('editMonthlyOptions').style.display = 'block';
+
+
+
+        // Check selected days of month
+
+
+
+        if (section.recurrenceDays && section.recurrenceDays.length > 0) {
+
+
+
+            document.querySelectorAll('input[name="editDayOfMonth"]').forEach(cb => {
+
+
+
+                cb.checked = section.recurrenceDays.includes(parseInt(cb.value));
+
+
+
+            });
+
+
+
+        }
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Uncheck all checkboxes if no recurrence
+
+
+
+    if (recurrenceType === 'none') {
+
+
+
+        document.querySelectorAll('input[name="editDayOfWeek"]').forEach(cb => cb.checked = false);
+
+
+
+        document.querySelectorAll('input[name="editDayOfMonth"]').forEach(cb => cb.checked = false);
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Add event listeners for recurrence type changes
+
+
+
+    document.querySelectorAll('input[name="editRecurrenceType"]').forEach(radio => {
+
+
+
+        radio.addEventListener('change', handleEditRecurrenceTypeChange);
+
+
+
+    });
+
+
+
+    
+
+
+
+    // Add event listeners to clear invalid styling on input
+
+
+
+    document.getElementById('editTimeframeName').addEventListener('input', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+    document.getElementById('editStartHour').addEventListener('change', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+    document.getElementById('editStartMinute').addEventListener('change', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+    document.getElementById('editEndHour').addEventListener('change', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+    document.getElementById('editEndMinute').addEventListener('change', function() {
+
+
+
+        this.classList.remove('invalid-input');
+
+
+
+    });
+
+
+
+}
+
+
+
+
+
+
+
+function closeEditSectionModal() {
+
+
+
+    const modal = document.getElementById('editSectionModal');
+
+
+
+    modal.style.display = 'none';
+
+
+
+    editingSectionIndex = null;
+
+
+
+}
+
+
+
+
+
+
+
+function generateEditMonthlyDays() {
+
+
+
+    const container = document.getElementById('editMonthlyDaysContainer');
+
+
+
+    container.innerHTML = '';
+
+
+
+    
+
+
+
+    for (let i = 1; i <= 31; i++) {
+
+
+
+        const label = document.createElement('label');
+
+
+
+        label.innerHTML = `<input type="checkbox" name="editDayOfMonth" value="${i}"> ${i}`;
+
+
+
+        container.appendChild(label);
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function handleEditRecurrenceTypeChange(event) {
+
+
+
+    const recurrenceType = event.target.value;
+
+
+
+    
+
+
+
+    document.getElementById('editWeeklyOptions').style.display = 'none';
+
+
+
+    document.getElementById('editMonthlyOptions').style.display = 'none';
+
+
+
+    
+
+
+
+    if (recurrenceType === 'weekly') {
+
+
+
+        document.getElementById('editWeeklyOptions').style.display = 'block';
+
+
+
+    } else if (recurrenceType === 'monthly') {
+
+
+
+        document.getElementById('editMonthlyOptions').style.display = 'block';
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function populateEditTimeDropdowns() {
+
+
+
+    // Populate hour dropdowns (1-12)
+
+
+
+    const editStartHour = document.getElementById('editStartHour');
+
+
+
+    const editEndHour = document.getElementById('editEndHour');
+
+
+
+    
+
+
+
+    editStartHour.innerHTML = '';
+
+
+
+    editEndHour.innerHTML = '';
+
+
+
+    
+
+
+
+    // Add empty option at the beginning
+
+
+
+    editStartHour.innerHTML += '<option value="">--</option>';
+
+
+
+    editEndHour.innerHTML += '<option value="">--</option>';
+
+
+
+    
+
+
+
+    for (let i = 1; i <= 12; i++) {
+
+
+
+        const hourStr = i.toString();
+
+
+
+        editStartHour.innerHTML += `<option value="${hourStr}">${hourStr}</option>`;
+
+
+
+        editEndHour.innerHTML += `<option value="${hourStr}">${hourStr}</option>`;
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Populate minute dropdowns (00-59)
+
+
+
+    const editStartMinute = document.getElementById('editStartMinute');
+
+
+
+    const editEndMinute = document.getElementById('editEndMinute');
+
+
+
+    
+
+
+
+    editStartMinute.innerHTML = '';
+
+
+
+    editEndMinute.innerHTML = '';
+
+
+
+    
+
+
+
+    // Add empty option at the beginning
+
+
+
+    editStartMinute.innerHTML += '<option value="">--</option>';
+
+
+
+    editEndMinute.innerHTML += '<option value="">--</option>';
+
+
+
+    
+
+
+
+    for (let i = 0; i <= 59; i++) {
+
+
+
+        const minuteStr = i.toString().padStart(2, '0');
+
+
+
+        editStartMinute.innerHTML += `<option value="${minuteStr}">${minuteStr}</option>`;
+
+
+
+        editEndMinute.innerHTML += `<option value="${minuteStr}">${minuteStr}</option>`;
+
+
+
+    }
+
+
+
+}
+
+
+
+
+
+
+
+function setTimeFrom24HourEdit(prefix, time24) {
+
+
+
+    const [hours24, minutes] = time24.split(':').map(Number);
+
+
+
+    
+
+
+
+    let hours12 = hours24 % 12;
+
+
+
+    if (hours12 === 0) hours12 = 12;
+
+
+
+    
+
+
+
+    const ampm = hours24 >= 12 ? 'PM' : 'AM';
+
+
+
+    
+
+
+
+    document.getElementById(prefix + 'Hour').value = hours12.toString();
+
+
+
+    document.getElementById(prefix + 'Minute').value = minutes.toString().padStart(2, '0');
+
+
+
+    document.getElementById(prefix + 'AmPm').value = ampm;
+
+
+
+}
+
+
+
+
+
+
+
+function getTimeTo24HourEdit(prefix) {
+
+
+
+    const hour = parseInt(document.getElementById(prefix + 'Hour').value);
+
+
+
+    const minute = document.getElementById(prefix + 'Minute').value;
+
+
+
+    const ampm = document.getElementById(prefix + 'AmPm').value;
+
+
+
+    
+
+
+
+    let hours24 = hour;
+
+
+
+    if (ampm === 'PM' && hour !== 12) {
+
+
+
+        hours24 += 12;
+
+
+
+    } else if (ampm === 'AM' && hour === 12) {
+
+
+
+        hours24 = 0;
+
+
+
+    }
+
+
+
+    
+
+
+
+    return `${hours24.toString().padStart(2, '0')}:${minute}`;
+
+
+
+}
+
+
+
+
+
+
+
+function confirmEditSection() {
+
+
+
+    if (editingSectionIndex === null || !selectedDate || !dateContent[selectedDate]) return;
+
+
+
+    
+
+
+
+    const timeframeName = document.getElementById('editTimeframeName').value.trim();
+
+
+
+    const startTime = getTimeTo24HourEdit('editStart');
+
+
+
+    const endTime = getTimeTo24HourEdit('editEnd');
+
+
+
+    const recurrenceType = document.querySelector('input[name="editRecurrenceType"]:checked').value;
+
+
+
+    
+
+
+
+    // Clear previous invalid styling
+
+
+
+    clearInvalidStyling('edit');
+
+
+
+    
+
+
+
+    let isValid = true;
+
+
+
+    
+
+
+
+    console.log('Confirm edit section:', { timeframeName, startTime, endTime, recurrenceType, selectedDate, editingSectionIndex });
+
+
+
+    console.log('Current timestamps before edit:', dateContent[selectedDate].timestamps);
+
+
+
+    
+
+
+
+    if (!timeframeName) {
+
+
+
+        document.getElementById('editTimeframeName').classList.add('invalid-input');
+
+
+
+        isValid = false;
+
+
+
+    }
+
+
+
+    
+
+
+
+    if (!startTime || !endTime) {
+
+
+
+        if (!startTime) {
+
+
+
+            document.getElementById('editStartHour').classList.add('invalid-input');
+
+
+
+            document.getElementById('editStartMinute').classList.add('invalid-input');
+
+
+
+        }
+
+
+
+        if (!endTime) {
+
+
+
+            document.getElementById('editEndHour').classList.add('invalid-input');
+
+
+
+            document.getElementById('editEndMinute').classList.add('invalid-input');
+
+
+
+        }
+
+
+
+        isValid = false;
+
+
+
+    }
+
+
+
+    
+
+
+
+    if (startTime === endTime) {
+
+
+
+        document.getElementById('editStartHour').classList.add('invalid-input');
+
+
+
+        document.getElementById('editStartMinute').classList.add('invalid-input');
+
+
+
+        document.getElementById('editEndHour').classList.add('invalid-input');
+
+
+
+        document.getElementById('editEndMinute').classList.add('invalid-input');
+
+
+
+        isValid = false;
+
+
+
+    }
+
+
+
+    
+
+
+
+    if (!isValid) return;
+
+
+
+    
+
+
+
+    // Get selected days based on recurrence type
+
+
+
+    let selectedDays = [];
+
+
+
+    if (recurrenceType === 'weekly') {
+
+
+
+        selectedDays = Array.from(document.querySelectorAll('input[name="editDayOfWeek"]:checked'))
+
+
+
+            .map(cb => parseInt(cb.value));
+
+
+
+    } else if (recurrenceType === 'monthly') {
+
+
+
+        selectedDays = Array.from(document.querySelectorAll('input[name="editDayOfMonth"]:checked'))
+
+
+
+            .map(cb => parseInt(cb.value));
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Store the old section data to identify old recurring instances
+
+
+
+    const oldSection = dateContent[selectedDate].timestamps[editingSectionIndex];
+
+
+
+    const oldTask = oldSection.task;
+
+
+
+    const oldStartTime = oldSection.startTime;
+
+
+
+    const oldEndTime = oldSection.endTime;
+
+
+
+    const oldRecurrence = oldSection.recurrence;
+
+
+
+    
+
+
+
+    console.log('Old section data:', { oldTask, oldStartTime, oldEndTime, oldRecurrence });
+
+
+
+    
+
+
+
+    // Update the section
+
+
+
+    dateContent[selectedDate].timestamps[editingSectionIndex].task = timeframeName;
+
+
+
+    dateContent[selectedDate].timestamps[editingSectionIndex].startTime = startTime;
+
+
+
+    dateContent[selectedDate].timestamps[editingSectionIndex].endTime = endTime;
+
+
+
+    dateContent[selectedDate].timestamps[editingSectionIndex].recurrence = recurrenceType;
+
+
+
+    dateContent[selectedDate].timestamps[editingSectionIndex].recurrenceDays = selectedDays;
+
+
+
+    
+
+
+
+    console.log('Current timestamps after update:', dateContent[selectedDate].timestamps);
+
+
+
+    
+
+
+
+    // Only remove old recurring instances if the old section had recurrence
+
+
+
+    if (oldRecurrence && oldRecurrence !== 'none') {
+
+
+
+        console.log('Removing old recurring instances...');
+
+
+
+        removeOldRecurringInstances(oldTask, oldStartTime, oldEndTime);
+
+
+
+    } else {
+
+
+
+        console.log('Not removing old recurring instances (old recurrence was none)');
+
+
+
+    }
+
+
+
+    
+
+
+
+    // If recurrence is changed to none, remove the section from the current date as well
+
+
+
+    if (oldRecurrence !== 'none' && recurrenceType === 'none') {
+
+
+
+        console.log('Removing section from current date since recurrence changed to none');
+
+
+
+        dateContent[selectedDate].timestamps.splice(editingSectionIndex, 1);
+
+
+
+    }
+
+
+
+    // If recurrence is set, add to other dates
+
+
+
+    else if (recurrenceType !== 'none' && selectedDays.length > 0) {
+
+
+
+        console.log('Adding new recurring instances...');
+
+
+
+        addRecurringSections(dateContent[selectedDate].timestamps[editingSectionIndex], recurrenceType, selectedDays);
+
+
+
+    }
+
+
+
+    
+
+
+
+    // Check for conflicts
+
+
+
+    checkForConflicts();
+
+
+
+    
+
+
+
+    // Update the UI
+
+
+
+    updateBottomSection(selectedDate);
+
+
+
+    
+
+
+
+    console.log('Final timestamps after UI update:', dateContent[selectedDate].timestamps);
+
+
+
+    
+
+
+
+    // Save to localStorage
+
+
+
+    saveCalendarData();
+
+
+
+    
+
+
+
+    // Close the modal
+
+
+
+    closeEditSectionModal();
+
+
+
+}
+
+
+
+
+
+
+
+function removeOldRecurringInstances(taskName, startTime, endTime) {
+
+
+
+    // Remove instances of this specific task from all dates
+
+
+
+    console.log('Removing old recurring instances:', { taskName, startTime, endTime });
+
+
+
+    
+
+
+
+    Object.keys(dateContent).forEach(dateStr => {
+
+
+
+        if (dateStr === selectedDate) return; // Skip the current date
+
+
+
+        
+
+
+
+        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+
+
+            const beforeCount = dateContent[dateStr].timestamps.length;
+
+
+
+            
+
+
+
+            // Filter out only the matching task instances
+
+
+
+            dateContent[dateStr].timestamps = dateContent[dateStr].timestamps.filter(ts => {
+
+
+
+                const isMatch = ts.task === taskName && ts.startTime === startTime && ts.endTime === endTime;
+
+
+
+                if (isMatch) {
+
+
+
+                    console.log('Removed old recurring instance from:', dateStr);
+
+
+
+                }
+
+
+
+                return !isMatch;
+
+
+
+            });
+
+
+
+            
+
+
+
+            const afterCount = dateContent[dateStr].timestamps.length;
+
+
+
+            if (beforeCount !== afterCount) {
+
+
+
+                console.log(`Date ${dateStr}: ${beforeCount} -> ${afterCount} tasks`);
+
+
+
+            }
+
+
+
+        }
+
+
+
+    });
+
+
+
+}
+
+
+
+
+
+
+
+function changeMonth(direction) {
+
+
+
+    currentMonth += direction;
+
+
+
+    
+
+
+
+    // Handle year transition
+
+
+
+    if (currentMonth < 0) {
+
+
+
+        currentMonth = 11;
+
+
+
+        currentYear--;
+
+
+
+    } else if (currentMonth > 11) {
+
+
+
+        currentMonth = 0;
+
+
+
+        currentYear++;
+
+
+
+    }
+
+
+
+    
+
+
+
+    renderCalendar(currentMonth, currentYear);
+
+
+
+}
+
+
+
+
+
+
+
+// Cache backend task statuses
+window.backendTaskStatuses = {};
+
+async function fetchBackendTaskStatuses() {
+    console.log('📅 Fetching backend task statuses...');
+    try {
+        // Get all task IDs from dashboardTasks
+        const taskIds = dashboardTasks.map(t => t.id);
+        
+        if (taskIds.length === 0) {
+            console.log('📅 No tasks to fetch statuses for');
+            return;
+        }
+        
+        // Fetch status for each task
+        for (const taskId of taskIds) {
+            try {
+                const response = await fetch('/api/get_task_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ task_id: taskId })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.backendTaskStatuses[taskId] = {
+                        completed: data.completed,
+                        status: data.status
+                    };
+                    console.log('📅 Cached backend status for task:', taskId, data.completed);
+                }
+            } catch (error) {
+                console.error('📅 Error fetching status for task:', taskId, error);
+            }
+        }
+        
+        console.log('📅 Backend task statuses cached:', Object.keys(window.backendTaskStatuses).length, 'tasks');
+    } catch (error) {
+        console.error('📅 Error fetching backend task statuses:', error);
+    }
+}
+
+// CALENDAR.JS LOADED
+console.log('📅 CALENDAR.JS FILE LOADED SUCCESSFULLY');
+
+// Test function definition
+console.log('📅 About to define markTaskCompletedInCalendar function');
+
+// Mark dashboard task as completed in calendar
+
+function markTaskCompletedInCalendar(taskId, completionStatus) {
+
+    console.log("=== TASK COMPLETION RECEIVED ===");
+    console.log("taskId:", taskId);
+    console.log("completionStatus:", completionStatus);
+
+    console.log('📅 === TASK MARKED AS COMPLETED IN CALENDAR ===');
+    console.log('Task ID:', taskId);
+    console.log('Task ID type:', typeof taskId);
+    console.log('Completion Status:', completionStatus);
+    console.log('Timestamp:', new Date().toISOString());
+
+    // Update backend task status cache immediately
+    window.backendTaskStatuses = window.backendTaskStatuses || {};
+    window.backendTaskStatuses[taskId] = {
+        completed: completionStatus === 'done',
+        status: completionStatus
+    };
+    console.log('📅 Updated backend task status cache:', { taskId, completed: window.backendTaskStatuses[taskId].completed });
+
+    console.log('Current dashboardTasks:', dashboardTasks);
+    console.log('DashboardTasks length:', dashboardTasks.length);
+    console.log('Current dashboardTasks IDs:', dashboardTasks.map(t => ({ id: t.id, name: t.name, idType: typeof t.id })));
+    console.log('Looking for task ID:', taskId, 'Type:', typeof taskId);
+
+    console.log('Current dateContent keys:', Object.keys(dateContent));
+
+    // If dashboardTasks is empty, store the completion in localStorage for when calendar loads
+    if (dashboardTasks.length === 0) {
+        console.log('⚠️ dashboardTasks is empty - storing completion in localStorage for calendar page');
+        const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]');
+        if (!completedTasks.includes(taskId)) {
+            completedTasks.push(taskId);
+            localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
+            console.log('✅ Stored task completion in localStorage:', taskId);
+        }
+        return;
+    }
+
+    
+
+    // Find the task in dashboardTasks array
+    const task = dashboardTasks.find(t => {
+        console.log('Comparing IDs:', t.id, 'vs', taskId, 'Types:', typeof t.id, typeof taskId, 'Match:', String(t.id) === String(taskId));
+        return String(t.id) === String(taskId);
+    });
+
+    if (!task) {
+
+        console.log('❌ ERROR: Task not found in dashboardTasks:', taskId);
+
+        return;
+
+    }
+
+    console.log('✅ Task found:', task.name, 'Previous completed status:', task.completed);
+
+    
+
+    // Mark the task as completed with the status from backend
+
+    task.completed = completionStatus === 'done' ? true : completionStatus;
+
+    console.log('✅ Task marked as completed in dashboardTasks array with status:', completionStatus);
+
+    
+
+    // Update all occurrences of this task in dateContent
+
+    let subtasksUpdated = 0;
+
+    Object.keys(dateContent).forEach(dateStr => {
+
+        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+
+            dateContent[dateStr].timestamps.forEach(section => {
+
+                // Check if this section has subtasks
+
+                if (section.subtasks && section.subtasks.length > 0) {
+
+                    section.subtasks.forEach(subtask => {
+
+                        // Check if this subtask is the dashboard task
+                        console.log("Comparing:", subtask.taskId, typeof subtask.taskId, "vs", taskId, typeof taskId);
+                        if (typeof subtask === 'object' && String(subtask.taskId) === String(taskId)) {
+                            console.log('🎯 Found matching subtask:', subtask.text, 'Current completed:', subtask.completed);
+                            subtask.completed = completionStatus === 'done' ? true : completionStatus;
+                            console.log("UPDATED SUBTASK:", subtask.taskId, subtask.completed);
+                            subtasksUpdated++;
+                            console.log(`✅ Marked subtask as completed on ${dateStr}:`, subtask.text, 'New Status:', subtask.completed);
+                        }
+
+                    });
+
+                }
+
+            });
+
+        }
+
+    });
+
+    console.log('✅ Total subtasks updated:', subtasksUpdated);
+
+    console.log("=== UPDATED dateContent ===");
+    console.log(JSON.stringify(dateContent, null, 2));
+
+    
+
+    // Save the updated data
+    saveCalendarData();
+
+    console.log('Data saved to localStorage');
+
+    // Refresh the calendar UI to show the updated completion state
+    if (selectedDate) {
+        console.log('🔄 Refreshing calendar UI for selected date:', selectedDate);
+        updateBottomSection(selectedDate);
+    } else {
+        console.log('No date selected, skipping calendar UI refresh');
+    }
+
+    console.log('✅ === TASK COMPLETION SYNC COMPLETE ===');
+
+    // Sync to backend API to ensure persistence
+    if (typeof fetch === 'function') {
+        console.log('📤 Syncing task completion to backend API');
+        fetch('/api/update_task_completion', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                taskId: taskId,
+                completed: true
+            })
+        }).then(response => response.json())
+        .then(data => {
+            console.log('✅ Task completion synced to backend:', data);
+        })
+        .catch(error => {
+            console.error('❌ Error syncing task completion to backend:', error);
+        });
+    } else {
+        console.log('⚠️ Fetch not available, skipping backend sync');
+    }
+
+}
+
+function markTaskExpiredInCalendar(taskId) {
+    console.log("=== TASK TIMER EXPIRED IN CALENDAR ===");
+    console.log("taskId:", taskId);
+    console.log("Timestamp:", new Date().toISOString());
+
+    // Update backend task status cache with timeout status
+    window.backendTaskStatuses = window.backendTaskStatuses || {};
+    window.backendTaskStatuses[taskId] = {
+        completed: false,
+        status: 'timeout',
+        timer_expired: true
+    };
+    console.log('📅 Updated backend task status cache with timeout status:', { taskId, status: 'timeout' });
+
+    // Update all occurrences of this task in dateContent
+    let subtasksUpdated = 0;
+    Object.keys(dateContent).forEach(dateStr => {
+        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+            dateContent[dateStr].timestamps.forEach(section => {
+                // Check if this section has subtasks
+                if (section.subtasks && section.subtasks.length > 0) {
+                    section.subtasks.forEach(subtask => {
+                        // Check if this subtask is the dashboard task
+                        if (typeof subtask === 'object' && String(subtask.taskId) === String(taskId)) {
+                            console.log('🎯 Found matching subtask for timeout:', subtask.text);
+                            subtask.timer_expired = true;
+                            subtask.completed = false;
+                            subtask.status = 'timeout';
+                            subtasksUpdated++;
+                            console.log(`✅ Marked subtask as timeout on ${dateStr}:`, subtask.text);
+                        }
+                    });
+                }
+            });
+        }
+    });
+
+    console.log('✅ Total subtasks marked as timeout:', subtasksUpdated);
+
+    // Save the updated data
+    saveCalendarData();
+    console.log('Data saved to localStorage');
+
+    // Refresh the calendar UI to show the timeout state
+    if (selectedDate) {
+        console.log('🔄 Refreshing calendar UI for selected date:', selectedDate);
+        updateBottomSection(selectedDate);
+    } else {
+        console.log('No date selected, skipping calendar UI refresh');
+    }
+
+    console.log('✅ === TASK TIMEOUT SYNC COMPLETE ===');
+}
+
+function removeTaskFromCalendar(taskId) {
+    console.log("=== REMOVING TASK FROM CALENDAR ===");
+    console.log("taskId:", taskId);
+    console.log("Timestamp:", new Date().toISOString());
+
+    // Remove from backend task status cache
+    if (window.backendTaskStatuses && window.backendTaskStatuses[taskId]) {
+        delete window.backendTaskStatuses[taskId];
+        console.log('📅 Removed task from backend status cache:', taskId);
+    }
+
+    // Remove all occurrences of this task from dateContent
+    let subtasksRemoved = 0;
+    Object.keys(dateContent).forEach(dateStr => {
+        if (dateContent[dateStr] && dateContent[dateStr].timestamps) {
+            dateContent[dateStr].timestamps.forEach(section => {
+                // Check if this section has subtasks
+                if (section.subtasks && section.subtasks.length > 0) {
+                    const originalLength = section.subtasks.length;
+                    section.subtasks = section.subtasks.filter(subtask => {
+                        if (typeof subtask === 'object' && subtask.taskId) {
+                            return String(subtask.taskId) !== String(taskId);
+                        }
+                        return true;
+                    });
+                    const removedCount = originalLength - section.subtasks.length;
+                    subtasksRemoved += removedCount;
+                    if (removedCount > 0) {
+                        console.log(`✅ Removed ${removedCount} subtask(s) from ${dateStr}`);
+                    }
+                }
+            });
+        }
+    });
+
+    console.log('✅ Total subtasks removed:', subtasksRemoved);
+
+    // Save the updated data
+    saveCalendarData();
+    console.log('Data saved to localStorage');
+
+    // Refresh the calendar UI
+    if (selectedDate) {
+        console.log('🔄 Refreshing calendar UI for selected date:', selectedDate);
+        updateBottomSection(selectedDate);
+    } else {
+        console.log('No date selected, skipping calendar UI refresh');
+    }
+
+    console.log('✅ === TASK REMOVAL FROM CALENDAR COMPLETE ===');
+}
+
+// Make function globally accessible
+console.log('📅 About to expose removeTaskFromCalendar to global scope');
+window.removeTaskFromCalendar = removeTaskFromCalendar;
+console.log('📅 Function removeTaskFromCalendar exposed successfully');
+
+console.log('📅 Function markTaskCompletedInCalendar defined successfully. typeof:', typeof markTaskCompletedInCalendar);
+
+// Make function globally accessible
+
+console.log('📅 About to expose markTaskCompletedInCalendar to global scope');
+window.markTaskCompletedInCalendar = markTaskCompletedInCalendar;
+window.markDashboardTaskCompletedInCalendar = markTaskCompletedInCalendar;
+console.log('📅 Function exposed successfully. typeof window.markTaskCompletedInCalendar:', typeof window.markTaskCompletedInCalendar);
+console.log('📅 Function itself:', window.markTaskCompletedInCalendar);
+
+// Test the function immediately after definition
+console.log('🧪 Testing markTaskCompletedInCalendar function immediately...');
+try {
+    if (typeof window.markTaskCompletedInCalendar === 'function') {
+        console.log('✅ Function is callable, calling with test data...');
+        window.markTaskCompletedInCalendar('test-id', 'test-status');
+    } else {
+        console.error('❌ Function is not callable after exposure');
+    }
+} catch (error) {
+    console.error('❌ Error calling function:', error);
+}
+
+// Handle task input keypress
+function handleTaskInputKeypress(event) {
+    if (event.key === 'Enter') {
+        const taskInput = document.getElementById('taskInput');
+        if (taskInput && taskInput.value.trim() !== '') {
+            addTaskSection(taskInput.value.trim());
+            taskInput.value = '';
+        }
+    }
+}
+
+// Make function globally accessible
+window.handleTaskInputKeypress = handleTaskInputKeypress;
+
+
+
+
+
+
+
+
+
+
+
