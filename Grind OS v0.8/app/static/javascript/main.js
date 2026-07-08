@@ -104,9 +104,10 @@ function logout() {
     if (authButtons) authButtons.classList.remove('hidden');
     if (greetingDiv) greetingDiv.classList.add('hidden');
 
-    // No account signed in now: fall back to the guest (device) theme.
+    // No account signed in now: the server cleared the theme cookie, so fall back
+    // to light (logged-out pages are light).
     if (window.applyTheme) {
-        window.applyTheme(localStorage.getItem('guestTheme') || 'light');
+        window.applyTheme('light');
     }
 }
 

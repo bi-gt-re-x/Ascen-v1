@@ -21,6 +21,9 @@ CALENDAR_JSON = os.path.join(DATA_DIR, 'calendar.json')
 XPEVENT_JSON = os.path.join(DATA_DIR, 'xpevent.json')
 GOALS_JSON = os.path.join(DATA_DIR, 'goals.json')
 
+# How long the theme cookie lives (1 year) — it just needs to outlive the session.
+THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
 # Import task_backend for XP data access
 sys.path.append(os.path.dirname(ROOT_DIR))
 import task_backend
@@ -42,19 +45,27 @@ def write_json_file(filepath, data):
         json.dump(data, f, indent=2)
 
 def get_current_theme():
-    """Return the light/dark theme for the signed-in account (default 'light').
+    """Return the light/dark theme to render for the current request.
 
-    The theme is the single source of truth stored per-account in users.json and is
-    used across every page. When nobody is signed in we return 'light' — logged-out
-    pages (landing, privacy, terms) are always light.
+    Preference order:
+      1. the `theme` cookie — set on every change and on login, so it is sent with
+         every request and lets the server pick the theme with no dependence on JS
+         timing or the session staying alive;
+      2. the signed-in account's stored theme in users.json (durable per account);
+      3. light.
+
+    Because this drives <html data-theme="..."> at render time, the correct theme is
+    in the very first bytes of the page — navigation never flashes or reverts.
     """
+    cookie_theme = request.cookies.get('theme')
+    if cookie_theme in ('light', 'dark'):
+        return cookie_theme
     username = session.get('username')
-    if not username:
-        return 'light'
-    for u in read_json_file(USERS_JSON):
-        if u.get('username') == username:
-            theme = u.get('theme', 'light')
-            return theme if theme in ('light', 'dark') else 'light'
+    if username:
+        for u in read_json_file(USERS_JSON):
+            if u.get('username') == username:
+                theme = u.get('theme', 'light')
+                return theme if theme in ('light', 'dark') else 'light'
     return 'light'
 
 # --- Routes Blueprint ---
@@ -372,7 +383,14 @@ def login():
     if user:
         # Remember who is signed in so the server can route them on the next visit.
         session['username'] = user['username']
-        return jsonify({"success": True, "message": "Login successful!", "user": {"username": user['username'], "id": user['id'], "theme": user.get('theme', 'light')}})
+        theme = user.get('theme', 'light')
+        if theme not in ('light', 'dark'):
+            theme = 'light'
+        resp = jsonify({"success": True, "message": "Login successful!", "user": {"username": user['username'], "id": user['id'], "theme": theme}})
+        # Seed the theme cookie from the account so every page this device loads
+        # renders in the right theme immediately, even before any JS runs.
+        resp.set_cookie('theme', theme, max_age=THEME_COOKIE_MAX_AGE, samesite='Lax')
+        return resp
     else:
         return jsonify({"success": False, "message": "Account doesn't exist or invalid credentials."})
 
@@ -380,31 +398,39 @@ def login():
 def logout():
     # Clear the server-side session so the root route stops redirecting to the dashboard.
     session.pop('username', None)
-    return jsonify({"success": True, "message": "Logged out."})
+    resp = jsonify({"success": True, "message": "Logged out."})
+    # Drop the theme cookie so logged-out pages fall back to light.
+    resp.delete_cookie('theme')
+    return resp
 
 @bp.route('/api/set_theme', methods=['POST'])
 def set_theme():
-    """Persist the signed-in account's light/dark theme to users.json.
+    """Persist the light/dark theme.
 
-    Guests (not signed in) still get a success response, but nothing is stored
-    server-side — the client keeps their choice device-only (localStorage).
+    Writes to the signed-in account's users.json entry (durable) and always mirrors
+    the choice into the `theme` cookie, which is what the server reads on every page
+    load to render <html data-theme="...">. The cookie makes navigation reliable
+    regardless of session state or client-side script timing.
     """
     data = request.json or {}
     theme = data.get('theme')
     if theme not in ('light', 'dark'):
         return jsonify({"success": False, "message": "Theme must be 'light' or 'dark'."}), 400
 
+    persisted = False
     username = session.get('username')
-    if not username:
-        return jsonify({"success": True, "persisted": False})
+    if username:
+        users = read_json_file(USERS_JSON)
+        for u in users:
+            if u.get('username') == username:
+                u['theme'] = theme
+                write_json_file(USERS_JSON, users)
+                persisted = True
+                break
 
-    users = read_json_file(USERS_JSON)
-    for u in users:
-        if u.get('username') == username:
-            u['theme'] = theme
-            write_json_file(USERS_JSON, users)
-            return jsonify({"success": True, "persisted": True})
-    return jsonify({"success": False, "message": "User not found."}), 404
+    resp = jsonify({"success": True, "persisted": persisted})
+    resp.set_cookie('theme', theme, max_age=THEME_COOKIE_MAX_AGE, samesite='Lax')
+    return resp
 
 @bp.route('/api/get_user_data', methods=['GET'])
 def get_user_data():
@@ -1150,6 +1176,37 @@ def timer_expired():
         "task_id": task_id
     })
 
+def apply_task_completion_to_goals(username):
+    """Count one completed task toward every active 'tasks'-type goal for the user.
+
+    A completed task advances all of the user's "complete N tasks" goals — mirroring
+    how earned XP advances every active XP goal. Progress is capped at the target and
+    a goal is marked completed once it's reached. No-op if there are no active tasks
+    goals. Runs server-side on each completion so the goals page reflects it whether
+    or not it's open.
+    """
+    goals = read_json_file(GOALS_JSON)
+    changed = False
+    for goal in goals:
+        if goal.get('user_id') != username:
+            continue
+        if goal.get('goal_type') != 'tasks':
+            continue
+        if goal.get('status') == 'completed':
+            continue
+        target = goal.get('target_tasks', 0) or 0
+        new_value = (goal.get('current_tasks', 0) or 0) + 1
+        if target and new_value > target:
+            new_value = target
+        goal['current_tasks'] = new_value
+        goal['target_value'] = target
+        goal['progress'] = round((new_value / target) * 100, 1) if target else 0
+        goal['status'] = 'completed' if (target and new_value >= target) else 'active'
+        changed = True
+    if changed:
+        write_json_file(GOALS_JSON, goals)
+
+
 @bp.route('/api/complete_task', methods=['POST'])
 def complete_task():
     data = request.json
@@ -1291,6 +1348,9 @@ def complete_task():
     xp_events.append(xp_event)
     write_json_file(XPEVENT_JSON, xp_events)
 
+    # Count this completion toward the user's active "tasks completed" goals.
+    apply_task_completion_to_goals(username)
+
     new_xp_required = new_level * 100
 
     return jsonify({
@@ -1386,15 +1446,60 @@ def add_goal():
     
     return jsonify({"success": True, "message": "Goal added successfully"})
 
+def sync_streak_goals_to_user_streak(username):
+    """Keep every streak-type goal in lockstep with the user's live current
+    streak — the same number shown on the dashboard — instead of a hand-entered
+    count. A streak goal means "reach an N-day streak", so its current value
+    should simply follow the real streak, tracking it up as it grows and back
+    down (to 0) whenever the streak breaks. Completion follows the same number:
+    completed once the live streak reaches the target, active again if it falls
+    back below it. No-op when the user has no streak goals.
+    """
+    users = read_json_file(USERS_JSON)
+    user = next((u for u in users if u.get('username') == username), None)
+    if not user:
+        return
+    current_streak = user.get('current_streak', 0) or 0
+
+    goals = read_json_file(GOALS_JSON)
+    changed = False
+    for goal in goals:
+        if goal.get('user_id') != username:
+            continue
+        if goal.get('goal_type') != 'streak':
+            continue
+        target = goal.get('target_streak', 0) or 0
+        # Follow the live streak, capped at the target so a completed goal reads
+        # "N / N Days" rather than overshooting.
+        new_value = min(current_streak, target) if target else current_streak
+        new_status = 'completed' if (target and new_value >= target) else 'active'
+        new_progress = round((new_value / target) * 100, 1) if target else 0
+        if (goal.get('current_streak') != new_value or
+                goal.get('status') != new_status or
+                goal.get('progress') != new_progress or
+                goal.get('target_value') != target):
+            goal['current_streak'] = new_value
+            goal['status'] = new_status
+            goal['progress'] = new_progress
+            goal['target_value'] = target
+            changed = True
+    if changed:
+        write_json_file(GOALS_JSON, goals)
+
+
 @bp.route('/api/get_goals', methods=['GET'])
 def get_goals():
     username = request.args.get('username')
     if not username:
         return jsonify({"success": False, "message": "Username required"})
 
+    # Mirror the user's live current streak onto their streak goals before
+    # returning them, so the goals page always shows the dashboard's streak.
+    sync_streak_goals_to_user_streak(username)
+
     # Read goals from JSON file
     goals = read_json_file(GOALS_JSON)
-    
+
     # Filter goals by username
     user_goals = [goal for goal in goals if goal.get('user_id') == username]
 

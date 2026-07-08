@@ -1,833 +1,420 @@
 /* Growth Page Styles */
-
-
-
 @keyframes fadeIn {
-
-    from { 
-
-        opacity: 0; 
-
+    from {
+        opacity: 0;
         transform: translateY(20px);
-
     }
 
-    to { 
-
-        opacity: 1; 
-
+    to {
+        opacity: 1;
         transform: translateY(0);
-
     }
 
 }
-
-
 
 body {
-
     height: 100vh;
-
     margin: 0;
-
     padding: 0;
-
     overflow-x: hidden;
-
     overflow-y: hidden; /* Strictly eliminates vertical scrolling */
-
 }
-
-
 
 /* Rounded navigation buttons */
-
 .nav-btn {
-
     border-radius: 25px !important;
-
     border: 2px solid black;
-
     background: white;
-
     color: black;
-
     padding: 10px 20px;
-
     font-weight: bold;
-
     transition: all 0.3s ease;
-
     animation: fadeIn 0.8s ease-out;
-
 }
-
-
 
 .home-btn {
-
     animation-delay: 0.2s;
-
 }
-
-
 
 .dashboard-btn {
-
     animation-delay: 0.4s;
-
 }
-
-
 
 .nav-btn:hover {
-
     background: white;
-
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
-
     transform: scale(1.05);
-
 }
-
-
 
 /* Position buttons at bottom */
-
 .home-btn, .dashboard-btn {
-
     position: fixed !important;
-
     bottom: 20px !important;
-
     top: auto !important;
-
 }
-
-
 
 .home-btn {
-
     left: 20px !important;
-
 }
-
-
 
 .dashboard-btn {
-
     right: 20px !important;
-
 }
-
-
 
 /* Theme selector in top right corner */
-
 .theme-selector {
-
     position: fixed !important;
-
     top: 20px !important;
-
     right: 20px !important;
-
     left: auto !important;
-
     animation: fadeIn 0.6s ease-out;
-
 }
-
-
 
 /* Main growth container - centers content on the page */
-
 .growth-container {
-
     display: flex;
-
     flex-direction: column;
-
     justify-content: center;
-
     align-items: center;
-
     height: auto;
-
     padding: 24px;
-
     box-sizing: border-box;
-
     animation: fadeIn 0.8s ease-out;
-
 }
-
-
 
 /* Tab Navigation */
-
 .tab-navigation {
-
     display: flex;
-
     justify-content: center;
-
     gap: 10px;
-
     margin-bottom: 20px;
-
     padding: 0 20px;
-
 }
-
-
 
 .tab-btn {
-
     padding: 10px 20px;
-
     border: none;
-
     border-radius: 25px;
-
     background-color: #f0f0f0;
-
     color: #2C302E;
-
     font-weight: bold;
-
     cursor: pointer;
-
     transition: all 0.3s ease;
-
     font-family: 'Century Gothic', sans-serif;
-
     border: 2px solid #e0e0e0;
-
 }
-
-
 
 .tab-btn:hover {
-
     background-color: #e8e8e8;
-
     transform: translateY(-2px);
-
 }
-
-
 
 .tab-btn.active {
-
     background-color: #2C302E;
-
     color: white;
-
     border-color: #2C302E;
-
 }
-
-
 
 /* Tab Content */
-
 .tab-content {
-
     position: relative;
-
     height: calc(100% - 120px);
-
 }
-
-
 
 .tab-pane {
-
     display: none;
-
     animation: fadeIn 0.5s ease-out;
-
 }
-
-
 
 .tab-pane.active {
-
     display: block;
-
 }
-
-
 
 /* White rounded rectangle with navy blue/blackish edges */
-
 .growth-card {
-
     background: white;
-
-    border-radius: 50px; 
-
+    border-radius: 50px;
     margin-left: auto;
-
     margin-right: auto;
-
     padding: 40px;
-
     width: 1700px;
-
     max-width: 90%;
-
     height: 68vh; /* Responsive scaling locks overflow from forcing vertical scroll */
-
     box-shadow:
-
         0 8px 32px rgba(0, 0, 0, 0.3),
-
         0 4px 16px rgba(0, 0, 0, 0.2),
-
         inset 0 1px 0 rgba(255, 255, 255, 0.9);
-
-    border: 2px solid #2C302E; 
-
+    border: 2px solid #2C302E;
     position: relative;
-
     top: 50px;
-
     animation: fadeIn 1s ease-out;
-
 }
-
-
 
 /* Darker edge effect */
-
 .growth-card::before {
-
-    opacity: 0; 
-
+    opacity: 0;
     animation: fadeIn 0.5s ease-out forwards;
-
-    animation-delay: 1s; 
-
+    animation-delay: 1s;
 }
-
-
 
 /* Growth title styling */
-
 .growth-card h1 {
-
     color: black;
-
     text-align: center;
-
     margin-bottom: 10px;
-
     font-size: 2.2em;
-
     font-weight: 300;
-
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
     animation: fadeIn 1.2s ease-out;
-
 }
-
-
 
 /* Card header with navigation button */
-
 .card-header {
-
     display: flex;
-
     justify-content: space-between;
-
     align-items: center;
-
     margin-bottom: 15px;
-
 }
-
-
 
 /* Daily XP navigation button */
-
 .daily-xp-nav-btn {
-
     background: none;
-
     border: none;
-
     cursor: pointer;
-
     padding: 8px;
-
     border-radius: 50%;
-
     transition: all 0.3s ease;
-
     animation: fadeIn 1.4s ease-out;
-
 }
-
-
 
 .daily-xp-nav-btn:hover {
-
     transform: scale(1.1);
-
     filter: drop-shadow(0 4px 8px rgba(44, 48, 46, 0.3));
-
 }
-
-
 
 .daily-xp-nav-btn:active {
-
     transform: scale(0.95);
-
 }
-
-
 
 .daily-xp-nav-btn svg {
-
     transition: transform 0.3s ease;
-
 }
-
-
 
 .daily-xp-nav-btn:hover svg {
-
     transform: translateX(2px);
-
 }
-
-
 
 /* Growth description styling */
-
 .growth-card p {
-
     color: #424242;
-
     text-align: center;
-
     font-size: 1.1em;
-
     line-height: 1.4;
-
     margin-bottom: 20px;
-
     animation: fadeIn 1.4s ease-out;
-
 }
-
-
 
 /* Chart Container */
-
 .chart-container {
-
     width: 100%;
-
     height: 480px;
-
     margin: 10px 0;
-
     position: relative;
-
     background: white;
-
     border-radius: 10px;
-
     padding: 15px;
-
     padding-left: 30px;
-
     padding-bottom: 30px;
-
     box-sizing: border-box;
-
 }
-
-
 
 /* Chart Canvas */
-
 #growthChart,
-
 #dailyXpChart,
-
 #averageXpChart {
-
     width: 100%;
-
     height: 100%;
-
     border-radius: 5px;
-
     background: white;
-
     margin-top: 10px;
-
     margin-left: 0;
-
     opacity: 1;
-
 }
-
-
 
 /* Fade-in animation for chart containers when switching tabs */
-
 .chart-container.fade-in {
-
     animation: fadeIn 0.5s ease-out;
-
 }
-
-
 
 .tab-pane {
-
     opacity: 0;
-
     transition: opacity 0.3s ease;
-
 }
-
-
 
 .tab-pane.active {
-
     opacity: 1;
-
 }
-
-
 
 /* Chart Title */
-
 .chart-title {
-
     text-align: center;
-
     font-size: 1.2em;
-
     font-weight: bold;
-
     color: #2C302E;
-
     margin-bottom: 10px;
-
 }
-
-
 
 /* Responsive design */
-
 @media (max-width: 768px) {
-
     .growth-card {
-
         margin: 20px;
-
         padding: 30px 20px;
-
     }
-
-    
 
     .growth-card h1 {
-
         font-size: 2em;
-
     }
-
-    
 
     .growth-card p {
-
         font-size: 1.1em;
-
     }
 
 }
 
-
-
 /* Theme integration */
-
 body.classic .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.classic .growth-card h1,
-
 body.classic .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.professional .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.professional .growth-card h1,
-
 body.professional .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.professional .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
-
-
 
 body.professional .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
-
-
 
 body.galactic-skies .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.galactic-skies .growth-card h1,
-
 body.galactic-skies .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.galactic-skies .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
-
-
 
 body.galactic-skies .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
-
-
 
 body.platinum-gold .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.platinum-gold .growth-card h1,
-
 body.platinum-gold .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.platinum-gold .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
-
-
 
 body.platinum-gold .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
-
-
 
 body.platinum-gold .nav-btn {
-
     background: rgba(255, 250, 240, 0.8);
-
     border: 2px solid rgba(255, 140, 0, 0.6);
-
     color: #ff8c00;
-
     font-weight: bold;
-
 }
-
-
 
 body.platinum-gold .nav-btn:hover {
-
     background: rgba(255, 250, 240, 0.9);
-
     box-shadow: 0 0 15px rgba(255, 140, 0, 0.4);
-
 }
-
-
 
 body.nature-green .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.nature-green .growth-card h1,
-
 body.nature-green .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.nature-green .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
-
-
 
 body.nature-green .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
-
-
 
 body.platinum-gold {
-
     background-image: url('https://www.littletrees.com/sites/default/files/2024-09/Sunset-Beach_Background.jpg');
-
     background-size: cover;
-
     background-position: center;
-
     background-repeat: no-repeat;
-
     background-attachment: fixed;
-
     color: white;
-
 }
-
-
 
 body.vintage-paper {
-
     background-image: url('https://www.creativefabrica.com/wp-content/uploads/2023/05/06/Old-Vintage-Paper-Textured-backgroundOld-Graphics-68979179-1.jpg');
-
     background-size: cover;
-
     background-position: center;
-
     background-repeat: no-repeat;
-
     background-attachment: fixed;
-
     color: #5d4e37;
-
     font-family: 'Georgia', serif;
-
 }
-
-
 
 body.vintage-paper .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.vintage-paper .growth-card h1,
-
 body.vintage-paper .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.vintage-paper .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
 
-
-
 body.vintage-paper .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
 
 body.vintage-paper .nav-pill {
@@ -842,430 +429,218 @@ body.vintage-paper .nav-pill:hover {
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
 
-
-
 body.retro-city {
-
     background-image: url('https://images3.alphacoders.com/783/thumb-1920-783635.jpg');
-
     background-size: cover;
-
     background-position: center;
-
     background-repeat: no-repeat;
-
     background-attachment: fixed;
-
     color: #00ffff;
-
     text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
-
 }
-
-
 
 body.retro-city .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.retro-city .growth-card h1,
-
 body.retro-city .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.retro-city .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
-
-
 
 body.retro-city .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
 
-
-
-body.synthwave { 
-
+body.synthwave {
     background-color: #000000 !important;
-
     background: #000000 !important;
-
-    background-image: 
-
+    background-image:
         linear-gradient(rgba(147, 51, 234, 0.6) 4px, transparent 4px),
-
         linear-gradient(90deg, rgba(0, 255, 255, 0.6) 4px, transparent 4px),
-
         linear-gradient(rgba(147, 51, 234, 0.3) 8px, transparent 8px),
-
         linear-gradient(90deg, rgba(0, 255, 255, 0.3) 8px, transparent 8px) !important;
-
     background-size: 160px 160px, 160px 160px, 320px 320px, 320px 320px !important;
-
     background-attachment: fixed !important;
-
     color: #ff00ff;
-
-    text-shadow: 
-
+    text-shadow:
         0 0 15px rgba(255, 0, 255, 0.9),
-
         0 0 25px rgba(0, 255, 255, 0.7),
-
         0 0 35px rgba(255, 20, 147, 0.5);
-
 }
-
-
 
 body.synthwave .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.synthwave .growth-card h1,
-
 body.synthwave .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.synthwave .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
-
-
 
 body.synthwave .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
-
-
 
 body.synthwave .nav-btn {
-
     background: linear-gradient(135deg, rgba(255, 0, 255, 0.3), rgba(0, 255, 255, 0.3));
-
     border: 2px solid #ff00ff;
-
     color: #ff00ff;
-
-    box-shadow: 
-
+    box-shadow:
         0 0 20px rgba(255, 0, 255, 0.6),
-
         inset 0 0 20px rgba(0, 255, 255, 0.4);
-
     text-shadow: 0 0 12px rgba(255, 0, 255, 0.9);
-
 }
-
-
 
 body.synthwave .nav-btn:hover {
-
     background: linear-gradient(135deg, rgba(255, 0, 255, 0.5), rgba(0, 255, 255, 0.5));
-
-    box-shadow: 
-
+    box-shadow:
         0 0 35px rgba(255, 0, 255, 0.9),
-
         inset 0 0 35px rgba(0, 255, 255, 0.6);
-
     transform: translateY(-2px);
-
 }
-
-
 
 body.desert-solitude .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.desert-solitude .growth-card h1,
-
 body.desert-solitude .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.desert-solitude .chart-container {
-
     backdrop-filter: blur(10px);
-
     background: rgba(255, 255, 255, 0.15);
-
     border: 1px solid rgba(255, 255, 255, 0.2);
-
     border-radius: 15px;
-
 }
-
-
 
 body.desert-solitude .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
-
-
 
 body.desert-solitude .nav-btn {
-
     backdrop-filter: blur(10px);
-
     background: rgba(255, 255, 255, 0.15);
-
     border: 1px solid rgba(255, 255, 255, 0.2);
-
     color: #5d4037;
-
     font-family: 'Quicksand', sans-serif;
-
     font-weight: 500;
-
 }
-
-
 
 body.desert-solitude .nav-btn:hover {
-
     backdrop-filter: blur(10px);
-
     background: rgba(255, 255, 255, 0.25);
-
     border: 1px solid rgba(255, 255, 255, 0.3);
-
 }
-
-
 
 body.lush-forest .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.lush-forest .growth-card h1,
-
 body.lush-forest .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.lush-forest .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
-
-
 
 body.lush-forest .chart-title {
-
     color: #2C302E;
-
     font-weight: bold;
-
 }
-
-
 
 body.volcanic-ash {
-
     background-image: url('https://i.abcnewsfe.com/a/30af0c08-2ea4-4008-beb8-c08a9f04f71d/Kilauea-Volcano-1-ht-gmh-251124_1764005704026_hpMain.jpg');
-
     background-size: cover;
-
     background-position: center;
-
     background-repeat: no-repeat;
-
     background-attachment: fixed;
-
     color: #ff6b35;
-
     text-shadow: 0 0 3px rgba(255, 107, 53, 0.5);
-
 }
-
-
 
 body.volcanic-ash .growth-card {
-
     border-color: #37474f;
-
 }
-
-
 
 body.volcanic-ash .growth-card h1,
-
 body.volcanic-ash .growth-card p {
-
     color: black;
-
 }
-
-
 
 body.volcanic-ash .chart-container {
-
     background: white;
-
     border-radius: 10px;
-
 }
-
-
 
 body.volcanic-ash .chart-title {
-
-    color: #ffffff; 
-
-    text-shadow: 0 0 8px rgba(255, 69, 0, 0.6); 
-
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(255, 69, 0, 0.6);
     font-weight: bold;
-
 }
-
-
 
 body.volcanic-ash .nav-btn {
-
     background: rgba(15, 15, 15, 0.8);
-
     border: 1px solid rgba(255, 69, 0, 0.3);
-
     color: #ffffff;
-
     font-weight: bold;
-
 }
-
-
 
 body.volcanic-ash .nav-btn:hover {
-
     background: rgba(15, 15, 15, 0.9);
-
     box-shadow: 0 0 10px rgba(255, 69, 0, 0.4);
-
 }
-
-
 
 /* Professional Theme Navy Blue Glow Effects */
-
 body.professional .nav-btn:hover {
-
     background: white;
-
     box-shadow: 0 0 20px rgba(25, 118, 210, 0.8), 0 0 40px rgba(25, 118, 210, 0.6);
-
     transform: scale(1.05);
-
 }
-
-
 
 body.professional .nav-pill {
-
     background: rgba(255, 255, 255, 0.15);
-
     border: 1px solid #2C302E;
-
     color: #2C302E;
-
 }
-
-
 
 body.professional .nav-pill:hover {
-
     background: rgba(44, 48, 46, 0.3);
-
     border-color: #2C302E;
-
     box-shadow: 0 0 15px rgba(44, 48, 46, 0.4);
-
 }
-
-
 
 body.professional .nav-pill.primary {
-
     background: rgba(44, 48, 46, 0.2);
-
     border-color: #2C302E;
-
     color: #2C302E;
-
 }
-
-
 
 body.professional .nav-pill.primary:hover {
-
     background: rgba(44, 48, 46, 0.4);
-
 }
-
-
 
 /* ============================================================
    MODERN GROWTH ANALYTICS LOOK (matches the reference design)
    ============================================================ */
-
 /* Cleaner card: light edge, soft shadow */
 .growth-card {
     border: 1px solid #e6e8f0 !important;
@@ -1370,7 +745,6 @@ body.professional .nav-pill.primary:hover {
    LAYOUT: taller card, ratings card sits just below the chart,
    and a refined professional bottom navigation bar.
    ============================================================ */
-
 /* Allow the page to grow taller than the viewport if needed */
 body {
     height: auto;
@@ -1475,453 +849,230 @@ body {
     color: #ffffff;
 }
 
-
-
 /* Average XP Ratings Button Container */
-
 .average-xp-button-container {
-
     display: flex;
-
     justify-content: center;
-
     margin-top: 90px;
-
     margin-left: 0px;
-
     padding-bottom: 20px;
-
     position: absolute;
-
     bottom: 20px;
-
     left: 50%;
-
     transform: translateX(-50%);
-
     width: 100%;
-
 }
-
-
 
 /* Average XP Ratings Button */
-
 .average-xp-btn {
-
     display: flex;
-
     align-items: center;
-
     gap: 8px;
-
     padding: 10px 20px;
-
     border: 2px solid #e0e0e0;
-
     border-radius: 25px;
-
     background-color: #f0f0f0;
-
     color: #2C302E;
-
     font-size: 16px;
-
     font-weight: bold;
-
     font-family: 'Century Gothic', sans-serif;
-
     cursor: pointer;
-
     transition: all 0.3s ease;
-
 }
-
-
 
 .average-xp-btn:hover {
-
     background-color: #2C302E;
-
     color: white;
-
     border-color: #2C302E;
-
     transform: translateY(-2px);
-
     box-shadow: 0 4px 12px rgba(44, 48, 46, 0.3);
-
 }
-
-
 
 /* Down Arrow Icon */
-
 .down-arrow {
-
     transition: transform 0.3s ease;
-
 }
-
-
 
 .average-xp-btn:hover .down-arrow {
-
     transform: translateY(2px);
-
 }
-
-
 
 /* Up Arrow Icon */
-
 .up-arrow {
-
     transition: transform 0.3s ease;
-
 }
-
-
 
 .average-xp-btn:hover .up-arrow {
-
     transform: translateY(-2px);
-
 }
-
-
 
 /* Stats Container */
-
 .stats-container {
-
     display: flex;
-
     justify-content: space-around;
-
     gap: 30px;
-
     margin: 40px 0;
-
     padding: 0 20px;
-
 }
-
-
 
 /* Stat Box */
-
 .stat-box {
-
     flex: 1;
-
     background: white;
-
     border: 2px solid #2C302E;
-
     border-radius: 20px;
-
     padding: 30px 20px;
-
     text-align: center;
-
     box-shadow: 0 4px 12px rgba(44, 48, 46, 0.15);
-
     transition: all 0.3s ease;
-
 }
-
-
 
 .stat-box:hover {
-
     transform: translateY(-5px);
-
     box-shadow: 0 8px 20px rgba(44, 48, 46, 0.25);
-
 }
-
-
 
 .stat-box h3 {
-
     color: #2C302E;
-
     font-size: 16px;
-
     font-weight: bold;
-
     margin-bottom: 15px;
-
     font-family: 'Century Gothic', sans-serif;
-
 }
-
-
 
 .stat-value {
-
     color: #2C302E;
-
     font-size: 36px;
-
     font-weight: bold;
-
     margin: 10px 0;
-
     font-family: 'Century Gothic', sans-serif;
-
 }
-
-
 
 .stat-label {
-
     color: #666;
-
     font-size: 14px;
-
     margin: 0;
-
     font-family: 'Century Gothic', sans-serif;
-
 }
-
-
 
 /* Charge Bar Section */
-
 .charge-bar-section {
-
     margin: 60px 20px 20px 20px;
-
     text-align: center;
-
     position: absolute;
-
     bottom: 80px;
-
     left: 50%;
-
     transform: translateX(-50%);
-
     width: calc(100% - 40px);
-
 }
-
-
 
 .charge-bar-title {
-
     color: #2C302E;
-
     font-size: 18px;
-
     font-weight: bold;
-
     margin-bottom: 15px;
-
     font-family: 'Century Gothic', sans-serif;
-
 }
-
-
 
 .charge-bar-container {
-
     width: 100%;
-
     height: 40px;
-
     background-color: rgba(255, 255, 255, 0.3);
-
     border-radius: 20px;
-
     overflow: hidden;
-
     margin: 0 auto;
-
     border: 1px solid rgba(44, 48, 46, 0.3);
-
     max-width: 1200px;
-
     position: relative;
-
 }
-
-
 
 .charge-bar-fill {
-
     height: 100%;
-
     width: 0%;
-
     background: linear-gradient(to right, #d9b06a 0%, #e6cf84 32%, #a9d79f 66%, #5ec6b8 100%);
-
     transition: width 0.5s ease;
-
 }
-
-
 
 .charge-bar-segments {
-
     position: absolute;
-
     top: 0;
-
     left: 0;
-
     width: 100%;
-
     height: 100%;
-
     display: flex;
-
     pointer-events: none;
-
 }
-
-
 
 .charge-bar-segment {
-
     flex: 1;
-
     border-right: 2px solid rgba(44, 48, 46, 0.2);
-
 }
-
-
 
 .charge-bar-segment:last-child {
-
     border-right: none;
-
 }
-
-
 
 .charge-bar-description {
-
     color: #888;
-
     font-size: 10px;
-
     margin-top: 10px;
-
     margin-left: 375px;
-
 }
-
-
 
 /* Floating bottom navigation bar */
-
 .bottom-nav {
-
     position: relative;
-
     margin: 100px auto 0 auto;
-
     transform: translateY(20px);
-
     background: rgba(255, 255, 255, 0.1);
-
     backdrop-filter: blur(10px);
-
     border: 1px solid rgba(100, 200, 255, 0.3);
-
     border-radius: 16px;
-
     padding: 12px 30px;
-
     display: flex;
-
     gap: 20px;
-
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-
     z-index: 100;
-
     width: fit-content;
-
 }
-
-
 
 .nav-pill {
-
     background: rgba(255, 255, 255, 0.15);
-
     border: 1px solid rgba(100, 200, 255, 0.3);
-
     color: white;
-
     padding: 10px 20px;
-
     border-radius: 20px;
-
     font-size: 14px;
-
     font-weight: 500;
-
     cursor: pointer;
-
     transition: all 0.3s ease;
-
     text-decoration: none;
-
     display: inline-flex;
-
     align-items: center;
-
     justify-content: center;
-
     min-width: 80px;
-
 }
-
-
 
 .nav-pill:hover {
-
     background: rgba(100, 200, 255, 0.4);
-
     box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
-
     transform: translateY(-2px);
-
 }
-
-
 
 .nav-pill.primary {
-
     background: rgba(255, 255, 255, 0.15);
-
     border-color: rgba(100, 200, 255, 0.3);
-
     font-weight: 600;
-
 }
-
-
 
 .nav-pill.primary:hover {
-
     background: rgba(100, 200, 255, 0.4);
-
 }
-
-
 
 /* ============================================================
    AUTHORITATIVE OVERRIDES (kept last so they win over the
    original bottom-nav / ratings rules above)
    ============================================================ */
-
 /* Let the tab/chart area size to its content so nothing overflows below it */
 .tab-content {
     height: auto !important;
@@ -2009,7 +1160,6 @@ body {
 /* ============================================================
    GROWTH RATINGS VIEW — two-card redesign (#blankCard)
    ============================================================ */
-
 /* Wrapper is a transparent container holding two white cards. */
 .ratings-view {
     width: 1700px;
@@ -2103,7 +1253,6 @@ body {
 
 .rt-trend.up { color: #16a34a; }
 .rt-trend.down { color: #A38A70; }
-
 .rt-stat-unit {
     color: #9aa0b5;
     font-size: 13px;
@@ -2141,7 +1290,6 @@ body {
 
 .rt-btn-chart { color: #16a34a; }
 .rt-btn-chev { color: #2C302E; }
-
 /* --- Charge card --- */
 .charge-card-head {
     display: flex;
@@ -2238,7 +1386,6 @@ body {
 .ratings-view .rt-btn-wrap { margin-top: 0; }
 .ratings-view .charge-card-head { margin-bottom: 0; }
 .ratings-view .charge-text .charge-bar-title { margin-top: 0; }
-
 /* ============================================================
    NO VERTICAL SCROLL — fit the whole growth page (both the
    analytics charts view and the ratings view) within a single
@@ -2301,7 +1448,6 @@ html, body {
    taller at the top, 30px taller at the bottom (still within
    the single non-scrolling viewport).
    ============================================================ */
-
 /* Analytics card stays extended via min-height, but the title sits at the very
    top of the card (normal top padding). The button, which has margin-top:auto,
    is pushed to the bottom, so the extra height opens up between chart and button. */
@@ -2516,7 +1662,6 @@ body.dark #themeSelect {
 /* ============================================================
    GROWTH RATINGS v2 — graded report card
    ============================================================ */
-
 /* The report card fills most of the screen — a wide centered column with a
    clean, professional sans-serif throughout. */
 #ratingsView.ratings-view {
@@ -2595,6 +1740,7 @@ body.dark #themeSelect {
     border-radius: 14px;
     overflow: hidden;
 }
+
 .grade-table th {
     text-align: left;
     padding: 14px 18px;
@@ -2606,12 +1752,14 @@ body.dark #themeSelect {
     background: #fafbfc;
     border-bottom: 1px solid #eceef3;
 }
+
 .grade-table td {
     padding: 15px 18px;
     color: #3a3f4b;
     border-bottom: 1px solid #f2f3f7;
     vertical-align: middle;
 }
+
 .grade-table tbody tr:last-child td { border-bottom: none; }
 .grade-table tbody tr:hover td { background: #fafbfc; }
 .gt-metric { font-weight: 600; color: #1f2430; white-space: nowrap; }
@@ -2630,6 +1778,7 @@ body.dark #themeSelect {
     padding-top: 24px;
     border-top: 1px solid #eceef3;
 }
+
 .grade-calc-title {
     margin: 0 0 10px;
     font-family: 'Inter', sans-serif;
@@ -2637,12 +1786,14 @@ body.dark #themeSelect {
     font-weight: 800;
     color: #1f2430;
 }
+
 .grade-calc-intro {
     margin: 0 0 12px;
     font-size: 14px;
     line-height: 1.6;
     color: #6b7280;
 }
+
 .grade-calc-list {
     margin: 0 0 16px;
     padding-left: 20px;
@@ -2653,6 +1804,7 @@ body.dark #themeSelect {
     line-height: 1.5;
     color: #5a6072;
 }
+
 .grade-calc-list strong { color: #3a3f4b; }
 .grade-formula {
     margin: 0;
@@ -2680,8 +1832,8 @@ body.dark #themeSelect {
     cursor: pointer;
     transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
-.grade-charts-btn:hover { background: #fbf7f0; transform: translateY(-1px); }
 
+.grade-charts-btn:hover { background: #fbf7f0; transform: translateY(-1px); }
 /* --- Right: scoring breakdown details --- */
 .ratings-scales {
     flex: 1 1 0;
@@ -2690,6 +1842,7 @@ body.dark #themeSelect {
     flex-direction: column;
     gap: 20px;
 }
+
 .details-title {
     margin: 0 0 4px;
     font-family: 'Inter', sans-serif;
@@ -2698,6 +1851,7 @@ body.dark #themeSelect {
     letter-spacing: -0.01em;
     color: #1f2430;
 }
+
 .detail-card {
     display: flex;
     align-items: center;
@@ -2714,17 +1868,20 @@ body.dark #themeSelect {
     min-height: 0;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
 .detail-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05),
                 0 14px 30px rgba(16, 24, 40, 0.10);
 }
+
 .detail-icon {
     flex-shrink: 0;
     width: 52px;
     height: 52px;
     color: #c9a86a;
 }
+
 .detail-icon svg { width: 100%; height: 100%; }
 .detail-body h3 {
     margin: 0 0 7px;
@@ -2733,6 +1890,7 @@ body.dark #themeSelect {
     font-weight: 700;
     color: #1f2430;
 }
+
 .detail-body p {
     margin: 0;
     font-size: 15px;
@@ -2747,11 +1905,13 @@ body.dark .detail-card {
     border: 1px solid #2b323c;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
 }
+
 body.dark .grade-card { border-top: 4px solid var(--grade-color, #c9a86a); }
 body.dark .detail-card { border-left: 4px solid #b08d5f; }
 body.dark .detail-card:hover {
     box-shadow: 0 16px 34px rgba(0, 0, 0, 0.5);
 }
+
 body.dark .grade-card-title,
 body.dark .details-title,
 body.dark .gt-metric,
@@ -2773,8 +1933,8 @@ body.dark .grade-charts-btn {
     border-color: #B08D5F;
     color: #E7D3B3;
 }
-body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
 
+body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
 /* --- Overall hero: skinny, always at the top --- */
 .report-hero {
     display: flex;
@@ -2853,10 +2013,10 @@ body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
     font-size: 14px;
     font-weight: 600;
 }
+
 .report-trend.trend-up { color: #16a34a; }
 .report-trend.trend-down { color: #ea580c; }
 .report-trend.trend-flat { color: #9ca3af; }
-
 /* --- Grade badge (shared by hero + cards) --- */
 .grade-badge {
     display: inline-flex;
@@ -2930,13 +2090,12 @@ body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
     color: #2C302E;   /* light theme: faint dark */
     opacity: 0.08;
 }
-.metric-art svg { width: 100%; height: 100%; display: block; }
 
+.metric-art svg { width: 100%; height: 100%; display: block; }
 .metric-top,
 .metric-key,
 .metric-sub,
 .metric-foot { position: relative; z-index: 1; }
-
 .metric-top {
     display: flex;
     align-items: center;
@@ -2998,10 +2157,10 @@ body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
     white-space: nowrap;
     line-height: 1.4;
 }
+
 .metric-trend.trend-up { color: #15803d; background: #dcfce7; }
 .metric-trend.trend-down { color: #b91c1c; background: #fee2e2; }
 .metric-trend.trend-flat { color: #6b7280; background: #f3f4f6; }
-
 .metric-score span {
     color: #1f2430;
     font-size: 18px;
@@ -3030,16 +2189,15 @@ body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
 .grade-D { --grade-color: #ed7014; --grade-shadow: rgba(237, 112, 20, 0.30); }
 .grade-F { --grade-color: #dc2626; --grade-shadow: rgba(220, 38, 38, 0.30); }
 .grade-none { --grade-color: #9ca3af; --grade-shadow: rgba(156, 163, 175, 0.22); }
-
 /* S is special: a gold gradient with dark text. C/none use dark text on their
    lighter fills so the letter stays readable. */
 .grade-badge.grade-S {
     background: linear-gradient(135deg, #f2c94c, #cf9a12);
     color: #3a2c00;
 }
+
 .grade-badge.grade-C { color: #3a2f00; }
 .grade-badge.grade-none { color: #ffffff; }
-
 /* --- Wide, prominent "See Growth Ratings" button (on the charts view) --- */
 .see-ratings-wrap {
     margin-top: auto;      /* anchor to the bottom of the charts card */
@@ -3125,7 +2283,6 @@ body.dark .metric-card.metric-pending .metric-key {
 body.dark .metric-trend.trend-up { color: #4ade80; background: rgba(34, 197, 94, 0.15); }
 body.dark .metric-trend.trend-down { color: #f87171; background: rgba(239, 68, 68, 0.15); }
 body.dark .metric-trend.trend-flat { color: #9aa4b2; background: rgba(255, 255, 255, 0.06); }
-
 /* Dark theme: black/dark-fill button with a light-brown outline and light-tan
    text (this dark style is intentionally dark-theme only). */
 body.dark .see-ratings-btn {
@@ -3134,6 +2291,7 @@ body.dark .see-ratings-btn {
     border-color: #B08D5F;                                          /* light brown outline */
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 26px rgba(0, 0, 0, 0.5);
 }
+
 body.dark .see-ratings-btn:hover {
     background: linear-gradient(145deg, #2a2622 0%, #1f1c18 100%);
     border-color: #C9A86A;                                          /* outline brightens */
@@ -3151,6 +2309,7 @@ body.dark .see-ratings-btn:hover {
         max-width: 100%;
         flex-direction: column;   /* stack: report first, then the scales */
     }
+
     .ratings-main, .ratings-scales { flex: 1 1 auto; width: 100%; }
     .metric-art { display: none; }   /* too crowded on phones */
     .report-hero {
@@ -3159,20 +2318,22 @@ body.dark .see-ratings-btn:hover {
         gap: 16px;
         padding: 24px 24px;
     }
+
     .report-hero-grade {
         align-self: stretch;
         justify-content: space-between;
         gap: 14px;
     }
+
     .report-title { font-size: 25px; }
     .report-message { font-size: 15px; }
     .report-overall-score { font-size: 34px; }
     .grade-badge-lg { min-width: 58px; height: 58px; font-size: 30px; }
-
     .report-grid {
         grid-template-columns: 1fr;
         gap: 16px;
     }
+
     .metric-card { padding: 22px 20px; }
     .metric-top { padding-right: 46px; }
     .metric-card > .grade-badge { top: 18px; right: 18px; }

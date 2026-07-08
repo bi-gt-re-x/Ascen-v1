@@ -6,15 +6,6 @@
     <script>
         // Hide the page until its goals are loaded so it fades in once, fully built.
         document.documentElement.classList.add('js-fade');
-        // Pre-paint: guests fall back to their device theme (default light);
-        // logged-in users keep the server-injected theme (from users.json).
-        (function () {
-            try {
-                if (!localStorage.getItem('currentUser')) {
-                    document.documentElement.setAttribute('data-theme', localStorage.getItem('guestTheme') || 'light');
-                }
-            } catch (e) {}
-        })();
     </script>
     <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">

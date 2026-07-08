@@ -7,15 +7,6 @@
     <script>
         // Hide the page until its data is loaded so it fades in once, fully built.
         document.documentElement.classList.add('js-fade');
-        // Pre-paint: logged-in users keep the server-injected theme (from users.json);
-        // guests fall back to their device choice (default light). Avoids a flash.
-        (function () {
-            try {
-                if (!localStorage.getItem('currentUser')) {
-                    document.documentElement.setAttribute('data-theme', localStorage.getItem('guestTheme') || 'light');
-                }
-            } catch (e) {}
-        })();
     </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,6 +22,7 @@
     <script src="{{ url_for('static', filename='javascript/growth.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/slider-keyboard.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/dashboard.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='javascript/goal-notify.js') }}" defer></script>
 </head>
 <body>
 
@@ -157,8 +149,8 @@
                         <div class="timer-inputs" style="margin-top: 8px;">
                             <div class="timer-input-group">
                                 <label for="timerHours">Hours</label>
-                                <input type="range" id="timerHours" min="0" max="96" value="0" style="accent-color: #2C302E;" oninput="updateTimerSliderDisplay('hours', this.value)">
-                                <input type="number" id="timerHoursInput" class="xp-input-field" style="width: 55px; padding: 4px; font-size: 12px;" min="0" max="96" value="0" oninput="updateTimerFromInput('hours', this.value)">
+                                <input type="range" id="timerHours" min="0" max="12" value="0" style="accent-color: #2C302E;" oninput="updateTimerSliderDisplay('hours', this.value)">
+                                <input type="number" id="timerHoursInput" class="xp-input-field" style="width: 55px; padding: 4px; font-size: 12px;" min="0" max="12" value="0" oninput="updateTimerFromInput('hours', this.value)">
                                 <span id="hoursVal" style="display:none;">0</span>
                             </div>
                             <div class="timer-input-group">

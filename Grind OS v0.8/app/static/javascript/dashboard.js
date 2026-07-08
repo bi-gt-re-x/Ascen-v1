@@ -1074,7 +1074,7 @@ function updateTimerSliderDisplay(type, val) {
 
     // Ensure value is within bounds
 
-    val = Math.max(0, Math.min(type === 'hours' ? 96 : 60, parseInt(val) || 0));
+    val = Math.max(0, Math.min(type === 'hours' ? 12 : 60, parseInt(val) || 0));
 
 
 
@@ -1114,7 +1114,7 @@ function updateTimerFromInput(type, val) {
 
     // Ensure value is within bounds
 
-    val = Math.max(0, Math.min(type === 'hours' ? 96 : 60, parseInt(val) || 0));
+    val = Math.max(0, Math.min(type === 'hours' ? 12 : 60, parseInt(val) || 0));
 
 
 
@@ -1126,6 +1126,10 @@ function updateTimerFromInput(type, val) {
 
         if (hoursSlider) hoursSlider.value = val;
 
+        const hoursInput = document.getElementById('timerHoursInput');
+
+        if (hoursInput) hoursInput.value = val;
+
         document.getElementById('hoursVal').textContent = val;
 
     } else if (type === 'minutes') {
@@ -1134,6 +1138,10 @@ function updateTimerFromInput(type, val) {
 
         if (minutesSlider) minutesSlider.value = val;
 
+        const minutesInput = document.getElementById('timerMinutesInput');
+
+        if (minutesInput) minutesInput.value = val;
+
         document.getElementById('minsVal').textContent = val;
 
     } else if (type === 'seconds') {
@@ -1141,6 +1149,10 @@ function updateTimerFromInput(type, val) {
         const secondsSlider = document.getElementById('timerSeconds');
 
         if (secondsSlider) secondsSlider.value = val;
+
+        const secondsInput = document.getElementById('timerSecondsInput');
+
+        if (secondsInput) secondsInput.value = val;
 
         document.getElementById('secsVal').textContent = val;
 
@@ -1257,7 +1269,7 @@ async function addTaskFromModal() {
     const taskId = Date.now().toString();
 
     // Calculate timer duration from input boxes
-    const h = parseInt(document.getElementById('timerHoursInput').value) || 0;
+    const h = Math.min(12, parseInt(document.getElementById('timerHoursInput').value) || 0);
     const m = parseInt(document.getElementById('timerMinutesInput').value) || 0;
     const s = parseInt(document.getElementById('timerSecondsInput').value) || 0;
     const totalSeconds = (h * 3600) + (m * 60) + s;
@@ -1517,6 +1529,11 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
             console.log('Task completed successfully, UI updated');
             // Refresh user data to get updated streak (this will filter out completed tasks)
             await loadUserData();
+            // A completed task can finish a "tasks" goal server-side — check now so
+            // the "{goal} was completed!" toast appears immediately, not on the next poll.
+            if (typeof window.checkGoalCompletions === 'function') {
+                window.checkGoalCompletions();
+            }
         } else {
             console.error('Task completion failed:', result);
             // Re-enable button if completion failed

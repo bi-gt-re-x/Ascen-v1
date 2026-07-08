@@ -1001,5 +1001,86 @@
     "timestamp": "2026-07-06T09:43:32.611320",
     "date": "2026-07-06",
     "tasks_completed": 1
+  },
+  {
+    "id": "1783440848532",
+    "user_id": "gayguy",
+    "amount": 5,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T11:14:08.532793",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783440849124",
+    "user_id": "gayguy",
+    "amount": 5,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T11:14:09.124818",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783441033572",
+    "user_id": "gayguy",
+    "amount": 52,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T11:17:13.572540",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783458245343",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T16:04:05.343509",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783458246087",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T16:04:06.087574",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783458246710",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T16:04:06.710826",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783521613543",
+    "user_id": "gayguy",
+    "amount": 37,
+    "reason": "task_completion",
+    "timestamp": "2026-07-08T09:40:13.543714",
+    "date": "2026-07-08",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783521899210",
+    "user_id": "gayguy",
+    "amount": 49,
+    "reason": "task_completion",
+    "timestamp": "2026-07-08T09:44:59.210113",
+    "date": "2026-07-08",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783543646631",
+    "user_id": "gayguy",
+    "amount": 22,
+    "reason": "task_completion",
+    "timestamp": "2026-07-08T15:47:26.631373",
+    "date": "2026-07-08",
+    "tasks_completed": 1
   }
 ]

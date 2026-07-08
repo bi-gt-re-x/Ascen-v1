@@ -371,6 +371,10 @@ body.desert-solitude .nav-pill.primary:hover {
 .goals-list {
     max-height: 350px;
     overflow-y: auto;
+    /* Pin overflow-x to hidden: overflow-y:auto otherwise computes overflow-x
+       to auto, so the pop-away animation's brief scale-up would flash a
+       horizontal scrollbar at the bottom of the list. */
+    overflow-x: hidden;
     padding-right: 5px;
     scrollbar-width: thin;
     scrollbar-color: rgba(100, 200, 255, 0.3) transparent;

@@ -321,6 +321,10 @@ body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    /* Keep overflow-x pinned to hidden: overflow-y:auto otherwise computes
+       overflow-x to auto, so the pop-away animation's brief scale-up would
+       flash a horizontal scrollbar at the bottom of the card. */
+    overflow-x: hidden;
     padding-right: 4px;
 }
 

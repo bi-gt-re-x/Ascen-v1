@@ -1909,7 +1909,9 @@ function renderCalendar(month, year) {
 
 
 
-    const firstDay = new Date(year, month, 1).getDay();
+    // Monday-first grid: convert JS getDay() (Sunday=0..Saturday=6) into the number
+    // of leading empty cells when the week starts on Monday (Monday=0..Sunday=6).
+    const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
 
 
 
@@ -2014,6 +2016,14 @@ function renderCalendar(month, year) {
 
 
         dayElement.appendChild(dayNumber);
+
+        // Show a dot under any day that has something scheduled.
+        const dayContent = dateContent[dateStr];
+        if (dayContent && Array.isArray(dayContent.timestamps) && dayContent.timestamps.length > 0) {
+            const eventDot = document.createElement('span');
+            eventDot.className = 'event-dot';
+            dayElement.appendChild(eventDot);
+        }
 
 
 
@@ -3071,6 +3081,61 @@ function updateBottomSection(dateStr) {
 
     if (!content) return;
 
+    // Treat dashboard tasks as first-class events: pull any dashboard-task
+    // subtasks out of the time-block they were nested under and give each its
+    // own top-level entry, timed from the task's due/creation time, so they
+    // sort chronologically alongside events and can be coloured by difficulty.
+    if (Array.isArray(content.timestamps)) {
+        const liftedTasks = [];
+        const hasStandalone = (taskId) =>
+            content.timestamps.some(t => t.isDashboardTask && String(t.dashboardTaskId) === String(taskId)) ||
+            liftedTasks.some(t => String(t.dashboardTaskId) === String(taskId));
+        content.timestamps.forEach(block => {
+            if (!Array.isArray(block.subtasks)) return;
+            block.subtasks = block.subtasks.filter(st => {
+                const taskId = st && typeof st === 'object' ? st.taskId : null;
+                if (!taskId) return true; // keep genuine (non-task) subtasks
+                if (!hasStandalone(taskId)) {
+                    const t = dashboardTasks.find(dt => String(dt.id) === String(taskId));
+                    let startTime = block.startTime;
+                    let endTime = block.endTime;
+                    let name = t ? t.name : String(st.text || '').replace(/\s+(?:due|created) at .*$/, '');
+                    // A task spans creation time -> due date. The task id is its
+                    // creation timestamp (ms), a reliable fallback when there's no
+                    // explicit created_at.
+                    const toDate = (v) => { const d = new Date(v); return isNaN(d.getTime()) ? null : d; };
+                    let created = t && t.created_at ? toDate(t.created_at) : null;
+                    if (!created && t && /^\d+$/.test(String(t.id))) created = toDate(Number(t.id));
+                    const due = t && t.due_date ? toDate(t.due_date) : null;
+                    const startDate = created || due;
+                    const endDate = due || (created ? new Date(created.getTime() + 60 * 60 * 1000) : null);
+                    const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    if (startDate) startTime = hhmm(startDate);
+                    if (endDate) endTime = hhmm(endDate);
+                    let completed = !!(t && t.completed) || !!st.completed;
+                    if (window.backendTaskStatuses && window.backendTaskStatuses[taskId]) {
+                        completed = !!window.backendTaskStatuses[taskId].completed;
+                    }
+                    liftedTasks.push({
+                        startTime: startTime,
+                        endTime: endTime,
+                        task: name,
+                        isDashboardTask: true,
+                        dashboardTaskId: taskId,
+                        xp: (t && (t.xp || t.xp_reward || t.difficulty)) || st.xp || 0,
+                        completed: completed
+                    });
+                }
+                return false; // remove the task from its host block
+            });
+            if (block.subtasks.length === 0) {
+                delete block.subtasks;
+                block.hasSubtasks = false;
+            }
+        });
+        if (liftedTasks.length) content.timestamps.push(...liftedTasks);
+    }
+
 
 
     
@@ -3437,46 +3502,22 @@ function updateBottomSection(dateStr) {
 
 
 
-            // Add priority color coding based on XP (only if not dashboard task and no subtasks)
-
-
-
-            if (!section.isDashboardTask && !section.hasSubtasks) {
-
-
-
-                const sectionXP = section.xp || 0;
-
-
-
-                if (sectionXP >= 75) {
-
-
-
-                    li.classList.add('priority-high');
-
-
-
-                } else if (sectionXP >= 40) {
-
-
-
-                    li.classList.add('priority-medium');
-
-
-
-                } else if (sectionXP >= 10) {
-
-
-
-                    li.classList.add('priority-low');
-
-
-
-                }
-
-
-
+            // Tasks are colour-coded by difficulty (red/yellow/blue); events get a
+            // bright colour from a varied palette that avoids the task colours.
+            if (section.isDashboardTask) {
+                li.classList.add('dashboard-task');
+                const xp = section.xp || 0;
+                if (xp >= 66) li.classList.add('priority-high');
+                else if (xp >= 33) li.classList.add('priority-medium');
+                else li.classList.add('priority-low');
+            } else {
+                li.classList.add('calendar-event');
+                const key = (section.task || '') + '|' + (section.startTime || '');
+                let h = 0;
+                for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+                const EVENT_COLORS = ['#8E44AD', '#E67E22', '#16A085', '#E84393', '#00BCD4', '#6C5CE7', '#D35400', '#B33771', '#9B59B6', '#218C74', '#CD6133', '#7158E2'];
+                li.style.background = EVENT_COLORS[h % EVENT_COLORS.length];
+                li.style.color = '#ffffff';
             }
 
 
@@ -3553,7 +3594,10 @@ function updateBottomSection(dateStr) {
 
 
 
-            const inProgressBadge = '';
+            const taskKindBadge = section.isDashboardTask ? '<span class="task-kind-badge">Task</span>' : '';
+            const completedBadge = (section.isDashboardTask && section.completed)
+                ? '<span class="completed-badge">Completed</span>' : '';
+            const inProgressBadge = taskKindBadge + completedBadge;
 
 
 
