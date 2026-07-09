@@ -1131,6 +1131,32 @@ function getIntensityColor(percentage) {
 
 }
 
+// Intensity as a shade of blue for the calendar date markers: a light blue for
+// a light day, deepening to dark navy as the day gets busier (higher intensity).
+function getIntensityBlue(percentage) {
+    const p = Math.max(0, Math.min(100, percentage)) / 100;
+    const light = [158, 200, 250]; // low intensity -> light blue
+    const dark = [10, 31, 82];     // high intensity -> dark navy blue
+    const c = light.map((l, i) => Math.round(l + (dark[i] - l) * p));
+    return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
+// A day's task intensity for the calendar marker. Counts only REAL tasks:
+// dashboard tasks (which carry difficulty/XP) or user-added non-placeholder
+// events. The default day-structure placeholders (Sleep Time, Morning session,
+// ...) do NOT count, so days with no real tasks stay uncoloured. Reads the
+// global task data, so the colour shows without having to click the date.
+function getDayTaskIntensity(dateStr) {
+    const dash = calculateDailyIntensity(dateStr);
+    if (dash.taskCount > 0) return dash.percentage; // XP-weighted difficulty
+    const content = dateContent[dateStr];
+    if (content && Array.isArray(content.timestamps)) {
+        const real = content.timestamps.filter(t => t.isDashboardTask || !isPlaceholderTask(t.task));
+        if (real.length > 0) return Math.min(real.length * 20, 100);
+    }
+    return 0;
+}
+
 
 
 
@@ -2017,9 +2043,17 @@ function renderCalendar(month, year) {
 
         dayElement.appendChild(dayNumber);
 
-        // Show a dot under any day that has something scheduled.
-        const dayContent = dateContent[dateStr];
-        if (dayContent && Array.isArray(dayContent.timestamps) && dayContent.timestamps.length > 0) {
+        // Colour the day marker by the intensity of its REAL tasks: light blue
+        // for a light day, deepening to dark navy for a busy one. Days without
+        // tasks stay uncoloured, and this reads the global task data so the
+        // colour shows on load — no click needed.
+        const dayIntensity = getDayTaskIntensity(dateStr);
+        if (dayIntensity > 0) {
+            dayNumber.style.background = getIntensityBlue(dayIntensity);
+            // Keep the number readable across the light -> dark range
+            dayNumber.style.color = dayIntensity >= 45 ? '#ffffff' : '#0b1b3a';
+
+            // Dot under days that actually have tasks
             const eventDot = document.createElement('span');
             eventDot.className = 'event-dot';
             dayElement.appendChild(eventDot);
@@ -2829,6 +2863,10 @@ function selectDate(dateStr, element) {
 
     updateBottomSection(dateStr);
 
+    // Refresh the month grid so the just-materialised content shows its
+    // intensity tint and event dot on the calendar.
+    renderCalendar(currentMonth, currentYear);
+
 
 
     
@@ -3466,15 +3504,15 @@ function updateBottomSection(dateStr) {
 
 
 
-    intensityContainer.appendChild(intensityBarWrapper);
-
-
-
-    intensityContainer.appendChild(focusInput);
-
-
-
-    tasksList.appendChild(intensityContainer);
+    // Pin the "Today's focus" field above the scrolling event list (mockup
+    // layout). The intensity bar/marker are intentionally not appended.
+    const focusHolder = document.getElementById('dailyFocusHolder');
+    if (focusHolder) {
+        focusHolder.innerHTML = '';
+        focusHolder.appendChild(focusInput);
+    } else {
+        tasksList.appendChild(focusInput);
+    }
 
 
 
@@ -3511,13 +3549,9 @@ function updateBottomSection(dateStr) {
                 else if (xp >= 33) li.classList.add('priority-medium');
                 else li.classList.add('priority-low');
             } else {
+                // All cards share one professional, futuristic style (defined in
+                // CSS) — no per-event colour-coding.
                 li.classList.add('calendar-event');
-                const key = (section.task || '') + '|' + (section.startTime || '');
-                let h = 0;
-                for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-                const EVENT_COLORS = ['#8E44AD', '#E67E22', '#16A085', '#E84393', '#00BCD4', '#6C5CE7', '#D35400', '#B33771', '#9B59B6', '#218C74', '#CD6133', '#7158E2'];
-                li.style.background = EVENT_COLORS[h % EVENT_COLORS.length];
-                li.style.color = '#ffffff';
             }
 
 
@@ -3595,9 +3629,16 @@ function updateBottomSection(dateStr) {
 
 
             const taskKindBadge = section.isDashboardTask ? '<span class="task-kind-badge">Task</span>' : '';
+            // Difficulty shown as a labelled pill on the card (not the card colour)
+            let difficultyBadge = '';
+            if (section.isDashboardTask) {
+                const dxp = section.xp || 0;
+                const level = dxp >= 66 ? 'High' : dxp >= 33 ? 'Medium' : 'Low';
+                difficultyBadge = `<span class="difficulty-badge difficulty-${level.toLowerCase()}">${level}</span>`;
+            }
             const completedBadge = (section.isDashboardTask && section.completed)
                 ? '<span class="completed-badge">Completed</span>' : '';
-            const inProgressBadge = taskKindBadge + completedBadge;
+            const inProgressBadge = taskKindBadge + difficultyBadge + completedBadge;
 
 
 
@@ -4115,7 +4156,20 @@ function updateBottomSection(dateStr) {
 
 
 
-        taskCounter.innerHTML = `<strong>Total tasks:</strong> ${totalTasks} | <strong>Completed:</strong> ${completedTasks} (${percentage}%)`;
+        const R = 18;
+        const CIRC = 2 * Math.PI * R;
+        const dash = (CIRC * percentage) / 100;
+        taskCounter.innerHTML = `
+            <div class="day-progress">
+                <svg class="day-progress-ring" viewBox="0 0 44 44" aria-hidden="true">
+                    <circle class="dpr-track" cx="22" cy="22" r="${R}"></circle>
+                    <circle class="dpr-fill" cx="22" cy="22" r="${R}" stroke-dasharray="${dash.toFixed(2)} ${CIRC.toFixed(2)}"></circle>
+                </svg>
+                <div class="day-progress-text">
+                    <span class="dpr-title">Day Completion Progress</span>
+                    <span class="dpr-sub">${completedTasks} Tasks (${percentage}% Completed)</span>
+                </div>
+            </div>`;
 
 
 

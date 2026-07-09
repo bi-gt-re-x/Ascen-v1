@@ -12,28 +12,29 @@
 </head>
 <body>
 
+    <select id="themeSelect" class="calendar-theme-select" aria-label="Theme">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+    </select>
+
     <div class="calendar-container">
         <div class="calendar-card">
             <div class="calendar-topbar">
-                <div class="calendar-header">
-                    <button class="nav-arrow" onclick="changeMonth(-1)">&#10094;</button>
-                    <h2 id="monthYear"></h2>
-                    <button class="nav-arrow" onclick="changeMonth(1)">&#10095;</button>
-                </div>
-                <div class="calendar-topbar-right">
-                    <div class="view-toggle" role="tablist" aria-label="Calendar view">
-                        <button type="button" class="view-toggle-btn active" aria-selected="true">Month</button>
-                        <button type="button" class="view-toggle-btn" aria-selected="false">Week</button>
-                        <button type="button" class="view-toggle-btn" aria-selected="false">Day</button>
-                    </div>
-                    <select id="themeSelect" class="calendar-theme-select" aria-label="Theme">
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                    </select>
+                <div class="view-toggle" role="tablist" aria-label="Calendar view">
+                    <button type="button" class="view-toggle-btn active" aria-selected="true">Month</button>
+                    <button type="button" class="view-toggle-btn" aria-selected="false">Week</button>
+                    <button type="button" class="view-toggle-btn" aria-selected="false">Day</button>
                 </div>
             </div>
             <div class="calendar-body">
                 <div class="calendar-left">
+                    <div class="calendar-header">
+                        <h2 id="monthYear"></h2>
+                        <div class="calendar-nav-arrows">
+                            <button class="nav-arrow" onclick="changeMonth(-1)">&#10094;</button>
+                            <button class="nav-arrow" onclick="changeMonth(1)">&#10095;</button>
+                        </div>
+                    </div>
                     <div class="calendar-grid day-names-row">
                         <div class="day-name">M</div>
                         <div class="day-name">T</div>
@@ -49,15 +50,19 @@
                     <div class="calendar-bottom-section">
                         <div class="calendar-bottom-box full-width">
                             <h3>What You'll Do Today</h3>
+                            <div id="dailyFocusHolder" class="daily-focus-holder"></div>
                             <ul id="dailyTasks"></ul>
                             <div id="taskCounter" class="task-counter"></div>
-                            <button onclick="addTaskSection()" class="add-section-btn">+ Add Section</button>
+                            <button onclick="addTaskSection()" class="add-section-btn">+ New Task Block</button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="calendar-sparkle" aria-hidden="true">&#10022;</div>
+    <div class="calendar-copyright">Copyright 2026 FocusPoint Inc.</div>
 
     <nav class="bottom-nav">
         <a href="{{ url_for('main.home') }}" class="nav-pill">
