@@ -1,0 +1,7 @@
+If you are seeing this, Welcome to Ascen, I have spent about 6 months building this project,
+but it actually only translates to 3 months because the first 3 months I was using an agent
+that made very careless decisions, which ultamitely resulted in me scrapping the project and
+restarting, and by the way, I have hid my files in the gitignore, I'm not telling you which
+ones, but if you want to plagarize my project, well that's too bad, I hid the most important
+backend file that connects everything together, withotuu it, nothing loads. So feast your eyes
+on my master-ish piece, and I hope you can enjoy it, Thank You!
