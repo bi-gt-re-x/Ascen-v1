@@ -1091,5 +1091,32 @@
     "timestamp": "2026-07-09T14:12:18.367061",
     "date": "2026-07-09",
     "tasks_completed": 1
+  },
+  {
+    "id": "1783695366920",
+    "user_id": "gayguy",
+    "amount": 99,
+    "reason": "task_completion",
+    "timestamp": "2026-07-10T09:56:06.920424",
+    "date": "2026-07-10",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783695367845",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-10T09:56:07.845785",
+    "date": "2026-07-10",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783713172862",
+    "user_id": "gayguy",
+    "amount": 37,
+    "reason": "task_completion",
+    "timestamp": "2026-07-10T14:52:52.862197",
+    "date": "2026-07-10",
+    "tasks_completed": 1
   }
 ]

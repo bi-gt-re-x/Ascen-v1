@@ -224,11 +224,13 @@ body {
     color: white;
 }
 
-/* Main calendar container - centers content on the page */
+/* Main calendar container - centers content on the page.
+   NOTE: margin-top here does nothing — the later .calendar-container rule
+   (search "flex: 1 1 auto") sets margin: 0 and wins on equal specificity.
+   The card's top offset comes from the body's padding-top instead. */
 
 .calendar-container {
     height: 100vh;
-    margin-top: 60px;
 }
 
 /* Calendar Card */
@@ -4176,17 +4178,24 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 14px;
+    justify-content: flex-start;
+    /* Top padding clears the fixed theme button (ends ~60px) by 15px; the 15px
+       gap sits between the card and the nav bar below it. */
+    gap: 15px;
+    /* Card top position is set by THIS padding-top (flex-start layout), not a
+       margin — .calendar-container has margin:0, so margin edits do nothing. */
+    padding: 46px 14px 14px;
     box-sizing: border-box;
 }
 
 .calendar-container {
     width: 100%;
-    height: auto;
+    flex: 1 1 auto;
     min-height: 0;
-    margin: 0;
+    /* Negative top margin pulls the whole container (and card) up by 25px.
+       Only the top is negative — a negative left/right would shift the
+       centred card sideways and overflow the viewport. */
+    margin: -25px 0 0 0;
     padding: 0;
     display: flex;
     justify-content: center;
@@ -4196,9 +4205,9 @@ body {
 .calendar-card {
     width: min(1720px, 97vw);
     max-width: 1720px;
-    height: calc(100vh - 106px);
+    height: 100%;
     min-height: 0;
-    max-height: calc(100vh - 106px);
+    max-height: 100%;
     padding: 32px 56px;
     background: #141518;
     border: 1px solid rgba(255, 255, 255, 0.07);
@@ -4338,7 +4347,17 @@ body {
     padding-right: 72px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+}
+/* Vertically centre the calendar dates block in the left column: the auto
+   margin above the header balances the auto margin above the ring below. */
+.calendar-left .calendar-header {
+    margin-top: auto;
+}
+/* Day Completion Progress sits at the bottom of the left half — the auto top
+   margin absorbs all remaining space and pushes the ring to the bottom edge. */
+.calendar-left #taskCounter.task-counter {
+    margin-top: auto;
+    margin-bottom: 0;
 }
 .calendar-right {
     flex: 1 1 56%;
@@ -4379,13 +4398,16 @@ body {
     position: relative;
 }
 .calendar-day:hover { background: transparent; transform: none; box-shadow: none; }
-/* Clear the old base cell styling (navy bg/glow) — the marker lives on the number now */
+/* Clear ALL old special styling for today/selected — these dates must look
+   identical to every other date. (Selection is shown only by the dot below.) */
 .calendar-day.today,
 .calendar-day.selected,
 .calendar-day.today.selected {
     background: transparent;
     box-shadow: none;
     border: none;
+    color: #e7e7ec;
+    font-weight: 400;
 }
 .calendar-day .day-number {
     display: flex;
@@ -4398,26 +4420,11 @@ body {
     transition: background 0.15s ease;
 }
 .calendar-day:hover .day-number { background: rgba(255, 255, 255, 0.09); }
-/* The current date gets no special marker — every day is coloured only by its
-   own intensity (see getIntensityBlue in calendar.js). */
-.calendar-day.selected .day-number { background: rgba(255, 255, 255, 0.16); color: #ffffff; font-weight: 700; }
+/* Every date looks identical — no today marker, no intensity fill, no ring.
+   The ONLY exception is a small dot under the currently selected date. */
 .calendar-day.empty { background: transparent; }
 .calendar-day.empty:hover .day-number { background: transparent; }
 
-/* Event indicator dot under days that have something scheduled */
-.event-dot {
-    position: absolute;
-    bottom: 4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #ffffff;
-}
-
-/* Dot under the currently selected date (teal to match the today accent).
-   Hide the white event-dot on the selected day so the two don't stack. */
 .calendar-day.selected::after {
     content: '';
     position: absolute;
@@ -4427,9 +4434,9 @@ body {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #14b8a6;
+    background: #ffffff;
 }
-.calendar-day.selected .event-dot { display: none; }
+html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
 
 /* Right column: the day's plan, rendered as clean event cards */
 .calendar-right .calendar-bottom-section {
@@ -4480,18 +4487,26 @@ body {
     border-radius: 8px;
 }
 
-/* Every plan card uses ONE professional, futuristic-space style (matching the
-   container) — no colour-coding by event or difficulty. Difficulty is shown as
-   a small labelled pill instead (see .difficulty-badge below). */
+/* ── Plan cards (mockup style) ───────────────────────────────────────────────
+   One futuristic card style for every item. Layout is a flex row:
+     [round clock icon — events only] · [body: tags → title → time]
+   with the ⋮ overflow menu (top-right) and the "Completed" badge (bottom-right)
+   positioned absolutely so they never disturb the body flow.
+   --fx-card-bg / --fx-card-border are kept because the light/dark theme
+   overrides re-point them (see html[data-theme="light"] #dailyTasks below). */
 #dailyTasks .task-section {
     --fx-card-bg:
         radial-gradient(120% 150% at 0% 0%, rgba(74, 96, 148, 0.30) 0%, rgba(24, 27, 36, 0) 60%),
         linear-gradient(160deg, #1c2029 0%, #12141b 100%);
-    --fx-card-border: rgba(255, 255, 255, 0.08);
+    --fx-card-border: rgba(255, 255, 255, 0.14);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
     border-bottom: none;
     border: 1px solid var(--fx-card-border);
-    border-radius: 18px;
-    padding: 22px 28px;
+    border-radius: 24px;
+    padding: 18px 62px 18px 22px;
     background: var(--fx-card-bg);
     color: #eef0f6;
     box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42);
@@ -4509,62 +4524,99 @@ body {
     opacity: 1 !important;
 }
 
-/* Card text (name + times) follows the card's own colour */
-#dailyTasks .task-section .task-input-inline,
-#dailyTasks .task-section .task-input { color: inherit !important; background: transparent !important; }
-#dailyTasks .task-section .timestamp-section input[type="time"],
-#dailyTasks .task-section .timestamp-section span { color: inherit !important; opacity: 0.9; }
-
-/* "Task" label so tasks are clearly distinguished from events. Sits at the
-   start of the title line; colour adapts to the card via currentColor. */
-#dailyTasks .task-kind-badge {
-    order: -2;
+/* Round clock icon — events only (tasks show the TASK label instead) */
+#dailyTasks .event-icon {
     flex: 0 0 auto;
-    align-self: center;
-    background: rgba(0, 0, 0, 0.18);
-    color: inherit;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 3px 10px;
-    border-radius: 999px;
-    margin: 0 9px 6px 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.30);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #c7c9d3;
 }
-/* On a task card the title shares the top line with the "Task" label */
-#dailyTasks .task-section.dashboard-task .task-input-inline { flex: 1 1 auto; }
+#dailyTasks .event-icon svg { width: 26px; height: 26px; }
 
-/* Difficulty shown as a small labelled pill on the card (the only accent colour;
-   the card itself stays the uniform futuristic style) */
+/* Card body: tags → title → time, stacked */
+#dailyTasks .card-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Tag row (Task N + difficulty pill) — tasks only */
+#dailyTasks .card-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+#dailyTasks .task-kind-badge {
+    background: rgba(0, 0, 0, 0.28);
+    color: #c9cbd6;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 6px;
+}
 #dailyTasks .difficulty-badge {
-    order: -2;
-    flex: 0 0 auto;
-    align-self: center;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    padding: 3px 10px;
-    border-radius: 999px;
-    margin: 0 9px 6px 0;
+    padding: 3px 9px;
+    border-radius: 6px;
     border: 1px solid transparent;
 }
 #dailyTasks .difficulty-badge.difficulty-low    { background: rgba(56, 132, 255, 0.16); color: #8fbcff; border-color: rgba(56, 132, 255, 0.45); }
 #dailyTasks .difficulty-badge.difficulty-medium { background: rgba(245, 196, 92, 0.16); color: #f3cd78; border-color: rgba(245, 196, 92, 0.45); }
 #dailyTasks .difficulty-badge.difficulty-high   { background: rgba(240, 90, 95, 0.16); color: #ff9297; border-color: rgba(240, 90, 95, 0.5); }
 
-/* "Completed" pill on finished tasks */
-#dailyTasks .completed-badge {
-    background: rgba(255, 255, 255, 0.28);
+/* Title — follows the card's own colour so it flips with the theme */
+#dailyTasks .task-input,
+#dailyTasks .task-input-inline,
+#dailyTasks .task-section .task-input-inline {
+    background: transparent !important;
     border: none;
-    color: #ffffff;
-    text-transform: none;
+    color: inherit !important;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     font-weight: 700;
-    font-size: 12px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    margin-left: 8px;
+    font-size: 18px;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    width: 100%;
+    min-width: 0;
+    text-overflow: ellipsis;
 }
+#dailyTasks .task-input::placeholder,
+#dailyTasks .task-input-inline::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+/* Time row (start – end). Tasks keep BOTH times even though they're read-only. */
+#dailyTasks .timestamp-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+#dailyTasks .task-section .timestamp-section input[type="time"] {
+    background: transparent;
+    border: none;
+    color: #9a9ca6 !important;
+    opacity: 1;
+    font-weight: 500;
+    font-size: 14px;
+    width: auto;
+    min-width: 82px;
+    padding: 0;
+}
+#dailyTasks .task-section .timestamp-section input[type="time"]:disabled { opacity: 1; }
+#dailyTasks .timestamp-section span { color: #9a9ca6; font-weight: 500; }
 
 /* Subtasks removed from the calendar entirely */
 #dailyTasks .subtasks-list,
@@ -4573,64 +4625,79 @@ body {
 #dailyTasks .add-subtask-btn,
 #dailyTasks .add-subtask-btn-small { display: none !important; }
 
-/* Make the inputs inside a card read like clean text */
-#dailyTasks .task-input,
-#dailyTasks .task-input-inline {
+/* ⋮ overflow menu (top-right) — opens Edit/Remove for events, Remove for tasks */
+#dailyTasks .card-menu-wrap { position: absolute; top: 14px; right: 14px; }
+#dailyTasks .card-menu-btn {
     background: transparent;
     border: none;
-    color: #17181c;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    font-weight: 700;
-    font-size: 15px;
-    padding: 2px 0;
-    margin: 0;
-    box-shadow: none;
-}
-#dailyTasks .task-input::placeholder,
-#dailyTasks .task-input-inline::placeholder { color: rgba(0, 0, 0, 0.4); }
-/* Put the event name on its own line above the time (title-over-time, like the mockup) */
-#dailyTasks .timestamp-section .task-input-inline {
-    flex: 1 1 100%;
-    order: -1;
-    font-size: 17px;
-    margin: 0 0 6px 0;
-}
-#dailyTasks .timestamp-section { margin-bottom: 6px; gap: 6px; flex-wrap: wrap; }
-#dailyTasks .timestamp-section input[type="time"] {
-    background: transparent;
-    border: none;
-    color: #45464d;
-    font-weight: 600;
-    font-size: 14px;
-    width: auto;
-    min-width: 92px;
-    padding: 0;
-}
-#dailyTasks .timestamp-section span { color: #45464d; font-weight: 600; }
-
-/* Edit / finish / delete controls — one consistent pill style on the cards */
-#dailyTasks .edit-section-btn,
-#dailyTasks .finish-section-btn,
-#dailyTasks .remove-section-btn {
-    background: rgba(255, 255, 255, 0.22);
-    border: 1px solid rgba(255, 255, 255, 0.38);
-    color: #ffffff !important;
-    border-radius: 9px;
-    width: auto;
-    height: auto;
-    padding: 7px 15px;
-    margin: 0 0 0 6px;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    font-size: 13px;
-    font-weight: 600;
+    color: #b6b8c2;
+    font-size: 20px;
     line-height: 1;
-    transition: background 0.2s ease;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
 }
-#dailyTasks .edit-section-btn:hover,
-#dailyTasks .finish-section-btn:hover,
-#dailyTasks .remove-section-btn:hover {
-    background: rgba(255, 255, 255, 0.34);
-    transform: none;
+#dailyTasks .card-menu-btn:hover { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
+#dailyTasks .card-menu {
+    display: none;
+    position: absolute;
+    top: 32px;
+    right: 0;
+    min-width: 132px;
+    background: #20242e;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    padding: 6px;
+    z-index: 20;
+}
+#dailyTasks .card-menu.open { display: block; }
+#dailyTasks .card-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: #e7e8ee;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+#dailyTasks .card-menu-item:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* "Completed" badge (bottom-right) with a green check */
+#dailyTasks .completed-badge {
+    position: absolute;
+    right: 18px;
+    bottom: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: #9a9ca6;
+    text-transform: none;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 0;
+    margin: 0;
+}
+#dailyTasks .completed-badge .completed-check {
+    width: 17px;
+    height: 17px;
+    padding: 2px;
+    border-radius: 50%;
+    background: #2ea043;
+    color: #ffffff;
+    box-sizing: border-box;
 }
 
 /* Day Completion Progress ring (hosted in #taskCounter) + add button */
@@ -4720,7 +4787,7 @@ body {
     right: 58px;
     bottom: 92px;
     z-index: 90;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(139, 92, 246, 0.8);
     font-size: 26px;
     pointer-events: none;
 }
@@ -4739,6 +4806,25 @@ body {
 .add-section-btn:hover {
     background: rgba(255, 255, 255, 0.16);
     transform: translateY(-1px);
+}
+
+/* Blue/violet accent buttons in dark theme (theme selector + New Task Block) */
+html[data-theme="dark"] .add-section-btn {
+    background: linear-gradient(135deg, #5468ee 0%, #8b5cf6 100%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}
+html[data-theme="dark"] .add-section-btn:hover {
+    background: linear-gradient(135deg, #6376f5 0%, #9a6dff 100%);
+}
+html[data-theme="dark"] .calendar-theme-select {
+    background-color: #5f5be6;
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+}
+html[data-theme="dark"] .calendar-theme-select:hover {
+    background-color: #6d69f0;
+    border-color: rgba(255, 255, 255, 0.4);
 }
 
 /* Bottom nav — matched to the other pages (white in-flow pill bar) */
@@ -4918,16 +5004,17 @@ html[data-theme="light"] .day-name { color: #6b6c76; }
 
 html[data-theme="light"] .calendar-day { color: #33343a; }
 html[data-theme="light"] .calendar-day:hover .day-number { background: rgba(16, 24, 40, 0.06); }
-html[data-theme="light"] .calendar-day.selected .day-number {
-    background: rgba(16, 24, 40, 0.1);
-    color: #17181c;
+/* No selected/today fill or ring — dates stay plain; only the selected dot (below).
+   High enough specificity to beat the legacy body.classic selected/today rules. */
+html[data-theme="light"] .calendar-day.today,
+html[data-theme="light"] .calendar-day.selected,
+html[data-theme="light"] .calendar-day.today.selected {
+    color: #33343a;
+    font-weight: 400;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
-html[data-theme="light"] .calendar-day.today.selected .day-number {
-    box-shadow: 0 0 0 2px rgba(16, 24, 40, 0.15);
-}
-/* "today" keeps its green marker with white text — reads well on light too */
-
-html[data-theme="light"] .event-dot { background: #33343a; }
 
 html[data-theme="light"] .calendar-bottom-box h3 { color: #17181c; }
 
@@ -4935,39 +5022,131 @@ html[data-theme="light"] #dailyTasks::-webkit-scrollbar-thumb {
     background: rgba(16, 24, 40, 0.18);
 }
 
-/* Uncoloured plan cards get a hairline + soft shadow so they separate from
-   the white card surface instead of blending in */
+/* Warm brown/black plan cards on the light surface — a tan fill with a brown
+   border and near-black text, so events read as brown, not plain white. */
 html[data-theme="light"] #dailyTasks .task-section {
-    --fx-card-bg: linear-gradient(160deg, #ffffff 0%, #f3f5fa 100%);
-    --fx-card-border: rgba(16, 24, 40, 0.1);
-    color: #17181c;
-    box-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+    --fx-card-bg: linear-gradient(160deg, #f7f0e4 0%, #eadfca 100%);
+    --fx-card-border: #6b5030;
+    color: #2c2013;
+    box-shadow: 0 6px 18px rgba(74, 56, 38, 0.20);
 }
 html[data-theme="light"] #dailyTasks .difficulty-badge.difficulty-low    { color: #1c5fd6; }
 html[data-theme="light"] #dailyTasks .difficulty-badge.difficulty-medium { color: #a9750a; }
 html[data-theme="light"] #dailyTasks .difficulty-badge.difficulty-high   { color: #cf3339; }
 
+/* Card chrome (icon ring, TASK label, ⋮ menu, times) in warm brown/black */
+html[data-theme="light"] #dailyTasks .event-icon { border-color: #6b5030; color: #5c4227; }
+html[data-theme="light"] #dailyTasks .task-kind-badge {
+    background: rgba(92, 66, 39, 0.16);
+    color: #4a3826;
+    border: 1px solid rgba(74, 56, 38, 0.35);
+}
+html[data-theme="light"] #dailyTasks .task-section .timestamp-section input[type="time"],
+html[data-theme="light"] #dailyTasks .timestamp-section span,
+html[data-theme="light"] #dailyTasks .completed-badge { color: #7a6650 !important; }
+html[data-theme="light"] #dailyTasks .card-menu-btn { color: #5c4630; }
+html[data-theme="light"] #dailyTasks .card-menu-btn:hover { background: rgba(92, 66, 39, 0.16); color: #2c2013; }
+html[data-theme="light"] #dailyTasks .card-menu {
+    background: #f7f0e4;
+    border-color: #6b5030;
+    box-shadow: 0 12px 30px rgba(74, 56, 38, 0.28);
+}
+html[data-theme="light"] #dailyTasks .card-menu-item { color: #2c2013; }
+html[data-theme="light"] #dailyTasks .card-menu-item:hover { background: rgba(92, 66, 39, 0.14); }
+
 html[data-theme="light"] .task-counter {
-    background: rgba(16, 24, 40, 0.05);
-    border: 1px solid rgba(16, 24, 40, 0.12);
-    color: #45464d;
+    background: rgba(92, 66, 39, 0.08);
+    border: 1px solid #6b5030;
+    color: #4a3826;
 }
 
+/* "+ New Task Block": a filled brown button with a near-black border */
 html[data-theme="light"] .add-section-btn {
-    background: rgba(16, 24, 40, 0.05);
-    border: 1px solid rgba(16, 24, 40, 0.12);
-    color: #17181c;
+    background: linear-gradient(160deg, #6b5030 0%, #46341f 100%);
+    border: 1px solid #2c2013;
+    color: #f7efe1;
 }
 html[data-theme="light"] .add-section-btn:hover {
-    background: rgba(16, 24, 40, 0.1);
+    background: linear-gradient(160deg, #7a5c39 0%, #52402a 100%);
 }
 
-/* Keep the intended solid-white pill nav (legacy body.classic would otherwise
-   make it translucent) */
+/* Borderless white pill nav. The pill labels must be re-coloured here because
+   the legacy body.classic rule paints them white — invisible on the white bar.
+   Scoped high enough to beat body.classic. */
 html[data-theme="light"] .bottom-nav {
     background: #ffffff;
-    border: 1px solid #e6e8f0;
+    border: none;
     box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
+}
+html[data-theme="light"] .bottom-nav .nav-pill {
+    color: #2c2013;
+    border: none;
+}
+html[data-theme="light"] .bottom-nav .nav-pill:hover {
+    background: rgba(92, 66, 39, 0.14);
+    color: #2c2013;
+}
+html[data-theme="light"] .bottom-nav .nav-pill.active {
+    background: #6b5030;
+    color: #f7efe1;
+    border: none;
+}
+
+/* ── Add/Edit/Delete Section modal in light theme: cream surface, tan-bordered
+   inputs, black "Add Section" button, beige "Cancel" — matches the mockup.
+   Base modal rules use navy (#1a237e); these override them in light theme. */
+html[data-theme="light"] .modal-content {
+    background: #fdfbf6;
+    border: 1px solid #d8c7a4;
+}
+html[data-theme="light"] .modal-header { border-bottom: 1px solid #e7dcc4; }
+html[data-theme="light"] .modal-header h3 { color: #1c140b; }
+html[data-theme="light"] .close-btn { color: #2c2013; }
+html[data-theme="light"] .close-btn:hover { color: #6b5030; }
+html[data-theme="light"] .form-group label { color: #2c2013; }
+html[data-theme="light"] .recurrence-note { color: #7a6650; }
+html[data-theme="light"] .form-group input[type="text"],
+html[data-theme="light"] .form-group input[type="time"],
+html[data-theme="light"] .time-select {
+    border: 2px solid #c4a875;
+    color: #2c2013;
+    background: #ffffff;
+}
+html[data-theme="light"] .form-group input:focus,
+html[data-theme="light"] .time-select:focus {
+    border-color: #6b5030;
+    box-shadow: 0 0 8px rgba(107, 80, 48, 0.3);
+}
+html[data-theme="light"] .radio-group input[type="radio"],
+html[data-theme="light"] .checkbox-group input[type="checkbox"] { accent-color: #1c140b; }
+html[data-theme="light"] .radio-group label,
+html[data-theme="light"] .checkbox-group label { color: #2c2013; }
+html[data-theme="light"] .checkbox-group label { background: #f3ece0; }
+html[data-theme="light"] .checkbox-group label:hover { background: #e9ddc8; }
+html[data-theme="light"] .modal-footer { border-top: 1px solid #e7dcc4; }
+html[data-theme="light"] .btn-cancel {
+    background: #dbc9a8;
+    border: 2px solid #dbc9a8;
+    color: #2c2013;
+}
+html[data-theme="light"] .btn-cancel:hover {
+    background: #cdb890;
+    border-color: #cdb890;
+}
+html[data-theme="light"] .btn-confirm {
+    background: #1a1206;
+    border: 2px solid #1a1206;
+    color: #ffffff;
+}
+html[data-theme="light"] .btn-confirm:hover {
+    background: #33261a;
+    border-color: #33261a;
+}
+/* Brown scrollbar inside the scrolling modal body (matches the mockup) */
+html[data-theme="light"] .modal-body::-webkit-scrollbar { width: 10px; }
+html[data-theme="light"] .modal-body::-webkit-scrollbar-thumb {
+    background: #b79a6a;
+    border-radius: 8px;
 }
 
 html[data-theme="light"] #dailyTasks .daily-intensity-container {
@@ -5051,4 +5230,76 @@ html[data-theme="dark"] .bottom-nav .nav-pill.active {
     html[data-theme="dark"] .calendar-right {
         border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
+}
+
+/* ── Add/Edit/Delete Section modal — futuristic space look for dark theme.
+   Reuses the calendar card's bluish-glow panel gradient and the cyan #2dd4bf
+   accent from the completion ring, so the popup matches the rest of the dark
+   UI (the base modal is navy/white). */
+html[data-theme="dark"] .modal { background-color: rgba(6, 8, 12, 0.62); }
+html[data-theme="dark"] .modal-content {
+    background:
+        radial-gradient(135% 120% at 50% -12%, rgba(64, 84, 134, 0.40) 0%, rgba(18, 20, 28, 0) 58%),
+        linear-gradient(168deg, #181b24 0%, #0e0f15 100%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.65),
+        0 0 40px rgba(45, 212, 191, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html[data-theme="dark"] .modal-header { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .modal-header h3 {
+    color: #f4f4f6;
+    text-shadow: 0 0 18px rgba(45, 212, 191, 0.25);
+}
+html[data-theme="dark"] .close-btn { color: #9a9ba4; }
+html[data-theme="dark"] .close-btn:hover { color: #2dd4bf; }
+html[data-theme="dark"] .form-group label { color: #e7e7ec; }
+html[data-theme="dark"] .recurrence-note { color: #8b8d97; }
+html[data-theme="dark"] .form-group input[type="text"],
+html[data-theme="dark"] .form-group input[type="time"],
+html[data-theme="dark"] .time-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f4f4f6;
+}
+html[data-theme="dark"] .form-group input::placeholder { color: #8b8d97; }
+html[data-theme="dark"] .form-group input:focus,
+html[data-theme="dark"] .time-select:focus {
+    border-color: rgba(45, 212, 191, 0.7);
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.35);
+}
+html[data-theme="dark"] .time-select option { background: #14171f; color: #f4f4f6; }
+html[data-theme="dark"] .radio-group input[type="radio"],
+html[data-theme="dark"] .checkbox-group input[type="checkbox"] { accent-color: #2dd4bf; }
+html[data-theme="dark"] .radio-group label,
+html[data-theme="dark"] .checkbox-group label { color: #e7e7ec; }
+html[data-theme="dark"] .checkbox-group label { background: rgba(255, 255, 255, 0.05); }
+html[data-theme="dark"] .checkbox-group label:hover { background: rgba(255, 255, 255, 0.10); }
+html[data-theme="dark"] .modal-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .btn-cancel {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #e7e7ec;
+}
+html[data-theme="dark"] .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+/* Confirm button: the theme's signature cyan glow */
+html[data-theme="dark"] .btn-confirm {
+    background: linear-gradient(160deg, #2dd4bf 0%, #14b8a6 100%);
+    border: 1px solid rgba(45, 212, 191, 0.6);
+    color: #05201c;
+    box-shadow: 0 0 18px rgba(45, 212, 191, 0.35);
+}
+html[data-theme="dark"] .btn-confirm:hover {
+    background: linear-gradient(160deg, #3ee0cb 0%, #17c6b2 100%);
+    border-color: rgba(45, 212, 191, 0.85);
+    box-shadow: 0 0 26px rgba(45, 212, 191, 0.5);
+}
+html[data-theme="dark"] .modal-body::-webkit-scrollbar { width: 10px; }
+html[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
+    background: rgba(45, 212, 191, 0.35);
+    border-radius: 8px;
 }

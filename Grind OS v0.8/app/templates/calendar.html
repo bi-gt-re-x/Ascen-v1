@@ -45,6 +45,7 @@
                         <div class="day-name">S</div>
                     </div>
                     <div class="calendar-grid" id="calendarDays"></div>
+                    <div id="taskCounter" class="task-counter"></div>
                 </div>
                 <div class="calendar-right">
                     <div class="calendar-bottom-section">
@@ -52,17 +53,13 @@
                             <h3>What You'll Do Today</h3>
                             <div id="dailyFocusHolder" class="daily-focus-holder"></div>
                             <ul id="dailyTasks"></ul>
-                            <div id="taskCounter" class="task-counter"></div>
-                            <button onclick="addTaskSection()" class="add-section-btn">+ New Task Block</button>
+                            <button onclick="addTaskSection()" class="add-section-btn">Add New Event</button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="calendar-sparkle" aria-hidden="true">&#10022;</div>
-    <div class="calendar-copyright">Copyright 2026 FocusPoint Inc.</div>
 
     <nav class="bottom-nav">
         <a href="{{ url_for('main.home') }}" class="nav-pill">

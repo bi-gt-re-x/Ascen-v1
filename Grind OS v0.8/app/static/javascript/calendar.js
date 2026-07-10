@@ -1141,20 +1141,23 @@ function getIntensityBlue(percentage) {
     return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
-// A day's task intensity for the calendar marker. Counts only REAL tasks:
-// dashboard tasks (which carry difficulty/XP) or user-added non-placeholder
-// events. The default day-structure placeholders (Sleep Time, Morning session,
-// ...) do NOT count, so days with no real tasks stay uncoloured. Reads the
-// global task data, so the colour shows without having to click the date.
+// A day's task intensity for the calendar marker (0 = no colour). Accurate to
+// the real workload: the XP-weighted difficulty of dashboard tasks due that day,
+// plus any user-added (non-placeholder) events. The default daily sessions
+// (Sleep Time, Morning session, ...) are NOT counted — they are identical on
+// every day, so counting them would colour every day the same and single out
+// "today". Higher value -> darker blue; 0 -> no colour.
 function getDayTaskIntensity(dateStr) {
+    // XP-weighted difficulty of real dashboard tasks due that day.
     const dash = calculateDailyIntensity(dateStr);
-    if (dash.taskCount > 0) return dash.percentage; // XP-weighted difficulty
+    let pct = dash.taskCount > 0 ? dash.percentage : 0;
+    // Add weight for any user-added, non-placeholder events on the day.
     const content = dateContent[dateStr];
     if (content && Array.isArray(content.timestamps)) {
-        const real = content.timestamps.filter(t => t.isDashboardTask || !isPlaceholderTask(t.task));
-        if (real.length > 0) return Math.min(real.length * 20, 100);
+        const customEvents = content.timestamps.filter(t => !t.isDashboardTask && !isPlaceholderTask(t.task));
+        pct += customEvents.length * 20;
     }
-    return 0;
+    return Math.min(pct, 100);
 }
 
 
@@ -2043,20 +2046,14 @@ function renderCalendar(month, year) {
 
         dayElement.appendChild(dayNumber);
 
-        // Colour the day marker by the intensity of its REAL tasks: light blue
-        // for a light day, deepening to dark navy for a busy one. Days without
-        // tasks stay uncoloured, and this reads the global task data so the
-        // colour shows on load — no click needed.
+        // Colour the day's number by its task intensity: light blue = low load,
+        // dark navy = high load. The current date is NOT treated specially — it
+        // is coloured by its own intensity exactly like any other day. Selection
+        // is shown only by the white dot (CSS .calendar-day.selected).
         const dayIntensity = getDayTaskIntensity(dateStr);
         if (dayIntensity > 0) {
             dayNumber.style.background = getIntensityBlue(dayIntensity);
-            // Keep the number readable across the light -> dark range
             dayNumber.style.color = dayIntensity >= 45 ? '#ffffff' : '#0b1b3a';
-
-            // Dot under days that actually have tasks
-            const eventDot = document.createElement('span');
-            eventDot.className = 'event-dot';
-            dayElement.appendChild(eventDot);
         }
 
 
@@ -3524,6 +3521,7 @@ function updateBottomSection(dateStr) {
 
 
 
+        let taskNumber = 0;
         content.timestamps.forEach((section, index) => {
 
 
@@ -3588,7 +3586,10 @@ function updateBottomSection(dateStr) {
 
 
 
-            if (section.hasConflict) {
+            // Dashboard tasks are auto-placed from their due date; two of them
+            // sharing a time is not a real scheduling conflict, so never give
+            // them the red "conflict" styling (which read as "overdue").
+            if (section.hasConflict && !section.isDashboardTask) {
 
 
 
@@ -3612,11 +3613,17 @@ function updateBottomSection(dateStr) {
 
 
 
-            const editButton = section.isDashboardTask ? '' : `<button class="edit-section-btn" onclick="editTaskSection(${index})">Edit</button>`;
+            // Overflow (⋮) menu replaces the old inline Edit/Remove buttons.
+            // Events (calendar-event) get Edit + Remove; auto-placed tasks get Remove only.
+            const menuItems = section.isDashboardTask
+                ? `<button type="button" class="card-menu-item" onclick="removeTaskSection(${index})">Remove</button>`
+                : `<button type="button" class="card-menu-item" onclick="editTaskSection(${index})">Edit</button><button type="button" class="card-menu-item" onclick="removeTaskSection(${index})">Remove</button>`;
+            const cardMenu = `<div class="card-menu-wrap"><button type="button" class="card-menu-btn" aria-label="More options" onclick="toggleCardMenu(event)">&#8942;</button><div class="card-menu">${menuItems}</div></div>`;
 
 
 
-            const removeButton = section.isDashboardTask ? '' : `<button class="remove-section-btn" onclick="removeTaskSection(${index})">×</button>`;
+            // Event clock icon (events only; tasks show the TASK label instead)
+            const eventIcon = section.isDashboardTask ? '' : `<span class="event-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></span>`;
 
 
 
@@ -3628,7 +3635,8 @@ function updateBottomSection(dateStr) {
 
 
 
-            const taskKindBadge = section.isDashboardTask ? '<span class="task-kind-badge">Task</span>' : '';
+            let taskKindBadge = '';
+            if (section.isDashboardTask) { taskNumber++; taskKindBadge = `<span class="task-kind-badge">Task ${taskNumber}</span>`; }
             // Difficulty shown as a labelled pill on the card (not the card colour)
             let difficultyBadge = '';
             if (section.isDashboardTask) {
@@ -3637,8 +3645,11 @@ function updateBottomSection(dateStr) {
                 difficultyBadge = `<span class="difficulty-badge difficulty-${level.toLowerCase()}">${level}</span>`;
             }
             const completedBadge = (section.isDashboardTask && section.completed)
-                ? '<span class="completed-badge">Completed</span>' : '';
-            const inProgressBadge = taskKindBadge + difficultyBadge + completedBadge;
+                ? `<span class="completed-badge">Completed <svg class="completed-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`
+                : '';
+            // Tasks show a tag row (Task N + difficulty pill); events have neither.
+            const cardTags = (taskKindBadge || difficultyBadge)
+                ? `<div class="card-tags">${taskKindBadge}${difficultyBadge}</div>` : '';
 
 
 
@@ -3679,42 +3690,18 @@ function updateBottomSection(dateStr) {
 
 
             li.innerHTML = `
-
-
-
-                <div class="timestamp-section">
-
-
-
-                    <input type="time" class="start-time" value="${section.startTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'startTime', this.value)">
-
-
-
-                    <span>-</span>
-
-
-
-                    <input type="time" class="end-time" value="${section.endTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'endTime', this.value)">
-
-
-
+                ${eventIcon}
+                <div class="card-body">
+                    ${cardTags}
                     <input type="text" class="task-input-inline" value="${section.task}" placeholder="What will you do..." ${readonlyAttr} onchange="updateTimestamp(${index}, 'task', this.value)">
-
-
-
-                    ${inProgressBadge}
-
-
-
-                    ${editButton}
-
-
-
-                    ${removeButton}
-
-
-
+                    <div class="timestamp-section">
+                        <input type="time" class="start-time" value="${section.startTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'startTime', this.value)">
+                        <span>-</span>
+                        <input type="time" class="end-time" value="${section.endTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'endTime', this.value)">
+                    </div>
                 </div>
+                ${cardMenu}
+                ${completedBadge}
 
 
 
@@ -6704,6 +6691,21 @@ function removeTaskSection(index) {
 
 
 
+
+// Toggle a plan card's ⋮ overflow menu (Edit / Remove). Only one open at a time.
+function toggleCardMenu(event) {
+    event.stopPropagation();
+    const wrap = event.currentTarget.closest('.card-menu-wrap');
+    const menu = wrap ? wrap.querySelector('.card-menu') : null;
+    const willOpen = menu && !menu.classList.contains('open');
+    document.querySelectorAll('#dailyTasks .card-menu.open').forEach(m => m.classList.remove('open'));
+    if (willOpen) menu.classList.add('open');
+}
+// Any click outside an open menu closes it (menu-item clicks bubble here too,
+// so choosing Edit/Remove opens its modal and dismisses the menu).
+document.addEventListener('click', () => {
+    document.querySelectorAll('#dailyTasks .card-menu.open').forEach(m => m.classList.remove('open'));
+});
 
 function openDeleteModal(section) {
 
