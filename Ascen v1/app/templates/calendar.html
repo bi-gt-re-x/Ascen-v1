@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calendar</title>
+    <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='calendar-week.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tenor+Sans&family=Quicksand:wght@400;500;600&family=Lato:wght@300;400;700&family=Noto+Sans:wght@300;400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="calendar-container">
+        <div class="calendar-card page-shell">
+            <select id="themeSelect" class="calendar-theme-select" aria-label="Theme">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+            <div class="calendar-topbar">
+                <div class="view-toggle" role="tablist" aria-label="Calendar view">
+                    <button type="button" class="view-toggle-btn active" data-view="week" aria-selected="true">Week</button>
+                    <button type="button" class="view-toggle-btn" data-view="day" aria-selected="false">Day</button>
+                    <button type="button" class="view-toggle-btn" data-view="month" aria-selected="false">Month</button>
+                </div>
+            </div>
+            <div id="monthView" class="view-pane">
+            <div class="calendar-body">
+                <div class="calendar-left">
+                    <div class="calendar-header">
+                        <h2 id="monthYear"></h2>
+                        <div class="calendar-nav-arrows">
+                            <button class="nav-arrow" onclick="changeMonth(-1)">&#10094;</button>
+                            <button class="nav-arrow" onclick="changeMonth(1)">&#10095;</button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid day-names-row">
+                        <div class="day-name">M</div>
+                        <div class="day-name">T</div>
+                        <div class="day-name">W</div>
+                        <div class="day-name">T</div>
+                        <div class="day-name">F</div>
+                        <div class="day-name">S</div>
+                        <div class="day-name">S</div>
+                    </div>
+                    <div class="calendar-grid" id="calendarDays"></div>
+                    <div id="taskCounter" class="task-counter"></div>
+                </div>
+                <div class="calendar-right">
+                    <div class="calendar-bottom-section">
+                        <div class="calendar-bottom-box full-width">
+                            <h3>What You'll Do Today</h3>
+                            <div id="dailyFocusHolder" class="daily-focus-holder"></div>
+                            <ul id="dailyTasks"></ul>
+                            <button onclick="addTaskSection()" class="add-section-btn">Add New Event</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div><!-- /#monthView -->
+
+            <div id="weekView" class="view-pane active">
+                <div class="wk-header">
+                    <div class="wk-titlegroup">
+                        <h2 class="wk-title" id="wkTitle">July 13 – July 19, 2026</h2>
+                        <div class="wk-nav">
+                            <button class="wk-arrow" aria-label="Previous week">&#10094;</button>
+                            <button class="wk-arrow" aria-label="Next week">&#10095;</button>
+                        </div>
+                        <button class="wk-today">Today</button>
+                    </div>
+                    <button class="wk-filters">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                        Filters
+                    </button>
+                </div>
+                <div class="wk-main">
+                    <aside class="wk-sidebar">
+                        <section class="wk-panel">
+                            <h3 class="wk-panel-title">📈 Weekly Overview</h3>
+                            <div class="wk-stats">
+                                <div class="wk-stat"><div class="wk-stat-num" id="wkTotalTasks">–</div><div class="wk-stat-label">Total Tasks</div></div>
+                                <div class="wk-stat"><div class="wk-stat-num" id="wkCompleted">–</div><div class="wk-stat-label">Completed</div></div>
+                                <div class="wk-stat"><div class="wk-stat-num" id="wkRate">–</div><div class="wk-stat-label">Completion Rate</div></div>
+                                <div class="wk-stat"><div class="wk-stat-num" id="wkXP">–</div><div class="wk-stat-label">Total XP Earned</div></div>
+                            </div>
+                        </section>
+                        <section class="wk-panel">
+                            <h3 class="wk-panel-title">🎯 Weekly Focus</h3>
+                            <p class="wk-focus-text">Finish coding project and complete math practice</p>
+                            <div class="wk-progress"><div class="wk-progress-bar" style="width:67%"></div></div>
+                            <span class="wk-progress-pct">67%</span>
+                        </section>
+                        <section class="wk-panel">
+                            <h3 class="wk-panel-title">🚩 Top Priorities</h3>
+                            <ol class="wk-priorities">
+                                <li><span>1. Coding Project</span><span class="wk-badge high">High</span></li>
+                                <li><span>2. Math Practice</span><span class="wk-badge high">High</span></li>
+                                <li><span>3. Violin Practice</span><span class="wk-badge med">Medium</span></li>
+                            </ol>
+                        </section>
+                        <section class="wk-panel">
+                            <h3 class="wk-panel-title">🔥 Streak</h3>
+                            <div class="wk-streak-num" id="wkStreak">– days</div>
+                            <div class="wk-streak-sub">Keep it up! 🔥</div>
+                        </section>
+                        <section class="wk-panel wk-charge">
+                            <div class="wk-charge-head">⚡ Weekly Charge <span class="wk-mult">4.2x Multiplier</span></div>
+                            <div class="wk-progress"><div class="wk-progress-bar" style="width:60%"></div></div>
+                            <p class="wk-charge-sub">Great momentum! You're on fire.</p>
+                        </section>
+                    </aside>
+                    <div class="wk-gridwrap">
+                        <div class="wk-grid-head">
+                            <div class="wk-corner"></div>
+                            <div class="wk-dayhead-row" id="wkDayHeads"></div>
+                        </div>
+                        <div class="wk-allday-row">
+                            <div class="wk-allday-label">All-day</div>
+                            <div class="wk-allday-cells" id="wkAllday"></div>
+                        </div>
+                        <div class="wk-scroll">
+                            <div class="wk-timelabels" id="wkTimeLabels"></div>
+                            <div class="wk-daycols" id="wkDayCols"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dayView" class="view-pane">
+                <div class="wk-placeholder">Day view is coming soon.</div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="{{ url_for('main.home') }}" class="nav-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+            Home
+        </a>
+        <a href="{{ url_for('main.dashboard') }}" class="nav-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Dashboard
+        </a>
+        <a href="{{ url_for('main.growth') }}" class="nav-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg>
+            Growth
+        </a>
+        <a href="{{ url_for('main.goals') }}" class="nav-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
+            Goals
+        </a>
+    </nav>
+
+    <!-- Add Section Modal -->
+    <div id="addSectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Section</h3>
+                <span class="close-btn" onclick="closeAddSectionModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="timeframeName">Timeframe Name:</label>
+                    <input type="text" id="timeframeName" placeholder="e.g., Morning Workout">
+                </div>
+                <div class="form-group">
+                    <label for="startTime">Start Time:</label>
+                    <div class="time-selector">
+                        <select id="startHour" class="time-select"></select>
+                        <select id="startMinute" class="time-select"></select>
+                        <select id="startAmPm" class="time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="endTime">End Time:</label>
+                    <div class="time-selector">
+                        <select id="endHour" class="time-select"></select>
+                        <select id="endMinute" class="time-select"></select>
+                        <select id="endAmPm" class="time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Recurrence Type:</label>
+                    <p class="recurrence-note">Recurrence applies to the next 12 months</p>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="recurrenceType" value="none" checked> No recurrence
+                        </label>
+                        <label>
+                            <input type="radio" name="recurrenceType" value="weekly"> Days of week
+                        </label>
+                        <label>
+                            <input type="radio" name="recurrenceType" value="monthly"> Days of month
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="weeklyOptions" style="display: none;">
+                    <label>Select Days of Week:</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="dayOfWeek" value="0"> Sunday</label>
+                        <label><input type="checkbox" name="dayOfWeek" value="1"> Monday</label>
+                        <label><input type="checkbox" name="dayOfWeek" value="2"> Tuesday</label>
+                        <label><input type="checkbox" name="dayOfWeek" value="3"> Wednesday</label>
+                        <label><input type="checkbox" name="dayOfWeek" value="4"> Thursday</label>
+                        <label><input type="checkbox" name="dayOfWeek" value="5"> Friday</label>
+                        <label><input type="checkbox" name="dayOfWeek" value="6"> Saturday</label>
+                    </div>
+                </div>
+                <div class="form-group" id="monthlyOptions" style="display: none;">
+                    <label>Select Days of Month:</label>
+                    <div class="checkbox-group" id="monthlyDaysContainer">
+                        <!-- Days will be generated by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeAddSectionModal()">Cancel</button>
+                <button class="btn-confirm" onclick="confirmAddSection()">Add Section</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Section Modal -->
+    <div id="editSectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Section</h3>
+                <span class="close-btn" onclick="closeEditSectionModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editTimeframeName">Timeframe Name:</label>
+                    <input type="text" id="editTimeframeName" placeholder="e.g., Morning Workout">
+                </div>
+                <div class="form-group">
+                    <label for="editStartTime">Start Time:</label>
+                    <div class="time-selector">
+                        <select id="editStartHour" class="time-select"></select>
+                        <select id="editStartMinute" class="time-select"></select>
+                        <select id="editStartAmPm" class="time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editEndTime">End Time:</label>
+                    <div class="time-selector">
+                        <select id="editEndHour" class="time-select"></select>
+                        <select id="editEndMinute" class="time-select"></select>
+                        <select id="editEndAmPm" class="time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Recurrence Type:</label>
+                    <p class="recurrence-note">Recurrence applies to the next 12 months</p>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="editRecurrenceType" value="none"> No recurrence
+                        </label>
+                        <label>
+                            <input type="radio" name="editRecurrenceType" value="weekly"> Days of week
+                        </label>
+                        <label>
+                            <input type="radio" name="editRecurrenceType" value="monthly"> Days of month
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="editWeeklyOptions" style="display: none;">
+                    <label>Select Days of Week:</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="editDayOfWeek" value="0"> Sunday</label>
+                        <label><input type="checkbox" name="editDayOfWeek" value="1"> Monday</label>
+                        <label><input type="checkbox" name="editDayOfWeek" value="2"> Tuesday</label>
+                        <label><input type="checkbox" name="editDayOfWeek" value="3"> Wednesday</label>
+                        <label><input type="checkbox" name="editDayOfWeek" value="4"> Thursday</label>
+                        <label><input type="checkbox" name="editDayOfWeek" value="5"> Friday</label>
+                        <label><input type="checkbox" name="editDayOfWeek" value="6"> Saturday</label>
+                    </div>
+                </div>
+                <div class="form-group" id="editMonthlyOptions" style="display: none;">
+                    <label>Select Days of Month:</label>
+                    <div class="checkbox-group" id="editMonthlyDaysContainer">
+                        <!-- Days will be generated by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEditSectionModal()">Cancel</button>
+                <button class="btn-confirm" onclick="confirmEditSection()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="deleteModalTitle">Delete Task</h3>
+                <span class="close-btn" onclick="closeDeleteModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- Placeholder Task Delete Options -->
+                <div class="form-group" id="placeholderDeleteOptions" style="display: none;">
+                    <label>What would you like to delete?</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="placeholderDeleteOption" value="permanent" checked> Delete permanently
+                        </label>
+                        <label>
+                            <input type="radio" name="placeholderDeleteOption" value="temporary"> Delete for a period
+                        </label>
+                        <label>
+                            <input type="radio" name="placeholderDeleteOption" value="recurrences"> Delete recurrences
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="timePeriodOptions" style="display: none;">
+                    <label>Select time period:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="timePeriod" value="1"> 1 month
+                        </label>
+                        <label>
+                            <input type="radio" name="timePeriod" value="2"> 2 months
+                        </label>
+                        <label>
+                            <input type="radio" name="timePeriod" value="4"> 4 months
+                        </label>
+                        <label>
+                            <input type="radio" name="timePeriod" value="8"> 8 months
+                        </label>
+                        <label>
+                            <input type="radio" name="timePeriod" value="12"> 12 months
+                        </label>
+                        <label>
+                            <input type="radio" name="timePeriod" value="24"> 24 months
+                        </label>
+                        <label>
+                            <input type="radio" name="timePeriod" value="36"> 36 months
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="placeholderRecurrenceOptions" style="display: none;">
+                    <label>Select recurrence type to delete:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="placeholderRecurrenceType" value="dates"> Specific dates
+                        </label>
+                        <label>
+                            <input type="radio" name="placeholderRecurrenceType" value="days"> Days of week
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="placeholderDatesOptions" style="display: none;">
+                    <label>Select days of month to delete from:</label>
+                    <div class="checkbox-group" id="placeholderDatesContainer">
+                        <!-- Days 1-31 will be generated by JS -->
+                    </div>
+                </div>
+                <div class="form-group" id="placeholderDaysOptions" style="display: none;">
+                    <label>Select days of week to delete from:</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="placeholderDeleteDayOfWeek" value="0"> Sunday</label>
+                        <label><input type="checkbox" name="placeholderDeleteDayOfWeek" value="1"> Monday</label>
+                        <label><input type="checkbox" name="placeholderDeleteDayOfWeek" value="2"> Tuesday</label>
+                        <label><input type="checkbox" name="placeholderDeleteDayOfWeek" value="3"> Wednesday</label>
+                        <label><input type="checkbox" name="placeholderDeleteDayOfWeek" value="4"> Thursday</label>
+                        <label><input type="checkbox" name="placeholderDeleteDayOfWeek" value="5"> Friday</label>
+                        <label><input type="checkbox" name="placeholderDeleteDayOfWeek" value="6"> Saturday</label>
+                    </div>
+                </div>
+
+                <!-- Custom Task Delete Options -->
+                <div class="form-group" id="customDeleteOptions" style="display: none;">
+                    <label>What would you like to delete?</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="deleteOption" value="individual" checked> Delete individual task on this date
+                        </label>
+                        <label>
+                            <input type="radio" name="deleteOption" value="recurrences"> Delete recurrences
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="recurrenceDeleteOptions" style="display: none;">
+                    <label>Select recurrence type to delete:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="recurrenceDeleteType" value="dates"> Specific dates
+                        </label>
+                        <label>
+                            <input type="radio" name="recurrenceDeleteType" value="days"> Days of week
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="datesDeleteOptions" style="display: none;">
+                    <label>Select days of month to delete from:</label>
+                    <div class="checkbox-group" id="datesDeleteContainer">
+                        <!-- Days 1-31 will be generated by JS -->
+                    </div>
+                </div>
+                <div class="form-group" id="daysDeleteOptions" style="display: none;">
+                    <label>Select days of week to delete from:</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="deleteDayOfWeek" value="0"> Sunday</label>
+                        <label><input type="checkbox" name="deleteDayOfWeek" value="1"> Monday</label>
+                        <label><input type="checkbox" name="deleteDayOfWeek" value="2"> Tuesday</label>
+                        <label><input type="checkbox" name="deleteDayOfWeek" value="3"> Wednesday</label>
+                        <label><input type="checkbox" name="deleteDayOfWeek" value="4"> Thursday</label>
+                        <label><input type="checkbox" name="deleteDayOfWeek" value="5"> Friday</label>
+                        <label><input type="checkbox" name="deleteDayOfWeek" value="6"> Saturday</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn-confirm" onclick="doneDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='javascript/calendar.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/calendar-week.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/api.js') }}"></script>
+
+    <script>
+        // Initialize the calendar once the DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeCalendar);
+    </script>
+
+</body>
+</html>

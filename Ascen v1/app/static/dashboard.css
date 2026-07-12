@@ -1,0 +1,947 @@
+/* ==========================================================================
+   GLOBAL RESET & ANIMATIONS
+   ========================================================================== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Single smooth page fade (JS-gated so the page never stays blank without JS).
+   The page loads hidden and reveals in one piece once its data is ready. */
+html.js-fade body { opacity: 0; }
+html.js-fade.page-ready body { opacity: 1; transition: opacity 0.45s ease; }
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #ECEFF1 0%, #FFFFFF 100%);
+    color: #2C302E;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ==========================================================================
+   NAVIGATION BAR
+   ========================================================================== */
+.main-nav {
+    width: 100%;
+    background: #FFFFFF;
+    border-bottom: 1px solid #EAEAEA;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+}
+
+.nav-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    /* Drops the image's white background into the white nav so only the mark shows */
+    mix-blend-mode: multiply;
+}
+
+.nav-center {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    justify-content: center;
+    flex: 1;
+}
+
+.nav-item {
+    text-decoration: none;
+    color: #2C302E;
+    font-weight: 400;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+
+.nav-item.active {
+    font-weight: 400;
+    text-underline-offset: 4px;
+}
+
+.nav-item:hover {
+    color: #A38A70;
+}
+
+.view-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: #F8F9FA;
+    border: 1px solid #EAEAEA;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.view-dropdown .dropdown-arrow {
+    font-size: 9px;
+    color: #6C757D;
+}
+
+/* ==========================================================================
+   LAYOUT STRUCTURE CONTROLLER
+   ========================================================================== */
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 100px auto 5px;
+    min-height: calc(100vh - 105px);
+    padding: 0 24px;
+}
+
+.top-section {
+    display: grid;
+    /* Same 45/55 split, but fr units respect the gap (45%+55%+gap used to
+       overflow by 24px) and minmax(0, …) lets wide content shrink. */
+    grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+    gap: 1.5rem;
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+.card {
+    background: #FFFFFF;
+    padding: 24px;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1.5px solid #EAEAEA;
+    text-align: left;
+}
+
+/* Nudge the user-stats card (Name / XP / Level / Multiplier) down 5px */
+.user-stats {
+    position: relative;
+    top: 5px;
+}
+
+.card h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #2C302E;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ==========================================================================
+   WIDGET COMPONENTS (XP & STATS)
+   ========================================================================== */
+.username-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 20px;
+}
+
+.username-row .label {
+    font-weight: 400;
+    color: #6C757D;
+}
+
+.username-row .username {
+    font-weight: 700;
+    color: #2C302E;
+}
+
+.xp-label-row {
+    text-align: right;
+    font-size: 12px;
+    color: #6C757D;
+    margin-bottom: 6px;
+}
+
+.xp-bar-container {
+    width: 100%;
+    height: 10px;
+    background: #E9ECEF;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.xp-bar-fill {
+    height: 100%;
+    background: #A38A70;
+    border-radius: 20px;
+    transition: width 0.4s ease;
+}
+
+.stats-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #6C757D;
+}
+
+.stat-item .highlight {
+    color: #A38A70;
+    font-weight: 600;
+}
+
+/* Statistics List Rows */
+.stat-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #F1F3F5;
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-row span {
+    font-size: 14px;
+    color: #495057;
+}
+
+.stat-row strong {
+    color: #2C302E;
+    font-weight: 700;
+}
+
+/* ==========================================================================
+   TASK MANAGER DASHBOARD
+   ========================================================================== */
+.task-manager {
+    width: calc(100% + 24px);
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.add-task-btn {
+    background: #2C302E;
+    color: #FFFFFF;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.add-task-btn:hover {
+    background-color: #454B48;
+}
+
+.task-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+.task-panel {
+    background: #FFFFFF;
+    border: 1.5px solid #EAEAEA;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header-band {
+    background: #F8F9FA;
+    color: #2C302E;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    border-bottom: 1.5px solid #EAEAEA;
+    text-align: left;
+}
+
+.task-panel ul,
+.task-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+/* Scroll the task list when it overflows the (page-filling) Tasks card */
+.task-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    /* Keep overflow-x pinned to hidden: overflow-y:auto otherwise computes
+       overflow-x to auto, so the pop-away animation's brief scale-up would
+       flash a horizontal scrollbar at the bottom of the card. */
+    overflow-x: hidden;
+    padding-right: 4px;
+}
+
+/* Individual Row Items */
+.task-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #FFFFFF;
+    padding: 14px 16px;
+    border: 2px solid #C4C4C4;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    transition: opacity 0.2s ease;
+    animation: taskEnter 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.task-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Sleek pop-away when a task is completed/removed */
+.task-item.removing {
+    animation: taskPopAway 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    overflow: hidden;
+    pointer-events: none;
+    transform-origin: center;
+    will-change: transform, opacity, max-height;
+}
+
+@keyframes taskPopAway {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 120px;
+    }
+    22% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.035);
+    }
+    55% {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.94);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.94);
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+    }
+}
+
+/* Smooth entrance when a task is added/loaded */
+@keyframes taskEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* XP value box next to the slider in the Add Task popup */
+.xp-input-field {
+    width: 56px;
+    padding: 6px 8px;
+    border: 1.5px solid #D9D9D9;
+    border-radius: 8px;
+    background: #F8F9FA;
+    color: #2C302E;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.xp-input-field:focus {
+    border-color: #A38A70;
+    box-shadow: 0 0 0 3px rgba(163, 138, 112, 0.18);
+}
+
+.xp-input-field::-webkit-outer-spin-button,
+.xp-input-field::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.task-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-grow: 1;
+}
+
+.task-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid #A0A0A0;
+    border-radius: 4px;
+    background: #FFFFFF;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.task-checkbox:hover {
+    border-color: #2C302E;
+}
+
+.task-name {
+    font-size: 14px;
+    font-weight: 400;
+    color: #2C302E;
+}
+
+.task-due-date {
+    font-size: 13px;
+    font-weight: 400;
+    color: #6C757D;
+    margin-left: auto;
+}
+
+/* Count-up timer shown for tasks with no due date */
+.task-due-date.task-elapsed {
+    color: #A38A70;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Completed Modifiers */
+.task-panel.completed-panel .task-item {
+    opacity: 0.55;
+}
+
+.task-panel.completed-panel .task-checkbox {
+    background-color: #2C302E;
+    border-color: #2C302E;
+}
+
+.task-panel.completed-panel .task-checkbox::after {
+    content: "";
+    width: 8px;
+    height: 2px;
+    background-color: #FFFFFF;
+    display: block;
+}
+
+.task-panel.completed-panel .task-name,
+.task-panel.completed-panel .task-due-date {
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+}
+
+/* ==========================================================================
+   FOOTER AREA
+   ========================================================================== */
+.quote-container {
+    margin-top: 32px;
+    text-align: center;
+    font-style: italic;
+    color: #6C757D;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   MODAL WINDOW COMPONENTS
+   ========================================================================== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+    background-color: #FFFFFF;
+    margin: 10% auto;
+    padding: 32px;
+    border: 1px solid #EAEAEA;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 14px;
+    color: #2C302E;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.close {
+    color: #A0A0A0;
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #2C302E;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+}
+
+.modal-content input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #CCCCCC;
+    font-size: 14px;
+    outline: none;
+}
+
+.modal-content input[type="text"]:focus {
+    border-color: #2C302E;
+}
+
+.modal-separator {
+    width: 100%;
+    height: 1px;
+    background: #EAEAEA;
+    margin: 24px 0;
+}
+
+/* Dropdown Grid Rules */
+.dropdown-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.dropdown-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.or-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: #A0A0A0;
+}
+
+.dropdown-btn {
+    flex: 1;
+    padding: 12px 16px;
+    background-color: #F8F9FA;
+    border: 1px solid #CCCCCC;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2C302E;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dropdown-content {
+    background-color: #F8F9FA;
+    border: 1px solid #EAEAEA;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: left;
+    animation: slideDown 0.2s ease;
+}
+
+.timer-inputs {
+    display: flex;
+    gap: 12px;
+}
+
+.timer-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.timer-input-group span[id$="Val"] {
+    display: none;
+}
+
+.timer-input-group label {
+    font-size: 0px;
+    color: #6C757D;
+    margin-bottom: 4px;
+}
+
+.timer-input-group input[type="range"] {
+    width: 100%;
+}
+
+.timer-input-group input[type="number"] {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    text-align: center;
+    margin-top: 6px;
+}
+
+.due-date-input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #CCCCCC;
+}
+
+.confirm-add-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: #2C302E;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 24px;
+}
+
+.confirm-add-btn:hover {
+    background-color: #454B48;
+}
+
+/* Responsive Scaling */
+@media (max-width: 768px) {
+    .top-section {
+        grid-template-columns: 100%;
+    }
+
+    /* Let the nav grow and wrap as whole items instead of breaking labels
+       into multiple lines inside the fixed 60px bar. */
+    .nav-content {
+        height: auto;
+        min-height: 60px;
+        flex-wrap: wrap;
+        padding: 0.5rem 1rem;
+        row-gap: 0.25rem;
+    }
+
+    .nav-center {
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .nav-item {
+        white-space: nowrap;
+    }
+}
+
+/* ==========================================================================
+   UPDATED TASK ITEM & CHECKBOX STYLING
+   ========================================================================== */
+.task-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #FFFFFF;
+    padding: 14px 16px;
+    border: 2px solid #C4C4C4;
+    transition: all 0.2s ease;
+}
+
+.task-left {
+    display: flex;
+    align-items: center;
+    gap: 14px; /* Space between checkbox and text */
+    flex-grow: 1;
+}
+
+/* Custom Styled Checkbox */
+.task-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #A38A70; /* Elegant muted gold/brown border */
+    border-radius: 6px;
+    background: #FFFFFF;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+/* Hover effect */
+.task-checkbox:hover {
+    border-color: #2C302E;
+    background-color: #F8F9FA;
+}
+
+/* Completed Task Styles */
+.task-panel.completed-panel .task-item {
+    opacity: 0.55;
+}
+
+/* Checkbox State inside Completed Panel */
+.task-panel.completed-panel .task-checkbox {
+    background-color: #2C302E;
+    border-color: #2C302E;
+}
+
+/* Checkmark inside the checkbox */
+.task-panel.completed-panel .task-checkbox::after {
+    content: "✓";
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* Line-through for text */
+.task-panel.completed-panel .task-name,
+.task-panel.completed-panel .task-due-date {
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+}
+
+/* Custom Styled Active Checkbox State */
+/* Custom Styled Active Checkbox State */
+.task-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #A38A70;
+    border-radius: 6px;
+    background: #FFFFFF;
+    color: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.1s ease-in-out;
+    user-select: none;
+}
+
+/* Instant active visual target checkmark generation */
+.task-item.completed-state .task-checkbox {
+    background-color: #2C302E;
+    border-color: #2C302E;
+    color: #FFFFFF !important;
+}
+
+/* ==========================================================================
+   THEME SELECTOR (Light / Dark dropdown)
+   ========================================================================== */
+.theme-select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: #FFFFFF;
+    color: #2C302E;
+    border: 1px solid #EAEAEA;
+    border-radius: 20px;
+    padding: 7px 30px 7px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236C757D' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+
+/* ==========================================================================
+   DARK THEME  (applied via <html data-theme="dark">)
+   ========================================================================== */
+html[data-theme="dark"] body {
+    background: #0d1117;
+    color: #f0f2f5;
+}
+
+/* Navigation */
+html[data-theme="dark"] .main-nav {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+}
+html[data-theme="dark"] .nav-item {
+    color: #8b949e;
+}
+html[data-theme="dark"] .nav-item.active,
+html[data-theme="dark"] .nav-item:hover {
+    color: #f0f2f5;
+}
+/* Invert the dark logo mark so it reads on the dark nav */
+html[data-theme="dark"] .logo img {
+    mix-blend-mode: screen;
+    filter: invert(1);
+}
+html[data-theme="dark"] .theme-select {
+    background-color: #161b22;
+    color: #f0f2f5;
+    border-color: #30363d;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+html[data-theme="dark"] .theme-select option {
+    background: #161b22;
+    color: #f0f2f5;
+}
+
+/* Cards & containers */
+html[data-theme="dark"] .card {
+    background: #1a1f26;
+    border-color: #30363d;
+}
+html[data-theme="dark"] .card h2,
+html[data-theme="dark"] .username,
+html[data-theme="dark"] .stat-row strong,
+html[data-theme="dark"] .task-name {
+    color: #f0f2f5;
+}
+html[data-theme="dark"] .username-row .label,
+html[data-theme="dark"] .xp-label-row,
+html[data-theme="dark"] .stats-footer,
+html[data-theme="dark"] .stat-row span,
+html[data-theme="dark"] .task-due-date,
+html[data-theme="dark"] #dailyQuote {
+    color: #8b949e;
+}
+html[data-theme="dark"] .stat-row {
+    border-bottom-color: #30363d;
+}
+
+/* XP bar + accent highlights */
+html[data-theme="dark"] .xp-bar-container {
+    background: #30363d;
+}
+html[data-theme="dark"] .stat-item .highlight,
+html[data-theme="dark"] .task-due-date.task-elapsed {
+    color: #d8b489;
+}
+
+/* Tasks */
+html[data-theme="dark"] .task-item {
+    background: #1a1f26;
+    border-color: #30363d;
+}
+html[data-theme="dark"] .task-checkbox {
+    border-color: #8b949e;
+    background: transparent;
+}
+html[data-theme="dark"] .task-item.completed-state .task-checkbox {
+    background-color: #f0f2f5;
+    border-color: #f0f2f5;
+    color: #0d1117 !important;
+}
+
+/* + Add Task button -> light, to pop on dark dashboard */
+html[data-theme="dark"] .add-task-btn {
+    background: #f0f2f5;
+    color: #0d1117;
+}
+html[data-theme="dark"] .add-task-btn:hover {
+    background: #ffffff;
+}
+
+/* Add Task modal */
+html[data-theme="dark"] .modal-content {
+    background: #1a1f26;
+    color: #f0f2f5;
+    border: 1px solid #30363d;
+}
+html[data-theme="dark"] .modal-content h2,
+html[data-theme="dark"] .modal-content label {
+    color: #f0f2f5 !important;
+}
+html[data-theme="dark"] #modalTaskName,
+html[data-theme="dark"] .xp-input-field,
+html[data-theme="dark"] .due-date-input,
+html[data-theme="dark"] .dropdown-btn,
+html[data-theme="dark"] .timer-input-group input {
+    background: #0d1117;
+    color: #f0f2f5;
+    border-color: #30363d;
+}
+/* White fills inside the modal -> dark grey with white text */
+html[data-theme="dark"] .dropdown-content {
+    background: #21262d;
+    border-color: #30363d;
+    color: #f0f2f5;
+}
+html[data-theme="dark"] .confirm-add-btn {
+    background: #21262d;
+    color: #f0f2f5;
+    border: 1px solid #30363d;
+}
+html[data-theme="dark"] .confirm-add-btn:hover {
+    background: #30363d;
+}
+html[data-theme="dark"] .modal-separator {
+    background: #30363d;
+}
+html[data-theme="dark"] .close {
+    color: #8b949e;
+}

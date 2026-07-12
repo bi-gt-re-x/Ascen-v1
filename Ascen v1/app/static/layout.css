@@ -1,0 +1,40 @@
+/* ==========================================================================
+   layout.css — shared responsive layout foundation (loaded by every page)
+
+   Structural only: no colors, no typography — each page's stylesheet keeps
+   full control of the look. Pages opt in by adding the class to their main
+   container and tuning the CSS variables.
+
+   Standard breakpoints used across the app:
+     1024px  tablet / small laptop
+      768px  large phone / portrait tablet
+      480px  phone
+   ========================================================================== */
+
+/* Centered fluid page container.
+   Pages tune the cap per container:
+     .my-page-card { --shell-max: 1700px; }
+   and, when a page wants to hug the viewport edges more closely:
+     .my-page-card { --shell-fluid: 97%; } */
+.page-shell {
+    width: min(var(--shell-fluid, 95%), var(--shell-max, 1400px));
+    margin-inline: auto;
+    box-sizing: border-box;
+}
+
+/* Responsive card grid: as many columns as fit, each at least --card-min
+   wide, collapsing naturally on narrow viewports (no media query needed). */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-min, 20rem)), 1fr));
+    gap: var(--card-gap, 1.25rem);
+}
+
+/* Embedded content inside a shell never overflows its parent. */
+.page-shell img,
+.page-shell canvas,
+.page-shell svg,
+.page-shell video,
+.page-shell table {
+    max-width: 100%;
+}
