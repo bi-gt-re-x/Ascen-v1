@@ -583,6 +583,13 @@ def update_task(task_id):
                 task['due_date'] = data['due_date']
             if 'completed' in data:
                 task['status'] = 'done' if data['completed'] else 'todo'
+                # Record the completion time (the task's "end") when finishing;
+                # clear it when re-opening. A no-due-date task uses this as its
+                # calendar end time/date.
+                if data['completed']:
+                    task['completed_at'] = datetime.now().isoformat()
+                else:
+                    task['completed_at'] = None
             task_found = True
             break
     

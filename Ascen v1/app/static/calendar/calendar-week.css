@@ -1,0 +1,211 @@
+/* calendar-week.css — Week view (self-contained). Loaded after calendar.css.
+   The Month view keeps its own styles; these only touch .wk-* and the panes. */
+
+/* View panes: the toggle shows exactly one. The active pane is a flex column
+   that fills the card's remaining height, so its children (e.g. the Month view's
+   .calendar-body, whose daily list is flex:1 + overflow:auto) stay bounded and
+   scroll internally instead of growing the whole card. */
+.view-pane { display: none; }
+.view-pane.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ---- Week header (title + nav + Today, Filters on the right) ---- */
+.wk-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+.wk-titlegroup { display: flex; align-items: center; gap: 14px; }
+.wk-title { margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.9rem); font-weight: 800; color: #1a1f26; }
+.wk-nav { display: flex; gap: 6px; }
+.wk-arrow, .wk-today, .wk-filters, .wk-addevent {
+    border: 1px solid #e5e8ee; background: #fff; border-radius: 999px;
+    cursor: pointer; font-family: inherit; color: #2c302e;
+}
+.wk-arrow { width: 34px; height: 34px; font-size: 15px; line-height: 1; }
+.wk-today { padding: 7px 18px; font-size: 14px; font-weight: 600; }
+.wk-filters, .wk-addevent { padding: 8px 16px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.wk-arrow:hover, .wk-today:hover, .wk-filters:hover, .wk-addevent:hover { background: #f6f7f9; }
+
+/* ---- Layout: sidebar + grid ---- */
+.wk-main { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 22px; align-items: start; }
+
+/* ---- Sidebar ---- */
+.wk-sidebar { display: flex; flex-direction: column; gap: 16px; }
+.wk-panel {
+    background: #fff; border: 1px solid #ececf1; border-radius: 16px; padding: 18px 18px;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 18px rgba(16,24,40,.05);
+}
+.wk-panel-title { margin: 0 0 14px; font-size: 15px; font-weight: 700; color: #1a1f26; }
+
+.wk-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.wk-stat { background: #fafbfc; border: 1px solid #eef0f4; border-radius: 12px; padding: 14px 14px; }
+.wk-stat-num { font-size: 22px; font-weight: 800; color: #1a1f26; }
+.wk-stat-label { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+.wk-focus-text { margin: 0 0 12px; font-size: 14px; line-height: 1.5; color: #4b5162; }
+.wk-focus-input {
+    display: block; width: 100%; box-sizing: border-box; margin: 0;
+    font: inherit; font-size: 14px; line-height: 1.5; color: #4b5162;
+    background: #fafbfc; border: 1px solid #eef0f4; border-radius: 12px;
+    padding: 10px 12px; resize: vertical; min-height: 44px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.wk-focus-input::placeholder { color: #9aa0ad; }
+.wk-focus-input:focus {
+    outline: none; border-color: #a8845c;
+    box-shadow: 0 0 0 3px rgba(168,132,92,.15);
+}
+.wk-progress { height: 8px; background: #eef0f4; border-radius: 999px; overflow: hidden; }
+.wk-progress-bar { height: 100%; background: #a8845c; border-radius: 999px; }
+.wk-progress-pct { display: block; text-align: right; font-size: 12px; color: #6b7280; margin-top: 6px; }
+
+.wk-priorities { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.wk-priorities li { display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #2c302e; }
+.wk-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.wk-badge.high { background: #fdecec; color: #b0413e; }
+.wk-badge.med { background: #fdf6e3; color: #9a7b2e; }
+.wk-badge.low { background: #eef2f7; color: #5a6472; }
+
+.wk-streak-num { font-size: 22px; font-weight: 800; color: #1a1f26; }
+.wk-streak-sub { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+.wk-charge { background: linear-gradient(180deg, #fbf7f0 0%, #fff 100%); }
+.wk-charge-head { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #1a1f26; margin-bottom: 12px; }
+.wk-mult { margin-left: auto; font-size: 11px; font-weight: 700; background: #f0e6d6; color: #8a6d3b; padding: 3px 10px; border-radius: 999px; }
+.wk-charge-sub { margin: 10px 0 0; font-size: 13px; color: #6b7280; }
+
+/* ---- Grid ---- */
+.wk-gridwrap { min-width: 0; }
+.wk-grid-head { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
+.wk-corner { }
+.wk-dayhead-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.wk-dayhead { text-align: center; padding-bottom: 10px; }
+.wk-dayname { font-size: 14px; font-weight: 700; color: #2c302e; }
+.wk-daydate { font-size: 12px; color: #6b7280; margin-top: 3px; }
+/* Today's date: black rounded-rectangle badge with white text. */
+.wk-daydate.today {
+    display: inline-block; background: #1c2128; color: #fff; font-weight: 700;
+    border-radius: 12px; padding: 5px 14px; margin-top: 2px;
+}
+
+.wk-allday-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; border-top: 1px solid #eef0f4; border-bottom: 1px solid #eef0f4; }
+.wk-allday-label { font-size: 11px; color: #9297ab; padding: 8px 8px; }
+.wk-allday-cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 6px 0; }
+.wk-allday-cell { display: flex; justify-content: center; }
+.wk-allday-chip {
+    width: calc(100% - 6px); text-align: center; font-size: 12px; font-weight: 600; color: #4b5162;
+    background: #f5f6f8; border: 1px solid #e9ebf0; border-radius: 8px; padding: 5px 6px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Editable per-day focus field (one per day column, in the Focus row). */
+.wk-day-focus {
+    width: calc(100% - 6px); box-sizing: border-box; text-align: center;
+    font: inherit; font-size: 12px; font-weight: 600; color: #4b5162;
+    background: #f5f6f8; border: 1px solid #e9ebf0; border-radius: 8px; padding: 5px 6px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.wk-day-focus::placeholder { color: #aab0bd; font-weight: 500; }
+.wk-day-focus:focus {
+    outline: none; border-color: #a8845c; background: #fff;
+    box-shadow: 0 0 0 3px rgba(168,132,92,.15);
+}
+
+.wk-scroll { display: grid; grid-template-columns: 56px minmax(0, 1fr); max-height: 62vh; overflow-y: auto; margin-top: 4px; }
+
+/* Above 1120px the calendar card is a fixed 100vh panel with hidden overflow
+   (below that it's height:auto and the whole page scrolls). In the fixed-card
+   mode, make the week pane fill the card and give each column its own scroll,
+   so the stats sidebar can scroll on the left and nothing is clipped. */
+@media (min-width: 1121px) {
+    .wk-main { align-items: stretch; flex: 1 1 auto; min-height: 0; }
+    .wk-sidebar { min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+    .wk-gridwrap { display: flex; flex-direction: column; min-height: 0; }
+    .wk-scroll { flex: 1 1 auto; min-height: 0; max-height: none; }
+}
+.wk-timelabels { position: relative; }
+.wk-timelabel { position: relative; }
+.wk-timelabel span { position: absolute; top: -7px; right: 10px; font-size: 11px; color: #9297ab; }
+
+.wk-daycols { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.wk-daycol { position: relative; border-left: 1px solid #eef0f4; }
+.wk-daycol.today { background: rgba(163,138,112,.04); }
+.wk-hourline { position: absolute; left: 0; right: 0; border-top: 1px solid #f1f2f5; }
+
+.wk-event {
+    position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 6px 8px;
+    border: 1px solid transparent; overflow: hidden; box-sizing: border-box;
+    font-size: 12px; line-height: 1.2;
+}
+/* Real task blocks (no category colours; done tasks are muted). */
+.wk-event.wk-task { background: #eef2fb; border-color: #d7e1f4; color: #2c3a5a; }
+.wk-event.wk-task.done { background: #eef1f4; border-color: #e2e6ec; color: #8a90a3; }
+.wk-event.wk-task.done .wk-event-title { text-decoration: line-through; }
+
+.wk-event-time { font-size: 11px; opacity: .8; }
+.wk-event-title { font-weight: 700; margin: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wk-event-xp { font-size: 11px; opacity: .9; display: flex; align-items: center; gap: 4px; }
+.wk-event-icon { font-size: 11px; }
+
+/* Category colors */
+.cat-math   { background: #fdf7ec; border-color: #f0e2c8; color: #8a6d3b; }
+.cat-coding { background: #eaf1fe; border-color: #cfe0fb; color: #2c5aa0; }
+.cat-scioly { background: #eafaf0; border-color: #cdeed9; color: #2e7d52; }
+.cat-violin { background: #f2ecfb; border-color: #e0d3f5; color: #6b4ca8; }
+.cat-workout{ background: #fdecec; border-color: #f7d5d5; color: #b0413e; }
+.cat-reading{ background: #f5f6f8; border-color: #e5e8ee; color: #5a6072; }
+.cat-tennis { background: #fdf7ec; border-color: #f0e2c8; color: #8a6d3b; }
+.cat-personal { background: #eafaf0; border-color: #cdeed9; color: #2e7d52; }
+.cat-rest   { background: #fdf7ec; border-color: #f0e2c8; color: #8a6d3b; }
+
+/* Day view placeholder (built later) */
+#dayView .wk-placeholder {
+    text-align: center; color: #6b7280; padding: 80px 20px; font-size: 15px;
+}
+
+/* ---- Responsive: stack the sidebar above the grid on narrow screens ---- */
+@media (max-width: 1000px) {
+    .wk-main { grid-template-columns: minmax(0, 1fr); }
+    .wk-scroll { max-height: 70vh; }
+}
+
+/* ---- Dark theme ---- */
+html[data-theme="dark"] .wk-title,
+html[data-theme="dark"] .wk-panel-title,
+html[data-theme="dark"] .wk-stat-num,
+html[data-theme="dark"] .wk-streak-num,
+html[data-theme="dark"] .wk-charge-head,
+html[data-theme="dark"] .wk-dayname { color: #f4f4f6; }
+html[data-theme="dark"] .wk-arrow,
+html[data-theme="dark"] .wk-today,
+html[data-theme="dark"] .wk-filters,
+html[data-theme="dark"] .wk-addevent { background: #1b212a; border-color: #2b323c; color: #e6e8f0; }
+html[data-theme="dark"] .wk-panel { background: #161b22; border-color: #262c36; box-shadow: none; }
+html[data-theme="dark"] .wk-stat { background: #0f141b; border-color: #262c36; }
+html[data-theme="dark"] .wk-stat-label,
+html[data-theme="dark"] .wk-focus-text,
+html[data-theme="dark"] .wk-streak-sub,
+html[data-theme="dark"] .wk-charge-sub,
+html[data-theme="dark"] .wk-daydate,
+html[data-theme="dark"] .wk-progress-pct { color: #9aa4b2; }
+html[data-theme="dark"] .wk-focus-input {
+    background: #0f141b; border-color: #262c36; color: #c9d1d9;
+}
+html[data-theme="dark"] .wk-focus-input::placeholder { color: #6b7280; }
+html[data-theme="dark"] .wk-focus-input:focus {
+    border-color: #a8845c; box-shadow: 0 0 0 3px rgba(168,132,92,.22);
+}
+html[data-theme="dark"] .wk-progress { background: #262c36; }
+html[data-theme="dark"] .wk-charge { background: linear-gradient(180deg, #1c2129 0%, #161b22 100%); }
+html[data-theme="dark"] .wk-allday-chip { background: #0f141b; border-color: #262c36; color: #c9d1d9; }
+html[data-theme="dark"] .wk-allday-row { border-color: #262c36; }
+html[data-theme="dark"] .wk-daycol { border-color: #21262d; }
+html[data-theme="dark"] .wk-hourline { border-color: #1b2029; }
+html[data-theme="dark"] .wk-daydate.today { background: #f4f4f6; color: #161b22; }

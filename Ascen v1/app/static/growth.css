@@ -140,8 +140,8 @@ body {
     padding: 40px;
     /* Fluid width via .page-shell: min(--shell-fluid, --shell-max), centered.
        Shrinks with the viewport instead of a fixed design width. */
-    --shell-fluid: 92%;
-    --shell-max: 1200px;
+    --shell-fluid: 97%;
+    --shell-max: 1680px;
     box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.3),
         0 4px 16px rgba(0, 0, 0, 0.2),
@@ -1406,13 +1406,15 @@ html, body {
     box-sizing: border-box;
     overflow: visible;
     justify-content: flex-start;
-    padding-top: 16px;
+    /* Nudged down 5% (5vh) of the viewport. */
+    padding-top: calc(16px + 5vh);
     padding-bottom: 16px;
 }
 
 /* Tighter bottom nav so it fits beneath the cards (nudged 20px lower) */
 .bottom-nav {
-    margin: 51px auto 0 !important;   /* nudged down 15px */
+    /* Nudged down a net 2% (5% down, then 3% back up) of the viewport. */
+    margin: calc(51px + 2vh) auto 0 !important;
 }
 
 /* --- Analytics view: size the card to its content and use a
@@ -1670,10 +1672,21 @@ body.dark #themeSelect {
 /* The report card fills most of the screen — a wide centered column with a
    clean, professional sans-serif throughout. */
 #ratingsView.ratings-view {
-    /* Fluid width via .page-shell: min(--shell-fluid, --shell-max), centered —
-       shrinks with the viewport. Phones (<900px) stack via the media query. */
-    --shell-fluid: 96%;
-    --shell-max: 1200px;
+    /* Fluid width via .page-shell: width = min(--shell-fluid, --shell-max).
+       This view is also height-fit-zoomed by fit-scale.js (fitShrinkHeight),
+       which shrinks the whole panel by `zoom` to fit short screens. With zoom
+       applied, the browser paints width = min(fluid% of viewport, max * zoom).
+       A modest --shell-max (e.g. 1440px) made `max * zoom` the binding term on
+       laptops (e.g. MacBook Air ~0.74 zoom -> 1440*0.74 = 1067px, only ~74% of
+       a 1440px viewport), so the cards stayed narrow no matter the fluid %.
+       Setting a large --shell-max lets the fluid % win instead, so the cards
+       fill ~95%+ of the width on small screens. It can never overflow: the
+       fluid% term always caps the painted width below the viewport. On big
+       screens tall enough that no zoom is needed, the cards cap at --shell-max.
+       Vertical height is unchanged — the height-fit zoom always fills the same
+       available vertical space regardless of width. Phones (<900px) stack. */
+    --shell-fluid: 98%;
+    --shell-max: 2400px;
     margin-top: 10px;   /* nudge the cards down from the top */
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     /* Two roughly-equal columns: Grade card (left) + scoring details (right).

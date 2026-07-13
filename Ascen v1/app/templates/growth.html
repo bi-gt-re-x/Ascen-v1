@@ -23,7 +23,7 @@
     </div>
 
     <div class="growth-container">
-        <div class="growth-card page-shell" id="growthCard">
+        <div class="growth-card page-shell" id="growthCard" data-fit-shrink-height>
             <div class="card-header">
                 <h1>Growth Analytics</h1>
             </div>
@@ -297,6 +297,8 @@
                 ratingsView.style.display = 'none';
                 growthCard.style.display = 'flex';
                 growthCard.style.opacity = '0';
+                // Now that it's laid out, shrink it to fit the viewport height.
+                if (typeof window.fitScaleRefresh === 'function') window.fitScaleRefresh();
 
                 // The charts were sized while their card was hidden (0x0 canvas),
                 // so resize the buffers to their real box and redraw now that the

@@ -511,9 +511,17 @@ function zoomChart(type, direction, event = null) {
             }
         }
 
+        // Keep the window exactly `newRange` wide even when the anchor is near an
+        // edge: if one side hits a boundary, shift the other side to preserve the
+        // width instead of letting the range collapse. (Collapsing over-zoomed at
+        // the edges, so zooming back out took many extra clicks to undo.)
         const halfRange = Math.floor(newRange / 2);
-        state.startIndex = Math.max(0, center - halfRange);
-        state.endIndex = Math.min(total - 1, center + halfRange);
+        let start = center - halfRange;
+        let end = start + newRange;
+        if (start < 0) { end -= start; start = 0; }
+        if (end > total - 1) { start -= (end - (total - 1)); end = total - 1; }
+        state.startIndex = Math.max(0, start);
+        state.endIndex = Math.min(total - 1, end);
 
     } else if (direction === 'out') {
         // Only stop if BOTH boundaries are already at their limits

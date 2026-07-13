@@ -1,0 +1,26 @@
+/* calendar-day.css — Day view. Reuses the Week view's .wk-* event/label/header
+   styles (calendar-week.css); only the single-column day layout lives here. */
+
+.day-main { display: flex; flex-direction: column; min-height: 0; }
+
+/* All-day row: label + a single full-width chip. */
+.day-allday {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: center;
+    border-top: 1px solid #eef0f4;
+    border-bottom: 1px solid #eef0f4;
+    padding: 6px 0;
+}
+.day-allday-chip { padding-right: 4px; }
+.day-allday-chip .wk-allday-chip { display: block; width: 100%; box-sizing: border-box; }
+
+/* Scroll area shares .wk-scroll (56px time gutter + 1 day column). */
+.day-scroll { grid-template-columns: 56px minmax(0, 1fr); }
+
+/* Single wide day column. */
+.day-col { position: relative; border-left: 1px solid #eef0f4; }
+
+/* Dark theme parity with the week view. */
+html[data-theme="dark"] .day-allday { border-color: #262c36; }
+html[data-theme="dark"] .day-col { border-color: #21262d; }

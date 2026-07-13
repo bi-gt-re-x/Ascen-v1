@@ -25,9 +25,6 @@
     var V_RESERVE = 118;   // px reserved for top margin + floating bottom nav
     var V_FILL = 0.95;     // height-fit fills 95% of the free height, leaving a
                            // consistent ~5% gap at the bottom on every layout
-    var V_RESERVE_SHRINK = 134; // px reserved for margins + the in-flow bottom nav
-                                // (measured ~26px above + ~106px below) so the
-                                // shrunk report and the nav both fit on screen
 
     function fitOne(el) {
         var design = parseFloat(el.getAttribute('data-fit-width'));
@@ -60,10 +57,14 @@
     }
 
     // Shrink-to-height only: keep the element's own (fluid) width, but if it's
-    // taller than the viewport, zoom it down proportionally so it fits. Never
-    // grows (scale capped at 1), so on tall/portrait screens it's left alone and
-    // the page scrolls as normal. Used for the Growth ratings report on wide
-    // landscape screens.
+    // taller than the free vertical space, zoom it down proportionally so it (and
+    // the in-flow bottom nav below it) fit on screen with no page scroll. Never
+    // grows (scale capped at 1). Used for the Growth analytics + ratings cards.
+    //
+    // The free space is measured dynamically — the element's real top offset
+    // (which includes the container's top padding) plus the nav's real height +
+    // margins — so it stays correct even as those offsets change (e.g. the
+    // container/nav nudges), instead of a brittle fixed reserve.
     function fitShrinkHeight(el) {
         var vw = document.documentElement.clientWidth;
         if (vw < PHONE_MAX) {
@@ -73,7 +74,20 @@
         el.style.zoom = '';            // measure the natural (unzoomed) height
         var naturalH = el.offsetHeight;
         if (!naturalH) return;         // hidden (display:none) — nothing to do
-        var availableH = document.documentElement.clientHeight - V_RESERVE_SHRINK;
+
+        // Space above the card (container padding + any margin), scroll-independent.
+        var topOffset = el.getBoundingClientRect().top + window.pageYOffset;
+
+        // Space the in-flow bottom nav needs below the card.
+        var reserve = 12;              // small breathing buffer
+        var nav = document.querySelector('.bottom-nav');
+        if (nav) {
+            var ns = getComputedStyle(nav);
+            reserve += nav.getBoundingClientRect().height +
+                       (parseFloat(ns.marginTop) || 0) + (parseFloat(ns.marginBottom) || 0);
+        }
+
+        var availableH = document.documentElement.clientHeight - topOffset - reserve;
         var scale = availableH / naturalH;
         if (scale >= 1) return;        // already fits — only ever shrink
         el.style.zoom = String(Math.max(MIN_SCALE, scale));

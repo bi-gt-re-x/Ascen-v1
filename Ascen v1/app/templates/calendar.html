@@ -7,8 +7,9 @@
     <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='calendar-week.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='calendar/calendar-month.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='calendar/calendar-week.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='calendar/calendar-day.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tenor+Sans&family=Quicksand:wght@400;500;600&family=Lato:wght@300;400;700&family=Noto+Sans:wght@300;400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
@@ -71,11 +72,10 @@
                             <button class="wk-arrow" aria-label="Previous week">&#10094;</button>
                             <button class="wk-arrow" aria-label="Next week">&#10095;</button>
                         </div>
-                        <button class="wk-today">Today</button>
                     </div>
-                    <button class="wk-filters">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                        Filters
+                    <button class="wk-addevent" type="button">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                        Add New Event
                     </button>
                 </div>
                 <div class="wk-main">
@@ -91,27 +91,20 @@
                         </section>
                         <section class="wk-panel">
                             <h3 class="wk-panel-title">🎯 Weekly Focus</h3>
-                            <p class="wk-focus-text">Finish coding project and complete math practice</p>
-                            <div class="wk-progress"><div class="wk-progress-bar" style="width:67%"></div></div>
-                            <span class="wk-progress-pct">67%</span>
+                            <textarea id="wkFocusInput" class="wk-focus-input" rows="2"
+                                      placeholder="What's your focus this week?"
+                                      aria-label="Weekly focus"></textarea>
                         </section>
                         <section class="wk-panel">
                             <h3 class="wk-panel-title">🚩 Top Priorities</h3>
                             <ol class="wk-priorities">
-                                <li><span>1. Coding Project</span><span class="wk-badge high">High</span></li>
-                                <li><span>2. Math Practice</span><span class="wk-badge high">High</span></li>
-                                <li><span>3. Violin Practice</span><span class="wk-badge med">Medium</span></li>
+                                <li><span>--</span><span class="wk-badge">--</span></li>
                             </ol>
                         </section>
                         <section class="wk-panel">
                             <h3 class="wk-panel-title">🔥 Streak</h3>
                             <div class="wk-streak-num" id="wkStreak">– days</div>
                             <div class="wk-streak-sub">Keep it up! 🔥</div>
-                        </section>
-                        <section class="wk-panel wk-charge">
-                            <div class="wk-charge-head">⚡ Weekly Charge <span class="wk-mult">4.2x Multiplier</span></div>
-                            <div class="wk-progress"><div class="wk-progress-bar" style="width:60%"></div></div>
-                            <p class="wk-charge-sub">Great momentum! You're on fire.</p>
                         </section>
                     </aside>
                     <div class="wk-gridwrap">
@@ -120,7 +113,7 @@
                             <div class="wk-dayhead-row" id="wkDayHeads"></div>
                         </div>
                         <div class="wk-allday-row">
-                            <div class="wk-allday-label">All-day</div>
+                            <div class="wk-allday-label">Focus</div>
                             <div class="wk-allday-cells" id="wkAllday"></div>
                         </div>
                         <div class="wk-scroll">
@@ -132,7 +125,26 @@
             </div>
 
             <div id="dayView" class="view-pane">
-                <div class="wk-placeholder">Day view is coming soon.</div>
+                <div class="wk-header">
+                    <div class="wk-titlegroup">
+                        <h2 class="wk-title" id="dayTitle">Day</h2>
+                        <div class="wk-nav">
+                            <button class="wk-arrow" aria-label="Previous day">&#10094;</button>
+                            <button class="wk-arrow" aria-label="Next day">&#10095;</button>
+                        </div>
+                        <button class="wk-today">Today</button>
+                    </div>
+                </div>
+                <div class="day-main">
+                    <div class="day-allday">
+                        <div class="wk-allday-label">All-day</div>
+                        <div class="day-allday-chip" id="dayAllday"></div>
+                    </div>
+                    <div class="wk-scroll day-scroll">
+                        <div class="wk-timelabels" id="dayTimeLabels"></div>
+                        <div class="day-col" id="dayCol"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -434,8 +446,9 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='javascript/calendar.js') }}"></script>
-    <script src="{{ url_for('static', filename='javascript/calendar-week.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/calendar/calendar-month.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/calendar/calendar-week.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/calendar/calendar-day.js') }}"></script>
     <script src="{{ url_for('static', filename='javascript/api.js') }}"></script>
 
     <script>

@@ -1352,6 +1352,12 @@ async function addTaskFromModal() {
                 setTimeout(() => notification.remove(), 300);
             }, 5000);
         }
+    } else if (dueDate.value) {
+        // Date picked but no time-of-day → the task is due at 12:00 AM
+        // (midnight) on exactly the day the user selected. No auto-adjust, so
+        // the due date lands on that day rather than being bumped forward.
+        const [year, month, day] = dueDate.value.split('-').map(Number);
+        dueDateTime = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
     }
 
     // --- REPAIRED STRUCTURAL ASSIGNMENT ---
