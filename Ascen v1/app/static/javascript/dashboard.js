@@ -614,8 +614,6 @@ const timerHours = document.getElementById("timerHours");
 
 const timerMinutes = document.getElementById("timerMinutes");
 
-const timerSeconds = document.getElementById("timerSeconds");
-
 const xpSlider = document.getElementById("xpSlider");
 
 
@@ -872,12 +870,6 @@ function openModal() {
 
     document.getElementById('minsVal').textContent = '0';
 
-    timerSeconds.value = 0;
-
-    document.getElementById('timerSecondsInput').value = 0;
-
-    document.getElementById('secsVal').textContent = '0';
-
 
 
     // Reset XP slider and input
@@ -1096,14 +1088,6 @@ function updateTimerSliderDisplay(type, val) {
 
         if (minutesInput) minutesInput.value = val;
 
-    } else if (type === 'seconds') {
-
-        document.getElementById('secsVal').textContent = val;
-
-        const secondsInput = document.getElementById('timerSecondsInput');
-
-        if (secondsInput) secondsInput.value = val;
-
     }
 
 }
@@ -1143,18 +1127,6 @@ function updateTimerFromInput(type, val) {
         if (minutesInput) minutesInput.value = val;
 
         document.getElementById('minsVal').textContent = val;
-
-    } else if (type === 'seconds') {
-
-        const secondsSlider = document.getElementById('timerSeconds');
-
-        if (secondsSlider) secondsSlider.value = val;
-
-        const secondsInput = document.getElementById('timerSecondsInput');
-
-        if (secondsInput) secondsInput.value = val;
-
-        document.getElementById('secsVal').textContent = val;
 
     }
 
@@ -1268,11 +1240,10 @@ async function addTaskFromModal() {
 
     const taskId = Date.now().toString();
 
-    // Calculate timer duration from input boxes
+    // Calculate timer duration from input boxes (hours + minutes only)
     const h = Math.min(12, parseInt(document.getElementById('timerHoursInput').value) || 0);
     const m = parseInt(document.getElementById('timerMinutesInput').value) || 0;
-    const s = parseInt(document.getElementById('timerSecondsInput').value) || 0;
-    const totalSeconds = (h * 3600) + (m * 60) + s;
+    const totalSeconds = (h * 3600) + (m * 60);
 
     // Get due date information
     const dueDate = document.getElementById('dueDate');
@@ -1463,6 +1434,12 @@ async function addTaskFromModal() {
     // Sync to calendar if task has due date
     if (newTask.due_date) {
         syncTaskToCalendar(newTask);
+    }
+
+    // If the new task's span (now -> due) buries an existing task or calendar
+    // event by more than 75%, offer to delete one of the two right away.
+    if (currentUser !== 'Default' && newTask.due_date) {
+        checkCreationConflict(newTask);
     }
 
     // Force refresh the task element to ensure due date is displayed
@@ -1691,7 +1668,7 @@ function navigateToGrowth() {
 
 function navigateToHome() {
 
-    window.location.href = '/';
+    window.location.href = '/home';
 
 }
 
@@ -1799,5 +1776,129 @@ function removeDashboardTaskFromCalendar(taskId) {
 
     }
 
+}
+
+
+
+// --- >75% overlap conflict check at task-creation time -----------------------
+// A new task spans from its creation (now) to its due date. If that span covers
+// more than 75% of an existing pending task's span, or of a calendar event,
+// pop up a chooser so the user can delete one of the two (or keep both).
+
+// Overlap measured against the LONGER span (0..1) — a short task tucked inside
+// a long one stays well under the threshold; only near-duplicate spans trip it.
+function spanOverlapFrac(aS, aE, bS, bE) {
+    const o = Math.min(aE, bE) - Math.max(aS, bS);
+    if (o <= 0) return 0;
+    return o / Math.max(aE - aS, bE - bS);
+}
+
+async function checkCreationConflict(newTask) {
+    const ns = Date.now();
+    const ne = new Date(newTask.due_date).getTime();
+    if (isNaN(ne) || ne <= ns) return;
+
+    // 1) Existing pending tasks (span: created_at -> due_date).
+    if (typeof getTasksAPI === 'function') {
+        const res = await getTasksAPI(currentUser);
+        if (res && res.success) {
+            for (const t of res.tasks) {
+                if (String(t.id) === String(newTask.id)) continue;
+                if (t.status === 'done' || !t.due_date) continue;
+                const ts = t.created_at ? new Date(t.created_at).getTime() : Number(t.id);
+                const te = new Date(t.due_date).getTime();
+                if (isNaN(ts) || isNaN(te) || te <= ts) continue;
+                if (spanOverlapFrac(ns, ne, ts, te) > 0.75) {
+                    showCreationConflictPopup(newTask, { kind: 'task', id: t.id, label: t.title || t.name || 'Task' });
+                    return;
+                }
+            }
+        }
+    }
+
+    // 2) Calendar events (from the calendar page's localStorage store).
+    try {
+        const data = JSON.parse(localStorage.getItem('calendarData') || '{}');
+        const PLACEHOLDERS = ['Sleep Time', 'Morning session', 'Afternoon session',
+                              'Late afternoon session', 'Evening session', 'Night session'];
+        // Walk each day the new task's span touches.
+        for (let d = new Date(ns); d.getTime() <= ne + 86400000; d.setDate(d.getDate() + 1)) {
+            const key = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+            const day = data[key];
+            if (!day || !Array.isArray(day.timestamps)) continue;
+            for (const t of day.timestamps) {
+                if (t.isDashboardTask || PLACEHOLDERS.includes(t.task)) continue;
+                if (!t.startTime || !t.endTime) continue;
+                const [sh, sm] = String(t.startTime).split(':').map(Number);
+                const [eh, em] = String(t.endTime).split(':').map(Number);
+                const es = new Date(d.getFullYear(), d.getMonth(), d.getDate(), sh || 0, sm || 0).getTime();
+                let ee = new Date(d.getFullYear(), d.getMonth(), d.getDate(), eh || 0, em || 0).getTime();
+                if (ee <= es) ee += 86400000;   // overnight event
+                if (spanOverlapFrac(ns, ne, es, ee) > 0.75) {
+                    showCreationConflictPopup(newTask, {
+                        kind: 'event', dateKey: key, label: t.task,
+                        startTime: t.startTime, endTime: t.endTime
+                    });
+                    return;
+                }
+            }
+        }
+    } catch (e) { /* localStorage unavailable/corrupt — skip the event check */ }
+}
+
+function showCreationConflictPopup(newTask, other) {
+    if (document.getElementById('creationConflictPopup')) return;
+    const pop = document.createElement('div');
+    pop.id = 'creationConflictPopup';
+    pop.className = 'conflict-popup';
+
+    const msg = document.createElement('span');
+    msg.textContent = `"${newTask.name}" overlaps "${other.label}" more than 75% — pick one to delete:`;
+    pop.appendChild(msg);
+
+    const btn = (text, onClick) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'conflict-popup-btn';
+        b.textContent = text;
+        b.addEventListener('click', () => { pop.remove(); onClick && onClick(); });
+        return b;
+    };
+
+    // Delete the just-created task (no XP tracking — it was never worked on).
+    pop.appendChild(btn(`Delete "${newTask.name}"`, () => {
+        if (typeof stopTaskTimer === 'function') stopTaskTimer(newTask.id);
+        if (typeof deleteTaskFromBackendWithoutTracking === 'function') {
+            deleteTaskFromBackendWithoutTracking(newTask.id);
+        }
+        const el = document.getElementById(`task-${newTask.id}`);
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+        removeDashboardTaskFromCalendar(newTask.id);
+    }));
+
+    // Delete the conflicting existing task/event instead.
+    pop.appendChild(btn(`Delete "${other.label}"`, () => {
+        if (other.kind === 'task') {
+            if (typeof deleteTaskFromBackendWithoutTracking === 'function') {
+                deleteTaskFromBackendWithoutTracking(other.id);
+            }
+            const el = document.getElementById(`task-${other.id}`);
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+            removeDashboardTaskFromCalendar(other.id);
+        } else {
+            try {
+                const data = JSON.parse(localStorage.getItem('calendarData') || '{}');
+                const day = data[other.dateKey];
+                if (day && Array.isArray(day.timestamps)) {
+                    day.timestamps = day.timestamps.filter(t =>
+                        !(t.task === other.label && t.startTime === other.startTime && t.endTime === other.endTime));
+                    localStorage.setItem('calendarData', JSON.stringify(data));
+                }
+            } catch (e) { /* ignore */ }
+        }
+    }));
+
+    pop.appendChild(btn('Keep Both', null));
+    document.body.appendChild(pop);
 }
 

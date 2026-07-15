@@ -466,6 +466,23 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
+/* Conflict popup: a new task overlaps an existing task/event by >75%. */
+.conflict-popup {
+    position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    max-width: min(92vw, 720px); justify-content: center;
+    background: #b0413e; color: #fff; padding: 12px 16px 12px 18px;
+    border-radius: 12px; font-size: 14px; font-weight: 600;
+    box-shadow: 0 8px 28px rgba(16, 24, 40, .28);
+}
+.conflict-popup-btn {
+    background: rgba(255, 255, 255, .22); color: #fff; border: none;
+    border-radius: 7px; padding: 5px 14px; cursor: pointer;
+    font: inherit; font-weight: 700;
+}
+.conflict-popup-btn:hover { background: rgba(255, 255, 255, .32); }
+
+
 /* Completed Modifiers */
 .task-panel.completed-panel .task-item {
     opacity: 0.55;

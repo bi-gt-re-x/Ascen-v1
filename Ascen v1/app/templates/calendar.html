@@ -67,6 +67,9 @@
             <div id="weekView" class="view-pane active">
                 <div class="wk-header">
                     <div class="wk-titlegroup">
+                        <button class="wk-sidebar-toggle" id="wkSidebarToggle" type="button" aria-expanded="true" aria-controls="wkSidebar" title="Collapse the overview sidebar">
+                            <span class="wk-sidebar-toggle-icon">&#10094;</span> Overview
+                        </button>
                         <h2 class="wk-title" id="wkTitle">July 13 – July 19, 2026</h2>
                         <div class="wk-nav">
                             <button class="wk-arrow" aria-label="Previous week">&#10094;</button>
@@ -79,7 +82,7 @@
                     </button>
                 </div>
                 <div class="wk-main">
-                    <aside class="wk-sidebar">
+                    <aside class="wk-sidebar" id="wkSidebar">
                         <section class="wk-panel">
                             <h3 class="wk-panel-title">📈 Weekly Overview</h3>
                             <div class="wk-stats">
