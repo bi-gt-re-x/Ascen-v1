@@ -156,11 +156,15 @@
                             </div>
                             <div class="timer-input-group">
                                 <label for="timerMinutes">Minutes</label>
-                                <input type="range" id="timerMinutes" min="15" max="60" value="15" style="accent-color: #2C302E;" oninput="updateTimerSliderDisplay('minutes', this.value)">
-                                <input type="number" id="timerMinutesInput" class="xp-input-field" style="width: 55px; padding: 4px; font-size: 12px;" min="15" max="60" value="15" oninput="updateTimerFromInput('minutes', this.value)">
+                                <div class="minutes-track">
+                                    <input type="range" id="timerMinutes" min="0" max="60" value="0" style="accent-color: #2C302E;" oninput="updateTimerSliderDisplay('minutes', this.value)">
+                                    <span class="cal-eligible-marker" title="Can show on calendar past this point"></span>
+                                </div>
+                                <input type="number" id="timerMinutesInput" class="xp-input-field" style="width: 55px; padding: 4px; font-size: 12px;" min="0" max="60" value="0" oninput="updateTimerFromInput('minutes', this.value)">
                                 <span id="minsVal" style="display:none;">0</span>
                             </div>
                         </div>
+                        <div class="cal-eligible-note"><span class="cal-eligible-tick">▲</span> 15 min — can show on calendar past this point</div>
                     </div>
                 </div>
 
@@ -168,12 +172,12 @@
                     <div class="due-date-section" style="display: flex; flex-direction: column; gap: 10px;">
                         <div>
                             <label for="dueDate" style="font-size: 12px; color: #6C757D; display:block; margin-bottom:4px;">Select Due Date:</label>
-                            <input type="date" id="dueDate" class="due-date-input" oninput="updateShowOnCalendarState()">
+                            <input type="date" id="dueDate" class="due-date-input">
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <select id="dueHour" class="due-date-input" style="flex: 1;" onchange="updateShowOnCalendarState()"><option value="">Hour</option></select>
-                            <select id="dueMinute" class="due-date-input" style="flex: 1;" onchange="updateShowOnCalendarState()"><option value="">Minute</option></select>
-                            <select id="dueAmPm" class="due-date-input" style="flex: 1;" onchange="updateShowOnCalendarState()">
+                            <select id="dueHour" class="due-date-input" style="flex: 1;"><option value="">Hour</option></select>
+                            <select id="dueMinute" class="due-date-input" style="flex: 1;"><option value="">Minute</option></select>
+                            <select id="dueAmPm" class="due-date-input" style="flex: 1;">
                                 <option value="">AM/PM</option>
                                 <option value="AM">AM</option>
                                 <option value="PM">PM</option>
@@ -184,8 +188,8 @@
             </div>
 
             <div style="margin-top: 20px; text-align: left; display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="showOnCalendar" style="accent-color: #2C302E;" disabled>
-                <label for="showOnCalendar" style="font-size: 13px; color: #2C302E; cursor: not-allowed; font-weight: 500; opacity: 0.5;">Show task on calendar</label>
+                <input type="checkbox" id="showOnCalendar" style="accent-color: #2C302E;" onchange="onShowOnCalendarToggle()">
+                <label for="showOnCalendar" style="font-size: 13px; color: #2C302E; cursor: pointer; font-weight: 500;">Show task on calendar</label>
             </div>
 
             <button class="confirm-add-btn" onclick="addTaskFromModal()">Confirm & Add Task</button>

@@ -864,11 +864,11 @@ function openModal() {
 
     document.getElementById('hoursVal').textContent = '0';
 
-    timerMinutes.value = 15;
+    timerMinutes.value = 0;
 
-    document.getElementById('timerMinutesInput').value = 15;
+    document.getElementById('timerMinutesInput').value = 0;
 
-    document.getElementById('minsVal').textContent = '15';
+    document.getElementById('minsVal').textContent = '0';
 
     syncTimerMinuteBounds();
 
@@ -922,39 +922,40 @@ function openModal() {
 
     document.getElementById('dueAmPm').addEventListener('change', () => clearErrorStates());
 
-    // Start with no due date/time, so the calendar toggle is off + locked.
-    updateShowOnCalendarState();
+    // Fresh task: the calendar toggle starts off (turning it on sets up a slot).
+    var __cal = document.getElementById('showOnCalendar');
+    if (__cal) __cal.checked = false;
 
 }
 
-// The "Show task on calendar" toggle only makes sense when the task has a due
-// date/time (a task with no due date has no slot to place on the calendar).
-// No due date/time -> the toggle is forced OFF and disabled; adding a due
-// date/time enables it and defaults it to ON, but the user can still turn it off.
-function updateShowOnCalendarState() {
-    const cb = document.getElementById('showOnCalendar');
-    if (!cb) return;
+// Does the task already have a due date or due time set?
+function hasDueDateOrTime() {
     const dueDate = document.getElementById('dueDate');
     const dueHour = document.getElementById('dueHour');
     const dueMinute = document.getElementById('dueMinute');
     const dueAmPm = document.getElementById('dueAmPm');
     const hasDate = !!(dueDate && dueDate.value);
     const hasTime = !!(dueHour && dueHour.value && dueMinute && dueMinute.value && dueAmPm && dueAmPm.value);
-    const hasDue = hasDate || hasTime;
-    const label = document.querySelector('label[for="showOnCalendar"]');
-    if (hasDue) {
-        if (cb.disabled) {          // was locked off -> unlock and default to yes
-            cb.disabled = false;
-            cb.checked = true;
-        }
-    } else {                        // no due date/time -> forced off + locked
-        cb.checked = false;
-        cb.disabled = true;
-    }
-    cb.style.cursor = cb.disabled ? 'not-allowed' : 'pointer';
-    if (label) {
-        label.style.opacity = cb.disabled ? '0.5' : '1';
-        label.style.cursor = cb.disabled ? 'not-allowed' : 'pointer';
+    return hasDate || hasTime;
+}
+// Total minutes currently on the task timer (hours + minutes).
+function currentTimerMinutesTotal() {
+    const h = parseInt(document.getElementById('timerHoursInput').value) || 0;
+    const m = parseInt(document.getElementById('timerMinutesInput').value) || 0;
+    return h * 60 + m;
+}
+// A task can only be shown on the calendar if it occupies at least a 15-minute
+// slot. When the user turns "Show task on calendar" on and the task has no due
+// date/time and less than 15 minutes on the timer, pull the timer dropdown down
+// and set it to 15 minutes so the task has a valid slot.
+function onShowOnCalendarToggle() {
+    const cb = document.getElementById('showOnCalendar');
+    if (!cb || !cb.checked) return;
+    if (hasDueDateOrTime()) return;
+    if (currentTimerMinutesTotal() < 15) {
+        const dd = document.getElementById('timerDropdown');
+        if (dd && dd.style.display === 'none') toggleDropdown('timerDropdown');
+        updateTimerFromInput('minutes', 15);
     }
 }
 
@@ -1099,8 +1100,9 @@ function updateXPFromInput(val) {
 // 15-minute minimum task duration: with no hours the minutes floor is 15; once
 // there is an hour or more, minutes may go all the way down to 0.
 function timerMinMinutes() {
-    var h = parseInt(document.getElementById('timerHoursInput').value) || 0;
-    return h >= 1 ? 0 : 15;
+    // No hard floor: the 15-minute mark is only a "can be shown on the calendar"
+    // threshold (see the slider marker), not a limit on how short a timer can be.
+    return 0;
 }
 // Re-apply the minute floor after the hours change (updates the slider/input min
 // and bumps the current value up if it now falls below the floor).
@@ -1499,9 +1501,10 @@ async function addTaskFromModal() {
         syncTaskToCalendar(newTask);
     }
 
-    // Tasks can't overlap: if the new task's window intersects an existing task
-    // (or heavily overlaps a calendar event), force the user to delete one.
-    if (currentUser !== 'Default' && newTask.due_date) {
+    // Tasks shown on the calendar can't overlap: if this task is on the calendar
+    // and its window intersects an existing task (or a calendar event), force the
+    // user to delete one. Tasks not shown on the calendar are left alone.
+    if (currentUser !== 'Default' && newTask.show_on_calendar && newTask.due_date) {
         checkCreationConflict(newTask);
     }
 

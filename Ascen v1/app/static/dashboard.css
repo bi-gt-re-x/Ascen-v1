@@ -968,3 +968,16 @@ html[data-theme="dark"] .modal-separator {
 html[data-theme="dark"] .close {
     color: #8b949e;
 }
+
+/* Minutes slider "can show on calendar" marker at the 15-minute point (25% of 0–60). */
+.minutes-track { position: relative; width: 100%; }
+.cal-eligible-marker {
+    position: absolute; left: 25%; top: 50%; transform: translate(-50%, -50%);
+    width: 2px; height: 16px; background: #2C302E; border-radius: 2px;
+    pointer-events: none;
+}
+.cal-eligible-note { font-size: 11px; color: #6C757D; text-align: center; margin-top: 8px; }
+.cal-eligible-tick { color: #2C302E; font-weight: 700; }
+html[data-theme="dark"] .cal-eligible-marker { background: #c9d1d9; }
+html[data-theme="dark"] .cal-eligible-note { color: #9aa4b2; }
+html[data-theme="dark"] .cal-eligible-tick { color: #c9d1d9; }
