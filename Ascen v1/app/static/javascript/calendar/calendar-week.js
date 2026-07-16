@@ -162,7 +162,7 @@
             var e = endDT > dayEnd ? END_HOUR : hourOf(endDT);
             s = Math.max(START_HOUR, Math.min(s, END_HOUR));
             e = Math.max(START_HOUR, Math.min(e, END_HOUR));
-            if (e - s < 0.5) e = Math.min(s + 0.5, END_HOUR);   // keep a readable minimum
+            // No minimum: task blocks are sized strictly by their actual time span.
             out.push({
                 kind: 'task',
                 id: t.id,
@@ -341,7 +341,7 @@
             if (eh <= sh) eh = sh + 1;                      // overnight/degenerate -> 1h
             var s = Math.max(START_HOUR, Math.min(sh, END_HOUR));
             var e = Math.max(START_HOUR, Math.min(eh, END_HOUR));
-            if (e - s < 0.5) e = Math.min(s + 0.5, END_HOUR);
+            // No minimum: event blocks are sized strictly by their actual time span.
             out.push({ kind: 'event', start: s, end: e, name: t.task || 'Event', startHM: t.startTime, endHM: t.endTime });
         });
         return out;
@@ -383,9 +383,8 @@
             var all = blocks.concat(events);
             all.forEach(function (b) {
                 b.top = (b.start - START_HOUR) * HOUR_H;
-                // Floor the height so even a very short block keeps enough room
-                // for its name plus the time/XP footer (two lines + padding).
-                b.h = Math.max(48, (b.end - b.start) * HOUR_H - 4);
+                // Height is strictly the block's time span (no minimum floor).
+                b.h = Math.max(2, (b.end - b.start) * HOUR_H - 4);
             });
             // A pending pair (task and/or event) overlapping >75% of the LONGER
             // block is a conflict — remember the first undismissed pair to offer

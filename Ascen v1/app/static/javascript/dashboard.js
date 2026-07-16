@@ -864,11 +864,13 @@ function openModal() {
 
     document.getElementById('hoursVal').textContent = '0';
 
-    timerMinutes.value = 0;
+    timerMinutes.value = 15;
 
-    document.getElementById('timerMinutesInput').value = 0;
+    document.getElementById('timerMinutesInput').value = 15;
 
-    document.getElementById('minsVal').textContent = '0';
+    document.getElementById('minsVal').textContent = '15';
+
+    syncTimerMinuteBounds();
 
 
 
@@ -1094,11 +1096,37 @@ function updateXPFromInput(val) {
 
 
 
+// 15-minute minimum task duration: with no hours the minutes floor is 15; once
+// there is an hour or more, minutes may go all the way down to 0.
+function timerMinMinutes() {
+    var h = parseInt(document.getElementById('timerHoursInput').value) || 0;
+    return h >= 1 ? 0 : 15;
+}
+// Re-apply the minute floor after the hours change (updates the slider/input min
+// and bumps the current value up if it now falls below the floor).
+function syncTimerMinuteBounds() {
+    var min = timerMinMinutes();
+    var slider = document.getElementById('timerMinutes');
+    var input = document.getElementById('timerMinutesInput');
+    if (slider) slider.min = min;
+    if (input) input.min = min;
+    var m = parseInt(input && input.value) || 0;
+    if (m < min) m = min;
+    if (m > 60) m = 60;
+    if (input) input.value = m;
+    if (slider) slider.value = m;
+    var span = document.getElementById('minsVal');
+    if (span) span.textContent = m;
+}
+
 function updateTimerSliderDisplay(type, val) {
 
     // Ensure value is within bounds
 
-    val = Math.max(0, Math.min(type === 'hours' ? 12 : 60, parseInt(val) || 0));
+    val = parseInt(val) || 0;
+    val = (type === 'hours')
+        ? Math.max(0, Math.min(12, val))
+        : Math.max(timerMinMinutes(), Math.min(60, val));
 
 
 
@@ -1130,7 +1158,10 @@ function updateTimerFromInput(type, val) {
 
     // Ensure value is within bounds
 
-    val = Math.max(0, Math.min(type === 'hours' ? 12 : 60, parseInt(val) || 0));
+    val = parseInt(val) || 0;
+    val = (type === 'hours')
+        ? Math.max(0, Math.min(12, val))
+        : Math.max(timerMinMinutes(), Math.min(60, val));
 
 
 
