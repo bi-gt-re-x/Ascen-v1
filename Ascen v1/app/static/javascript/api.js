@@ -7,6 +7,7 @@
 async function apiRequest(url, options = {}) {
     const response = await fetch(url, {
         headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',   // always pull fresh data (e.g. live streak) on every call
         ...options,
     });
 

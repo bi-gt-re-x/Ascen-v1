@@ -239,15 +239,20 @@
         return ka < kb ? ka + '|' + kb : kb + '|' + ka;
     }
 
-    // Conflict popup: two blocks overlap >75% — pick one to delete, or keep both.
+    // Conflict modal: two blocks overlap >75%. Centered on a blocking backdrop
+    // with no "keep both" — the calendar can't be used until one side is deleted.
     function showConflictPopup(a, b, dayIso) {
-        if (document.getElementById('wkOverlapPopup')) return;
+        if (document.getElementById('wkOverlapBackdrop')) return;
+        var backdrop = document.createElement('div');
+        backdrop.id = 'wkOverlapBackdrop';
+        backdrop.className = 'wk-overlap-backdrop';
         var pop = document.createElement('div');
         pop.id = 'wkOverlapPopup';
         pop.className = 'wk-overlap-popup';
         var labelOf = function (x) { return x.kind === 'event' ? x.name : x.title; };
         var msg = document.createElement('span');
-        msg.textContent = '"' + labelOf(a) + '" and "' + labelOf(b) + '" overlap more than 75% — pick one to delete:';
+        msg.className = 'wk-overlap-msg';
+        msg.textContent = '"' + labelOf(a) + '" and "' + labelOf(b) + '" overlap more than 75%. Delete one to continue:';
         pop.appendChild(msg);
         [a, b].forEach(function (x) {
             var del = document.createElement('button');
@@ -255,24 +260,16 @@
             del.className = 'wk-overlap-close';
             del.textContent = 'Delete "' + labelOf(x) + '"';
             del.addEventListener('click', function () {
-                pop.remove();
+                backdrop.remove();
                 deleteBlock(x, dayIso);
             });
             pop.appendChild(del);
         });
-        var keep = document.createElement('button');
-        keep.type = 'button';
-        keep.className = 'wk-overlap-close wk-overlap-keep';
-        keep.textContent = 'Keep Both';
-        keep.addEventListener('click', function () {
-            dismissedConflicts[conflictKey(a, b)] = true;
-            pop.remove();
-        });
-        pop.appendChild(keep);
-        document.body.appendChild(pop);
+        backdrop.appendChild(pop);
+        document.body.appendChild(backdrop);
     }
     function hideOverlapPopup() {
-        var p = document.getElementById('wkOverlapPopup');
+        var p = document.getElementById('wkOverlapBackdrop');
         if (p) p.remove();
     }
 
@@ -426,9 +423,11 @@
                 }
                 // Task block. Colour-coded by state: completed = green, else by
                 // difficulty (low/easy = blue, medium = yellow, high/hard = red).
-                var stateCls = b.done ? 'done'
-                    : (b.priority === 'high' ? 'prio-high'
-                    : (b.priority === 'medium' ? 'prio-medium' : 'prio-low'));
+                var prioCls = b.priority === 'high' ? 'prio-high'
+                    : (b.priority === 'medium' ? 'prio-medium' : 'prio-low');
+                // Completed tasks keep their priority colour; the done state shows
+                // only as a green check sign + green text (see .is-done in CSS).
+                var stateCls = prioCls + (b.done ? ' is-done' : '');
                 // Footer: a task running past this day says where it continues; a
                 // finished task shows its completion time; else its due time.
                 var timeText, timeClass;
@@ -445,7 +444,10 @@
                     timeClass = 'wk-event-due';
                 }
                 return '<div class="wk-event wk-task ' + stateCls + '" style="' + nestPos(b) + '">' +
-                    '<div class="wk-event-title">' + esc(b.title) + '</div>' +
+                    '<div class="wk-event-title">' +
+                        (b.done ? '<span class="wk-event-check">✓</span> ' : '') +
+                        esc(b.title) +
+                    '</div>' +
                     '<div class="wk-event-foot">' +
                         (timeText ? '<span class="' + timeClass + '">' + esc(timeText) + '</span>' : '') +
                         '<span class="wk-event-xp">' + b.xp + ' XP</span>' +
@@ -526,7 +528,7 @@
     // account's live streak.
     function loadSidebar() {
         var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
-        fetch('/api/get_user_data?username=' + encodeURIComponent(user))
+        fetch('/api/get_user_data?username=' + encodeURIComponent(user), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 if (!data || !data.success) { renderPriorities([]); return; }
@@ -684,9 +686,11 @@
         // so the seven day columns widen to fill the freed space. State persists.
         var sidebarToggle = document.getElementById('wkSidebarToggle');
         var wkMain = document.querySelector('#weekView .wk-main');
+        var wkHeader = document.querySelector('#weekView .wk-header');
         function applySidebar(collapsed) {
             if (!wkMain) return;
             wkMain.classList.toggle('sidebar-collapsed', collapsed);
+            if (wkHeader) wkHeader.classList.toggle('sidebar-collapsed', collapsed);
             if (sidebarToggle) {
                 sidebarToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
                 sidebarToggle.title = (collapsed ? 'Open' : 'Collapse') + ' the overview sidebar';

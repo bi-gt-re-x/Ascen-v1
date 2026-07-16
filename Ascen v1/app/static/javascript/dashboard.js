@@ -1436,8 +1436,8 @@ async function addTaskFromModal() {
         syncTaskToCalendar(newTask);
     }
 
-    // If the new task's span (now -> due) buries an existing task or calendar
-    // event by more than 75%, offer to delete one of the two right away.
+    // Tasks can't overlap: if the new task's window intersects an existing task
+    // (or heavily overlaps a calendar event), force the user to delete one.
     if (currentUser !== 'Default' && newTask.due_date) {
         checkCreationConflict(newTask);
     }
@@ -1780,13 +1780,15 @@ function removeDashboardTaskFromCalendar(taskId) {
 
 
 
-// --- >75% overlap conflict check at task-creation time -----------------------
-// A new task spans from its creation (now) to its due date. If that span covers
-// more than 75% of an existing pending task's span, or of a calendar event,
-// pop up a chooser so the user can delete one of the two (or keep both).
+// --- Overlap conflict check at task-creation time ----------------------------
+// A new task spans from its creation (now) to its due date. Tasks aren't allowed
+// to overlap at all: if the new task's active window intersects ANY existing
+// pending task's window, pop up a blocking chooser to delete one of the two.
+// (Calendar events keep a looser >75% bar so a multi-day task isn't blocked by
+// every event it happens to cross.)
 
-// Overlap measured against the LONGER span (0..1) — a short task tucked inside
-// a long one stays well under the threshold; only near-duplicate spans trip it.
+// Overlap fraction measured against the LONGER span (0..1): used with a >0 bar
+// for tasks (any intersection) and a >0.75 bar for calendar events.
 function spanOverlapFrac(aS, aE, bS, bE) {
     const o = Math.min(aE, bE) - Math.max(aS, bS);
     if (o <= 0) return 0;
@@ -1808,7 +1810,7 @@ async function checkCreationConflict(newTask) {
                 const ts = t.created_at ? new Date(t.created_at).getTime() : Number(t.id);
                 const te = new Date(t.due_date).getTime();
                 if (isNaN(ts) || isNaN(te) || te <= ts) continue;
-                if (spanOverlapFrac(ns, ne, ts, te) > 0.75) {
+                if (spanOverlapFrac(ns, ne, ts, te) > 0) {
                     showCreationConflictPopup(newTask, { kind: 'task', id: t.id, label: t.title || t.name || 'Task' });
                     return;
                 }
@@ -1847,13 +1849,20 @@ async function checkCreationConflict(newTask) {
 }
 
 function showCreationConflictPopup(newTask, other) {
-    if (document.getElementById('creationConflictPopup')) return;
+    if (document.getElementById('creationConflictBackdrop')) return;
+    // Centered, blocking backdrop: overlapping tasks aren't allowed, so the user
+    // must delete one before they can touch the dashboard again (no "keep both").
+    const backdrop = document.createElement('div');
+    backdrop.id = 'creationConflictBackdrop';
+    backdrop.className = 'conflict-backdrop';
+
     const pop = document.createElement('div');
     pop.id = 'creationConflictPopup';
     pop.className = 'conflict-popup';
 
     const msg = document.createElement('span');
-    msg.textContent = `"${newTask.name}" overlaps "${other.label}" more than 75% — pick one to delete:`;
+    msg.className = 'conflict-popup-msg';
+    msg.textContent = `"${newTask.name}" overlaps "${other.label}". Delete one to continue:`;
     pop.appendChild(msg);
 
     const btn = (text, onClick) => {
@@ -1861,7 +1870,7 @@ function showCreationConflictPopup(newTask, other) {
         b.type = 'button';
         b.className = 'conflict-popup-btn';
         b.textContent = text;
-        b.addEventListener('click', () => { pop.remove(); onClick && onClick(); });
+        b.addEventListener('click', () => { backdrop.remove(); onClick && onClick(); });
         return b;
     };
 
@@ -1898,7 +1907,7 @@ function showCreationConflictPopup(newTask, other) {
         }
     }));
 
-    pop.appendChild(btn('Keep Both', null));
-    document.body.appendChild(pop);
+    backdrop.appendChild(pop);
+    document.body.appendChild(backdrop);
 }
 

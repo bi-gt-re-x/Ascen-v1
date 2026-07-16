@@ -14,17 +14,29 @@
 }
 
 /* ---- Week header (title + nav + Today, Filters on the right) ---- */
+/* Header aligns to the grid below: the Overview toggle sits over the sidebar
+   column, and the date + arrows + Add-Event sit over the day grid — with a 56px
+   left pad (the time-label gutter) so the date lands on top of Mon/Tue. */
 .wk-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: 22px;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
     margin-bottom: 18px;
-    flex-wrap: wrap;
 }
-.wk-titlegroup { display: flex; align-items: center; gap: 14px; }
-.wk-title { margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.9rem); font-weight: 800; color: #1a1f26; }
-.wk-nav { display: flex; gap: 6px; }
+.wk-header .wk-sidebar-toggle { justify-self: start; }
+.wk-headmain {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; min-width: 0; padding-left: 56px;
+}
+.wk-titlegroup { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.wk-title { margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.9rem); font-weight: 800; color: #1a1f26; white-space: nowrap; }
+.wk-nav { display: flex; gap: 6px; flex: none; }
+
+/* Collapsed sidebar: no sidebar column to align to, so the header flows normally
+   (toggle, date and Add-Event in one row). */
+.wk-header.sidebar-collapsed { display: flex; flex-wrap: wrap; }
+.wk-header.sidebar-collapsed .wk-headmain { flex: 1 1 auto; padding-left: 0; }
 .wk-arrow, .wk-today, .wk-filters, .wk-addevent {
     border: 1px solid #e5e8ee; background: #fff; border-radius: 999px;
     cursor: pointer; font-family: inherit; color: #2c302e;
@@ -156,15 +168,19 @@
 /* "Now" indicator: a red line across the whole week grid at the current time,
    with a matching red time badge on the left (time-label) edge. */
 .wk-nowline {
-    position: absolute; left: 0; right: 0; height: 0;
+    position: absolute; left: 0.35vw; right: 0; height: 0;
     border-top: 2px solid #e5484d; z-index: 6; pointer-events: none;
 }
 .wk-nowline::before {
     content: ''; position: absolute; left: -4px; top: -5px;
     width: 8px; height: 8px; border-radius: 50%; background: #e5484d;
 }
+/* Time badge sits in the time-label gutter, just outside (left of) the first day
+   column — its right edge a couple px short of the column border so the border
+   still shows and the badge itself isn't clipped. */
 .wk-nowlabel {
-    position: absolute; right: 6px; transform: translateY(-50%);
+    position: absolute; right: 1px; left: auto;
+    transform: translateY(-50%);
     background: #e5484d; color: #fff; font-size: 10px; font-weight: 700;
     padding: 1px 5px; border-radius: 6px; white-space: nowrap; z-index: 7;
     pointer-events: none;
@@ -189,7 +205,10 @@
 .wk-event.wk-task.prio-low    { background: #eaf1fe; border-color: #cfe0fb; color: #2c5aa0; }
 .wk-event.wk-task.prio-medium { background: #fdf6e3; border-color: #f0e2c8; color: #8a6d3b; }
 .wk-event.wk-task.prio-high   { background: #fdecec; border-color: #f7d5d5; color: #b0413e; }
-.wk-event.wk-task.done        { background: #eafaf0; border-color: #cdeed9; color: #2e7d52; }
+/* Completed task: keep the priority fill & border; completion is shown only with
+   a green check sign + green text, so the block's colours don't change. */
+.wk-event.wk-task.is-done { color: #2e7d52; }
+.wk-event-check { font-weight: 800; margin-right: 1px; }
 
 /* Calendar events: light 40%-transparent fills (set inline, from a palette that
    avoids the task colours); dark text for contrast over the translucent fill. */
@@ -207,20 +226,25 @@ html[data-theme="dark"] .wk-event.wk-event-cal .wk-event-title { color: #ece9f5;
 .wk-event-xp { font-size: 11px; opacity: .9; flex: none; display: flex; align-items: center; gap: 4px; }
 .wk-event-icon { font-size: 11px; }
 
-/* Conflict popup: two blocks overlap >75% — pick one to delete, or keep both. */
-.wk-overlap-popup {
-    position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
-    z-index: 1000; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    max-width: min(92vw, 720px); justify-content: center;
-    background: #b0413e; color: #fff; padding: 12px 16px 12px 18px;
-    border-radius: 12px; font-size: 14px; font-weight: 600;
-    box-shadow: 0 8px 28px rgba(16,24,40,.28);
+/* Conflict modal: two blocks overlap >75%. A blocking backdrop centers the
+   prompt so the calendar can't be used until one side is deleted (no keep-both). */
+.wk-overlap-backdrop {
+    position: fixed; inset: 0; z-index: 1000; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(16, 24, 40, .45);
 }
-.wk-overlap-keep { background: rgba(255,255,255,.08); }
+.wk-overlap-popup {
+    display: flex; flex-direction: column; gap: 12px;
+    max-width: min(92vw, 440px); text-align: center;
+    background: #b0413e; color: #fff; padding: 20px 22px;
+    border-radius: 14px; font-size: 15px; font-weight: 600;
+    box-shadow: 0 16px 44px rgba(16,24,40,.4);
+}
+.wk-overlap-msg { line-height: 1.45; margin-bottom: 4px; }
 .wk-overlap-close {
     background: rgba(255,255,255,.22); color: #fff; border: none;
-    border-radius: 7px; padding: 5px 14px; cursor: pointer;
-    font: inherit; font-weight: 700;
+    border-radius: 8px; padding: 10px 16px; cursor: pointer;
+    font: inherit; font-weight: 700; width: 100%;
 }
 .wk-overlap-close:hover { background: rgba(255,255,255,.32); }
 
@@ -244,6 +268,9 @@ html[data-theme="dark"] .wk-event.wk-event-cal .wk-event-title { color: #ece9f5;
 @media (max-width: 1000px) {
     .wk-main { grid-template-columns: minmax(0, 1fr); }
     .wk-scroll { max-height: 70vh; }
+    /* Sidebar stacks above the grid here, so the header flows normally too. */
+    .wk-header { display: flex; flex-wrap: wrap; gap: 16px; }
+    .wk-headmain { flex: 1 1 auto; padding-left: 0; }
 }
 
 /* ---- Dark theme ---- */
@@ -284,4 +311,4 @@ html[data-theme="dark"] .wk-daydate.today { background: #f4f4f6; color: #161b22;
 html[data-theme="dark"] .wk-event.wk-task.prio-low    { background: #16233a; border-color: #274267; color: #9bc0ff; }
 html[data-theme="dark"] .wk-event.wk-task.prio-medium { background: #2d2718; border-color: #4d4327; color: #e6c979; }
 html[data-theme="dark"] .wk-event.wk-task.prio-high   { background: #341c1c; border-color: #5a2f2f; color: #f2a3a3; }
-html[data-theme="dark"] .wk-event.wk-task.done        { background: #16291f; border-color: #275038; color: #86d6a5; }
+html[data-theme="dark"] .wk-event.wk-task.is-done { color: #86d6a5; }

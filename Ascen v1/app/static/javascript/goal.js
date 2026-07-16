@@ -205,7 +205,7 @@ async function loadGoals() {
     }
 
     try {
-        const response = await fetch(`/api/get_goals?username=${encodeURIComponent(currentUser)}`);
+        const response = await fetch(`/api/get_goals?username=${encodeURIComponent(currentUser)}`, { cache: 'no-store' });
         const data = await response.json();
 
         if (data.success) {

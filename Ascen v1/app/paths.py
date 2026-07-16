@@ -3,6 +3,7 @@ import json
 import sqlite3
 import sys
 import random
+import tempfile
 from flask import Blueprint, render_template, request, jsonify, session
 from datetime import datetime, date, timedelta
 
@@ -40,9 +41,27 @@ def read_json_file(filepath):
         return []
 
 def write_json_file(filepath, data):
-    """Write data to a JSON file"""
-    with open(filepath, 'w') as f:
-        json.dump(data, f, indent=2)
+    """Write data to a JSON file atomically.
+
+    Writing to a temp file in the same directory and then os.replace()-ing it
+    over the target means a concurrent reader always sees either the complete old
+    file or the complete new one — never a half-written, truncated file. This
+    matters because the threaded dev server can read one JSON store on one request
+    while another request is rewriting it (e.g. the live streak decay)."""
+    dir_name = os.path.dirname(filepath) or '.'
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, filepath)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 def get_current_theme():
     """Return the light/dark theme to render for the current request.
@@ -432,6 +451,43 @@ def set_theme():
     resp.set_cookie('theme', theme, max_age=THEME_COOKIE_MAX_AGE, samesite='Lax')
     return resp
 
+def refresh_user_streak(user):
+    """Decay a stale streak so every page reads the same live value.
+
+    A streak counts consecutive days with at least one completed task. It stays
+    alive only while the last completed task was today or yesterday; once a whole
+    day passes with no completion (last task 2+ days ago), the current streak is
+    lost (reset to 0). best_streak is the all-time record and is never lowered.
+    At the start of a new day the day_state flips back to 'newday' so the next
+    completion extends the streak. Returns True if the user record changed, so
+    the caller can persist it.
+    """
+    last = user.get('last_task_date')
+    if not last:
+        return False
+    try:
+        last_date = datetime.strptime(str(last)[:10], '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return False
+
+    gap = (date.today() - last_date).days
+    changed = False
+    if gap >= 2:
+        # A full day went by with no completed task — the streak is broken.
+        if user.get('current_streak', 0) != 0:
+            user['current_streak'] = 0
+            changed = True
+        if user.get('day_state') != 'newday':
+            user['day_state'] = 'newday'
+            changed = True
+    elif gap == 1:
+        # New day, streak still alive but not yet extended today.
+        if user.get('day_state') != 'newday':
+            user['day_state'] = 'newday'
+            changed = True
+    return changed
+
+
 @bp.route('/api/get_user_data', methods=['GET'])
 def get_user_data():
     username = request.args.get('username')
@@ -450,6 +506,10 @@ def get_user_data():
     
     if not user:
         return jsonify({"success": False, "message": "User not found"})
+
+    # Decay a stale streak (lost after a full day with no task) before reporting.
+    if refresh_user_streak(user):
+        write_json_file(USERS_JSON, users)
 
     # Read tasks from JSON file
     tasks = read_json_file(TASKS_JSON)
@@ -1301,41 +1361,40 @@ def complete_task():
     
     user['level'] = new_level
 
-    # Update streak logic
+    # Update streak logic. The streak counts consecutive days with at least one
+    # completed task: the first task the day after the last one extends it by 1,
+    # another task the same day leaves it unchanged, and a gap of a full day
+    # (2+ days since the last task) restarts it at 1. best_streak keeps the
+    # all-time high and is never lowered.
     today = date.today()
     today_str = today.isoformat()
-    
+
     current_streak = user.get('current_streak', 0)
     best_streak = user.get('best_streak', 0)
     last_task_date = user.get('last_task_date', None)
-    day_state = user.get('day_state', 'newday')
 
-    # Check if streak should be broken before incrementing
+    last_date = None
     if last_task_date:
         try:
-            last_date = datetime.strptime(last_task_date, '%Y-%m-%d').date()
-            
-            # If any new day has passed (not today), break the streak
-            if last_date != today:
-                current_streak = 0
-                day_state = 'newday'
+            last_date = datetime.strptime(str(last_task_date)[:10], '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            current_streak = 0
-            day_state = 'newday'
-    else:
-        day_state = 'newday'
+            last_date = None
 
-    # If it's the first task of the day (day_state is 'newday'), increment streak
-    if day_state == 'newday':
-        new_streak = current_streak + 1
-        new_best_streak = max(best_streak, new_streak)
-        
-        user['current_streak'] = new_streak
-        user['best_streak'] = new_best_streak
-        user['last_task_date'] = today_str
-        user['day_state'] = 'oldday'
+    if last_date is None:
+        new_streak = 1
     else:
-        user['last_task_date'] = today_str
+        gap = (today - last_date).days
+        if gap <= 0:
+            new_streak = max(current_streak, 1)   # another task today — no change
+        elif gap == 1:
+            new_streak = current_streak + 1        # next day — extend the streak
+        else:
+            new_streak = 1                          # missed a full day — restart
+
+    user['current_streak'] = new_streak
+    user['best_streak'] = max(best_streak, new_streak)
+    user['last_task_date'] = today_str
+    user['day_state'] = 'oldday'
 
     # Write updated data back to JSON files
     write_json_file(TASKS_JSON, tasks)
@@ -1466,6 +1525,9 @@ def sync_streak_goals_to_user_streak(username):
     user = next((u for u in users if u.get('username') == username), None)
     if not user:
         return
+    # Decay a stale streak first so goals follow the same live value everywhere.
+    if refresh_user_streak(user):
+        write_json_file(USERS_JSON, users)
     current_streak = user.get('current_streak', 0) or 0
 
     goals = read_json_file(GOALS_JSON)
