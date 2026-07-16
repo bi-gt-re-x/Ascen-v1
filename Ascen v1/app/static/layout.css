@@ -38,3 +38,20 @@
 .page-shell table {
     max-width: 100%;
 }
+
+/* ---- Themed scrollbars (light + dark), shared by every page ---------------- */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #c3c9d4 transparent;        /* Firefox: thumb, track */
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: #c3c9d4; border-radius: 8px;
+    border: 2px solid transparent; background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #aab1c0; background-clip: padding-box; }
+
+html[data-theme="dark"] * { scrollbar-color: #333b47 transparent; }
+html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #333b47; background-clip: padding-box; }
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #434c5a; background-clip: padding-box; }

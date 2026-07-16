@@ -194,7 +194,13 @@
     /* Shadow separates stacked layers so an overlapped block reads as "behind". */
     box-shadow: 0 1px 4px rgba(16, 24, 40, .16);
 }
-/* Footer holds the due time + XP, pushed to the bottom of the box. */
+/* Header row: title (left, truncates) + start time (right), kept at the top. */
+.wk-event-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+}
+.wk-event-head .wk-event-title { flex: 1 1 auto; min-width: 0; margin: 0; }
+.wk-event-start { font-size: 11px; opacity: .8; flex: none; }
+/* Footer holds the due/completion time + XP, pushed to the bottom of the box. */
 .wk-event-foot {
     margin-top: auto; display: flex; align-items: baseline;
     justify-content: space-between; gap: 6px; padding-top: 2px;
@@ -299,6 +305,15 @@ html[data-theme="dark"] .wk-focus-input {
 html[data-theme="dark"] .wk-focus-input::placeholder { color: #6b7280; }
 html[data-theme="dark"] .wk-focus-input:focus {
     border-color: #a8845c; box-shadow: 0 0 0 3px rgba(168,132,92,.22);
+}
+/* Per-day "Focus…" boxes in the top row — dark fill instead of the light default. */
+html[data-theme="dark"] .wk-day-focus {
+    background: #0f141b; border-color: #262c36; color: #c9d1d9;
+}
+html[data-theme="dark"] .wk-day-focus::placeholder { color: #6b7280; }
+html[data-theme="dark"] .wk-day-focus:focus {
+    border-color: #a8845c; background: #161b22;
+    box-shadow: 0 0 0 3px rgba(168,132,92,.22);
 }
 html[data-theme="dark"] .wk-progress { background: #262c36; }
 html[data-theme="dark"] .wk-charge { background: linear-gradient(180deg, #1c2129 0%, #161b22 100%); }

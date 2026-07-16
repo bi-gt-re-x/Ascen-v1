@@ -443,10 +443,16 @@
                     timeText = dueStr ? 'Due ' + dueStr : '';
                     timeClass = 'wk-event-due';
                 }
+                // Start time (the task's start clock time) sits at the top next to
+                // the title, kept compact so the title stays readable beside it.
+                var startText = b.startDT ? timeLabel(b.startDT) : '';
                 return '<div class="wk-event wk-task ' + stateCls + '" style="' + nestPos(b) + '">' +
-                    '<div class="wk-event-title">' +
-                        (b.done ? '<span class="wk-event-check">✓</span> ' : '') +
-                        esc(b.title) +
+                    '<div class="wk-event-head">' +
+                        '<div class="wk-event-title">' +
+                            (b.done ? '<span class="wk-event-check">✓</span> ' : '') +
+                            esc(b.title) +
+                        '</div>' +
+                        (startText ? '<span class="wk-event-start">' + esc(startText) + '</span>' : '') +
                     '</div>' +
                     '<div class="wk-event-foot">' +
                         (timeText ? '<span class="' + timeClass + '">' + esc(timeText) + '</span>' : '') +
