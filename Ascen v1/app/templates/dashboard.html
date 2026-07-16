@@ -168,12 +168,12 @@
                     <div class="due-date-section" style="display: flex; flex-direction: column; gap: 10px;">
                         <div>
                             <label for="dueDate" style="font-size: 12px; color: #6C757D; display:block; margin-bottom:4px;">Select Due Date:</label>
-                            <input type="date" id="dueDate" class="due-date-input">
+                            <input type="date" id="dueDate" class="due-date-input" oninput="updateShowOnCalendarState()">
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <select id="dueHour" class="due-date-input" style="flex: 1;"><option value="">Hour</option></select>
-                            <select id="dueMinute" class="due-date-input" style="flex: 1;"><option value="">Minute</option></select>
-                            <select id="dueAmPm" class="due-date-input" style="flex: 1;">
+                            <select id="dueHour" class="due-date-input" style="flex: 1;" onchange="updateShowOnCalendarState()"><option value="">Hour</option></select>
+                            <select id="dueMinute" class="due-date-input" style="flex: 1;" onchange="updateShowOnCalendarState()"><option value="">Minute</option></select>
+                            <select id="dueAmPm" class="due-date-input" style="flex: 1;" onchange="updateShowOnCalendarState()">
                                 <option value="">AM/PM</option>
                                 <option value="AM">AM</option>
                                 <option value="PM">PM</option>
@@ -184,8 +184,8 @@
             </div>
 
             <div style="margin-top: 20px; text-align: left; display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="showOnCalendar" style="accent-color: #2C302E;" checked>
-                <label for="showOnCalendar" style="font-size: 13px; color: #2C302E; cursor: pointer; font-weight: 500;">Show task on calendar</label>
+                <input type="checkbox" id="showOnCalendar" style="accent-color: #2C302E;" disabled>
+                <label for="showOnCalendar" style="font-size: 13px; color: #2C302E; cursor: not-allowed; font-weight: 500; opacity: 0.5;">Show task on calendar</label>
             </div>
 
             <button class="confirm-add-btn" onclick="addTaskFromModal()">Confirm & Add Task</button>

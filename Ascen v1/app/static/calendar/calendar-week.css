@@ -285,6 +285,7 @@ html[data-theme="dark"] .wk-panel-title,
 html[data-theme="dark"] .wk-stat-num,
 html[data-theme="dark"] .wk-streak-num,
 html[data-theme="dark"] .wk-charge-head,
+html[data-theme="dark"] .wk-priorities li,
 html[data-theme="dark"] .wk-dayname { color: #f4f4f6; }
 html[data-theme="dark"] .wk-arrow,
 html[data-theme="dark"] .wk-today,

@@ -920,9 +920,41 @@ function openModal() {
 
     document.getElementById('dueAmPm').addEventListener('change', () => clearErrorStates());
 
+    // Start with no due date/time, so the calendar toggle is off + locked.
+    updateShowOnCalendarState();
+
 }
 
-
+// The "Show task on calendar" toggle only makes sense when the task has a due
+// date/time (a task with no due date has no slot to place on the calendar).
+// No due date/time -> the toggle is forced OFF and disabled; adding a due
+// date/time enables it and defaults it to ON, but the user can still turn it off.
+function updateShowOnCalendarState() {
+    const cb = document.getElementById('showOnCalendar');
+    if (!cb) return;
+    const dueDate = document.getElementById('dueDate');
+    const dueHour = document.getElementById('dueHour');
+    const dueMinute = document.getElementById('dueMinute');
+    const dueAmPm = document.getElementById('dueAmPm');
+    const hasDate = !!(dueDate && dueDate.value);
+    const hasTime = !!(dueHour && dueHour.value && dueMinute && dueMinute.value && dueAmPm && dueAmPm.value);
+    const hasDue = hasDate || hasTime;
+    const label = document.querySelector('label[for="showOnCalendar"]');
+    if (hasDue) {
+        if (cb.disabled) {          // was locked off -> unlock and default to yes
+            cb.disabled = false;
+            cb.checked = true;
+        }
+    } else {                        // no due date/time -> forced off + locked
+        cb.checked = false;
+        cb.disabled = true;
+    }
+    cb.style.cursor = cb.disabled ? 'not-allowed' : 'pointer';
+    if (label) {
+        label.style.opacity = cb.disabled ? '0.5' : '1';
+        label.style.cursor = cb.disabled ? 'not-allowed' : 'pointer';
+    }
+}
 
 function populateTimeSelectors() {
 
