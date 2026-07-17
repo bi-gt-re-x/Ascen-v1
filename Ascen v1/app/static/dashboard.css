@@ -698,6 +698,31 @@ body {
     background-color: #454B48;
 }
 
+/* "Show on calendar" free-slot suggestion / overlap warning under the toggle. */
+.cal-suggest {
+    margin-top: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    text-align: left;
+    background: #f1f3f7;
+    border: 1px solid #e2e6ee;
+    color: #55607a;
+}
+.cal-suggest-ok { background: #eaf7ef; border-color: #c7ebd5; color: #2e7d52; }
+.cal-suggest-bad { background: #fdecec; border-color: #f5d2d2; color: #b0413e; }
+.cal-suggest .cal-suggest-link {
+    color: #2c5aa0; font-weight: 700; text-decoration: underline; cursor: pointer;
+}
+.cal-suggest-bad .cal-suggest-link { color: #b0413e; }
+
+html[data-theme="dark"] .cal-suggest { background: #232a35; border-color: #333c48; color: #aab2c5; }
+html[data-theme="dark"] .cal-suggest-ok { background: #13291d; border-color: #24503a; color: #7ee0a6; }
+html[data-theme="dark"] .cal-suggest-bad { background: #2e1618; border-color: #5a2b2b; color: #ff9297; }
+html[data-theme="dark"] .cal-suggest .cal-suggest-link { color: #8fbcff; }
+html[data-theme="dark"] .cal-suggest-bad .cal-suggest-link { color: #ff9297; }
+
 /* Responsive Scaling */
 @media (max-width: 768px) {
     .top-section {

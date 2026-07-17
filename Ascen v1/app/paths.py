@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import sqlite3
 import sys
 import random
@@ -21,6 +22,9 @@ TASKS_JSON = os.path.join(DATA_DIR, 'task.json')
 CALENDAR_JSON = os.path.join(DATA_DIR, 'calendar.json')
 XPEVENT_JSON = os.path.join(DATA_DIR, 'xpevent.json')
 GOALS_JSON = os.path.join(DATA_DIR, 'goals.json')
+# Tracks every hex colour already assigned to a calendar event, so each new
+# event can be given a colour that is a good amount different from the others.
+EVENTCOLORS_JSON = os.path.join(DATA_DIR, 'eventcolors.json')
 
 # How long the theme cookie lives (1 year) — it just needs to outlive the session.
 THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
@@ -322,6 +326,42 @@ def get_custom_events():
         import task_backend
         events = task_backend.get_custom_events()
         return jsonify({"success": True, "events": events})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
+def _read_event_colors():
+    """Return the tracked list of event hex colours (tolerates list or dict)."""
+    data = read_json_file(EVENTCOLORS_JSON)
+    if isinstance(data, dict):
+        colors = data.get('colors', [])
+    elif isinstance(data, list):
+        colors = data
+    else:
+        colors = []
+    return [c for c in colors if isinstance(c, str)]
+
+@bp.route('/api/get_event_colors', methods=['GET'])
+def get_event_colors():
+    """Return the hex colours already assigned to calendar events. The client
+    uses these to pick a new colour that is visibly different from all of them."""
+    try:
+        return jsonify({"success": True, "colors": _read_event_colors()})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error: {str(e)}", "colors": []})
+
+@bp.route('/api/add_event_color', methods=['POST'])
+def add_event_color():
+    """Append a newly-assigned event colour to eventcolors.json."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        color = str(payload.get('color', '')).strip().lower()
+        if not re.match(r'^#[0-9a-f]{6}$', color):
+            return jsonify({"success": False, "message": "Invalid colour"}), 400
+        colors = _read_event_colors()
+        if color not in colors:
+            colors.append(color)
+            write_json_file(EVENTCOLORS_JSON, {"colors": colors})
+        return jsonify({"success": True, "colors": colors})
     except Exception as e:
         return jsonify({"success": False, "message": f"Error: {str(e)}"})
 

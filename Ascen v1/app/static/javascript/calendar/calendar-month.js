@@ -60,6 +60,84 @@ function eventColorIndexFor(section) {
 window.EVENT_COLOR_PALETTE = EVENT_COLOR_PALETTE;
 window.eventColorIndexFor = eventColorIndexFor;
 
+// --- Distinct per-event hex colours (tracked in data/eventcolors.json) -------
+// Every used colour is tracked server-side so each new event gets a hex that is
+// a good amount different (max hue distance) from all the existing ones.
+window.eventColorsUsed = window.eventColorsUsed || [];
+function loadEventColors() {
+    fetch('/api/get_event_colors')
+        .then(r => r.json())
+        .then(d => { if (d && d.success && Array.isArray(d.colors)) window.eventColorsUsed = d.colors.slice(); })
+        .catch(() => { /* offline / no backend — fall back to the palette */ });
+}
+function hslToRgb(h, s, l) {
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => Math.round((l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))) * 255);
+    return [f(0), f(8), f(4)];
+}
+function rgbToHex(r, g, b) { const to = x => x.toString(16).padStart(2, '0'); return '#' + to(r) + to(g) + to(b); }
+function hexToRgbArr(hex) {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
+}
+// Colour families events may use — browns, greys, oranges, greens, and red /
+// yellow / blue shifted away from the task-difficulty colours so an event never
+// reads as a task colour. [h, s, l] with s,l in 0..1.
+const EVENT_HSL_CANDIDATES = [
+    // browns (warm, muted, darker)
+    [22, 0.55, 0.34], [28, 0.45, 0.40], [33, 0.50, 0.30], [16, 0.42, 0.38], [30, 0.35, 0.46], [25, 0.60, 0.44],
+    // greys (near-zero saturation, light → dark)
+    [30, 0.05, 0.45], [30, 0.05, 0.56], [210, 0.06, 0.50], [210, 0.05, 0.64], [30, 0.05, 0.70],
+    // oranges
+    [30, 0.85, 0.55], [38, 0.80, 0.52], [23, 0.78, 0.50], [43, 0.75, 0.58],
+    // greens
+    [95, 0.45, 0.45], [120, 0.42, 0.42], [140, 0.45, 0.40], [105, 0.55, 0.50], [150, 0.34, 0.46], [82, 0.50, 0.48],
+    // reds shifted off the task red (brick / rose)
+    [8, 0.60, 0.45], [12, 0.55, 0.52], [350, 0.42, 0.46],
+    // yellows shifted off the task yellow (mustard / gold)
+    [48, 0.68, 0.48], [52, 0.60, 0.55], [45, 0.55, 0.44],
+    // blues shifted off the task blue (steel / indigo)
+    [200, 0.50, 0.48], [225, 0.45, 0.52], [210, 0.42, 0.42], [235, 0.34, 0.56]
+];
+// Task-difficulty colours (blue / yellow / red) events must stay distinct from.
+const TASK_RGB = [[56, 132, 255], [245, 196, 92], [240, 90, 95]];
+function rgbDist2(a, b) { const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2]; return dr * dr + dg * dg + db * db; }
+// Pick the family colour furthest (in RGB) from every colour already in use and
+// from the task colours → each new event is a good amount different.
+function generateDistinctColor() {
+    const avoid = (window.eventColorsUsed || []).map(hexToRgbArr).filter(Boolean).concat(TASK_RGB);
+    let best = null, bestScore = -1;
+    for (const c of EVENT_HSL_CANDIDATES) {
+        const rgb = hslToRgb(c[0], c[1], c[2]);
+        let minD = Infinity;
+        for (const a of avoid) { const d = rgbDist2(rgb, a); if (d < minD) minD = d; }
+        if (minD > bestScore) { bestScore = minD; best = rgb; }
+    }
+    if (!best) best = hslToRgb(30, 0.5, 0.45);
+    return rgbToHex(best[0], best[1], best[2]);
+}
+// Assign a fresh distinct colour to a new event and persist it to the tracker.
+function assignEventColor() {
+    const color = generateDistinctColor();
+    if (!window.eventColorsUsed) window.eventColorsUsed = [];
+    window.eventColorsUsed.push(color);
+    fetch('/api/add_event_color', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ color: color })
+    }).catch(() => { /* best-effort persistence */ });
+    return color;
+}
+// [r,g,b] for an event: its stored hex if any, else the legacy palette colour.
+function eventRgb(section) {
+    const hex = section && typeof section.color === 'string' && /^#?[0-9a-f]{6}$/i.test(section.color)
+        ? section.color.replace('#', '') : null;
+    if (hex) return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+    return EVENT_COLOR_PALETTE[eventColorIndexFor(section)];
+}
+window.eventRgb = eventRgb;
+
 
 
 
@@ -1830,6 +1908,9 @@ function initializeCalendar() {
 
 
     loadCalendarData();
+
+    // Load the tracked event colours so new events get a distinct hex.
+    loadEventColors();
 
     // Merge the account's backend tasks into the calendar (localStorage only has
     // tasks created in this browser). Async: it re-renders when done.
@@ -3645,7 +3726,7 @@ function updateBottomSection(dateStr) {
                 // tint is applied inline with !important so it beats the base
                 // .calendar-event background/border rule.
                 li.classList.add('calendar-event');
-                const rgb = EVENT_COLOR_PALETTE[eventColorIndexFor(section)];
+                const rgb = eventRgb(section);
                 li.style.setProperty('background', `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.16)`, 'important');
                 li.style.setProperty('border', `1px solid rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.55)`, 'important');
             }
@@ -4966,6 +5047,17 @@ function openAddSectionModal() {
 
     modal.style.display = 'block';
 
+    // Live overlap/suggestion under the time pickers: wire the selects once, then
+    // refresh whenever the modal opens or a time changes.
+    if (!modal.__evSuggestWired) {
+        modal.__evSuggestWired = true;
+        ['startHour', 'startMinute', 'startAmPm', 'endHour', 'endMinute', 'endAmPm'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('change', function () { updateEventSuggestion(); });
+        });
+    }
+    setTimeout(updateEventSuggestion, 0);
+
 
 
 
@@ -5016,7 +5108,7 @@ function openAddSectionModal() {
 
 
 
-    document.getElementById('startMinute').value = '';
+    document.getElementById('startMinute').value = '00'; // minutes default to 00
 
 
 
@@ -5028,7 +5120,7 @@ function openAddSectionModal() {
 
 
 
-    document.getElementById('endMinute').value = '';
+    document.getElementById('endMinute').value = '00'; // minutes default to 00
 
 
 
@@ -5557,6 +5649,121 @@ function eventDurationMinutes(startTime, endTime) {
     return d;
 }
 
+// --- Event scheduling: prevent overlaps + suggest a free slot ----------------
+// Same "available time" idea as the dashboard, but on the calendar's own store:
+// an event may not overlap any other event or on-calendar task on its day, and
+// the modal suggests the closest free slot after the current time.
+function escHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function hmToMinutes(hm) { var p = String(hm).split(':'); return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0); }
+function minutesToLabel(m) {
+    m = ((m % 1440) + 1440) % 1440;
+    var h = Math.floor(m / 60), mm = m % 60, ap = h < 12 ? 'AM' : 'PM', h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + ':' + (mm < 10 ? '0' + mm : mm) + ' ' + ap;
+}
+// Busy [startMin, endMin, label] spans on a day, from every event and on-calendar
+// task (anything with start/end times), skipping placeholders and one excluded row.
+function eventBusyIntervals(dateStr, excludeIndex) {
+    var out = [];
+    var store = (typeof dateContent !== 'undefined') ? dateContent[dateStr] : null;
+    if (!store || !Array.isArray(store.timestamps)) return out;
+    store.timestamps.forEach(function (t, i) {
+        if (excludeIndex != null && i === excludeIndex) return;
+        if (!t || !t.startTime || !t.endTime) return;
+        if (typeof isPlaceholderTask === 'function' && isPlaceholderTask(t.task)) return;
+        var s = hmToMinutes(t.startTime), e = hmToMinutes(t.endTime);
+        if (e <= s) e += 1440;   // overnight
+        out.push([s, e, t.task || (t.isDashboardTask ? 'Task' : 'Event')]);
+    });
+    return out;
+}
+function eventOverlapLabel(s, e, busy) { for (var i = 0; i < busy.length; i++) { if (s < busy[i][1] && busy[i][0] < e) return busy[i][2]; } return null; }
+// Closest free start (aligned to 15 min, 6 AM–11 PM) fitting durMin, at/after fromMin.
+function eventFindFreeStart(busy, durMin, fromMin) {
+    var step = 15, open = 6 * 60, lastStart = 23 * 60 - Math.max(15, durMin);
+    var t = Math.max(open, fromMin || 0);
+    t = Math.ceil(t / step) * step;
+    for (; t <= lastStart; t += step) {
+        if (!eventOverlapLabel(t, t + Math.max(15, durMin), busy)) return t;
+    }
+    return null;
+}
+// Minutes-of-day "now" if the modal's day is today, else the day's 6 AM open.
+function eventDayFromMinutes(dateStr) {
+    var p = String(dateStr).split('-').map(Number);
+    var now = new Date();
+    if (p[0] === now.getFullYear() && p[1] === now.getMonth() + 1 && p[2] === now.getDate()) {
+        return now.getHours() * 60 + now.getMinutes();
+    }
+    return 6 * 60;
+}
+// Refresh the suggestion / overlap line under the Add-Event time pickers.
+function updateEventSuggestion() {
+    var box = document.getElementById('eventSuggestion');
+    if (!box || !selectedDate) return;
+    var busy = eventBusyIntervals(selectedDate, null);
+    var startTime = getTimeTo24Hour('start'), endTime = getTimeTo24Hour('end');
+    var hasStart = document.getElementById('startHour').value !== '';
+    var hasEnd = document.getElementById('endHour').value !== '';
+    var dur = (hasStart && hasEnd) ? eventDurationMinutes(startTime, endTime) : 60;
+    if (dur < 15) dur = 60;
+    var slot = eventFindFreeStart(busy, dur, eventDayFromMinutes(selectedDate));
+    var suggestHtml = slot == null ? 'No free slot left that day.'
+        : 'Next available: <a href="#" class="event-suggest-link" data-min="' + slot + '">' + minutesToLabel(slot) + '</a>' +
+          ' is free — ' + eventNextGapText(busy, slot);
+    box.style.display = 'block';
+    if (hasStart && hasEnd) {
+        var s = hmToMinutes(startTime), e = hmToMinutes(endTime); if (e <= s) e += 1440;
+        var label = eventOverlapLabel(s, e, busy);
+        if (label) {
+            box.className = 'event-suggest event-suggest-bad';
+            box.innerHTML = '⚠ That time overlaps "' + escHtml(label) + '". ' + suggestHtml;
+        } else {
+            box.className = 'event-suggest event-suggest-ok';
+            box.textContent = '✓ ' + minutesToLabel(s) + ' – ' + minutesToLabel(e % 1440) + ' is free.';
+            wireEventSuggestLink();
+            return;
+        }
+    } else {
+        box.className = 'event-suggest';
+        box.innerHTML = suggestHtml;
+    }
+    wireEventSuggestLink();
+}
+// "<duration> until <thing>" (or "nothing else scheduled") after a free start.
+function eventNextGapText(busy, slotMin) {
+    var next = null;
+    for (var i = 0; i < busy.length; i++) { if (busy[i][0] >= slotMin && (!next || busy[i][0] < next[0])) next = busy[i]; }
+    if (!next) return 'nothing else scheduled';
+    var mins = next[0] - slotMin, h = Math.floor(mins / 60), r = mins % 60;
+    var dur = mins < 60 ? mins + ' min' : (h + ' hr' + (r ? ' ' + r + ' min' : ''));
+    return dur + ' until "' + escHtml(next[2]) + '"';
+}
+// Clicking the suggested time fills the start pickers (+1 h default end).
+function wireEventSuggestLink() {
+    var link = document.querySelector('#eventSuggestion .event-suggest-link');
+    if (!link) return;
+    link.addEventListener('click', function (e) {
+        e.preventDefault();
+        var startMin = parseInt(link.getAttribute('data-min'), 10) || 0;
+        var hasEnd = document.getElementById('endHour').value !== '';
+        var hasStart = document.getElementById('startHour').value !== '';
+        var dur = (hasStart && hasEnd) ? eventDurationMinutes(getTimeTo24Hour('start'), getTimeTo24Hour('end')) : 60;
+        if (dur < 15) dur = 60;
+        setTimePickers('start', startMin);
+        setTimePickers('end', (startMin + dur) % 1440);
+        clearInvalidStyling('add');
+        updateEventSuggestion();
+    });
+}
+// Set the hour/minute/AM-PM pickers for a prefix from minutes-of-day.
+function setTimePickers(prefix, minute) {
+    minute = ((minute % 1440) + 1440) % 1440;
+    var h = Math.floor(minute / 60), mm = minute % 60, ap = h < 12 ? 'AM' : 'PM', h12 = h % 12; if (h12 === 0) h12 = 12;
+    document.getElementById(prefix + 'Hour').value = String(h12);
+    document.getElementById(prefix + 'Minute').value = (mm < 10 ? '0' + mm : String(mm));
+    document.getElementById(prefix + 'AmPm').value = ap;
+}
+
 function confirmAddSection() {
 
 
@@ -5853,6 +6060,19 @@ function confirmAddSection() {
 
 
 
+    // Clamp: an event can't overlap another event or on-calendar task on its day.
+    // Block the add and point the user at the closest free slot. (Only the primary
+    // date is checked; recurrences follow from it.)
+    var _evBusy = eventBusyIntervals(selectedDate, null);
+    var _evS = hmToMinutes(startTime), _evE = hmToMinutes(endTime); if (_evE <= _evS) _evE += 1440;
+    if (eventOverlapLabel(_evS, _evE, _evBusy)) {
+        updateEventSuggestion();
+        ['startHour', 'startMinute', 'endHour', 'endMinute'].forEach(function (id) {
+            document.getElementById(id).classList.add('invalid-input');
+        });
+        return;
+    }
+
     // Add the section to the selected date only if it matches recurrence pattern or if no recurrence
 
 
@@ -5885,7 +6105,7 @@ function confirmAddSection() {
 
 
 
-        colorIndex: nextEventColorIndex() // one colour per event; copied to its recurrences
+        color: assignEventColor() // distinct hex per event; copied to its recurrences
 
 
 

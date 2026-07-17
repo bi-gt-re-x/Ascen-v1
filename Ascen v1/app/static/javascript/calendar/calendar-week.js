@@ -175,7 +175,9 @@
                 startDT: startDT,
                 completedDT: t.status === 'done' ? toDate(t.completed_at) : null,
                 // Runs past this day's end -> the block continues on the next day.
-                contDT: endDT > dayEnd ? new Date(dayStart.getTime() + 86400000) : null
+                contDT: endDT > dayEnd ? new Date(dayStart.getTime() + 86400000) : null,
+                // Began on an earlier day -> this column is a continuation.
+                cont: startDT < dayStart
             });
         });
         out.sort(function (a, b) { return a.start - b.start; });
@@ -222,13 +224,12 @@
             b.depth = depth;
         });
     }
-    // Inset (left = right) for a block at a given nesting depth, so shorter
-    // blocks sit inside longer ones. Uses left+right so a block can never
-    // overhang its day column. Capped so deep nesting stays usably wide.
-    var NEST_BASE = 4, NEST_STEP = 9, NEST_MAX = 5;
+    // Every block is the same width — events and tasks alike — with a small fixed
+    // side inset. (Overlaps are prevented at creation, so blocks no longer need to
+    // nest inside one another; a rare leftover overlap just layers, shorter on top.)
+    var NEST_BASE = 4;
     function nestPos(b) {
-        var inset = NEST_BASE + Math.min(b.depth || 0, NEST_MAX) * NEST_STEP;
-        return 'top:' + b.top + 'px;height:' + b.h + 'px;left:' + inset + 'px;right:' + inset + 'px';
+        return 'top:' + b.top + 'px;height:' + b.h + 'px;left:' + NEST_BASE + 'px;right:' + NEST_BASE + 'px';
     }
 
     // Pairs the user chose to keep — don't nag about them again this session.
@@ -453,9 +454,16 @@
         for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
         return h % n;
     }
-    // Returns { fill, border } rgba strings for an event block.
+    // Returns { fill, border } rgba strings for an event block. Prefers the
+    // event's stored distinct hex (shared with the month view), falling back to
+    // the local palette for legacy events.
     function eventColor(b) {
-        var rgb = WK_EVENT_PALETTE[wkEventColorIndex(b)];
+        var rgb;
+        if (window.eventRgb) {
+            rgb = window.eventRgb({ color: b.color, colorIndex: b.colorIndex, task: b.name });
+        } else {
+            rgb = WK_EVENT_PALETTE[wkEventColorIndex(b)];
+        }
         return {
             fill: 'rgba(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ', 0.4)',
             border: 'rgba(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ', 0.62)'
@@ -487,11 +495,18 @@
             if (!t.startTime || !t.endTime) return;
             var sh = hmToHour(t.startTime); if (sh < START_HOUR) sh += 24;
             var eh = hmToHour(t.endTime); if (eh < START_HOUR) eh += 24;
-            if (eh <= sh) eh = sh + 1;                      // overnight/degenerate -> 1h
-            var s = Math.max(START_HOUR, Math.min(sh, END_HOUR));
-            var e = Math.max(START_HOUR, Math.min(eh, END_HOUR));
-            // No minimum: event blocks are sized strictly by their actual time span.
-            out.push({ kind: 'event', start: s, end: e, name: t.task || 'Event', startHM: t.startTime, endHM: t.endTime, colorIndex: t.colorIndex });
+            if (eh <= sh) eh = sh + 1;                      // degenerate -> 1h
+            var base = { kind: 'event', name: t.task || 'Event', startHM: t.startTime, endHM: t.endTime, colorIndex: t.colorIndex, color: t.color };
+            var clamp = function (x) { return Math.max(START_HOUR, Math.min(x, END_HOUR)); };
+            // An event crossing midnight (24:00) is split there so the after-
+            // midnight part renders as its own "continued" block on the next day.
+            if (sh < 24 && eh > 24) {
+                out.push(Object.assign({ start: clamp(sh), end: 24 }, base));
+                out.push(Object.assign({ start: 24, end: clamp(eh), cont: true }, base));
+            } else {
+                // Sizes are strictly the block's actual time span (no minimum).
+                out.push(Object.assign({ start: clamp(sh), end: clamp(eh) }, base));
+            }
         });
         return out;
     }
@@ -568,7 +583,7 @@
                         '" data-shm="' + esc(b.startHM) + '" data-ehm="' + esc(b.endHM) + '" style="' + nestPos(b) +
                         ';background:' + col.fill + ';border-color:' + col.border + '">' +
                         cardMenuBtn(b.h) +
-                        '<div class="wk-event-title">' + esc(b.name) + '</div>' +
+                        '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
                         '<div class="wk-event-foot"><span class="wk-event-due">' +
                             esc(hmLabel(b.startHM) + ' – ' + hmLabel(b.endHM)) +
                         '</span></div>' +
@@ -605,7 +620,7 @@
                     '<div class="wk-event-head">' +
                         '<div class="wk-event-title">' +
                             (b.done ? '<span class="wk-event-check">✓</span> ' : '') +
-                            esc(b.title) +
+                            esc(b.title) + (b.cont ? ' — continued' : '') +
                         '</div>' +
                         (startText ? '<span class="wk-event-start">' + esc(startText) + '</span>' : '') +
                     '</div>' +

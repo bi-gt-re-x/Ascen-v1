@@ -914,17 +914,21 @@ function openModal() {
 
     modalName.addEventListener('input', () => modalName.classList.remove('input-error'));
 
-    document.getElementById('dueDate').addEventListener('input', () => clearErrorStates());
+    // Re-check the calendar suggestion/overlap whenever the due date/time changes.
+    const onDueChange = () => { clearErrorStates(); updateCalSuggestion(); };
+    document.getElementById('dueDate').addEventListener('input', onDueChange);
 
-    document.getElementById('dueHour').addEventListener('change', () => clearErrorStates());
+    document.getElementById('dueHour').addEventListener('change', onDueChange);
 
-    document.getElementById('dueMinute').addEventListener('change', () => clearErrorStates());
+    document.getElementById('dueMinute').addEventListener('change', onDueChange);
 
-    document.getElementById('dueAmPm').addEventListener('change', () => clearErrorStates());
+    document.getElementById('dueAmPm').addEventListener('change', onDueChange);
 
     // Fresh task: the calendar toggle starts off (turning it on sets up a slot).
     var __cal = document.getElementById('showOnCalendar');
     if (__cal) __cal.checked = false;
+    const __sug = document.getElementById('calSuggestion');
+    if (__sug) { __sug.style.display = 'none'; __sug.innerHTML = ''; }
 
 }
 
@@ -950,13 +954,13 @@ function currentTimerMinutesTotal() {
 // and set it to 15 minutes so the task has a valid slot.
 function onShowOnCalendarToggle() {
     const cb = document.getElementById('showOnCalendar');
-    if (!cb || !cb.checked) return;
-    if (hasDueDateOrTime()) return;
-    if (currentTimerMinutesTotal() < 15) {
+    if (cb && cb.checked && !hasDueDateOrTime() && currentTimerMinutesTotal() < 15) {
         const dd = document.getElementById('timerDropdown');
         if (dd && dd.style.display === 'none') toggleDropdown('timerDropdown');
         updateTimerFromInput('minutes', 15);
     }
+    // Show/refresh the free-slot suggestion + overlap warning (or hide it when off).
+    updateCalSuggestion();
 }
 
 function populateTimeSelectors() {
@@ -1399,6 +1403,25 @@ async function addTaskFromModal() {
     // --- REPAIRED STRUCTURAL ASSIGNMENT ---
     const calendarCheckbox = document.getElementById('showOnCalendar');
     const showOnCalendarValue = calendarCheckbox ? calendarCheckbox.checked : true;
+
+    // Clamp: a task shown on the calendar can't be placed on a time that overlaps
+    // an existing event or on-calendar task (not even by a minute). Block the add
+    // and point the user at a free slot. Tasks not shown on the calendar skip this
+    // and may be scheduled at any time.
+    if (showOnCalendarValue && dueDateTime) {
+        const startMs = new Date(dueDateTime).getTime();
+        if (!isNaN(startMs)) {
+            const busy = await gatherCalendarBusy(new Date(startMs), taskId);
+            if (findOverlapLabel(startMs, startMs + CAL_BLOCK_MS, busy)) {
+                await updateCalSuggestion();
+                ['dueHour', 'dueMinute', 'dueAmPm'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('input-error');
+                });
+                return; // don't create an overlapping on-calendar task
+            }
+        }
+    }
 
     const newTask = {
         id: taskId,
@@ -1975,5 +1998,216 @@ function showCreationConflictPopup(newTask, other) {
 
     backdrop.appendChild(pop);
     document.body.appendChild(backdrop);
+}
+
+// --- Show-on-calendar overlap prevention + free-slot suggestion --------------
+// These clamps apply ONLY when "Show task on calendar" is ticked. An on-calendar
+// task occupies a fixed 1-hour block at its due time (matching how the calendar
+// places dashboard tasks), and may not overlap any existing calendar event or
+// on-calendar task — not even by a minute. When the toggle is off, any time is
+// allowed and none of this runs.
+const CAL_BLOCK_MS = 60 * 60 * 1000;
+const CAL_PLACEHOLDERS = ['Sleep Time', 'Morning session', 'Afternoon session',
+                          'Late afternoon session', 'Evening session', 'Night session'];
+
+function calEscapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+function calFmtTime(d) {
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+// Busy [startMs, endMs, label] intervals on the given day, from calendar events
+// (localStorage) and pending on-calendar tasks (backend). Async for the tasks.
+async function gatherCalendarBusy(dayDate, excludeTaskId) {
+    const y = dayDate.getFullYear(), mo = dayDate.getMonth(), da = dayDate.getDate();
+    const dayStart = new Date(y, mo, da, 0, 0, 0, 0).getTime();
+    const dayEnd = dayStart + 86400000;
+    const busy = [];
+
+    // 1) Calendar events on this day (start–end times).
+    try {
+        const data = JSON.parse(localStorage.getItem('calendarData') || '{}');
+        const day = data[y + '-' + (mo + 1) + '-' + da];
+        if (day && Array.isArray(day.timestamps)) {
+            for (const t of day.timestamps) {
+                if (t.isDashboardTask || CAL_PLACEHOLDERS.includes(t.task)) continue;
+                if (!t.startTime || !t.endTime) continue;
+                const [sh, sm] = String(t.startTime).split(':').map(Number);
+                const [eh, em] = String(t.endTime).split(':').map(Number);
+                const s = new Date(y, mo, da, sh || 0, sm || 0).getTime();
+                let e = new Date(y, mo, da, eh || 0, em || 0).getTime();
+                if (e <= s) e += 86400000;   // overnight event
+                busy.push([s, e, t.task || 'Event']);
+            }
+        }
+    } catch (e) { /* ignore corrupt store */ }
+
+    // 2) Pending on-calendar tasks: a 1-hour block at each due time.
+    try {
+        if (typeof getTasksAPI === 'function' && currentUser !== 'Default') {
+            const res = await getTasksAPI(currentUser);
+            if (res && res.success) {
+                for (const t of res.tasks) {
+                    if (excludeTaskId && String(t.id) === String(excludeTaskId)) continue;
+                    if (t.status === 'done' || !t.due_date) continue;
+                    if (t.show_on_calendar === false) continue;
+                    const ds = new Date(t.due_date).getTime();
+                    if (isNaN(ds) || ds >= dayEnd || ds + CAL_BLOCK_MS <= dayStart) continue;
+                    busy.push([ds, ds + CAL_BLOCK_MS, t.title || t.name || 'Task']);
+                }
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    return busy;
+}
+
+// Label of the first busy block the [start,end) window intersects, else null.
+function findOverlapLabel(start, end, busy) {
+    for (const b of busy) {
+        if (start < b[1] && b[0] < end) return b[2];
+    }
+    return null;
+}
+
+// Earliest free 1-hour slot on dayDate (aligned to 15 min, within 6 AM–11 PM),
+// at or after `fromMs`. Returns a Date (slot start) or null.
+function findFreeSlot(dayDate, busy, fromMs) {
+    const y = dayDate.getFullYear(), mo = dayDate.getMonth(), da = dayDate.getDate();
+    const step = 15 * 60 * 1000;
+    let t = Math.max(new Date(y, mo, da, 6, 0, 0, 0).getTime(), fromMs || 0);
+    t = Math.ceil(t / step) * step;
+    const lastStart = new Date(y, mo, da, 22, 0, 0, 0).getTime(); // last 1h slot 10–11 PM
+    for (; t <= lastStart; t += step) {
+        if (!findOverlapLabel(t, t + CAL_BLOCK_MS, busy)) return new Date(t);
+    }
+    return null;
+}
+
+// "45 min" / "2 hr" / "1 hr 30 min" from a millisecond span.
+function humanDuration(ms) {
+    let mins = Math.max(0, Math.round(ms / 60000));
+    if (mins < 60) return mins + ' min';
+    const h = Math.floor(mins / 60), r = mins % 60;
+    return h + ' hr' + (r ? ' ' + r + ' min' : '');
+}
+
+// The closest free slot at/after fromMs, plus the next event/task that follows
+// it. Used to say "<time> is free — <duration> until <thing>". `fromMs` is the
+// current time (today) or the day's start (a future day), so the suggestion is
+// always the closest slot after now, never merely the slot after a conflict.
+function availabilityInfo(dayDate, busy, fromMs) {
+    const slot = findFreeSlot(dayDate, busy, fromMs);
+    if (!slot) return null;
+    const slotMs = slot.getTime();
+    let next = null;
+    for (const b of busy) { if (b[0] >= slotMs && (!next || b[0] < next[0])) next = b; }
+    return { slot: slot, next: next };
+}
+
+// "<time> is free — <duration> until <thing>" (time optionally a click-to-apply
+// link). Falls back to "…nothing else scheduled" when the day is otherwise open.
+function availabilitySentence(info, asLink) {
+    const t = calFmtTime(info.slot);
+    const timeHtml = asLink ? '<a href="#" class="cal-suggest-link">' + t + '</a>' : t;
+    if (info.next) {
+        return timeHtml + ' is free — ' + humanDuration(info.next[0] - info.slot.getTime()) +
+               ' until "' + calEscapeHtml(info.next[2]) + '"';
+    }
+    return timeHtml + ' is free — nothing else scheduled';
+}
+
+// The day currently targeted by the modal (chosen due date, else today).
+function calSelectedDay() {
+    const dueDate = document.getElementById('dueDate');
+    if (dueDate && dueDate.value) {
+        const [yy, mm, dd] = dueDate.value.split('-').map(Number);
+        return new Date(yy, mm - 1, dd, 0, 0, 0, 0);
+    }
+    const d = new Date(); d.setHours(0, 0, 0, 0); return d;
+}
+
+// The full due time currently chosen in the modal, or null if incomplete.
+function calChosenDateTime() {
+    const dueHour = document.getElementById('dueHour');
+    const dueMinute = document.getElementById('dueMinute');
+    const dueAmPm = document.getElementById('dueAmPm');
+    if (!(dueHour && dueHour.value && dueMinute && dueMinute.value && dueAmPm && dueAmPm.value)) return null;
+    let h24 = parseInt(dueHour.value);
+    if (dueAmPm.value === 'PM' && h24 !== 12) h24 += 12;
+    else if (dueAmPm.value === 'AM' && h24 === 12) h24 = 0;
+    const day = calSelectedDay();
+    return new Date(day.getFullYear(), day.getMonth(), day.getDate(), h24, parseInt(dueMinute.value), 0, 0);
+}
+
+function wireSuggestLink(box, slot) {
+    const link = box.querySelector('.cal-suggest-link');
+    if (link && slot) link.addEventListener('click', (e) => { e.preventDefault(); applySuggestedSlot(slot); });
+}
+
+// Fill the modal's due date/time from a suggested slot.
+function applySuggestedSlot(slot) {
+    const dd = document.getElementById('dueDateDropdown');
+    if (dd && dd.style.display === 'none') toggleDropdown('dueDateDropdown');
+    const dueDate = document.getElementById('dueDate');
+    const dueHour = document.getElementById('dueHour');
+    const dueMinute = document.getElementById('dueMinute');
+    const dueAmPm = document.getElementById('dueAmPm');
+    const y = slot.getFullYear(), mo = String(slot.getMonth() + 1).padStart(2, '0'), da = String(slot.getDate()).padStart(2, '0');
+    if (dueDate) dueDate.value = y + '-' + mo + '-' + da;
+    let h = slot.getHours(); const ap = h < 12 ? 'AM' : 'PM'; let h12 = h % 12; if (h12 === 0) h12 = 12;
+    if (dueHour) dueHour.value = String(h12);
+    if (dueMinute) dueMinute.value = String(slot.getMinutes());
+    if (dueAmPm) dueAmPm.value = ap;
+    clearErrorStates();
+    updateCalSuggestion();
+}
+
+// Refresh the suggestion/validation line under the "Show on calendar" toggle.
+// Off when the toggle is unticked (any time is then allowed).
+async function updateCalSuggestion() {
+    const box = document.getElementById('calSuggestion');
+    if (!box) return;
+    const cb = document.getElementById('showOnCalendar');
+    if (!cb || !cb.checked) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+    const dayDate = calSelectedDay();
+    const busy = await gatherCalendarBusy(dayDate, null);
+    const chosen = calChosenDateTime();
+    box.style.display = 'block';
+
+    // The suggestion is always the closest free slot after the current time (or
+    // the day's start for a future day) — not merely the slot after a conflict.
+    const fromMs = isSameDay(dayDate, new Date()) ? Date.now() : dayDate.getTime();
+    const info = availabilityInfo(dayDate, busy, fromMs);
+    const noSlot = 'No free 1-hour slot left that day — pick another day.';
+
+    if (chosen) {
+        const label = findOverlapLabel(chosen.getTime(), chosen.getTime() + CAL_BLOCK_MS, busy);
+        if (label) {
+            box.className = 'cal-suggest cal-suggest-bad';
+            box.innerHTML = '⚠ That time overlaps "' + calEscapeHtml(label) + '". ' +
+                (info ? 'Next available: ' + availabilitySentence(info, true) + '.' : noSlot);
+            wireSuggestLink(box, info && info.slot);
+        } else {
+            box.className = 'cal-suggest cal-suggest-ok';
+            box.textContent = '✓ ' + calFmtTime(chosen) + ' is free on the calendar.';
+        }
+        return;
+    }
+
+    // No time chosen yet — show the closest available slot and how long it's free.
+    box.className = 'cal-suggest';
+    if (info) {
+        box.innerHTML = 'Next available: ' + availabilitySentence(info, true) + '.';
+        wireSuggestLink(box, info.slot);
+    } else {
+        box.textContent = noSlot;
+    }
+}
+
+function isSameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
