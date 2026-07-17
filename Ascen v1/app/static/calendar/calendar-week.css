@@ -229,6 +229,41 @@ html[data-theme="dark"] .wk-event.wk-event-cal .wk-event-title { color: #ece9f5;
 .wk-event-cont { font-size: 11px; opacity: .85; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wk-event-cont { font-style: italic; font-weight: 600; }
 .wk-event-title { font-weight: 700; margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Leave room at the top-right for the three-dots menu button so the title (and
+   a task's start time) truncate with an ellipsis instead of running under it. */
+.wk-event-cal > .wk-event-title { padding-right: 16px; }
+.wk-event-head { padding-right: 16px; }
+
+/* Three-dots overflow menu on grid blocks (events + tasks). */
+.wk-card-menu {
+    position: absolute; top: 2px; right: 2px; z-index: 4;
+    width: 18px; height: 16px; padding: 0; margin: 0;
+    border: none; background: transparent; cursor: pointer;
+    color: inherit; opacity: .55; line-height: 1; font-size: 14px;
+    border-radius: 5px; display: flex; align-items: center; justify-content: center;
+}
+.wk-card-menu:hover { opacity: 1; background: rgba(16, 24, 40, .12); }
+
+/* Body-level popover so the block's overflow:hidden can't clip it. */
+.wk-card-pop {
+    position: fixed; z-index: 1200; min-width: 118px;
+    display: flex; flex-direction: column; padding: 4px 0;
+    background: #fff; border: 1px solid #e3e6ee; border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(16, 24, 40, .22); overflow: hidden;
+}
+.wk-card-pop .wk-dd-item {
+    border: none; background: transparent; text-align: left;
+    padding: 8px 14px; font: inherit; font-size: 13px; cursor: pointer;
+    color: #2c3550; white-space: nowrap;
+}
+.wk-card-pop .wk-dd-item:hover { background: #f2f5fb; }
+.wk-card-pop .wk-dd-del { color: #b0413e; }
+
+html[data-theme="dark"] .wk-card-pop { background: #1b1f2a; border-color: #2b3242; }
+html[data-theme="dark"] .wk-card-pop .wk-dd-item { color: #e7e9f2; }
+html[data-theme="dark"] .wk-card-pop .wk-dd-item:hover { background: #262c3a; }
+html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
 .wk-event-xp { font-size: 11px; opacity: .9; flex: none; display: flex; align-items: center; gap: 4px; }
 .wk-event-icon { font-size: 11px; }
 

@@ -295,6 +295,93 @@
         }
     }
 
+    // --- Per-block overflow (three-dots) menu: edit / delete -------------------
+    // The dots glyph adapts to the block's height: a short block gets a
+    // horizontal ellipsis (⋯) so it fits the thin strip; a taller block gets
+    // the usual vertical three-dots (⋮).
+    function cardMenuBtn(h) {
+        var dots = h < 44 ? '⋯' : '⋮';   // ⋯ horizontal vs ⋮ vertical
+        return '<button type="button" class="wk-card-menu" aria-label="Options">' + dots + '</button>';
+    }
+
+    // The dropdown is a body-level popover (not nested in the block) so the
+    // block's overflow:hidden can't clip it. Only one is open at a time.
+    function closeCardPop() {
+        var p = document.getElementById('wkCardPop');
+        if (p) p.remove();
+    }
+    function openCardPop(btn) {
+        closeCardPop();
+        var block = btn.closest('.wk-event');
+        if (!block) return;
+        var kind = block.getAttribute('data-kind');
+        var iso = block.getAttribute('data-iso');
+        var pop = document.createElement('div');
+        pop.id = 'wkCardPop';
+        pop.className = 'wk-card-pop';
+        var items = [];
+        if (kind === 'event') items.push(['Edit', 'edit']);   // tasks aren't editable here
+        items.push(['Delete', 'del']);
+        items.forEach(function (it) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'wk-dd-item' + (it[1] === 'del' ? ' wk-dd-del' : '');
+            b.textContent = it[0];
+            b.addEventListener('click', function (e) {
+                e.stopPropagation();
+                closeCardPop();
+                doCardAction(it[1], kind, iso, block);
+            });
+            pop.appendChild(b);
+        });
+        document.body.appendChild(pop);
+        // Anchor the popover to the button, flipping above/left if it would
+        // run off the viewport.
+        var r = btn.getBoundingClientRect();
+        var pw = pop.offsetWidth || 120, ph = pop.offsetHeight || 72;
+        var left = Math.max(6, Math.min(r.right - pw, window.innerWidth - pw - 6));
+        var top = r.bottom + 4;
+        if (top + ph > window.innerHeight - 6) top = Math.max(6, r.top - ph - 4);
+        pop.style.left = left + 'px';
+        pop.style.top = top + 'px';
+    }
+    function doCardAction(action, kind, iso, block) {
+        if (action === 'edit') {
+            editEvent(iso, block);   // events only (tasks have no edit item)
+            return;
+        }
+        // Delete: both events and tasks go through the tested week deleteBlock,
+        // which removes the item and redraws — no modal, no confirm alert.
+        if (kind === 'task') {
+            deleteBlock({ kind: 'task', id: block.getAttribute('data-id') }, iso);
+        } else {
+            deleteBlock({
+                kind: 'event',
+                name: block.getAttribute('data-name'),
+                startHM: block.getAttribute('data-shm'),
+                endHM: block.getAttribute('data-ehm')
+            }, iso);
+        }
+    }
+    // Edit an event through the month view's shared edit modal by pointing
+    // selectedDate at the event's day and finding its timestamp index.
+    function editEvent(iso, block) {
+        var name = block.getAttribute('data-name');
+        var shm = block.getAttribute('data-shm');
+        var ehm = block.getAttribute('data-ehm');
+        var mk = monthKey(iso);
+        var store = (typeof dateContent !== 'undefined') ? dateContent[mk] : null;
+        if (!store || !Array.isArray(store.timestamps)) return;
+        var idx = -1;
+        for (var i = 0; i < store.timestamps.length; i++) {
+            var t = store.timestamps[i];
+            if (t && t.task === name && t.startTime === shm && t.endTime === ehm) { idx = i; break; }
+        }
+        if (idx < 0) return;
+        selectedDate = mk;   // shared global lexical binding the month flow reads
+        if (typeof editTaskSection === 'function') editTaskSection(idx);
+    }
+
     // --- Calendar events (created via the shared "Add New Event" modal) --------
     // Events live in the month view's localStorage store (dateContent, from
     // calendar-month.js), keyed by a non-padded YYYY-M-D string. They render
@@ -361,6 +448,9 @@
         if (typeof dateContent !== 'undefined' && !dateContent[key]) dateContent[key] = { timestamps: [] };
         selectedDate = key;   // global from calendar-month.js; confirmAddSection reads it
         openAddSectionModal();
+        // Widen the shared modal for the week view (2x) and drop horizontal scroll.
+        var modal = document.getElementById('addSectionModal');
+        if (modal) modal.classList.add('from-week');
     }
 
     // Draw the seven day columns from the cached real tasks. Kept separate so it
@@ -412,8 +502,11 @@
                 if (b.kind === 'event') {
                     var col = eventColor(b.name);
                     var border = col.replace('0.4)', '0.6)');
-                    return '<div class="wk-event wk-event-cal" style="' + nestPos(b) +
+                    return '<div class="wk-event wk-event-cal" data-kind="event"' +
+                        ' data-iso="' + esc(d.iso) + '" data-name="' + esc(b.name) +
+                        '" data-shm="' + esc(b.startHM) + '" data-ehm="' + esc(b.endHM) + '" style="' + nestPos(b) +
                         ';background:' + col + ';border-color:' + border + '">' +
+                        cardMenuBtn(b.h) +
                         '<div class="wk-event-title">' + esc(b.name) + '</div>' +
                         '<div class="wk-event-foot"><span class="wk-event-due">' +
                             esc(hmLabel(b.startHM) + ' – ' + hmLabel(b.endHM)) +
@@ -445,7 +538,9 @@
                 // Start time (the task's start clock time) sits at the top next to
                 // the title, kept compact so the title stays readable beside it.
                 var startText = b.startDT ? timeLabel(b.startDT) : '';
-                return '<div class="wk-event wk-task ' + stateCls + '" style="' + nestPos(b) + '">' +
+                return '<div class="wk-event wk-task ' + stateCls + '" data-kind="task"' +
+                    ' data-iso="' + esc(d.iso) + '" data-id="' + esc(String(b.id)) + '" style="' + nestPos(b) + '">' +
+                    cardMenuBtn(b.h) +
                     '<div class="wk-event-head">' +
                         '<div class="wk-event-title">' +
                             (b.done ? '<span class="wk-event-check">✓</span> ' : '') +
@@ -726,6 +821,33 @@
                 renderDayColumns();
             };
         }
+        // The three-dots menu routes event edit/delete through the month modals;
+        // redraw the grid after those confirm so the change syncs into the week.
+        if (typeof window.confirmEditSection === 'function' && !window.__wkWrapEdit) {
+            window.__wkWrapEdit = true;
+            var origEdit = window.confirmEditSection;
+            window.confirmEditSection = function () {
+                origEdit.apply(this, arguments);
+                renderDayColumns();
+            };
+        }
+        // Open a block's overflow menu on click of its three-dots button. The
+        // menu is a body-level popover; a click anywhere else (or a grid scroll)
+        // closes it.
+        var colsEl = document.getElementById('wkDayCols');
+        if (colsEl) {
+            colsEl.addEventListener('click', function (e) {
+                var btn = e.target.closest('.wk-card-menu');
+                if (!btn) return;
+                e.stopPropagation();
+                if (document.getElementById('wkCardPop')) { closeCardPop(); return; }
+                openCardPop(btn);
+            });
+        }
+        document.addEventListener('click', closeCardPop);
+        window.addEventListener('resize', closeCardPop);
+        var wkScroll = document.querySelector('#weekView .wk-scroll');
+        if (wkScroll) wkScroll.addEventListener('scroll', closeCardPop, true);
 
         // Keep the "now" line tracking the clock (re-placed each minute).
         setInterval(renderNowLine, 60000);

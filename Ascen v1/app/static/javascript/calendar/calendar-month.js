@@ -4017,11 +4017,18 @@ function updateBottomSection(dateStr) {
 
 
 
+    } else {
+
+        const emptyMsg = document.createElement('li');
+        emptyMsg.className = 'no-events-message';
+        emptyMsg.textContent = 'No Tasks or Events scheduled yet';
+        tasksList.appendChild(emptyMsg);
+
     }
 
 
 
-    
+
 
 
 
@@ -4909,11 +4916,14 @@ function openAddSectionModal() {
 
 
 
+    // Week view adds .from-week for a wider popup; month view always resets to normal width.
+    modal.classList.remove('from-week');
+
     modal.style.display = 'block';
 
 
 
-    
+
 
 
 
@@ -5325,7 +5335,7 @@ function getTimeTo24Hour(prefix) {
 
 
 
-    const minute = document.getElementById(prefix + 'Minute').value;
+    const minute = document.getElementById(prefix + 'Minute').value || '00';
 
 
 
@@ -8945,7 +8955,7 @@ function getTimeTo24HourEdit(prefix) {
 
 
 
-    const minute = document.getElementById(prefix + 'Minute').value;
+    const minute = document.getElementById(prefix + 'Minute').value || '00';
 
 
 

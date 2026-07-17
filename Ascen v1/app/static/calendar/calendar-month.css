@@ -572,6 +572,27 @@ body {
 }
 
 
+.no-events-message {
+
+    list-style: none;
+
+    padding: 18px 4px;
+
+    text-align: center;
+
+    color: #8a8f9a;
+
+    font-size: 0.95rem;
+
+    font-style: italic;
+
+}
+
+html[data-theme="light"] .no-events-message { color: #8a7a5f; }
+
+html[data-theme="dark"] .no-events-message { color: rgba(255, 255, 255, 0.55); }
+
+
 .task-section {
 
     padding: 10px 0;
@@ -2914,6 +2935,24 @@ body.galactic-skies .calendar-day:hover {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 
     animation: fadeIn 0.3s ease-out;
+
+}
+
+
+/* Week view opens the shared "Add New Event" modal 2x wider, with no horizontal scroll. */
+.modal.from-week .modal-content {
+
+    width: min(1200px, 96%);
+
+    max-width: 96vw;
+
+    box-sizing: border-box;
+
+}
+
+.modal.from-week .modal-body {
+
+    overflow-x: hidden;
 
 }
 
