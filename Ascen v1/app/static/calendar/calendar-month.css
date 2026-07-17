@@ -4831,31 +4831,36 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     font-size: 26px;
     pointer-events: none;
 }
+/* Matches the week view's .wk-addevent pill (compact white pill + "+" icon). */
 .add-section-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 12px;
-    color: #ffffff;
-    padding: 13px 24px;
+    background: #fff;
+    border: 1px solid #e5e8ee;
+    border-radius: 999px;
+    color: #2c302e;
+    padding: 8px 16px;
     margin-top: 16px;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-family: inherit;
+    font-size: 14px;
     font-weight: 600;
     flex: 0 0 auto;
-    transition: background 0.2s ease, transform 0.2s ease;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
 }
 .add-section-btn:hover {
-    background: rgba(255, 255, 255, 0.16);
-    transform: translateY(-1px);
+    background: #f6f7f9;
 }
 
-/* Blue/violet accent buttons in dark theme (theme selector + New Task Block) */
 html[data-theme="dark"] .add-section-btn {
-    background: linear-gradient(135deg, #5468ee 0%, #8b5cf6 100%);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    color: #ffffff;
+    background: #1b212a;
+    border: 1px solid #2b323c;
+    color: #e6e8f0;
 }
 html[data-theme="dark"] .add-section-btn:hover {
-    background: linear-gradient(135deg, #6376f5 0%, #9a6dff 100%);
+    background: #232a35;
 }
 html[data-theme="dark"] .calendar-theme-select {
     background-color: #5f5be6;
@@ -5102,12 +5107,12 @@ html[data-theme="light"] .task-counter {
 
 /* "+ New Task Block": a filled brown button with a near-black border */
 html[data-theme="light"] .add-section-btn {
-    background: linear-gradient(160deg, #6b5030 0%, #46341f 100%);
-    border: 1px solid #2c2013;
-    color: #f7efe1;
+    background: #fff;
+    border: 1px solid #e5e8ee;
+    color: #2c302e;
 }
 html[data-theme="light"] .add-section-btn:hover {
-    background: linear-gradient(160deg, #7a5c39 0%, #52402a 100%);
+    background: #f6f7f9;
 }
 
 /* Borderless white pill nav. The pill labels must be re-coloured here because

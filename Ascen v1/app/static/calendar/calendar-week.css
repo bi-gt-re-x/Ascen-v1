@@ -289,6 +289,36 @@ html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
 }
 .wk-overlap-close:hover { background: rgba(255,255,255,.32); }
 
+/* Delete confirmation: a styled, blocking popup. The backdrop covers the whole
+   viewport so nothing behind it can be clicked until the user answers. */
+.wk-confirm-backdrop {
+    position: fixed; inset: 0; z-index: 1300; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(16, 24, 40, .5); backdrop-filter: blur(3px);
+}
+.wk-confirm-popup {
+    width: min(92vw, 400px); text-align: left;
+    background: #fff; border: 1px solid #e5e8ee; border-radius: 16px;
+    padding: 22px 24px; box-shadow: 0 20px 60px rgba(16, 24, 40, .4);
+}
+.wk-confirm-title { margin: 0 0 8px; font-size: 18px; font-weight: 800; color: #1a2230; }
+.wk-confirm-msg { margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: #55607a; }
+.wk-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.wk-confirm-cancel, .wk-confirm-delete {
+    border-radius: 999px; padding: 9px 20px; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 700; border: 1px solid transparent;
+}
+.wk-confirm-cancel { background: #f1f3f7; border-color: #e5e8ee; color: #2c3550; }
+.wk-confirm-cancel:hover { background: #e7eaf1; }
+.wk-confirm-delete { background: #d84a47; color: #fff; }
+.wk-confirm-delete:hover { background: #c33f3c; }
+
+html[data-theme="dark"] .wk-confirm-popup { background: #171b23; border-color: #2b323c; }
+html[data-theme="dark"] .wk-confirm-title { color: #f0f2f7; }
+html[data-theme="dark"] .wk-confirm-msg { color: #aab2c5; }
+html[data-theme="dark"] .wk-confirm-cancel { background: #232a35; border-color: #333c48; color: #e6e8f0; }
+html[data-theme="dark"] .wk-confirm-cancel:hover { background: #2c3440; }
+
 /* Category colors */
 .cat-math   { background: #fdf7ec; border-color: #f0e2c8; color: #8a6d3b; }
 .cat-coding { background: #eaf1fe; border-color: #cfe0fb; color: #2c5aa0; }

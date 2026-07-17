@@ -350,18 +350,64 @@
             editEvent(iso, block);   // events only (tasks have no edit item)
             return;
         }
-        // Delete: both events and tasks go through the tested week deleteBlock,
-        // which removes the item and redraws — no modal, no confirm alert.
-        if (kind === 'task') {
-            deleteBlock({ kind: 'task', id: block.getAttribute('data-id') }, iso);
-        } else {
-            deleteBlock({
-                kind: 'event',
-                name: block.getAttribute('data-name'),
-                startHM: block.getAttribute('data-shm'),
-                endHM: block.getAttribute('data-ehm')
-            }, iso);
-        }
+        // Delete: confirm first in a styled, blocking popup. Only on confirm does
+        // the tested deleteBlock remove the item and redraw.
+        var titleEl = block.querySelector('.wk-event-title');
+        var name = kind === 'task'
+            ? (titleEl ? titleEl.textContent.replace('✓', '').trim() : 'this task')
+            : block.getAttribute('data-name');
+        showDeleteConfirm(kind, name, function () {
+            if (kind === 'task') {
+                deleteBlock({ kind: 'task', id: block.getAttribute('data-id') }, iso);
+            } else {
+                deleteBlock({
+                    kind: 'event',
+                    name: block.getAttribute('data-name'),
+                    startHM: block.getAttribute('data-shm'),
+                    endHM: block.getAttribute('data-ehm')
+                }, iso);
+            }
+        });
+    }
+    // Styled, blocking delete confirmation. A full-viewport backdrop intercepts
+    // all clicks so the rest of the page can't be used until the user answers.
+    function showDeleteConfirm(kind, name, onConfirm) {
+        closeCardPop();
+        var existing = document.getElementById('wkConfirmBackdrop');
+        if (existing) existing.remove();
+        var noun = kind === 'task' ? 'task' : 'event';
+        var backdrop = document.createElement('div');
+        backdrop.id = 'wkConfirmBackdrop';
+        backdrop.className = 'wk-confirm-backdrop';
+        var pop = document.createElement('div');
+        pop.className = 'wk-confirm-popup';
+        var title = document.createElement('h3');
+        title.className = 'wk-confirm-title';
+        title.textContent = 'Delete ' + noun + '?';
+        var msg = document.createElement('p');
+        msg.className = 'wk-confirm-msg';
+        msg.textContent = 'Delete "' + name + '"? This can’t be undone.';
+        var actions = document.createElement('div');
+        actions.className = 'wk-confirm-actions';
+        var cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'wk-confirm-cancel';
+        cancel.textContent = 'Cancel';
+        cancel.addEventListener('click', function () { backdrop.remove(); });
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'wk-confirm-delete';
+        del.textContent = 'Delete';
+        del.addEventListener('click', function () { backdrop.remove(); onConfirm(); });
+        actions.appendChild(cancel);
+        actions.appendChild(del);
+        pop.appendChild(title);
+        pop.appendChild(msg);
+        pop.appendChild(actions);
+        backdrop.appendChild(pop);
+        // Clicking the dimmed area (outside the card) cancels; the card doesn't.
+        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) backdrop.remove(); });
+        document.body.appendChild(backdrop);
     }
     // Edit an event through the month view's shared edit modal by pointing
     // selectedDate at the event's day and finding its timestamp index.
@@ -384,20 +430,36 @@
 
     // --- Calendar events (created via the shared "Add New Event" modal) --------
     // Events live in the month view's localStorage store (dateContent, from
-    // calendar-month.js), keyed by a non-padded YYYY-M-D string. They render
-    // beneath tasks in light, 40%-opaque colours from a palette that avoids the
-    // task colours (blue/yellow/red/green).
-    var EVENT_COLORS = [
-        'rgba(139, 92, 246, 0.4)',   // violet
-        'rgba(217, 70, 239, 0.4)',   // fuchsia
-        'rgba(236, 72, 153, 0.4)',   // pink
-        'rgba(20, 184, 166, 0.4)',   // teal
-        'rgba(124, 58, 237, 0.4)'    // purple
+    // calendar-month.js), keyed by a non-padded YYYY-M-D string. Each event is
+    // colour-coded per identity: one colour per event, shared by all of its
+    // recurrences. The palette matches the month view's EVENT_COLOR_PALETTE so a
+    // given event looks identical in both views.
+    var WK_EVENT_PALETTE = [
+        [139, 92, 246],   // violet
+        [236, 72, 153],   // pink
+        [20, 184, 166],   // teal
+        [249, 115, 22],   // orange
+        [217, 70, 239],   // fuchsia
+        [34, 211, 238],   // cyan
+        [124, 58, 237],   // purple
+        [244, 63, 94]     // rose
     ];
-    function eventColor(name) {
-        var h = 0, s = String(name || '');
+    // Colour index for an event block: its stored colorIndex, else a stable hash
+    // of the name (so legacy events and their repeats still share a colour).
+    function wkEventColorIndex(b) {
+        var n = WK_EVENT_PALETTE.length;
+        if (b && typeof b.colorIndex === 'number') return ((b.colorIndex % n) + n) % n;
+        var s = String((b && b.name) || ''), h = 0;
         for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-        return EVENT_COLORS[h % EVENT_COLORS.length];
+        return h % n;
+    }
+    // Returns { fill, border } rgba strings for an event block.
+    function eventColor(b) {
+        var rgb = WK_EVENT_PALETTE[wkEventColorIndex(b)];
+        return {
+            fill: 'rgba(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ', 0.4)',
+            border: 'rgba(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ', 0.62)'
+        };
     }
     function monthKey(iso) {
         var p = iso.split('-');
@@ -429,7 +491,7 @@
             var s = Math.max(START_HOUR, Math.min(sh, END_HOUR));
             var e = Math.max(START_HOUR, Math.min(eh, END_HOUR));
             // No minimum: event blocks are sized strictly by their actual time span.
-            out.push({ kind: 'event', start: s, end: e, name: t.task || 'Event', startHM: t.startTime, endHM: t.endTime });
+            out.push({ kind: 'event', start: s, end: e, name: t.task || 'Event', startHM: t.startTime, endHM: t.endTime, colorIndex: t.colorIndex });
         });
         return out;
     }
@@ -500,12 +562,11 @@
             all.sort(byStackOrder);   // longer beneath (wider), shorter on top (inset)
             var html = all.map(function (b) {
                 if (b.kind === 'event') {
-                    var col = eventColor(b.name);
-                    var border = col.replace('0.4)', '0.6)');
+                    var col = eventColor(b);
                     return '<div class="wk-event wk-event-cal" data-kind="event"' +
                         ' data-iso="' + esc(d.iso) + '" data-name="' + esc(b.name) +
                         '" data-shm="' + esc(b.startHM) + '" data-ehm="' + esc(b.endHM) + '" style="' + nestPos(b) +
-                        ';background:' + col + ';border-color:' + border + '">' +
+                        ';background:' + col.fill + ';border-color:' + col.border + '">' +
                         cardMenuBtn(b.h) +
                         '<div class="wk-event-title">' + esc(b.name) + '</div>' +
                         '<div class="wk-event-foot"><span class="wk-event-due">' +

@@ -20,6 +20,46 @@ let currentYear = currentDate.getFullYear();
 
 let selectedDate = null;
 
+// --- Per-event colour coding ------------------------------------------------
+// Each event created gets the next colour in the palette (round-robin), stored
+// as `colorIndex` on the event and copied to all of its recurrences (via the
+// {...section} spread in addRecurringSections). So an event and all its repeats
+// share one colour, and two separately-created events get different colours.
+// The week view (calendar-week.js) uses an identical palette so a given event
+// looks the same in both views.
+const EVENT_COLOR_PALETTE = [
+    [139, 92, 246],   // violet
+    [236, 72, 153],   // pink
+    [20, 184, 166],   // teal
+    [249, 115, 22],   // orange
+    [217, 70, 239],   // fuchsia
+    [34, 211, 238],   // cyan
+    [124, 58, 237],   // purple
+    [244, 63, 94]     // rose
+];
+function nextEventColorIndex() {
+    let n = 0;
+    try { n = parseInt(localStorage.getItem('eventColorCounter') || '0', 10) || 0; } catch (e) { /* ignore */ }
+    try { localStorage.setItem('eventColorCounter', String(n + 1)); } catch (e) { /* ignore */ }
+    return n % EVENT_COLOR_PALETTE.length;
+}
+// Colour index for an event. Events created before colour coding have no
+// colorIndex, so fall back to a stable hash of the name (its repeats share the
+// name, so they still share a colour).
+function eventColorIndexFor(section) {
+    const n = EVENT_COLOR_PALETTE.length;
+    if (section && typeof section.colorIndex === 'number') {
+        return ((section.colorIndex % n) + n) % n;
+    }
+    const s = String((section && section.task) || '');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h % n;
+}
+// Expose for the separate week-view script.
+window.EVENT_COLOR_PALETTE = EVENT_COLOR_PALETTE;
+window.eventColorIndexFor = eventColorIndexFor;
+
 
 
 
@@ -3600,9 +3640,14 @@ function updateBottomSection(dateStr) {
                 else if (xp >= 33) li.classList.add('priority-medium');
                 else li.classList.add('priority-low');
             } else {
-                // All cards share one professional, futuristic style (defined in
-                // CSS) — no per-event colour-coding.
+                // Events are colour-coded per identity: one colour per event,
+                // shared by all its recurrences (see EVENT_COLOR_PALETTE). The
+                // tint is applied inline with !important so it beats the base
+                // .calendar-event background/border rule.
                 li.classList.add('calendar-event');
+                const rgb = EVENT_COLOR_PALETTE[eventColorIndexFor(section)];
+                li.style.setProperty('background', `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.16)`, 'important');
+                li.style.setProperty('border', `1px solid rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.55)`, 'important');
             }
 
 
@@ -5836,7 +5881,11 @@ function confirmAddSection() {
 
 
 
-        xp: 10 // Default XP for user-created tasks
+        xp: 10, // Default XP for user-created tasks
+
+
+
+        colorIndex: nextEventColorIndex() // one colour per event; copied to its recurrences
 
 
 
