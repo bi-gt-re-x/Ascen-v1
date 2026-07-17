@@ -642,8 +642,12 @@
             b.classList.toggle('active', on);
             b.setAttribute('aria-selected', on ? 'true' : 'false');
         });
-        // Whenever the week view becomes visible, jump straight to the current time.
-        if (view === 'week') requestAnimationFrame(scrollToNow);
+        // Whenever the week view becomes visible, redraw it so any events added
+        // or removed on the month view sync in, then jump to the current time.
+        if (view === 'week') {
+            renderDayColumns();
+            requestAnimationFrame(scrollToNow);
+        }
     }
 
     // Re-render everything that depends on the shown week.

@@ -272,6 +272,17 @@ function loadCalendarData() {
 
             Object.assign(dateContent, parsed);
 
+            // Purge any legacy default/placeholder session events so no default
+            // events remain on any day (they used to be auto-generated per day).
+            Object.keys(dateContent).forEach(function (k) {
+                const day = dateContent[k];
+                if (day && Array.isArray(day.timestamps)) {
+                    day.timestamps = day.timestamps.filter(function (t) {
+                        return !(t && !t.isDashboardTask && isPlaceholderTask(t.task));
+                    });
+                }
+            });
+
 
 
         } catch (e) {
@@ -715,6 +726,10 @@ function resetCalendarData() {
 
 function generateDefaultTimestamps() {
 
+    // No default session events — every day starts empty on the month and week.
+    return [];
+
+
 
 
     return [
@@ -1141,12 +1156,10 @@ function getIntensityBlue(percentage) {
     return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
-// A day's task intensity for the calendar marker (0 = no colour). Accurate to
-// the real workload: the XP-weighted difficulty of dashboard tasks due that day,
-// plus any user-added (non-placeholder) events. The default daily sessions
-// (Sleep Time, Morning session, ...) are NOT counted — they are identical on
-// every day, so counting them would colour every day the same and single out
-// "today". Higher value -> darker blue; 0 -> no colour.
+// A day's task intensity for the calendar marker (0 = no colour). Based purely on
+// the real workload: the XP-weighted difficulty of dashboard tasks due that day
+// (plus no-due-date tasks created that day). Events never contribute, so adding
+// an event anywhere never changes a date's colour. Higher value -> darker blue.
 // Count dashboard tasks that have no due date and were created on `dateStr`.
 // These live on their creation day (start time = when they were made), so the
 // day needs to reflect them even though calculateDailyIntensity is due-date based.
@@ -1163,12 +1176,8 @@ function getDayTaskIntensity(dateStr) {
     // XP-weighted difficulty of real dashboard tasks due that day.
     const dash = calculateDailyIntensity(dateStr);
     let pct = dash.taskCount > 0 ? dash.percentage : 0;
-    // Add weight for any user-added, non-placeholder events on the day.
-    const content = dateContent[dateStr];
-    if (content && Array.isArray(content.timestamps)) {
-        const customEvents = content.timestamps.filter(t => !t.isDashboardTask && !isPlaceholderTask(t.task));
-        pct += customEvents.length * 20;
-    }
+    // Events do NOT affect a day's intensity — only real tasks (and their XP-
+    // weighted difficulty) do, so adding an event never darkens a date.
     // No-due-date tasks pop on their creation day too.
     pct += countNoDueDateTasksOn(dateStr) * 20;
     return Math.min(pct, 100);
