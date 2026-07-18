@@ -297,6 +297,37 @@ html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
 }
 .wk-overlap-close:hover { background: rgba(255,255,255,.32); }
 
+/* Drag-to-create chooser: after a drag, ask whether to make an event or a task.
+   Neutral (not an error), centered on a light dismissable backdrop. */
+.wk-choose-backdrop {
+    position: fixed; inset: 0; z-index: 1100; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(16, 24, 40, .45);
+}
+.wk-choose-popup {
+    display: flex; flex-direction: column; gap: 12px;
+    max-width: min(92vw, 380px); text-align: center;
+    background: #fff; color: #1f2733; padding: 22px 22px;
+    border-radius: 14px; box-shadow: 0 16px 44px rgba(16,24,40,.4);
+}
+.wk-choose-title { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+.wk-choose-row { display: flex; gap: 10px; }
+.wk-choose-btn {
+    flex: 1; border: none; border-radius: 10px; padding: 12px 14px;
+    cursor: pointer; font: inherit; font-weight: 700; color: #fff;
+    background: #3b4658;
+}
+.wk-choose-btn.is-task { background: #8b5cf6; }
+.wk-choose-btn:hover { filter: brightness(1.08); }
+.wk-choose-cancel {
+    background: none; border: none; color: #6c757d; cursor: pointer;
+    font: inherit; font-weight: 600; padding: 4px;
+}
+.wk-choose-cancel:hover { color: #1f2733; }
+html[data-theme="dark"] .wk-choose-popup { background: #1b212a; color: #e6e8f0; }
+html[data-theme="dark"] .wk-choose-cancel { color: #9aa4b2; }
+html[data-theme="dark"] .wk-choose-cancel:hover { color: #e6e8f0; }
+
 /* Delete confirmation: a styled, blocking popup. The backdrop covers the whole
    viewport so nothing behind it can be clicked until the user answers. */
 .wk-confirm-backdrop {

@@ -638,7 +638,9 @@ def create_task():
         "xp_value": data.get('xp_reward', 0),
         "due_date": data.get('due_date', None),
         "show_on_calendar": data.get('show_on_calendar', True),
-        "created_at": datetime.now().isoformat()
+        # Honor a client-supplied created_at (the week calendar's drag-to-create
+        # task uses it to place the block on the dragged slot); default to now.
+        "created_at": data.get('created_at') or datetime.now().isoformat()
     }
     
     # Add to tasks list

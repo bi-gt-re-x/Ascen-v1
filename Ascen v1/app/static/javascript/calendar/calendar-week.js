@@ -536,6 +536,125 @@
         if (typeof applyDefaultRecurrence === 'function') applyDefaultRecurrence('weekly');
     }
 
+    // --- Drag-to-create: choose Event or Task, then open the matching modal ----
+    // The drag interaction (selection, gap-clamping, snapping) is shared; only the
+    // outcome differs. This chooser is the first popup a drag pops up.
+    function showCreateChooser(iso, times) {
+        var existing = document.getElementById('wkChooseBackdrop');
+        if (existing) existing.remove();
+        var backdrop = document.createElement('div');
+        backdrop.id = 'wkChooseBackdrop';
+        backdrop.className = 'wk-choose-backdrop';
+        var pop = document.createElement('div');
+        pop.className = 'wk-choose-popup';
+        var title = document.createElement('div');
+        title.className = 'wk-choose-title';
+        title.textContent = 'Create in this slot';
+        var row = document.createElement('div');
+        row.className = 'wk-choose-row';
+        var evBtn = document.createElement('button');
+        evBtn.type = 'button'; evBtn.className = 'wk-choose-btn'; evBtn.textContent = 'Event';
+        evBtn.addEventListener('click', function () {
+            backdrop.remove();
+            openWeekModalForDate(monthKey(iso), times);
+        });
+        var taskBtn = document.createElement('button');
+        taskBtn.type = 'button'; taskBtn.className = 'wk-choose-btn is-task'; taskBtn.textContent = 'Task';
+        taskBtn.addEventListener('click', function () {
+            backdrop.remove();
+            openWeekTaskModal(iso, times);
+        });
+        row.appendChild(evBtn); row.appendChild(taskBtn);
+        var cancel = document.createElement('button');
+        cancel.type = 'button'; cancel.className = 'wk-choose-cancel'; cancel.textContent = 'Cancel';
+        cancel.addEventListener('click', function () { backdrop.remove(); });
+        pop.appendChild(title); pop.appendChild(row); pop.appendChild(cancel);
+        backdrop.appendChild(pop);
+        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) backdrop.remove(); });
+        document.body.appendChild(backdrop);
+    }
+
+    // The day (YYYY-M-D-ish iso) a drag-created task belongs to; read by confirm.
+    var wkTaskIso = null;
+
+    // Fill the task modal's hour (1–12) and minute (5-min) selects for a prefix.
+    function fillTaskTimeSelects() {
+        ['taskStart', 'taskEnd'].forEach(function (p) {
+            var hEl = document.getElementById(p + 'Hour');
+            var mEl = document.getElementById(p + 'Minute');
+            if (hEl) { var h = '<option value="">--</option>'; for (var i = 1; i <= 12; i++) h += '<option value="' + i + '">' + i + '</option>'; hEl.innerHTML = h; }
+            if (mEl) { var m = '<option value="">--</option>'; for (var j = 0; j <= 59; j += 5) { var mm = (j < 10 ? '0' + j : '' + j); m += '<option value="' + mm + '">' + mm + '</option>'; } mEl.innerHTML = m; }
+        });
+    }
+
+    // Open the task modal (same layout as the Add-Event modal) with the dragged
+    // times and default XP pre-filled. Tasks don't recur yet — no recurrence UI.
+    function openWeekTaskModal(iso, times) {
+        var modal = document.getElementById('addTaskModal');
+        if (!modal) return;
+        wkTaskIso = iso;
+        fillTaskTimeSelects();
+        var nameEl = document.getElementById('taskName'); if (nameEl) nameEl.value = '';
+        var xpEl = document.getElementById('taskXp'); if (xpEl) xpEl.value = 10;
+        if (times && typeof setTimePickers === 'function') {
+            setTimePickers('taskStart', times.start);
+            setTimePickers('taskEnd', times.end);
+        }
+        ['taskName', 'taskStartHour', 'taskEndHour'].forEach(function (id) {
+            var el = document.getElementById(id); if (el) el.classList.remove('invalid-input');
+        });
+        modal.classList.add('from-week');   // match the wide Add-Event popup
+        modal.style.display = 'block';
+    }
+
+    function closeWeekTaskModal() {
+        var modal = document.getElementById('addTaskModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    // Create the task from the modal: place its block on the dragged slot by using
+    // created_at = start and due_date = end (both on wkTaskIso), persist it, then
+    // add it to the grid and redraw — which runs the strict overlap check.
+    function confirmWeekTask() {
+        var name = (document.getElementById('taskName').value || '').trim();
+        var xp = parseInt(document.getElementById('taskXp').value, 10);
+        if (isNaN(xp) || xp < 0) xp = 0;
+        var hasStart = !!document.getElementById('taskStartHour').value;
+        var hasEnd = !!document.getElementById('taskEndHour').value;
+        var bad = false;
+        function mark(id, on) { var el = document.getElementById(id); if (el) el.classList.toggle('invalid-input', on); }
+        mark('taskName', !name); if (!name) bad = true;
+        mark('taskStartHour', !hasStart); if (!hasStart) bad = true;
+        mark('taskEndHour', !hasEnd); if (!hasEnd) bad = true;
+        if (bad) return;
+        var startT = getTimeTo24Hour('taskStart');
+        var endT = getTimeTo24Hour('taskEnd');
+
+        // iso is 'YYYY-M-D' (non-padded); build a local ISO with zero-padded parts.
+        var parts = String(wkTaskIso).split('-');
+        var day = parts[0] + '-' + String(parts[1]).padStart(2, '0') + '-' + String(parts[2]).padStart(2, '0');
+        var createdAt = day + 'T' + startT + ':00';
+        var dueDate = day + 'T' + endT + ':00';
+        var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
+        var id = String(Date.now());
+        var payload = {
+            id: id, username: user, name: name, priority: 'medium',
+            xp_reward: xp, due_date: dueDate, created_at: createdAt, show_on_calendar: true
+        };
+        if (typeof addTaskToBackend === 'function') addTaskToBackend(payload);
+        // Reflect on the grid immediately (mirrors the shape loadSidebar caches).
+        gTasks.push({
+            id: id, title: name, status: 'todo', priority: 'medium',
+            xp_value: xp, created_at: createdAt, due_date: dueDate
+        });
+        closeWeekTaskModal();
+        renderDayColumns();   // draws the task and runs the overlap conflict check
+    }
+
+    // Exposed for the task modal's inline onclick handlers.
+    window.confirmWeekTask = confirmWeekTask;
+    window.closeWeekTaskModal = closeWeekTaskModal;
+
     // --- Drag on an empty grid spot to create an event ------------------------
     // Mouse-down on empty space in a day column starts a selection; dragging grows
     // it, clamped so it can't cross into an existing task/event; releasing opens
@@ -603,7 +722,8 @@
             document.body.style.userSelect = '';
             if (st.preview && st.preview.parentNode) st.preview.parentNode.removeChild(st.preview);
             if (!st.moved || (st.curBottom - st.curTop) < MIN5_PX) return;   // ignore a tiny drag
-            openWeekModalForDate(monthKey(st.iso), { start: pxToClockMin(st.curTop), end: pxToClockMin(st.curBottom) });
+            // Same dragged slot, then ask: make this an event or a task?
+            showCreateChooser(st.iso, { start: pxToClockMin(st.curTop), end: pxToClockMin(st.curBottom) });
         });
     }
 

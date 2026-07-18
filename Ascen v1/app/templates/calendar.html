@@ -247,6 +247,53 @@
         </div>
     </div>
 
+    <!-- Add Task Modal (week drag-to-create) — same layout as Add Section, with
+         an XP field instead of recurrence (tasks don't recur yet). -->
+    <div id="addTaskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Task</h3>
+                <span class="close-btn" onclick="closeWeekTaskModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="taskName">Task Name:</label>
+                    <input type="text" id="taskName" placeholder="e.g., Finish essay">
+                </div>
+                <div class="form-group">
+                    <label for="taskStartTime">Start Time:</label>
+                    <div class="time-selector">
+                        <select id="taskStartHour" class="time-select"></select>
+                        <select id="taskStartMinute" class="time-select"></select>
+                        <select id="taskStartAmPm" class="time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="taskEndTime">End Time:</label>
+                    <div class="time-selector">
+                        <select id="taskEndHour" class="time-select"></select>
+                        <select id="taskEndMinute" class="time-select"></select>
+                        <select id="taskEndAmPm" class="time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="taskXp">XP Reward:</label>
+                    <input type="number" id="taskXp" min="0" step="5" value="10">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeWeekTaskModal()">Cancel</button>
+                <button class="btn-confirm" onclick="confirmWeekTask()">Add Task</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Section Modal -->
     <div id="editSectionModal" class="modal">
         <div class="modal-content">
