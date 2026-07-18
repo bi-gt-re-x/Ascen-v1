@@ -466,6 +466,12 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
+/* Tasks with no due date: a quiet static "waiting" label, no timer. */
+.task-due-date.task-nodue {
+    font-style: italic;
+    opacity: 0.7;
+}
+
 /* Conflict modal: a new task overlaps an existing task/event by >75%. A blocking
    backdrop centers the prompt so the dashboard can't be used until one is deleted. */
 .conflict-backdrop {

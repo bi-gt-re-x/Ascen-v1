@@ -5043,8 +5043,6 @@ function openAddSectionModal() {
 
     const modal = document.getElementById('addSectionModal');
 
-
-
     // Week view adds .from-week for a wider popup; month view always resets to normal width.
     modal.classList.remove('from-week');
 
@@ -5717,8 +5715,12 @@ function eventDayFromMinutes(dateStr) {
     }
     return 6 * 60;
 }
-// Refresh the suggestion / overlap line under the Add-Event time pickers.
+// The Add-Event "availability" / next-free-slot message has been removed — events
+// are created freely and the strict overlap popup resolves any conflict — so this
+// is now a no-op kept only so its existing callers stay harmless.
 function updateEventSuggestion() {
+    return;
+    // eslint-disable-next-line no-unreachable
     var box = document.getElementById('eventSuggestion');
     if (!box || !selectedDate) return;
     var busy = eventBusyIntervals(selectedDate, null);
@@ -6081,18 +6083,10 @@ function confirmAddSection() {
 
 
 
-    // Clamp: an event can't overlap another event or on-calendar task on its day.
-    // Block the add and point the user at the closest free slot. (Only the primary
-    // date is checked; recurrences follow from it.)
-    var _evBusy = eventBusyIntervals(selectedDate, null);
-    var _evS = hmToMinutes(startTime), _evE = hmToMinutes(endTime); if (_evE <= _evS) _evE += 1440;
-    if (eventOverlapLabel(_evS, _evE, _evBusy)) {
-        updateEventSuggestion();
-        ['startHour', 'startMinute', 'endHour', 'endMinute'].forEach(function (id) {
-            document.getElementById(id).classList.add('invalid-input');
-        });
-        return;
-    }
+    // Overlap is NOT blocked here. Events may be created freely; the week view's
+    // strict event-overlap check then forces the user to delete one side of any
+    // event–event overlap (see showConflictPopup / renderDayColumns in
+    // calendar-week.js). A silent block-and-suggest here would pre-empt that popup.
 
     // Add the section to the selected date only if it matches recurrence pattern or if no recurrence
 
@@ -8639,7 +8633,9 @@ function openEditSectionModal(section) {
 
     const modal = document.getElementById('editSectionModal');
 
-
+    // Default to normal width; the week view re-adds .from-week (see editEvent in
+    // calendar-week.js) so the edit popup matches the wide Add-Event popup there.
+    modal.classList.remove('from-week');
 
     modal.style.display = 'block';
 

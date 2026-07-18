@@ -282,9 +282,8 @@ async function loadTasks() {
                     startTaskTimer(task.id, null, task.due_date);
                 } else if (task.timer_duration && task.timer_duration > 0) {
                     startTaskTimer(task.id, task.timer_duration);
-                } else {
-                    startTaskTimer(task.id);
                 }
+                // No due date and no duration -> no timer; the task just waits.
             }
         }
     });
@@ -1506,10 +1505,8 @@ async function addTaskFromModal() {
             }, 5000);
 
             console.log(`Task automatically scheduled for: ${scheduledTime}`);
-        } else {
-            console.log('Starting count-up timer');
-            startTaskTimer(taskId);
         }
+        // No due date and no duration -> no timer; the task just waits in the list.
     } else {
         console.log('startTaskTimer function is NOT available');
     }
@@ -1870,14 +1867,14 @@ function removeDashboardTaskFromCalendar(taskId) {
 
 
 // --- Overlap conflict check at task-creation time ----------------------------
-// A new task spans from its creation (now) to its due date. Tasks aren't allowed
-// to overlap at all: if the new task's active window intersects ANY existing
-// pending task's window, pop up a blocking chooser to delete one of the two.
-// (Calendar events keep a looser >75% bar so a multi-day task isn't blocked by
-// every event it happens to cross.)
+// A new task spans from its creation (now) to its due date. Neither tasks nor
+// calendar events may overlap it at all: if the new task's active window
+// intersects ANY existing pending task's window OR any calendar event (including
+// every recurrence of a recurring event, which are walked day by day below), pop
+// up a blocking chooser to delete one of the two.
 
-// Overlap fraction measured against the LONGER span (0..1): used with a >0 bar
-// for tasks (any intersection) and a >0.75 bar for calendar events.
+// Overlap fraction measured against the LONGER span (0..1); any positive value
+// (>0) means the two intersect, which is now a conflict for both tasks and events.
 function spanOverlapFrac(aS, aE, bS, bE) {
     const o = Math.min(aE, bE) - Math.max(aS, bS);
     if (o <= 0) return 0;
@@ -1925,7 +1922,9 @@ async function checkCreationConflict(newTask) {
                 const es = new Date(d.getFullYear(), d.getMonth(), d.getDate(), sh || 0, sm || 0).getTime();
                 let ee = new Date(d.getFullYear(), d.getMonth(), d.getDate(), eh || 0, em || 0).getTime();
                 if (ee <= es) ee += 86400000;   // overnight event
-                if (spanOverlapFrac(ns, ne, es, ee) > 0.75) {
+                // Any overlap at all — including a recurring event whose instance
+                // lands inside the task's window — is a conflict to resolve.
+                if (spanOverlapFrac(ns, ne, es, ee) > 0) {
                     showCreationConflictPopup(newTask, {
                         kind: 'event', dateKey: key, label: t.task,
                         startTime: t.startTime, endTime: t.endTime

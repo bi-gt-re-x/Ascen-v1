@@ -197,13 +197,12 @@
         return a.top - b.top;                // ties: earlier start beneath
     }
 
-    // Overlap measured against the LONGER block's span (0..1). Above 0.75 the two
-    // occupy essentially the same slot — a conflict worth resolving. (A short
-    // block tucked inside a long one stays well under this, so it just nests.)
-    function overlapFrac(a, b) {
-        var o = Math.min(a.top + a.h, b.top + b.h) - Math.max(a.top, b.top);
-        if (o <= 0) return 0;
-        return o / Math.max(a.h, b.h);
+    // Strict overlap test between two blocks, on the clock (hours). True when their
+    // time spans intersect by more than a hair — so any real overlap counts, but
+    // blocks that merely touch at an edge (e.g. 2–3 and 3–4) do not.
+    function blocksOverlap(a, b) {
+        var EPS = 0.001;   // ~3.6s; times snap to 5-min so touching edges give 0
+        return Math.min(a.end, b.end) - Math.max(a.start, b.start) > EPS;
     }
 
     // Nesting depth: how many overlapping blocks are longer (taller) than this
@@ -244,8 +243,9 @@
         return ka < kb ? ka + '|' + kb : kb + '|' + ka;
     }
 
-    // Conflict modal: two blocks overlap >75%. Centered on a blocking backdrop
-    // with no "keep both" — the calendar can't be used until one side is deleted.
+    // Conflict modal: two blocks (event–event or event–task) overlap in time.
+    // Centered on a blocking backdrop with no "keep both" — the calendar can't be
+    // used until one side is deleted.
     function showConflictPopup(a, b, dayIso) {
         if (document.getElementById('wkOverlapBackdrop')) return;
         var backdrop = document.createElement('div');
@@ -257,7 +257,7 @@
         var labelOf = function (x) { return x.kind === 'event' ? x.name : x.title; };
         var msg = document.createElement('span');
         msg.className = 'wk-overlap-msg';
-        msg.textContent = '"' + labelOf(a) + '" and "' + labelOf(b) + '" overlap more than 75%. Delete one to continue:';
+        msg.textContent = '"' + labelOf(a) + '" and "' + labelOf(b) + '" overlap. Delete one to continue:';
         pop.appendChild(msg);
         [a, b].forEach(function (x) {
             var del = document.createElement('button');
@@ -431,6 +431,9 @@
         if (idx < 0) return;
         selectedDate = mk;   // shared global lexical binding the month flow reads
         if (typeof editTaskSection === 'function') editTaskSection(idx);
+        // Match the wide Add-Event popup: widen the edit modal in the week view.
+        var em = document.getElementById('editSectionModal');
+        if (em) em.classList.add('from-week');
     }
 
     // --- Calendar events (created via the shared "Add New Event" modal) --------
@@ -515,21 +518,6 @@
         return out;
     }
 
-    // Open the shared month-page "Add New Event" modal from the week view. The
-    // month flow (confirmAddSection) writes to dateContent[selectedDate], so we
-    // point selectedDate at a real day first: today if it's in the shown week,
-    // otherwise that week's Monday.
-    function openWeekEventModal() {
-        if (typeof openAddSectionModal !== 'function') return;
-        var mon = mondayOf(weekOffset);
-        var weekEnd = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 7);
-        var today = new Date(); today.setHours(0, 0, 0, 0);
-        var target = (today >= mon && today < weekEnd) ? today : mon;
-        var key = target.getFullYear() + '-' + (target.getMonth() + 1) + '-' + target.getDate();
-        if (typeof dateContent !== 'undefined' && !dateContent[key]) dateContent[key] = { timestamps: [] };
-        openWeekModalForDate(key);
-    }
-
     // Open the shared Add-Event modal for a specific day, widened for the week
     // view and defaulted to weekly recurrence. `times`, when given, pre-fills the
     // start/end pickers (minutes-of-day) — used by the drag-to-create flow.
@@ -599,7 +587,10 @@
             if (!dragState) return;
             var y = e.clientY - dragState.col.getBoundingClientRect().top;
             y = Math.max(dragState.gap[0], Math.min(y, dragState.gap[1]));   // stop at neighbours
-            var top = snapPx(Math.min(dragState.y0, y)), bottom = snapPx(Math.max(dragState.y0, y));
+            // Snap to 5 min, then re-clamp to the gap so rounding can't push an edge
+            // past a neighbour into an existing task/event.
+            var top = Math.max(dragState.gap[0], snapPx(Math.min(dragState.y0, y)));
+            var bottom = Math.min(dragState.gap[1], snapPx(Math.max(dragState.y0, y)));
             dragState.preview.style.top = top + 'px';
             dragState.preview.style.height = Math.max(0, bottom - top) + 'px';
             dragState.curTop = top; dragState.curBottom = bottom;
@@ -641,16 +632,19 @@
                 b.h = Math.max(2, (b.end - b.start) * HOUR_H - 4);
             });
             dragBusy[d.iso] = all.map(function (b) { return [b.top, b.top + b.h]; });
-            // A pending pair (task and/or event) overlapping >75% of the LONGER
-            // block is a conflict — remember the first undismissed pair to offer
-            // a delete. Completed tasks are history, so only pending ones count.
+            // Strictly no overlap involving an event: ANY overlap (not just a >75%
+            // near-identical slot) between two events, OR between an event and a
+            // task (including an event's recurrences landing on a task), is a
+            // conflict the user must resolve by deleting one side. Task↔task pairs
+            // are ignored, and completed tasks are history so they're excluded.
             if (!conflict) {
-                var live = all.filter(function (b) { return !b.done; });
-                for (var ci = 0; ci < live.length && !conflict; ci++) {
-                    for (var cj = ci + 1; cj < live.length; cj++) {
-                        if (overlapFrac(live[ci], live[cj]) > 0.75 &&
-                            !dismissedConflicts[conflictKey(live[ci], live[cj])]) {
-                            conflict = { a: live[ci], b: live[cj], iso: d.iso };
+                var cand = all.filter(function (b) { return b.kind === 'event' || !b.done; });
+                for (var ci = 0; ci < cand.length && !conflict; ci++) {
+                    for (var cj = ci + 1; cj < cand.length; cj++) {
+                        // Need at least one event — bare task overlaps don't count.
+                        if (cand[ci].kind !== 'event' && cand[cj].kind !== 'event') continue;
+                        if (blocksOverlap(cand[ci], cand[cj])) {
+                            conflict = { a: cand[ci], b: cand[cj], iso: d.iso };
                             break;
                         }
                     }
@@ -721,7 +715,7 @@
             return '<div class="wk-daycol' + (d.today ? ' today' : '') + '" data-iso="' + esc(d.iso) + '" style="height:' + gridH + 'px">' + lines + html + '</div>';
         }).join('');
 
-        // Offer to resolve the first >75% overlap conflict (task or event pair).
+        // Force resolution of the first event–event overlap on any day this week.
         if (conflict) showConflictPopup(conflict.a, conflict.b, conflict.iso);
         else hideOverlapPopup();
 
@@ -946,9 +940,7 @@
         // Week is the default landing view.
         setView('week', btns);
 
-        // "Add New Event" opens the same modal the month page uses.
-        var addEventBtn = document.querySelector('#weekView .wk-addevent');
-        if (addEventBtn) addEventBtn.addEventListener('click', openWeekEventModal);
+        // Events are created by dragging on an empty grid spot (see initDragCreate).
 
         // Overview sidebar collapse/expand. Collapsing removes the sidebar column,
         // so the seven day columns widen to fill the freed space. State persists.

@@ -1,29 +1,7 @@
 // tasks.js - Handles task creation and management logic
 
-// Format a number of seconds as m:ss (or h:mm:ss past an hour)
-function formatElapsed(totalSeconds) {
-    const s = totalSeconds % 60;
-    const m = Math.floor(totalSeconds / 60) % 60;
-    const h = Math.floor(totalSeconds / 3600);
-    const pad = (n) => String(n).padStart(2, '0');
-    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
-
-// Update every "count-up" timer (tasks with no due date) once per second.
-function tickElapsedTimers() {
-    const now = Date.now();
-    document.querySelectorAll('.task-elapsed').forEach((el) => {
-        const start = parseInt(el.dataset.start, 10);
-        if (!Number.isNaN(start)) {
-            el.textContent = formatElapsed(Math.max(0, Math.floor((now - start) / 1000)));
-        }
-    });
-}
-
-// Start the shared ticker once. Detached tasks simply drop out of the query.
-if (typeof window !== 'undefined' && !window._elapsedTicker) {
-    window._elapsedTicker = setInterval(tickElapsedTimers, 1000);
-}
+// Tasks without a due date no longer count up — they just sit in the list with a
+// static "No due date" label (see createTaskElement), so no ticker is needed.
 
 function createTaskElement(task, onDeleteCallback) {
     const li = document.createElement('li');
@@ -87,12 +65,10 @@ function createTaskElement(task, onDeleteCallback) {
         const timePart = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         dueDateSpan.textContent = `Due: ${datePart}, ${timePart}`;
     } else {
-        // No due date/time -> count up from 0 to show how long the task takes.
-        // A single global ticker (see tickElapsedTimers) updates these each second.
-        const startMs = task.created_at ? new Date(task.created_at).getTime() : Date.now();
-        dueDateSpan.classList.add('task-elapsed');
-        dueDateSpan.dataset.start = String(startMs);
-        dueDateSpan.textContent = formatElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+        // No due date/time -> the task just sits there waiting. No count-up timer
+        // (nothing to count toward), just a quiet static label.
+        dueDateSpan.classList.add('task-nodue');
+        dueDateSpan.textContent = 'No due date';
     }
 
     // Assemble structural item
