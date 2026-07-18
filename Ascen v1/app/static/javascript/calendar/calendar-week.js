@@ -59,6 +59,10 @@
     // not render placeholder events, and calendar events proper aren't shown yet.
     var gTasks = [];
 
+    // Per-day occupied [top, bottom] pixel ranges, rebuilt on every render; used
+    // by drag-to-create so a new selection stops when it meets a task/event.
+    var dragBusy = {};
+
     // --- Formatting helpers --------------------------------------------------
     function hourLabel(h) {
         var hm = ((h % 24) + 24) % 24;          // normalise 24–29 back to 0–5
@@ -523,11 +527,93 @@
         var target = (today >= mon && today < weekEnd) ? today : mon;
         var key = target.getFullYear() + '-' + (target.getMonth() + 1) + '-' + target.getDate();
         if (typeof dateContent !== 'undefined' && !dateContent[key]) dateContent[key] = { timestamps: [] };
+        openWeekModalForDate(key);
+    }
+
+    // Open the shared Add-Event modal for a specific day, widened for the week
+    // view and defaulted to weekly recurrence. `times`, when given, pre-fills the
+    // start/end pickers (minutes-of-day) — used by the drag-to-create flow.
+    function openWeekModalForDate(key, times) {
+        if (typeof openAddSectionModal !== 'function') return;
+        if (typeof dateContent !== 'undefined' && !dateContent[key]) dateContent[key] = { timestamps: [] };
         selectedDate = key;   // global from calendar-month.js; confirmAddSection reads it
         openAddSectionModal();
-        // Widen the shared modal for the week view (2x) and drop horizontal scroll.
         var modal = document.getElementById('addSectionModal');
-        if (modal) modal.classList.add('from-week');
+        if (modal) modal.classList.add('from-week');   // 2x-wide popup, no h-scroll
+        if (times && typeof setTimePickers === 'function') {
+            setTimePickers('start', times.start);
+            setTimePickers('end', times.end);
+        }
+        // Week calendar → default to weekly recurrence on the selected day.
+        if (typeof applyDefaultRecurrence === 'function') applyDefaultRecurrence('weekly');
+    }
+
+    // --- Drag on an empty grid spot to create an event ------------------------
+    // Mouse-down on empty space in a day column starts a selection; dragging grows
+    // it, clamped so it can't cross into an existing task/event; releasing opens
+    // the Add-Event modal with the dragged times (snapped to 5 min) pre-filled.
+    var MIN5_PX = HOUR_H / 12;               // pixels per 5 minutes
+    function snapPx(px) { return Math.round(px / MIN5_PX) * MIN5_PX; }
+    // Grid pixels (from a column's top) -> clock time, snapped to 5 minutes.
+    function pxToClockMin(px) {
+        var gridMin = START_HOUR * 60 + (px / HOUR_H) * 60;   // 360 … 1740
+        gridMin = Math.round(gridMin / 5) * 5;
+        return ((gridMin % 1440) + 1440) % 1440;              // wrap into 0 … 1439
+    }
+    // The free [top, bottom] gap around y in a column, or null if y sits in a block.
+    function gapAround(iso, y, gridH) {
+        var busy = (dragBusy[iso] || []);
+        var top = 0, bottom = gridH;
+        for (var i = 0; i < busy.length; i++) {
+            if (busy[i][0] <= y && busy[i][1] > y) return null;               // inside a block
+            if (busy[i][1] <= y && busy[i][1] > top) top = busy[i][1];        // nearest block above
+            if (busy[i][0] >= y && busy[i][0] < bottom) bottom = busy[i][0];  // nearest block below
+        }
+        return [top, bottom];
+    }
+
+    var dragState = null;
+    function initDragCreate() {
+        var cols = document.getElementById('wkDayCols');
+        if (!cols || cols.__dragWired) return;
+        cols.__dragWired = true;
+        var gridH = (END_HOUR - START_HOUR) * HOUR_H;
+
+        cols.addEventListener('mousedown', function (e) {
+            if (e.button !== 0) return;
+            if (e.target.closest('.wk-event') || e.target.closest('.wk-card-menu')) return;
+            var col = e.target.closest('.wk-daycol');
+            if (!col) return;
+            var y = e.clientY - col.getBoundingClientRect().top;
+            var gap = gapAround(col.getAttribute('data-iso'), y, gridH);
+            if (!gap) return;                      // started on top of a block
+            e.preventDefault();
+            var preview = document.createElement('div');
+            preview.className = 'wk-drag-preview';
+            col.appendChild(preview);
+            dragState = { iso: col.getAttribute('data-iso'), col: col, y0: y, gap: gap, preview: preview, moved: false };
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', function (e) {
+            if (!dragState) return;
+            var y = e.clientY - dragState.col.getBoundingClientRect().top;
+            y = Math.max(dragState.gap[0], Math.min(y, dragState.gap[1]));   // stop at neighbours
+            var top = snapPx(Math.min(dragState.y0, y)), bottom = snapPx(Math.max(dragState.y0, y));
+            dragState.preview.style.top = top + 'px';
+            dragState.preview.style.height = Math.max(0, bottom - top) + 'px';
+            dragState.curTop = top; dragState.curBottom = bottom;
+            if (bottom - top > 3) dragState.moved = true;
+        });
+
+        document.addEventListener('mouseup', function () {
+            if (!dragState) return;
+            var st = dragState; dragState = null;
+            document.body.style.userSelect = '';
+            if (st.preview && st.preview.parentNode) st.preview.parentNode.removeChild(st.preview);
+            if (!st.moved || (st.curBottom - st.curTop) < MIN5_PX) return;   // ignore a tiny drag
+            openWeekModalForDate(monthKey(st.iso), { start: pxToClockMin(st.curTop), end: pxToClockMin(st.curBottom) });
+        });
     }
 
     // Draw the seven day columns from the cached real tasks. Kept separate so it
@@ -538,6 +624,7 @@
         var DAYS = buildDays();
         var gridH = (END_HOUR - START_HOUR) * HOUR_H;
         var conflict = null;
+        dragBusy = {};   // per-day occupied [top, bottom] pixel ranges, for drag-to-create
         cols.innerHTML = DAYS.map(function (d) {
             var lines = '';
             for (var h = START_HOUR; h < END_HOUR; h++) {
@@ -553,6 +640,7 @@
                 // Height is strictly the block's time span (no minimum floor).
                 b.h = Math.max(2, (b.end - b.start) * HOUR_H - 4);
             });
+            dragBusy[d.iso] = all.map(function (b) { return [b.top, b.top + b.h]; });
             // A pending pair (task and/or event) overlapping >75% of the LONGER
             // block is a conflict — remember the first undismissed pair to offer
             // a delete. Completed tasks are history, so only pending ones count.
@@ -630,7 +718,7 @@
                     '</div>' +
                     '</div>';
             }).join('');
-            return '<div class="wk-daycol' + (d.today ? ' today' : '') + '" style="height:' + gridH + 'px">' + lines + html + '</div>';
+            return '<div class="wk-daycol' + (d.today ? ' today' : '') + '" data-iso="' + esc(d.iso) + '" style="height:' + gridH + 'px">' + lines + html + '</div>';
         }).join('');
 
         // Offer to resolve the first >75% overlap conflict (task or event pair).
@@ -924,6 +1012,9 @@
         window.addEventListener('resize', closeCardPop);
         var wkScroll = document.querySelector('#weekView .wk-scroll');
         if (wkScroll) wkScroll.addEventListener('scroll', closeCardPop, true);
+
+        // Drag on an empty grid spot to create an event (delegated once).
+        initDragCreate();
 
         // Keep the "now" line tracking the clock (re-placed each minute).
         setInterval(renderNowLine, 60000);

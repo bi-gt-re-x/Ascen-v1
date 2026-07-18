@@ -5024,6 +5024,9 @@ function addTaskSection() {
 
     openAddSectionModal();
 
+    // Month calendar → default to monthly recurrence on the selected date.
+    applyDefaultRecurrence('monthly');
+
 
 
 }
@@ -5384,7 +5387,7 @@ function populateTimeDropdowns() {
 
 
 
-    for (let i = 0; i <= 59; i++) {
+    for (let i = 0; i <= 59; i += 5) {   // minutes snap to 5 (00, 05, 10, …, 55)
 
 
 
@@ -5588,6 +5591,24 @@ function handleRecurrenceTypeChange(event) {
 
 
 
+}
+
+// Default the Add-Event recurrence to match the view it was opened from: weekly
+// on the week calendar, monthly on the month calendar. The current day is pre-
+// selected so the recurrence is valid, and the matching options panel is shown.
+function applyDefaultRecurrence(type) {
+    document.querySelectorAll('input[name="recurrenceType"]').forEach(function (r) { r.checked = (r.value === type); });
+    document.getElementById('weeklyOptions').style.display = (type === 'weekly') ? 'block' : 'none';
+    document.getElementById('monthlyOptions').style.display = (type === 'monthly') ? 'block' : 'none';
+    if (!selectedDate) return;
+    var p = String(selectedDate).split('-').map(Number);
+    var d = new Date(p[0], p[1] - 1, p[2]);
+    if (type === 'weekly') {
+        var dow = d.getDay();   // 0=Sun … 6=Sat, matching the dayOfWeek checkbox values
+        document.querySelectorAll('input[name="dayOfWeek"]').forEach(function (cb) { cb.checked = (parseInt(cb.value, 10) === dow); });
+    } else if (type === 'monthly') {
+        document.querySelectorAll('input[name="dayOfMonth"]').forEach(function (cb) { cb.checked = (parseInt(cb.value, 10) === p[2]); });
+    }
 }
 
 
@@ -9136,7 +9157,7 @@ function populateEditTimeDropdowns() {
 
 
 
-    for (let i = 0; i <= 59; i++) {
+    for (let i = 0; i <= 59; i += 5) {   // minutes snap to 5 (00, 05, 10, …, 55)
 
 
 

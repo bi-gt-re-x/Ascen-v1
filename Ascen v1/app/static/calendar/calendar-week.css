@@ -186,6 +186,14 @@
     pointer-events: none;
 }
 
+/* Drag-to-create selection preview on the time grid. */
+.wk-drag-preview {
+    position: absolute; left: 4px; right: 4px; z-index: 6; pointer-events: none;
+    border-radius: 8px; border: 1.5px dashed #2c5aa0;
+    background: rgba(44, 90, 160, .16);
+}
+html[data-theme="dark"] .wk-drag-preview { border-color: #8fbcff; background: rgba(143, 188, 255, .18); }
+
 .wk-event {
     position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 6px 8px;
     border: 1px solid transparent; overflow: hidden; box-sizing: border-box;
