@@ -151,12 +151,11 @@ function updateStreakUI(currentStreak, bestStreak) {
 
 // Updated task deletion function with growth tracking integration
 async function handleTaskDeletionWithGrowthTracking(taskId, taskXP, liElement, currentUser) {
-    const taskList = document.getElementById('taskList');
-
     // Instantly remove from DOM tree context if it hasn't been detached yet
     if (liElement && liElement.parentNode) {
         liElement.parentNode.removeChild(liElement);
     }
+    if (typeof updateTaskSectionEmptyStates === 'function') updateTaskSectionEmptyStates();
 
     if (typeof stopTaskTimer === 'function') {
         stopTaskTimer(taskId);

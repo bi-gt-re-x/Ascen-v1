@@ -283,8 +283,11 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="taskXp">XP Reward:</label>
-                    <input type="number" id="taskXp" min="0" step="5" value="10">
+                    <label>XP Reward: <span id="taskXpValue" class="xp-value">10</span></label>
+                    <div class="xp-slider-row">
+                        <input type="range" id="taskXpSlider" min="10" max="100" value="10" style="flex:1; accent-color:#A38A70;" oninput="syncTaskXp(this.value)">
+                        <input type="number" id="taskXp" class="xp-input-field" min="10" max="100" value="10" oninput="syncTaskXp(this.value)">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

@@ -233,16 +233,40 @@ async function loadUserData() {
 
 }
 
+// A task shows on the calendar when its show_on_calendar flag is truthy (tasks
+// created from the week calendar always set it). Those go in the "Calendar Tasks"
+// sub-section; everything else goes in "Todo Tasks" above it.
+function isCalendarTask(task) {
+    var v = task && task.show_on_calendar;
+    return v === true || v === 1 || v === '1' || v === 'true';
+}
+// The <ul> a task belongs in. Falls back to the todo list if the calendar list
+// is missing for any reason.
+function taskListElFor(task) {
+    var id = isCalendarTask(task) ? 'calendarTaskList' : 'todoTaskList';
+    return document.getElementById(id) || document.getElementById('todoTaskList');
+}
+// Show a "nothing here yet" line under whichever sub-section is empty.
+function updateTaskSectionEmptyStates() {
+    [['todoTaskList', 'todoEmpty'], ['calendarTaskList', 'calendarEmpty']].forEach(function (pair) {
+        var list = document.getElementById(pair[0]);
+        var empty = document.getElementById(pair[1]);
+        if (list && empty) empty.style.display = list.children.length ? 'none' : 'block';
+    });
+}
+
 async function loadTasks() {
     console.log('=== LOAD TASKS START ===');
-    const taskList = document.getElementById('taskList');
+    const todoList = document.getElementById('todoTaskList');
+    const calendarList = document.getElementById('calendarTaskList');
 
-    if (!taskList) {
-        console.log('ERROR: taskList element not found');
+    if (!todoList && !calendarList) {
+        console.log('ERROR: task list elements not found');
         return;
     }
 
-    taskList.innerHTML = ''; // Clear existing
+    if (todoList) todoList.innerHTML = '';         // Clear both sub-sections
+    if (calendarList) calendarList.innerHTML = '';
 
     // Preserve existing timer state
     const existingTimers = typeof timers !== 'undefined' ? {...timers} : {};
@@ -268,7 +292,7 @@ async function loadTasks() {
     incompleteTasks.forEach(task => {
         if (typeof createTaskElement === 'function') {
             const li = createTaskElement(task, handleTaskDeletion);
-            taskList.appendChild(li);
+            taskListElFor(task).appendChild(li);
 
             // Start timer with due date if available, but preserve existing timer state
             if (typeof startTaskTimer === 'function') {
@@ -288,6 +312,7 @@ async function loadTasks() {
         }
     });
 
+    updateTaskSectionEmptyStates();
     console.log('=== LOAD TASKS END ===');
 }
 
@@ -347,13 +372,13 @@ function restoreTimerCompletedState() {
 
 
 
-                // Move to top
+                // Move to the top of its own sub-section (Todo / Calendar)
 
-                const taskList = document.getElementById('taskList');
+                const parentList = taskElement.parentNode;
 
-                if (taskList && taskList.firstChild) {
+                if (parentList && parentList.firstChild) {
 
-                    taskList.insertBefore(taskElement, taskList.firstChild);
+                    parentList.insertBefore(taskElement, parentList.firstChild);
 
                 }
 
@@ -1295,8 +1320,6 @@ function findNextAvailableTimeSlot(durationSeconds) {
 
 
 async function addTaskFromModal() {
-    const taskList = document.getElementById('taskList');
-
     // Clear previous error states
     clearErrorStates();
 
@@ -1436,10 +1459,11 @@ async function addTaskFromModal() {
     console.log('Task created:', newTask);
     console.log('dueDateTime:', dueDateTime, 'totalSeconds:', totalSeconds);
 
-    // Add to UI immediately to show due date
+    // Add to UI immediately, into the matching sub-section (Todo / Calendar).
     if (typeof createTaskElement === 'function') {
         const li = createTaskElement(newTask, handleTaskDeletion);
-        taskList.appendChild(li);
+        taskListElFor(newTask).appendChild(li);
+        if (typeof updateTaskSectionEmptyStates === 'function') updateTaskSectionEmptyStates();
         console.log('Task element added to DOM with due date:', newTask.due_date);
     }
 
@@ -1548,8 +1572,6 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
     // backend (the goals page polls /api/last_task_completion for this).
     console.log('Task Completed(' + taskXP + ' xp)');
 
-    const taskList = document.getElementById('taskList');
-
 
 
     // Disable the delete button to prevent multiple clicks
@@ -1585,8 +1607,9 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
     // Remove task from DOM immediately to prevent multiple clicks
     setTimeout(() => {
         if (liElement.parentNode) {
-            taskList.removeChild(liElement);
+            liElement.parentNode.removeChild(liElement);
         }
+        if (typeof updateTaskSectionEmptyStates === 'function') updateTaskSectionEmptyStates();
     }, 520);
 
     // Sync with Backend - Use backend for all calculations

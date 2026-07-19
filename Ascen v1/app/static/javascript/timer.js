@@ -196,10 +196,10 @@ function onTimerComplete(taskId) {
         // Also add red styling to entire task element (existing behavior)
         taskElement.classList.add('timer-completed');
 
-        // Move to top
-        const taskList = document.getElementById('taskList');
-        if (taskList && taskList.firstChild) {
-            taskList.insertBefore(taskElement, taskList.firstChild);
+        // Move to the top of its own sub-section (Todo / Calendar)
+        const parentList = taskElement.parentNode;
+        if (parentList && parentList.firstChild) {
+            parentList.insertBefore(taskElement, parentList.firstChild);
         }
 
         // Change button to Terminate/More Time
@@ -250,10 +250,10 @@ function restoreOverdueState(taskId) {
         // Also add red styling and flashing animation to entire task element (existing behavior)
         taskElement.classList.add('timer-completed');
 
-        // Move to top
-        const taskList = document.getElementById('taskList');
-        if (taskList && taskList.firstChild) {
-            taskList.insertBefore(taskElement, taskList.firstChild);
+        // Move to the top of its own sub-section (Todo / Calendar)
+        const parentList = taskElement.parentNode;
+        if (parentList && parentList.firstChild) {
+            parentList.insertBefore(taskElement, parentList.firstChild);
         }
 
         // Change button to Terminate/More Time

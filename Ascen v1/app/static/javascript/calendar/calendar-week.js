@@ -595,7 +595,7 @@
         wkTaskIso = iso;
         fillTaskTimeSelects();
         var nameEl = document.getElementById('taskName'); if (nameEl) nameEl.value = '';
-        var xpEl = document.getElementById('taskXp'); if (xpEl) xpEl.value = 10;
+        syncTaskXp(10);   // reset the XP slider/input/label together
         if (times && typeof setTimePickers === 'function') {
             setTimePickers('taskStart', times.start);
             setTimePickers('taskEnd', times.end);
@@ -651,9 +651,22 @@
         renderDayColumns();   // draws the task and runs the overlap conflict check
     }
 
-    // Exposed for the task modal's inline onclick handlers.
+    // Keep the task modal's XP slider, number box and label in sync (mirrors the
+    // dashboard's XP slider). Clamped to 10–100 like the dashboard.
+    function syncTaskXp(val) {
+        val = Math.max(10, Math.min(100, parseInt(val, 10) || 10));
+        var slider = document.getElementById('taskXpSlider');
+        var input = document.getElementById('taskXp');
+        var label = document.getElementById('taskXpValue');
+        if (slider) slider.value = val;
+        if (input) input.value = val;
+        if (label) label.textContent = val;
+    }
+
+    // Exposed for the task modal's inline onclick / oninput handlers.
     window.confirmWeekTask = confirmWeekTask;
     window.closeWeekTaskModal = closeWeekTaskModal;
+    window.syncTaskXp = syncTaskXp;
 
     // --- Drag on an empty grid spot to create an event ------------------------
     // Mouse-down on empty space in a day column starts a selection; dragging grows

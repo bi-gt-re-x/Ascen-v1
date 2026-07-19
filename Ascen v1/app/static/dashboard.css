@@ -330,6 +330,24 @@ body {
     padding-right: 4px;
 }
 
+/* Tasks card sub-sections: "Todo Tasks" (not on calendar) above "Calendar Tasks".
+   The groups container is the scroll region; the lists inside size to content. */
+.task-groups {
+    flex: 1 1 auto; min-height: 0;
+    overflow-y: auto; overflow-x: hidden;
+    display: flex; flex-direction: column; gap: 16px;
+    padding-right: 4px;
+}
+.task-groups .task-list { flex: none; overflow: visible; min-height: 0; padding-right: 0; }
+.task-subsection { display: flex; flex-direction: column; }
+.task-subhead {
+    margin: 0 0 8px; font-size: 12px; font-weight: 700;
+    letter-spacing: .05em; text-transform: uppercase; color: #8a8f98;
+}
+.task-empty { margin: 2px 2px 0; font-size: 13px; color: #9aa0a6; font-style: italic; }
+html[data-theme="dark"] .task-subhead { color: #9aa4b2; }
+html[data-theme="dark"] .task-empty { color: #7a828c; }
+
 /* Individual Row Items */
 .task-item {
     display: flex;

@@ -109,7 +109,18 @@
                 <button class="add-task-btn" onclick="openModal()">+ Add Task</button>
             </div>
 
-            <ul id="taskList" class="task-list"></ul>
+            <div class="task-groups">
+                <div class="task-subsection" id="todoSection">
+                    <h3 class="task-subhead">Todo Tasks</h3>
+                    <ul id="todoTaskList" class="task-list"></ul>
+                    <p class="task-empty" id="todoEmpty">Nothing here yet.</p>
+                </div>
+                <div class="task-subsection" id="calendarSection">
+                    <h3 class="task-subhead">Calendar Tasks</h3>
+                    <ul id="calendarTaskList" class="task-list"></ul>
+                    <p class="task-empty" id="calendarEmpty">Nothing here yet.</p>
+                </div>
+            </div>
         </div>
 
         <div class="quote-container">
