@@ -151,9 +151,13 @@
         gTasks.forEach(function (t) {
             var startDT = toDate(t.created_at) || toDate(t.due_date);
             if (!startDT) return;
-            var endDT = (t.status === 'done' && toDate(t.completed_at)) ||
-                        toDate(t.due_date) ||
-                        new Date(startDT.getTime() + 3600000);
+            var dueDT = toDate(t.due_date);
+            var compDT = (t.status === 'done') ? toDate(t.completed_at) : null;
+            // Finishing early shrinks the block to the completion time; finishing
+            // late must NOT extend it — a done task never grows past its scheduled
+            // slot, so cap the end at the due time.
+            var endDT = compDT || dueDT || new Date(startDT.getTime() + 3600000);
+            if (dueDT && endDT > dueDT) endDT = dueDT;
             if (endDT <= startDT) endDT = new Date(startDT.getTime() + 3600000);
             if (endDT < dayStart || startDT > dayEnd) return;   // no overlap with this day
             // Hours after midnight (0–5:59) belong to the late-night tail of the
@@ -174,6 +178,10 @@
                 title: t.title || t.name || 'Task',
                 xp: Number(t.xp_value || t.xp_reward) || 0,
                 done: t.status === 'done',
+                // Only tasks explicitly shown on the calendar take part in overlap
+                // conflicts; plain dashboard/to-do tasks are excluded (see below).
+                onCalendar: (t.show_on_calendar === true || t.show_on_calendar === 1 ||
+                             t.show_on_calendar === '1' || t.show_on_calendar === 'true'),
                 priority: String(t.priority || '').toLowerCase(),
                 dueDT: toDate(t.due_date),
                 startDT: startDT,
@@ -637,18 +645,27 @@
         var dueDate = day + 'T' + endT + ':00';
         var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
         var id = String(Date.now());
+        // Difficulty (priority) is derived from XP, matching the dashboard's slider
+        // thresholds, so the block colour-codes by difficulty like a dashboard task.
+        var priority = xpToPriority(xp);
         var payload = {
-            id: id, username: user, name: name, priority: 'medium',
+            id: id, username: user, name: name, priority: priority,
             xp_reward: xp, due_date: dueDate, created_at: createdAt, show_on_calendar: true
         };
         if (typeof addTaskToBackend === 'function') addTaskToBackend(payload);
         // Reflect on the grid immediately (mirrors the shape loadSidebar caches).
         gTasks.push({
-            id: id, title: name, status: 'todo', priority: 'medium',
+            id: id, title: name, status: 'todo', priority: priority,
             xp_value: xp, created_at: createdAt, due_date: dueDate
         });
         closeWeekTaskModal();
         renderDayColumns();   // draws the task and runs the overlap conflict check
+    }
+
+    // XP -> difficulty, matching the dashboard (updateXPDisplay): <33 low,
+    // <66 medium, else high. Drives the task block's colour on the calendar.
+    function xpToPriority(xp) {
+        return xp < 33 ? 'low' : (xp < 66 ? 'medium' : 'high');
     }
 
     // Keep the task modal's XP slider, number box and label in sync (mirrors the
@@ -765,17 +782,14 @@
                 b.h = Math.max(2, (b.end - b.start) * HOUR_H - 4);
             });
             dragBusy[d.iso] = all.map(function (b) { return [b.top, b.top + b.h]; });
-            // Strictly no overlap involving an event: ANY overlap (not just a >75%
-            // near-identical slot) between two events, OR between an event and a
-            // task (including an event's recurrences landing on a task), is a
-            // conflict the user must resolve by deleting one side. Task↔task pairs
-            // are ignored, and completed tasks are history so they're excluded.
+            // Strictly no overlap between any two live blocks — event↔event,
+            // event↔task AND task↔task — is a conflict the user must resolve by
+            // deleting one side. Only calendar tasks (show_on_calendar) count;
+            // plain to-do/dashboard tasks and completed tasks are excluded.
             if (!conflict) {
-                var cand = all.filter(function (b) { return b.kind === 'event' || !b.done; });
+                var cand = all.filter(function (b) { return b.kind === 'event' || (b.onCalendar && !b.done); });
                 for (var ci = 0; ci < cand.length && !conflict; ci++) {
                     for (var cj = ci + 1; cj < cand.length; cj++) {
-                        // Need at least one event — bare task overlaps don't count.
-                        if (cand[ci].kind !== 'event' && cand[cj].kind !== 'event') continue;
                         if (blocksOverlap(cand[ci], cand[cj])) {
                             conflict = { a: cand[ci], b: cand[cj], iso: d.iso };
                             break;
@@ -912,6 +926,20 @@
         sc.scrollTop = Math.max(0, top - sc.clientHeight / 2);
     }
 
+    // Frozen weekly-overview snapshots, keyed by the week's Monday (YYYY-MM-DD).
+    // Once a week is over, its overview must not change as tasks are later edited
+    // or deleted — so we read the saved value instead of recomputing.
+    function loadWkSnapshots() {
+        try { return JSON.parse((window.localStorage && localStorage.getItem('wkOverviewSnapshots')) || '{}') || {}; }
+        catch (e) { return {}; }
+    }
+    function saveWkSnapshot(key, snap) {
+        if (!window.localStorage) return;
+        var all = loadWkSnapshots();
+        all[key] = snap;
+        try { localStorage.setItem('wkOverviewSnapshots', JSON.stringify(all)); } catch (e) {}
+    }
+
     // --- Real sidebar numbers, scoped to the current week --------------------
     // "This week" = the Mon–Sun calendar week containing today. Total/Completed/
     // Rate/XP are all derived from the tasks created in that window so they stay
@@ -936,6 +964,19 @@
                 var done = weekDone.length;
                 var rate = total ? Math.round(done / total * 100) : 0;
                 var xp = weekDone.reduce(function (sum, t) { return sum + (Number(t.xp_value) || 0); }, 0);
+
+                // A past week (weekOffset < 0) shows its frozen snapshot and never
+                // recomputes. The current week (offset 0) stays live and keeps its
+                // snapshot fresh, so whatever it holds when the week ends is what
+                // freezes. (A past week seen for the first time is frozen now.)
+                var wkKey = wk.start;
+                var snaps = loadWkSnapshots();
+                if (weekOffset < 0 && snaps[wkKey]) {
+                    total = snaps[wkKey].total; done = snaps[wkKey].done;
+                    rate = snaps[wkKey].rate;   xp = snaps[wkKey].xp;
+                } else if (weekOffset <= 0) {
+                    saveWkSnapshot(wkKey, { total: total, done: done, rate: rate, xp: xp });
+                }
 
                 setText('wkTotalTasks', total);
                 setText('wkCompleted', done);
