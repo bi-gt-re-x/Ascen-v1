@@ -412,6 +412,24 @@ html[data-theme="dark"] .task-empty { color: #7a828c; }
     }
 }
 
+/* Hint at the bottom of the Add Task popup: calendar tasks are made on the
+   calendar page, not here. */
+.calendar-hint {
+    margin: 18px 0 6px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #6C757D;
+    background: #F5F3EF;
+    border: 1px solid #E7E1D8;
+    border-radius: 8px;
+    text-align: left;
+}
+.calendar-hint a { color: #A38A70; font-weight: 700; text-decoration: none; }
+.calendar-hint a:hover { text-decoration: underline; }
+html[data-theme="dark"] .calendar-hint { color: #9aa4b2; background: #20262f; border-color: #2b323c; }
+html[data-theme="dark"] .calendar-hint a { color: #d8c3a5; }
+
 /* XP value box next to the slider in the Add Task popup */
 .xp-input-field {
     width: 56px;

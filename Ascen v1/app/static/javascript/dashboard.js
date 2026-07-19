@@ -1422,9 +1422,11 @@ async function addTaskFromModal() {
         dueDateTime = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
     }
 
-    // --- REPAIRED STRUCTURAL ASSIGNMENT ---
-    const calendarCheckbox = document.getElementById('showOnCalendar');
-    const showOnCalendarValue = calendarCheckbox ? calendarCheckbox.checked : true;
+    // Tasks created on the dashboard never go on the calendar — to put something
+    // on the calendar the user drags a slot there and chooses "Task" (see the hint
+    // in the modal). So this is always false; calendar placement lives on the
+    // calendar page only.
+    const showOnCalendarValue = false;
 
     // Clamp: a task shown on the calendar can't be placed on a time that overlaps
     // an existing event or on-calendar task (not even by a minute). Block the add
