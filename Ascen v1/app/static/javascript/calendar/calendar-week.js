@@ -83,6 +83,13 @@
         var mm = d.getMinutes();
         return h12 + ':' + (mm < 10 ? '0' + mm : mm) + ' ' + ampm;
     }
+    // "6 PM" / "6:40 PM" — drops ":00" on the hour; for the compact short layout.
+    function timeLabelShort(d) {
+        var hh = d.getHours(), ampm = hh < 12 ? 'AM' : 'PM';
+        var h12 = hh % 12; if (h12 === 0) h12 = 12;
+        var mm = d.getMinutes();
+        return mm ? (h12 + ':' + (mm < 10 ? '0' + mm : mm) + ' ' + ampm) : (h12 + ' ' + ampm);
+    }
     // "Jul 15, 6:40 PM" for a Date — used to label a task block's due date.
     function dueLabel(d) {
         return MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + timeLabel(d);
@@ -1028,10 +1035,13 @@
                     timeText = dueStr ? 'Due ' + dueStr : '';
                     timeClass = 'wk-event-due';
                 }
+                // A short task (≤15 min) mirrors the short-event layout: name and
+                // start time on one row, dropping the due/XP footer that won't fit.
+                var compactTask = (b.end - b.start) * 60 <= 15;
                 // Start time (the task's start clock time) sits at the top next to
                 // the title, kept compact so the title stays readable beside it.
-                var startText = b.startDT ? timeLabel(b.startDT) : '';
-                return '<div class="wk-event wk-task ' + stateCls + '" data-kind="task"' +
+                var startText = b.startDT ? (compactTask ? timeLabelShort(b.startDT) : timeLabel(b.startDT)) : '';
+                return '<div class="wk-event wk-task ' + stateCls + (compactTask ? ' is-compact' : '') + '" data-kind="task"' +
                     ' data-iso="' + esc(d.iso) + '" data-id="' + esc(String(b.id)) + '" style="' + nestPos(b) + '">' +
                     cardMenuBtn(b.h) +
                     '<div class="wk-event-head">' +
@@ -1041,10 +1051,11 @@
                         '</div>' +
                         (startText ? '<span class="wk-event-start">' + esc(startText) + '</span>' : '') +
                     '</div>' +
+                    (compactTask ? '' :
                     '<div class="wk-event-foot">' +
                         (timeText ? '<span class="' + timeClass + '">' + esc(timeText) + '</span>' : '') +
                         '<span class="wk-event-xp">' + b.xp + ' XP</span>' +
-                    '</div>' +
+                    '</div>') +
                     '</div>';
             }).join('');
             return '<div class="wk-daycol' + (d.today ? ' today' : '') + '" data-iso="' + esc(d.iso) + '" style="height:' + gridH + 'px">' + lines + html + '</div>';

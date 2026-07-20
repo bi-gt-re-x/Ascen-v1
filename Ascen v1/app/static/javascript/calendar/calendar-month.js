@@ -5640,8 +5640,8 @@ function generateMonthlyDays() {
 
 
 
-// Minutes between two "HH:MM" times, wrapping past midnight. Used to enforce a
-// 15-minute minimum event duration (also catches equal start/end = 0 minutes).
+// Minutes between two "HH:MM" times, wrapping past midnight. Used only to reject
+// a zero-length event (equal start/end); short events are allowed.
 function eventDurationMinutes(startTime, endTime) {
     var toMin = function (t) { var p = String(t).split(':').map(Number); return p[0] * 60 + p[1]; };
     var d = toMin(endTime) - toMin(startTime);
@@ -5890,7 +5890,7 @@ function confirmAddSection() {
 
 
 
-    if (eventDurationMinutes(startTime, endTime) < 15) {
+    if (eventDurationMinutes(startTime, endTime) <= 0) {
 
 
 
@@ -9375,7 +9375,7 @@ function confirmEditSection() {
 
 
 
-    if (eventDurationMinutes(startTime, endTime) < 15) {
+    if (eventDurationMinutes(startTime, endTime) <= 0) {
 
 
 

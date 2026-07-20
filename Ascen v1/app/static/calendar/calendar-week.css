@@ -204,9 +204,10 @@ html[data-theme="dark"] .wk-drag-preview { border-color: #8fbcff; background: rg
     /* Shadow separates stacked layers so an overlapped block reads as "behind". */
     box-shadow: 0 1px 4px rgba(16, 24, 40, .16);
 }
-/* A ≤15-min event renders its name + start time on a single centered row. */
-.wk-event.wk-event-cal.is-compact { justify-content: center; padding-top: 3px; padding-bottom: 3px; }
-.wk-event.wk-event-cal.is-compact .wk-event-head { align-items: center; }
+/* A ≤15-min event or task renders its name + start time on a single centered
+   row (no end time / footer), sized to fit the thin block. */
+.wk-event.is-compact { justify-content: center; padding-top: 3px; padding-bottom: 3px; }
+.wk-event.is-compact .wk-event-head { align-items: center; }
 /* Header row: title (left, truncates) + start time (right), kept at the top. */
 .wk-event-head {
     display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
