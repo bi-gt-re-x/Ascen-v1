@@ -345,7 +345,7 @@
         pop.id = 'wkCardPop';
         pop.className = 'wk-card-pop';
         var items = [];
-        if (kind === 'event') items.push(['Edit', 'edit']);   // tasks aren't editable here
+        items.push(['Edit', 'edit']);   // events and tasks are both editable
         items.push(['Delete', 'del']);
         items.forEach(function (it) {
             var b = document.createElement('button');
@@ -372,7 +372,8 @@
     }
     function doCardAction(action, kind, iso, block) {
         if (action === 'edit') {
-            editEvent(iso, block);   // events only (tasks have no edit item)
+            if (kind === 'task') editTaskFromBlock(iso, block);   // opens the task modal, prefilled
+            else editEvent(iso, block);
             return;
         }
         // Delete: confirm first in a styled, blocking popup. Only on confirm does
@@ -397,9 +398,17 @@
             }
             return;
         }
-        showDeleteConfirm(kind, name, function () {
-            deleteBlock({ kind: 'task', id: block.getAttribute('data-id') }, iso);
-        });
+        // Task delete: like events, a recurring task (same title + start/end
+        // time-of-day across days) offers this / all / choose; a one-off confirms.
+        var taskId = block.getAttribute('data-id');
+        var taskOccs = findTaskOccurrences(taskId);
+        if (taskOccs.length > 1) {
+            showTaskRecurrenceDeleteDialog(name, iso, taskId, taskOccs);
+        } else {
+            showDeleteConfirm('task', name, function () {
+                deleteBlock({ kind: 'task', id: taskId }, iso);
+            });
+        }
     }
     // Styled, blocking delete confirmation. A full-viewport backdrop intercepts
     // all clicks so the rest of the page can't be used until the user answers.
@@ -726,8 +735,10 @@
         document.body.appendChild(backdrop);
     }
 
-    // The day (YYYY-M-D-ish iso) a drag-created task belongs to; read by confirm.
+    // The day (YYYY-MM-DD iso) a drag-created task belongs to; read by confirm.
     var wkTaskIso = null;
+    // When set, the task modal is EDITING this task id rather than creating.
+    var wkEditTaskId = null;
 
     // Fill the task modal's hour (1–12) and minute (5-min) selects for a prefix.
     function fillTaskTimeSelects() {
@@ -739,12 +750,90 @@
         });
     }
 
-    // Open the task modal (same layout as the Add-Event modal) with the dragged
-    // times and default XP pre-filled. Tasks don't recur yet — no recurrence UI.
+    // --- Task recurrence UI (mirrors the event Add-Section modal) --------------
+    // Build the 1–31 day-of-month checkboxes once, and wire the recurrence radios
+    // to reveal the matching weekly / monthly panel.
+    function initTaskRecurrenceUI() {
+        var mc = document.getElementById('taskMonthlyDaysContainer');
+        if (mc && !mc.__filled) {
+            mc.__filled = true;
+            var h = '';
+            for (var i = 1; i <= 31; i++) h += '<label><input type="checkbox" name="taskDayOfMonth" value="' + i + '"> ' + i + '</label>';
+            mc.innerHTML = h;
+        }
+        document.querySelectorAll('input[name="taskRecurrenceType"]').forEach(function (r) {
+            if (r.__wired) return; r.__wired = true;
+            r.addEventListener('change', function () {
+                var t = this.value;
+                var w = document.getElementById('taskWeeklyOptions');
+                var m = document.getElementById('taskMonthlyOptions');
+                if (w) w.style.display = (t === 'weekly') ? 'block' : 'none';
+                if (m) m.style.display = (t === 'monthly') ? 'block' : 'none';
+            });
+        });
+    }
+    // Preselect a recurrence type with the modal's day pre-checked so it's valid,
+    // matching applyDefaultRecurrence for events (week view → weekly by default).
+    function applyTaskDefaultRecurrence(iso, type) {
+        document.querySelectorAll('input[name="taskRecurrenceType"]').forEach(function (r) { r.checked = (r.value === type); });
+        var w = document.getElementById('taskWeeklyOptions');
+        var m = document.getElementById('taskMonthlyOptions');
+        if (w) w.style.display = (type === 'weekly') ? 'block' : 'none';
+        if (m) m.style.display = (type === 'monthly') ? 'block' : 'none';
+        var p = String(iso).split('-').map(Number);
+        var d = new Date(p[0], p[1] - 1, p[2]);
+        document.querySelectorAll('input[name="taskDayOfWeek"], input[name="taskDayOfMonth"]').forEach(function (cb) { cb.checked = false; });
+        if (type === 'weekly') {
+            document.querySelectorAll('input[name="taskDayOfWeek"]').forEach(function (cb) { cb.checked = (parseInt(cb.value, 10) === d.getDay()); });
+        } else if (type === 'monthly') {
+            document.querySelectorAll('input[name="taskDayOfMonth"]').forEach(function (cb) { cb.checked = (parseInt(cb.value, 10) === d.getDate()); });
+        }
+    }
+    // Read the chosen recurrence + selected day numbers from the task modal.
+    function readTaskRecurrence() {
+        var checked = document.querySelector('input[name="taskRecurrenceType"]:checked');
+        var type = checked ? checked.value : 'none';
+        var days = [];
+        if (type === 'weekly') days = [].slice.call(document.querySelectorAll('input[name="taskDayOfWeek"]:checked')).map(function (c) { return parseInt(c.value, 10); });
+        else if (type === 'monthly') days = [].slice.call(document.querySelectorAll('input[name="taskDayOfMonth"]:checked')).map(function (c) { return parseInt(c.value, 10); });
+        return { type: type, days: days };
+    }
+    // Show/hide the whole recurrence block (hidden while editing one occurrence).
+    function setTaskRecurrenceVisible(on) {
+        var g = document.getElementById('taskRecurrenceGroup');
+        if (g) g.style.display = on ? '' : 'none';
+        if (!on) {
+            var w = document.getElementById('taskWeeklyOptions'); if (w) w.style.display = 'none';
+            var m = document.getElementById('taskMonthlyOptions'); if (m) m.style.display = 'none';
+        }
+    }
+
+    // Occurrence dates (YYYY-MM-DD) for a recurring task over the next 12 months,
+    // mirroring event recurrence: the base day is always included, plus every
+    // later day matching the selected weekdays (weekly) or day-numbers (monthly).
+    function computeTaskOccurrences(baseIso, type, days) {
+        var out = [baseIso];
+        if (type === 'none' || !days.length) return out;
+        var p = String(baseIso).split('-').map(Number);
+        var start = new Date(p[0], p[1] - 1, p[2]);
+        var end = new Date(p[0], p[1] - 1 + 12, p[2]);   // ~12 months ahead
+        var d = new Date(start); d.setDate(d.getDate() + 1);
+        while (d <= end) {
+            var match = (type === 'weekly') ? days.indexOf(d.getDay()) >= 0 : days.indexOf(d.getDate()) >= 0;
+            if (match) out.push(isoDay(d));
+            d.setDate(d.getDate() + 1);
+        }
+        return out;
+    }
+
+    // Open the task modal to CREATE (drag-to-create). Same layout as Add-Event,
+    // with an XP field and a recurrence block defaulting to weekly on the dragged
+    // day — the week view's event default too.
     function openWeekTaskModal(iso, times) {
         var modal = document.getElementById('addTaskModal');
         if (!modal) return;
         wkTaskIso = iso;
+        wkEditTaskId = null;
         fillTaskTimeSelects();
         var nameEl = document.getElementById('taskName'); if (nameEl) nameEl.value = '';
         syncTaskXp(10);   // reset the XP slider/input/label together
@@ -752,21 +841,71 @@
             setTimePickers('taskStart', times.start);
             setTimePickers('taskEnd', times.end);
         }
-        ['taskName', 'taskStartHour', 'taskEndHour'].forEach(function (id) {
+        ['taskName', 'taskStartHour', 'taskEndHour', 'taskWeeklyOptions', 'taskMonthlyOptions'].forEach(function (id) {
             var el = document.getElementById(id); if (el) el.classList.remove('invalid-input');
         });
+        initTaskRecurrenceUI();
+        setTaskRecurrenceVisible(true);
+        applyTaskDefaultRecurrence(iso, 'weekly');
+        var t = document.getElementById('taskModalTitle'); if (t) t.textContent = 'Add New Task';
+        var b = document.getElementById('taskModalConfirmBtn'); if (b) b.textContent = 'Add Task';
         modal.classList.add('from-week');   // match the wide Add-Event popup
+        modal.style.display = 'block';
+    }
+
+    // Open the task modal to EDIT one existing task (from the three-dots menu):
+    // prefill its name / times / XP; recurrence is hidden (a single occurrence).
+    function editTaskFromBlock(iso, block) {
+        var id = block.getAttribute('data-id');
+        var t = null;
+        for (var i = 0; i < gTasks.length; i++) { if (String(gTasks[i].id) === String(id)) { t = gTasks[i]; break; } }
+        if (!t) return;
+        var modal = document.getElementById('addTaskModal');
+        if (!modal) return;
+        wkTaskIso = iso;
+        wkEditTaskId = String(id);
+        fillTaskTimeSelects();
+        var nameEl = document.getElementById('taskName'); if (nameEl) nameEl.value = t.title || t.name || '';
+        syncTaskXp(Number(t.xp_value || t.xp_reward) || 10);
+        var sd = toDate(t.created_at), ed = toDate(t.due_date);
+        if (typeof setTimePickers === 'function') {
+            if (sd) setTimePickers('taskStart', sd.getHours() * 60 + sd.getMinutes());
+            if (ed) setTimePickers('taskEnd', ed.getHours() * 60 + ed.getMinutes());
+        }
+        ['taskName', 'taskStartHour', 'taskEndHour'].forEach(function (cid) {
+            var el = document.getElementById(cid); if (el) el.classList.remove('invalid-input');
+        });
+        initTaskRecurrenceUI();
+        setTaskRecurrenceVisible(false);   // editing a single occurrence
+        var ti = document.getElementById('taskModalTitle'); if (ti) ti.textContent = 'Edit Task';
+        var bt = document.getElementById('taskModalConfirmBtn'); if (bt) bt.textContent = 'Save Changes';
+        modal.classList.add('from-week');
         modal.style.display = 'block';
     }
 
     function closeWeekTaskModal() {
         var modal = document.getElementById('addTaskModal');
         if (modal) modal.style.display = 'none';
+        wkEditTaskId = null;
     }
 
-    // Create the task from the modal: place its block on the dragged slot by using
-    // created_at = start and due_date = end (both on wkTaskIso), persist it, then
-    // add it to the grid and redraw — which runs the strict overlap check.
+    // Persist a batch of task payloads without racing the single-file datastore:
+    // chained so each add finishes before the next starts. Fire-and-forget — the
+    // grid was already updated optimistically.
+    function persistTasksSequential(payloads) {
+        var i = 0;
+        (function next() {
+            if (i >= payloads.length) return;
+            var p = payloads[i++];
+            Promise.resolve(typeof addTaskToBackend === 'function' ? addTaskToBackend(p) : null).then(next, next);
+        })();
+    }
+
+    // Create or update the task from the modal. Create places the block on the
+    // dragged slot (created_at = start, due_date = end) and, when recurrence is
+    // set, fans out one task per occurrence over the next 12 months. Edit replaces
+    // the single task in place (delete + re-add, since the backend can't move a
+    // task's created_at). Either way the grid redraws and re-checks overlaps.
     function confirmWeekTask() {
         var name = (document.getElementById('taskName').value || '').trim();
         var xp = parseInt(document.getElementById('taskXp').value, 10);
@@ -781,29 +920,167 @@
         if (bad) return;
         var startT = getTimeTo24Hour('taskStart');
         var endT = getTimeTo24Hour('taskEnd');
-
-        // iso is 'YYYY-M-D' (non-padded); build a local ISO with zero-padded parts.
-        var parts = String(wkTaskIso).split('-');
-        var day = parts[0] + '-' + String(parts[1]).padStart(2, '0') + '-' + String(parts[2]).padStart(2, '0');
-        var createdAt = day + 'T' + startT + ':00';
-        var dueDate = day + 'T' + endT + ':00';
         var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
-        var id = String(Date.now());
         // Difficulty (priority) is derived from XP, matching the dashboard's slider
         // thresholds, so the block colour-codes by difficulty like a dashboard task.
         var priority = xpToPriority(xp);
-        var payload = {
-            id: id, username: user, name: name, priority: priority,
-            xp_reward: xp, due_date: dueDate, created_at: createdAt, show_on_calendar: true
-        };
-        if (typeof addTaskToBackend === 'function') addTaskToBackend(payload);
-        // Reflect on the grid immediately (mirrors the shape loadSidebar caches).
-        gTasks.push({
-            id: id, title: name, status: 'todo', priority: priority,
-            xp_value: xp, created_at: createdAt, due_date: dueDate
+
+        // iso is 'YYYY-M[M]-D[D]'; build a zero-padded day for the base occurrence.
+        var parts = String(wkTaskIso).split('-');
+        var baseDay = parts[0] + '-' + String(parts[1]).padStart(2, '0') + '-' + String(parts[2]).padStart(2, '0');
+
+        // --- Edit: replace the existing task in place --------------------------
+        if (wkEditTaskId) {
+            var oldId = wkEditTaskId;
+            var newId = String(Date.now());
+            var createdAtE = baseDay + 'T' + startT + ':00';
+            var dueDateE = baseDay + 'T' + endT + ':00';
+            gTasks = gTasks.filter(function (t) { return String(t.id) !== String(oldId); });
+            gTasks.push({ id: newId, title: name, status: 'todo', priority: priority, xp_value: xp, created_at: createdAtE, due_date: dueDateE });
+            // Delete the old record, then add the updated one (chained, no race).
+            Promise.resolve(typeof deleteTaskFromBackendWithoutTracking === 'function' ? deleteTaskFromBackendWithoutTracking(oldId) : null)
+                .then(function () {
+                    if (typeof addTaskToBackend === 'function') addTaskToBackend({ id: newId, username: user, name: name, priority: priority, xp_reward: xp, due_date: dueDateE, created_at: createdAtE, show_on_calendar: true });
+                });
+            closeWeekTaskModal();
+            renderDayColumns();
+            return;
+        }
+
+        // --- Create (optionally recurring) ------------------------------------
+        var rec = readTaskRecurrence();
+        mark('taskWeeklyOptions', false); mark('taskMonthlyOptions', false);
+        if (rec.type !== 'none' && !rec.days.length) {
+            mark(rec.type === 'weekly' ? 'taskWeeklyOptions' : 'taskMonthlyOptions', true);
+            return;
+        }
+        var occs = computeTaskOccurrences(baseDay, rec.type, rec.days);
+        var payloads = [];
+        occs.forEach(function (dayIso, idx) {
+            var id = String(Date.now()) + '-' + idx;
+            var createdAt = dayIso + 'T' + startT + ':00';
+            var dueDate = dayIso + 'T' + endT + ':00';
+            payloads.push({ id: id, username: user, name: name, priority: priority, xp_reward: xp, due_date: dueDate, created_at: createdAt, show_on_calendar: true });
+            // Reflect on the grid immediately (mirrors the shape loadSidebar caches).
+            gTasks.push({ id: id, title: name, status: 'todo', priority: priority, xp_value: xp, created_at: createdAt, due_date: dueDate });
         });
+        persistTasksSequential(payloads);
         closeWeekTaskModal();
-        renderDayColumns();   // draws the task and runs the overlap conflict check
+        renderDayColumns();   // draws the task(s) and runs the overlap conflict check
+    }
+
+    // --- Task recurrence grouping (by identity, matching events) --------------
+    // Tasks store no recurrence id, so occurrences of one series are those sharing
+    // a title + start/end time-of-day — exactly how events group by name +
+    // startTime + endTime. Returns [{id, iso, date}] sorted by date.
+    function taskHM(dtStr) {
+        var d = toDate(dtStr); if (!d) return '';
+        var p = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+    function taskIdentity(t) {
+        return (t.title || t.name || '') + '|' + taskHM(t.created_at) + '|' + taskHM(t.due_date);
+    }
+    function findTaskOccurrences(id) {
+        var self = null;
+        for (var i = 0; i < gTasks.length; i++) { if (String(gTasks[i].id) === String(id)) { self = gTasks[i]; break; } }
+        if (!self) return [];
+        var key = taskIdentity(self);
+        var res = [];
+        gTasks.forEach(function (t) {
+            if (taskIdentity(t) !== key) return;
+            var d = toDate(t.created_at);
+            res.push({ id: t.id, iso: d ? isoDay(d) : '', date: d || new Date(0) });
+        });
+        res.sort(function (a, b) { return a.date - b.date; });
+        return res;
+    }
+    // Remove tasks by id from the grid and the backend (no XP tracking — they were
+    // never completed), then redraw.
+    function deleteTasksByIds(ids) {
+        var set = {}; ids.forEach(function (i) { set[String(i)] = true; });
+        gTasks = gTasks.filter(function (t) { return !set[String(t.id)]; });
+        var arr = ids.slice(), k = 0;
+        (function next() {
+            if (k >= arr.length) return;
+            var id = arr[k++];
+            Promise.resolve(typeof deleteTaskFromBackendWithoutTracking === 'function' ? deleteTaskFromBackendWithoutTracking(id) : null).then(next, next);
+        })();
+        renderDayColumns();
+    }
+    // Task version of the recurring-delete dialog: this / all / choose specific
+    // dates, then a bulk delete. Reuses the event dialog's styling.
+    function showTaskRecurrenceDeleteDialog(name, thisIso, thisId, occs) {
+        closeCardPop();
+        var existing = document.getElementById('wkConfirmBackdrop');
+        if (existing) existing.remove();
+        var backdrop = document.createElement('div');
+        backdrop.id = 'wkConfirmBackdrop';
+        backdrop.className = 'wk-confirm-backdrop';
+        var pop = document.createElement('div');
+        pop.className = 'wk-confirm-popup';
+        backdrop.appendChild(pop);
+        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) backdrop.remove(); });
+        document.body.appendChild(backdrop);
+
+        function btn(cls, text, onClick) {
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = cls; b.textContent = text;
+            b.addEventListener('click', onClick);
+            return b;
+        }
+        var DAYS3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        function fmtDate(d) { return DAYS3[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate(); }
+
+        function renderMain() {
+            pop.innerHTML = '';
+            var title = document.createElement('h3');
+            title.className = 'wk-confirm-title';
+            title.textContent = 'Delete recurring task';
+            var msg = document.createElement('p');
+            msg.className = 'wk-confirm-msg';
+            msg.textContent = '"' + name + '" repeats across ' + occs.length + ' days. What should be deleted?';
+            var actions = document.createElement('div');
+            actions.className = 'wk-recur-actions';
+            actions.appendChild(btn('wk-recur-btn', 'Only this occurrence', function () {
+                backdrop.remove(); deleteTasksByIds([thisId]);
+            }));
+            actions.appendChild(btn('wk-recur-btn', 'All ' + occs.length + ' occurrences', function () {
+                backdrop.remove(); deleteTasksByIds(occs.map(function (o) { return o.id; }));
+            }));
+            actions.appendChild(btn('wk-recur-btn', 'Choose specific dates…', renderChoose));
+            actions.appendChild(btn('wk-confirm-cancel', 'Cancel', function () { backdrop.remove(); }));
+            pop.appendChild(title); pop.appendChild(msg); pop.appendChild(actions);
+        }
+        function renderChoose() {
+            pop.innerHTML = '';
+            var title = document.createElement('h3');
+            title.className = 'wk-confirm-title';
+            title.textContent = 'Choose dates to delete';
+            var list = document.createElement('div');
+            list.className = 'wk-recur-list';
+            occs.forEach(function (o) {
+                var row = document.createElement('label');
+                row.className = 'wk-recur-row';
+                var cb = document.createElement('input');
+                cb.type = 'checkbox'; cb.value = o.id;
+                if (String(o.id) === String(thisId)) cb.checked = true;
+                var span = document.createElement('span');
+                span.textContent = fmtDate(o.date);
+                row.appendChild(cb); row.appendChild(span);
+                list.appendChild(row);
+            });
+            var actions = document.createElement('div');
+            actions.className = 'wk-confirm-actions';
+            actions.appendChild(btn('wk-confirm-cancel', 'Back', renderMain));
+            actions.appendChild(btn('wk-confirm-delete', 'Delete selected', function () {
+                var ids = [].slice.call(list.querySelectorAll('input:checked')).map(function (c) { return c.value; });
+                backdrop.remove();
+                if (ids.length) deleteTasksByIds(ids);
+            }));
+            pop.appendChild(title); pop.appendChild(list); pop.appendChild(actions);
+        }
+        renderMain();
     }
 
     // XP -> difficulty, matching the dashboard (updateXPDisplay): <33 low,
