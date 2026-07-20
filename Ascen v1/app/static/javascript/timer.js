@@ -36,7 +36,6 @@ function startTaskTimer(taskId, durationSeconds = null, dueDate = null) {
     if (dueDate) {
         // Countdown to due date
         const dueDateTime = new Date(dueDate).getTime();
-        console.log('Timer start - dueDate:', dueDate, 'dueDateTime:', dueDateTime, 'now:', now);
         timers[taskId] = {
             type: 'due_date_countdown',
             startTime: now,
@@ -102,13 +101,11 @@ function startTimerInterval(taskId) {
 function updateTimerDisplay(taskId) {
     const timerData = timers[taskId];
     if (!timerData) {
-        console.log('No timer data for task:', taskId);
         return;
     }
 
     const displayElement = document.getElementById(`timer-${taskId}`);
     if (!displayElement) {
-        console.log('No display element for task:', taskId);
         return;
     }
 
@@ -117,7 +114,6 @@ function updateTimerDisplay(taskId) {
 
     if (timerData.type === 'due_date_countdown') {
         const remaining = timerData.endTime - now;
-        console.log('Updating due_date_countdown - remaining:', remaining, 'endTime:', timerData.endTime, 'now:', now);
 
         if (remaining <= 0) {
             timeString = "Time's up!";
@@ -180,7 +176,6 @@ function onTimerComplete(taskId) {
             })
         }).then(response => response.json())
         .then(data => {
-            console.log('✅ Timer expiration sent to backend:', data);
         })
         .catch(error => {
             console.error('❌ Error sending timer expiration to backend:', error);
@@ -314,9 +309,6 @@ function addMoreTime(taskId) {
 }
 
 function addMoreTimeToTask(taskId, additionalSeconds) {
-    console.log("ADD MORE TIME RUNNING");
-    console.log("taskId:", taskId);
-    console.log("timerData:", timers[taskId]);
 
     const timerData = timers[taskId];
 
@@ -407,7 +399,6 @@ function addMoreTimeToTask(taskId, additionalSeconds) {
         startTimerInterval(taskId);
         updateTimerDisplay(taskId);
         
-        console.log('Task rescheduled on calendar with new due date:', new Date(timerData.endTime));
     }
 }
 

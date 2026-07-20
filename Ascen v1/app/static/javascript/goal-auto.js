@@ -79,7 +79,6 @@
         // re-entry without pressing +1.
         localStorage.setItem(key, String(at));
         const xp = data.xp || 0;
-        console.log('Task Completed(' + xp + ' xp)');
         applyXpToGoals(username, xp);
     }
 

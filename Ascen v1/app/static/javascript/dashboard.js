@@ -35,8 +35,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-    console.log('=== DASHBOARD INITIALIZATION START ===');
-    console.log('Current user from localStorage:', currentUser);
 
     // ... rest of init logic
 
@@ -54,19 +52,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 
-    console.log('Checking if user is not Default:', currentUser !== 'Default');
 
     if (currentUser !== 'Default') {
 
-        console.log('Calling loadUserData() for user:', currentUser);
         await loadUserData();
-        console.log('Calling loadTasks()...');
         await loadTasks();
 
     } else {
 
-        console.log('User is Default, using local stats');
-        console.log('Local stats values:', { xp, level, xpRequired, tasksCompleted });
         if (typeof updateStatsUI === 'function') {
 
             updateStatsUI(xp, level, xpRequired, tasksCompleted);
@@ -115,23 +108,17 @@ document.getElementById('userNameDisplay').innerText = currentUser;
 
 async function loadUserData() {
 
-    console.log('=== LOAD USER DATA START ===');
-    console.log('getUserDataAPI exists:', typeof getUserDataAPI === 'function');
 
     if (typeof getUserDataAPI !== 'function') {
-        console.log('ERROR: getUserDataAPI is not available');
         return;
     }
 
-    console.log('Fetching user data for:', currentUser);
     const data = await getUserDataAPI(currentUser);
-    console.log('API response:', data);
 
 
 
     if (data && data.success) {
 
-        console.log('API call successful, parsing stats...');
 
         // Load Stats
 
@@ -143,7 +130,6 @@ async function loadUserData() {
 
         const bestStreak = data.stats.best_streak || 0;
 
-        console.log('Parsed stats:', { totalXp, tasksCompleted, currentStreak, bestStreak });
 
 
 
@@ -153,13 +139,11 @@ async function loadUserData() {
         const bestStreakEl = document.getElementById('bestStreak');
         const tasksCompletedEl = document.getElementById('tasksCompleted');
 
-        console.log('DOM elements found:', { currentStreakEl, bestStreakEl, tasksCompletedEl });
 
         if (currentStreakEl) currentStreakEl.textContent = currentStreak;
         if (bestStreakEl) bestStreakEl.textContent = bestStreak;
         if (tasksCompletedEl) tasksCompletedEl.textContent = tasksCompleted;
 
-        console.log('Updated DOM elements');
 
 
 
@@ -193,43 +177,21 @@ async function loadUserData() {
 
 
 
-        console.log('Initial user data loaded:', {
-
-            totalXp: totalXp,
-
-            calculatedLevel: calculatedLevel,
-
-            currentXpInLevel: xp,
-
-            xpRequired: xpRequired,
-
-            tasksCompleted: tasksCompleted,
-
-            currentStreak: currentStreak,
-
-            bestStreak: bestStreak
-
-        });
 
 
 
         if (typeof updateStatsUI === 'function') {
 
-            console.log('Calling updateStatsUI with:', { xp, level, xpRequired, tasksCompleted });
             updateStatsUI(xp, level, xpRequired, tasksCompleted);
-            console.log('updateStatsUI completed');
 
         } else {
 
-            console.log('ERROR: updateStatsUI is not a function');
         }
 
     } else {
 
-        console.log('ERROR: API call failed or returned no success');
     }
 
-    console.log('=== LOAD USER DATA END ===');
 
 }
 
@@ -256,12 +218,10 @@ function updateTaskSectionEmptyStates() {
 }
 
 async function loadTasks() {
-    console.log('=== LOAD TASKS START ===');
     const todoList = document.getElementById('todoTaskList');
     const calendarList = document.getElementById('calendarTaskList');
 
     if (!todoList && !calendarList) {
-        console.log('ERROR: task list elements not found');
         return;
     }
 
@@ -275,19 +235,15 @@ async function loadTasks() {
     let tasks = [];
 
     if (typeof getTasksAPI === 'function') {
-        console.log('Fetching tasks via getTasksAPI...');
         const tasksData = await getTasksAPI(currentUser);
         if (tasksData && tasksData.success) {
             tasks = tasksData.tasks;
-            console.log('Tasks loaded:', tasks.length);
         }
     } else {
-        console.log('ERROR: getTasksAPI not available');
     }
 
     // Filter out completed tasks - only show incomplete tasks on dashboard
     const incompleteTasks = tasks.filter(task => !(task.status === 'done' || task.completed === 1 || task.completed === true || task.completed === '1'));
-    console.log('Incomplete tasks:', incompleteTasks.length);
 
     incompleteTasks.forEach(task => {
         if (typeof createTaskElement === 'function') {
@@ -313,7 +269,6 @@ async function loadTasks() {
     });
 
     updateTaskSectionEmptyStates();
-    console.log('=== LOAD TASKS END ===');
 }
 
 // Function to restore timer-completed state after tasks are loaded
@@ -780,7 +735,6 @@ function updateMoreTimeFromSlider(type, val) {
 
 function confirmMoreTime() {
 
-    console.log("CONFIRM CLICKED");
 
 
 
@@ -792,17 +746,6 @@ function confirmMoreTime() {
 
 
 
-    console.log({
-
-        currentTaskIdForMoreTime,
-
-        hours,
-
-        minutes,
-
-        seconds
-
-    });
 
     
 
@@ -1458,22 +1401,17 @@ async function addTaskFromModal() {
         show_on_calendar: showOnCalendarValue
     };
 
-    console.log('Task created:', newTask);
-    console.log('dueDateTime:', dueDateTime, 'totalSeconds:', totalSeconds);
 
     // Add to UI immediately, into the matching sub-section (Todo / Calendar).
     if (typeof createTaskElement === 'function') {
         const li = createTaskElement(newTask, handleTaskDeletion);
         taskListElFor(newTask).appendChild(li);
         if (typeof updateTaskSectionEmptyStates === 'function') updateTaskSectionEmptyStates();
-        console.log('Task element added to DOM with due date:', newTask.due_date);
     }
 
     // Start Timer (Client-side) with automatic scheduling
     if (typeof startTaskTimer === 'function') {
-        console.log('startTaskTimer function is available');
         if (dueDateTime) {
-            console.log('Starting timer with due date:', dueDateTime);
             startTaskTimer(taskId, null, dueDateTime);
         } else if (totalSeconds > 0) {
             // Find next available time slot automatically
@@ -1494,7 +1432,6 @@ async function addTaskFromModal() {
             newTask.due_date = autoDueDateTime;
             newTask.timer_duration = 0;
 
-            console.log('Starting timer with auto-scheduled due date:', autoDueDateTime);
             startTaskTimer(taskId, null, autoDueDateTime);
 
             // Show user the scheduled time
@@ -1530,11 +1467,9 @@ async function addTaskFromModal() {
                 setTimeout(() => notification.remove(), 300);
             }, 5000);
 
-            console.log(`Task automatically scheduled for: ${scheduledTime}`);
         }
         // No due date and no duration -> no timer; the task just waits in the list.
     } else {
-        console.log('startTaskTimer function is NOT available');
     }
 
     // Save to Backend
@@ -1559,7 +1494,6 @@ async function addTaskFromModal() {
     if (taskElement && newTask.due_date) {
         const newLi = createTaskElement(newTask, handleTaskDeletion);
         taskElement.replaceWith(newLi);
-        console.log('Task element refreshed to show due date');
     }
 
     modalName.value = "";
@@ -1572,7 +1506,6 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
 
     // Log the completed task's XP. The signal reaches the goals page through the
     // backend (the goals page polls /api/last_task_completion for this).
-    console.log('Task Completed(' + taskXP + ' xp)');
 
 
 
@@ -1620,7 +1553,6 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
         const result = await trackTaskCompletion(taskId, currentUser, taskXP);
 
         if (result && result.success) {
-            console.log('Task completed successfully, UI updated');
             // Refresh user data to get updated streak (this will filter out completed tasks)
             await loadUserData();
             // A completed task can finish a "tasks" goal server-side — check now so
@@ -1843,7 +1775,6 @@ function syncTaskToCalendar(task) {
 
         localStorage.setItem('dashboardTasks', JSON.stringify(dashboardTasks));
 
-        console.log('Task synced to calendar:', task.name);
 
     }
 
@@ -1883,7 +1814,6 @@ function removeDashboardTaskFromCalendar(taskId) {
 
         localStorage.setItem('dashboardTasks', JSON.stringify(dashboardTasks));
 
-        console.log('Task removed from calendar:', taskId);
 
     }
 

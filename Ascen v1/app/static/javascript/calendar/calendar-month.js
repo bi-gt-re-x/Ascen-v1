@@ -515,7 +515,6 @@ function loadCalendarData() {
 
 
 
-    console.log('Calendar data loaded successfully');
 
 
 
@@ -583,7 +582,6 @@ function migrateAllSubtasks() {
 
 
 
-                            console.log('Migrated string subtask to object:', subtask);
 
 
 
@@ -623,7 +621,6 @@ function migrateAllSubtasks() {
 
 
 
-        console.log('Migration completed and saved');
 
 
 
@@ -826,7 +823,6 @@ function resetCalendarData() {
 
 
 
-    console.log('Calendar data reset to defaults');
 
 
 
@@ -1078,7 +1074,6 @@ function calculateDailyIntensity(dateStr) {
 
 
 
-    console.log('calculateDailyIntensity called for date:', dateStr);
 
 
 
@@ -1150,7 +1145,6 @@ function calculateDailyIntensity(dateStr) {
 
 
 
-    console.log('Tasks for day:', tasksForDay);
 
 
 
@@ -1162,7 +1156,6 @@ function calculateDailyIntensity(dateStr) {
 
 
 
-        console.log('No tasks for this day, returning 0%');
 
 
 
@@ -1206,7 +1199,6 @@ function calculateDailyIntensity(dateStr) {
 
 
 
-    console.log('Total XP:', totalXP, 'Task count:', tasksForDay.length, 'Calculated percentage:', roundedPercentage);
 
 
 
@@ -1515,7 +1507,6 @@ function addDashboardTaskToCalendar(task) {
 
 
 
-            console.log('Adding dashboard task subtask with XP:', taskXP, 'for task:', task.name, 'Task object:', JSON.stringify(task));
 
 
 
@@ -1571,7 +1562,6 @@ function addDashboardTaskToCalendar(task) {
 
 
 
-            console.log('Adding dashboard task subtask (fallback) with XP:', taskXP, 'for task:', task.name, 'Task object:', JSON.stringify(task));
 
 
 
@@ -1719,7 +1709,6 @@ function clearAllDashboardTasks() {
 
 
 
-    console.log('All dashboard tasks cleared from calendar');
 
 
 
@@ -1895,7 +1884,6 @@ function initializeCalendar() {
 
 
 
-    console.log('Initializing calendar...');
 
 
 
@@ -1922,13 +1910,11 @@ function initializeCalendar() {
     // Check for stored task completions from dashboard and apply them
     const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]');
     if (completedTasks.length > 0) {
-        console.log('📅 Found stored completions from dashboard:', completedTasks);
         // Apply completions to dashboardTasks and dateContent
         completedTasks.forEach(taskId => {
             const task = dashboardTasks.find(t => String(t.id) === String(taskId));
             if (task) {
                 task.completed = true;
-                console.log('✅ Applied completion to dashboardTask:', task.name);
             }
             // Also update dateContent
             Object.keys(dateContent).forEach(dateStr => {
@@ -1938,7 +1924,6 @@ function initializeCalendar() {
                             section.subtasks.forEach(subtask => {
                                 if (typeof subtask === 'object' && String(subtask.taskId) === String(taskId)) {
                                     subtask.completed = true;
-                                    console.log('✅ Applied completion to subtask on', dateStr, ':', subtask.text);
                                 }
                             });
                         }
@@ -1948,7 +1933,6 @@ function initializeCalendar() {
         });
         // Clear the stored completions after applying
         localStorage.removeItem('completedTasks');
-        console.log('📅 Cleared stored completions after applying');
         saveCalendarData();
     }
 
@@ -1958,7 +1942,6 @@ function initializeCalendar() {
 
 
 
-    console.log('Calendar data loaded. Rendering calendar...');
 
 
 
@@ -1974,7 +1957,6 @@ function initializeCalendar() {
 
 
 
-    console.log('Calendar rendered. Auto-selecting today\'s date...');
 
 
 
@@ -2010,7 +1992,6 @@ function initializeCalendar() {
 
 
 
-            console.log('Auto-selecting today\'s date:', dateStr);
 
 
 
@@ -2022,7 +2003,6 @@ function initializeCalendar() {
 
 
 
-            console.log('Could not find today\'s date element:', dateStr);
 
 
 
@@ -2338,11 +2318,9 @@ function selectDate(dateStr, element) {
 
 
 
-    console.log('selectDate called with dateStr:', dateStr);
 
 
 
-    console.log('Current dashboardTasks:', dashboardTasks);
 
 
 
@@ -2510,7 +2488,6 @@ function selectDate(dateStr, element) {
 
 
 
-            console.log('Checking task:', task.name, 'due date:', task.due_date, 'taskDateStr:', taskDateStr, 'selected dateStr:', dateStr);
 
 
 
@@ -3018,7 +2995,6 @@ function selectDate(dateStr, element) {
 
 
 
-    console.log('Selected date:', dateStr);
 
 
 
@@ -3479,7 +3455,6 @@ function updateBottomSection(dateStr) {
 
 
 
-        console.log('Setting bar width to:', percentage + '%');
 
 
 
@@ -3519,7 +3494,6 @@ function updateBottomSection(dateStr) {
 
 
 
-        console.log('No tasks, showing message in intensity bar');
 
 
 
@@ -3615,7 +3589,6 @@ function updateBottomSection(dateStr) {
 
 
 
-    console.log('Focus input created with value:', content.focus);
 
 
 
@@ -3631,7 +3604,6 @@ function updateBottomSection(dateStr) {
 
 
 
-        console.log('Focus input changed to:', e.target.value);
 
 
 
@@ -3655,7 +3627,6 @@ function updateBottomSection(dateStr) {
 
 
 
-        console.log('Focus input blurred, saving:', e.target.value);
 
 
 
@@ -3776,7 +3747,6 @@ function updateBottomSection(dateStr) {
 
 
 
-                console.log('Adding conflict class to section', index, section.startTime, '-', section.endTime);
 
 
 
@@ -3916,7 +3886,6 @@ function updateBottomSection(dateStr) {
 
 
 
-                            console.log('Subtask:', subtaskText, 'XP:', subtaskXP, 'Type:', typeof subtask);
 
 
 
@@ -3980,7 +3949,6 @@ function updateBottomSection(dateStr) {
 
 
 
-                            console.log('Priority class for subtask:', priorityClass);
 
 
 
@@ -3998,13 +3966,11 @@ function updateBottomSection(dateStr) {
                                     subtaskCompleted = window.backendTaskStatuses[subtask.taskId].completed;
                                     subtaskExpired = window.backendTaskStatuses[subtask.taskId].timer_expired || false;
                                     subtaskTimeout = window.backendTaskStatuses[subtask.taskId].status === 'timeout';
-                                    console.log('🔍 Cached backend task status:', { taskId: subtask.taskId, completed: subtaskCompleted, expired: subtaskExpired, timeout: subtaskTimeout });
                                 } else {
                                     // Fallback to local subtask.completed
                                     subtaskCompleted = subtask.completed || false;
                                     subtaskExpired = subtask.timer_expired || false;
                                     subtaskTimeout = subtask.status === 'timeout';
-                                    console.log('🔍 Using local subtask.completed (no cache):', { subtaskText: subtask.text, subtaskCompleted, subtaskExpired, subtaskTimeout });
                                 }
                             }
 
@@ -4040,8 +4006,6 @@ function updateBottomSection(dateStr) {
 
                             const subtaskInProgressBadge = subtaskTimeout && isDashboardTask ? `<span class="timeout-badge">TIME'S UP</span>` : subtaskExpired && isDashboardTask ? `<span class="expired-badge">TIME'S UP!</span>` : (!subtaskCompleted && isDashboardTask) ? `<span class="in-progress-badge">In Progress</span>` : (subtaskCompleted && isDashboardTask) ? `<span class="completed-badge">COMPLETED</span>` : '';
 
-                            console.log("Rendering:", subtask.taskId, "completed=", subtask.completed, "subtaskCompleted=", subtaskCompleted);
-                            console.log('Subtask rendering:', { subtaskText, isDashboardTask, subtaskCompleted, priority: priorityClass, badge: subtaskInProgressBadge });
 
 
 
@@ -4053,7 +4017,6 @@ function updateBottomSection(dateStr) {
 
 
 
-                            console.log('Final subtask class:', finalClass, 'Badge:', subtaskInProgressBadge);
 
 
 
@@ -4578,7 +4541,6 @@ function removeSubtask(index, subIndex) {
 
 
 
-            console.log('Cannot remove dashboard task subtask');
 
 
 
@@ -4694,7 +4656,6 @@ function updateSubtask(index, subIndex, value) {
 
 
 
-            console.log('Cannot edit dashboard task subtask');
 
 
 
@@ -4854,7 +4815,6 @@ function checkForConflicts() {
 
 
 
-    console.log('Checking conflicts for', timestamps.length, 'sections');
 
 
 
@@ -4878,7 +4838,6 @@ function checkForConflicts() {
 
 
 
-            console.log('*** SAME START/END TIME DETECTED ***', section.startTime);
 
 
 
@@ -4950,7 +4909,6 @@ function checkForConflicts() {
 
 
 
-            console.log(`Comparing section ${i} (${section1.startTime}-${section1.endTime}) with section ${j} (${section2.startTime}-${section2.endTime})`);
 
 
 
@@ -4974,7 +4932,6 @@ function checkForConflicts() {
 
 
 
-                console.log('*** IDENTICAL TIMEFRAME DETECTED ***');
 
 
 
@@ -4994,7 +4951,6 @@ function checkForConflicts() {
 
 
 
-    console.log('Conflict check complete. Conflicts:', timestamps.map((s, i) => i + ': ' + (s.hasConflict ? 'YES' : 'NO')).join(', '));
 
 
 
@@ -5831,11 +5787,9 @@ function confirmAddSection() {
 
 
 
-    console.log('Confirm add section:', { timeframeName, startTime, endTime, recurrenceType, selectedDate });
 
 
 
-    console.log('Current timestamps before add:', dateContent[selectedDate].timestamps);
 
 
 
@@ -5991,7 +5945,6 @@ function confirmAddSection() {
 
 
 
-    console.log('Selected days for recurrence:', selectedDays);
 
 
 
@@ -6055,7 +6008,6 @@ function confirmAddSection() {
 
 
 
-        console.log('Selected date day of week:', selectedDayOfWeek, 'matches:', selectedDateMatches);
 
 
 
@@ -6071,7 +6023,6 @@ function confirmAddSection() {
 
 
 
-        console.log('Selected date day of month:', selectedDayOfMonth, 'matches:', selectedDateMatches);
 
 
 
@@ -6140,7 +6091,6 @@ function confirmAddSection() {
 
 
 
-        console.log('Added section to selected date');
 
 
 
@@ -6148,7 +6098,6 @@ function confirmAddSection() {
 
 
 
-        console.log('Did not add section to selected date (does not match recurrence pattern)');
 
 
 
@@ -6160,7 +6109,6 @@ function confirmAddSection() {
 
 
 
-    console.log('Current timestamps after push:', dateContent[selectedDate].timestamps);
 
 
 
@@ -6176,7 +6124,6 @@ function confirmAddSection() {
 
 
 
-        console.log('Calling addRecurringSections with:', recurrenceType, selectedDays);
 
 
 
@@ -6188,7 +6135,6 @@ function confirmAddSection() {
 
 
 
-        console.log('Not adding recurring sections. recurrenceType:', recurrenceType, 'selectedDays.length:', selectedDays.length);
 
 
 
@@ -6200,7 +6146,6 @@ function confirmAddSection() {
 
 
 
-    console.log('Current timestamps after recurrence:', dateContent[selectedDate].timestamps);
 
 
 
@@ -6232,7 +6177,6 @@ function confirmAddSection() {
 
 
 
-    console.log('Final timestamps after UI update:', dateContent[selectedDate].timestamps);
 
 
 
@@ -6368,7 +6312,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-    console.log('Adding recurring sections:', { recurrenceType, selectedDays, startYear, startMonth });
 
 
 
@@ -6396,7 +6339,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-    console.log('Recurrence period:', { startYear, startMonth, endYear, endMonth });
 
 
 
@@ -6484,7 +6426,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-                            console.log(`Skipping selected date ${dateStr} in addRecurringSections`);
 
 
 
@@ -6508,7 +6449,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-                        console.log(`Date ${dateStr} before: ${beforeCount} tasks`);
 
 
 
@@ -6608,7 +6548,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-                            console.log('Added weekly recurring section to:', dateStr);
 
 
 
@@ -6628,7 +6567,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-                            console.log(`Date ${dateStr} after: ${afterCount} tasks`);
 
 
 
@@ -6708,7 +6646,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-                        console.log(`Skipping selected date ${dateStr} in addRecurringSections`);
 
 
 
@@ -6732,7 +6669,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-                    console.log(`Date ${dateStr} before: ${beforeCount} tasks`);
 
 
 
@@ -6832,7 +6768,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-                        console.log('Added monthly recurring section to:', dateStr);
 
 
 
@@ -6852,7 +6787,6 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-                        console.log(`Date ${dateStr} after: ${afterCount} tasks`);
 
 
 
@@ -6880,11 +6814,9 @@ function addRecurringSections(section, recurrenceType, selectedDays) {
 
 
 
-    console.log('Finished adding recurring sections. Total added:', addedCount);
 
 
 
-    console.log('Total dates in dateContent:', Object.keys(dateContent).length);
 
 
 
@@ -7671,7 +7603,6 @@ function deletePlaceholderTaskPermanently(section) {
 
 
 
-    console.log('Deleted placeholder task permanently:', section.task);
 
 
 
@@ -7811,7 +7742,6 @@ function deletePlaceholderTaskForPeriod(section, months) {
 
 
 
-                console.log('Deleted placeholder task from:', dateStr);
 
 
 
@@ -7827,7 +7757,6 @@ function deletePlaceholderTaskForPeriod(section, months) {
 
 
 
-    console.log('Deleted placeholder task for', months, 'months:', section.task);
 
 
 
@@ -8159,7 +8088,6 @@ function doneDelete() {
 
 
 
-                            console.log('Deleted placeholder task from:', dateStr);
 
 
 
@@ -8291,7 +8219,6 @@ function doneDelete() {
 
 
 
-                            console.log('Deleted placeholder task from:', dateStr);
 
 
 
@@ -9345,11 +9272,9 @@ function confirmEditSection() {
 
 
 
-    console.log('Confirm edit section:', { timeframeName, startTime, endTime, recurrenceType, selectedDate, editingSectionIndex });
 
 
 
-    console.log('Current timestamps before edit:', dateContent[selectedDate].timestamps);
 
 
 
@@ -9533,7 +9458,6 @@ function confirmEditSection() {
 
 
 
-    console.log('Old section data:', { oldTask, oldStartTime, oldEndTime, oldRecurrence });
 
 
 
@@ -9569,7 +9493,6 @@ function confirmEditSection() {
 
 
 
-    console.log('Current timestamps after update:', dateContent[selectedDate].timestamps);
 
 
 
@@ -9585,7 +9508,6 @@ function confirmEditSection() {
 
 
 
-        console.log('Removing old recurring instances...');
 
 
 
@@ -9597,7 +9519,6 @@ function confirmEditSection() {
 
 
 
-        console.log('Not removing old recurring instances (old recurrence was none)');
 
 
 
@@ -9617,7 +9538,6 @@ function confirmEditSection() {
 
 
 
-        console.log('Removing section from current date since recurrence changed to none');
 
 
 
@@ -9637,7 +9557,6 @@ function confirmEditSection() {
 
 
 
-        console.log('Adding new recurring instances...');
 
 
 
@@ -9677,7 +9596,6 @@ function confirmEditSection() {
 
 
 
-    console.log('Final timestamps after UI update:', dateContent[selectedDate].timestamps);
 
 
 
@@ -9721,7 +9639,6 @@ function removeOldRecurringInstances(taskName, startTime, endTime) {
 
 
 
-    console.log('Removing old recurring instances:', { taskName, startTime, endTime });
 
 
 
@@ -9769,7 +9686,6 @@ function removeOldRecurringInstances(taskName, startTime, endTime) {
 
 
 
-                    console.log('Removed old recurring instance from:', dateStr);
 
 
 
@@ -9797,7 +9713,6 @@ function removeOldRecurringInstances(taskName, startTime, endTime) {
 
 
 
-                console.log(`Date ${dateStr}: ${beforeCount} -> ${afterCount} tasks`);
 
 
 
@@ -9926,7 +9841,6 @@ async function loadBackendTasksIntoCalendar() {
             existing.add(String(t.id));
             added++;
         });
-        console.log('📅 Merged backend tasks into calendar:', added, 'added of', data.tasks.length);
 
         // Re-render so the merged tasks appear on the grid and in the selected
         // day's list + progress.
@@ -9942,13 +9856,11 @@ async function loadBackendTasksIntoCalendar() {
 }
 
 async function fetchBackendTaskStatuses() {
-    console.log('📅 Fetching backend task statuses...');
     try {
         // Get all task IDs from dashboardTasks
         const taskIds = dashboardTasks.map(t => t.id);
         
         if (taskIds.length === 0) {
-            console.log('📅 No tasks to fetch statuses for');
             return;
         }
         
@@ -9966,38 +9878,26 @@ async function fetchBackendTaskStatuses() {
                         completed: data.completed,
                         status: data.status
                     };
-                    console.log('📅 Cached backend status for task:', taskId, data.completed);
                 }
             } catch (error) {
                 console.error('📅 Error fetching status for task:', taskId, error);
             }
         }
         
-        console.log('📅 Backend task statuses cached:', Object.keys(window.backendTaskStatuses).length, 'tasks');
     } catch (error) {
         console.error('📅 Error fetching backend task statuses:', error);
     }
 }
 
 // CALENDAR.JS LOADED
-console.log('📅 CALENDAR.JS FILE LOADED SUCCESSFULLY');
 
 // Test function definition
-console.log('📅 About to define markTaskCompletedInCalendar function');
 
 // Mark dashboard task as completed in calendar
 
 function markTaskCompletedInCalendar(taskId, completionStatus) {
 
-    console.log("=== TASK COMPLETION RECEIVED ===");
-    console.log("taskId:", taskId);
-    console.log("completionStatus:", completionStatus);
 
-    console.log('📅 === TASK MARKED AS COMPLETED IN CALENDAR ===');
-    console.log('Task ID:', taskId);
-    console.log('Task ID type:', typeof taskId);
-    console.log('Completion Status:', completionStatus);
-    console.log('Timestamp:', new Date().toISOString());
 
     // Update backend task status cache immediately
     window.backendTaskStatuses = window.backendTaskStatuses || {};
@@ -10005,23 +9905,15 @@ function markTaskCompletedInCalendar(taskId, completionStatus) {
         completed: completionStatus === 'done',
         status: completionStatus
     };
-    console.log('📅 Updated backend task status cache:', { taskId, completed: window.backendTaskStatuses[taskId].completed });
 
-    console.log('Current dashboardTasks:', dashboardTasks);
-    console.log('DashboardTasks length:', dashboardTasks.length);
-    console.log('Current dashboardTasks IDs:', dashboardTasks.map(t => ({ id: t.id, name: t.name, idType: typeof t.id })));
-    console.log('Looking for task ID:', taskId, 'Type:', typeof taskId);
 
-    console.log('Current dateContent keys:', Object.keys(dateContent));
 
     // If dashboardTasks is empty, store the completion in localStorage for when calendar loads
     if (dashboardTasks.length === 0) {
-        console.log('⚠️ dashboardTasks is empty - storing completion in localStorage for calendar page');
         const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]');
         if (!completedTasks.includes(taskId)) {
             completedTasks.push(taskId);
             localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
-            console.log('✅ Stored task completion in localStorage:', taskId);
         }
         return;
     }
@@ -10030,19 +9922,16 @@ function markTaskCompletedInCalendar(taskId, completionStatus) {
 
     // Find the task in dashboardTasks array
     const task = dashboardTasks.find(t => {
-        console.log('Comparing IDs:', t.id, 'vs', taskId, 'Types:', typeof t.id, typeof taskId, 'Match:', String(t.id) === String(taskId));
         return String(t.id) === String(taskId);
     });
 
     if (!task) {
 
-        console.log('❌ ERROR: Task not found in dashboardTasks:', taskId);
 
         return;
 
     }
 
-    console.log('✅ Task found:', task.name, 'Previous completed status:', task.completed);
 
     
 
@@ -10059,7 +9948,6 @@ function markTaskCompletedInCalendar(taskId, completionStatus) {
         task.completed_at = null;
     }
 
-    console.log('✅ Task marked as completed in dashboardTasks array with status:', completionStatus);
 
     
 
@@ -10080,13 +9968,9 @@ function markTaskCompletedInCalendar(taskId, completionStatus) {
                     section.subtasks.forEach(subtask => {
 
                         // Check if this subtask is the dashboard task
-                        console.log("Comparing:", subtask.taskId, typeof subtask.taskId, "vs", taskId, typeof taskId);
                         if (typeof subtask === 'object' && String(subtask.taskId) === String(taskId)) {
-                            console.log('🎯 Found matching subtask:', subtask.text, 'Current completed:', subtask.completed);
                             subtask.completed = completionStatus === 'done' ? true : completionStatus;
-                            console.log("UPDATED SUBTASK:", subtask.taskId, subtask.completed);
                             subtasksUpdated++;
-                            console.log(`✅ Marked subtask as completed on ${dateStr}:`, subtask.text, 'New Status:', subtask.completed);
                         }
 
                     });
@@ -10099,31 +9983,23 @@ function markTaskCompletedInCalendar(taskId, completionStatus) {
 
     });
 
-    console.log('✅ Total subtasks updated:', subtasksUpdated);
 
-    console.log("=== UPDATED dateContent ===");
-    console.log(JSON.stringify(dateContent, null, 2));
 
     
 
     // Save the updated data
     saveCalendarData();
 
-    console.log('Data saved to localStorage');
 
     // Refresh the calendar UI to show the updated completion state
     if (selectedDate) {
-        console.log('🔄 Refreshing calendar UI for selected date:', selectedDate);
         updateBottomSection(selectedDate);
     } else {
-        console.log('No date selected, skipping calendar UI refresh');
     }
 
-    console.log('✅ === TASK COMPLETION SYNC COMPLETE ===');
 
     // Sync to backend API to ensure persistence
     if (typeof fetch === 'function') {
-        console.log('📤 Syncing task completion to backend API');
         fetch('/api/update_task_completion', {
             method: 'POST',
             headers: {
@@ -10135,21 +10011,16 @@ function markTaskCompletedInCalendar(taskId, completionStatus) {
             })
         }).then(response => response.json())
         .then(data => {
-            console.log('✅ Task completion synced to backend:', data);
         })
         .catch(error => {
             console.error('❌ Error syncing task completion to backend:', error);
         });
     } else {
-        console.log('⚠️ Fetch not available, skipping backend sync');
     }
 
 }
 
 function markTaskExpiredInCalendar(taskId) {
-    console.log("=== TASK TIMER EXPIRED IN CALENDAR ===");
-    console.log("taskId:", taskId);
-    console.log("Timestamp:", new Date().toISOString());
 
     // Update backend task status cache with timeout status
     window.backendTaskStatuses = window.backendTaskStatuses || {};
@@ -10158,7 +10029,6 @@ function markTaskExpiredInCalendar(taskId) {
         status: 'timeout',
         timer_expired: true
     };
-    console.log('📅 Updated backend task status cache with timeout status:', { taskId, status: 'timeout' });
 
     // Update all occurrences of this task in dateContent
     let subtasksUpdated = 0;
@@ -10170,12 +10040,10 @@ function markTaskExpiredInCalendar(taskId) {
                     section.subtasks.forEach(subtask => {
                         // Check if this subtask is the dashboard task
                         if (typeof subtask === 'object' && String(subtask.taskId) === String(taskId)) {
-                            console.log('🎯 Found matching subtask for timeout:', subtask.text);
                             subtask.timer_expired = true;
                             subtask.completed = false;
                             subtask.status = 'timeout';
                             subtasksUpdated++;
-                            console.log(`✅ Marked subtask as timeout on ${dateStr}:`, subtask.text);
                         }
                     });
                 }
@@ -10183,32 +10051,23 @@ function markTaskExpiredInCalendar(taskId) {
         }
     });
 
-    console.log('✅ Total subtasks marked as timeout:', subtasksUpdated);
 
     // Save the updated data
     saveCalendarData();
-    console.log('Data saved to localStorage');
 
     // Refresh the calendar UI to show the timeout state
     if (selectedDate) {
-        console.log('🔄 Refreshing calendar UI for selected date:', selectedDate);
         updateBottomSection(selectedDate);
     } else {
-        console.log('No date selected, skipping calendar UI refresh');
     }
 
-    console.log('✅ === TASK TIMEOUT SYNC COMPLETE ===');
 }
 
 function removeTaskFromCalendar(taskId) {
-    console.log("=== REMOVING TASK FROM CALENDAR ===");
-    console.log("taskId:", taskId);
-    console.log("Timestamp:", new Date().toISOString());
 
     // Remove from backend task status cache
     if (window.backendTaskStatuses && window.backendTaskStatuses[taskId]) {
         delete window.backendTaskStatuses[taskId];
-        console.log('📅 Removed task from backend status cache:', taskId);
     }
 
     // Remove all occurrences of this task from dateContent
@@ -10228,50 +10087,36 @@ function removeTaskFromCalendar(taskId) {
                     const removedCount = originalLength - section.subtasks.length;
                     subtasksRemoved += removedCount;
                     if (removedCount > 0) {
-                        console.log(`✅ Removed ${removedCount} subtask(s) from ${dateStr}`);
                     }
                 }
             });
         }
     });
 
-    console.log('✅ Total subtasks removed:', subtasksRemoved);
 
     // Save the updated data
     saveCalendarData();
-    console.log('Data saved to localStorage');
 
     // Refresh the calendar UI
     if (selectedDate) {
-        console.log('🔄 Refreshing calendar UI for selected date:', selectedDate);
         updateBottomSection(selectedDate);
     } else {
-        console.log('No date selected, skipping calendar UI refresh');
     }
 
-    console.log('✅ === TASK REMOVAL FROM CALENDAR COMPLETE ===');
 }
 
 // Make function globally accessible
-console.log('📅 About to expose removeTaskFromCalendar to global scope');
 window.removeTaskFromCalendar = removeTaskFromCalendar;
-console.log('📅 Function removeTaskFromCalendar exposed successfully');
 
-console.log('📅 Function markTaskCompletedInCalendar defined successfully. typeof:', typeof markTaskCompletedInCalendar);
 
 // Make function globally accessible
 
-console.log('📅 About to expose markTaskCompletedInCalendar to global scope');
 window.markTaskCompletedInCalendar = markTaskCompletedInCalendar;
 window.markDashboardTaskCompletedInCalendar = markTaskCompletedInCalendar;
-console.log('📅 Function exposed successfully. typeof window.markTaskCompletedInCalendar:', typeof window.markTaskCompletedInCalendar);
-console.log('📅 Function itself:', window.markTaskCompletedInCalendar);
 
 // Test the function immediately after definition
-console.log('🧪 Testing markTaskCompletedInCalendar function immediately...');
 try {
     if (typeof window.markTaskCompletedInCalendar === 'function') {
-        console.log('✅ Function is callable, calling with test data...');
         window.markTaskCompletedInCalendar('test-id', 'test-status');
     } else {
         console.error('❌ Function is not callable after exposure');

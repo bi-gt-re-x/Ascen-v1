@@ -795,7 +795,6 @@ document.addEventListener('DOMContentLoaded', function () {
     dailyXpCanvas   = document.getElementById('dailyXpChart');
     avgTaskXpCanvas = document.getElementById('averageXpChart');
 
-    console.log('Canvas elements found:', !!growthCanvas, !!dailyXpCanvas, !!avgTaskXpCanvas);
 
     if (!growthCanvas || !dailyXpCanvas || !avgTaskXpCanvas) {
         console.error('Missing canvas elements');
@@ -806,7 +805,6 @@ document.addEventListener('DOMContentLoaded', function () {
     dailyXpCtx   = dailyXpCanvas.getContext('2d');
     avgTaskXpCtx = avgTaskXpCanvas.getContext('2d');
 
-    console.log('Canvas contexts created:', !!growthCtx, !!dailyXpCtx, !!avgTaskXpCtx);
 
     // Load the graded report card (the primary view on this page).
     loadGrowthRatings();
@@ -857,7 +855,6 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // Force initial chart draw after data loads
     setTimeout(() => {
-        console.log('Forcing chart draw, data length:', chartData.labels.length);
         if (chartData.labels.length > 0) {
             drawChart('cumulative');
             drawChart('daily');

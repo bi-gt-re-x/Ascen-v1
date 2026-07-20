@@ -79,12 +79,6 @@ function createTaskElement(task, onDeleteCallback) {
 }
 
 function updateStatsUI(xp, level, xpRequired, tasksCompleted) {
-    console.log('updateStatsUI called with:', {
-        xp: xp,
-        level: level,
-        xpRequired: xpRequired,
-        tasksCompleted: tasksCompleted
-    });
 
     const xpEl = document.getElementById('xp');
     const levelEl = document.getElementById('level');
@@ -135,7 +129,6 @@ function showXPPopup(amount) {
 }
 
 function updateStreakUI(currentStreak, bestStreak) {
-    console.log('Updating streak UI:', { currentStreak, bestStreak });
 
     const currentStreakEl = document.getElementById('currentStreak');
     const bestStreakEl = document.getElementById('bestStreak');

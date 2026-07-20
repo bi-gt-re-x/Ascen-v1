@@ -191,10 +191,6 @@ async function loginAPI(username, password) {
 
 async function trackTaskCompletion(taskId, username, taskXP) {
     try {
-        console.log('=== TASK COMPLETION STARTED ===');
-        console.log('Task ID:', taskId);
-        console.log('Username:', username);
-        console.log('Task XP:', taskXP);
         
         // Call the complete_task endpoint to handle XP, stats, and task status
         const completeResponse = await apiRequest('/api/complete_task', {
@@ -206,12 +202,6 @@ async function trackTaskCompletion(taskId, username, taskXP) {
         });
 
         if (completeResponse.success) {
-            console.log('✅ TASK COMPLETED SUCCESSFULLY');
-            console.log('Task ID:', completeResponse.task_id);
-            console.log('Completion Status:', completeResponse.completion_status);
-            console.log('XP Earned:', completeResponse.xp_earned);
-            console.log('New Level:', completeResponse.new_level);
-            console.log('New Tasks Completed:', completeResponse.new_tasks_completed);
             
             // Update UI with backend-calculated values
             if (typeof updateStatsUI === 'function') {
@@ -224,18 +214,12 @@ async function trackTaskCompletion(taskId, username, taskXP) {
             }
 
             // Send task completion data to calendar.js for green completion state
-            console.log('🔍 Checking if markTaskCompletedInCalendar is available:', typeof markTaskCompletedInCalendar);
-            console.log('🔍 Available functions:', typeof window.markTaskCompletedInCalendar, typeof window.markDashboardTaskCompletedInCalendar);
-            console.log('🔍 window object keys:', Object.keys(window).filter(key => key.includes('mark')));
             
             if (typeof markTaskCompletedInCalendar === 'function') {
-                console.log('📅 SENDING TASK COMPLETION TO CALENDAR');
                 markTaskCompletedInCalendar(completeResponse.task_id, completeResponse.completion_status);
             } else if (typeof window.markTaskCompletedInCalendar === 'function') {
-                console.log('📅 SENDING TASK COMPLETION TO CALENDAR (via window)');
                 window.markTaskCompletedInCalendar(completeResponse.task_id, completeResponse.completion_status);
             } else if (typeof window.markDashboardTaskCompletedInCalendar === 'function') {
-                console.log('📅 SENDING TASK COMPLETION TO CALENDAR (via markDashboardTaskCompletedInCalendar)');
                 window.markDashboardTaskCompletedInCalendar(completeResponse.task_id, completeResponse.completion_status);
             } else {
                 console.error('❌ markTaskCompletedInCalendar is not available!');
@@ -251,7 +235,6 @@ async function trackTaskCompletion(taskId, username, taskXP) {
                 })
             });
 
-            console.log('=== TASK COMPLETION FLOW COMPLETE ===');
             return completeResponse;
         } else {
             console.error('❌ TASK COMPLETION FAILED:', completeResponse);
