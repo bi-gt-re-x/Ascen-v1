@@ -85,37 +85,62 @@ function hexToRgbArr(hex) {
 // yellow / blue shifted away from the task-difficulty colours so an event never
 // reads as a task colour. [h, s, l] with s,l in 0..1.
 const EVENT_HSL_CANDIDATES = [
+    // Each entry is [hue, sat, light, family]; family drives the pick weighting.
     // browns (warm, muted, darker)
-    [22, 0.55, 0.34], [28, 0.45, 0.40], [33, 0.50, 0.30], [16, 0.42, 0.38], [30, 0.35, 0.46], [25, 0.60, 0.44],
+    [22, 0.55, 0.34, 'brown'], [28, 0.45, 0.40, 'brown'], [33, 0.50, 0.30, 'brown'], [16, 0.42, 0.38, 'brown'], [30, 0.35, 0.46, 'brown'], [25, 0.60, 0.44, 'brown'],
     // greys (near-zero saturation, light → dark)
-    [30, 0.05, 0.45], [30, 0.05, 0.56], [210, 0.06, 0.50], [210, 0.05, 0.64], [30, 0.05, 0.70],
+    [30, 0.05, 0.45, 'gray'], [30, 0.05, 0.56, 'gray'], [210, 0.06, 0.50, 'gray'], [210, 0.05, 0.64, 'gray'], [30, 0.05, 0.70, 'gray'],
     // oranges
-    [30, 0.85, 0.55], [38, 0.80, 0.52], [23, 0.78, 0.50], [43, 0.75, 0.58],
+    [30, 0.85, 0.55, 'orange'], [38, 0.80, 0.52, 'orange'], [23, 0.78, 0.50, 'orange'], [43, 0.75, 0.58, 'orange'],
     // greens
-    [95, 0.45, 0.45], [120, 0.42, 0.42], [140, 0.45, 0.40], [105, 0.55, 0.50], [150, 0.34, 0.46], [82, 0.50, 0.48],
+    [95, 0.45, 0.45, 'green'], [120, 0.42, 0.42, 'green'], [140, 0.45, 0.40, 'green'], [105, 0.55, 0.50, 'green'], [150, 0.34, 0.46, 'green'], [82, 0.50, 0.48, 'green'],
     // reds shifted off the task red (brick / rose)
-    [8, 0.60, 0.45], [12, 0.55, 0.52], [350, 0.42, 0.46],
+    [8, 0.60, 0.45, 'red'], [12, 0.55, 0.52, 'red'], [350, 0.42, 0.46, 'red'],
     // yellows shifted off the task yellow (mustard / gold)
-    [48, 0.68, 0.48], [52, 0.60, 0.55], [45, 0.55, 0.44],
+    [48, 0.68, 0.48, 'yellow'], [52, 0.60, 0.55, 'yellow'], [45, 0.55, 0.44, 'yellow'],
     // blues shifted off the task blue (steel / indigo)
-    [200, 0.50, 0.48], [225, 0.45, 0.52], [210, 0.42, 0.42], [235, 0.34, 0.56]
+    [200, 0.50, 0.48, 'blue'], [225, 0.45, 0.52, 'blue'], [210, 0.42, 0.42, 'blue'], [235, 0.34, 0.56, 'blue'],
+    // purples (deliberately rarer)
+    [270, 0.45, 0.52, 'purple'], [285, 0.40, 0.48, 'purple'], [258, 0.42, 0.56, 'purple'],
+    // pinks (deliberately rarer)
+    [330, 0.60, 0.60, 'pink'], [340, 0.55, 0.66, 'pink'], [318, 0.50, 0.58, 'pink']
 ];
+// Pick-frequency per colour family: orange / green / yellow / red / blue come up
+// more often; purple / pink / gray / brown are the rarer accents.
+const EVENT_FAMILY_WEIGHT = {
+    orange: 3, green: 3, yellow: 3, red: 3, blue: 3,
+    purple: 1, pink: 1, gray: 1, brown: 1
+};
 // Task-difficulty colours (blue / yellow / red) events must stay distinct from.
 const TASK_RGB = [[56, 132, 255], [245, 196, 92], [240, 90, 95]];
 function rgbDist2(a, b) { const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2]; return dr * dr + dg * dg + db * db; }
-// Pick the family colour furthest (in RGB) from every colour already in use and
-// from the task colours → each new event is a good amount different.
+// Pick a family colour weighted toward the common families (orange/green/yellow/
+// red/blue) and away from the rarer ones (purple/pink/gray/brown), while still
+// biasing toward colours that sit far (in RGB) from those already in use and the
+// task colours → each new event stays a good amount different, with the requested
+// colour odds.
 function generateDistinctColor() {
     const avoid = (window.eventColorsUsed || []).map(hexToRgbArr).filter(Boolean).concat(TASK_RGB);
-    let best = null, bestScore = -1;
-    for (const c of EVENT_HSL_CANDIDATES) {
+    const scored = EVENT_HSL_CANDIDATES.map(function (c) {
         const rgb = hslToRgb(c[0], c[1], c[2]);
         let minD = Infinity;
         for (const a of avoid) { const d = rgbDist2(rgb, a); if (d < minD) minD = d; }
-        if (minD > bestScore) { bestScore = minD; best = rgb; }
-    }
-    if (!best) best = hslToRgb(30, 0.5, 0.45);
-    return rgbToHex(best[0], best[1], best[2]);
+        if (!isFinite(minD)) minD = 1;   // nothing to avoid yet
+        return { rgb: rgb, family: c[3] || 'other', minD: minD };
+    });
+    const maxD = scored.reduce(function (m, s) { return Math.max(m, s.minD); }, 1) || 1;
+    // Weight = family frequency × a softened distinctness factor, so a common
+    // family can still win even when its nearest match is a little closer.
+    let total = 0;
+    scored.forEach(function (s) {
+        const fw = EVENT_FAMILY_WEIGHT[s.family] || 1;
+        s.weight = fw * (0.3 + 0.7 * (s.minD / maxD));
+        total += s.weight;
+    });
+    let r = Math.random() * total;
+    for (const s of scored) { r -= s.weight; if (r <= 0) return rgbToHex(s.rgb[0], s.rgb[1], s.rgb[2]); }
+    const last = scored[scored.length - 1].rgb;
+    return rgbToHex(last[0], last[1], last[2]);
 }
 // Assign a fresh distinct colour to a new event and persist it to the tracker.
 function assignEventColor() {

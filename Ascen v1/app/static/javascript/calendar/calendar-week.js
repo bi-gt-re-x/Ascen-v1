@@ -145,8 +145,13 @@
     // to their end (completion time if done, else the due date), clamped to the
     // day and the visible hour window. Multi-day tasks fill each day they cover.
     function dayTaskBlocks(iso) {
-        var dayStart = new Date(iso + 'T00:00:00');
-        var dayEnd = new Date(iso + 'T23:59:59.999');
+        // A column runs along the GRID window, not calendar midnight: START_HOUR
+        // (6 AM) that day to END_HOUR (5 AM the next day). Early-morning hours
+        // (before 6 AM) belong to the previous day's column tail, so placing tasks
+        // by this window keeps an overnight task (e.g. 3 PM → 5 AM) as one block on
+        // the correct column instead of wrongly spilling onto the next day.
+        var gridStart = new Date(iso + 'T00:00:00'); gridStart.setHours(START_HOUR, 0, 0, 0);
+        var gridEnd = new Date(gridStart.getTime() + (END_HOUR - START_HOUR) * 3600000);
         var out = [];
         gTasks.forEach(function (t) {
             var startDT = toDate(t.created_at) || toDate(t.due_date);
@@ -159,15 +164,11 @@
             var endDT = compDT || dueDT || new Date(startDT.getTime() + 3600000);
             if (dueDT && endDT > dueDT) endDT = dueDT;
             if (endDT <= startDT) endDT = new Date(startDT.getTime() + 3600000);
-            if (endDT < dayStart || startDT > dayEnd) return;   // no overlap with this day
-            // Hours after midnight (0–5:59) belong to the late-night tail of the
-            // grid, so express them as 24–29 to sit below the day's midnight line.
-            var hourOf = function (dt) {
-                var h = dt.getHours() + dt.getMinutes() / 60;
-                return h < START_HOUR ? h + 24 : h;
-            };
-            var s = startDT < dayStart ? START_HOUR : hourOf(startDT);
-            var e = endDT > dayEnd ? END_HOUR : hourOf(endDT);
+            if (endDT <= gridStart || startDT >= gridEnd) return;   // outside this column's window
+            // Hours measured from the column's 6 AM top: 6 … 29 (29 = 5 AM next day).
+            var hourInCol = function (dt) { return START_HOUR + (dt.getTime() - gridStart.getTime()) / 3600000; };
+            var s = startDT < gridStart ? START_HOUR : hourInCol(startDT);
+            var e = endDT > gridEnd ? END_HOUR : hourInCol(endDT);
             s = Math.max(START_HOUR, Math.min(s, END_HOUR));
             e = Math.max(START_HOUR, Math.min(e, END_HOUR));
             // No minimum: task blocks are sized strictly by their actual time span.
@@ -186,10 +187,10 @@
                 dueDT: toDate(t.due_date),
                 startDT: startDT,
                 completedDT: t.status === 'done' ? toDate(t.completed_at) : null,
-                // Runs past this day's end -> the block continues on the next day.
-                contDT: endDT > dayEnd ? new Date(dayStart.getTime() + 86400000) : null,
-                // Began on an earlier day -> this column is a continuation.
-                cont: startDT < dayStart
+                // Runs past this column's window -> continues on the next day.
+                contDT: endDT > gridEnd ? new Date(gridStart.getTime() + 86400000) : null,
+                // Began before this column's window -> this column is a continuation.
+                cont: startDT < gridStart
             });
         });
         out.sort(function (a, b) { return a.start - b.start; });
@@ -369,17 +370,24 @@
         var name = kind === 'task'
             ? (titleEl ? titleEl.textContent.replace('✓', '').trim() : 'this task')
             : block.getAttribute('data-name');
-        showDeleteConfirm(kind, name, function () {
-            if (kind === 'task') {
-                deleteBlock({ kind: 'task', id: block.getAttribute('data-id') }, iso);
+        if (kind === 'event') {
+            var evName = block.getAttribute('data-name');
+            var evS = block.getAttribute('data-shm');
+            var evE = block.getAttribute('data-ehm');
+            var occs = findEventOccurrences(evName, evS, evE);
+            // A recurring event (more than one occurrence) offers all / this /
+            // choose-specific; a one-off just confirms.
+            if (occs.length > 1) {
+                showRecurrenceDeleteDialog(evName, evS, evE, iso, occs);
             } else {
-                deleteBlock({
-                    kind: 'event',
-                    name: block.getAttribute('data-name'),
-                    startHM: block.getAttribute('data-shm'),
-                    endHM: block.getAttribute('data-ehm')
-                }, iso);
+                showDeleteConfirm('event', name, function () {
+                    deleteBlock({ kind: 'event', name: evName, startHM: evS, endHM: evE }, iso);
+                });
             }
+            return;
+        }
+        showDeleteConfirm(kind, name, function () {
+            deleteBlock({ kind: 'task', id: block.getAttribute('data-id') }, iso);
         });
     }
     // Styled, blocking delete confirmation. A full-viewport backdrop intercepts
@@ -422,6 +430,121 @@
         backdrop.addEventListener('click', function (e) { if (e.target === backdrop) backdrop.remove(); });
         document.body.appendChild(backdrop);
     }
+
+    // --- Recurring-event delete: all / this one / choose specific dates --------
+    // Recurrences of an event are separate timestamps (one per day) that share the
+    // same name + start/end time across the month-view store. Find them all.
+    function findEventOccurrences(name, shm, ehm) {
+        var res = [];
+        if (typeof dateContent === 'undefined') return res;
+        Object.keys(dateContent).forEach(function (key) {
+            var store = dateContent[key];
+            if (!store || !Array.isArray(store.timestamps)) return;
+            var hit = store.timestamps.some(function (t) {
+                return t && t.task === name && t.startTime === shm && t.endTime === ehm;
+            });
+            if (hit) res.push({ key: key, date: keyToDate(key) });
+        });
+        res.sort(function (a, b) { return a.date - b.date; });
+        return res;
+    }
+    function keyToDate(key) {
+        var p = String(key).split('-');
+        return new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1);
+    }
+    // Remove every occurrence of the event on the given month-store keys, persist,
+    // and redraw (which re-runs the overlap check).
+    function removeEventFromKeys(name, shm, ehm, keys) {
+        keys.forEach(function (key) {
+            var store = (typeof dateContent !== 'undefined') ? dateContent[key] : null;
+            if (store && Array.isArray(store.timestamps)) {
+                store.timestamps = store.timestamps.filter(function (t) {
+                    return !(t.task === name && t.startTime === shm && t.endTime === ehm);
+                });
+            }
+        });
+        if (typeof saveCalendarData === 'function') saveCalendarData();
+        renderDayColumns();
+    }
+
+    function showRecurrenceDeleteDialog(name, shm, ehm, thisIso, occs) {
+        closeCardPop();
+        var existing = document.getElementById('wkConfirmBackdrop');
+        if (existing) existing.remove();
+        var thisKey = monthKey(thisIso);
+        var backdrop = document.createElement('div');
+        backdrop.id = 'wkConfirmBackdrop';
+        backdrop.className = 'wk-confirm-backdrop';
+        var pop = document.createElement('div');
+        pop.className = 'wk-confirm-popup';
+        backdrop.appendChild(pop);
+        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) backdrop.remove(); });
+        document.body.appendChild(backdrop);
+
+        function btn(cls, text, onClick) {
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = cls; b.textContent = text;
+            b.addEventListener('click', onClick);
+            return b;
+        }
+        var DAYS3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        function fmtDate(d) { return DAYS3[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate(); }
+
+        // Main view: this / all / choose / cancel.
+        function renderMain() {
+            pop.innerHTML = '';
+            var title = document.createElement('h3');
+            title.className = 'wk-confirm-title';
+            title.textContent = 'Delete recurring event';
+            var msg = document.createElement('p');
+            msg.className = 'wk-confirm-msg';
+            msg.textContent = '"' + name + '" repeats across ' + occs.length + ' days. What should be deleted?';
+            var actions = document.createElement('div');
+            actions.className = 'wk-recur-actions';
+            actions.appendChild(btn('wk-recur-btn', 'Only this occurrence', function () {
+                backdrop.remove(); removeEventFromKeys(name, shm, ehm, [thisKey]);
+            }));
+            actions.appendChild(btn('wk-recur-btn', 'All ' + occs.length + ' occurrences', function () {
+                backdrop.remove(); removeEventFromKeys(name, shm, ehm, occs.map(function (o) { return o.key; }));
+            }));
+            actions.appendChild(btn('wk-recur-btn', 'Choose specific dates…', renderChoose));
+            actions.appendChild(btn('wk-confirm-cancel', 'Cancel', function () { backdrop.remove(); }));
+            pop.appendChild(title); pop.appendChild(msg); pop.appendChild(actions);
+        }
+
+        // Choose view: a checklist of every occurrence date (current pre-checked).
+        function renderChoose() {
+            pop.innerHTML = '';
+            var title = document.createElement('h3');
+            title.className = 'wk-confirm-title';
+            title.textContent = 'Choose dates to delete';
+            var list = document.createElement('div');
+            list.className = 'wk-recur-list';
+            occs.forEach(function (o) {
+                var row = document.createElement('label');
+                row.className = 'wk-recur-row';
+                var cb = document.createElement('input');
+                cb.type = 'checkbox'; cb.value = o.key;
+                if (o.key === thisKey) cb.checked = true;
+                var span = document.createElement('span');
+                span.textContent = fmtDate(o.date);
+                row.appendChild(cb); row.appendChild(span);
+                list.appendChild(row);
+            });
+            var actions = document.createElement('div');
+            actions.className = 'wk-confirm-actions';
+            actions.appendChild(btn('wk-confirm-cancel', 'Back', renderMain));
+            actions.appendChild(btn('wk-confirm-delete', 'Delete selected', function () {
+                var keys = [].slice.call(list.querySelectorAll('input:checked')).map(function (c) { return c.value; });
+                backdrop.remove();
+                if (keys.length) removeEventFromKeys(name, shm, ehm, keys);
+            }));
+            pop.appendChild(title); pop.appendChild(list); pop.appendChild(actions);
+        }
+
+        renderMain();
+    }
+
     // Edit an event through the month view's shared edit modal by pointing
     // selectedDate at the event's day and finding its timestamp index.
     function editEvent(iso, block) {
@@ -481,7 +604,9 @@
         }
         return {
             fill: 'rgba(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ', 0.4)',
-            border: 'rgba(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ', 0.62)'
+            border: 'rgba(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ', 0.62)',
+            // A stronger, near-solid version for the left accent border.
+            left: 'rgba(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ', 0.95)'
         };
     }
     function monthKey(iso) {
@@ -497,6 +622,14 @@
         var H = parseInt(p[0], 10) || 0, M = parseInt(p[1], 10) || 0;
         var ap = H < 12 ? 'AM' : 'PM', h12 = H % 12; if (h12 === 0) h12 = 12;
         return h12 + ':' + (M < 10 ? '0' + M : M) + ' ' + ap;
+    }
+    // Compact start time — drops ":00" on the hour (e.g. "12 PM", "1:45 PM").
+    // Used by the short-event one-row layout.
+    function hmLabelShort(hm) {
+        var p = String(hm).split(':');
+        var H = parseInt(p[0], 10) || 0, M = parseInt(p[1], 10) || 0;
+        var ap = H < 12 ? 'AM' : 'PM', h12 = H % 12; if (h12 === 0) h12 = 12;
+        return M ? (h12 + ':' + (M < 10 ? '0' + M : M) + ' ' + ap) : (h12 + ' ' + ap);
     }
     // User-created events for a day (dashboard tasks and the default daily
     // sessions are excluded — those aren't calendar events).
@@ -715,6 +848,54 @@
         if (!cols || cols.__dragWired) return;
         cols.__dragWired = true;
         var gridH = (END_HOUR - START_HOUR) * HOUR_H;
+        var scroller = document.querySelector('#weekView .wk-scroll');
+        var EDGE = 46;         // px from a scroll edge that triggers auto-scroll
+        var MAX_STEP = 16;     // max px scrolled per frame (faster the closer to the edge)
+
+        // Size the selection from the pointer's Y. Because y is measured against the
+        // column's live top, it stays correct as the grid scrolls, and the gap
+        // clamp keeps the selection out of existing tiles even when those tiles are
+        // scrolled above the view.
+        function applyDrag(clientY) {
+            if (!dragState) return;
+            var y = clientY - dragState.col.getBoundingClientRect().top;
+            y = Math.max(dragState.gap[0], Math.min(y, dragState.gap[1]));   // stop at neighbours
+            // Snap to 5 min, then re-clamp to the gap so rounding can't push an edge
+            // past a neighbour into an existing task/event.
+            var top = Math.max(dragState.gap[0], snapPx(Math.min(dragState.y0, y)));
+            var bottom = Math.min(dragState.gap[1], snapPx(Math.max(dragState.y0, y)));
+            dragState.preview.style.top = top + 'px';
+            dragState.preview.style.height = Math.max(0, bottom - top) + 'px';
+            dragState.curTop = top; dragState.curBottom = bottom;
+            if (bottom - top > 3) dragState.moved = true;
+        }
+
+        // How far to auto-scroll for a pointer near the scroller's top/bottom edge,
+        // scaled by how deep into the edge zone it is. Returns 0 when the selection
+        // can't grow any further that way (it's already flush against its gap).
+        function edgeScroll(clientY) {
+            if (!scroller || !dragState) return 0;
+            var r = scroller.getBoundingClientRect();
+            if (clientY > r.bottom - EDGE && dragState.curBottom < dragState.gap[1]) {
+                return Math.min(MAX_STEP, Math.max(3, (clientY - (r.bottom - EDGE)) / EDGE * MAX_STEP));
+            }
+            if (clientY < r.top + EDGE && dragState.curTop > dragState.gap[0]) {
+                return -Math.min(MAX_STEP, Math.max(3, ((r.top + EDGE) - clientY) / EDGE * MAX_STEP));
+            }
+            return 0;
+        }
+        function autoScrollTick() {
+            if (!dragState) return;
+            var amt = edgeScroll(dragState.lastClientY);
+            if (amt !== 0) {
+                var before = scroller.scrollTop;
+                scroller.scrollTop += amt;
+                if (scroller.scrollTop !== before) applyDrag(dragState.lastClientY);
+                dragState.rafId = requestAnimationFrame(autoScrollTick);
+            } else {
+                dragState.rafId = null;   // idle; a later mousemove restarts it
+            }
+        }
 
         cols.addEventListener('mousedown', function (e) {
             if (e.button !== 0) return;
@@ -728,27 +909,25 @@
             var preview = document.createElement('div');
             preview.className = 'wk-drag-preview';
             col.appendChild(preview);
-            dragState = { iso: col.getAttribute('data-iso'), col: col, y0: y, gap: gap, preview: preview, moved: false };
+            dragState = { iso: col.getAttribute('data-iso'), col: col, y0: y, gap: gap, preview: preview,
+                          moved: false, curTop: y, curBottom: y, lastClientY: e.clientY, rafId: null };
             document.body.style.userSelect = 'none';
         });
 
         document.addEventListener('mousemove', function (e) {
             if (!dragState) return;
-            var y = e.clientY - dragState.col.getBoundingClientRect().top;
-            y = Math.max(dragState.gap[0], Math.min(y, dragState.gap[1]));   // stop at neighbours
-            // Snap to 5 min, then re-clamp to the gap so rounding can't push an edge
-            // past a neighbour into an existing task/event.
-            var top = Math.max(dragState.gap[0], snapPx(Math.min(dragState.y0, y)));
-            var bottom = Math.min(dragState.gap[1], snapPx(Math.max(dragState.y0, y)));
-            dragState.preview.style.top = top + 'px';
-            dragState.preview.style.height = Math.max(0, bottom - top) + 'px';
-            dragState.curTop = top; dragState.curBottom = bottom;
-            if (bottom - top > 3) dragState.moved = true;
+            dragState.lastClientY = e.clientY;
+            applyDrag(e.clientY);
+            // Near a scroll edge and not already auto-scrolling? Start the loop.
+            if (dragState.rafId == null && edgeScroll(e.clientY) !== 0) {
+                dragState.rafId = requestAnimationFrame(autoScrollTick);
+            }
         });
 
         document.addEventListener('mouseup', function () {
             if (!dragState) return;
             var st = dragState; dragState = null;
+            if (st.rafId != null) cancelAnimationFrame(st.rafId);
             document.body.style.userSelect = '';
             if (st.preview && st.preview.parentNode) st.preview.parentNode.removeChild(st.preview);
             if (!st.moved || (st.curBottom - st.curTop) < MIN5_PX) return;   // ignore a tiny drag
@@ -807,15 +986,24 @@
             var html = all.map(function (b) {
                 if (b.kind === 'event') {
                     var col = eventColor(b);
-                    return '<div class="wk-event wk-event-cal" data-kind="event"' +
+                    // A short event (≤15 min) is too thin for two rows: show its
+                    // name and start time on one line, without the end time.
+                    var compact = (b.end - b.start) * 60 <= 15;
+                    var body = compact
+                        ? '<div class="wk-event-head">' +
+                              '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
+                              '<span class="wk-event-start">' + esc(hmLabelShort(b.startHM)) + '</span>' +
+                          '</div>'
+                        : '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
+                          '<div class="wk-event-foot"><span class="wk-event-due">' +
+                              esc(hmLabel(b.startHM) + ' – ' + hmLabel(b.endHM)) +
+                          '</span></div>';
+                    return '<div class="wk-event wk-event-cal' + (compact ? ' is-compact' : '') + '" data-kind="event"' +
                         ' data-iso="' + esc(d.iso) + '" data-name="' + esc(b.name) +
                         '" data-shm="' + esc(b.startHM) + '" data-ehm="' + esc(b.endHM) + '" style="' + nestPos(b) +
-                        ';background:' + col.fill + ';border-color:' + col.border + '">' +
-                        cardMenuBtn(b.h) +
-                        '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
-                        '<div class="wk-event-foot"><span class="wk-event-due">' +
-                            esc(hmLabel(b.startHM) + ' – ' + hmLabel(b.endHM)) +
-                        '</span></div>' +
+                        ';background:' + col.fill + ';border-color:' + col.border +
+                        ';border-left-color:' + col.left + '">' +
+                        cardMenuBtn(b.h) + body +
                         '</div>';
                 }
                 // Task block. Colour-coded by state: completed = green, else by
@@ -1001,7 +1189,18 @@
     function renderPriorities(tasks) {
         var ol = document.querySelector('.wk-priorities');
         if (!ol) return;
-        var pending = (tasks || []).filter(function (t) { return t.status !== 'done'; });
+        // Scope to the shown week (Mon–Sun): a pending task is a priority for this
+        // week if it was created in the week or is due within it — the same window
+        // the rest of the weekly overview uses — so stepping weeks changes these.
+        var wk = weekRange(mondayOf(weekOffset));
+        function inShownWeek(t) {
+            var c = (t.created_at || '').slice(0, 10);
+            var d = (t.due_date || '').slice(0, 10);
+            return (c && c >= wk.start && c <= wk.end) || (d && d >= wk.start && d <= wk.end);
+        }
+        var pending = (tasks || []).filter(function (t) {
+            return t.status !== 'done' && inShownWeek(t);
+        });
         pending.sort(function (a, b) { return (Number(b.xp_value) || 0) - (Number(a.xp_value) || 0); });
         var top = pending.slice(0, 3);
         if (!top.length) {
