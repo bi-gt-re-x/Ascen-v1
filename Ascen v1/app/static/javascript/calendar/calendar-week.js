@@ -19,6 +19,10 @@
     var START_HOUR = 6;    // 6 AM
     var END_HOUR = 29;     // 5 AM the next day (24 + 5)
     var HOUR_H = 141;      // px per hour (0.7× the previous 202px — a shorter grid)
+    // Smallest height (px) for a ≤15-min single-row block: a 5-min block is only
+    // ~8px tall by time, too short for its text, so short blocks are nudged up to
+    // this one-row minimum — the least extension that keeps the text visible.
+    var COMPACT_MIN_H = 22;
 
     // --- Which week is shown (0 = the real current week; the arrows step this) --
     var weekOffset = 0;
@@ -964,8 +968,11 @@
             var all = blocks.concat(events);
             all.forEach(function (b) {
                 b.top = (b.start - START_HOUR) * HOUR_H;
-                // Height is strictly the block's time span (no minimum floor).
+                // Height tracks the block's time span…
                 b.h = Math.max(2, (b.end - b.start) * HOUR_H - 4);
+                // …except a ≤15-min block gets a one-row minimum so its compact
+                // name + start time stay fully visible instead of being clipped.
+                if ((b.end - b.start) * 60 <= 15) b.h = Math.max(b.h, COMPACT_MIN_H);
             });
             dragBusy[d.iso] = all.map(function (b) { return [b.top, b.top + b.h]; });
             // Strictly no overlap between any two live blocks — event↔event,
