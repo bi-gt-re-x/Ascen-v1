@@ -739,6 +739,9 @@
     var wkTaskIso = null;
     // When set, the task modal is EDITING this task id rather than creating.
     var wkEditTaskId = null;
+    // The full recurring series (occurrences) of the task being edited, captured
+    // when the edit modal opens — used to apply a change to all occurrences.
+    var wkEditOccs = [];
 
     // Fill the task modal's hour (1–12) and minute (5-min) selects for a prefix.
     function fillTaskTimeSelects() {
@@ -771,6 +774,16 @@
                 if (m) m.style.display = (t === 'monthly') ? 'block' : 'none';
             });
         });
+        // Edit scope: "All occurrences" reveals the recurrence controls (you can
+        // change the pattern for the whole series); "This occurrence" hides them.
+        document.querySelectorAll('input[name="taskEditScope"]').forEach(function (r) {
+            if (r.__wired) return; r.__wired = true;
+            r.addEventListener('change', function () {
+                var sg = document.getElementById('taskEditScopeGroup');
+                if (!sg || sg.style.display === 'none') return;   // only in edit mode
+                setTaskRecurrenceVisible(this.value === 'all');
+            });
+        });
     }
     // Preselect a recurrence type with the modal's day pre-checked so it's valid,
     // matching applyDefaultRecurrence for events (week view → weekly by default).
@@ -798,14 +811,33 @@
         else if (type === 'monthly') days = [].slice.call(document.querySelectorAll('input[name="taskDayOfMonth"]:checked')).map(function (c) { return parseInt(c.value, 10); });
         return { type: type, days: days };
     }
-    // Show/hide the whole recurrence block (hidden while editing one occurrence).
+    // Set the recurrence controls to a specific type + day list (used to prefill
+    // the edit modal with the series' current pattern).
+    function setTaskRecurrence(type, days) {
+        document.querySelectorAll('input[name="taskRecurrenceType"]').forEach(function (r) { r.checked = (r.value === type); });
+        var set = {}; (days || []).forEach(function (d) { set[d] = 1; });
+        document.querySelectorAll('input[name="taskDayOfWeek"]').forEach(function (cb) { cb.checked = (type === 'weekly' && !!set[parseInt(cb.value, 10)]); });
+        document.querySelectorAll('input[name="taskDayOfMonth"]').forEach(function (cb) { cb.checked = (type === 'monthly' && !!set[parseInt(cb.value, 10)]); });
+    }
+    // Infer a series' recurrence from its occurrence dates: all on one weekday →
+    // weekly; all on one day-of-month → monthly; otherwise fall back to weekly.
+    function inferTaskRecurrence(occs) {
+        if (!occs || occs.length <= 1) return { type: 'none', days: [] };
+        var wd = {}, md = {};
+        occs.forEach(function (o) { var d = o.date; wd[d.getDay()] = 1; md[d.getDate()] = 1; });
+        var wdKeys = Object.keys(wd), mdKeys = Object.keys(md);
+        if (wdKeys.length <= mdKeys.length) return { type: 'weekly', days: wdKeys.map(Number) };
+        return { type: 'monthly', days: mdKeys.map(Number) };
+    }
+    // Show/hide the recurrence block. When shown, the weekly/monthly panel matches
+    // the currently-checked type so the right day pickers appear.
     function setTaskRecurrenceVisible(on) {
         var g = document.getElementById('taskRecurrenceGroup');
         if (g) g.style.display = on ? '' : 'none';
-        if (!on) {
-            var w = document.getElementById('taskWeeklyOptions'); if (w) w.style.display = 'none';
-            var m = document.getElementById('taskMonthlyOptions'); if (m) m.style.display = 'none';
-        }
+        var checked = document.querySelector('input[name="taskRecurrenceType"]:checked');
+        var type = checked ? checked.value : 'none';
+        var w = document.getElementById('taskWeeklyOptions'); if (w) w.style.display = (on && type === 'weekly') ? 'block' : 'none';
+        var m = document.getElementById('taskMonthlyOptions'); if (m) m.style.display = (on && type === 'monthly') ? 'block' : 'none';
     }
 
     // Occurrence dates (YYYY-MM-DD) for a recurring task over the next 12 months,
@@ -847,6 +879,8 @@
         initTaskRecurrenceUI();
         setTaskRecurrenceVisible(true);
         applyTaskDefaultRecurrence(iso, 'weekly');
+        wkEditOccs = [];
+        var scope = document.getElementById('taskEditScopeGroup'); if (scope) scope.style.display = 'none';
         var t = document.getElementById('taskModalTitle'); if (t) t.textContent = 'Add New Task';
         var b = document.getElementById('taskModalConfirmBtn'); if (b) b.textContent = 'Add Task';
         modal.classList.add('from-week');   // match the wide Add-Event popup
@@ -876,7 +910,30 @@
             var el = document.getElementById(cid); if (el) el.classList.remove('invalid-input');
         });
         initTaskRecurrenceUI();
-        setTaskRecurrenceVisible(false);   // editing a single occurrence
+        wkEditOccs = findTaskOccurrences(id);
+        var scopeGroup = document.getElementById('taskEditScopeGroup');
+        var recurring = wkEditOccs.length > 1;
+        if (recurring) {
+            // Recurring task: prefill the controls with the series' current pattern,
+            // offer This / All, and default to This (so the recurrence controls
+            // stay hidden until the user chooses to change the whole series).
+            var inf = inferTaskRecurrence(wkEditOccs);
+            setTaskRecurrence(inf.type, inf.days);
+            if (scopeGroup) {
+                scopeGroup.style.display = '';
+                var one = document.querySelector('input[name="taskEditScope"][value="one"]');
+                if (one) one.checked = true;
+                var allInput = scopeGroup.querySelector('input[name="taskEditScope"][value="all"]');
+                if (allInput && allInput.parentNode) allInput.parentNode.lastChild.textContent = ' All ' + wkEditOccs.length + ' occurrences';
+            }
+            setTaskRecurrenceVisible(false);   // shown when the user picks "All occurrences"
+        } else {
+            // One-off task: no scope choice; the recurrence controls are shown so an
+            // edit can also turn it into a recurring series.
+            if (scopeGroup) scopeGroup.style.display = 'none';
+            setTaskRecurrence('none', []);
+            setTaskRecurrenceVisible(true);
+        }
         var ti = document.getElementById('taskModalTitle'); if (ti) ti.textContent = 'Edit Task';
         var bt = document.getElementById('taskModalConfirmBtn'); if (bt) bt.textContent = 'Save Changes';
         modal.classList.add('from-week');
@@ -887,6 +944,7 @@
         var modal = document.getElementById('addTaskModal');
         if (modal) modal.style.display = 'none';
         wkEditTaskId = null;
+        wkEditOccs = [];
     }
 
     // Persist a batch of task payloads without racing the single-file datastore:
@@ -898,6 +956,16 @@
             if (i >= payloads.length) return;
             var p = payloads[i++];
             Promise.resolve(typeof addTaskToBackend === 'function' ? addTaskToBackend(p) : null).then(next, next);
+        })();
+    }
+    // Run an array of promise-returning thunks one at a time (chained), so a batch
+    // of mixed deletes + adds never races the single-file datastore. Non-blocking.
+    function runSequential(thunks) {
+        var i = 0;
+        (function next() {
+            if (i >= thunks.length) return;
+            var fn = thunks[i++];
+            Promise.resolve(fn()).then(next, next);
         })();
     }
 
@@ -929,19 +997,45 @@
         var parts = String(wkTaskIso).split('-');
         var baseDay = parts[0] + '-' + String(parts[1]).padStart(2, '0') + '-' + String(parts[2]).padStart(2, '0');
 
-        // --- Edit: replace the existing task in place --------------------------
+        // --- Edit: replace the task(s) in place --------------------------------
         if (wkEditTaskId) {
-            var oldId = wkEditTaskId;
-            var newId = String(Date.now());
-            var createdAtE = baseDay + 'T' + startT + ':00';
-            var dueDateE = baseDay + 'T' + endT + ':00';
-            gTasks = gTasks.filter(function (t) { return String(t.id) !== String(oldId); });
-            gTasks.push({ id: newId, title: name, status: 'todo', priority: priority, xp_value: xp, created_at: createdAtE, due_date: dueDateE });
-            // Delete the old record, then add the updated one (chained, no race).
-            Promise.resolve(typeof deleteTaskFromBackendWithoutTracking === 'function' ? deleteTaskFromBackendWithoutTracking(oldId) : null)
-                .then(function () {
-                    if (typeof addTaskToBackend === 'function') addTaskToBackend({ id: newId, username: user, name: name, priority: priority, xp_reward: xp, due_date: dueDateE, created_at: createdAtE, show_on_calendar: true });
-                });
+            var scopeEl = document.querySelector('input[name="taskEditScope"]:checked');
+            var scopeGroup = document.getElementById('taskEditScopeGroup');
+            var scopeVisible = scopeGroup && scopeGroup.style.display !== 'none';
+            // Recurring task + "This occurrence" → touch only this instance. Anything
+            // else (a one-off, or "All occurrences") regenerates from the chosen
+            // recurrence pattern so a weekly⇄monthly change takes effect too.
+            var editOne = scopeVisible && scopeEl && scopeEl.value === 'one';
+
+            var oldIds, targets;
+            if (editOne) {
+                oldIds = [wkEditTaskId];
+                targets = [baseDay];
+            } else {
+                var rec2 = readTaskRecurrence();
+                mark('taskWeeklyOptions', false); mark('taskMonthlyOptions', false);
+                if (rec2.type !== 'none' && !rec2.days.length) {
+                    mark(rec2.type === 'weekly' ? 'taskWeeklyOptions' : 'taskMonthlyOptions', true);
+                    return;   // a pattern was chosen but no day picked
+                }
+                oldIds = wkEditOccs.length ? wkEditOccs.map(function (o) { return o.id; }) : [wkEditTaskId];
+                targets = computeTaskOccurrences(baseDay, rec2.type, rec2.days);   // new pattern
+            }
+
+            var oldSet = {}; oldIds.forEach(function (i) { oldSet[String(i)] = true; });
+            gTasks = gTasks.filter(function (t) { return !oldSet[String(t.id)]; });
+            var thunks = [];
+            oldIds.forEach(function (id) {
+                thunks.push(function () { return Promise.resolve(typeof deleteTaskFromBackendWithoutTracking === 'function' ? deleteTaskFromBackendWithoutTracking(id) : null); });
+            });
+            targets.forEach(function (dayIso, idx) {
+                var ca = dayIso + 'T' + startT + ':00';
+                var dd = dayIso + 'T' + endT + ':00';
+                var nid = String(Date.now()) + '-e' + idx;
+                gTasks.push({ id: nid, title: name, status: 'todo', priority: priority, xp_value: xp, created_at: ca, due_date: dd });
+                thunks.push(function () { return Promise.resolve(typeof addTaskToBackend === 'function' ? addTaskToBackend({ id: nid, username: user, name: name, priority: priority, xp_reward: xp, due_date: dd, created_at: ca, show_on_calendar: true }) : null); });
+            });
+            runSequential(thunks);   // deletes then adds, chained (no datastore race)
             closeWeekTaskModal();
             renderDayColumns();
             return;

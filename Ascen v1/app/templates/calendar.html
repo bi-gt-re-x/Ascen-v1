@@ -289,6 +289,19 @@
                         <input type="number" id="taskXp" class="xp-input-field" min="10" max="100" value="10" oninput="syncTaskXp(this.value)">
                     </div>
                 </div>
+                <!-- Edit-only: apply the change to just this occurrence or the whole
+                     recurring series. Shown only when editing a recurring task. -->
+                <div class="form-group" id="taskEditScopeGroup" style="display: none;">
+                    <label>Apply changes to:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="taskEditScope" value="one" checked> This occurrence
+                        </label>
+                        <label>
+                            <input type="radio" name="taskEditScope" value="all"> All occurrences
+                        </label>
+                    </div>
+                </div>
                 <!-- Recurrence (mirrors Add Section) — hidden while editing a task. -->
                 <div class="form-group" id="taskRecurrenceGroup">
                     <label>Recurrence Type:</label>
