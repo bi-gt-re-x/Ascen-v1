@@ -156,6 +156,14 @@
     }
     function leadIcon(name) { return '<span class="wk-event-lead">' + iconForName(name) + '</span>'; }
 
+    // True when the single-day view is the active pane. The Day view deliberately
+    // omits task recurrence — create / edit / delete there act on one task only —
+    // so the shared task modals hide their recurrence controls when this is true.
+    function isDayView() {
+        var p = document.getElementById('dayView');
+        return !!(p && p.classList.contains('active'));
+    }
+
     // --- Render the grid -----------------------------------------------------
     function renderWeek() {
         var heads = document.getElementById('wkDayHeads');
@@ -448,9 +456,10 @@
         }
         // Task delete: like events, a recurring task (same title + start/end
         // time-of-day across days) offers this / all / choose; a one-off confirms.
+        // The Day view never offers the series options — it deletes just this task.
         var taskId = block.getAttribute('data-id');
         var taskOccs = findTaskOccurrences(taskId);
-        if (taskOccs.length > 1) {
+        if (!isDayView() && taskOccs.length > 1) {
             showTaskRecurrenceDeleteDialog(name, iso, taskId, taskOccs);
         } else {
             showDeleteConfirm('task', name, function () {
@@ -925,8 +934,14 @@
             var el = document.getElementById(id); if (el) el.classList.remove('invalid-input');
         });
         initTaskRecurrenceUI();
-        setTaskRecurrenceVisible(true);
-        applyTaskDefaultRecurrence(iso, 'weekly');
+        if (isDayView()) {
+            // Day view: no recurrence — create a single task.
+            setTaskRecurrence('none', []);
+            setTaskRecurrenceVisible(false);
+        } else {
+            setTaskRecurrenceVisible(true);
+            applyTaskDefaultRecurrence(iso, 'weekly');
+        }
         wkEditOccs = [];
         var scope = document.getElementById('taskEditScopeGroup'); if (scope) scope.style.display = 'none';
         var t = document.getElementById('taskModalTitle'); if (t) t.textContent = 'Add New Task';
@@ -958,8 +973,20 @@
             var el = document.getElementById(cid); if (el) el.classList.remove('invalid-input');
         });
         initTaskRecurrenceUI();
-        wkEditOccs = findTaskOccurrences(id);
         var scopeGroup = document.getElementById('taskEditScopeGroup');
+        if (isDayView()) {
+            // Day view: no recurrence or this/all scope — edit only this occurrence.
+            wkEditOccs = [];
+            if (scopeGroup) scopeGroup.style.display = 'none';
+            setTaskRecurrence('none', []);
+            setTaskRecurrenceVisible(false);
+            var tiD = document.getElementById('taskModalTitle'); if (tiD) tiD.textContent = 'Edit Task';
+            var btD = document.getElementById('taskModalConfirmBtn'); if (btD) btD.textContent = 'Save Changes';
+            modal.classList.add('from-week');
+            modal.style.display = 'block';
+            return;
+        }
+        wkEditOccs = findTaskOccurrences(id);
         var recurring = wkEditOccs.length > 1;
         if (recurring) {
             // Recurring task: prefill the controls with the series' current pattern,
@@ -1651,15 +1678,14 @@
                 ul.innerHTML = '<li class="day-tasks-empty">Nothing left — you’re all caught up. 🎉</li>';
             } else {
                 ul.innerHTML = pending.slice(0, 5).map(function (b) {
-                    var cat = b.priority ? (b.priority.charAt(0).toUpperCase() + b.priority.slice(1)) : 'Task';
-                    var time = b.dueDT ? timeLabel(b.dueDT) : (b.startDT ? timeLabel(b.startDT) : '');
+                    // Difficulty (priority) sits on the far right; no due/start time.
+                    var p = String(b.priority || '').toLowerCase();
+                    var cls = p === 'high' ? 'high' : (p === 'medium' ? 'med' : 'low');
+                    var label = p ? (p.charAt(0).toUpperCase() + p.slice(1)) : '—';
                     return '<li class="day-task-item">' +
                         '<span class="day-task-ring"></span>' +
-                        '<span class="day-task-main">' +
-                            '<span class="day-task-name">' + esc(b.title) + '</span>' +
-                            '<span class="day-task-cat">' + esc(cat) + '</span>' +
-                        '</span>' +
-                        (time ? '<span class="day-task-time">' + esc(time) + '</span>' : '') +
+                        '<span class="day-task-name">' + esc(b.title) + '</span>' +
+                        '<span class="day-task-diff ' + cls + '">' + esc(label) + '</span>' +
                     '</li>';
                 }).join('');
             }
@@ -2006,8 +2032,6 @@
                 if (name) { var nm = document.getElementById('taskName'); if (nm) nm.value = name; }
             }
         }
-        var addTaskBtn = document.getElementById('dayAddTaskBtn');
-        if (addTaskBtn) addTaskBtn.addEventListener('click', function () { openTaskForDay(''); });
         var addTaskLink = document.getElementById('dayAddTaskLink');
         if (addTaskLink) addTaskLink.addEventListener('click', function () { openTaskForDay(''); });
 

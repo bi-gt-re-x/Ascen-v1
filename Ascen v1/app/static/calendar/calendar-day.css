@@ -117,22 +117,22 @@
 .day-stat-green { color: #2e9e6b !important; }
 .day-stat-purple { color: #7a6aa8 !important; }
 
-/* Tasks Left list */
-.day-tasks-left { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; }
-.day-task-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid #f1f2f5; }
+/* Tasks Left list: a check ring, the task name, and its difficulty pushed to
+   the far right (no due/start time). */
+.day-tasks-left { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.day-task-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f1f2f5; }
 .day-task-item:first-child { border-top: none; }
 .day-task-ring {
-    flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 999px;
+    flex: none; width: 18px; height: 18px; border-radius: 999px;
     border: 2px solid #cfd3db; box-sizing: border-box;
 }
 .day-task-ring.is-done { border-color: #2e9e6b; background: #2e9e6b; }
-.day-task-main { flex: 1 1 auto; min-width: 0; }
-.day-task-name { font-size: 14px; color: #2c302e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.day-task-cat { font-size: 12px; color: #9297ab; margin-top: 1px; }
-.day-task-time { font-size: 12px; color: #9297ab; flex: none; margin-top: 1px; }
+.day-task-name { flex: 1 1 auto; min-width: 0; font-size: 14px; color: #2c302e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.day-task-diff { flex: none; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.day-task-diff.high { background: #fdecec; color: #b0413e; }
+.day-task-diff.med  { background: #fdf6e3; color: #9a7b2e; }
+.day-task-diff.low  { background: #eef2f7; color: #5a6472; }
 .day-tasks-empty { font-size: 13px; color: #9297ab; padding: 10px 0; }
-.day-viewall { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; color: #a8845c; text-decoration: none; }
-.day-viewall:hover { text-decoration: underline; }
 
 /* ---- Per-event lead icon (Day view only) ---- */
 /* Hidden in the Week grid (columns are too narrow); shown in the wide Day column
@@ -208,7 +208,9 @@ html[data-theme="dark"] .day-mini-cell.is-selected:hover { background: #cfd3db; 
 html[data-theme="dark"] .wk-stat-sub { color: #7d8492; }
 html[data-theme="dark"] .day-focus-sub, html[data-theme="dark"] .day-focus-barrow { color: #7d8492; }
 html[data-theme="dark"] .day-task-name { color: #e6e9f0; }
-html[data-theme="dark"] .day-task-cat, html[data-theme="dark"] .day-task-time { color: #7d8492; }
 html[data-theme="dark"] .day-task-item { border-color: #21262d; }
+html[data-theme="dark"] .day-task-diff.high { background: #341c1c; color: #f2a3a3; }
+html[data-theme="dark"] .day-task-diff.med  { background: #2d2718; color: #e6c979; }
+html[data-theme="dark"] .day-task-diff.low  { background: #1c222c; color: #aab2c0; }
 html[data-theme="dark"] .day-task-ring { border-color: #3a424e; }
 html[data-theme="dark"] .day-col .wk-event-lead { background: rgba(0, 0, 0, .25); }
