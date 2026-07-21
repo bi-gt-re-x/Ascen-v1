@@ -8,6 +8,15 @@
         // Hide the page until its goals are loaded so it fades in once, fully built.
         document.documentElement.classList.add('js-fade');
     </script>
+    <script>
+        // Recover the signed-in user from the server session when this browser has
+        // no cached currentUser (e.g. localStorage was cleared), so the page loads
+        // the account's data instead of the empty Default state.
+        (function () {
+            var u = {{ current_user|tojson }};
+            if (u && !localStorage.getItem('currentUser')) localStorage.setItem('currentUser', u);
+        })();
+    </script>
     <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">

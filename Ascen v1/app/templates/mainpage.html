@@ -9,6 +9,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        // Recover the signed-in user from the server session when this browser has
+        // no cached currentUser (e.g. localStorage was cleared), so the page loads
+        // the account's data instead of the empty Default state.
+        (function () {
+            var u = {{ current_user|tojson }};
+            if (u && !localStorage.getItem('currentUser')) localStorage.setItem('currentUser', u);
+        })();
+    </script>
     <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/api.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/main.js') }}" defer></script>
