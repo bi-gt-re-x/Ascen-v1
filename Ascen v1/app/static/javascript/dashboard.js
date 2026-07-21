@@ -217,6 +217,42 @@ function updateTaskSectionEmptyStates() {
     });
 }
 
+// --- Recurring tasks show only today's occurrence -------------------------
+// The calendar stores each occurrence of a recurring task as its own record
+// (same title + start/end time-of-day, on different dates). On the dashboard a
+// recurring task should appear only on the day it falls, so future occurrences
+// don't pile up in the list. One-off tasks always show, on any day.
+function dashLocalDay(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    var p = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function dashTimeOfDay(v) {
+    var d = v ? new Date(v) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    var p = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+}
+// A series key groups a recurring task's occurrences: same title + start/end
+// time-of-day — exactly how the calendar identifies a task series.
+function taskSeriesKey(t) {
+    return (t.title || t.name || '') + '|' + dashTimeOfDay(t.created_at) + '|' + dashTimeOfDay(t.due_date);
+}
+// From the full task list, keep every one-off task but only the today
+// occurrence of any recurring series (2+ records sharing a key across dates).
+function filterRecurringToToday(allTasks, incompleteTasks) {
+    var today = dashLocalDay(new Date());
+    var counts = {};
+    allTasks.forEach(function (t) { var k = taskSeriesKey(t); counts[k] = (counts[k] || 0) + 1; });
+    return incompleteTasks.filter(function (t) {
+        if (counts[taskSeriesKey(t)] <= 1) return true;                  // one-off → always
+        var d = dashLocalDay(t.due_date) || dashLocalDay(t.created_at);
+        return d === today;                                              // recurring → today only
+    });
+}
+
 async function loadTasks() {
     const todoList = document.getElementById('todoTaskList');
     const calendarList = document.getElementById('calendarTaskList');
@@ -245,7 +281,12 @@ async function loadTasks() {
     // Filter out completed tasks - only show incomplete tasks on dashboard
     const incompleteTasks = tasks.filter(task => !(task.status === 'done' || task.completed === 1 || task.completed === true || task.completed === '1'));
 
-    incompleteTasks.forEach(task => {
+    // A recurring task only shows on the dashboard for today; one-off tasks
+    // always show. (Recurrence is detected by 2+ occurrences sharing a series
+    // key across dates — the calendar stores each occurrence as its own record.)
+    const visibleTasks = filterRecurringToToday(tasks, incompleteTasks);
+
+    visibleTasks.forEach(task => {
         if (typeof createTaskElement === 'function') {
             const li = createTaskElement(task, handleTaskDeletion);
             taskListElFor(task).appendChild(li);
