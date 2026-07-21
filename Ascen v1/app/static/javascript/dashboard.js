@@ -2207,26 +2207,50 @@ function isSameDay(a, b) {
 }
 
 
-// --- Focus panel goal stepper ---------------------------------------------
-// The hour goal is adjustable (0.5-hr steps, 0.5–12h); the progress readout and
-// the Start Focus button are placeholders — there's no tracked-focus feature
-// yet. Runs on load (this script is deferred, so the DOM is ready).
+// --- Focus panel (real, tracked via focus.js) -----------------------------
+// The hour goal is adjustable (0.5-hr steps, 0.5–12h). Start Focus begins a
+// timestamp-based session that keeps counting even while the user is away, and
+// the button becomes Stop Focus; stopping banks the elapsed time. State lives in
+// localStorage (focus.js) so the calendar's Focus card stays in sync.
 (function () {
     var hoursEl = document.getElementById('focusHours');
-    if (!hoursEl) return;
+    if (!hoursEl || !window.Focus) return;
     var minusBtn = document.getElementById('focusMinus');
     var plusBtn = document.getElementById('focusPlus');
+    var startBtn = document.getElementById('focusStartBtn');
     var label = document.getElementById('focusProgressLabel');
-    var goal = 2.0;
+    var pctEl = document.getElementById('focusProgressPct');
+    var fill = document.getElementById('focusProgressFill');
+    var startLabel = startBtn ? startBtn.querySelector('.focus-start-label') : null;
+    var tick = null;
+
     function render() {
-        hoursEl.textContent = goal.toFixed(1);
-        if (label) label.textContent = '0.0 / ' + goal.toFixed(1) + ' hrs focused';
+        var s = window.Focus.get();
+        var focusedH = window.Focus.focusedSeconds() / 3600;
+        var pct = window.Focus.percent();
+        hoursEl.textContent = s.goalHours.toFixed(1);
+        if (label) label.textContent = focusedH.toFixed(1) + ' / ' + s.goalHours.toFixed(1) + ' hrs focused';
+        if (pctEl) pctEl.textContent = pct + '%';
+        if (fill) fill.style.width = pct + '%';
+        var running = window.Focus.isRunning();
+        if (startBtn) startBtn.classList.toggle('is-running', running);
+        if (startLabel) startLabel.textContent = running ? 'Stop Focus' : 'Start Focus';
     }
-    function step(delta) {
-        goal = Math.min(12, Math.max(0.5, Math.round((goal + delta) * 2) / 2));
+    function startTick() { if (!tick) tick = setInterval(render, 1000); }
+    function stopTick() { if (tick) { clearInterval(tick); tick = null; } }
+
+    if (minusBtn) minusBtn.addEventListener('click', function () { window.Focus.setGoalHours(window.Focus.goalHours() - 0.5); render(); });
+    if (plusBtn) plusBtn.addEventListener('click', function () { window.Focus.setGoalHours(window.Focus.goalHours() + 0.5); render(); });
+    if (startBtn) startBtn.addEventListener('click', function () {
+        if (window.Focus.isRunning()) { window.Focus.stop(); stopTick(); }
+        else { window.Focus.start(); startTick(); }
         render();
-    }
-    if (minusBtn) minusBtn.addEventListener('click', function () { step(-0.5); });
-    if (plusBtn) plusBtn.addEventListener('click', function () { step(0.5); });
+    });
+
+    // If a session was already running (started earlier / on another page / while
+    // the browser was closed), resume the live display.
+    if (window.Focus.isRunning()) startTick();
+    // Catch up the display when the tab regains focus (time elapsed while away).
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) render(); });
     render();
 })();

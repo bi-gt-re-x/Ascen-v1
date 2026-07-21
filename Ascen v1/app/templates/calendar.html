@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Calendar</title>
+    <script>
+        // Recover the signed-in user from the server session when this browser has
+        // no cached currentUser (e.g. localStorage was cleared), so the calendar
+        // still loads the account's tasks/events/stats instead of the empty Default.
+        (function () {
+            var u = {{ current_user|tojson }};
+            if (u && !localStorage.getItem('currentUser')) localStorage.setItem('currentUser', u);
+        })();
+    </script>
     <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='mainpage.css') }}">
@@ -185,15 +194,15 @@
                                 </span>
                                 <div class="day-focus-main">
                                     <div class="day-focus-name">Deep Work</div>
-                                    <div class="day-focus-sub">3h 45m</div>
+                                    <div class="day-focus-sub" id="dayFocusSub">0m</div>
                                 </div>
-                                <div class="day-focus-time">3h 45m</div>
+                                <div class="day-focus-time" id="dayFocusGoal">2h</div>
                             </div>
                             <div class="day-focus-barrow">
                                 <span>Today's focus time</span>
-                                <span class="day-focus-pct">75%</span>
+                                <span class="day-focus-pct" id="dayFocusPct">0%</span>
                             </div>
-                            <div class="wk-progress"><div class="wk-progress-bar" style="width:75%"></div></div>
+                            <div class="wk-progress"><div class="wk-progress-bar" id="dayFocusBar" style="width:0%"></div></div>
                         </section>
 
                         <section class="wk-panel">
@@ -632,6 +641,7 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='javascript/focus.js') }}"></script>
     <script src="{{ url_for('static', filename='javascript/calendar/calendar-month.js') }}"></script>
     <script src="{{ url_for('static', filename='javascript/calendar/calendar-week.js') }}"></script>
     <script src="{{ url_for('static', filename='javascript/calendar/calendar-day.js') }}"></script>

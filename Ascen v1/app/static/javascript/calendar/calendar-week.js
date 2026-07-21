@@ -1636,6 +1636,20 @@
         miniY = d.date.getFullYear(); miniM = d.date.getMonth();
         renderDayMiniCal();
         renderDaySidebar(d);
+        updateDayFocusCard();
+    }
+
+    // Reflect the shared focus state (focus.js) into the Day view's Focus card so
+    // its goal + progress stay aligned with the dashboard. Refreshed on render and
+    // once a second (so a running session ticks up live here too).
+    function updateDayFocusCard() {
+        if (!window.Focus || !document.getElementById('dayFocusSub')) return;
+        var s = window.Focus.get();
+        setText('dayFocusSub', window.Focus.fmtHM(window.Focus.focusedSeconds()));
+        setText('dayFocusGoal', window.Focus.fmtHM(s.goalHours * 3600));
+        setText('dayFocusPct', window.Focus.percent() + '%');
+        var bar = document.getElementById('dayFocusBar');
+        if (bar) bar.style.width = window.Focus.percent() + '%';
     }
 
     // --- Day overview sidebar (real data, scoped to the shown day) -----------
@@ -2107,6 +2121,9 @@
 
         // Keep the "now" lines (week + day) tracking the clock, re-placed each minute.
         setInterval(function () { renderNowLine(); renderDayNowLine(); }, 60000);
+        // Keep the Day view's Focus card in sync with the shared focus state (and
+        // ticking while a session runs), matching the dashboard.
+        setInterval(updateDayFocusCard, 1000);
     }
 
     if (document.readyState === 'loading') {

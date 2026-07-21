@@ -14,14 +14,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <script>
+        // Recover the signed-in user from the server session when this browser has
+        // no cached currentUser (e.g. localStorage was cleared), so the page loads
+        // the account's data instead of the empty Default state.
+        (function () {
+            var u = {{ current_user|tojson }};
+            if (u && !localStorage.getItem('currentUser')) localStorage.setItem('currentUser', u);
+        })();
+    </script>
     <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/page-fade.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/timer.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/api.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/calendar/calendar-month.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/tasks.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='javascript/growth.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/slider-keyboard.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='javascript/focus.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/dashboard.js') }}" defer></script>
     <script src="{{ url_for('static', filename='javascript/goal-notify.js') }}" defer></script>
 </head>
@@ -152,8 +161,9 @@
                     </div>
                 </div>
                 <button type="button" class="focus-start-btn" id="focusStartBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                    Start Focus
+                    <svg class="focus-ico-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    <svg class="focus-ico-stop" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                    <span class="focus-start-label">Start Focus</span>
                 </button>
                 <p class="focus-hint">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>

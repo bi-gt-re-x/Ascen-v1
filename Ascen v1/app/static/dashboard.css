@@ -314,7 +314,8 @@ body {
     background: #FAFAF8;
     border: 1.5px solid #EAEAEA;
     border-radius: 12px;
-    padding: 22px;
+    padding: 26px 24px;
+    margin-bottom: 24px;   /* min gap before the (bottom-anchored) Start button */
 }
 .focus-goal-title {
     margin: 0 0 8px;
@@ -323,7 +324,7 @@ body {
     color: #2C302E;
 }
 .focus-goal-q {
-    margin: 0 0 18px;
+    margin: 0 0 24px;
     font-size: 14px;
     color: #6C757D;
 }
@@ -332,7 +333,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 28px;
-    margin-bottom: 20px;
+    margin-bottom: 28px;
 }
 .focus-step-btn {
     width: 48px;
@@ -369,7 +370,7 @@ body {
     background: #E9ECEF;
     border-radius: 20px;
     overflow: hidden;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 .focus-progress-fill {
     height: 100%;
@@ -383,13 +384,15 @@ body {
     font-size: 13px;
     color: #6C757D;
 }
+/* Start Focus + hint are pushed to the bottom of the (tall) panel so the goal
+   box sits up top and the action anchors down, with the hint just beneath it. */
 .focus-start-btn {
-    margin-top: 18px;
+    margin-top: auto;
     background: #2C302E;
     color: #FFFFFF;
     border: none;
     border-radius: 12px;
-    padding: 15px;
+    padding: 16px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -400,12 +403,19 @@ body {
     transition: background-color 0.2s ease;
 }
 .focus-start-btn:hover { background: #454B48; }
+.focus-start-btn svg { flex: none; }
+/* Running: the button becomes a red "Stop Focus". */
+.focus-start-btn .focus-ico-stop { display: none; }
+.focus-start-btn.is-running { background: #b0413e; color: #fff; }
+.focus-start-btn.is-running:hover { background: #983733; }
+.focus-start-btn.is-running .focus-ico-play { display: none; }
+.focus-start-btn.is-running .focus-ico-stop { display: inline-flex; }
 .focus-hint {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
-    margin: 14px 0 0;
+    margin: 16px 0 0;
     font-size: 13px;
     color: #6C757D;
 }
@@ -1208,3 +1218,5 @@ html[data-theme="dark"] .focus-start-btn {
     color: #0d1117;
 }
 html[data-theme="dark"] .focus-start-btn:hover { background: #ffffff; }
+html[data-theme="dark"] .focus-start-btn.is-running { background: #b0413e; color: #fff; }
+html[data-theme="dark"] .focus-start-btn.is-running:hover { background: #c34c48; }
