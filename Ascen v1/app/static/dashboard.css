@@ -129,7 +129,10 @@ body {
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 1200px;
+    /* Wider shell (~+15%): the top cards scale up with it, while the Focus
+       panel below is pinned to a fixed width so only the Tasks card absorbs
+       the extra room. */
+    max-width: 1370px;
     margin: 100px auto 5px;
     min-height: calc(100vh - 105px);
     padding: 0 24px;
@@ -140,19 +143,26 @@ body {
     /* Same 45/55 split, but fr units respect the gap (45%+55%+gap used to
        overflow by 24px) and minmax(0, …) lets wide content shrink. */
     grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+    grid-template-rows: minmax(0, 1fr);
     gap: 1.5rem;
     width: 100%;
     margin-bottom: 1.5rem;
+    /* Grow to help fill the page vertically so the quote sits near the bottom. */
+    flex: 1 1 auto;
 }
 
-/* Bottom row: the Tasks card (wider) beside the Focus panel. */
+/* Bottom row: the Tasks card (fills the extra width) beside the Focus panel
+   (fixed width — kept unchanged). Grows more than the top row so the tall
+   Tasks/Focus cards take up most of the page height. */
 .bottom-section {
     display: grid;
-    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+    grid-template-columns: minmax(0, 1fr) 508px;
+    grid-template-rows: minmax(0, 1fr);
     gap: 1.5rem;
     width: 100%;
     margin-bottom: 1.5rem;
-    align-items: start;
+    align-items: stretch;
+    flex: 2 1 auto;
 }
 
 .card {
@@ -164,10 +174,9 @@ body {
     text-align: left;
 }
 
-/* Nudge the user-stats card (Name / XP / Level / Multiplier) down 5px */
+/* User-stats card sits flush with the Statistics card beside it (no offset). */
 .user-stats {
     position: relative;
-    top: 5px;
 }
 
 .card h2 {
@@ -888,6 +897,9 @@ html[data-theme="dark"] .cal-suggest-bad .cal-suggest-link { color: #ff9297; }
     .top-section,
     .bottom-section {
         grid-template-columns: 100%;
+        grid-template-rows: auto;
+        /* Stack at natural height on mobile — don't stretch cards to fill. */
+        flex: 0 0 auto;
     }
 
     /* Let the nav grow and wrap as whole items instead of breaking labels
