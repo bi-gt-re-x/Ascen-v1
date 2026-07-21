@@ -26,8 +26,12 @@
 
     // --- Which week is shown (0 = the real current week; the arrows step this) --
     var weekOffset = 0;
+    // --- Which day the Day view shows (0 = today; its arrows step this) ----------
+    var dayOffset = 0;
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     var DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    var DOW_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     // Monday (midnight) of the shown week.
     function mondayOf(offset) {
@@ -62,6 +66,9 @@
     // Real user tasks are placed on the grid (fetched in loadSidebar). We do
     // not render placeholder events, and calendar events proper aren't shown yet.
     var gTasks = [];
+    // Account stats (level / xp / current_streak / …) cached from the same fetch,
+    // so the Day view's overview sidebar can read the live streak etc.
+    var gStats = {};
 
     // Per-day occupied [top, bottom] pixel ranges, rebuilt on every render; used
     // by drag-to-create so a new selection stops when it meets a task/event.
@@ -108,6 +115,47 @@
         });
     }
 
+    // --- Per-block icon, inferred from the event/task name --------------------
+    // The Day view shows a small icon on each block. There's no icon field in the
+    // data, so we keyword-match the name to one of a handful of inline SVGs; a
+    // catch-all covers anything unmatched. (Shown in the Day column only — the CSS
+    // hides .wk-event-lead everywhere else.)
+    var ICON_SVGS = {
+        dumbbell: '<path d="M6.5 6.5 17.5 17.5M4 8l-1 1 3 3-3 3 1 1M20 8l1 1-3 3 3 3-1 1M7 5 5 7M17 19l2-2"/>',
+        book: '<path d="M4 5a2 2 0 0 1 2-2h11v16H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 1 2-2h11"/>',
+        code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13 6l-2 12"/>',
+        sigma: '<path d="M17 5H7l5 7-5 7h10"/>',
+        pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+        music: '<circle cx="6" cy="18" r="2.5"/><circle cx="17" cy="16" r="2.5"/><path d="M8.5 18V6l11-2v10"/>',
+        run: '<circle cx="13" cy="5" r="2"/><path d="M8 21l3-5 3 2 1 3M11 16l-2-4 4-2 2 3 3 1"/>',
+        food: '<path d="M6 3v7a2 2 0 0 0 4 0V3M8 3v18M17 3c-1.5 1-2 3-2 5s.5 3 2 3v10"/>',
+        users: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.6"/>',
+        star: '<path d="M12 3l2.7 5.9 6.3.7-4.7 4.3 1.3 6.2L12 17.8 6.1 20.4l1.3-6.2L2.7 9.6l6.3-.7z"/>',
+        check: '<path d="M20 6 9 17l-5-5"/>',
+        clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+    };
+    function iconKeyFor(name) {
+        var s = String(name || '').toLowerCase();
+        if (/(workout|gym|exercise|lift|train)/.test(s)) return 'dumbbell';
+        if (/(run|jog|walk|cardio)/.test(s)) return 'run';
+        if (/(read|book|study|essay|reading)/.test(s)) return 'book';
+        if (/(cod(e|ing)|program|dev|github|project|build)/.test(s)) return 'code';
+        if (/(math|algebra|calculus|problem set)/.test(s)) return 'sigma';
+        if (/(write|writing|journal|blog|notes?)/.test(s)) return 'pencil';
+        if (/(music|violin|piano|guitar|practice|song)/.test(s)) return 'music';
+        if (/(meet|call|sync|standup|interview|1:1)/.test(s)) return 'users';
+        if (/(eat|lunch|dinner|breakfast|meal|food)/.test(s)) return 'food';
+        if (/(review|plan|goal|reflect)/.test(s)) return 'star';
+        if (/(done|complete|finish)/.test(s)) return 'check';
+        return 'clock';
+    }
+    function iconForName(name) {
+        var svg = ICON_SVGS[iconKeyFor(name)] || ICON_SVGS.clock;
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+               'stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg>';
+    }
+    function leadIcon(name) { return '<span class="wk-event-lead">' + iconForName(name) + '</span>'; }
+
     // --- Render the grid -----------------------------------------------------
     function renderWeek() {
         var heads = document.getElementById('wkDayHeads');
@@ -147,7 +195,7 @@
         labels.innerHTML = lab;
         labels.style.height = gridH + 'px';
 
-        renderDayColumns();
+        renderActive();
     }
 
     function toDate(v) { if (!v) return null; var d = new Date(v); return isNaN(d.getTime()) ? null : d; }
@@ -307,7 +355,7 @@
                 deleteTaskFromBackendWithoutTracking(x.id);
             }
             gTasks = gTasks.filter(function (t) { return String(t.id) !== String(x.id); });
-            renderDayColumns();
+            renderActive();
         } else if (x.kind === 'event') {
             var store = (typeof dateContent !== 'undefined') ? dateContent[monthKey(dayIso)] : null;
             if (store && Array.isArray(store.timestamps)) {
@@ -316,7 +364,7 @@
                 });
                 if (typeof saveCalendarData === 'function') saveCalendarData();
             }
-            renderDayColumns();
+            renderActive();
         }
     }
 
@@ -484,7 +532,7 @@
             }
         });
         if (typeof saveCalendarData === 'function') saveCalendarData();
-        renderDayColumns();
+        renderActive();
     }
 
     function showRecurrenceDeleteDialog(name, shm, ehm, thisIso, occs) {
@@ -1037,7 +1085,7 @@
             });
             runSequential(thunks);   // deletes then adds, chained (no datastore race)
             closeWeekTaskModal();
-            renderDayColumns();
+            renderActive();
             return;
         }
 
@@ -1060,7 +1108,7 @@
         });
         persistTasksSequential(payloads);
         closeWeekTaskModal();
-        renderDayColumns();   // draws the task(s) and runs the overlap conflict check
+        renderActive();   // draws the task(s) and runs the overlap conflict check
     }
 
     // --- Task recurrence grouping (by identity, matching events) --------------
@@ -1100,7 +1148,7 @@
             var id = arr[k++];
             Promise.resolve(typeof deleteTaskFromBackendWithoutTracking === 'function' ? deleteTaskFromBackendWithoutTracking(id) : null).then(next, next);
         })();
-        renderDayColumns();
+        renderActive();
     }
     // Task version of the recurring-delete dialog: this / all / choose specific
     // dates, then a bulk delete. Reuses the event dialog's styling.
@@ -1225,59 +1273,57 @@
     }
 
     var dragState = null;
-    function initDragCreate() {
-        var cols = document.getElementById('wkDayCols');
+    var __dragDocWired = false;
+    var DRAG_EDGE = 46;        // px from a scroll edge that triggers auto-scroll
+    var DRAG_MAX_STEP = 16;    // max px scrolled per frame (faster nearer the edge)
+
+    // Size the selection from the pointer's Y. y is measured against the column's
+    // live top, so it stays correct as the grid scrolls; the gap clamp keeps the
+    // selection out of existing tiles even when those are scrolled off-view.
+    function dragApply(clientY) {
+        if (!dragState) return;
+        var y = clientY - dragState.col.getBoundingClientRect().top;
+        y = Math.max(dragState.gap[0], Math.min(y, dragState.gap[1]));   // stop at neighbours
+        var top = Math.max(dragState.gap[0], snapPx(Math.min(dragState.y0, y)));
+        var bottom = Math.min(dragState.gap[1], snapPx(Math.max(dragState.y0, y)));
+        dragState.preview.style.top = top + 'px';
+        dragState.preview.style.height = Math.max(0, bottom - top) + 'px';
+        dragState.curTop = top; dragState.curBottom = bottom;
+        if (bottom - top > 3) dragState.moved = true;
+    }
+    // Auto-scroll speed for a pointer near the active scroller's top/bottom edge.
+    function dragEdgeScroll(clientY) {
+        var scroller = dragState && dragState.scroller;
+        if (!scroller) return 0;
+        var r = scroller.getBoundingClientRect();
+        if (clientY > r.bottom - DRAG_EDGE && dragState.curBottom < dragState.gap[1]) {
+            return Math.min(DRAG_MAX_STEP, Math.max(3, (clientY - (r.bottom - DRAG_EDGE)) / DRAG_EDGE * DRAG_MAX_STEP));
+        }
+        if (clientY < r.top + DRAG_EDGE && dragState.curTop > dragState.gap[0]) {
+            return -Math.min(DRAG_MAX_STEP, Math.max(3, ((r.top + DRAG_EDGE) - clientY) / DRAG_EDGE * DRAG_MAX_STEP));
+        }
+        return 0;
+    }
+    function dragAutoTick() {
+        if (!dragState) return;
+        var scroller = dragState.scroller;
+        var amt = dragEdgeScroll(dragState.lastClientY);
+        if (scroller && amt !== 0) {
+            var before = scroller.scrollTop;
+            scroller.scrollTop += amt;
+            if (scroller.scrollTop !== before) dragApply(dragState.lastClientY);
+            dragState.rafId = requestAnimationFrame(dragAutoTick);
+        } else {
+            dragState.rafId = null;   // idle; a later mousemove restarts it
+        }
+    }
+    // Wire drag-to-create on a columns container (week grid or the day column),
+    // using the given scroller for edge auto-scroll. The document-level move/up
+    // handlers are shared across every container (wired once).
+    function initDragCreate(cols, scroller) {
         if (!cols || cols.__dragWired) return;
         cols.__dragWired = true;
         var gridH = (END_HOUR - START_HOUR) * HOUR_H;
-        var scroller = document.querySelector('#weekView .wk-scroll');
-        var EDGE = 46;         // px from a scroll edge that triggers auto-scroll
-        var MAX_STEP = 16;     // max px scrolled per frame (faster the closer to the edge)
-
-        // Size the selection from the pointer's Y. Because y is measured against the
-        // column's live top, it stays correct as the grid scrolls, and the gap
-        // clamp keeps the selection out of existing tiles even when those tiles are
-        // scrolled above the view.
-        function applyDrag(clientY) {
-            if (!dragState) return;
-            var y = clientY - dragState.col.getBoundingClientRect().top;
-            y = Math.max(dragState.gap[0], Math.min(y, dragState.gap[1]));   // stop at neighbours
-            // Snap to 5 min, then re-clamp to the gap so rounding can't push an edge
-            // past a neighbour into an existing task/event.
-            var top = Math.max(dragState.gap[0], snapPx(Math.min(dragState.y0, y)));
-            var bottom = Math.min(dragState.gap[1], snapPx(Math.max(dragState.y0, y)));
-            dragState.preview.style.top = top + 'px';
-            dragState.preview.style.height = Math.max(0, bottom - top) + 'px';
-            dragState.curTop = top; dragState.curBottom = bottom;
-            if (bottom - top > 3) dragState.moved = true;
-        }
-
-        // How far to auto-scroll for a pointer near the scroller's top/bottom edge,
-        // scaled by how deep into the edge zone it is. Returns 0 when the selection
-        // can't grow any further that way (it's already flush against its gap).
-        function edgeScroll(clientY) {
-            if (!scroller || !dragState) return 0;
-            var r = scroller.getBoundingClientRect();
-            if (clientY > r.bottom - EDGE && dragState.curBottom < dragState.gap[1]) {
-                return Math.min(MAX_STEP, Math.max(3, (clientY - (r.bottom - EDGE)) / EDGE * MAX_STEP));
-            }
-            if (clientY < r.top + EDGE && dragState.curTop > dragState.gap[0]) {
-                return -Math.min(MAX_STEP, Math.max(3, ((r.top + EDGE) - clientY) / EDGE * MAX_STEP));
-            }
-            return 0;
-        }
-        function autoScrollTick() {
-            if (!dragState) return;
-            var amt = edgeScroll(dragState.lastClientY);
-            if (amt !== 0) {
-                var before = scroller.scrollTop;
-                scroller.scrollTop += amt;
-                if (scroller.scrollTop !== before) applyDrag(dragState.lastClientY);
-                dragState.rafId = requestAnimationFrame(autoScrollTick);
-            } else {
-                dragState.rafId = null;   // idle; a later mousemove restarts it
-            }
-        }
 
         cols.addEventListener('mousedown', function (e) {
             if (e.button !== 0) return;
@@ -1292,20 +1338,20 @@
             preview.className = 'wk-drag-preview';
             col.appendChild(preview);
             dragState = { iso: col.getAttribute('data-iso'), col: col, y0: y, gap: gap, preview: preview,
-                          moved: false, curTop: y, curBottom: y, lastClientY: e.clientY, rafId: null };
+                          moved: false, curTop: y, curBottom: y, lastClientY: e.clientY, rafId: null, scroller: scroller };
             document.body.style.userSelect = 'none';
         });
 
+        if (__dragDocWired) return;
+        __dragDocWired = true;
         document.addEventListener('mousemove', function (e) {
             if (!dragState) return;
             dragState.lastClientY = e.clientY;
-            applyDrag(e.clientY);
-            // Near a scroll edge and not already auto-scrolling? Start the loop.
-            if (dragState.rafId == null && edgeScroll(e.clientY) !== 0) {
-                dragState.rafId = requestAnimationFrame(autoScrollTick);
+            dragApply(e.clientY);
+            if (dragState.rafId == null && dragEdgeScroll(e.clientY) !== 0) {
+                dragState.rafId = requestAnimationFrame(dragAutoTick);
             }
         });
-
         document.addEventListener('mouseup', function () {
             if (!dragState) return;
             var st = dragState; dragState = null;
@@ -1320,127 +1366,140 @@
 
     // Draw the seven day columns from the cached real tasks. Kept separate so it
     // can redraw when tasks arrive (async) without rebuilding headers/focus.
+    // Build one day's inner grid HTML (hour lines + positioned blocks) for the iso
+    // in day object `d`. Side effects: registers dragBusy[d.iso] and, via ctx,
+    // records the first overlap conflict found. Shared by the week and day views
+    // so both render tasks/events identically from the same data.
+    function buildColumnInner(d, ctx) {
+        var lines = '';
+        for (var h = START_HOUR; h < END_HOUR; h++) {
+            lines += '<div class="wk-hourline" style="top:' + ((h - START_HOUR) * HOUR_H) + 'px"></div>';
+        }
+        var blocks = dayTaskBlocks(d.iso);
+        var events = dayEventBlocks(d.iso);
+        // Position everything by its start/end time. Blocks keep full width and
+        // layer where they overlap (shorter blocks render on top).
+        var all = blocks.concat(events);
+        all.forEach(function (b) {
+            b.top = (b.start - START_HOUR) * HOUR_H;
+            // Height tracks the block's time span…
+            b.h = Math.max(2, (b.end - b.start) * HOUR_H - 4);
+            // …except a ≤15-min block gets a one-row minimum so its compact name +
+            // start time stay fully visible instead of being clipped.
+            if ((b.end - b.start) * 60 <= 15) b.h = Math.max(b.h, COMPACT_MIN_H);
+        });
+        dragBusy[d.iso] = all.map(function (b) { return [b.top, b.top + b.h]; });
+        // Strictly no overlap between any two live blocks — event↔event,
+        // event↔task AND task↔task — is a conflict the user must resolve by
+        // deleting one side. Only calendar tasks (show_on_calendar) count; plain
+        // to-do/dashboard tasks and completed tasks are excluded.
+        if (ctx && !ctx.conflict) {
+            var cand = all.filter(function (b) { return b.kind === 'event' || (b.onCalendar && !b.done); });
+            for (var ci = 0; ci < cand.length && !ctx.conflict; ci++) {
+                for (var cj = ci + 1; cj < cand.length; cj++) {
+                    if (blocksOverlap(cand[ci], cand[cj])) {
+                        ctx.conflict = { a: cand[ci], b: cand[cj], iso: d.iso };
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Nesting insets, then draw tasks and events together in one pass: longer
+        // blocks beneath and a bit wider, shorter ones on top and tucked inside.
+        assignNesting(all);
+        all.sort(byStackOrder);   // longer beneath (wider), shorter on top (inset)
+        var html = all.map(function (b) {
+            if (b.kind === 'event') {
+                var col = eventColor(b);
+                // A short event (≤15 min) is too thin for two rows: show its name
+                // and start time on one line, without the end time.
+                var compact = (b.end - b.start) * 60 <= 15;
+                var body = compact
+                    ? '<div class="wk-event-head">' +
+                          '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
+                          '<span class="wk-event-start">' + esc(hmLabelShort(b.startHM)) + '</span>' +
+                      '</div>'
+                    : '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
+                      '<div class="wk-event-foot"><span class="wk-event-due">' +
+                          esc(hmLabel(b.startHM) + ' – ' + hmLabel(b.endHM)) +
+                      '</span></div>';
+                return '<div class="wk-event wk-event-cal' + (compact ? ' is-compact' : '') + '" data-kind="event"' +
+                    ' data-iso="' + esc(d.iso) + '" data-name="' + esc(b.name) +
+                    '" data-shm="' + esc(b.startHM) + '" data-ehm="' + esc(b.endHM) + '" style="' + nestPos(b) +
+                    ';background:' + col.fill + ';border-color:' + col.border +
+                    ';border-left-color:' + col.left + '">' +
+                    leadIcon(b.name) + cardMenuBtn(b.h) + body +
+                    '</div>';
+            }
+            // Task block. Colour-coded by state: completed = green, else by
+            // difficulty (low/easy = blue, medium = yellow, high/hard = red).
+            var prioCls = b.priority === 'high' ? 'prio-high'
+                : (b.priority === 'medium' ? 'prio-medium' : 'prio-low');
+            // Completed tasks keep their priority colour; the done state shows only
+            // as a green check sign + green text (see .is-done in CSS).
+            var stateCls = prioCls + (b.done ? ' is-done' : '');
+            // Footer: a task running past this day says where it continues; a
+            // finished task shows its completion time; else its due time.
+            var timeText, timeClass;
+            if (b.contDT) {
+                timeText = 'Continued on ' + MONTHS[b.contDT.getMonth()] + ' ' + b.contDT.getDate();
+                timeClass = 'wk-event-cont';
+            } else if (b.done) {
+                var end = b.completedDT || b.dueDT;
+                timeText = end ? (isoDay(end) === d.iso ? timeLabel(end) : shortDT(end)) : '';
+                timeClass = 'wk-event-done-time';
+            } else {
+                var dueStr = b.dueDT ? dueLabel(b.dueDT) : '';
+                timeText = dueStr ? 'Due ' + dueStr : '';
+                timeClass = 'wk-event-due';
+            }
+            // A short task (≤15 min) mirrors the short-event layout: name and start
+            // time on one row, dropping the due/XP footer that won't fit.
+            var compactTask = (b.end - b.start) * 60 <= 15;
+            var startText = b.startDT ? (compactTask ? timeLabelShort(b.startDT) : timeLabel(b.startDT)) : '';
+            return '<div class="wk-event wk-task ' + stateCls + (compactTask ? ' is-compact' : '') + '" data-kind="task"' +
+                ' data-iso="' + esc(d.iso) + '" data-id="' + esc(String(b.id)) + '" style="' + nestPos(b) + '">' +
+                leadIcon(b.title) + cardMenuBtn(b.h) +
+                '<div class="wk-event-head">' +
+                    '<div class="wk-event-title">' +
+                        (b.done ? '<span class="wk-event-check">✓</span> ' : '') +
+                        esc(b.title) + (b.cont ? ' — continued' : '') +
+                    '</div>' +
+                    (startText ? '<span class="wk-event-start">' + esc(startText) + '</span>' : '') +
+                '</div>' +
+                (compactTask ? '' :
+                '<div class="wk-event-foot">' +
+                    (timeText ? '<span class="' + timeClass + '">' + esc(timeText) + '</span>' : '') +
+                    '<span class="wk-event-xp">' + b.xp + ' XP</span>' +
+                '</div>') +
+                '</div>';
+        }).join('');
+        return lines + html;
+    }
+
+    // Redraw whichever grid is currently visible (week vs day). Both read the same
+    // gTasks + events, so a change made in one view shows in the other on toggle.
+    function renderActive() {
+        var dayPane = document.getElementById('dayView');
+        if (dayPane && dayPane.classList.contains('active')) renderDay();
+        else renderDayColumns();
+    }
+
     function renderDayColumns() {
         var cols = document.getElementById('wkDayCols');
         if (!cols) return;
         var DAYS = buildDays();
         var gridH = (END_HOUR - START_HOUR) * HOUR_H;
-        var conflict = null;
+        var ctx = { conflict: null };
         dragBusy = {};   // per-day occupied [top, bottom] pixel ranges, for drag-to-create
         cols.innerHTML = DAYS.map(function (d) {
-            var lines = '';
-            for (var h = START_HOUR; h < END_HOUR; h++) {
-                lines += '<div class="wk-hourline" style="top:' + ((h - START_HOUR) * HOUR_H) + 'px"></div>';
-            }
-            var blocks = dayTaskBlocks(d.iso);
-            var events = dayEventBlocks(d.iso);
-            // Position everything by its start/end time. Blocks keep full width
-            // and layer where they overlap (shorter blocks render on top).
-            var all = blocks.concat(events);
-            all.forEach(function (b) {
-                b.top = (b.start - START_HOUR) * HOUR_H;
-                // Height tracks the block's time span…
-                b.h = Math.max(2, (b.end - b.start) * HOUR_H - 4);
-                // …except a ≤15-min block gets a one-row minimum so its compact
-                // name + start time stay fully visible instead of being clipped.
-                if ((b.end - b.start) * 60 <= 15) b.h = Math.max(b.h, COMPACT_MIN_H);
-            });
-            dragBusy[d.iso] = all.map(function (b) { return [b.top, b.top + b.h]; });
-            // Strictly no overlap between any two live blocks — event↔event,
-            // event↔task AND task↔task — is a conflict the user must resolve by
-            // deleting one side. Only calendar tasks (show_on_calendar) count;
-            // plain to-do/dashboard tasks and completed tasks are excluded.
-            if (!conflict) {
-                var cand = all.filter(function (b) { return b.kind === 'event' || (b.onCalendar && !b.done); });
-                for (var ci = 0; ci < cand.length && !conflict; ci++) {
-                    for (var cj = ci + 1; cj < cand.length; cj++) {
-                        if (blocksOverlap(cand[ci], cand[cj])) {
-                            conflict = { a: cand[ci], b: cand[cj], iso: d.iso };
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Nesting insets, then draw tasks and events together in one pass:
-            // longer blocks beneath and a bit wider, shorter ones on top and
-            // tucked inside — so task-in-task, event-in-task and task-in-event
-            // all read as containment.
-            assignNesting(all);
-            all.sort(byStackOrder);   // longer beneath (wider), shorter on top (inset)
-            var html = all.map(function (b) {
-                if (b.kind === 'event') {
-                    var col = eventColor(b);
-                    // A short event (≤15 min) is too thin for two rows: show its
-                    // name and start time on one line, without the end time.
-                    var compact = (b.end - b.start) * 60 <= 15;
-                    var body = compact
-                        ? '<div class="wk-event-head">' +
-                              '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
-                              '<span class="wk-event-start">' + esc(hmLabelShort(b.startHM)) + '</span>' +
-                          '</div>'
-                        : '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
-                          '<div class="wk-event-foot"><span class="wk-event-due">' +
-                              esc(hmLabel(b.startHM) + ' – ' + hmLabel(b.endHM)) +
-                          '</span></div>';
-                    return '<div class="wk-event wk-event-cal' + (compact ? ' is-compact' : '') + '" data-kind="event"' +
-                        ' data-iso="' + esc(d.iso) + '" data-name="' + esc(b.name) +
-                        '" data-shm="' + esc(b.startHM) + '" data-ehm="' + esc(b.endHM) + '" style="' + nestPos(b) +
-                        ';background:' + col.fill + ';border-color:' + col.border +
-                        ';border-left-color:' + col.left + '">' +
-                        cardMenuBtn(b.h) + body +
-                        '</div>';
-                }
-                // Task block. Colour-coded by state: completed = green, else by
-                // difficulty (low/easy = blue, medium = yellow, high/hard = red).
-                var prioCls = b.priority === 'high' ? 'prio-high'
-                    : (b.priority === 'medium' ? 'prio-medium' : 'prio-low');
-                // Completed tasks keep their priority colour; the done state shows
-                // only as a green check sign + green text (see .is-done in CSS).
-                var stateCls = prioCls + (b.done ? ' is-done' : '');
-                // Footer: a task running past this day says where it continues; a
-                // finished task shows its completion time; else its due time.
-                var timeText, timeClass;
-                if (b.contDT) {
-                    timeText = 'Continued on ' + MONTHS[b.contDT.getMonth()] + ' ' + b.contDT.getDate();
-                    timeClass = 'wk-event-cont';
-                } else if (b.done) {
-                    var end = b.completedDT || b.dueDT;
-                    timeText = end ? (isoDay(end) === d.iso ? timeLabel(end) : shortDT(end)) : '';
-                    timeClass = 'wk-event-done-time';
-                } else {
-                    var dueStr = b.dueDT ? dueLabel(b.dueDT) : '';
-                    timeText = dueStr ? 'Due ' + dueStr : '';
-                    timeClass = 'wk-event-due';
-                }
-                // A short task (≤15 min) mirrors the short-event layout: name and
-                // start time on one row, dropping the due/XP footer that won't fit.
-                var compactTask = (b.end - b.start) * 60 <= 15;
-                // Start time (the task's start clock time) sits at the top next to
-                // the title, kept compact so the title stays readable beside it.
-                var startText = b.startDT ? (compactTask ? timeLabelShort(b.startDT) : timeLabel(b.startDT)) : '';
-                return '<div class="wk-event wk-task ' + stateCls + (compactTask ? ' is-compact' : '') + '" data-kind="task"' +
-                    ' data-iso="' + esc(d.iso) + '" data-id="' + esc(String(b.id)) + '" style="' + nestPos(b) + '">' +
-                    cardMenuBtn(b.h) +
-                    '<div class="wk-event-head">' +
-                        '<div class="wk-event-title">' +
-                            (b.done ? '<span class="wk-event-check">✓</span> ' : '') +
-                            esc(b.title) + (b.cont ? ' — continued' : '') +
-                        '</div>' +
-                        (startText ? '<span class="wk-event-start">' + esc(startText) + '</span>' : '') +
-                    '</div>' +
-                    (compactTask ? '' :
-                    '<div class="wk-event-foot">' +
-                        (timeText ? '<span class="' + timeClass + '">' + esc(timeText) + '</span>' : '') +
-                        '<span class="wk-event-xp">' + b.xp + ' XP</span>' +
-                    '</div>') +
-                    '</div>';
-            }).join('');
-            return '<div class="wk-daycol' + (d.today ? ' today' : '') + '" data-iso="' + esc(d.iso) + '" style="height:' + gridH + 'px">' + lines + html + '</div>';
+            return '<div class="wk-daycol' + (d.today ? ' today' : '') + '" data-iso="' + esc(d.iso) +
+                '" style="height:' + gridH + 'px">' + buildColumnInner(d, ctx) + '</div>';
         }).join('');
 
         // Force resolution of the first event–event overlap on any day this week.
-        if (conflict) showConflictPopup(conflict.a, conflict.b, conflict.iso);
+        if (ctx.conflict) showConflictPopup(ctx.conflict.a, ctx.conflict.b, ctx.conflict.iso);
         else hideOverlapPopup();
 
         // Draw/refresh the "current time" red line after the columns exist.
@@ -1503,6 +1562,175 @@
         sc.scrollTop = Math.max(0, top - sc.clientHeight / 2);
     }
 
+    // --- Day view: a single-day version of the grid, sharing all rendering, data
+    // and interactions with the week view (only the DOM targets differ). ---------
+    function dayDateOf(offset) {
+        var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + offset); return d;
+    }
+    function buildDayObj() {
+        var d = dayDateOf(dayOffset);
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        return { iso: isoDay(d), today: sameDay(d, today), date: d };
+    }
+    function dayTitleText(d) {
+        return DOW_FULL[d.getDay()] + ', ' + MONTHS_FULL[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+    }
+    function renderDay() {
+        var colEl = document.getElementById('dayCol');
+        var labels = document.getElementById('dayTimeLabels');
+        var titleEl = document.getElementById('dayTitle');
+        if (!colEl || !labels) return;
+        var d = buildDayObj();
+        var gridH = (END_HOUR - START_HOUR) * HOUR_H;
+        if (titleEl) titleEl.textContent = dayTitleText(d.date);
+
+        // Time labels — same 6 AM–5 AM window as the week.
+        var lab = '';
+        for (var h = START_HOUR; h <= END_HOUR; h++) {
+            lab += '<div class="wk-timelabel" style="height:' + HOUR_H + 'px"><span>' + hourLabel(h) + '</span></div>';
+        }
+        labels.innerHTML = lab;
+        labels.style.height = gridH + 'px';
+
+        // The single day column, built by the SAME pipeline as the week columns.
+        dragBusy = {};
+        var ctx = { conflict: null };
+        colEl.className = 'day-col wk-daycol' + (d.today ? ' today' : '');
+        colEl.setAttribute('data-iso', d.iso);
+        colEl.style.height = gridH + 'px';
+        colEl.innerHTML = buildColumnInner(d, ctx);
+
+        if (ctx.conflict) showConflictPopup(ctx.conflict.a, ctx.conflict.b, ctx.conflict.iso);
+        else hideOverlapPopup();
+        renderDayNowLine();
+
+        // Right-hand overview sidebar: mini-month (synced to the shown day) plus
+        // the Daily Overview / Tasks Left panels, all scoped to the shown day.
+        miniY = d.date.getFullYear(); miniM = d.date.getMonth();
+        renderDayMiniCal();
+        renderDaySidebar(d);
+    }
+
+    // --- Day overview sidebar (real data, scoped to the shown day) -----------
+    // Tasks / XP / streak come from the same fetch as the week sidebar; "Focus
+    // Time" is the day's total scheduled block time (a real "planned" figure —
+    // there's no tracked-focus feature yet, so the Focus card itself is a
+    // placeholder). Everything reads gTasks + gStats, cached in loadSidebar.
+    function fmtHM(hours) {
+        var total = Math.round(hours * 60);
+        var h = Math.floor(total / 60), m = total % 60;
+        if (h && m) return h + 'h ' + m + 'm';
+        if (h) return h + 'h';
+        return m + 'm';
+    }
+    function renderDaySidebar(d) {
+        var blocks = dayTaskBlocks(d.iso);          // this day's task blocks
+        var events = dayEventBlocks(d.iso);         // this day's calendar events
+        var doneBlocks = blocks.filter(function (b) { return b.done; });
+        var total = blocks.length;
+        var done = doneBlocks.length;
+        setText('dayStatTasks', done + ' / ' + total);
+
+        // Planned time = summed duration of every scheduled block (tasks + events).
+        var plannedH = blocks.concat(events).reduce(function (s, b) { return s + (b.end - b.start); }, 0);
+        setText('dayStatFocus', plannedH > 0 ? fmtHM(plannedH) : '0m');
+
+        // XP earned = XP from tasks completed on this day.
+        var xpToday = doneBlocks.reduce(function (s, b) { return s + (Number(b.xp) || 0); }, 0);
+        setText('dayStatXp', xpToday);
+
+        var streak = Number(gStats.current_streak) || 0;
+        setText('dayStatStreak', streak);
+
+        // Tasks Left: the day's pending (not-done) task blocks, earliest first.
+        var pending = blocks.filter(function (b) { return !b.done; })
+            .sort(function (a, b) { return a.start - b.start; });
+        var ul = document.getElementById('dayTasksLeft');
+        if (ul) {
+            if (!pending.length) {
+                ul.innerHTML = '<li class="day-tasks-empty">Nothing left — you’re all caught up. 🎉</li>';
+            } else {
+                ul.innerHTML = pending.slice(0, 5).map(function (b) {
+                    var cat = b.priority ? (b.priority.charAt(0).toUpperCase() + b.priority.slice(1)) : 'Task';
+                    var time = b.dueDT ? timeLabel(b.dueDT) : (b.startDT ? timeLabel(b.startDT) : '');
+                    return '<li class="day-task-item">' +
+                        '<span class="day-task-ring"></span>' +
+                        '<span class="day-task-main">' +
+                            '<span class="day-task-name">' + esc(b.title) + '</span>' +
+                            '<span class="day-task-cat">' + esc(cat) + '</span>' +
+                        '</span>' +
+                        (time ? '<span class="day-task-time">' + esc(time) + '</span>' : '') +
+                    '</li>';
+                }).join('');
+            }
+        }
+    }
+
+    // --- Mini-month calendar in the Day sidebar ------------------------------
+    // Its own month cursor (miniY/miniM): the main day-nav resyncs it to the
+    // shown day's month (see renderDay); its own arrows page months without
+    // moving the day; clicking a date jumps the Day view to that date.
+    var miniY, miniM;
+    function renderDayMiniCal() {
+        var grid = document.getElementById('dayMiniGrid');
+        var title = document.getElementById('dayMiniTitle');
+        if (!grid) return;
+        if (miniY == null) { var t = new Date(); miniY = t.getFullYear(); miniM = t.getMonth(); }
+        if (title) title.textContent = MONTHS_FULL[miniM] + ' ' + miniY;
+
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var shown = dayDateOf(dayOffset); shown.setHours(0, 0, 0, 0);
+        var first = new Date(miniY, miniM, 1);
+        var startDow = first.getDay();               // 0 = Sun … 6 = Sat
+        var gridStart = new Date(miniY, miniM, 1 - startDow);
+        var html = '';
+        for (var i = 0; i < 42; i++) {
+            var cur = new Date(gridStart); cur.setDate(gridStart.getDate() + i);
+            var cls = 'day-mini-cell';
+            if (cur.getMonth() !== miniM) cls += ' is-muted';
+            if (sameDay(cur, today)) cls += ' is-today';
+            if (sameDay(cur, shown)) cls += ' is-selected';
+            html += '<button type="button" class="' + cls + '" data-iso="' + isoDay(cur) + '">' + cur.getDate() + '</button>';
+        }
+        grid.innerHTML = html;
+    }
+    // Days between two dates (ignoring time), for mapping a clicked mini-cal day
+    // to the Day view's today-relative offset.
+    function daysBetween(a, b) {
+        var ms = new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate());
+        return Math.round(ms / 86400000);
+    }
+    function renderDayNowLine() {
+        var col = document.getElementById('dayCol');
+        var labels = document.getElementById('dayTimeLabels');
+        if (!col || !labels) return;
+        var oldLine = document.getElementById('dayNowLine'); if (oldLine) oldLine.remove();
+        var oldLabel = document.getElementById('dayNowLabel'); if (oldLabel) oldLabel.remove();
+        if (dayOffset !== 0) return;   // the "now" line only makes sense on today
+        var now = new Date();
+        var h = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+        if (h < START_HOUR) h += 24;
+        if (h > END_HOUR) return;
+        var top = (h - START_HOUR) * HOUR_H;
+        var line = document.createElement('div');
+        line.id = 'dayNowLine'; line.className = 'wk-nowline'; line.style.top = top + 'px';
+        col.appendChild(line);
+        var lab = document.createElement('div');
+        lab.id = 'dayNowLabel'; lab.className = 'wk-nowlabel'; lab.style.top = top + 'px'; lab.textContent = fmtNow(now);
+        labels.appendChild(lab);
+    }
+    function scrollDayToNow() {
+        if (dayOffset !== 0) return;
+        var sc = document.querySelector('#dayView .wk-scroll');
+        if (!sc) return;
+        var now = new Date();
+        var h = now.getHours() + now.getMinutes() / 60;
+        if (h < START_HOUR) h += 24;
+        if (h > END_HOUR) return;
+        var top = (h - START_HOUR) * HOUR_H;
+        sc.scrollTop = Math.max(0, top - sc.clientHeight / 2);
+    }
+
     // Frozen weekly-overview snapshots, keyed by the week's Monday (YYYY-MM-DD).
     // Once a week is over, its overview must not change as tasks are later edited
     // or deleted — so we read the saved value instead of recomputing.
@@ -1531,7 +1759,8 @@
                 var stats = data.stats || {};
                 var tasks = data.tasks || [];
                 gTasks = tasks;            // cache for the grid, then draw them
-                renderDayColumns();
+                gStats = stats;            // …and for the Day view's overview sidebar
+                renderActive();
                 var wk = weekRange(mondayOf(weekOffset));
                 function inWeek(s) { s = (s || '').slice(0, 10); return s && s >= wk.start && s <= wk.end; }
 
@@ -1657,11 +1886,14 @@
             b.classList.toggle('active', on);
             b.setAttribute('aria-selected', on ? 'true' : 'false');
         });
-        // Whenever the week view becomes visible, redraw it so any events added
-        // or removed on the month view sync in, then jump to the current time.
+        // Whenever a time-grid view becomes visible, redraw it so any events
+        // added/removed elsewhere sync in, then jump to the current time.
         if (view === 'week') {
             renderDayColumns();
             requestAnimationFrame(scrollToNow);
+        } else if (view === 'day') {
+            renderDay();
+            requestAnimationFrame(scrollDayToNow);
         }
     }
 
@@ -1736,7 +1968,7 @@
             var origConfirm = window.confirmAddSection;
             window.confirmAddSection = function () {
                 origConfirm.apply(this, arguments);
-                renderDayColumns();
+                renderActive();
             };
         }
         // The three-dots menu routes event edit/delete through the month modals;
@@ -1746,15 +1978,88 @@
             var origEdit = window.confirmEditSection;
             window.confirmEditSection = function () {
                 origEdit.apply(this, arguments);
-                renderDayColumns();
+                renderActive();
             };
         }
-        // Open a block's overflow menu on click of its three-dots button. The
-        // menu is a body-level popover; a click anywhere else (or a grid scroll)
-        // closes it.
-        var colsEl = document.getElementById('wkDayCols');
-        if (colsEl) {
-            colsEl.addEventListener('click', function (e) {
+        // Day navigation: prev / next step a day, Today returns to today.
+        var dayArrows = document.querySelectorAll('#dayView .wk-nav .wk-arrow');
+        if (dayArrows[0]) dayArrows[0].addEventListener('click', function () { dayOffset -= 1; renderDay(); });
+        if (dayArrows[1]) dayArrows[1].addEventListener('click', function () { dayOffset += 1; renderDay(); });
+        var dayToday = document.querySelector('#dayView .wk-today');
+        if (dayToday) dayToday.addEventListener('click', function () { dayOffset = 0; renderDay(); requestAnimationFrame(scrollDayToNow); });
+
+        // Header "Add Task" (and the sidebar's "+ Add Task"): open the task modal
+        // for the shown day, defaulting to the next hour. An optional name (from the
+        // all-day field) is prefilled after the modal resets its inputs.
+        function openTaskForDay(name) {
+            var d = buildDayObj();
+            var startMin;
+            if (d.today) {
+                var now = new Date();
+                startMin = (now.getHours() + 1) * 60;             // top of the next hour
+            } else {
+                startMin = 9 * 60;                                // 9 AM on another day
+            }
+            if (startMin >= 23 * 60) startMin = 22 * 60;          // keep end within the day
+            if (typeof openWeekTaskModal === 'function') {
+                openWeekTaskModal(d.iso, { start: startMin, end: startMin + 60 });
+                if (name) { var nm = document.getElementById('taskName'); if (nm) nm.value = name; }
+            }
+        }
+        var addTaskBtn = document.getElementById('dayAddTaskBtn');
+        if (addTaskBtn) addTaskBtn.addEventListener('click', function () { openTaskForDay(''); });
+        var addTaskLink = document.getElementById('dayAddTaskLink');
+        if (addTaskLink) addTaskLink.addEventListener('click', function () { openTaskForDay(''); });
+
+        // All-day field: Enter or the + button opens the task modal, prefilled with
+        // whatever was typed, then clears the field.
+        var alldayInput = document.getElementById('dayAlldayInput');
+        var alldayAdd = document.getElementById('dayAlldayAdd');
+        function submitAllday() {
+            if (!alldayInput) return;
+            var v = alldayInput.value.trim();
+            openTaskForDay(v);
+            alldayInput.value = '';
+        }
+        if (alldayAdd) alldayAdd.addEventListener('click', submitAllday);
+        if (alldayInput) alldayInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); submitAllday(); }
+        });
+
+        // Focus button: visual placeholder — no tracked-focus feature yet.
+        var focusBtn = document.getElementById('dayFocusBtn');
+        if (focusBtn) focusBtn.addEventListener('click', function () { /* placeholder */ });
+
+        // Mini-month: its arrows page the month in place; a day click jumps the
+        // Day view to that date (which resyncs the mini-month to the new month).
+        var miniPrev = document.getElementById('dayMiniPrev');
+        var miniNext = document.getElementById('dayMiniNext');
+        if (miniPrev) miniPrev.addEventListener('click', function () {
+            miniM -= 1; if (miniM < 0) { miniM = 11; miniY -= 1; } renderDayMiniCal();
+        });
+        if (miniNext) miniNext.addEventListener('click', function () {
+            miniM += 1; if (miniM > 11) { miniM = 0; miniY += 1; } renderDayMiniCal();
+        });
+        var miniGrid = document.getElementById('dayMiniGrid');
+        if (miniGrid) miniGrid.addEventListener('click', function (e) {
+            var cell = e.target.closest ? e.target.closest('.day-mini-cell') : null;
+            if (!cell) return;
+            var iso = cell.getAttribute('data-iso');
+            if (!iso) return;
+            var parts = iso.split('-');
+            var picked = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            dayOffset = daysBetween(new Date(), picked);
+            renderDay();
+            requestAnimationFrame(scrollDayToNow);
+        });
+
+        // Open a block's overflow menu on click of its three-dots button. The menu
+        // is a body-level popover; a click elsewhere (or a grid scroll) closes it.
+        // Wired on both the week grid and the day column.
+        function wireCardMenu(container) {
+            if (!container || container.__menuWired) return;
+            container.__menuWired = true;
+            container.addEventListener('click', function (e) {
                 var btn = e.target.closest('.wk-card-menu');
                 if (!btn) return;
                 e.stopPropagation();
@@ -1762,16 +2067,22 @@
                 openCardPop(btn);
             });
         }
+        wireCardMenu(document.getElementById('wkDayCols'));
+        wireCardMenu(document.getElementById('dayCol'));
         document.addEventListener('click', closeCardPop);
         window.addEventListener('resize', closeCardPop);
         var wkScroll = document.querySelector('#weekView .wk-scroll');
         if (wkScroll) wkScroll.addEventListener('scroll', closeCardPop, true);
+        var dayScroll = document.querySelector('#dayView .wk-scroll');
+        if (dayScroll) dayScroll.addEventListener('scroll', closeCardPop, true);
 
-        // Drag on an empty grid spot to create an event (delegated once).
-        initDragCreate();
+        // Drag on an empty grid spot to create an event/task — week grid and day
+        // column both, each with its own scroller for edge auto-scroll.
+        initDragCreate(document.getElementById('wkDayCols'), document.querySelector('#weekView .wk-scroll'));
+        initDragCreate(document.getElementById('dayCol'), document.querySelector('#dayView .wk-scroll'));
 
-        // Keep the "now" line tracking the clock (re-placed each minute).
-        setInterval(renderNowLine, 60000);
+        // Keep the "now" lines (week + day) tracking the clock, re-placed each minute.
+        setInterval(function () { renderNowLine(); renderDayNowLine(); }, 60000);
     }
 
     if (document.readyState === 'loading') {

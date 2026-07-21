@@ -1,19 +1,60 @@
 /* calendar-day.css — Day view. Reuses the Week view's .wk-* event/label/header
-   styles (calendar-week.css); only the single-column day layout lives here. */
+   styles (calendar-week.css); the single-day layout + the right-hand overview
+   sidebar (mini-month, Focus, Daily Overview, Tasks Left) live here. */
 
-.day-main { display: flex; flex-direction: column; min-height: 0; }
+/* ---- Header: title/nav on the left, Focus + Add Task on the right ---- */
+.day-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.day-header-actions { display: flex; align-items: center; gap: 10px; }
+.day-action-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid #e5e8ee; background: #fff; border-radius: 12px;
+    padding: 9px 16px; font: inherit; font-size: 14px; font-weight: 600;
+    color: #2c302e; cursor: pointer; transition: background .15s ease, border-color .15s ease;
+}
+.day-action-btn svg { width: 16px; height: 16px; }
+.day-action-btn:hover { background: #f6f7f9; }
+.day-action-primary { background: #1a1f26; border-color: #1a1f26; color: #fff; }
+.day-action-primary:hover { background: #2b323c; border-color: #2b323c; }
 
-/* All-day row: label + a single full-width chip. */
+/* ---- Two-column body: day grid on the left, overview sidebar on the right ---- */
+.day-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 22px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.day-gridpane { display: flex; flex-direction: column; min-height: 0; }
+
+/* All-day row: label + a full-width "add an all-day task" input with a + button. */
 .day-allday {
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr);
     align-items: center;
     border-top: 1px solid #eef0f4;
     border-bottom: 1px solid #eef0f4;
-    padding: 6px 0;
+    padding: 8px 0;
+    flex: none;   /* stays put while the grid below scrolls */
 }
-.day-allday-chip { padding-right: 4px; }
-.day-allday-chip .wk-allday-chip { display: block; width: 100%; box-sizing: border-box; }
+.day-allday-field { display: flex; align-items: center; gap: 8px; padding-right: 4px; }
+.day-allday-input {
+    flex: 1 1 auto; min-width: 0; box-sizing: border-box;
+    font: inherit; font-size: 14px; color: #3a3f4a;
+    background: #fafbfc; border: 1px solid #eef0f4; border-radius: 12px;
+    padding: 11px 14px; transition: border-color .15s ease, box-shadow .15s ease;
+}
+.day-allday-input::placeholder { color: #9aa0ad; }
+.day-allday-input:focus {
+    outline: none; border-color: #a8845c;
+    box-shadow: 0 0 0 3px rgba(168,132,92,.15);
+}
+.day-allday-add {
+    flex: none; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid #eef0f4; background: #fafbfc; border-radius: 10px;
+    color: #6b7280; cursor: pointer; transition: background .15s ease, color .15s ease;
+}
+.day-allday-add svg { width: 16px; height: 16px; }
+.day-allday-add:hover { background: #f0f1f4; color: #2c302e; }
 
 /* Scroll area shares .wk-scroll (56px time gutter + 1 day column). */
 .day-scroll { grid-template-columns: 56px minmax(0, 1fr); }
@@ -21,6 +62,153 @@
 /* Single wide day column. */
 .day-col { position: relative; border-left: 1px solid #eef0f4; }
 
-/* Dark theme parity with the week view. */
+/* ---- Overview sidebar ---- */
+.day-sidebar { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.day-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.day-panel-head .wk-panel-title { margin: 0; }
+.day-panel-link { font-size: 13px; font-weight: 600; color: #a8845c; cursor: pointer; }
+.day-panel-link:hover { text-decoration: underline; }
+
+/* Mini month calendar */
+.day-mini-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.day-mini-title { font-size: 15px; font-weight: 700; color: #1a1f26; }
+.day-mini-nav { display: flex; gap: 4px; }
+.day-mini-arrow {
+    width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
+    border: none; background: transparent; border-radius: 8px;
+    color: #6b7280; font-size: 12px; cursor: pointer;
+}
+.day-mini-arrow:hover { background: #f2f3f6; color: #1a1f26; }
+.day-mini-dow { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 6px; }
+.day-mini-dow span { font-size: 11px; font-weight: 600; color: #9297ab; }
+.day-mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.day-mini-cell {
+    aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center;
+    font-size: 12.5px; color: #3a3f4a; border-radius: 999px; cursor: pointer;
+    border: none; background: transparent; font-family: inherit;
+    transition: background .12s ease;
+}
+.day-mini-cell:hover { background: #f2f3f6; }
+.day-mini-cell.is-muted { color: #c2c6d0; }
+.day-mini-cell.is-today { font-weight: 700; color: #a8845c; }
+.day-mini-cell.is-selected { background: #1a1f26; color: #fff; font-weight: 700; }
+.day-mini-cell.is-selected:hover { background: #2b323c; }
+
+/* Focus card (placeholder) */
+.day-focus-row { display: flex; align-items: center; gap: 12px; }
+.day-focus-icon {
+    flex: none; width: 40px; height: 40px; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(139, 122, 168, .16); color: #7a6aa8;
+}
+.day-focus-icon svg { width: 20px; height: 20px; }
+.day-focus-main { flex: 1 1 auto; min-width: 0; }
+.day-focus-name { font-size: 14px; font-weight: 700; color: #7a6aa8; }
+.day-focus-sub { font-size: 12px; color: #9297ab; }
+.day-focus-time { font-size: 13px; font-weight: 600; color: #6b7280; }
+.day-focus-barrow { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 6px; font-size: 12px; color: #6b7280; }
+.day-focus-pct { font-weight: 700; color: #7a6aa8; }
+.day-sidebar .wk-progress-bar { background: linear-gradient(90deg, #8b7aa8, #a893c9); }
+
+/* Daily Overview stat tiles: label on top, big number, small sub. */
+.day-stats .wk-stat { padding: 14px 14px; }
+.wk-stat-sub { font-size: 12px; color: #9297ab; margin-top: 2px; }
+.day-stats .wk-stat-num { margin-top: 4px; }
+.day-stat-green { color: #2e9e6b !important; }
+.day-stat-purple { color: #7a6aa8 !important; }
+
+/* Tasks Left list */
+.day-tasks-left { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; }
+.day-task-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid #f1f2f5; }
+.day-task-item:first-child { border-top: none; }
+.day-task-ring {
+    flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 999px;
+    border: 2px solid #cfd3db; box-sizing: border-box;
+}
+.day-task-ring.is-done { border-color: #2e9e6b; background: #2e9e6b; }
+.day-task-main { flex: 1 1 auto; min-width: 0; }
+.day-task-name { font-size: 14px; color: #2c302e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.day-task-cat { font-size: 12px; color: #9297ab; margin-top: 1px; }
+.day-task-time { font-size: 12px; color: #9297ab; flex: none; margin-top: 1px; }
+.day-tasks-empty { font-size: 13px; color: #9297ab; padding: 10px 0; }
+.day-viewall { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; color: #a8845c; text-decoration: none; }
+.day-viewall:hover { text-decoration: underline; }
+
+/* ---- Per-event lead icon (Day view only) ---- */
+/* Hidden in the Week grid (columns are too narrow); shown in the wide Day column
+   as a small rounded badge at the block's left edge, with the text shifted over. */
+.wk-event-lead { display: none; }
+.day-col .wk-event { padding-left: 40px; }
+.day-col .wk-event.is-compact { padding-left: 34px; }
+.day-col .wk-event-lead {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; border-radius: 8px;
+    background: rgba(255, 255, 255, .55); color: currentColor;
+}
+.day-col .wk-event-lead svg { width: 15px; height: 15px; }
+.day-col .wk-task .wk-event-lead { background: rgba(255, 255, 255, .5); }
+
+/* ---- Scroll behaviour ----
+   Above 1120px the calendar card is a fixed-height panel with hidden overflow
+   (see calendar.css), so the Day view fills the card and gives each column its
+   own scroll — the grid and the overview sidebar each scroll to the bottom
+   independently, and nothing is clipped. (This mirrors the Week view's
+   min-width:1121px rule; .day-scroll picks up .wk-scroll's flexible height from
+   calendar-week.css.) Below 1120px the card is height:auto and the whole page
+   scrolls, so the columns stack. */
+@media (min-width: 1121px) {
+    .day-layout { grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+    .day-sidebar { overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+}
+@media (max-width: 1120px) {
+    .day-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- Scrollbars for the Day view's two scrollers (light + dark) ----
+   Thin, rounded, and theme-aware, matching the app's shared scrollbar style. */
+.day-scroll, .day-sidebar { scrollbar-width: thin; scrollbar-color: #c3c9d4 transparent; }
+.day-scroll::-webkit-scrollbar,
+.day-sidebar::-webkit-scrollbar { width: 8px; height: 8px; }
+.day-scroll::-webkit-scrollbar-track,
+.day-sidebar::-webkit-scrollbar-track { background: transparent; }
+.day-scroll::-webkit-scrollbar-thumb,
+.day-sidebar::-webkit-scrollbar-thumb {
+    background: #c3c9d4; border-radius: 8px;
+    border: 2px solid transparent; background-clip: padding-box;
+}
+.day-scroll::-webkit-scrollbar-thumb:hover,
+.day-sidebar::-webkit-scrollbar-thumb:hover { background: #aab1c0; background-clip: padding-box; }
+html[data-theme="dark"] .day-scroll,
+html[data-theme="dark"] .day-sidebar { scrollbar-color: #333b47 transparent; }
+html[data-theme="dark"] .day-scroll::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .day-sidebar::-webkit-scrollbar-thumb { background: #333b47; background-clip: padding-box; }
+html[data-theme="dark"] .day-scroll::-webkit-scrollbar-thumb:hover,
+html[data-theme="dark"] .day-sidebar::-webkit-scrollbar-thumb:hover { background: #434c5a; background-clip: padding-box; }
+
+/* ---- Dark theme parity ---- */
 html[data-theme="dark"] .day-allday { border-color: #262c36; }
 html[data-theme="dark"] .day-col { border-color: #21262d; }
+html[data-theme="dark"] .day-action-btn { background: #161b22; border-color: #2b3242; color: #e6e9f0; }
+html[data-theme="dark"] .day-action-btn:hover { background: #1c222c; }
+html[data-theme="dark"] .day-action-primary { background: #e6e9f0; border-color: #e6e9f0; color: #12161c; }
+html[data-theme="dark"] .day-action-primary:hover { background: #cfd3db; border-color: #cfd3db; }
+html[data-theme="dark"] .day-allday-input { background: #0f141b; border-color: #262c36; color: #e6e9f0; }
+html[data-theme="dark"] .day-allday-input::placeholder { color: #6b7280; }
+html[data-theme="dark"] .day-allday-add { background: #0f141b; border-color: #262c36; color: #9aa2af; }
+html[data-theme="dark"] .day-allday-add:hover { background: #1c222c; color: #e6e9f0; }
+html[data-theme="dark"] .day-mini-title { color: #e6e9f0; }
+html[data-theme="dark"] .day-mini-arrow { color: #9aa2af; }
+html[data-theme="dark"] .day-mini-arrow:hover { background: #1c222c; color: #e6e9f0; }
+html[data-theme="dark"] .day-mini-cell { color: #c9d1d9; }
+html[data-theme="dark"] .day-mini-cell:hover { background: #1c222c; }
+html[data-theme="dark"] .day-mini-cell.is-muted { color: #4b525e; }
+html[data-theme="dark"] .day-mini-cell.is-selected { background: #e6e9f0; color: #12161c; }
+html[data-theme="dark"] .day-mini-cell.is-selected:hover { background: #cfd3db; }
+html[data-theme="dark"] .wk-stat-sub { color: #7d8492; }
+html[data-theme="dark"] .day-focus-sub, html[data-theme="dark"] .day-focus-barrow { color: #7d8492; }
+html[data-theme="dark"] .day-task-name { color: #e6e9f0; }
+html[data-theme="dark"] .day-task-cat, html[data-theme="dark"] .day-task-time { color: #7d8492; }
+html[data-theme="dark"] .day-task-item { border-color: #21262d; }
+html[data-theme="dark"] .day-task-ring { border-color: #3a424e; }
+html[data-theme="dark"] .day-col .wk-event-lead { background: rgba(0, 0, 0, .25); }

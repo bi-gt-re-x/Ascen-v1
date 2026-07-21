@@ -129,7 +129,7 @@
             </div>
 
             <div id="dayView" class="view-pane">
-                <div class="wk-header">
+                <div class="wk-header day-header">
                     <div class="wk-titlegroup">
                         <h2 class="wk-title" id="dayTitle">Day</h2>
                         <div class="wk-nav">
@@ -138,16 +138,106 @@
                         </div>
                         <button class="wk-today">Today</button>
                     </div>
+                    <div class="day-header-actions">
+                        <button type="button" class="day-action-btn" id="dayFocusBtn" title="Focus mode (coming soon)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg>
+                            Focus
+                        </button>
+                        <button type="button" class="day-action-btn day-action-primary" id="dayAddTaskBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                            Add Task
+                        </button>
+                    </div>
                 </div>
-                <div class="day-main">
-                    <div class="day-allday">
-                        <div class="wk-allday-label">All-day</div>
-                        <div class="day-allday-chip" id="dayAllday"></div>
+                <div class="day-layout">
+                    <div class="day-gridpane">
+                        <div class="day-allday">
+                            <div class="wk-allday-label">All-day</div>
+                            <div class="day-allday-field">
+                                <input type="text" id="dayAlldayInput" class="day-allday-input" placeholder="Add an all-day task…" aria-label="Add an all-day task">
+                                <button type="button" class="day-allday-add" id="dayAlldayAdd" aria-label="Add all-day task">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="wk-scroll day-scroll">
+                            <div class="wk-timelabels" id="dayTimeLabels"></div>
+                            <div class="day-col" id="dayCol"></div>
+                        </div>
                     </div>
-                    <div class="wk-scroll day-scroll">
-                        <div class="wk-timelabels" id="dayTimeLabels"></div>
-                        <div class="day-col" id="dayCol"></div>
-                    </div>
+                    <aside class="day-sidebar" id="daySidebar">
+                        <section class="wk-panel day-mini-panel">
+                            <div class="day-mini-head">
+                                <span class="day-mini-title" id="dayMiniTitle">Month</span>
+                                <div class="day-mini-nav">
+                                    <button type="button" class="day-mini-arrow" id="dayMiniPrev" aria-label="Previous month">&#10094;</button>
+                                    <button type="button" class="day-mini-arrow" id="dayMiniNext" aria-label="Next month">&#10095;</button>
+                                </div>
+                            </div>
+                            <div class="day-mini-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+                            <div class="day-mini-grid" id="dayMiniGrid"></div>
+                        </section>
+
+                        <section class="wk-panel">
+                            <div class="day-panel-head">
+                                <h3 class="wk-panel-title">Focus</h3>
+                                <span class="day-panel-link">Edit</span>
+                            </div>
+                            <div class="day-focus-row">
+                                <span class="day-focus-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+                                </span>
+                                <div class="day-focus-main">
+                                    <div class="day-focus-name">Deep Work</div>
+                                    <div class="day-focus-sub">3h 45m</div>
+                                </div>
+                                <div class="day-focus-time">3h 45m</div>
+                            </div>
+                            <div class="day-focus-barrow">
+                                <span>Today's focus time</span>
+                                <span class="day-focus-pct">75%</span>
+                            </div>
+                            <div class="wk-progress"><div class="wk-progress-bar" style="width:75%"></div></div>
+                        </section>
+
+                        <section class="wk-panel">
+                            <div class="day-panel-head">
+                                <h3 class="wk-panel-title">Daily Overview</h3>
+                                <span class="day-panel-link">View Analytics</span>
+                            </div>
+                            <div class="wk-stats day-stats">
+                                <div class="wk-stat">
+                                    <div class="wk-stat-label">Tasks</div>
+                                    <div class="wk-stat-num" id="dayStatTasks">–</div>
+                                    <div class="wk-stat-sub">Completed</div>
+                                </div>
+                                <div class="wk-stat">
+                                    <div class="wk-stat-label">Focus Time</div>
+                                    <div class="wk-stat-num day-stat-green" id="dayStatFocus">–</div>
+                                    <div class="wk-stat-sub">Planned</div>
+                                </div>
+                                <div class="wk-stat">
+                                    <div class="wk-stat-label">XP Earned</div>
+                                    <div class="wk-stat-num day-stat-purple" id="dayStatXp">–</div>
+                                    <div class="wk-stat-sub" id="dayStatXpSub">today</div>
+                                </div>
+                                <div class="wk-stat">
+                                    <div class="wk-stat-label">Streak</div>
+                                    <div class="wk-stat-num" id="dayStatStreak">–</div>
+                                    <div class="wk-stat-sub">days</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="wk-panel">
+                            <div class="day-panel-head">
+                                <h3 class="wk-panel-title">Tasks Left</h3>
+                                <span class="day-panel-link" id="dayAddTaskLink">+ Add Task</span>
+                            </div>
+                            <ul class="day-tasks-left" id="dayTasksLeft"></ul>
+                            <a class="day-viewall" href="{{ url_for('main.home') }}">View all tasks &rarr;</a>
+                        </section>
+                    </aside>
                 </div>
             </div>
         </div>
