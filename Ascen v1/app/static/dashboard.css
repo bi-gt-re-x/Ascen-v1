@@ -145,6 +145,16 @@ body {
     margin-bottom: 1.5rem;
 }
 
+/* Bottom row: the Tasks card (wider) beside the Focus panel. */
+.bottom-section {
+    display: grid;
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+    gap: 1.5rem;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    align-items: start;
+}
+
 .card {
     background: #FFFFFF;
     padding: 24px;
@@ -253,8 +263,8 @@ body {
    TASK MANAGER DASHBOARD
    ========================================================================== */
 .task-manager {
-    width: calc(100% + 24px);
-    align-self: flex-start;
+    width: 100%;
+    align-self: stretch;
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -283,6 +293,114 @@ body {
 .add-task-btn:hover {
     background-color: #454B48;
 }
+
+/* ==========================================================================
+   FOCUS PANEL (dashboard bottom-right)
+   ========================================================================== */
+.focus-panel {
+    display: flex;
+    flex-direction: column;
+}
+.focus-goal {
+    background: #FAFAF8;
+    border: 1.5px solid #EAEAEA;
+    border-radius: 12px;
+    padding: 22px;
+}
+.focus-goal-title {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2C302E;
+}
+.focus-goal-q {
+    margin: 0 0 18px;
+    font-size: 14px;
+    color: #6C757D;
+}
+.focus-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    margin-bottom: 20px;
+}
+.focus-step-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    border: 1.5px solid #EAEAEA;
+    background: #FFFFFF;
+    color: #6C757D;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.focus-step-btn:hover { background: #F2F2EE; color: #2C302E; }
+.focus-amount {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 96px;
+    justify-content: center;
+}
+.focus-amount #focusHours {
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #2C302E;
+}
+.focus-unit { font-size: 1rem; font-weight: 500; color: #6C757D; }
+.focus-progress {
+    height: 8px;
+    background: #E9ECEF;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+.focus-progress-fill {
+    height: 100%;
+    background: #A38A70;
+    border-radius: 20px;
+    transition: width 0.4s ease;
+}
+.focus-progress-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #6C757D;
+}
+.focus-start-btn {
+    margin-top: 18px;
+    background: #2C302E;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background-color 0.2s ease;
+}
+.focus-start-btn:hover { background: #454B48; }
+.focus-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: #6C757D;
+}
+.focus-hint svg { flex: none; }
 
 .task-panels {
     display: flex;
@@ -767,7 +885,8 @@ html[data-theme="dark"] .cal-suggest-bad .cal-suggest-link { color: #ff9297; }
 
 /* Responsive Scaling */
 @media (max-width: 768px) {
-    .top-section {
+    .top-section,
+    .bottom-section {
         grid-template-columns: 100%;
     }
 
@@ -1048,3 +1167,32 @@ html[data-theme="dark"] .close {
 html[data-theme="dark"] .cal-eligible-marker { background: #c9d1d9; }
 html[data-theme="dark"] .cal-eligible-note { color: #9aa4b2; }
 html[data-theme="dark"] .cal-eligible-tick { color: #c9d1d9; }
+
+/* Focus panel (dark) */
+html[data-theme="dark"] .focus-goal {
+    background: #12161c;
+    border-color: #30363d;
+}
+html[data-theme="dark"] .focus-goal-title,
+html[data-theme="dark"] .focus-amount #focusHours {
+    color: #f0f2f5;
+}
+html[data-theme="dark"] .focus-goal-q,
+html[data-theme="dark"] .focus-unit,
+html[data-theme="dark"] .focus-progress-row,
+html[data-theme="dark"] .focus-hint {
+    color: #8b949e;
+}
+html[data-theme="dark"] .focus-step-btn {
+    background: #0d1117;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+html[data-theme="dark"] .focus-step-btn:hover { background: #21262d; color: #f0f2f5; }
+html[data-theme="dark"] .focus-progress { background: #30363d; }
+/* Start Focus -> light button, to pop on the dark dashboard (like + Add Task). */
+html[data-theme="dark"] .focus-start-btn {
+    background: #f0f2f5;
+    color: #0d1117;
+}
+html[data-theme="dark"] .focus-start-btn:hover { background: #ffffff; }

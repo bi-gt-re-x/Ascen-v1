@@ -2206,3 +2206,27 @@ function isSameDay(a, b) {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+
+// --- Focus panel goal stepper ---------------------------------------------
+// The hour goal is adjustable (0.5-hr steps, 0.5–12h); the progress readout and
+// the Start Focus button are placeholders — there's no tracked-focus feature
+// yet. Runs on load (this script is deferred, so the DOM is ready).
+(function () {
+    var hoursEl = document.getElementById('focusHours');
+    if (!hoursEl) return;
+    var minusBtn = document.getElementById('focusMinus');
+    var plusBtn = document.getElementById('focusPlus');
+    var label = document.getElementById('focusProgressLabel');
+    var goal = 2.0;
+    function render() {
+        hoursEl.textContent = goal.toFixed(1);
+        if (label) label.textContent = '0.0 / ' + goal.toFixed(1) + ' hrs focused';
+    }
+    function step(delta) {
+        goal = Math.min(12, Math.max(0.5, Math.round((goal + delta) * 2) / 2));
+        render();
+    }
+    if (minusBtn) minusBtn.addEventListener('click', function () { step(-0.5); });
+    if (plusBtn) plusBtn.addEventListener('click', function () { step(0.5); });
+    render();
+})();
