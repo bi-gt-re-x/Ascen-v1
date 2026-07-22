@@ -41,10 +41,10 @@
     "best_streak": 2,
     "last_task_date": "2026-07-22",
     "day_state": "oldday",
-    "theme": "light",
+    "theme": "dark",
     "focus_history": {
       "2026-07-22": {
-        "seconds": 23633.0,
+        "seconds": 23681.0,
         "goal_hours": 12.0
       }
     }

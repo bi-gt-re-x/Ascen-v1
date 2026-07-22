@@ -165,7 +165,12 @@
         isRunning: function () { return !!load().runningSince; },
         start: function () {
             var s = load();
-            if (!s.runningSince) { s.runningSince = Date.now(); save(s); }
+            if (!s.runningSince) {
+                s.runningSince = Date.now();
+                save(s);
+                // Let the focus theme (focus-theme.js) react on this page instantly.
+                document.dispatchEvent(new CustomEvent('focusmodechange', { detail: { running: true } }));
+            }
             return s;
         },
         stop: function () {
@@ -174,6 +179,7 @@
                 s.accumulatedSeconds += Math.max(0, (Date.now() - s.runningSince) / 1000);
                 s.runningSince = null;
                 save(s);
+                document.dispatchEvent(new CustomEvent('focusmodechange', { detail: { running: false } }));
             }
             return s;
         },
