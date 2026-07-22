@@ -98,7 +98,10 @@ function updateStatsUI(xp, level, xpRequired, tasksCompleted) {
     if (xpReqEl) xpReqEl.innerText = xpRequired;
     if (tasksCompEl) tasksCompEl.innerText = tasksCompleted;
 
-    if (leveledUp) popXpBar();
+    if (leveledUp) {
+        popXpBar();
+        showLevelUpFx(level);
+    }
 
     if (xpBarFill) {
         const percentage = Math.min((xp / xpRequired) * 100, 100);
@@ -136,6 +139,40 @@ function popXpBar() {
         el.classList.add('level-up');
         setTimeout(() => el.classList.remove('level-up'), 1200);
     });
+}
+
+// The level-up celebration: a "LEVEL UP!" badge bursts in mid-screen with
+// sparks flying outward. Every 5th level is a milestone — a bigger golden
+// badge with a crown, an expanding shockwave ring, more sparks, and the
+// bottom-corner confetti cannons join in.
+function showLevelUpFx(level) {
+    const milestone = level % 5 === 0;
+    const overlay = document.createElement('div');
+    overlay.className = 'levelup-overlay' + (milestone ? ' milestone' : '');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML =
+        '<div class="levelup-badge">' +
+            (milestone ? '<div class="levelup-crown">👑</div>' : '') +
+            '<div class="levelup-title">' + (milestone ? 'MILESTONE!' : 'LEVEL UP!') + '</div>' +
+            '<div class="levelup-level">Level ' + level + '</div>' +
+        '</div>';
+
+    // Sparks radiate from the badge — more of them (and further) on milestones.
+    const sparkCount = milestone ? 20 : 10;
+    for (let i = 0; i < sparkCount; i++) {
+        const s = document.createElement('span');
+        s.className = 'levelup-spark';
+        s.style.setProperty('--a', Math.round((360 / sparkCount) * i + Math.random() * 18) + 'deg');
+        s.style.setProperty('--d', Math.round(70 + Math.random() * (milestone ? 170 : 90)) + 'px');
+        s.style.animationDelay = (Math.random() * 0.15).toFixed(2) + 's';
+        overlay.appendChild(s);
+    }
+
+    document.body.appendChild(overlay);
+    if (milestone && window.Celebrate && typeof window.Celebrate.confetti === 'function') {
+        window.Celebrate.confetti();
+    }
+    setTimeout(() => overlay.remove(), milestone ? 2600 : 1800);
 }
 
 function showXPPopup(amount) {

@@ -1128,11 +1128,13 @@
     "title": "1",
     "description": "",
     "priority": "low",
-    "status": "todo",
+    "status": "done",
     "xp_value": 10,
     "due_date": null,
     "show_on_calendar": false,
-    "created_at": "2026-07-18T16:20:09.739577"
+    "created_at": "2026-07-18T16:20:09.739577",
+    "completed_at": "2026-07-22T16:30:33.708213",
+    "completion_seconds": 346224
   },
   {
     "id": "1784412795294",
@@ -1170,11 +1172,14 @@
     "title": "1",
     "description": "",
     "priority": "medium",
-    "status": "todo",
+    "status": "done",
     "xp_value": 35,
     "due_date": "2026-07-19T10:52:10",
     "show_on_calendar": false,
-    "created_at": "2026-07-19T10:43:10.752904"
+    "created_at": "2026-07-19T10:43:10.752904",
+    "completed_at": "2026-07-22T16:30:32.385550",
+    "completion_seconds": 280042,
+    "met_deadline": false
   },
   {
     "id": "1784499900294",
@@ -3228,11 +3233,14 @@
     "title": "Span Toxic",
     "description": "",
     "priority": "low",
-    "status": "todo",
+    "status": "done",
     "xp_value": 10,
     "due_date": "2026-07-22T10:30:00",
     "show_on_calendar": true,
-    "created_at": "2026-07-22T10:15:00"
+    "created_at": "2026-07-22T10:15:00",
+    "completed_at": "2026-07-22T16:30:35.174260",
+    "completion_seconds": 22535,
+    "met_deadline": false
   },
   {
     "id": "1784565153429-e2",

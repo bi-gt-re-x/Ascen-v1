@@ -945,37 +945,6 @@ function openModal() {
 
 }
 
-// Does the task already have a due date or due time set?
-function hasDueDateOrTime() {
-    const dueDate = document.getElementById('dueDate');
-    const dueHour = document.getElementById('dueHour');
-    const dueMinute = document.getElementById('dueMinute');
-    const dueAmPm = document.getElementById('dueAmPm');
-    const hasDate = !!(dueDate && dueDate.value);
-    const hasTime = !!(dueHour && dueHour.value && dueMinute && dueMinute.value && dueAmPm && dueAmPm.value);
-    return hasDate || hasTime;
-}
-// Total minutes currently on the task timer (hours + minutes).
-function currentTimerMinutesTotal() {
-    const h = parseInt(document.getElementById('timerHoursInput').value) || 0;
-    const m = parseInt(document.getElementById('timerMinutesInput').value) || 0;
-    return h * 60 + m;
-}
-// A task can only be shown on the calendar if it occupies at least a 15-minute
-// slot. When the user turns "Show task on calendar" on and the task has no due
-// date/time and less than 15 minutes on the timer, pull the timer dropdown down
-// and set it to 15 minutes so the task has a valid slot.
-function onShowOnCalendarToggle() {
-    const cb = document.getElementById('showOnCalendar');
-    if (cb && cb.checked && !hasDueDateOrTime() && currentTimerMinutesTotal() < 15) {
-        const dd = document.getElementById('timerDropdown');
-        if (dd && dd.style.display === 'none') toggleDropdown('timerDropdown');
-        updateTimerFromInput('minutes', 15);
-    }
-    // Show/refresh the free-slot suggestion + overlap warning (or hide it when off).
-    updateCalSuggestion();
-}
-
 function populateTimeSelectors() {
 
     const hourSelect = document.getElementById('dueHour');

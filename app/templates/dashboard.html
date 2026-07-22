@@ -218,15 +218,11 @@
                             </div>
                             <div class="timer-input-group">
                                 <label for="timerMinutes">Minutes</label>
-                                <div class="minutes-track">
-                                    <input type="range" id="timerMinutes" min="0" max="60" value="0" style="accent-color: #2C302E;" oninput="updateTimerSliderDisplay('minutes', this.value)">
-                                    <span class="cal-eligible-marker" title="Can show on calendar past this point"></span>
-                                </div>
+                                <input type="range" id="timerMinutes" min="0" max="60" value="0" style="accent-color: #2C302E;" oninput="updateTimerSliderDisplay('minutes', this.value)">
                                 <input type="number" id="timerMinutesInput" class="xp-input-field" style="width: 55px; padding: 4px; font-size: 12px;" min="0" max="60" value="0" oninput="updateTimerFromInput('minutes', this.value)">
                                 <span id="minsVal" style="display:none;">0</span>
                             </div>
                         </div>
-                        <div class="cal-eligible-note"><span class="cal-eligible-tick">▲</span> 15 min — can show on calendar past this point</div>
                     </div>
                 </div>
 

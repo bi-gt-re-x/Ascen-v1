@@ -1757,5 +1757,32 @@
     "timestamp": "2026-07-22T15:07:28.986266",
     "date": "2026-07-22",
     "tasks_completed": 1
+  },
+  {
+    "id": "1784755832398",
+    "user_id": "men",
+    "amount": 35,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T16:30:32.398450",
+    "date": "2026-07-22",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784755833718",
+    "user_id": "men",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T16:30:33.718831",
+    "date": "2026-07-22",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784755835185",
+    "user_id": "men",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T16:30:35.185673",
+    "date": "2026-07-22",
+    "tasks_completed": 1
   }
 ]
