@@ -2166,21 +2166,26 @@ body.dark #themeSelect {
    ========================================================================== */
 
 .goals-page {
-    max-width: 1560px;
+    /* ~20% wider each way than the old 1560px frame; the viewport clamp keeps
+       it from touching the screen edges (shrinks itself when space runs out). */
+    max-width: min(2180px, calc(100vw - 88px));
     margin: 0 auto;
-    padding: 80px 32px 140px;   /* top clears the theme selector; bottom clears the nav */
+    padding: 72px 0 130px;   /* top clears the theme selector; bottom clears the nav */
 }
 
-/* The one big shell everything lives in */
+/* The one big shell everything lives in. Height is FIXED (viewport-driven, ~10%
+   taller than before) — adding more goals scrolls the list inside instead of
+   growing the shell. */
 .goals-shell {
     background: #ffffff;
     border: 1px solid #e8eaf0;
-    border-radius: 24px;
-    padding: 36px 40px 28px;
+    border-radius: 26px;
+    padding: 44px 52px 36px;
     box-shadow: 0 16px 50px rgba(20, 24, 40, 0.10);
-    min-height: calc(100vh - 260px);
+    height: max(600px, min(1240px, calc(100vh - 205px)));
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* ---- Decorative page progress bar at the top (no functionality yet) ---- */
@@ -2209,19 +2214,25 @@ body.dark #themeSelect {
 .shell-progress-fill {
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #23272e 0%, #0ea5a4 28%, #3b82f6 55%, #8b5cf6 78%, #d946ef 100%);
-    box-shadow: 0 0 12px rgba(139, 92, 246, 0.35);
+    background: linear-gradient(90deg, #1a1f26 0%, #A38A70 55%, #f5f1ea 100%);
+    box-shadow: 0 0 10px rgba(163, 138, 112, 0.45);
 }
 
 /* ---- Columns: goals | separating line | milestones ---- */
 .goals-columns {
     display: flex;
     align-items: stretch;
-    gap: 36px;
+    gap: 44px;
     flex: 1;
     min-height: 0;
 }
-.goals-main { flex: 1 1 68%; min-width: 0; }
+.goals-main {
+    flex: 1 1 68%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
 .goals-divider {
     flex: 0 0 1.5px;
     align-self: stretch;
@@ -2232,14 +2243,8 @@ body.dark #themeSelect {
     flex: 0 0 29%;
     min-width: 280px;
     padding: 4px 0 0 2px;
-}
-
-/* ---- Colorful gradient strip at the bottom of the shell ---- */
-.shell-bottombar {
-    height: 10px;
-    border-radius: 999px;
-    margin-top: 32px;
-    background: linear-gradient(90deg, #f59e0b, #ef4444, #d946ef, #8b5cf6, #3b82f6, #0ea5a4, #22c55e);
+    overflow-y: auto;
+    min-height: 0;
 }
 
 /* ---- Summary cards ---- */
@@ -2334,22 +2339,13 @@ body.dark #themeSelect {
     margin: 30px 0 22px;
     flex-wrap: wrap;
 }
-.goals-toolbar .tab-navigation { border: none; margin: 0; padding: 0; gap: 10px; display: flex; }
-.goals-toolbar .tab-btn {
-    border: 1.5px solid #e2e5ea;
-    background: #fff;
-    color: #4a4f58;
-    border-radius: 999px;
-    padding: 10px 22px;
-    font-weight: 600;
-    box-shadow: none;
-}
-.goals-toolbar .tab-btn:hover { background: #f6f7f9; color: #2c302e; border-color: #d6dae1; }
-.goals-toolbar .tab-btn.active {
-    background: #efe7db;
-    border-color: #dccdb8;
+.goals-heading {
+    font-size: 22px;
+    font-weight: 800;
     color: #2c302e;
+    margin: 0;
 }
+body.dark .goals-heading { color: #e6e8f0; }
 .goals-toolbar .add-goal-btn {
     background: #1a1f26;
     color: #fff;
@@ -2363,15 +2359,16 @@ body.dark #themeSelect {
 
 /* ---- Goals list + cards ---- */
 /* The goals column scrolls on its own; the scroll area ends with the last goal
-   (natural content height), keeping the shell itself a fixed frame. */
+   (natural content height), while the shell stays a fixed frame — more goals
+   never enlarge the container. */
 .goals-page .goals-list {
-    max-height: calc(100vh - 560px);
-    min-height: 260px;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 22px;
-    padding: 2px 14px 8px 2px;
+    gap: 24px;
+    padding: 2px 16px 10px 2px;
 }
 .goals-page .goals-list::-webkit-scrollbar { width: 8px; }
 .goals-page .goals-list::-webkit-scrollbar-track { background: transparent; }
@@ -2458,23 +2455,27 @@ body.dark .goals-page .goal-description { color: #9aa0b5; }
 .gp-label { display: block; font-size: 11px; color: #6c757d; margin-top: 2px; }
 .goals-page .goal-deadline { font-size: 12px; color: #6c757d; }
 
-/* Gradient progress bar (mock: dark -> teal -> blue -> purple -> magenta) */
+/* Goal progress bar: black -> tan -> white sweep on a soft track */
 .progress-bar-container.gradient-bar {
-    height: 10px;
+    height: 11px;
     border-radius: 999px;
-    background: #eceef2;
+    background: #f1f2f4;
+    border: 1px solid #e4e7ec;
     overflow: hidden;
     margin: 0;
 }
-.gradient-bar .progress-bar-fill {
+/* .goals-page prefix outranks the older body.classic/body.dark fill rules */
+.goals-page .gradient-bar .progress-bar-fill {
     height: 100%;
     border-radius: 999px;
-    background-image: linear-gradient(90deg, #23272e 0%, #0ea5a4 28%, #3b82f6 55%, #8b5cf6 78%, #d946ef 100%);
+    background: none;
+    background-image: linear-gradient(90deg, #1a1f26 0%, #6b5a45 40%, #A38A70 70%, #f5f1ea 100%);
     background-repeat: no-repeat;
+    box-shadow: none;
     transition: width 0.4s ease;
 }
 .goals-page .goal-item.completed .gradient-bar .progress-bar-fill.completed {
-    background-image: linear-gradient(90deg, #23272e 0%, #0ea5a4 28%, #3b82f6 55%, #8b5cf6 78%, #d946ef 100%);
+    background-image: linear-gradient(90deg, #1a1f26 0%, #6b5a45 40%, #A38A70 70%, #f5f1ea 100%);
 }
 .goal-under-row {
     display: flex;
@@ -2629,7 +2630,7 @@ body.dark .goal-target-big { color: #e6e8f0; }
 body.dark .goal-priority { background: #1c222c; }
 body.dark .gp-num { color: #e6e8f0; }
 body.dark .goals-page .goal-metric { color: #e6e8f0; }
-body.dark .progress-bar-container.gradient-bar { background: #232a36; }
+body.dark .progress-bar-container.gradient-bar { background: #232a36; border-color: #2b3242; }
 body.dark .gm-hint { background: #1c222c; color: #9aa0b5; }
 body.dark .goal-modal-modern input[type="text"],
 body.dark .goal-modal-modern input[type="number"],
@@ -2643,8 +2644,8 @@ body.dark .goal-modal-modern select {
 
 /* ---- Stack below 900px: milestones drop under the goals ---- */
 @media (max-width: 900px) {
-    .goals-page { padding: 76px 14px 120px; }
-    .goals-shell { padding: 22px 20px 18px; min-height: 0; }
+    .goals-page { max-width: none; padding: 76px 14px 120px; }
+    .goals-shell { padding: 22px 20px 18px; height: auto; overflow: visible; }
     .goals-columns { flex-direction: column; gap: 24px; }
     .goals-divider { flex: none; height: 1.5px; align-self: auto; width: 100%;
         background: linear-gradient(90deg, transparent, #dde1e8 12%, #dde1e8 88%, transparent); }

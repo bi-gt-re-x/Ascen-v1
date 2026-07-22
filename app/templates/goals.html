@@ -74,13 +74,9 @@
                 </div>
             </div>
 
-            <!-- Filter chips + add button -->
+            <!-- Active goals only live here — completed ones become Milestones -->
             <div class="goals-toolbar">
-                <div class="tab-navigation">
-                    <button class="tab-btn active" id="btn-active" onclick="filterGoals('active')">Active</button>
-                    <button class="tab-btn" id="btn-all" onclick="filterGoals('all')">All Goals</button>
-                    <button class="tab-btn" id="btn-completed" onclick="filterGoals('completed')">Completed</button>
-                </div>
+                <h2 class="goals-heading">Active Goals</h2>
                 <button class="add-goal-btn" onclick="openGoalModal()">+ Add New Goal</button>
             </div>
 
@@ -105,9 +101,6 @@
             </div>
         </aside>
         </div><!-- /goals-columns -->
-
-        <!-- Colorful gradient strip at the bottom of the shell -->
-        <div class="shell-bottombar"></div>
 
         </div><!-- /goals-shell -->
     </div>
