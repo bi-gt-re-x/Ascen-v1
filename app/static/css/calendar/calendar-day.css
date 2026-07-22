@@ -149,6 +149,18 @@
 .day-col .wk-event-lead svg { width: 15px; height: 15px; }
 .day-col .wk-task .wk-event-lead { background: rgba(255, 255, 255, .5); }
 
+/* Icon files from /static/icons, painted with the block's text colour via a
+   CSS mask (the SVGs are stroke drawings; the mask only uses their alpha). */
+.cal-ico {
+    display: block; width: 15px; height: 15px;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+}
+.day-tasks-left .cal-ico {
+    width: 14px; height: 14px; flex: 0 0 14px; opacity: .75;
+}
+
 /* ---- Scroll behaviour ----
    Above 1120px the calendar card is a fixed-height panel with hidden overflow
    (see calendar.css), so the Day view fills the card and gives each column its

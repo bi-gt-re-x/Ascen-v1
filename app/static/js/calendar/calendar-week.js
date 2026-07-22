@@ -117,42 +117,109 @@
 
     // --- Per-block icon, inferred from the event/task name --------------------
     // The Day view shows a small icon on each block. There's no icon field in the
-    // data, so we keyword-match the name to one of a handful of inline SVGs; a
-    // catch-all covers anything unmatched. (Shown in the Day column only — the CSS
-    // hides .wk-event-lead everywhere else.)
-    var ICON_SVGS = {
-        dumbbell: '<path d="M6.5 6.5 17.5 17.5M4 8l-1 1 3 3-3 3 1 1M20 8l1 1-3 3 3 3-1 1M7 5 5 7M17 19l2-2"/>',
-        book: '<path d="M4 5a2 2 0 0 1 2-2h11v16H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 1 2-2h11"/>',
-        code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13 6l-2 12"/>',
-        sigma: '<path d="M17 5H7l5 7-5 7h10"/>',
-        pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
-        music: '<circle cx="6" cy="18" r="2.5"/><circle cx="17" cy="16" r="2.5"/><path d="M8.5 18V6l11-2v10"/>',
-        run: '<circle cx="13" cy="5" r="2"/><path d="M8 21l3-5 3 2 1 3M11 16l-2-4 4-2 2 3 3 1"/>',
-        food: '<path d="M6 3v7a2 2 0 0 0 4 0V3M8 3v18M17 3c-1.5 1-2 3-2 5s.5 3 2 3v10"/>',
-        users: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.6"/>',
-        star: '<path d="M12 3l2.7 5.9 6.3.7-4.7 4.3 1.3 6.2L12 17.8 6.1 20.4l1.3-6.2L2.7 9.6l6.3-.7z"/>',
-        check: '<path d="M20 6 9 17l-5-5"/>',
-        clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
-    };
+    // data, so we keyword-match the name against the icon library in
+    // /static/icons (80 stroke SVGs, one file per key below). The badge paints
+    // the file with currentColor through a CSS mask (.cal-ico), so it always
+    // matches the block's text colour. First matching rule wins; 'clock' is the
+    // catch-all. (Shown in the Day column only — CSS hides .wk-event-lead
+    // everywhere else.)
+    var ICON_RULES = [
+        // Fitness & sport
+        [/(gym|workout|weight|lift|strength|exercise)/, 'gym'],
+        [/\b(run|jog|sprint|cardio|5k|10k)/, 'run'],
+        [/\b(walk|stroll|steps)\b/, 'walk'],
+        [/(bike|bicycle|cycling|spin class)/, 'bike'],
+        [/(swim|pool|laps)/, 'swim'],
+        [/(yoga|stretch|pilates)/, 'yoga'],
+        [/(basketball|hoops)/, 'basketball'],
+        [/(soccer|football)/, 'soccer'],
+        [/(tennis|badminton|squash|pickleball)/, 'tennis'],
+        [/(hike|hiking|trail|climb|bouldering)/, 'hike'],
+        // Study & school
+        [/(math|algebra|calculus|geometry|stats|problem set)/, 'math'],
+        [/(exam|test|quiz|midterm|final)/, 'exam'],
+        [/(homework|assignment|worksheet)/, 'homework'],
+        [/(physics)/, 'physics'],
+        [/(chem|lab|science|experiment)/, 'science'],
+        [/(bio(logy)?|anatomy)/, 'biology'],
+        [/(spanish|french|german|japanese|chinese|language|vocab|duolingo)/, 'language'],
+        [/(present|slides|demo)/, 'presentation'],
+        [/(research|thesis|paper)/, 'research'],
+        [/(school|class|lecture|lesson|graduation)/, 'school'],
+        [/(read|book|novel|chapter|study)/, 'reading'],
+        [/(essay|write|writing|blog|draft)/, 'writing'],
+        [/(journal|diary|reflect)/, 'journal'],
+        [/(cod(e|ing)|program|dev|github|debug)/, 'code'],
+        // Work
+        [/(meet|standup|sync|1:1|interview)/, 'meeting'],
+        [/\b(call|phone call|zoom|facetime)\b/, 'call'],
+        [/(email|inbox|mail)/, 'email'],
+        [/(deadline|due|submit)/, 'deadline'],
+        [/(brainstorm|idea|ideate)/, 'idea'],
+        [/(budget|finance|taxes|invoice|bank)/, 'finance'],
+        [/(report|analytics|metrics|chart)/, 'chart'],
+        [/(project|build|sprint)/, 'project'],
+        [/\b(work|job|office|shift)\b/, 'work'],
+        // Food & drink
+        [/(coffee|espresso|latte|tea)\b/, 'coffee'],
+        [/(breakfast|brunch)/, 'breakfast'],
+        [/(lunch|burger|sandwich)/, 'lunch'],
+        [/(cook|bake|meal prep|recipe)/, 'cooking'],
+        [/(grocer|supermarket|market run)/, 'groceries'],
+        [/(snack|fruit)/, 'snack'],
+        [/(hydrate|water)/, 'water'],
+        [/(eat|dinner|meal|food|restaurant)/, 'food'],
+        // Rest & hobbies
+        [/(sleep|bedtime|lights out)/, 'sleep'],
+        [/(relax|chill|unwind|rest|lounge)/, 'relax'],
+        [/\b(break|pause)\b/, 'break'],
+        [/(meditat|mindful|breathe)/, 'meditation'],
+        [/(shower|bath)/, 'shower'],
+        [/(tv|show|series|netflix|movie|film)/, 'tv'],
+        [/(game|gaming|videogame|minecraft|valorant)/, 'game'],
+        [/(guitar)/, 'guitar'],
+        [/(piano|keyboard practice)/, 'piano'],
+        [/(music|violin|song|band|choir)/, 'music'],
+        [/(draw|paint|art|sketch|design)/, 'art'],
+        [/(photo|camera|shoot)/, 'photo'],
+        // People & social
+        [/(family|mom|dad|parents|grandma|grandpa|sister|brother)/, 'family'],
+        [/(friend|hang ?out|social)/, 'friends'],
+        [/(party|celebrat)/, 'party'],
+        [/(date night|date\b|anniversary)/, 'date'],
+        [/(dog|cat|pet|vet)/, 'pet'],
+        [/(birthday)/, 'birthday'],
+        // Errands & life
+        [/(clean|tidy|chores|vacuum|dishes)/, 'cleaning'],
+        [/(laundry|folding)/, 'laundry'],
+        [/(shop|mall|buy)/, 'shopping'],
+        [/(travel|flight|airport|trip|vacation)/, 'travel'],
+        [/(drive|car|commute)/, 'car'],
+        [/(errand|pick ?up|drop ?off)/, 'errand'],
+        [/(doctor|dentist|appointment|checkup)/, 'doctor'],
+        [/(medicine|meds|pill|pharmacy)/, 'medicine'],
+        [/(health|therapy|wellness)/, 'health'],
+        [/(garden|plant|water the)/, 'garden'],
+        [/(fix|repair|install)/, 'repair'],
+        // Planning & misc
+        [/(focus|deep work|pomodoro|grind)/, 'focus'],
+        [/(goal|milestone|target)/, 'goal'],
+        [/(plan|schedule|organize|calendar)/, 'plan'],
+        [/(streak|habit)/, 'streak'],
+        [/(win|trophy|award|competition)/, 'trophy'],
+        [/(review|star|important|priority)/, 'star'],
+        [/(done|complete|finish)/, 'check']
+    ];
     function iconKeyFor(name) {
         var s = String(name || '').toLowerCase();
-        if (/(workout|gym|exercise|lift|train)/.test(s)) return 'dumbbell';
-        if (/(run|jog|walk|cardio)/.test(s)) return 'run';
-        if (/(read|book|study|essay|reading)/.test(s)) return 'book';
-        if (/(cod(e|ing)|program|dev|github|project|build)/.test(s)) return 'code';
-        if (/(math|algebra|calculus|problem set)/.test(s)) return 'sigma';
-        if (/(write|writing|journal|blog|notes?)/.test(s)) return 'pencil';
-        if (/(music|violin|piano|guitar|practice|song)/.test(s)) return 'music';
-        if (/(meet|call|sync|standup|interview|1:1)/.test(s)) return 'users';
-        if (/(eat|lunch|dinner|breakfast|meal|food)/.test(s)) return 'food';
-        if (/(review|plan|goal|reflect)/.test(s)) return 'star';
-        if (/(done|complete|finish)/.test(s)) return 'check';
+        for (var i = 0; i < ICON_RULES.length; i++) {
+            if (ICON_RULES[i][0].test(s)) return ICON_RULES[i][1];
+        }
         return 'clock';
     }
     function iconForName(name) {
-        var svg = ICON_SVGS[iconKeyFor(name)] || ICON_SVGS.clock;
-        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-               'stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg>';
+        return '<i class="cal-ico" style="--ico:url(/static/icons/' +
+               iconKeyFor(name) + '.svg)"></i>';
     }
     function leadIcon(name) { return '<span class="wk-event-lead">' + iconForName(name) + '</span>'; }
 
@@ -1705,6 +1772,7 @@
                     var label = p ? (p.charAt(0).toUpperCase() + p.slice(1)) : '—';
                     return '<li class="day-task-item">' +
                         '<span class="day-task-ring"></span>' +
+                        iconForName(b.title) +
                         '<span class="day-task-name">' + esc(b.title) + '</span>' +
                         '<span class="day-task-diff ' + cls + '">' + esc(label) + '</span>' +
                     '</li>';
