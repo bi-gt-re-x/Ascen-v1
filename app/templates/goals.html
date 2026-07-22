@@ -36,43 +36,80 @@
         </select>
     </div>
 
-    <div class="goals-container">
-        <!-- Large glassmorphic container -->
-        <div class="blue-square page-shell" data-fit-width="1200" data-fit-height>
-            <!-- Header Section -->
-            <div class="top-tab">
-                <h2>Set / View Your Goals</h2>
-                <button class="add-goal-btn" onclick="openGoalModal()">+ Add New Goal</button>
+    <!-- One big shell: decorative progress bar on top, 70/30 goals | milestones
+         columns with a separating line, colorful gradient strip at the bottom. -->
+    <div class="goals-page">
+        <div class="goals-shell">
+
+        <!-- Decorative page progress bar (no functionality yet) -->
+        <div class="shell-topbar">
+            <div class="shell-topbar-label">Overall Progress</div>
+            <div class="shell-progress-track"><div class="shell-progress-fill" style="width: 62%"></div></div>
+        </div>
+
+        <div class="goals-columns">
+        <div class="goals-main">
+            <!-- Summary cards -->
+            <div class="goals-summary-row">
+                <div class="sum-card sum-dark">
+                    <div class="sum-ring" id="sumRing"><div class="sum-ring-hole"></div></div>
+                    <div class="sum-main">
+                        <div class="sum-number" id="activeCount">0</div>
+                        <div class="sum-label">In Progress</div>
+                        <div class="sum-sub"><span id="avgXpDay">0</span> avg. XP/day</div>
+                    </div>
+                    <a class="sum-link" href="{{ url_for('main.dashboard') }}" aria-label="Open dashboard" title="Open dashboard">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
+                    </a>
+                </div>
+                <div class="sum-card sum-silver">
+                    <div class="sum-badge" id="monthCompletedBadge" title="Completed this month">0</div>
+                    <div class="sum-medal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="m9 14.5-2 6 5-2.7 5 2.7-2-6"/><path d="m9.5 9 1.7 1.7L14.5 7.4"/></svg>
+                    </div>
+                    <div class="sum-main">
+                        <div class="sum-number" id="completedCount">0</div>
+                        <div class="sum-label">Completed</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Stats Overview -->
-            <div class="stats-boxes">
-                <div class="stat-box active-box">
-                    <div class="stat-number" id="activeCount">0</div>
-                    <div class="stat-label">In Progress</div>
-                </div>
-                <div class="stat-box completed-box">
-                    <div class="stat-number" id="completedCount">0</div>
-                    <div class="stat-label">Completed</div>
-                </div>
-            </div>
-
-            <!-- Goals list section -->
-            <div class="goals-list-section">
-                <!-- Tab Navigation -->
+            <!-- Filter chips + add button -->
+            <div class="goals-toolbar">
                 <div class="tab-navigation">
                     <button class="tab-btn active" id="btn-active" onclick="filterGoals('active')">Active</button>
                     <button class="tab-btn" id="btn-all" onclick="filterGoals('all')">All Goals</button>
                     <button class="tab-btn" id="btn-completed" onclick="filterGoals('completed')">Completed</button>
                 </div>
+                <button class="add-goal-btn" onclick="openGoalModal()">+ Add New Goal</button>
+            </div>
 
-                <div class="goals-list" id="goalsList">
-                    <div class="no-goals" id="noGoals">
-                        <p>No goals yet. Create your first goal to start tracking your progress!</p>
-                    </div>
+            <div class="goals-list" id="goalsList">
+                <div class="no-goals" id="noGoals">
+                    <p>No goals yet. Create your first goal to start tracking your progress!</p>
                 </div>
             </div>
         </div>
+
+        <div class="goals-divider" role="separator"></div>
+
+        <aside class="milestones-panel">
+            <h2 class="milestones-title">Milestones list</h2>
+            <div class="milestones-head">
+                <span>Milestone</span>
+                <span>Target</span>
+            </div>
+            <div id="milestonesList"></div>
+            <div class="no-milestones" id="noMilestones">
+                <p>Complete goals and they'll appear here as milestones.</p>
+            </div>
+        </aside>
+        </div><!-- /goals-columns -->
+
+        <!-- Colorful gradient strip at the bottom of the shell -->
+        <div class="shell-bottombar"></div>
+
+        </div><!-- /goals-shell -->
     </div>
 
     <!-- Floating bottom navigation bar -->
@@ -96,7 +133,7 @@
     </div>
 
     <div id="goalModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content goal-modal-modern">
             <span class="close" onclick="closeGoalModal()">&times;</span>
             <h2 id="modalTitle">Add New Goal</h2>
             <input type="hidden" id="editingGoalId" value="">
@@ -104,18 +141,31 @@
             <input type="text" id="goalTitle" placeholder="e.g., Complete 100 tasks">
             <label for="goalDescription">Description (optional)</label>
             <textarea id="goalDescription" placeholder="Describe your goal..." rows="3"></textarea>
-            <label for="goalType">Goal Type</label>
-            <select id="goalType" onchange="updateGoalTypeInputs()">
-                <option value="xp">XP Based</option>
-                <option value="streak">Streak Based</option>
-                <option value="tasks">Tasks Completed</option>
-            </select>
-            <label for="targetXP" id="targetXPLabel">Target XP</label>
-            <input type="number" id="targetXP" placeholder="e.g., 1000" min="1">
-            <label for="targetStreak" id="targetStreakLabel" style="display:none;">Target Streak (days)</label>
-            <input type="number" id="targetStreak" placeholder="e.g., 30" min="1" style="display:none;">
-            <label for="targetTasks" id="targetTasksLabel" style="display:none;">Target Tasks</label>
-            <input type="number" id="targetTasks" placeholder="e.g., 100" min="1" style="display:none;">
+            <div class="gm-row">
+                <div class="gm-col">
+                    <label for="goalType">Goal Type</label>
+                    <select id="goalType" onchange="updateGoalTypeInputs()">
+                        <option value="xp">XP Based</option>
+                        <option value="streak">Streak Based</option>
+                        <option value="tasks">Tasks Completed</option>
+                        <option value="focus">Focus Time</option>
+                    </select>
+                </div>
+                <div class="gm-col">
+                    <label for="targetXP" id="targetXPLabel">Target XP</label>
+                    <input type="number" id="targetXP" placeholder="e.g., 1000" min="1">
+                    <label for="targetStreak" id="targetStreakLabel" style="display:none;">Target Streak (days)</label>
+                    <input type="number" id="targetStreak" placeholder="e.g., 30" min="1" style="display:none;">
+                    <label for="targetTasks" id="targetTasksLabel" style="display:none;">Target Tasks</label>
+                    <input type="number" id="targetTasks" placeholder="e.g., 100" min="1" style="display:none;">
+                    <label for="targetFocus" id="targetFocusLabel" style="display:none;">Target Focus Time (hours)</label>
+                    <input type="number" id="targetFocus" placeholder="e.g., 10" min="0.5" step="0.5" style="display:none;">
+                </div>
+            </div>
+            <p class="gm-hint" id="focusGoalHint" style="display:none;">⏱ Auto-completes as you log focus time (dashboard or calendar) after the goal is set.</p>
+            <label for="goalPriority" class="gm-priority-label">Priority Rank <span class="gm-priority-val" id="goalPriorityVal">5</span>/10</label>
+            <input type="range" id="goalPriority" min="1" max="10" value="5" step="1"
+                   oninput="document.getElementById('goalPriorityVal').textContent = this.value">
             <label for="goalDeadline">Deadline (optional)</label>
             <input type="date" id="goalDeadline">
             <button onclick="saveGoal()" class="confirm-add-btn" id="saveGoalBtn">Add Goal</button>

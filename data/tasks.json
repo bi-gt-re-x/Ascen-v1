@@ -8692,5 +8692,33 @@
     "due_date": "2027-07-21T12:25:00",
     "show_on_calendar": true,
     "created_at": "2027-07-21T11:00:00"
+  },
+  {
+    "id": "1784756209706",
+    "user_id": "men",
+    "title": "1",
+    "description": "",
+    "priority": "high",
+    "status": "done",
+    "xp_value": 100,
+    "due_date": null,
+    "show_on_calendar": false,
+    "created_at": "2026-07-22T16:36:49.712155",
+    "completed_at": "2026-07-22T16:36:54.592199",
+    "completion_seconds": 5
+  },
+  {
+    "id": "1784756213288",
+    "user_id": "men",
+    "title": "1",
+    "description": "",
+    "priority": "high",
+    "status": "done",
+    "xp_value": 100,
+    "due_date": null,
+    "show_on_calendar": false,
+    "created_at": "2026-07-22T16:36:53.292256",
+    "completed_at": "2026-07-22T16:36:56.072981",
+    "completion_seconds": 3
   }
 ]

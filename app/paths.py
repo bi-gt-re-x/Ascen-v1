@@ -1625,7 +1625,9 @@ def add_goal():
     target_xp = data.get('target_xp', 0)
     target_streak = data.get('target_streak', 0)
     target_tasks = data.get('target_tasks', 0)
+    target_focus = data.get('target_focus', 0)  # minutes of tracked focus time
     deadline = data.get('deadline', '')
+    priority = _clamp_priority(data.get('priority', 5))
 
     if not username or not title:
         return jsonify({"success": False, "message": "Username and title are required"})
@@ -1637,10 +1639,15 @@ def add_goal():
         return jsonify({"success": False, "message": "Target streak is required for streak goals"})
     if goal_type == 'tasks' and not target_tasks:
         return jsonify({"success": False, "message": "Target tasks is required for task goals"})
+    if goal_type == 'focus' and not target_focus:
+        return jsonify({"success": False, "message": "Target focus time is required for focus goals"})
 
     # Read existing goals from JSON file
     goals = read_json_file(GOALS_JSON)
-    
+
+    target_value = {'xp': target_xp, 'streak': target_streak,
+                    'tasks': target_tasks, 'focus': target_focus}.get(goal_type, target_xp)
+
     # Create goal object with proper structure
     new_goal = {
         "id": goal_id,
@@ -1648,7 +1655,7 @@ def add_goal():
         "title": title,
         "description": description,
         "progress": 0,
-        "target_value": target_xp if goal_type == 'xp' else (target_streak if goal_type == 'streak' else target_tasks),
+        "target_value": target_value,
         "goal_type": goal_type,
         "target_xp": target_xp,
         "current_xp": 0,
@@ -1656,15 +1663,80 @@ def add_goal():
         "current_streak": 0,
         "target_tasks": target_tasks,
         "current_tasks": 0,
+        "target_focus": target_focus,
+        "current_focus": 0,
+        # Focus goals auto-track "focus time since the goal was set": remember
+        # the user's total tracked focus seconds right now, so progress is
+        # simply (total later - this baseline).
+        "focus_baseline_seconds": _total_focus_seconds(username) if goal_type == 'focus' else 0,
+        "priority": priority,
         "deadline": deadline,
         "status": "active",
         "created_at": datetime.now().isoformat()
     }
-    
+
     goals.append(new_goal)
     write_json_file(GOALS_JSON, goals)
-    
+
     return jsonify({"success": True, "message": "Goal added successfully"})
+
+def _clamp_priority(value):
+    """Priority rank 1-10 (default 5) — tolerate junk input."""
+    try:
+        return max(1, min(10, int(value)))
+    except (ValueError, TypeError):
+        return 5
+
+def _total_focus_seconds(username):
+    """The user's all-time tracked focus seconds (sum of focus_history days)."""
+    users = read_json_file(USERS_JSON)
+    user = next((u for u in users if u.get('username') == username), None)
+    if not user:
+        return 0.0
+    total = 0.0
+    for rec in _focus_history_for(user).values():
+        try:
+            total += max(0.0, float((rec or {}).get('seconds', 0) or 0))
+        except (ValueError, TypeError):
+            continue
+    return total
+
+def sync_focus_goals_to_user_focus(username):
+    """Focus goals auto-track: their current value is the focus time accumulated
+    since the goal was set (the user's total tracked seconds minus the total
+    recorded as the goal's baseline at creation), and they complete on their own
+    the moment that reaches the target. Runs on every get_goals so the goals
+    page — and the completion-toast watcher polling it — always see live values.
+    """
+    goals = read_json_file(GOALS_JSON)
+    focus_goals = [g for g in goals
+                   if g.get('user_id') == username and g.get('goal_type') == 'focus'
+                   and g.get('status') != 'completed']
+    if not focus_goals:
+        return
+
+    total_now = _total_focus_seconds(username)
+    changed = False
+    for goal in focus_goals:
+        target_min = goal.get('target_focus', 0) or 0
+        try:
+            baseline = max(0.0, float(goal.get('focus_baseline_seconds', 0) or 0))
+        except (ValueError, TypeError):
+            baseline = 0.0
+        earned_min = max(0.0, (total_now - baseline) / 60.0)
+        new_value = round(min(earned_min, target_min) if target_min else earned_min, 1)
+        new_status = 'completed' if (target_min and earned_min >= target_min) else 'active'
+        new_progress = round((new_value / target_min) * 100, 1) if target_min else 0
+        if (goal.get('current_focus') != new_value or
+                goal.get('status') != new_status or
+                goal.get('progress') != new_progress):
+            goal['current_focus'] = new_value
+            goal['status'] = new_status
+            goal['progress'] = new_progress
+            goal['target_value'] = target_min
+            changed = True
+    if changed:
+        write_json_file(GOALS_JSON, goals)
 
 def sync_streak_goals_to_user_streak(username):
     """Keep every streak-type goal in lockstep with the user's live current
@@ -1719,6 +1791,9 @@ def get_goals():
     # Mirror the user's live current streak onto their streak goals before
     # returning them, so the goals page always shows the dashboard's streak.
     sync_streak_goals_to_user_streak(username)
+    # Advance focus goals from the tracked focus history (auto-completing any
+    # that reached their target since the last look).
+    sync_focus_goals_to_user_focus(username)
 
     # Read goals from JSON file
     goals = read_json_file(GOALS_JSON)
@@ -1726,9 +1801,20 @@ def get_goals():
     # Filter goals by username
     user_goals = [goal for goal in goals if goal.get('user_id') == username]
 
+    # Average XP per active day — for the goals page's "IN PROGRESS" summary card.
+    xp_events = [e for e in read_json_file(XPEVENT_JSON) if e.get('user_id') == username]
+    total_xp = sum(e.get('amount', 0) or 0 for e in xp_events)
+    active_days = set()
+    for e in xp_events:
+        day = e.get('date') or (e.get('timestamp', '') or '')[:10]
+        if day:
+            active_days.add(day)
+    avg_xp_per_day = round(total_xp / len(active_days)) if active_days else 0
+
     return jsonify({
         "success": True,
-        "goals": user_goals
+        "goals": user_goals,
+        "avg_xp_per_day": avg_xp_per_day
     })
 
 @bp.route('/api/update_goal', methods=['POST'])
@@ -1762,6 +1848,22 @@ def update_goal():
                 goal['current_streak'] = data['current_streak']
             if 'current_tasks' in data:
                 goal['current_tasks'] = data['current_tasks']
+            if 'current_focus' in data:
+                goal['current_focus'] = data['current_focus']
+            if 'goal_type' in data:
+                goal['goal_type'] = data['goal_type']
+            if 'target_xp' in data:
+                goal['target_xp'] = data['target_xp']
+            if 'target_streak' in data:
+                goal['target_streak'] = data['target_streak']
+            if 'target_tasks' in data:
+                goal['target_tasks'] = data['target_tasks']
+            if 'target_focus' in data:
+                goal['target_focus'] = data['target_focus']
+            if 'deadline' in data:
+                goal['deadline'] = data['deadline']
+            if 'priority' in data:
+                goal['priority'] = _clamp_priority(data['priority'])
             goal_found = True
             break
     

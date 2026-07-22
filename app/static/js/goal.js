@@ -45,13 +45,15 @@ function addInputValidationListeners() {
     const targetXPInput = document.getElementById('targetXP');
     const targetStreakInput = document.getElementById('targetStreak');
     const targetTasksInput = document.getElementById('targetTasks');
+    const targetFocusInput = document.getElementById('targetFocus');
     const deadlineInput = document.getElementById('goalDeadline');
-    
+
     // Remove invalid classes on input
     titleInput.addEventListener('input', () => titleInput.classList.remove('invalid-input'));
     targetXPInput.addEventListener('input', () => targetXPInput.classList.remove('invalid-input'));
     targetStreakInput.addEventListener('input', () => targetStreakInput.classList.remove('invalid-input'));
     targetTasksInput.addEventListener('input', () => targetTasksInput.classList.remove('invalid-input'));
+    targetFocusInput.addEventListener('input', () => targetFocusInput.classList.remove('invalid-input'));
     deadlineInput.addEventListener('input', () => deadlineInput.classList.remove('invalid-date'));
 }
 
@@ -132,6 +134,9 @@ function closeGoalModal() {
     document.getElementById('targetXP').value = '';
     document.getElementById('targetStreak').value = '';
     document.getElementById('targetTasks').value = '';
+    document.getElementById('targetFocus').value = '';
+    document.getElementById('goalPriority').value = 5;
+    document.getElementById('goalPriorityVal').textContent = '5';
     document.getElementById('goalDeadline').value = '';
     document.getElementById('goalType').value = 'xp';
     document.getElementById('editingGoalId').value = '';
@@ -150,32 +155,26 @@ function closeGoalModal() {
 
 function updateGoalTypeInputs() {
     const goalType = document.getElementById('goalType').value;
-    const targetXPLabel = document.getElementById('targetXPLabel');
-    const targetXPInput = document.getElementById('targetXP');
-    const targetStreakLabel = document.getElementById('targetStreakLabel');
-    const targetStreakInput = document.getElementById('targetStreak');
-    const targetTasksLabel = document.getElementById('targetTasksLabel');
-    const targetTasksInput = document.getElementById('targetTasks');
+    const pairs = {
+        xp: ['targetXPLabel', 'targetXP'],
+        streak: ['targetStreakLabel', 'targetStreak'],
+        tasks: ['targetTasksLabel', 'targetTasks'],
+        focus: ['targetFocusLabel', 'targetFocus']
+    };
 
-    // Hide all first
-    targetXPLabel.style.display = 'none';
-    targetXPInput.style.display = 'none';
-    targetStreakLabel.style.display = 'none';
-    targetStreakInput.style.display = 'none';
-    targetTasksLabel.style.display = 'none';
-    targetTasksInput.style.display = 'none';
+    // Hide all target fields, then show the pair for the chosen type.
+    Object.values(pairs).forEach(ids => ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    }));
+    (pairs[goalType] || pairs.xp).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'block';
+    });
 
-    // Show based on type
-    if (goalType === 'xp') {
-        targetXPLabel.style.display = 'block';
-        targetXPInput.style.display = 'block';
-    } else if (goalType === 'streak') {
-        targetStreakLabel.style.display = 'block';
-        targetStreakInput.style.display = 'block';
-    } else if (goalType === 'tasks') {
-        targetTasksLabel.style.display = 'block';
-        targetTasksInput.style.display = 'block';
-    }
+    // Focus goals auto-track — explain that in the modal.
+    const hint = document.getElementById('focusGoalHint');
+    if (hint) hint.style.display = goalType === 'focus' ? 'block' : 'none';
 }
 
 window.onclick = function(event) {
@@ -212,6 +211,9 @@ async function loadGoals() {
             allGoals = data.goals || [];
             filterGoals(currentFilter);
             updateStatCounts();
+            renderMilestones();
+            const avgEl = document.getElementById('avgXpDay');
+            if (avgEl) avgEl.textContent = data.avg_xp_per_day || 0;
             checkGoalDeadlines(); // Check for overdue goals
         } else {
             console.error('API error loading goals:', data.message);
@@ -252,11 +254,19 @@ function startGoalTimer(goalId, deadline) {
     
     const now = new Date();
     const deadlineTime = deadline.getTime();
-    
+
     // Calculate remaining time
     const remaining = deadlineTime - now.getTime();
-    
-    if (remaining > 0) {
+
+    // setTimeout delays overflow a 32-bit int (~24.8 days) and fire IMMEDIATELY,
+    // which was wrongly flagging far-future deadlines as overdue. For those,
+    // sleep the max delay and then re-check instead.
+    const MAX_DELAY = 0x7FFFFFFF;
+    if (remaining > MAX_DELAY) {
+        goalTimers[goalId] = setTimeout(() => {
+            startGoalTimer(goalId, deadline);
+        }, MAX_DELAY);
+    } else if (remaining > 0) {
         // Start timer to check when goal becomes overdue
         goalTimers[goalId] = setTimeout(() => {
             markGoalAsOverdue(goalId);
@@ -824,110 +834,17 @@ async function addProgressToGoal(goalId, amount = null) {
 
 function updateGoalElement(goalId, goalData) {
     const goalElement = document.getElementById(`goal-${goalId}`);
-    if (!goalElement) {
-        return;
+    if (goalElement) {
+        // Rebuild the card wholesale — one markup path (createGoalElement) keeps
+        // the redesigned layout consistent instead of patching pieces in place.
+        const fresh = createGoalElement(goalData);
+        fresh.style.display = goalElement.style.display;
+        goalElement.replaceWith(fresh);
     }
-    
-    // Update the goal element in place without replacing it
-    updateGoalElementInPlace(goalElement, goalData);
-    
-    // Update the stat counts
+
+    // Update the stat counts + milestones panel
     updateStatCounts();
-}
-
-function updateGoalElementInPlace(goalElement, goalData) {
-    const goalType = goalData.goal_type || 'xp';
-    let current, target, label, progress;
-    const isCompleted = goalData.status === 'completed';
-
-    if (goalType === 'xp') {
-        current = goalData.current_xp || 0;
-        target = goalData.target_xp || 0;
-        label = 'XP';
-        progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    } else if (goalType === 'streak') {
-        current = goalData.current_streak || 0;
-        target = goalData.target_streak || 0;
-        label = 'Days';
-        progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    } else if (goalType === 'tasks') {
-        current = goalData.current_tasks || 0;
-        target = goalData.target_tasks || 0;
-        label = 'Tasks';
-        progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    } else {
-        current = goalData.current_xp || 0;
-        target = goalData.target_xp || 0;
-        label = 'XP';
-        progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    }
-
-    // For completed goals, show full progress bar
-    if (isCompleted) {
-        progress = 100;
-    }
-
-    // Update the goal element's classes
-    goalElement.className = `goal-item ${isCompleted ? 'completed' : ''}`;
-
-    // Update only the dynamic elements without touching title and description
-    const goalMetric = goalElement.querySelector('.goal-metric');
-    if (goalMetric) {
-        goalMetric.textContent = `${current} / ${target} ${label}`;
-    }
-
-    const progressBarFill = goalElement.querySelector('.progress-bar-fill');
-    if (progressBarFill) {
-        progressBarFill.style.width = `${progress}%`;
-        if (isCompleted) {
-            progressBarFill.classList.add('completed');
-        } else {
-            progressBarFill.classList.remove('completed');
-        }
-    }
-
-    const progressText = goalElement.querySelector('.progress-text');
-    if (progressText) {
-        progressText.textContent = `${progress.toFixed(1)}%`;
-    }
-
-    const goalTypeBadge = goalElement.querySelector('.goal-type-badge');
-    if (goalTypeBadge) {
-        goalTypeBadge.textContent = goalType.toUpperCase();
-        if (isCompleted) {
-            goalTypeBadge.classList.add('completed');
-        } else {
-            goalTypeBadge.classList.remove('completed');
-        }
-    }
-
-    // Update utility buttons based on completion status
-    const utilityButtons = goalElement.querySelector('.goal-utility-buttons');
-    if (utilityButtons) {
-        if (isCompleted) {
-            utilityButtons.innerHTML = `<button class="goal-utility-btn delete" onclick="deleteGoal('${goalData.id}')">Delete</button>`;
-        } else {
-            utilityButtons.innerHTML = `
-                <button type="button" class="goal-utility-btn" onclick="addProgressToGoal('${goalData.id}', 1)">+1</button>
-                <button class="goal-utility-btn edit" onclick="editGoal('${goalData.id}')">Edit</button>
-                <button class="goal-utility-btn delete" onclick="deleteGoal('${goalData.id}')">Delete</button>
-            `;
-        }
-    }
-
-    // Update completed badge
-    const existingCompletedBadge = goalElement.querySelector('.goal-completed-badge');
-    if (isCompleted && !existingCompletedBadge) {
-        const statsBox = goalElement.querySelector('.goal-stats');
-        if (statsBox) {
-            const badge = document.createElement('span');
-            badge.className = 'goal-completed-badge';
-            badge.textContent = '✓ COMPLETED';
-            statsBox.appendChild(badge);
-        }
-    } else if (!isCompleted && existingCompletedBadge) {
-        existingCompletedBadge.remove();
-    }
+    renderMilestones();
 }
 
 function removeGoalElement(goalId) {
@@ -941,7 +858,7 @@ function removeGoalElement(goalId) {
 function updateStatCounts() {
     let completedCount = 0;
     let activeCount = 0;
-    
+
     // Count from allGoals array instead of DOM elements
     allGoals.forEach(goal => {
         if (goal.status === 'completed') {
@@ -950,10 +867,73 @@ function updateStatCounts() {
             activeCount++;
         }
     });
-    
+
     document.getElementById('completedCount').textContent = completedCount;
     document.getElementById('activeCount').textContent = activeCount;
+
+    // Ring donut on the IN PROGRESS card: tan slice = share of goals completed,
+    // periwinkle = still active. All-gray when there are no goals yet.
+    const ring = document.getElementById('sumRing');
+    if (ring) {
+        const total = activeCount + completedCount;
+        if (total > 0) {
+            const pct = (completedCount / total) * 100;
+            ring.style.background =
+                `conic-gradient(#A38A70 0 ${pct}%, #6d7cf5 ${pct}% 100%)`;
+        } else {
+            ring.style.background = 'conic-gradient(#3a4150 0 100%)';
+        }
+    }
+
+    // Badge on the COMPLETED card: goals completed this calendar month.
+    const badge = document.getElementById('monthCompletedBadge');
+    if (badge) {
+        const now = new Date();
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const thisMonth = allGoals.filter(g =>
+            g.status === 'completed' && String(g.created_at || '').slice(0, 7) === monthKey).length;
+        badge.textContent = thisMonth;
+    }
+
+    // The Milestones panel mirrors completed goals — counts change exactly when
+    // completions do, so refreshing it here covers every mutation path.
+    renderMilestones();
 }
+
+// --- Milestones panel (right column): every completed goal is a milestone ---
+function renderMilestones() {
+    const list = document.getElementById('milestonesList');
+    const empty = document.getElementById('noMilestones');
+    if (!list) return;
+
+    const completed = allGoals.filter(g => g.status === 'completed');
+    list.innerHTML = '';
+    completed.forEach(goal => {
+        const { goalType, target, label } = goalNumbers(goal);
+        const value = goalType === 'focus'
+            ? `${fmtGoalValue(target, 'focus')} Focus`
+            : `${target} ${label}`;
+        const row = document.createElement('div');
+        row.className = 'milestone-row';
+        row.innerHTML = `
+            <span class="ms-name" title="${escGoalHtml(goal.title)}">${escGoalHtml(goal.title)}</span>
+            <span class="ms-value">${value}</span>
+            <button type="button" class="ms-delete" onclick="deleteGoal('${goal.id}')">Delete</button>
+        `;
+        list.appendChild(row);
+    });
+    if (empty) empty.style.display = completed.length ? 'none' : 'block';
+}
+
+// Focus goals advance on their own (tracked focus time) — while one is active,
+// re-pull the list every 30s so its bar creeps forward without a manual reload.
+setInterval(() => {
+    if (allGoals.some(g => g.goal_type === 'focus' && g.status === 'active')) {
+        const list = document.getElementById('goalsList');
+        if (list) list.querySelectorAll('.goal-item').forEach(el => el.remove());
+        loadGoals();
+    }
+}, 30000);
 
 function editGoal(goalId) {
     const goal = allGoals.find(g => g.id === goalId);
@@ -971,6 +951,11 @@ function editGoal(goalId) {
     document.getElementById('targetXP').value = goal.target_xp || '';
     document.getElementById('targetStreak').value = goal.target_streak || '';
     document.getElementById('targetTasks').value = goal.target_tasks || '';
+    // Focus targets are stored in minutes; the modal asks for hours.
+    document.getElementById('targetFocus').value = goal.target_focus ? (goal.target_focus / 60) : '';
+    const priority = Math.max(1, Math.min(10, parseInt(goal.priority, 10) || 5));
+    document.getElementById('goalPriority').value = priority;
+    document.getElementById('goalPriorityVal').textContent = String(priority);
     document.getElementById('goalDeadline').value = goal.deadline || '';
 
     // Update input visibility based on goal type
@@ -980,70 +965,90 @@ function editGoal(goalId) {
     openGoalModal();
 }
 
+// Escape user-entered text before dropping it into card markup.
+function escGoalHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Current/target/label/progress for any goal type, in one place.
+function goalNumbers(goal) {
+    const goalType = goal.goal_type || 'xp';
+    let current, target, label;
+    if (goalType === 'streak') {
+        current = goal.current_streak || 0; target = goal.target_streak || 0; label = 'Days';
+    } else if (goalType === 'tasks') {
+        current = goal.current_tasks || 0; target = goal.target_tasks || 0; label = 'Tasks';
+    } else if (goalType === 'focus') {
+        current = goal.current_focus || 0; target = goal.target_focus || 0; label = 'Focus';
+    } else {
+        current = goal.current_xp || 0; target = goal.target_xp || 0; label = 'XP';
+    }
+    let progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+    if (goal.status === 'completed') progress = 100;
+    return { goalType, current, target, label, progress };
+}
+
+// Focus values are stored in minutes — show them as "1h 30m".
+function fmtGoalValue(value, goalType) {
+    if (goalType !== 'focus') return String(value);
+    const total = Math.round(value);
+    const h = Math.floor(total / 60), m = total % 60;
+    if (h && m) return `${h}h ${m}m`;
+    if (h) return `${h}h`;
+    return `${m}m`;
+}
+
 function createGoalElement(goal) {
     const div = document.createElement('div');
     div.className = `goal-item ${goal.status === 'completed' ? 'completed' : ''}`;
     div.id = `goal-${goal.id}`;
 
-    const goalType = goal.goal_type || 'xp';
-    let current, target, label, progress;
+    const { goalType, current, target, label, progress } = goalNumbers(goal);
     const isCompleted = goal.status === 'completed';
-
-    if (goalType === 'xp') {
-        current = goal.current_xp || 0;
-        target = goal.target_xp || 0;
-        label = 'XP';
-        progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    } else if (goalType === 'streak') {
-        current = goal.current_streak || 0;
-        target = goal.target_streak || 0;
-        label = 'Days';
-        progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    } else if (goalType === 'tasks') {
-        current = goal.current_tasks || 0;
-        target = goal.target_tasks || 0;
-        label = 'Tasks';
-        progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    } else {
-        current = goal.current_xp || 0;
-        target = goal.target_xp || 0;
-        label = 'XP';
-        progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    }
-
-    // For completed goals, show full progress bar
-    if (isCompleted) {
-        progress = 100;
-    }
+    const isFocus = goalType === 'focus';
+    const priority = Math.max(1, Math.min(10, parseInt(goal.priority, 10) || 5));
+    // Stretch the gradient across the whole track so a partial fill shows the
+    // left slice of it (like the mockup), not a squeezed full rainbow.
+    const bgSize = progress > 0 ? `${(10000 / progress).toFixed(2)}% 100%` : '100% 100%';
 
     div.innerHTML = `
-        <div class="goal-content">
-            <h3 class="goal-title">${goal.title}</h3>
-            ${goal.description ? `<p class="goal-description">${goal.description}</p>` : ''}
-        </div>
-        <div class="goal-header">
-            <div class="goal-type-badge ${isCompleted ? 'completed' : ''}">${goalType.toUpperCase()}</div>
-            <div class="goal-utility-buttons">
-                ${!isCompleted ? `<button type="button" class="goal-utility-btn" onclick="addProgressToGoal('${goal.id}', 1)">+1</button>` : ''}
-                ${!isCompleted ? `<button class="goal-utility-btn edit" onclick="editGoal('${goal.id}')">Edit</button>` : ''}
-                <button class="goal-utility-btn delete" onclick="deleteGoal('${goal.id}')">Delete</button>
+        <div class="goal-card-head">
+            <div class="goal-headline">
+                <div class="goal-target-big">${fmtGoalValue(target, goalType)}${isFocus ? '' : ' ' + label}</div>
+                <h3 class="goal-title">${escGoalHtml(goal.title)}</h3>
+                ${goal.description ? `<p class="goal-description">${escGoalHtml(goal.description)}</p>` : ''}
+            </div>
+            <div class="goal-side">
+                <div class="goal-priority">
+                    <span class="gp-num">${priority}</span>
+                    <span class="gp-info" tabindex="0">&#9432;<span class="gp-tooltip">How important this goal is &mdash; 1 (low) to 10 (critical)</span></span>
+                    <span class="gp-label">Priority Rank 1-10</span>
+                </div>
+                <div class="goal-utility-buttons">
+                    ${!isCompleted && !isFocus ? `<button type="button" class="goal-utility-btn" onclick="addProgressToGoal('${goal.id}', 1)">+1</button>` : ''}
+                    ${!isCompleted ? `<button class="goal-utility-btn edit" onclick="editGoal('${goal.id}')">Edit</button>` : ''}
+                    <button class="goal-utility-btn delete" onclick="deleteGoal('${goal.id}')">Delete</button>
+                </div>
+                ${goal.deadline ? `<div class="goal-deadline">Deadline: ${formatDate(goal.deadline)}</div>` : ''}
             </div>
         </div>
-        <div class="goal-stats">
-            <span class="goal-metric">${current} / ${target} ${label}</span>
-            ${goal.deadline ? `<span class="goal-deadline">Deadline: ${formatDate(goal.deadline)}</span>` : ''}
-            ${isCompleted ? `<span class="goal-completed-badge">✓ COMPLETED</span>` : ''}
+        <div class="progress-bar-container gradient-bar">
+            <div class="progress-bar-fill ${isCompleted ? 'completed' : ''}" style="width: ${progress}%; background-size: ${bgSize}"></div>
         </div>
-        <div class="progress-bar-container">
-            <div class="progress-bar-fill ${isCompleted ? 'completed' : ''}" style="width: ${progress}%"></div>
+        <div class="goal-under-row">
+            <span class="progress-text">${progress.toFixed(1)}%</span>
+            <span class="goal-metric">${fmtGoalValue(current, goalType)} / ${fmtGoalValue(target, goalType)} ${isFocus ? 'focused' : label}</span>
+            <span class="goal-under-right">
+                ${isCompleted ? `<span class="goal-completed-badge">&#10003; COMPLETED</span>`
+                : isFocus ? `<span class="goal-autotrack" title="Progress comes from your tracked focus sessions">&#9201; Auto-tracks focus time</span>`
+                : `<span class="goal-controls">
+                        <input type="number" id="progress-input-${goal.id}" placeholder="${label}" min="1" onkeypress="handleProgressInputKeypress(event, '${goal.id}')">
+                        <button type="button" onclick="setProgressToGoal('${goal.id}')">Set</button>
+                   </span>`}
+            </span>
         </div>
-        <div class="progress-text">${progress.toFixed(1)}%</div>
-        ${!isCompleted ? `
-        <div class="goal-controls">
-            <input type="number" id="progress-input-${goal.id}" placeholder="${label}" min="1" onkeypress="handleProgressInputKeypress(event, '${goal.id}')">
-            <button type="button" onclick="setProgressToGoal('${goal.id}')">Set</button>
-        </div>
-        ` : ''}
     `;
 
     return div;
@@ -1061,6 +1066,10 @@ async function saveGoal() {
     const targetStreak = parseInt(targetStreakInput.value) || 0;
     const targetTasksInput = document.getElementById('targetTasks');
     const targetTasks = parseInt(targetTasksInput.value) || 0;
+    const targetFocusInput = document.getElementById('targetFocus');
+    // Entered in hours, stored in minutes.
+    const targetFocus = Math.round((parseFloat(targetFocusInput.value) || 0) * 60);
+    const priority = Math.max(1, Math.min(10, parseInt(document.getElementById('goalPriority').value, 10) || 5));
     const deadline = document.getElementById('goalDeadline').value;
     const deadlineInput = document.getElementById('goalDeadline');
 
@@ -1092,6 +1101,13 @@ async function saveGoal() {
         hasError = true;
     } else {
         targetTasksInput.classList.remove('invalid-input');
+    }
+
+    if (goalType === 'focus' && !targetFocus) {
+        targetFocusInput.classList.add('invalid-input');
+        hasError = true;
+    } else {
+        targetFocusInput.classList.remove('invalid-input');
     }
 
     // Validate deadline - cannot be today or in the past
@@ -1131,6 +1147,8 @@ async function saveGoal() {
         target_xp: targetXP,
         target_streak: targetStreak,
         target_tasks: targetTasks,
+        target_focus: targetFocus,
+        priority: priority,
         deadline: deadline
     };
 
@@ -1142,6 +1160,7 @@ async function saveGoal() {
             goalData.current_xp = existingGoal.current_xp || 0;
             goalData.current_streak = existingGoal.current_streak || 0;
             goalData.current_tasks = existingGoal.current_tasks || 0;
+            goalData.current_focus = existingGoal.current_focus || 0;
             goalData.status = existingGoal.status;
 
             // Check if editing would complete the goal
@@ -1151,6 +1170,8 @@ async function saveGoal() {
             } else if (goalType === 'streak' && targetStreak <= existingGoal.current_streak) {
                 wouldComplete = true;
             } else if (goalType === 'tasks' && targetTasks <= existingGoal.current_tasks) {
+                wouldComplete = true;
+            } else if (goalType === 'focus' && targetFocus <= (existingGoal.current_focus || 0)) {
                 wouldComplete = true;
             }
 
@@ -1180,6 +1201,8 @@ async function saveGoal() {
                         target_xp: targetXP,
                         target_streak: targetStreak,
                         target_tasks: targetTasks,
+                        target_focus: targetFocus,
+                        priority: priority,
                         deadline: deadline
                     };
                     // Update the DOM element directly
