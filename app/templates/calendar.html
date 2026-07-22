@@ -157,13 +157,12 @@
                 </div>
                 <div class="day-layout">
                     <div class="day-gridpane">
+                        <!-- Daily focus: the same per-day note as the Week row and the
+                             Month view's "Today's focus…" field (shared via DayFocus). -->
                         <div class="day-allday">
-                            <div class="wk-allday-label">All-day</div>
+                            <div class="wk-allday-label">Focus</div>
                             <div class="day-allday-field">
-                                <input type="text" id="dayAlldayInput" class="day-allday-input" placeholder="Add an all-day task…" aria-label="Add an all-day task">
-                                <button type="button" class="day-allday-add" id="dayAlldayAdd" aria-label="Add all-day task">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                                </button>
+                                <input type="text" id="dayFocusInput" class="day-allday-input" placeholder="What's your focus for this day?" aria-label="Daily focus">
                             </div>
                         </div>
                         <div class="wk-scroll day-scroll">
@@ -643,6 +642,7 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/focus.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/calendar/day-focus.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar/calendar-month.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar/calendar-week.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar/calendar-day.js') }}"></script>

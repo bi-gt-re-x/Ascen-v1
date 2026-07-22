@@ -18,7 +18,8 @@
         "seconds": 240,
         "goal_hours": 2.5
       }
-    }
+    },
+    "day_focus": {}
   },
   {
     "id": "1781715970833",
@@ -43,7 +44,7 @@
     "theme": "light",
     "focus_history": {
       "2026-07-22": {
-        "seconds": 547.0,
+        "seconds": 3868.0,
         "goal_hours": 2.0
       }
     }

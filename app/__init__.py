@@ -6,6 +6,7 @@ import os
 
 from .paths import DATABASE_PATH, TEMPLATE_FOLDER, STATIC_FOLDER, bp
 from .services.automation import automation_bp
+from .routes.calendar import dayfocus_bp
 
 
 
@@ -38,6 +39,8 @@ def create_app():
     app.register_blueprint(bp)
 
     app.register_blueprint(automation_bp)
+
+    app.register_blueprint(dayfocus_bp)
 
     
 

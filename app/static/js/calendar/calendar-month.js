@@ -3633,9 +3633,18 @@ function updateBottomSection(dateStr) {
 
     focusInput.placeholder = 'Today\'s focus...';
 
+    // Shared per-day focus (day-focus.js) — the same note as the Week row and
+    // the Day view's Focus field. The month's internal date keys are unpadded
+    // ("2026-7-4"); the shared store uses real ISO ("2026-07-04"), so always go
+    // through dayFocusIso(). Older data lived on content.focus only; migrate it
+    // into the shared store the first time it's seen.
+    const focusIso = dayFocusIso(dateStr);
+    if (window.DayFocus && !window.DayFocus.get(focusIso) && content.focus) {
+        window.DayFocus.set(focusIso, content.focus);
+    }
+    focusInput.value = (window.DayFocus ? window.DayFocus.get(focusIso) : content.focus) || '';
 
-
-    focusInput.value = content.focus || '';
+    focusInput.dataset.iso = focusIso;
 
 
 
@@ -3656,18 +3665,11 @@ function updateBottomSection(dateStr) {
 
     focusInput.addEventListener('input', (e) => {
 
-
-
-
-
-
         content.focus = e.target.value;
 
-
+        if (window.DayFocus) window.DayFocus.set(focusIso, e.target.value);
 
         saveCalendarData();
-
-
 
     });
 
@@ -3679,18 +3681,11 @@ function updateBottomSection(dateStr) {
 
     focusInput.addEventListener('blur', (e) => {
 
-
-
-
-
-
         content.focus = e.target.value;
 
-
+        if (window.DayFocus) window.DayFocus.set(focusIso, e.target.value);
 
         saveCalendarData();
-
-
 
     });
 
@@ -10203,3 +10198,21 @@ window.handleTaskInputKeypress = handleTaskInputKeypress;
 
 
 
+
+// Month date keys are unpadded ("2026-7-4"); the shared day-focus store keys by
+// real ISO dates ("2026-07-04"). Normalize before any DayFocus call.
+function dayFocusIso(dateStr) {
+    var p = String(dateStr).split('-');
+    if (p.length !== 3) return dateStr;
+    return p[0] + '-' + ('0' + p[1]).slice(-2) + '-' + ('0' + p[2]).slice(-2);
+}
+
+// Keep the Month view's "Today's focus…" field live-synced when the shared
+// day-focus (day-focus.js) changes in another view or hydrates from the server.
+document.addEventListener('dayfocuschange', function () {
+    document.querySelectorAll('.daily-focus-input').forEach(function (inp) {
+        if (inp !== document.activeElement && inp.dataset.iso && window.DayFocus) {
+            inp.value = window.DayFocus.get(inp.dataset.iso);
+        }
+    });
+});

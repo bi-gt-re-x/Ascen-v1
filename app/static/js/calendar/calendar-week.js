@@ -208,14 +208,140 @@
         [/(streak|habit)/, 'streak'],
         [/(win|trophy|award|competition)/, 'trophy'],
         [/(review|star|important|priority)/, 'star'],
-        [/(done|complete|finish)/, 'check']
+        [/(done|complete|finish)/, 'check'],
+        // Day-part section names (the calendar's default events)
+        [/(morning)/, 'coffee'],
+        [/(afternoon)/, 'break'],
+        [/(evening)/, 'relax'],
+        [/\b(night|bedtime)\b/, 'sleep'],
+        [/(session)/, 'focus']
     ];
+
+    // --- Smart assist ---------------------------------------------------------
+    // For names the rules above miss, match each word against a dictionary of
+    // every icon name plus extra synonyms — exactly first (with light
+    // plural/gerund stripping), then fuzzily (edit distance 1 for short words,
+    // 2 for longer), so "gymm", "Mathz hw" or "swimm sesion" still land on the
+    // right icon instead of the clock.
+    var ICON_TOKENS = (function () {
+        var map = {};
+        ['art', 'basketball', 'bike', 'biology', 'birthday', 'break', 'breakfast',
+         'call', 'car', 'chart', 'check', 'cleaning', 'clock', 'code', 'coffee',
+         'cooking', 'date', 'deadline', 'doctor', 'email', 'errand', 'exam',
+         'family', 'finance', 'focus', 'food', 'friends', 'game', 'garden',
+         'goal', 'groceries', 'guitar', 'gym', 'health', 'hike', 'homework',
+         'idea', 'journal', 'language', 'laundry', 'lunch', 'math', 'medicine',
+         'meditation', 'meeting', 'music', 'nature', 'party', 'pet', 'phone',
+         'photo', 'physics', 'piano', 'plan', 'presentation', 'project',
+         'reading', 'relax', 'repair', 'research', 'run', 'school', 'science',
+         'shopping', 'shower', 'sleep', 'snack', 'soccer', 'star', 'streak',
+         'swim', 'tennis', 'travel', 'trophy', 'tv', 'walk', 'water', 'work',
+         'writing', 'yoga'].forEach(function (k) { map[k] = k; });
+        var syn = {
+            gym: ['weights', 'lifting', 'deadlift', 'bench', 'squats', 'crossfit', 'fitness'],
+            run: ['jogging', 'sprints', 'marathon', 'treadmill', 'parkrun'],
+            math: ['calc', 'algebra', 'geometry', 'trig', 'arithmetic'],
+            reading: ['novel', 'textbook', 'chapters', 'literature'],
+            writing: ['essay', 'draft', 'thesis', 'notes'],
+            code: ['coding', 'programming', 'leetcode', 'debugging', 'website'],
+            science: ['chemistry', 'chem', 'experiment'],
+            homework: ['assignment', 'worksheet', 'revision', 'studying'],
+            meeting: ['standup', 'interview', 'catchup', 'onboarding'],
+            food: ['dinner', 'meal', 'restaurant', 'takeout'],
+            coffee: ['espresso', 'latte', 'cafe', 'matcha', 'boba'],
+            cooking: ['baking', 'recipe', 'mealprep'],
+            sleep: ['bedtime', 'rest'],
+            relax: ['chill', 'unwind', 'lounge', 'destress'],
+            meditation: ['mindfulness', 'breathing', 'journaling'],
+            game: ['gaming', 'minecraft', 'valorant', 'fortnite', 'chess'],
+            tv: ['netflix', 'youtube', 'anime', 'movie', 'series'],
+            music: ['violin', 'band', 'choir', 'singing', 'karaoke'],
+            art: ['drawing', 'painting', 'sketching', 'design'],
+            family: ['parents', 'grandma', 'grandpa', 'siblings', 'cousins'],
+            friends: ['hangout', 'social', 'sleepover'],
+            party: ['celebration', 'birthday'],
+            pet: ['puppy', 'kitten', 'walkies'],
+            cleaning: ['chores', 'tidying', 'vacuum', 'dishes', 'organize'],
+            shopping: ['mall', 'errands', 'ikea'],
+            travel: ['flight', 'airport', 'vacation', 'roadtrip'],
+            car: ['driving', 'commute', 'carpool'],
+            doctor: ['dentist', 'checkup', 'appointment', 'physio'],
+            health: ['therapy', 'wellness'],
+            work: ['shift', 'office', 'internship', 'job'],
+            finance: ['budget', 'taxes', 'banking', 'invoice'],
+            exam: ['midterm', 'finals', 'quiz', 'test'],
+            school: ['lecture', 'class', 'tutoring', 'seminar'],
+            focus: ['pomodoro', 'deepwork', 'grind', 'lockin'],
+            walk: ['stroll', 'steps'],
+            swim: ['swimming', 'pool'],
+            soccer: ['football', 'futsal'],
+            basketball: ['hoops', 'nba'],
+            water: ['hydrate', 'hydration'],
+            language: ['spanish', 'french', 'duolingo', 'vocab'],
+            presentation: ['slides', 'pitch', 'demo']
+        };
+        Object.keys(syn).forEach(function (k) {
+            syn[k].forEach(function (t) { map[t] = k; });
+        });
+        return map;
+    })();
+
+    // Levenshtein distance capped at `max` (-1 = over the cap). Small inputs
+    // only, so the simple DP is plenty fast.
+    function editDistance(a, b, max) {
+        if (a === b) return 0;
+        if (Math.abs(a.length - b.length) > max) return -1;
+        var prev = [], cur = [], i, j;
+        for (j = 0; j <= b.length; j++) prev[j] = j;
+        for (i = 1; i <= a.length; i++) {
+            cur[0] = i;
+            var rowMin = i;
+            for (j = 1; j <= b.length; j++) {
+                var cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+                cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+                if (cur[j] < rowMin) rowMin = cur[j];
+            }
+            if (rowMin > max) return -1;
+            prev = cur.slice();
+        }
+        return prev[b.length] <= max ? prev[b.length] : -1;
+    }
+
+    function smartIconKey(s) {
+        var tokens = s.split(/[^a-z]+/).filter(function (t) { return t.length >= 3; });
+        var i, t;
+        // Exact token hits, with light suffix stripping ("readings" -> "reading").
+        for (i = 0; i < tokens.length; i++) {
+            t = tokens[i];
+            if (ICON_TOKENS[t]) return ICON_TOKENS[t];
+            var stem = t.replace(/(ings?|es|s)$/, '');
+            if (stem !== t && ICON_TOKENS[stem]) return ICON_TOKENS[stem];
+        }
+        // Fuzzy pass: closest dictionary word within the typo budget wins.
+        var dict = Object.keys(ICON_TOKENS);
+        var bestKey = null, bestD = Infinity;
+        for (i = 0; i < tokens.length; i++) {
+            t = tokens[i];
+            if (t.length < 4) continue; // too short to fuzz safely
+            var allow = t.length <= 5 ? 1 : 2;
+            for (var j = 0; j < dict.length; j++) {
+                var d = editDistance(t, dict[j], allow);
+                if (d !== -1 && d < bestD) {
+                    bestD = d;
+                    bestKey = ICON_TOKENS[dict[j]];
+                    if (d === 1 && t.length <= 5) break;
+                }
+            }
+        }
+        return bestKey;
+    }
+
     function iconKeyFor(name) {
         var s = String(name || '').toLowerCase();
         for (var i = 0; i < ICON_RULES.length; i++) {
             if (ICON_RULES[i][0].test(s)) return ICON_RULES[i][1];
         }
-        return 'clock';
+        return smartIconKey(s) || 'clock';
     }
     function iconForName(name) {
         return '<i class="cal-ico" style="--ico:url(/static/icons/' +
@@ -1678,6 +1804,14 @@
         var gridH = (END_HOUR - START_HOUR) * HOUR_H;
         if (titleEl) titleEl.textContent = dayTitleText(d.date);
 
+        // Bind the Daily Focus field to the shown day (shared store — see
+        // day-focus.js). Don't clobber the field mid-edit.
+        var focusField = document.getElementById('dayFocusInput');
+        if (focusField) {
+            focusField.dataset.iso = d.iso;
+            if (focusField !== document.activeElement) focusField.value = loadDayFocus(d.iso);
+        }
+
         // Time labels — same 6 AM–5 AM window as the week.
         var lab = '';
         for (var h = START_HOUR; h <= END_HOUR; h++) {
@@ -1972,9 +2106,17 @@
     function wkUser() {
         return (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
     }
+    // Shared per-day focus store (day-focus.js): synced across the Week / Day /
+    // Month views and persisted server-side. Falls back to plain localStorage
+    // if day-focus.js didn't load.
     function dayFocusKey(iso) { return 'wkDayFocus:' + wkUser() + ':' + iso; }
     function loadDayFocus(iso) {
+        if (window.DayFocus) return window.DayFocus.get(iso);
         try { return localStorage.getItem(dayFocusKey(iso)) || ''; } catch (e) { return ''; }
+    }
+    function saveDayFocus(iso, text) {
+        if (window.DayFocus) { window.DayFocus.set(iso, text); return; }
+        try { localStorage.setItem(dayFocusKey(iso), text); } catch (e) { /* ignore */ }
     }
 
     // Mon–Sun week containing date d, as {start, end} YYYY-MM-DD strings.
@@ -2034,11 +2176,26 @@
             var saveDay = function (e) {
                 var inp = e.target && e.target.closest ? e.target.closest('.wk-day-focus') : null;
                 if (!inp) return;
-                try { localStorage.setItem(dayFocusKey(inp.dataset.date), inp.value); } catch (err) { /* ignore */ }
+                saveDayFocus(inp.dataset.date, inp.value);
             };
             focusRow.addEventListener('input', saveDay);
             focusRow.addEventListener('blur', saveDay, true);
         }
+
+        // Whenever the shared day-focus changes anywhere (another view on this
+        // page, or the server hydrate), refresh every focus field that isn't
+        // being typed in right now.
+        document.addEventListener('dayfocuschange', function () {
+            document.querySelectorAll('.wk-day-focus').forEach(function (inp) {
+                if (inp !== document.activeElement && inp.dataset.date) {
+                    inp.value = loadDayFocus(inp.dataset.date);
+                }
+            });
+            var dfi = document.getElementById('dayFocusInput');
+            if (dfi && dfi !== document.activeElement && dfi.dataset.iso) {
+                dfi.value = loadDayFocus(dfi.dataset.iso);
+            }
+        });
 
         var btns = Array.prototype.slice.call(document.querySelectorAll('.view-toggle-btn'));
         btns.forEach(function (b) {
@@ -2124,20 +2281,15 @@
         var addTaskLink = document.getElementById('dayAddTaskLink');
         if (addTaskLink) addTaskLink.addEventListener('click', function () { openTaskForDay(''); });
 
-        // All-day field: Enter or the + button opens the task modal, prefilled with
-        // whatever was typed, then clears the field.
-        var alldayInput = document.getElementById('dayAlldayInput');
-        var alldayAdd = document.getElementById('dayAlldayAdd');
-        function submitAllday() {
-            if (!alldayInput) return;
-            var v = alldayInput.value.trim();
-            openTaskForDay(v);
-            alldayInput.value = '';
+        // Daily Focus field (replaces the old all-day task adder): edits the same
+        // per-day note as the Week row and Month view. Bound to whichever day the
+        // Day view is showing (renderDay stamps data-iso and fills the value).
+        var dayFocusField = document.getElementById('dayFocusInput');
+        if (dayFocusField) {
+            dayFocusField.addEventListener('input', function () {
+                if (dayFocusField.dataset.iso) saveDayFocus(dayFocusField.dataset.iso, dayFocusField.value);
+            });
         }
-        if (alldayAdd) alldayAdd.addEventListener('click', submitAllday);
-        if (alldayInput) alldayInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') { e.preventDefault(); submitAllday(); }
-        });
 
         // Focus button: visual placeholder — no tracked-focus feature yet.
         var focusBtn = document.getElementById('dayFocusBtn');
