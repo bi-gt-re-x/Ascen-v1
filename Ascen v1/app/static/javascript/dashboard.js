@@ -1788,7 +1788,7 @@ function syncTaskToCalendar(task) {
 
     let dashboardTasks = [];
 
-    const storedTasks = localStorage.getItem('dashboardTasks');
+    const storedTasks = localStorage.getItem(userScopedKey('dashboardTasks'));
 
     if (storedTasks) {
 
@@ -1814,7 +1814,7 @@ function syncTaskToCalendar(task) {
 
         dashboardTasks.push(task);
 
-        localStorage.setItem('dashboardTasks', JSON.stringify(dashboardTasks));
+        localStorage.setItem(userScopedKey('dashboardTasks'), JSON.stringify(dashboardTasks));
 
 
     }
@@ -1829,7 +1829,7 @@ function removeDashboardTaskFromCalendar(taskId) {
 
     let dashboardTasks = [];
 
-    const storedTasks = localStorage.getItem('dashboardTasks');
+    const storedTasks = localStorage.getItem(userScopedKey('dashboardTasks'));
 
     if (storedTasks) {
 
@@ -1853,7 +1853,7 @@ function removeDashboardTaskFromCalendar(taskId) {
 
         dashboardTasks.splice(taskIndex, 1);
 
-        localStorage.setItem('dashboardTasks', JSON.stringify(dashboardTasks));
+        localStorage.setItem(userScopedKey('dashboardTasks'), JSON.stringify(dashboardTasks));
 
 
     }
@@ -1902,7 +1902,7 @@ async function checkCreationConflict(newTask) {
 
     // 2) Calendar events (from the calendar page's localStorage store).
     try {
-        const data = JSON.parse(localStorage.getItem('calendarData') || '{}');
+        const data = JSON.parse(localStorage.getItem(userScopedKey('calendarData')) || '{}');
         const PLACEHOLDERS = ['Sleep Time', 'Morning session', 'Afternoon session',
                               'Late afternoon session', 'Evening session', 'Night session'];
         // Walk each day the new task's span touches.
@@ -1980,12 +1980,12 @@ function showCreationConflictPopup(newTask, other) {
             removeDashboardTaskFromCalendar(other.id);
         } else {
             try {
-                const data = JSON.parse(localStorage.getItem('calendarData') || '{}');
+                const data = JSON.parse(localStorage.getItem(userScopedKey('calendarData')) || '{}');
                 const day = data[other.dateKey];
                 if (day && Array.isArray(day.timestamps)) {
                     day.timestamps = day.timestamps.filter(t =>
                         !(t.task === other.label && t.startTime === other.startTime && t.endTime === other.endTime));
-                    localStorage.setItem('calendarData', JSON.stringify(data));
+                    localStorage.setItem(userScopedKey('calendarData'), JSON.stringify(data));
                 }
             } catch (e) { /* ignore */ }
         }
@@ -2022,7 +2022,7 @@ async function gatherCalendarBusy(dayDate, excludeTaskId) {
 
     // 1) Calendar events on this day (start–end times).
     try {
-        const data = JSON.parse(localStorage.getItem('calendarData') || '{}');
+        const data = JSON.parse(localStorage.getItem(userScopedKey('calendarData')) || '{}');
         const day = data[y + '-' + (mo + 1) + '-' + da];
         if (day && Array.isArray(day.timestamps)) {
             for (const t of day.timestamps) {

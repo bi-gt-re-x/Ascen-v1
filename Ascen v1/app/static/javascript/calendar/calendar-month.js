@@ -193,6 +193,35 @@ const monthNames = [
 
 
 
+// --- Per-account browser storage --------------------------------------------
+// Calendar events and task state used to live under single shared localStorage
+// keys ('calendarData', 'dashboardTasks', ...), so every account that signed in
+// on this machine saw the same data. Keys are now scoped per account. Any legacy
+// shared data is migrated once to the first real account that loads a page (the
+// head snippet has already synced currentUser from the server session).
+window.userScopedKey = function (base) {
+    var u = 'Default';
+    try { u = localStorage.getItem('currentUser') || 'Default'; } catch (e) { /* ignore */ }
+    return base + ':' + u;
+};
+(function migrateSharedKeys() {
+    // Only adopt the legacy shared data once a real account is signed in, so it
+    // lands under the right account key (a signed-out load leaves it in place).
+    var u = null;
+    try { u = localStorage.getItem('currentUser'); } catch (e) { /* ignore */ }
+    if (!u || u === 'Default') return;
+    ['calendarData', 'hiddenPlaceholderTasks', 'dashboardTasks', 'wkOverviewSnapshots'].forEach(function (base) {
+        try {
+            var legacy = localStorage.getItem(base);
+            if (legacy === null) return;
+            if (localStorage.getItem(window.userScopedKey(base)) === null) {
+                localStorage.setItem(window.userScopedKey(base), legacy);
+            }
+            localStorage.removeItem(base);
+        } catch (e) { /* ignore */ }
+    });
+})();
+
 const dateContent = {};
 
 
@@ -397,7 +426,7 @@ function loadCalendarData() {
 
 
 
-    const savedData = localStorage.getItem('calendarData');
+    const savedData = localStorage.getItem(userScopedKey('calendarData'));
 
 
 
@@ -452,7 +481,7 @@ function loadCalendarData() {
 
 
 
-    const hiddenData = localStorage.getItem('hiddenPlaceholderTasks');
+    const hiddenData = localStorage.getItem(userScopedKey('hiddenPlaceholderTasks'));
 
 
 
@@ -496,7 +525,7 @@ function loadCalendarData() {
 
 
 
-    const dashboardData = localStorage.getItem('dashboardTasks');
+    const dashboardData = localStorage.getItem(userScopedKey('dashboardTasks'));
 
 
 
@@ -776,15 +805,15 @@ function saveCalendarData() {
 
 
 
-    localStorage.setItem('calendarData', JSON.stringify(cleanedDateContent));
+    localStorage.setItem(userScopedKey('calendarData'), JSON.stringify(cleanedDateContent));
 
 
 
-    localStorage.setItem('hiddenPlaceholderTasks', JSON.stringify(hiddenPlaceholderTasks));
+    localStorage.setItem(userScopedKey('hiddenPlaceholderTasks'), JSON.stringify(hiddenPlaceholderTasks));
 
 
 
-    localStorage.setItem('dashboardTasks', JSON.stringify(dashboardTasks));
+    localStorage.setItem(userScopedKey('dashboardTasks'), JSON.stringify(dashboardTasks));
 
 
 
@@ -804,15 +833,15 @@ function resetCalendarData() {
 
 
 
-    localStorage.removeItem('calendarData');
+    localStorage.removeItem(userScopedKey('calendarData'));
 
 
 
-    localStorage.removeItem('hiddenPlaceholderTasks');
+    localStorage.removeItem(userScopedKey('hiddenPlaceholderTasks'));
 
 
 
-    localStorage.removeItem('dashboardTasks');
+    localStorage.removeItem(userScopedKey('dashboardTasks'));
 
 
 

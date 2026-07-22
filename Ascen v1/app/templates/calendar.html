@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Calendar</title>
     <script>
-        // Recover the signed-in user from the server session when this browser has
-        // no cached currentUser (e.g. localStorage was cleared), so the calendar
-        // still loads the account's tasks/events/stats instead of the empty Default.
+        // The signed-in account (server session) is the source of truth for whose
+        // calendars and tasks this page loads: sync it into currentUser on every
+        // load, overriding any stale value this browser kept from an earlier
+        // sign-in. With no session, any cached currentUser is left as a fallback.
         (function () {
             var u = {{ current_user|tojson }};
-            if (u && !localStorage.getItem('currentUser')) localStorage.setItem('currentUser', u);
+            if (u) localStorage.setItem('currentUser', u);
         })();
     </script>
     <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>

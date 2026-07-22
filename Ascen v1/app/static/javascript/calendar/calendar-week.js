@@ -1775,14 +1775,14 @@
     // Once a week is over, its overview must not change as tasks are later edited
     // or deleted — so we read the saved value instead of recomputing.
     function loadWkSnapshots() {
-        try { return JSON.parse((window.localStorage && localStorage.getItem('wkOverviewSnapshots')) || '{}') || {}; }
+        try { return JSON.parse((window.localStorage && localStorage.getItem(userScopedKey('wkOverviewSnapshots'))) || '{}') || {}; }
         catch (e) { return {}; }
     }
     function saveWkSnapshot(key, snap) {
         if (!window.localStorage) return;
         var all = loadWkSnapshots();
         all[key] = snap;
-        try { localStorage.setItem('wkOverviewSnapshots', JSON.stringify(all)); } catch (e) {}
+        try { localStorage.setItem(userScopedKey('wkOverviewSnapshots'), JSON.stringify(all)); } catch (e) {}
     }
 
     // --- Real sidebar numbers, scoped to the current week --------------------

@@ -15,12 +15,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
-        // Recover the signed-in user from the server session when this browser has
-        // no cached currentUser (e.g. localStorage was cleared), so the page loads
-        // the account's data instead of the empty Default state.
+        // The signed-in account (server session) is the source of truth for whose
+        // data this page loads: sync it into currentUser on every load, overriding
+        // any stale value this browser kept from an earlier sign-in. With no
+        // session, any cached currentUser is left as a fallback.
         (function () {
             var u = {{ current_user|tojson }};
-            if (u && !localStorage.getItem('currentUser')) localStorage.setItem('currentUser', u);
+            if (u) localStorage.setItem('currentUser', u);
         })();
     </script>
     <script src="{{ url_for('static', filename='javascript/theme.js') }}" defer></script>
