@@ -33,19 +33,19 @@
     "id": "1782923188347",
     "username": "men",
     "password_hash": "1",
-    "xp": 4221,
+    "xp": 4268,
     "level": 9,
     "charge": 0,
-    "tasks_completed": 63,
-    "current_streak": 1,
-    "best_streak": 1,
-    "last_task_date": "2026-07-21",
-    "day_state": "newday",
+    "tasks_completed": 64,
+    "current_streak": 2,
+    "best_streak": 2,
+    "last_task_date": "2026-07-22",
+    "day_state": "oldday",
     "theme": "light",
     "focus_history": {
       "2026-07-22": {
-        "seconds": 4061.0,
-        "goal_hours": 2.0
+        "seconds": 17456.0,
+        "goal_hours": 4.5
       }
     }
   },

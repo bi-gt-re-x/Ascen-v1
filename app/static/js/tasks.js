@@ -86,10 +86,19 @@ function updateStatsUI(xp, level, xpRequired, tasksCompleted) {
     const tasksCompEl = document.getElementById('tasksCompleted');
     const xpBarFill = document.getElementById('xpBarFill');
 
+    // Level-up detection: compare against the last level this UI rendered.
+    // (Read BEFORE writing the new level into the DOM.) On the very first
+    // render there's nothing to compare against, so no animation fires on load.
+    const prevLevel = xpBarFill ? parseInt(xpBarFill.dataset.lastLevel || '', 10) : NaN;
+    const leveledUp = !isNaN(prevLevel) && level > prevLevel;
+    if (xpBarFill) xpBarFill.dataset.lastLevel = String(level);
+
     if (xpEl) xpEl.innerText = xp;
     if (levelEl) levelEl.innerText = level;
     if (xpReqEl) xpReqEl.innerText = xpRequired;
     if (tasksCompEl) tasksCompEl.innerText = tasksCompleted;
+
+    if (leveledUp) popXpBar();
 
     if (xpBarFill) {
         const percentage = Math.min((xp / xpRequired) * 100, 100);
@@ -111,6 +120,22 @@ function updateStatsUI(xp, level, xpRequired, tasksCompleted) {
             localStorage.setItem('xpPct_' + user, String(percentage));
         } catch (e) {}
     }
+}
+
+// Level up! Make the XP bar pop (glow + brighten) and jump (bounce), and give
+// the Level stat a little pop too. Classes are removed on a timer so the
+// animation can re-fire on the next level.
+function popXpBar() {
+    const bar = document.querySelector('.xp-bar-container');
+    const fill = document.getElementById('xpBarFill');
+    const levelEl = document.getElementById('level');
+    [bar, fill, levelEl].forEach(el => {
+        if (!el) return;
+        el.classList.remove('level-up');
+        void el.offsetWidth; // restart the animation if it's mid-flight
+        el.classList.add('level-up');
+        setTimeout(() => el.classList.remove('level-up'), 1200);
+    });
 }
 
 function showXPPopup(amount) {

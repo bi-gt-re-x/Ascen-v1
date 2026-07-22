@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contact Support</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mainpage.css') }}">
+    <style>
+        body { font-family: 'Century Gothic', sans-serif; padding: 20px; line-height: 1.6; }
+        h1 { color: inherit; }
+        .content-container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 10px;
+            max-width: 800px;
+            margin: 50px auto;
+            color: #333;
+        }
+        .content-container h2 { margin-top: 1.5em; font-size: 1.2em; }
+        .content-container ul { padding-left: 1.4em; }
+        .contact-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 1em;
+        }
+        .contact-card {
+            background: #f7f7f7;
+            border-radius: 8px;
+            padding: 18px;
+        }
+        .contact-card h3 { margin: 0 0 6px; font-size: 1em; }
+        .contact-card p { margin: 0; font-size: 0.92em; color: #555; }
+        .faq details {
+            background: #f7f7f7;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+        }
+        .faq summary { cursor: pointer; font-weight: bold; }
+        .faq p { margin: 10px 0 0; color: #555; }
+    </style>
+</head>
+<body>
+    <button class="nav-btn home-btn" onclick="window.location.href='{{ url_for('main.home') }}'" style="position: absolute; top: 10px; left: 10px;">Home</button>
+
+    <div class="content-container">
+        <h1>Contact Support</h1>
+
+        <p>Stuck on something? We want Ascen to help you focus, not slow you down. Check the quick answers below — and if they don't solve it, reach out.</p>
+
+        <h2>Get In Touch</h2>
+        <div class="contact-options">
+            <div class="contact-card">
+                <h3>📧 Email</h3>
+                <p>Send questions, bug reports, or feedback to <a href="mailto:support@ascen.app">support@ascen.app</a>. We aim to reply within 2 business days.</p>
+            </div>
+            <div class="contact-card">
+                <h3>🐛 Bug Reports</h3>
+                <p>Found something broken? Open an issue on the project's repository with steps to reproduce — screenshots help a lot.</p>
+            </div>
+            <div class="contact-card">
+                <h3>💡 Feature Ideas</h3>
+                <p>Ascen is shaped by its users. Tell us what would make your study sessions better.</p>
+            </div>
+        </div>
+
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq">
+            <details>
+                <summary>Where is my data stored?</summary>
+                <p>Everything lives locally — in your browser's local storage and in JSON files on the machine running the app. Nothing is uploaded to a cloud service. See our <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a> for details.</p>
+            </details>
+            <details>
+                <summary>I lost my streak — can it be restored?</summary>
+                <p>Streaks count consecutive days with completed work. If a day was genuinely logged and the streak still reset, that's a bug — report it with your task history and we'll look into it.</p>
+            </details>
+            <details>
+                <summary>How do XP and levels work?</summary>
+                <p>Completing tasks and focus sessions earns XP. Each level requires more XP than the last, and your Growth page grades your consistency over time.</p>
+            </details>
+            <details>
+                <summary>Can I use Ascen on multiple devices?</summary>
+                <p>Because data is stored locally, each device keeps its own progress. To move your data, copy the app's JSON data files to the new machine.</p>
+            </details>
+            <details>
+                <summary>Does Ascen cost anything?</summary>
+                <p>No — Ascen is free, with every feature included. There are no paid tiers, subscriptions, or ads.</p>
+            </details>
+        </div>
+
+        <h2>Before You Write In</h2>
+        <ul>
+            <li>Include what you were doing when the problem happened.</li>
+            <li>Mention your browser and operating system.</li>
+            <li>Attach a screenshot if something looks wrong on screen.</li>
+        </ul>
+    </div>
+
+</body>
+</html>

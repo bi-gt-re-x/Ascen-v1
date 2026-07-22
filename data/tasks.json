@@ -1182,11 +1182,14 @@
     "title": "99999",
     "description": "",
     "priority": "medium",
-    "status": "todo",
+    "status": "done",
     "xp_value": 47,
     "due_date": "2026-07-19T17:34:00",
     "show_on_calendar": false,
-    "created_at": "2026-07-19T17:25:00.299765"
+    "created_at": "2026-07-19T17:25:00.299765",
+    "completed_at": "2026-07-22T15:07:28.974219",
+    "completion_seconds": 250949,
+    "met_deadline": false
   },
   {
     "id": "1784502921334",

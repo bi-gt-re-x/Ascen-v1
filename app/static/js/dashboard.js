@@ -278,6 +278,11 @@ async function loadTasks() {
     } else {
     }
 
+    // Hand the full list (completed included) to the day-clear confetti check.
+    if (window.Celebrate && typeof window.Celebrate.setTasks === 'function') {
+        window.Celebrate.setTasks(tasks);
+    }
+
     // Filter out completed tasks - only show incomplete tasks on dashboard
     const incompleteTasks = tasks.filter(task => !(task.status === 'done' || task.completed === 1 || task.completed === true || task.completed === '1'));
 
@@ -1518,6 +1523,12 @@ async function addTaskFromModal() {
         await addTaskToBackend(newTask);
     }
 
+    // Let the day-clear confetti check know about this task (the Default user's
+    // tasks never reach the backend, so loadTasks alone would miss them).
+    if (window.Celebrate && typeof window.Celebrate.taskAdded === 'function') {
+        window.Celebrate.taskAdded(newTask);
+    }
+
     // Sync to calendar if task has due date
     if (newTask.due_date) {
         syncTaskToCalendar(newTask);
@@ -1601,6 +1612,10 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
             if (typeof window.checkGoalCompletions === 'function') {
                 window.checkGoalCompletions();
             }
+            // Was that the last task due today? If so — confetti.
+            if (window.Celebrate && typeof window.Celebrate.taskCompleted === 'function') {
+                window.Celebrate.taskCompleted(taskId);
+            }
         } else {
             console.error('Task completion failed:', result);
             // Re-enable button if completion failed
@@ -1659,6 +1674,11 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
 
             updateStatsUI(xp, level, xpRequired, tasksCompleted);
 
+        }
+
+        // Was that the last task due today? If so — confetti.
+        if (window.Celebrate && typeof window.Celebrate.taskCompleted === 'function') {
+            window.Celebrate.taskCompleted(taskId);
         }
 
     }
@@ -2242,9 +2262,18 @@ function isSameDay(a, b) {
     if (minusBtn) minusBtn.addEventListener('click', function () { window.Focus.setGoalHours(window.Focus.goalHours() - 0.5); render(); });
     if (plusBtn) plusBtn.addEventListener('click', function () { window.Focus.setGoalHours(window.Focus.goalHours() + 0.5); render(); });
     if (startBtn) startBtn.addEventListener('click', function () {
-        if (window.Focus.isRunning()) { window.Focus.stop(); stopTick(); }
-        else { window.Focus.start(); startTick(); }
-        render();
+        if (window.Focus.isRunning()) {
+            // Stopping asks first — an accidental click shouldn't end a session.
+            window.Focus.confirmStop(function () {
+                window.Focus.stop();
+                stopTick();
+                render();
+            });
+        } else {
+            window.Focus.start();
+            startTick();
+            render();
+        }
     });
 
     // If a session was already running (started earlier / on another page / while

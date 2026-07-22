@@ -1748,5 +1748,14 @@
     "timestamp": "2026-07-21T17:22:18.875216",
     "date": "2026-07-21",
     "tasks_completed": 1
+  },
+  {
+    "id": "1784750848986",
+    "user_id": "men",
+    "amount": 47,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T15:07:28.986266",
+    "date": "2026-07-22",
+    "tasks_completed": 1
   }
 ]

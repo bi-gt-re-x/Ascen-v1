@@ -13,6 +13,9 @@
 }
 .day-action-btn svg { width: 16px; height: 16px; }
 .day-action-btn:hover { background: #f6f7f9; }
+/* Focus session running: the button flips to a "stop" look */
+.day-action-btn.is-running { background: #d9534f; border-color: #d9534f; color: #fff; }
+.day-action-btn.is-running:hover { background: #c9453f; border-color: #c9453f; }
 .day-action-primary { background: #1a1f26; border-color: #1a1f26; color: #fff; }
 .day-action-primary:hover { background: #2b323c; border-color: #2b323c; }
 
@@ -203,6 +206,8 @@ html[data-theme="dark"] .day-allday { border-color: #262c36; }
 html[data-theme="dark"] .day-col { border-color: #21262d; }
 html[data-theme="dark"] .day-action-btn { background: #161b22; border-color: #2b3242; color: #e6e9f0; }
 html[data-theme="dark"] .day-action-btn:hover { background: #1c222c; }
+html[data-theme="dark"] .day-action-btn.is-running { background: #d9534f; border-color: #d9534f; color: #fff; }
+html[data-theme="dark"] .day-action-btn.is-running:hover { background: #c9453f; border-color: #c9453f; }
 html[data-theme="dark"] .day-action-primary { background: #e6e9f0; border-color: #e6e9f0; color: #12161c; }
 html[data-theme="dark"] .day-action-primary:hover { background: #cfd3db; border-color: #cfd3db; }
 html[data-theme="dark"] .day-allday-input { background: #0f141b; border-color: #262c36; color: #e6e9f0; }

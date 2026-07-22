@@ -1851,6 +1851,20 @@
         setText('dayFocusPct', window.Focus.percent() + '%');
         var bar = document.getElementById('dayFocusBar');
         if (bar) bar.style.width = window.Focus.percent() + '%';
+        renderDayFocusBtn();
+    }
+
+    // Header Focus button label/state: "Focus" ⇄ "Stop Focus". Runs with the
+    // 1s focus-card tick too, so a session started on the dashboard (or another
+    // tab) flips this button without any interaction here.
+    function renderDayFocusBtn() {
+        var btn = document.getElementById('dayFocusBtn');
+        if (!btn || !window.Focus) return;
+        var running = window.Focus.isRunning();
+        var label = document.getElementById('dayFocusBtnLabel');
+        if (label) label.textContent = running ? 'Stop Focus' : 'Focus';
+        btn.classList.toggle('is-running', running);
+        btn.title = running ? 'Stop the focus session' : 'Start a focus session';
     }
 
     // --- Day overview sidebar (real data, scoped to the shown day) -----------
@@ -2291,9 +2305,24 @@
             });
         }
 
-        // Focus button: visual placeholder — no tracked-focus feature yet.
+        // Focus button: toggles the shared focus session (focus.js — the same
+        // one the dashboard's Focus panel tracks). Stopping asks first.
         var focusBtn = document.getElementById('dayFocusBtn');
-        if (focusBtn) focusBtn.addEventListener('click', function () { /* placeholder */ });
+        if (focusBtn) focusBtn.addEventListener('click', function () {
+            if (!window.Focus) return;
+            if (window.Focus.isRunning()) {
+                window.Focus.confirmStop(function () {
+                    window.Focus.stop();
+                    renderDayFocusBtn();
+                    updateDayFocusCard();
+                });
+            } else {
+                window.Focus.start();
+                renderDayFocusBtn();
+                updateDayFocusCard();
+            }
+        });
+        renderDayFocusBtn();
 
         // Mini-month: its arrows page the month in place; a day click jumps the
         // Day view to that date (which resyncs the mini-month to the new month).

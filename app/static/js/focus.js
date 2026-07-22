@@ -83,6 +83,69 @@
         return m + 'm';
     }
 
+    // --- "Really stop?" confirmation popup ---------------------------------
+    // Shared by the dashboard Focus panel and the calendar Day view's Focus
+    // button, so stopping a session always asks first. Styles are injected once;
+    // colors follow the html[data-theme="dark"] attribute theme.js maintains.
+    function ensureConfirmStyles() {
+        if (document.getElementById('focusConfirmStyles')) return;
+        var css = [
+            '.focus-confirm-overlay{position:fixed;inset:0;background:rgba(20,22,26,.45);display:flex;align-items:center;justify-content:center;z-index:100000;opacity:0;transition:opacity .15s ease;}',
+            '.focus-confirm-overlay.show{opacity:1;}',
+            '.focus-confirm-box{background:#fff;color:#2c302e;border-radius:14px;padding:26px 28px;max-width:340px;width:calc(100vw - 48px);box-shadow:0 18px 50px rgba(0,0,0,.25);text-align:center;font-family:inherit;transform:scale(.92);transition:transform .15s ease;}',
+            '.focus-confirm-overlay.show .focus-confirm-box{transform:scale(1);}',
+            '.focus-confirm-title{font-size:17px;font-weight:700;margin:0 0 6px;}',
+            '.focus-confirm-msg{font-size:14px;color:#6c757d;margin:0 0 18px;}',
+            '.focus-confirm-actions{display:flex;gap:10px;justify-content:center;}',
+            '.focus-confirm-btn{font:inherit;font-size:14px;font-weight:600;border-radius:10px;padding:9px 18px;cursor:pointer;border:1px solid #e5e8ee;background:#fff;color:#2c302e;}',
+            '.focus-confirm-btn:hover{background:#f6f7f9;}',
+            '.focus-confirm-btn.danger{background:#d9534f;border-color:#d9534f;color:#fff;}',
+            '.focus-confirm-btn.danger:hover{background:#c9453f;}',
+            'html[data-theme="dark"] .focus-confirm-box{background:#161b22;color:#e6e9f0;}',
+            'html[data-theme="dark"] .focus-confirm-msg{color:#9aa4b2;}',
+            'html[data-theme="dark"] .focus-confirm-btn{background:#161b22;border-color:#2b3242;color:#e6e9f0;}',
+            'html[data-theme="dark"] .focus-confirm-btn:hover{background:#1c222c;}',
+            'html[data-theme="dark"] .focus-confirm-btn.danger{background:#d9534f;border-color:#d9534f;color:#fff;}'
+        ].join('\n');
+        var style = document.createElement('style');
+        style.id = 'focusConfirmStyles';
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
+
+    function confirmStop(onConfirm) {
+        ensureConfirmStyles();
+        var overlay = document.createElement('div');
+        overlay.className = 'focus-confirm-overlay';
+        overlay.innerHTML =
+            '<div class="focus-confirm-box" role="dialog" aria-modal="true" aria-label="Stop focus session">' +
+                '<p class="focus-confirm-title">Stop focusing?</p>' +
+                '<p class="focus-confirm-msg">Your time so far is saved — but are you sure you want to quit this session?</p>' +
+                '<div class="focus-confirm-actions">' +
+                    '<button type="button" class="focus-confirm-btn" data-act="cancel">Keep Going</button>' +
+                    '<button type="button" class="focus-confirm-btn danger" data-act="stop">Stop Focus</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        requestAnimationFrame(function () { overlay.classList.add('show'); });
+
+        function close() {
+            overlay.classList.remove('show');
+            setTimeout(function () { overlay.remove(); }, 160);
+            document.removeEventListener('keydown', onKey);
+        }
+        function onKey(e) { if (e.key === 'Escape') close(); }
+        document.addEventListener('keydown', onKey);
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) { close(); return; } // click outside = cancel
+            var btn = e.target.closest ? e.target.closest('.focus-confirm-btn') : null;
+            if (!btn) return;
+            close();
+            if (btn.getAttribute('data-act') === 'stop' && typeof onConfirm === 'function') onConfirm();
+        });
+    }
+
     window.Focus = {
         get: load,
         goalHours: function () { return load().goalHours; },
@@ -114,6 +177,7 @@
             }
             return s;
         },
-        fmtHM: fmtHM
+        fmtHM: fmtHM,
+        confirmStop: confirmStop
     };
 })();

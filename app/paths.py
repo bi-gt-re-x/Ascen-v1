@@ -383,11 +383,23 @@ def daily_xp():
 
 @bp.route('/privacy-policy')
 def privacy_policy():
-    return render_template('privacy_policy.html')
+    return render_template('Misc HTML/privacy_policy.html')
 
 @bp.route('/terms-of-service')
 def terms_of_service():
-    return render_template('terms_of_service.html')
+    return render_template('Misc HTML/terms_of_service.html')
+
+@bp.route('/about-us')
+def about_us():
+    return render_template('Misc HTML/about_us.html')
+
+@bp.route('/contact-support')
+def contact_support():
+    return render_template('Misc HTML/contact_support.html')
+
+@bp.route('/careers')
+def careers():
+    return render_template('Misc HTML/careers.html')
 
 @bp.route('/test-dashboard')
 def test_dashboard():
