@@ -31,7 +31,42 @@
         if (typeof s.runningSince !== 'number') s.runningSince = null;
         return s;
     }
-    function save(s) { try { localStorage.setItem(key(), JSON.stringify(s)); } catch (e) { /* ignore */ } }
+    function save(s) {
+        try { localStorage.setItem(key(), JSON.stringify(s)); } catch (e) { /* ignore */ }
+        scheduleSync();
+    }
+
+    // --- Server sync -------------------------------------------------------
+    // Mirror today's focus state to the backend (/api/focus_sync) so the growth
+    // page can chart focus history and grade it. Debounced so rapid goal-stepper
+    // clicks send one request; a slow interval keeps a running session current.
+    var syncTimer = null;
+    function syncToServer() {
+        var s = load();
+        try {
+            fetch('/api/focus_sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: user(),
+                    date: todayStr(),
+                    focused_seconds: Math.round(focusedSeconds(s)),
+                    goal_hours: s.goalHours
+                }),
+                keepalive: true
+            }).catch(function () { /* offline — the next sync retries */ });
+        } catch (e) { /* ignore */ }
+    }
+    function scheduleSync() {
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(syncToServer, 1500);
+    }
+    // Keep the server roughly current while a session ticks, and flush the
+    // final total when the page is left mid-session (keepalive survives unload).
+    setInterval(function () { if (load().runningSince) syncToServer(); }, 60000);
+    window.addEventListener('pagehide', function () {
+        if (load().runningSince) syncToServer();
+    });
 
     function focusedSeconds(s) {
         s = s || load();

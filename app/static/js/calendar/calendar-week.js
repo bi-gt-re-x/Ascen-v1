@@ -1673,8 +1673,15 @@
         setText('dayStatTasks', done + ' / ' + total);
 
         // Planned time = summed duration of every scheduled block (tasks + events).
+        // For TODAY, "Focus Time" instead mirrors the dashboard Focus panel's goal
+        // (the planned focus time), so both pages always show the same number;
+        // other days keep showing their scheduled block time.
         var plannedH = blocks.concat(events).reduce(function (s, b) { return s + (b.end - b.start); }, 0);
-        setText('dayStatFocus', plannedH > 0 ? fmtHM(plannedH) : '0m');
+        if (d.today && window.Focus) {
+            setText('dayStatFocus', fmtHM(window.Focus.goalHours()));
+        } else {
+            setText('dayStatFocus', plannedH > 0 ? fmtHM(plannedH) : '0m');
+        }
 
         // XP earned = XP from tasks completed on this day.
         var xpToday = doneBlocks.reduce(function (s, b) { return s + (Number(b.xp) || 0); }, 0);

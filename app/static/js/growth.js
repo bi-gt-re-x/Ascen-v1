@@ -1,15 +1,17 @@
 // Combined Growth Analytics JavaScript (FIXED VERSION)
 
 // === TOP-LEVEL SCOPE: shared between DOMContentLoaded and event handlers ===
-let growthCanvas, dailyXpCanvas, avgTaskXpCanvas;
-let growthCtx, dailyXpCtx, avgTaskXpCtx;
+let growthCanvas, dailyXpCanvas, avgTaskXpCanvas, cumulativeFocusCanvas, dailyFocusCanvas;
+let growthCtx, dailyXpCtx, avgTaskXpCtx, cumulativeFocusCtx, dailyFocusCtx;
 
 let chartData = {
     labels: [],
     dates: [],
     values: [],
     cumulativeValues: [],
-    avgTaskValues: []
+    avgTaskValues: [],
+    focusValues: [],
+    cumulativeFocusValues: []
 };
 
 // Consistent plot padding, shared by the chart drawing and the hover tooltip
@@ -24,8 +26,13 @@ let showChartPlaceholder = false;
 let zoomState = {
     cumulative: {},
     daily: {},
-    avgTask: {}
+    avgTask: {},
+    cumulativeFocus: {},
+    dailyFocus: {}
 };
+
+// Every chart type, in one place, so the shared loops stay in sync.
+const CHART_TYPES = ['cumulative', 'daily', 'avgTask', 'cumulativeFocus', 'dailyFocus'];
 
 // ============================================================
 // UTILITIES
@@ -52,6 +59,15 @@ function formatNumber(value) {
 // Rounded whole number with thousands separators, e.g. 7165 -> "7,165".
 function formatInt(value) {
     return Math.round(value || 0).toLocaleString('en-US');
+}
+
+// Minutes -> "1h 20m" / "45m" / "2h", for the focus chart tooltips.
+function formatMinutes(mins) {
+    const m = Math.round(mins || 0);
+    const h = Math.floor(m / 60), rem = m % 60;
+    if (h && rem) return `${h}h ${rem}m`;
+    if (h) return `${h}h`;
+    return `${rem}m`;
 }
 
 // Compute "nice", evenly-rounded y-axis tick values up to just above maxValue.
@@ -152,10 +168,14 @@ function initializeZoomState(type, total) {
 // Compute the plot geometry (scaled points, axis max, etc.) for a chart type.
 // Shared by drawChart and the hover handler so the crosshair lines up exactly.
 function computeGeometry(type) {
+    const fmtXp = v => `XP: ${formatInt(v)}`;
+    const fmtFocus = v => `Focus: ${formatMinutes(v)}`;
     const configs = {
-        cumulative: { canvas: growthCanvas,    ctx: growthCtx,    key: 'cumulativeValues', minStep: 1000 },
-        daily:      { canvas: dailyXpCanvas,   ctx: dailyXpCtx,   key: 'values',           minStep: 50 },
-        avgTask:    { canvas: avgTaskXpCanvas,  ctx: avgTaskXpCtx, key: 'avgTaskValues',    minStep: 5 }
+        cumulative:      { canvas: growthCanvas,          ctx: growthCtx,          key: 'cumulativeValues',      minStep: 1000, fmtValue: fmtXp },
+        daily:           { canvas: dailyXpCanvas,         ctx: dailyXpCtx,         key: 'values',                minStep: 50,   fmtValue: fmtXp },
+        avgTask:         { canvas: avgTaskXpCanvas,       ctx: avgTaskXpCtx,       key: 'avgTaskValues',         minStep: 5,    fmtValue: fmtXp },
+        cumulativeFocus: { canvas: cumulativeFocusCanvas, ctx: cumulativeFocusCtx, key: 'cumulativeFocusValues', minStep: 30,   fmtValue: fmtFocus, empty: 'Run a focus session for growth to show' },
+        dailyFocus:      { canvas: dailyFocusCanvas,      ctx: dailyFocusCtx,      key: 'focusValues',           minStep: 15,   fmtValue: fmtFocus, empty: 'Run a focus session for growth to show' }
     };
 
     const cfg = configs[type];
@@ -188,7 +208,8 @@ function computeGeometry(type) {
         index: i
     }));
 
-    return { canvas, ctx, dates, values, finalMax, ticks, baseY, xStep, yScale, plotH, points, startIndex: state.startIndex };
+    return { canvas, ctx, dates, values, finalMax, ticks, baseY, xStep, yScale, plotH, points, startIndex: state.startIndex,
+             fmtValue: cfg.fmtValue, emptyMsg: cfg.empty || 'Do a task for growth to show' };
 }
 
 // Theme-aware palette for the canvas charts. In dark mode the chart sits on the
@@ -252,7 +273,8 @@ function drawChartPlaceholder(canvas) {
 function drawChart(type) {
     // New accounts: don't draw the chart, just show the placeholder text.
     if (showChartPlaceholder) {
-        const canvasMap = { cumulative: growthCanvas, daily: dailyXpCanvas, avgTask: avgTaskXpCanvas };
+        const canvasMap = { cumulative: growthCanvas, daily: dailyXpCanvas, avgTask: avgTaskXpCanvas,
+                            cumulativeFocus: cumulativeFocusCanvas, dailyFocus: dailyFocusCanvas };
         drawChartPlaceholder(canvasMap[type]);
         return;
     }
@@ -268,7 +290,7 @@ function drawChart(type) {
         ctx.fillStyle = col.empty;
         ctx.font = '16px Quicksand';
         ctx.textAlign = 'center';
-        ctx.fillText('Do a task for growth to show', canvas.width / 2, canvas.height / 2);
+        ctx.fillText(geo.emptyMsg, canvas.width / 2, canvas.height / 2);
         return;
     }
 
@@ -326,7 +348,7 @@ function drawChart(type) {
         ctx.font = '16px Quicksand';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('Do a task for growth to show', canvas.width / 2, (CHART_PAD.top + baseY) / 2);
+        ctx.fillText(geo.emptyMsg, canvas.width / 2, (CHART_PAD.top + baseY) / 2);
     }
 }
 
@@ -356,9 +378,9 @@ function drawHover(geo, idx) {
     ctx.strokeStyle = col.markerRing;
     ctx.stroke();
 
-    // Tooltip text: WHEN it was + HOW MUCH xp (no "/100")
+    // Tooltip text: WHEN it was + HOW MUCH (XP or focus time, per chart type)
     const dateStr = formatDateFull(dates[idx]) || `Day ${startIndex + idx + 1}`;
-    const xpStr = `XP: ${formatInt(values[idx])}`;
+    const xpStr = (geo.fmtValue || (v => `XP: ${formatInt(v)}`))(values[idx]);
 
     ctx.font = 'bold 12.5px Arial';
     const w1 = ctx.measureText(dateStr).width;
@@ -465,9 +487,7 @@ function drawRatingsSparkline() {
 }
 
 function drawAll() {
-    drawChart('cumulative');
-    drawChart('daily');
-    drawChart('avgTask');
+    CHART_TYPES.forEach(drawChart);
     drawRatingsSparkline();
 }
 
@@ -565,9 +585,11 @@ function zoomChart(type, direction, event = null) {
 function handleWheel(e, type) {
     e.preventDefault();
     const canvasMap = {
-        cumulative: growthCanvas,
-        daily:      dailyXpCanvas,
-        avgTask:    avgTaskXpCanvas
+        cumulative:      growthCanvas,
+        daily:           dailyXpCanvas,
+        avgTask:         avgTaskXpCanvas,
+        cumulativeFocus: cumulativeFocusCanvas,
+        dailyFocus:      dailyFocusCanvas
     };
     const modifiedEvent = {
         target:  canvasMap[type],
@@ -701,6 +723,13 @@ async function loadGrowthRatings() {
     // ⚡ Efficiency — deadlines met (50%) + time to finish (50%)
     renderMetricCard('efficiency', m.efficiency.grade, m.efficiency.score,
         `${m.efficiency.on_time_pct}% on-time`, '', m.efficiency.trend);
+
+    // ⏱️ Focus — focused time vs the daily focus goal
+    if (m.focus) {
+        renderMetricCard('focus', m.focus.grade, m.focus.score,
+            `${formatMinutes(m.focus.focused_minutes)} / ${formatMinutes(m.focus.goal_minutes)} focused`,
+            '', m.focus.trend);
+    }
 }
 
 window.loadGrowthRatings = loadGrowthRatings;
@@ -711,7 +740,7 @@ window.loadGrowthRatings = loadGrowthRatings;
 
 function resizeCanvases() {
     const minWidth = 400, minHeight = 300;
-    [growthCanvas, dailyXpCanvas, avgTaskXpCanvas].forEach(canvas => {
+    [growthCanvas, dailyXpCanvas, avgTaskXpCanvas, cumulativeFocusCanvas, dailyFocusCanvas].forEach(canvas => {
         if (!canvas) return;
         const parent = canvas.parentElement;
         // Size the drawing buffer to the canvas's own rendered box (it flexes to
@@ -725,7 +754,8 @@ function resizeCanvases() {
 }
 
 function processData(data) {
-    chartData = { labels: [], dates: [], values: [], cumulativeValues: [], avgTaskValues: [], tasks: [] };
+    chartData = { labels: [], dates: [], values: [], cumulativeValues: [], avgTaskValues: [],
+                  focusValues: [], cumulativeFocusValues: [], tasks: [] };
 
     // If no data, create default 7-day chart with 200xp y-cap for new users
     if (!data || data.length === 0) {
@@ -738,6 +768,8 @@ function processData(data) {
             chartData.values.push(0);
             chartData.cumulativeValues.push(0);
             chartData.avgTaskValues.push(0);
+            chartData.focusValues.push(0);
+            chartData.cumulativeFocusValues.push(0);
             chartData.tasks.push(0);
         }
     } else {
@@ -752,13 +784,15 @@ function processData(data) {
                 chartData.values.push(d.xp_earned);
                 chartData.cumulativeValues.push(d.cumulative_xp);
                 chartData.avgTaskValues.push(d.avg_task_xp || 0);
+                chartData.focusValues.push(d.focus_minutes || 0);
+                chartData.cumulativeFocusValues.push(d.cumulative_focus_minutes || 0);
                 chartData.tasks.push(d.tasks_completed || 0);
             }
         });
     }
-    
+
     const total = chartData.labels.length;
-    ['cumulative', 'daily', 'avgTask'].forEach(t => initializeZoomState(t, total));
+    CHART_TYPES.forEach(t => initializeZoomState(t, total));
     resizeCanvases();
 }
 
@@ -791,19 +825,23 @@ async function loadGrowthData() {
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function () {
-    growthCanvas    = document.getElementById('growthChart');
-    dailyXpCanvas   = document.getElementById('dailyXpChart');
-    avgTaskXpCanvas = document.getElementById('averageXpChart');
+    growthCanvas          = document.getElementById('growthChart');
+    dailyXpCanvas         = document.getElementById('dailyXpChart');
+    avgTaskXpCanvas       = document.getElementById('averageXpChart');
+    cumulativeFocusCanvas = document.getElementById('cumulativeFocusChart');
+    dailyFocusCanvas      = document.getElementById('dailyFocusChart');
 
 
-    if (!growthCanvas || !dailyXpCanvas || !avgTaskXpCanvas) {
+    if (!growthCanvas || !dailyXpCanvas || !avgTaskXpCanvas || !cumulativeFocusCanvas || !dailyFocusCanvas) {
         console.error('Missing canvas elements');
         return;
     }
 
-    growthCtx    = growthCanvas.getContext('2d');
-    dailyXpCtx   = dailyXpCanvas.getContext('2d');
-    avgTaskXpCtx = avgTaskXpCanvas.getContext('2d');
+    growthCtx          = growthCanvas.getContext('2d');
+    dailyXpCtx         = dailyXpCanvas.getContext('2d');
+    avgTaskXpCtx       = avgTaskXpCanvas.getContext('2d');
+    cumulativeFocusCtx = cumulativeFocusCanvas.getContext('2d');
+    dailyFocusCtx      = dailyFocusCanvas.getContext('2d');
 
 
     // Load the graded report card (the primary view on this page).
@@ -811,17 +849,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.addEventListener('resize', resizeCanvases);
 
-    growthCanvas.addEventListener('wheel',    e => handleWheel(e, 'cumulative'), { passive: false });
-    dailyXpCanvas.addEventListener('wheel',   e => handleWheel(e, 'daily'),      { passive: false });
-    avgTaskXpCanvas.addEventListener('wheel', e => handleWheel(e, 'avgTask'),    { passive: false });
-
-    growthCanvas.addEventListener('mousemove',    e => handleMouseMove(e, 'cumulative'));
-    dailyXpCanvas.addEventListener('mousemove',   e => handleMouseMove(e, 'daily'));
-    avgTaskXpCanvas.addEventListener('mousemove', e => handleMouseMove(e, 'avgTask'));
-
-    growthCanvas.addEventListener('mouseleave',    () => handleMouseLeave('cumulative'));
-    dailyXpCanvas.addEventListener('mouseleave',   () => handleMouseLeave('daily'));
-    avgTaskXpCanvas.addEventListener('mouseleave', () => handleMouseLeave('avgTask'));
+    const chartCanvases = {
+        cumulative: growthCanvas,
+        daily: dailyXpCanvas,
+        avgTask: avgTaskXpCanvas,
+        cumulativeFocus: cumulativeFocusCanvas,
+        dailyFocus: dailyFocusCanvas
+    };
+    Object.entries(chartCanvases).forEach(([type, canvas]) => {
+        canvas.addEventListener('wheel',      e  => handleWheel(e, type), { passive: false });
+        canvas.addEventListener('mousemove',  e  => handleMouseMove(e, type));
+        canvas.addEventListener('mouseleave', () => handleMouseLeave(type));
+    });
 
     setTimeout(loadGrowthData, 100);
     setInterval(loadGrowthData, 30000);
@@ -856,9 +895,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Force initial chart draw after data loads
     setTimeout(() => {
         if (chartData.labels.length > 0) {
-            drawChart('cumulative');
-            drawChart('daily');
-            drawChart('avgTask');
+            CHART_TYPES.forEach(drawChart);
         }
     }, 500);
 });

@@ -43,6 +43,8 @@
                 <button class="tab-btn active" onclick="switchTab('cumulative')" id="cumulative-tab">Cumulative Growth</button>
                 <button class="tab-btn" onclick="switchTab('daily')" id="daily-tab">Daily XP</button>
                 <button class="tab-btn" onclick="switchTab('average')" id="average-tab">Average Task XP Daily</button>
+                <button class="tab-btn" onclick="switchTab('cumulativeFocus')" id="cumulativeFocus-tab">Cumulative Focus</button>
+                <button class="tab-btn" onclick="switchTab('dailyFocus')" id="dailyFocus-tab">Daily Focus</button>
             </div>
             
             <!-- Tab Content -->
@@ -68,6 +70,22 @@
                     <div class="chart-container">
                         <h2 class="chart-title">Average Task XP Per Day</h2>
                         <canvas id="averageXpChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Cumulative Focus Tab -->
+                <div class="tab-pane" id="cumulativeFocus-content">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Cumulative Focus Time (minutes)</h2>
+                        <canvas id="cumulativeFocusChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Daily Focus Tab -->
+                <div class="tab-pane" id="dailyFocus-content">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Daily Focus Time (minutes)</h2>
+                        <canvas id="dailyFocusChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -124,20 +142,27 @@
                             <td id="score-efficiency">0</td>
                             <td><span class="grade-badge gt-badge" id="grade-efficiency">–</span></td>
                         </tr>
+                        <tr id="card-focus">
+                            <td class="gt-metric"><span class="gt-emoji">⏱️</span> Focus</td>
+                            <td id="key-focus">–</td>
+                            <td id="score-focus">0</td>
+                            <td><span class="grade-badge gt-badge" id="grade-focus">–</span></td>
+                        </tr>
                     </tbody>
                 </table>
 
                 <!-- How it's calculated -->
                 <div class="grade-calc">
                     <h3 class="grade-calc-title">How it's Calculated</h3>
-                    <p class="grade-calc-intro">Each metric is scored 0–100 from your real activity and given a letter grade. Your Unified Grade Score is the average of the four metric scores.</p>
+                    <p class="grade-calc-intro">Each metric is scored 0–100 from your real activity and given a letter grade. Your Unified Grade Score is the average of the five metric scores.</p>
                     <ul class="grade-calc-list">
                         <li><strong>Productivity</strong> — XP earned per active day.</li>
                         <li><strong>Quality</strong> — average XP per completed task.</li>
                         <li><strong>Consistency</strong> — share of days active since signup.</li>
                         <li><strong>Efficiency</strong> — deadlines met and completion speed.</li>
+                        <li><strong>Focus</strong> — focused time vs your daily focus goal.</li>
                     </ul>
-                    <p class="grade-formula">Overall = (Productivity + Quality + Consistency + Efficiency) ÷ 4</p>
+                    <p class="grade-formula">Overall = (Productivity + Quality + Consistency + Efficiency + Focus) ÷ 5</p>
                 </div>
 
                 <button class="grade-charts-btn" onclick="showGrowthCharts()">
@@ -180,6 +205,14 @@
                     <div class="detail-body">
                         <h3>Efficiency Tracking</h3>
                         <p>Rewards finishing on time and quickly. Your score is <strong>50% deadlines met + 50% speed</strong>, where speed comes from your average completion time (≤30 min scores 100, scaling down for slower tasks). Beating timers and hitting due dates both push this up.</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <span class="detail-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/><path d="M19 5l1.5 1.5"/></svg></span>
+                    <div class="detail-body">
+                        <h3>Focus Tracking</h3>
+                        <p>Measures how much of your planned focus time you actually put in. Your score is your <strong>total focused time ÷ total focus goal × 100</strong> (capped at 100), using the daily goal you set on the dashboard's Focus panel. Completing your focus goal every day keeps this at 100.</p>
                     </div>
                 </div>
             </aside>

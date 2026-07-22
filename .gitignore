@@ -1,6 +1,3 @@
-# Private backend file — kept out of the repo
-app/paths.py
-
 # Python
 __pycache__/
 *.pyc

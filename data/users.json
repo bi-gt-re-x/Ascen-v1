@@ -12,7 +12,13 @@
     "last_task_date": "2026-07-21",
     "day_state": "newday",
     "theme": "light",
-    "created_at": "2026-06-13T20:04:14.120090"
+    "created_at": "2026-06-13T20:04:14.120090",
+    "focus_history": {
+      "2026-07-22": {
+        "seconds": 240,
+        "goal_hours": 2.5
+      }
+    }
   },
   {
     "id": "1781715970833",
@@ -34,7 +40,13 @@
     "best_streak": 1,
     "last_task_date": "2026-07-21",
     "day_state": "newday",
-    "theme": "light"
+    "theme": "light",
+    "focus_history": {
+      "2026-07-22": {
+        "seconds": 50.0,
+        "goal_hours": 2.0
+      }
+    }
   },
   {
     "id": "1784731823389",

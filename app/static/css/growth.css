@@ -233,7 +233,9 @@ body {
 /* Chart Canvas */
 #growthChart,
 #dailyXpChart,
-#averageXpChart {
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
     width: 100%;
     height: 100%;
     border-radius: 5px;
@@ -1148,7 +1150,9 @@ body {
 
 #growthChart,
 #dailyXpChart,
-#averageXpChart {
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
     /* Responsive height, small floor so short screens aren't forced tall.
        (The later rule wins; kept in sync so both agree.) */
     height: clamp(180px, 34vh, 340px);
@@ -1425,7 +1429,9 @@ html, body {
 
 #growthChart,
 #dailyXpChart,
-#averageXpChart {
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
     height: clamp(180px, 34vh, 340px);
 }
 
@@ -1556,7 +1562,9 @@ body.dark .chart-title {
 
 body.dark #growthChart,
 body.dark #dailyXpChart,
-body.dark #averageXpChart {
+body.dark #averageXpChart,
+body.dark #cumulativeFocusChart,
+body.dark #dailyFocusChart {
     background: transparent;
 }
 
