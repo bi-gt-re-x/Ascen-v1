@@ -1,2 +1,15 @@
 # Private backend file — kept out of the repo
-Ascen v1/app/paths.py
+app/paths.py
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv-mac/
+
+# Environment files
+.env
+frontend/.env
+
+# Local tool settings
+.claude/settings.local.json

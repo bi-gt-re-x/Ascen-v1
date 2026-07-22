@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "grindos-mac",
+      "runtimeExecutable": ".venv-mac/bin/python",
+      "runtimeArgs": ["run_mac.py"],
+      "port": 5050
+    }
+  ]
+}
