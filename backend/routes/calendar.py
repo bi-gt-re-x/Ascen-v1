@@ -12,7 +12,7 @@ import re
 
 from flask import Blueprint, jsonify, request
 
-from app.paths import USERS_JSON, read_json_file, write_json_file
+from backend.paths import USERS_JSON, read_json_file, write_json_file
 
 dayfocus_bp = Blueprint('dayfocus', __name__)
 

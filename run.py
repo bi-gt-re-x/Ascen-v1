@@ -2,8 +2,8 @@ import os
 
 from flask import session, redirect, url_for, render_template
 
-from app import create_app
-from app.paths import USERS_JSON, read_json_file
+from backend import create_app
+from backend.paths import USERS_JSON, read_json_file
 
 app = create_app()
 

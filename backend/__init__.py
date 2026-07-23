@@ -1,18 +1,36 @@
-from flask import Flask
+from flask import Flask, abort, send_from_directory
 
 import sqlite3
 
 import os
 
-from .paths import DATABASE_PATH, TEMPLATE_FOLDER, STATIC_FOLDER, bp
+from .paths import DATABASE_PATH, TEMPLATE_FOLDER, ROOT_DIR, bp
 from .services.automation import automation_bp
 from .routes.calendar import dayfocus_bp
 
 
+# Static assets moved out of the old app/static tree into top-level folders,
+# but keep their classic /static/<kind>/... URLs so every
+# url_for('static', filename='css/...') in the templates still works.
+STATIC_ROOTS = {
+    'css': os.path.join(ROOT_DIR, 'styles'),
+    'js': os.path.join(ROOT_DIR, 'utilities', 'js'),
+    'images': os.path.join(ROOT_DIR, 'images'),
+    'icons': os.path.join(ROOT_DIR, 'images', 'icons'),
+}
+
 
 def create_app():
 
-    app = Flask(__name__, template_folder=TEMPLATE_FOLDER, static_folder=STATIC_FOLDER)
+    app = Flask(__name__, template_folder=TEMPLATE_FOLDER, static_folder=None)
+
+    @app.route('/static/<path:filename>', endpoint='static')
+    def static_files(filename):
+        kind, _, rest = filename.partition('/')
+        root = STATIC_ROOTS.get(kind)
+        if not root or not rest:
+            abort(404)
+        return send_from_directory(root, rest)
 
 
 
