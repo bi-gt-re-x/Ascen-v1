@@ -165,6 +165,54 @@ body {
     flex: 2 1 auto;
 }
 
+/* ==========================================================================
+   FOCUS MODE LAYOUT (html.focus-mode is set by focus-theme.js)
+   While a focus session runs, the User Profile + Statistics row slides away
+   and the bottom row restacks — Focus on top, Tasks underneath — with the
+   two of them absorbing the space the departed cards left behind.
+   ========================================================================== */
+
+/* Slide-away: the row's single grid track collapses to 0 while the whole row
+   fades and drifts upward; the cards' vertical padding/borders collapse too
+   so nothing holds the height open. */
+.top-section {
+    transition: grid-template-rows 0.6s ease, opacity 0.45s ease,
+                transform 0.6s ease, margin-bottom 0.6s ease,
+                flex-grow 0.6s ease;
+}
+.top-section > .card {
+    min-height: 0;
+    transition: padding 0.6s ease, border-width 0.6s ease;
+}
+html.focus-mode .top-section {
+    grid-template-rows: minmax(0, 0fr);
+    opacity: 0;
+    transform: translateY(-26px);
+    margin-bottom: 0;
+    flex: 0 1 auto;
+    pointer-events: none;
+    visibility: hidden;
+    transition: grid-template-rows 0.6s ease, opacity 0.45s ease,
+                transform 0.6s ease, margin-bottom 0.6s ease,
+                flex-grow 0.6s ease, visibility 0s linear 0.6s;
+}
+html.focus-mode .top-section > .card {
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+/* Restack the bottom row: one column, Focus first at its natural height,
+   Tasks below it stretching into everything the top row freed up. */
+html.focus-mode .bottom-section {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+}
+html.focus-mode .bottom-section .focus-panel { order: -1; }
+html.focus-mode .bottom-section .task-manager { order: 1; }
+
 .card {
     background: #FFFFFF;
     padding: 24px;
