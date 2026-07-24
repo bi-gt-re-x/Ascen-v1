@@ -26,6 +26,10 @@
     function isUnlocked() {
         try { return localStorage.getItem(key()) === '1'; } catch (e) { return false; }
     }
+    // The whole hidden chain only lives in the dark.
+    function isDark() {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
     function markUnlocked() {
         try { localStorage.setItem(key(), '1'); } catch (e) {}
     }
@@ -53,6 +57,7 @@
 
         icon.addEventListener('click', function () {
             if (isUnlocked()) return;     // one reveal per day
+            if (!isDark()) { clicks = 0; return; }   // only reachable in dark mode
             clicks++;
             if (resetTimer) clearTimeout(resetTimer);
             resetTimer = setTimeout(function () { clicks = 0; }, RESET_MS);

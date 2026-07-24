@@ -14,12 +14,25 @@
             if (u) localStorage.setItem('currentUser', u);
         })();
     </script>
+    <script>
+        // The hidden chain ends here: the pentagon's arrow arrives at
+        // /calendar#void. Stamp the mutation onto <html> before the first paint
+        // so the super-dark, empty "void calendar" renders with no flash.
+        (function () {
+            try {
+                if (location.hash && location.hash.toLowerCase().indexOf('void') !== -1) {
+                    document.documentElement.classList.add('egg-void');
+                }
+            } catch (e) {}
+        })();
+    </script>
     <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainpage.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar/calendar-month.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar/calendar-week.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar/calendar-day.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar/calendar-void.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tenor+Sans&family=Quicksand:wght@400;500;600&family=Lato:wght@300;400;700&family=Noto+Sans:wght@300;400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
@@ -648,6 +661,7 @@
     <script src="{{ url_for('static', filename='js/calendar/calendar-week.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar/calendar-day.js') }}"></script>
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/calendar-void.js') }}" defer></script>
 
     <script>
         // Initialize the calendar once the DOM is ready

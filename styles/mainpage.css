@@ -1295,25 +1295,30 @@ html[data-theme="dark"] .hfx-toast { background: #e6e8f0; color: #161B22; }
 }
 .home-main.page-quake { animation: pageQuake 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
 
-/* The collapse: every top-level block implodes toward its centre and fades,
-   staggered so the page comes apart in a quick cascade. */
-@keyframes pageImplode {
-    0%   { transform: translateY(0) scale(1);    opacity: 1; }
-    60%  { opacity: 0.4; }
-    100% { transform: translateY(48px) scale(0.12); opacity: 0; }
+/* The collapse: everything crashes down and hurls off the sides of the page —
+   odd blocks rear up then fly out to the left, even blocks to the right, each
+   accelerating away like debris. */
+@keyframes pageCrashLeft {
+    0%   { transform: translate(0, 0) rotate(0deg);        opacity: 1; }
+    14%  { transform: translate(0, -16px) rotate(-2.5deg); opacity: 1; }
+    100% { transform: translate(-135vw, 62vh) rotate(-55deg); opacity: 0; }
+}
+@keyframes pageCrashRight {
+    0%   { transform: translate(0, 0) rotate(0deg);       opacity: 1; }
+    14%  { transform: translate(0, -16px) rotate(2.5deg); opacity: 1; }
+    100% { transform: translate(135vw, 62vh) rotate(55deg); opacity: 0; }
 }
 .lp.page-collapse { pointer-events: none; }
-.lp.page-collapse > * {
-    animation: pageImplode 0.8s cubic-bezier(0.55, -0.2, 0.7, 0.1) forwards;
-    transform-origin: 50% 50%;
-}
+.lp.page-collapse > * { transform-origin: 50% 50%; }
+.lp.page-collapse > *:nth-child(odd)  { animation: pageCrashLeft  0.85s cubic-bezier(0.5, 0, 0.9, 0.35) forwards; }
+.lp.page-collapse > *:nth-child(even) { animation: pageCrashRight 0.85s cubic-bezier(0.5, 0, 0.9, 0.35) forwards; }
 .lp.page-collapse > *:nth-child(1) { animation-delay: 0s; }
-.lp.page-collapse > *:nth-child(2) { animation-delay: 0.07s; }
-.lp.page-collapse > *:nth-child(3) { animation-delay: 0.14s; }
-.lp.page-collapse > *:nth-child(4) { animation-delay: 0.21s; }
-.lp.page-collapse > *:nth-child(5) { animation-delay: 0.28s; }
-.lp.page-collapse > *:nth-child(6) { animation-delay: 0.35s; }
-.lp.page-collapse > *:nth-child(n+7) { animation-delay: 0.42s; }
+.lp.page-collapse > *:nth-child(2) { animation-delay: 0.06s; }
+.lp.page-collapse > *:nth-child(3) { animation-delay: 0.12s; }
+.lp.page-collapse > *:nth-child(4) { animation-delay: 0.18s; }
+.lp.page-collapse > *:nth-child(5) { animation-delay: 0.24s; }
+.lp.page-collapse > *:nth-child(6) { animation-delay: 0.30s; }
+.lp.page-collapse > *:nth-child(n+7) { animation-delay: 0.36s; }
 
 /* The surrounding chrome dissolves with the cards, leaving a clean void. */
 body.pent-void .site-nav,
@@ -1323,20 +1328,6 @@ body.pent-void .footer {
     pointer-events: none;
     transition: opacity 0.7s ease;
 }
-
-/* Clicking the arrow reassembles the page it took apart. */
-@keyframes pageReform {
-    0%   { transform: translateY(48px) scale(0.12); opacity: 0; }
-    100% { transform: translateY(0) scale(1);       opacity: 1; }
-}
-.lp.page-restore > * {
-    animation: pageReform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    transform-origin: 50% 50%;
-}
-.lp.page-restore > *:nth-child(2) { animation-delay: 0.05s; }
-.lp.page-restore > *:nth-child(3) { animation-delay: 0.1s; }
-.lp.page-restore > *:nth-child(4) { animation-delay: 0.15s; }
-.lp.page-restore > *:nth-child(n+5) { animation-delay: 0.2s; }
 
 /* The lone arrow left behind — a clear, inviting, gently pulsing button. */
 #pentArrow {
@@ -1359,6 +1350,8 @@ body.pent-void .footer {
 }
 #pentArrow svg { width: 54px; height: 54px; }
 #pentArrow.show { opacity: 1; transform: translate(-50%, -50%) scale(1); animation: arrowPulse 1.8s ease-in-out infinite 0.6s; }
+/* On click, the arrow lunges forward and fades as the void calendar loads. */
+#pentArrow.leaving { animation: none; opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
 #pentArrow:hover {
     color: #b4892f;
     border-color: rgba(201, 162, 75, 0.9);
@@ -1374,6 +1367,5 @@ html[data-theme="dark"] #pentArrow { color: #f0d38a; border-color: rgba(240, 211
     .lp-radar.pentagon-pop, .lp-radar.pentagon-spin,
     .home-main.page-quake { animation: none; }
     .lp.page-collapse > * { animation: none; opacity: 0; }
-    .lp.page-restore > * { animation: none; opacity: 1; }
     #pentArrow.show { animation: none; }
 }

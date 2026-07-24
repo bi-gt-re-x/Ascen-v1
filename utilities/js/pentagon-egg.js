@@ -23,19 +23,24 @@
         try { return localStorage.getItem('easterEgg:' + user() + ':' + todayStr()) === '1'; }
         catch (e) { return false; }
     }
+    // The whole hidden chain only lives in the dark.
+    function isDark() {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
 
     function init() {
         var pent = document.querySelector('.lp-preview-rating .lp-radar');
         if (!pent) return;
         if (!quoteUnlocked()) return;          // stays inert until the quote is found
 
-        pent.style.cursor = 'pointer';
+        if (isDark()) { pent.style.cursor = 'pointer'; }
         pent.style.pointerEvents = 'auto';
 
         var clicks = 0;
         var busy = false;
         pent.addEventListener('click', function () {
             if (busy) return;
+            if (!isDark()) { clicks = 0; return; }   // only reachable in dark mode
             clicks++;
             if (clicks < 3) {
                 pent.classList.remove('pentagon-pop');
@@ -69,12 +74,13 @@
             document.body.classList.add('pent-void');
         }, 820);
 
-        // 3) Once gone, the page is emptied and a lone arrow is left behind.
+        // 3) Once the debris has flown off, the page is emptied and a lone
+        //    arrow is left behind.
         setTimeout(function () {
             lp.style.display = 'none';
             document.documentElement.classList.remove('pent-clip');
             showArrow(lp);
-        }, 820 + 900);
+        }, 820 + 1300);
     }
 
     function showArrow(lp) {
@@ -90,16 +96,11 @@
         document.body.appendChild(btn);
         requestAnimationFrame(function () { btn.classList.add('show'); });
 
-        // Clickable: for now it gracefully reassembles the page it took apart.
+        // Clickable: it leads into the mutated, super-dark, empty calendar.
         btn.addEventListener('click', function () {
-            btn.classList.remove('show');
+            btn.classList.add('leaving');
             setTimeout(function () {
-                btn.remove();
-                lp.style.display = '';
-                lp.classList.remove('page-collapse');
-                document.body.classList.remove('pent-void');
-                lp.classList.add('page-restore');
-                setTimeout(function () { lp.classList.remove('page-restore'); }, 820);
+                window.location.href = '/calendar#void';
             }, 380);
         });
     }
