@@ -949,6 +949,69 @@ html[data-theme="dark"] .calendar-hint a { color: #d8c3a5; }
     font-style: italic;
     color: #6C757D;
     font-size: 14px;
+    overflow: hidden;   /* keeps the slide-out from spilling / adding scrollbars */
+}
+
+/* ==========================================================================
+   HIDDEN QUOTE EASTER EGG (unlocked by easter-egg.js)
+   The day's quote slides out sleekly, and the mysterious one rises in with an
+   ominous glow while the whole screen shakes.
+   ========================================================================== */
+#dailyQuote {
+    display: inline-block;
+    transition: transform 0.55s cubic-bezier(0.6, 0.02, 0.2, 1), opacity 0.55s ease;
+}
+
+/* 1) Sleek exit: glide left and dissolve. */
+#dailyQuote.quote-slide-out {
+    transform: translateX(-48px);
+    opacity: 0;
+}
+
+/* 2) Ominous entrance: rise from below, resolving out of a blur. */
+@keyframes quoteOminousIn {
+    0%   { transform: translateY(26px) scale(0.94); opacity: 0; filter: blur(7px); letter-spacing: 0.6px; }
+    55%  { opacity: 1; filter: blur(0); }
+    100% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); letter-spacing: normal; }
+}
+#dailyQuote.quote-slide-in {
+    animation: quoteOminousIn 0.95s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* The mysterious quote's ominous dress: a dark, softly glowing blood-red. */
+.quote-container.quote-ominous #dailyQuote {
+    color: #b0413e;
+    font-weight: 600;
+    text-shadow: 0 0 10px rgba(176, 65, 62, 0.5), 0 0 22px rgba(176, 65, 62, 0.25);
+}
+html[data-theme="dark"] .quote-container.quote-ominous #dailyQuote {
+    color: #ff6b66;
+    text-shadow: 0 0 12px rgba(255, 107, 102, 0.55), 0 0 26px rgba(255, 107, 102, 0.3);
+}
+
+/* 3) Full-screen shake. Clip the root while it plays so the offsets never
+   surface a scrollbar. */
+html.easter-shake-clip { overflow: hidden; }
+@keyframes easterShake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    8%   { transform: translate(-9px, 5px) rotate(-0.7deg); }
+    17%  { transform: translate(8px, -6px) rotate(0.6deg); }
+    26%  { transform: translate(-10px, 4px) rotate(-0.6deg); }
+    35%  { transform: translate(9px, -5px) rotate(0.5deg); }
+    44%  { transform: translate(-7px, 6px) rotate(-0.5deg); }
+    53%  { transform: translate(7px, -4px) rotate(0.4deg); }
+    62%  { transform: translate(-6px, 3px) rotate(-0.3deg); }
+    71%  { transform: translate(5px, -3px) rotate(0.25deg); }
+    80%  { transform: translate(-3px, 2px) rotate(-0.15deg); }
+    90%  { transform: translate(2px, -1px) rotate(0.1deg); }
+}
+body.easter-shake {
+    animation: easterShake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@media (prefers-reduced-motion: reduce) {
+    #dailyQuote.quote-slide-out,
+    #dailyQuote.quote-slide-in { animation: none; transition: none; transform: none; opacity: 1; }
+    body.easter-shake { animation: none; }
 }
 
 /* ==========================================================================

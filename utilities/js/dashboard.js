@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchDailyQuoteAPI().then((quoteData) => {
             const el = document.getElementById('dailyQuote');
             if (!el) return;
+            // If today's hidden quote has been unlocked (easter-egg.js), it owns
+            // the quote line — don't let the daily fetch clobber it.
+            if (window.__mysteriousQuoteActive) return;
             el.textContent = quoteData
                 ? `"${quoteData.content}" - ${quoteData.author}`
                 : '"The secret of getting ahead is getting started." - Mark Twain';
