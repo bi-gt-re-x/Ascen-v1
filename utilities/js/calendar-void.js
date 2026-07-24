@@ -141,11 +141,11 @@
             }
         }
         document.body.appendChild(layer);
-        // let the shards paint one frame as an intact black pane, then blow apart
+        // let the shards paint one frame as an intact black pane, then break
         requestAnimationFrame(function () {
             requestAnimationFrame(function () { layer.classList.add('go'); });
         });
-        setTimeout(function () { layer.remove(); if (done) done(); }, 1500);
+        setTimeout(function () { layer.remove(); if (done) done(); }, 2000);
     }
 
     function addShard(layer, c, r, G, upper) {
@@ -155,105 +155,193 @@
             ? 'polygon(' + x0 + '% ' + y0 + '%, ' + x1 + '% ' + y0 + '%, ' + x0 + '% ' + y1 + '%)'
             : 'polygon(' + x1 + '% ' + y0 + '%, ' + x1 + '% ' + y1 + '%, ' + x0 + '% ' + y1 + '%)';
         var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-        var dx = (cx - 50) / 50, dy = (cy - 50) / 50;   // direction from centre (-1..1)
-        var mag = 60 + Math.random() * 60;
+        var dx = (cx - 50) / 50, dy = (cy - 50) / 50;   // offset from centre (-1..1)
         var sh = document.createElement('div');
         sh.className = 'void-shard';
         sh.style.clipPath = clip;
         sh.style.webkitClipPath = clip;
-        sh.style.setProperty('--tx', (dx * mag).toFixed(1) + 'vw');
-        sh.style.setProperty('--ty', (dy * mag + 25).toFixed(1) + 'vh');   // + gravity
-        sh.style.setProperty('--rot', ((Math.random() - 0.5) * 140).toFixed(0) + 'deg');
-        sh.style.transitionDelay = (Math.abs(dx) + Math.abs(dy)) * 0.06 + 's';
+        // Break loose, then fall: a little sideways drift, then straight down and
+        // off the bottom, tumbling as it goes.
+        sh.style.setProperty('--tx', (dx * (6 + Math.random() * 14)).toFixed(1) + 'vw');
+        sh.style.setProperty('--ty', (108 + Math.random() * 60).toFixed(1) + 'vh');
+        sh.style.setProperty('--rot', ((Math.random() - 0.5) * 220).toFixed(0) + 'deg');
+        // Cracks radiate from the centre, so the centre pieces let go first.
+        sh.style.transitionDelay = ((Math.abs(dx) + Math.abs(dy)) * 0.13).toFixed(2) + 's';
         layer.appendChild(sh);
     }
 
-    // --- THE ENGINE: gears, machines and code, alive underneath -------------
+    // --- THE ENGINE: a dark industrial room, alive beneath the calendar -----
     function buildEngine() {
         if (document.getElementById('voidEngine')) return;
         var eng = document.createElement('div');
         eng.id = 'voidEngine';
 
-        var gears = '';
-        var specs = [
-            { x: '8%',  y: '18%', s: 150, t: 12, dur: 14, dir: 1,  col: '#3a4150' },
-            { x: '82%', y: '12%', s: 210, t: 14, dur: 22, dir: -1, col: '#2f3542' },
-            { x: '72%', y: '70%', s: 260, t: 16, dur: 30, dir: 1,  col: '#353c4a' },
-            { x: '18%', y: '74%', s: 190, t: 12, dur: 18, dir: -1, col: '#2b313d' },
-            { x: '46%', y: '44%', s: 120, t: 10, dur: 10, dir: 1,  col: '#4a5265' }
+        // Slowly rotating gears set into the back wall.
+        var gearSpecs = [
+            { x: '7%',  y: '22%', s: 190, t: 14, dur: 36, dir: 1 },
+            { x: '90%', y: '17%', s: 250, t: 16, dur: 48, dir: -1 },
+            { x: '85%', y: '80%', s: 290, t: 18, dur: 56, dir: 1 },
+            { x: '13%', y: '82%', s: 220, t: 14, dur: 42, dir: -1 },
+            { x: '50%', y: '9%',  s: 130, t: 12, dur: 30, dir: 1 }
         ];
-        specs.forEach(function (g) {
-            gears += '<div class="eng-gear" style="left:' + g.x + ';top:' + g.y +
+        var gears = gearSpecs.map(function (g) {
+            return '<div class="eng-gear" style="left:' + g.x + ';top:' + g.y +
                 ';width:' + g.s + 'px;height:' + g.s + 'px;animation-duration:' + g.dur +
                 's;animation-direction:' + (g.dir < 0 ? 'reverse' : 'normal') + '">' +
-                gearSVG(g.t, g.col) + '</div>';
-        });
+                gearSVG(g.t) + '</div>';
+        }).join('');
 
-        // Reciprocating "machines" — pistons pumping at the base.
+        // Pistons pumping along the base.
         var pistons = '';
-        for (var i = 0; i < 6; i++) {
-            pistons += '<div class="eng-piston" style="left:' + (6 + i * 16) + '%;' +
-                'animation-delay:' + (i * 0.18) + 's"><span></span></div>';
+        for (var i = 0; i < 7; i++) {
+            pistons += '<div class="eng-piston" style="left:' + (4 + i * 14) + '%;' +
+                'animation-delay:' + (i * 0.16) + 's"><span></span></div>';
         }
 
-        // Code columns — monospaced streams that keep changing.
-        var cols = '';
-        for (var j = 0; j < 5; j++) {
-            cols += '<pre class="eng-code" data-col="' + j + '" style="left:' +
-                (4 + j * 22) + '%;animation-duration:' + (7 + j * 2) + 's"></pre>';
+        // Conveyor belts carrying XP and tasks past the core.
+        var belts =
+            belt('20%', 'ltr', ['+10 XP', 'TASK ✓', '+25 XP', 'FOCUS', '+5 XP', 'TASK ✓', 'LEVEL ↑', '+15 XP']) +
+            belt('73%', 'rtl', ['COMPILE', '+40 XP', 'TASK ✓', 'STREAK', '+15 XP', 'RENDER', '+10 XP', 'BUILD']);
+
+        // Floating code — the etched comments, plus live streams.
+        var comments = [
+            { t: '// Productivity is manufactured here.', x: '6%',  y: '33%' },
+            { t: '// Reality is compiled every refresh.', x: '58%', y: '26%' },
+            { t: '// Do not alter the engine.',           x: '30%', y: '63%' }
+        ];
+        var floatCode = comments.map(function (c, i) {
+            return '<pre class="eng-cmt" style="left:' + c.x + ';top:' + c.y +
+                ';animation-delay:' + (i * 0.8) + 's">' + c.t + '</pre>';
+        }).join('');
+        var streams = '';
+        for (var j = 0; j < 3; j++) {
+            streams += '<pre class="eng-stream" style="left:' + (12 + j * 38) +
+                '%;animation-duration:' + (9 + j * 3) + 's"></pre>';
         }
+
+        // A control strip of blinking status lights.
+        var lightCols = ['#57e08a', '#e0b74f', '#b0413e', '#57e08a', '#5aa0ff', '#e0b74f', '#57e08a', '#b0413e', '#5aa0ff'];
+        var lights = lightCols.map(function (col, k) {
+            return '<span class="eng-light" style="--lc:' + col + ';animation-delay:' +
+                (k * 0.21) + 's;animation-duration:' + (0.9 + (k % 3) * 0.5) + 's"></span>';
+        }).join('');
 
         eng.innerHTML =
-            '<div class="eng-gears">' + gears + '</div>' +
-            '<div class="eng-code-wrap">' + cols + '</div>' +
-            '<div class="eng-pistons">' + pistons + '</div>' +
+            '<div class="eng-room"><div class="eng-floor"></div><div class="eng-haze"></div></div>' +
+            '<div class="eng-layer eng-pipes">' + pipesSVG() + '</div>' +
+            '<div class="eng-layer eng-gears">' + gears + '</div>' +
+            '<div class="eng-layer eng-belts">' + belts + '</div>' +
+            '<div class="eng-layer eng-codewrap">' + floatCode + streams + '</div>' +
+            '<div class="eng-layer eng-pistons">' + pistons + '</div>' +
+            coreMarkup() +
+            '<div class="eng-panel">' + lights + '</div>' +
             '<div class="eng-vignette"></div>' +
-            '<h1 class="eng-title">THE ENGINE</h1>' +
-            '<p class="eng-sub">// it was running the whole time</p>';
+            '<div class="eng-nameplate">THE ENGINE</div>' +
+            settingsArrow();
         document.body.appendChild(eng);
 
+        wireSettings(eng);
         requestAnimationFrame(function () { eng.classList.add('lit'); });
         startCode(eng);
     }
 
-    function gearSVG(teeth, col) {
+    function coreMarkup() {
+        return '<div class="eng-core">' +
+            '<div class="eng-core-glow"></div>' +
+            '<div class="eng-core-ring eng-core-ring1"></div>' +
+            '<div class="eng-core-ring eng-core-ring2"></div>' +
+            '<div class="eng-core-ring eng-core-ring3"></div>' +
+            '<div class="eng-core-hub">' +
+                '<div class="eng-core-pulse"></div>' +
+                '<div class="eng-core-name"><span>ASCEN</span><strong>ENGINE</strong></div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function pipesSVG() {
+        var pipe = function (d) { return '<path class="eng-pipe" d="' + d + '"/>'; };
+        var flow = function (d) { return '<path class="eng-flow" d="' + d + '"/>'; };
+        var d1 = 'M0 28 H26 Q38 28 38 40 V64';
+        var d2 = 'M100 20 H72 Q60 20 60 32 V58';
+        var d3 = 'M10 100 V82 Q10 72 22 72 H44';
+        var d4 = 'M100 74 H80 Q70 74 70 84 V100';
+        return '<svg viewBox="0 0 100 100" preserveAspectRatio="none">' +
+            pipe(d1) + pipe(d2) + pipe(d3) + pipe(d4) +
+            flow(d1) + flow(d2) + flow(d3) +
+            '</svg>';
+    }
+
+    function belt(top, dir, items) {
+        var doubled = items.concat(items);
+        var chips = doubled.map(function (it) {
+            return '<span class="eng-chip">' + it + '</span>';
+        }).join('');
+        return '<div class="eng-belt" style="top:' + top + '">' +
+            '<div class="eng-belt-surface"></div>' +
+            '<div class="eng-belt-track' + (dir === 'rtl' ? ' rtl' : '') + '">' + chips + '</div>' +
+        '</div>';
+    }
+
+    function settingsArrow() {
+        return '<button id="engSettings" class="eng-settings" type="button" aria-label="Engine settings">' +
+            '<span class="eng-settings-text">ENGINE SETTINGS</span>' +
+            '<svg class="eng-settings-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+                'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+                '<line x1="4" y1="12" x2="17" y2="12"/><polyline points="12 6 18 12 12 18"/></svg>' +
+        '</button>';
+    }
+
+    function wireSettings(eng) {
+        var btn = eng.querySelector('#engSettings');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            // The metal door to the next room. Wired to boot with a flicker until
+            // the ENGINE SETTINGS room is built.
+            btn.classList.add('pressed');
+            eng.classList.add('powering');
+            setTimeout(function () {
+                btn.classList.remove('pressed');
+                eng.classList.remove('powering');
+            }, 700);
+        });
+    }
+
+    function gearSVG(teeth) {
         var t = '';
         for (var i = 0; i < teeth; i++) {
             var ang = i * (360 / teeth);
-            t += '<rect x="44" y="2" width="12" height="18" rx="2.5" fill="' + col +
-                 '" transform="rotate(' + ang + ' 50 50)"/>';
+            t += '<rect x="44" y="2" width="12" height="18" rx="2.5" fill="#3a4150" ' +
+                 'transform="rotate(' + ang + ' 50 50)"/>';
         }
         return '<svg viewBox="0 0 100 100">' + t +
-            '<circle cx="50" cy="50" r="34" fill="' + col + '"/>' +
-            '<circle cx="50" cy="50" r="26" fill="none" stroke="#12151c" stroke-width="2"/>' +
-            '<circle cx="50" cy="50" r="13" fill="#070a0f"/>' +
-            '<circle cx="50" cy="50" r="13" fill="none" stroke="#4b566b" stroke-width="2"/>' +
+            '<circle cx="50" cy="50" r="34" fill="#2f3542"/>' +
+            '<circle cx="50" cy="50" r="34" fill="none" stroke="#4b566b" stroke-width="1.5"/>' +
+            '<circle cx="50" cy="50" r="25" fill="none" stroke="#12151c" stroke-width="2.5"/>' +
+            '<circle cx="50" cy="50" r="13" fill="#0a0d13"/>' +
+            '<circle cx="50" cy="50" r="13" fill="none" stroke="#5a6675" stroke-width="2"/>' +
             '</svg>';
     }
 
     function startCode(eng) {
-        var glyphs = '01{}[]()<>=+-*/;:#&|!$%01ABCDEF0123456789';
+        var glyphs = '01{}[]()<>=+-*/;:#&|!$%ABCDEF0123456789';
         var line = function (n) {
             var s = '';
             for (var i = 0; i < n; i++) s += glyphs[(Math.random() * glyphs.length) | 0];
             return s;
         };
-        var cols = eng.querySelectorAll('.eng-code');
+        var cols = eng.querySelectorAll('.eng-stream');
         cols.forEach(function (pre) {
-            var rows = 26, buf = [];
-            for (var i = 0; i < rows; i++) buf.push(line(10));
+            var rows = 22, buf = [];
+            for (var i = 0; i < rows; i++) buf.push(line(9));
             pre.textContent = buf.join('\n');
             pre._buf = buf;
         });
-        // Keep mutating a few random rows so the code is always changing.
         eng._codeTimer = setInterval(function () {
             cols.forEach(function (pre) {
                 var buf = pre._buf; if (!buf) return;
-                for (var k = 0; k < 3; k++) {
-                    buf[(Math.random() * buf.length) | 0] = line(10);
-                }
+                for (var k = 0; k < 3; k++) buf[(Math.random() * buf.length) | 0] = line(9);
                 pre.textContent = buf.join('\n');
             });
-        }, 120);
+        }, 130);
     }
 })();

@@ -1123,20 +1123,6 @@
     "met_deadline": false
   },
   {
-    "id": "1784409609734",
-    "user_id": "men",
-    "title": "1",
-    "description": "",
-    "priority": "low",
-    "status": "done",
-    "xp_value": 10,
-    "due_date": null,
-    "show_on_calendar": false,
-    "created_at": "2026-07-18T16:20:09.739577",
-    "completed_at": "2026-07-22T16:30:33.708213",
-    "completion_seconds": 346224
-  },
-  {
     "id": "1784412795294",
     "user_id": "men",
     "title": "Finish essay",
@@ -8720,5 +8706,19 @@
     "created_at": "2026-07-22T16:36:53.292256",
     "completed_at": "2026-07-22T16:36:56.072981",
     "completion_seconds": 3
+  },
+  {
+    "id": "1784819493361",
+    "user_id": "men",
+    "title": "1",
+    "description": "",
+    "priority": "high",
+    "status": "done",
+    "xp_value": 98,
+    "due_date": null,
+    "show_on_calendar": false,
+    "created_at": "2026-07-23T10:11:33.367547",
+    "completed_at": "2026-07-23T10:11:34.667250",
+    "completion_seconds": 1
   }
 ]
