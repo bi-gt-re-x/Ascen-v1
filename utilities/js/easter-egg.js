@@ -60,36 +60,83 @@
                 clicks = 0;
                 if (resetTimer) clearTimeout(resetTimer);
                 reveal(quoteEl, container);
+            } else {
+                wobble(clicks);   // little wobble that grows bigger each click
             }
         });
+    }
+
+    // A per-click wobble whose amplitude climbs with the streak (click 1 = a
+    // faint nudge, click 9 = a hard shake), building tension toward the reveal.
+    var wobbleClipTimer = null;
+    function wobble(n) {
+        var root = document.documentElement;
+        root.style.setProperty('--wob', (n * 2.5) + 'px');
+        root.style.setProperty('--wob-rot', (n * 0.28) + 'deg');
+        root.classList.add('easter-shake-clip');
+        document.body.classList.remove('easter-wobble');
+        void document.body.offsetWidth;               // restart animation
+        document.body.classList.add('easter-wobble');
+        if (wobbleClipTimer) clearTimeout(wobbleClipTimer);
+        wobbleClipTimer = setTimeout(function () {
+            document.body.classList.remove('easter-wobble');
+            root.classList.remove('easter-shake-clip');
+        }, 340);
     }
 
     function reveal(quoteEl, container) {
         markUnlocked();
         window.__mysteriousQuoteActive = true;
 
+        // A full-viewport scrim, spotlighting the quote when the rest goes dark.
+        var dark = document.getElementById('easterDark');
+        if (!dark) {
+            dark = document.createElement('div');
+            dark.id = 'easterDark';
+            dark.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(dark);
+        }
+
         // 1) Sleek slide-out of the current quote.
+        if (wobbleClipTimer) clearTimeout(wobbleClipTimer);
+        document.body.classList.remove('easter-wobble');
         quoteEl.classList.add('quote-slide-out');
 
         setTimeout(function () {
             // 2) Swap in the mysterious text, dressed ominously.
             quoteEl.textContent = QUOTE;
-            if (container) container.classList.add('quote-ominous');
+            if (container) {
+                container.classList.add('quote-ominous');
+                container.classList.add('quote-spotlight');   // lift above the scrim
+            }
             quoteEl.classList.remove('quote-slide-out');
 
-            // 3) Ominous rise-in + full-screen shake.
+            // 3) The rest of the screen turns dark.
+            void dark.offsetWidth;
+            dark.classList.add('show');
+
+            // 4) The biggest shake yet + the ominous rise-in.
             void quoteEl.offsetWidth;                 // restart animation
             quoteEl.classList.add('quote-slide-in');
             document.documentElement.classList.add('easter-shake-clip');
+            document.body.classList.remove('easter-wobble');
+            void document.body.offsetWidth;
             document.body.classList.add('easter-shake');
 
             setTimeout(function () {
                 document.body.classList.remove('easter-shake');
                 document.documentElement.classList.remove('easter-shake-clip');
-            }, 850);
+            }, 900);
             setTimeout(function () {
                 quoteEl.classList.remove('quote-slide-in');
-            }, 1000);
+            }, 1050);
+
+            // 5) Hold the darkness a beat, then lift it — leaving the ominous
+            //    quote glowing in the restored dashboard.
+            setTimeout(function () { dark.classList.remove('show'); }, 2400);
+            setTimeout(function () {
+                if (container) container.classList.remove('quote-spotlight');
+            }, 3350);
         }, 560);   // matches the slide-out transition
     }
 

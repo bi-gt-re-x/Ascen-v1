@@ -989,29 +989,67 @@ html[data-theme="dark"] .quote-container.quote-ominous #dailyQuote {
     text-shadow: 0 0 12px rgba(255, 107, 102, 0.55), 0 0 26px rgba(255, 107, 102, 0.3);
 }
 
-/* 3) Full-screen shake. Clip the root while it plays so the offsets never
-   surface a scrollbar. */
+/* 3) Full-screen shake. Clip the root while any shake/wobble plays so the
+   offsets never surface a scrollbar. */
 html.easter-shake-clip { overflow: hidden; }
+
+/* Per-click wobble — amplitude driven by --wob / --wob-rot, which easter-egg.js
+   raises with every click so the screen shakes harder the closer you get. */
+:root { --wob: 4px; --wob-rot: 0.3deg; }
+@keyframes easterWobble {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    20% { transform: translate(calc(var(--wob) * -1), calc(var(--wob) * 0.35)) rotate(calc(var(--wob-rot) * -1)); }
+    40% { transform: translate(var(--wob), calc(var(--wob) * -0.4)) rotate(var(--wob-rot)); }
+    60% { transform: translate(calc(var(--wob) * -0.7), calc(var(--wob) * 0.3)) rotate(calc(var(--wob-rot) * -0.55)); }
+    80% { transform: translate(calc(var(--wob) * 0.5), calc(var(--wob) * -0.2)) rotate(calc(var(--wob-rot) * 0.4)); }
+}
+body.easter-wobble {
+    animation: easterWobble 0.3s ease both;
+}
+
+/* The reveal's climax shake — the biggest of all, more violent than click 9. */
 @keyframes easterShake {
     0%, 100% { transform: translate(0, 0) rotate(0); }
-    8%   { transform: translate(-9px, 5px) rotate(-0.7deg); }
-    17%  { transform: translate(8px, -6px) rotate(0.6deg); }
-    26%  { transform: translate(-10px, 4px) rotate(-0.6deg); }
-    35%  { transform: translate(9px, -5px) rotate(0.5deg); }
-    44%  { transform: translate(-7px, 6px) rotate(-0.5deg); }
-    53%  { transform: translate(7px, -4px) rotate(0.4deg); }
-    62%  { transform: translate(-6px, 3px) rotate(-0.3deg); }
-    71%  { transform: translate(5px, -3px) rotate(0.25deg); }
-    80%  { transform: translate(-3px, 2px) rotate(-0.15deg); }
-    90%  { transform: translate(2px, -1px) rotate(0.1deg); }
+    7%   { transform: translate(-28px, 14px) rotate(-2deg); }
+    15%  { transform: translate(26px, -18px) rotate(1.8deg); }
+    23%  { transform: translate(-30px, 12px) rotate(-1.9deg); }
+    31%  { transform: translate(27px, -15px) rotate(1.6deg); }
+    39%  { transform: translate(-22px, 16px) rotate(-1.5deg); }
+    47%  { transform: translate(20px, -12px) rotate(1.3deg); }
+    55%  { transform: translate(-17px, 9px) rotate(-1deg); }
+    63%  { transform: translate(14px, -8px) rotate(0.8deg); }
+    71%  { transform: translate(-10px, 6px) rotate(-0.6deg); }
+    80%  { transform: translate(7px, -4px) rotate(0.4deg); }
+    90%  { transform: translate(-3px, 2px) rotate(-0.2deg); }
 }
 body.easter-shake {
-    animation: easterShake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    animation: easterShake 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
+
+/* The rest of the screen turning dark: a full-viewport scrim that also throws a
+   soft spotlight up onto the quote, which is lifted above it. */
+#easterDark {
+    position: fixed;
+    inset: 0;
+    z-index: 40000;
+    pointer-events: none;
+    background: radial-gradient(ellipse 60% 45% at 50% 94%,
+                rgba(12, 10, 18, 0.45) 0%, rgba(4, 5, 9, 0.94) 68%);
+    opacity: 0;
+    transition: opacity 0.85s ease;
+}
+#easterDark.show { opacity: 1; }
+.quote-container.quote-spotlight {
+    position: relative;
+    z-index: 40001;
+}
+
 @media (prefers-reduced-motion: reduce) {
     #dailyQuote.quote-slide-out,
     #dailyQuote.quote-slide-in { animation: none; transition: none; transform: none; opacity: 1; }
+    body.easter-wobble,
     body.easter-shake { animation: none; }
+    #easterDark { transition: none; }
 }
 
 /* ==========================================================================
