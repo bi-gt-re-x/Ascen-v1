@@ -1252,3 +1252,128 @@ html { overflow-x: hidden; }
 }
 .hfx-toast.is-shown { opacity: 1; transform: translate(-50%, 0); }
 html[data-theme="dark"] .hfx-toast { background: #e6e8f0; color: #161B22; }
+
+/* ==========================================================================
+   PENTAGON EASTER EGG (armed by pentagon-egg.js after the mysterious quote)
+   Click 3×: pop, pop, then a full spin — after which the whole page shakes,
+   the cards implode and vanish, and a lone clickable arrow remains.
+   ========================================================================== */
+.pent-clip { overflow: hidden; }
+
+.lp-radar { transform-origin: 50% 50%; }
+
+/* Each of the first two clicks — a little pop. */
+@keyframes pentPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.2); }
+    70%  { transform: scale(0.94); }
+    100% { transform: scale(1); }
+}
+.lp-radar.pentagon-pop { animation: pentPop 0.4s ease; }
+
+/* Third click — a full 360° turn with a confident overshoot. */
+@keyframes pentSpin {
+    0%   { transform: rotate(0deg) scale(1); }
+    55%  { transform: rotate(330deg) scale(1.16); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+.lp-radar.pentagon-spin { animation: pentSpin 0.72s cubic-bezier(0.4, 0.1, 0.2, 1) both; }
+
+/* The whole page shakes. */
+@keyframes pageQuake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    8%   { transform: translate(-16px, 8px) rotate(-1deg); }
+    17%  { transform: translate(15px, -10px) rotate(0.9deg); }
+    26%  { transform: translate(-18px, 7px) rotate(-1deg); }
+    35%  { transform: translate(16px, -9px) rotate(0.8deg); }
+    44%  { transform: translate(-13px, 9px) rotate(-0.7deg); }
+    53%  { transform: translate(12px, -7px) rotate(0.6deg); }
+    62%  { transform: translate(-10px, 5px) rotate(-0.5deg); }
+    71%  { transform: translate(8px, -4px) rotate(0.35deg); }
+    80%  { transform: translate(-5px, 3px) rotate(-0.2deg); }
+    90%  { transform: translate(3px, -2px) rotate(0.1deg); }
+}
+.home-main.page-quake { animation: pageQuake 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
+/* The collapse: every top-level block implodes toward its centre and fades,
+   staggered so the page comes apart in a quick cascade. */
+@keyframes pageImplode {
+    0%   { transform: translateY(0) scale(1);    opacity: 1; }
+    60%  { opacity: 0.4; }
+    100% { transform: translateY(48px) scale(0.12); opacity: 0; }
+}
+.lp.page-collapse { pointer-events: none; }
+.lp.page-collapse > * {
+    animation: pageImplode 0.8s cubic-bezier(0.55, -0.2, 0.7, 0.1) forwards;
+    transform-origin: 50% 50%;
+}
+.lp.page-collapse > *:nth-child(1) { animation-delay: 0s; }
+.lp.page-collapse > *:nth-child(2) { animation-delay: 0.07s; }
+.lp.page-collapse > *:nth-child(3) { animation-delay: 0.14s; }
+.lp.page-collapse > *:nth-child(4) { animation-delay: 0.21s; }
+.lp.page-collapse > *:nth-child(5) { animation-delay: 0.28s; }
+.lp.page-collapse > *:nth-child(6) { animation-delay: 0.35s; }
+.lp.page-collapse > *:nth-child(n+7) { animation-delay: 0.42s; }
+
+/* The surrounding chrome dissolves with the cards, leaving a clean void. */
+body.pent-void .site-nav,
+body.pent-void .account-row,
+body.pent-void .footer {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.7s ease;
+}
+
+/* Clicking the arrow reassembles the page it took apart. */
+@keyframes pageReform {
+    0%   { transform: translateY(48px) scale(0.12); opacity: 0; }
+    100% { transform: translateY(0) scale(1);       opacity: 1; }
+}
+.lp.page-restore > * {
+    animation: pageReform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    transform-origin: 50% 50%;
+}
+.lp.page-restore > *:nth-child(2) { animation-delay: 0.05s; }
+.lp.page-restore > *:nth-child(3) { animation-delay: 0.1s; }
+.lp.page-restore > *:nth-child(4) { animation-delay: 0.15s; }
+.lp.page-restore > *:nth-child(n+5) { animation-delay: 0.2s; }
+
+/* The lone arrow left behind — a clear, inviting, gently pulsing button. */
+#pentArrow {
+    position: fixed;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    z-index: 50000;
+    width: 104px; height: 104px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    border: 2px solid rgba(201, 162, 75, 0.55);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 45%, rgba(201, 162, 75, 0.14), rgba(44, 48, 46, 0.06));
+    color: #2C302E;
+    cursor: pointer;
+    opacity: 0;
+    box-shadow: 0 8px 30px rgba(201, 162, 75, 0.28);
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+                background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+#pentArrow svg { width: 54px; height: 54px; }
+#pentArrow.show { opacity: 1; transform: translate(-50%, -50%) scale(1); animation: arrowPulse 1.8s ease-in-out infinite 0.6s; }
+#pentArrow:hover {
+    color: #b4892f;
+    border-color: rgba(201, 162, 75, 0.9);
+    background: radial-gradient(circle at 50% 45%, rgba(201, 162, 75, 0.28), rgba(44, 48, 46, 0.08));
+}
+html[data-theme="dark"] #pentArrow { color: #f0d38a; border-color: rgba(240, 211, 138, 0.5); }
+@keyframes arrowPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 8px 30px rgba(201, 162, 75, 0.28); }
+    50%      { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 10px 40px rgba(201, 162, 75, 0.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-radar.pentagon-pop, .lp-radar.pentagon-spin,
+    .home-main.page-quake { animation: none; }
+    .lp.page-collapse > * { animation: none; opacity: 0; }
+    .lp.page-restore > * { animation: none; opacity: 1; }
+    #pentArrow.show { animation: none; }
+}
