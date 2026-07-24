@@ -222,19 +222,58 @@ html.focus-mode .bottom-section .focus-panel {
 }
 html.focus-mode .bottom-section .task-manager { order: 1; min-height: 0; }
 
-/* Compact the Focus panel so its controls sit comfortably inside the 30%:
-   tighter paddings, a smaller stepper, and the goal question + hint (moot
-   while a session is already running) step aside. */
-html.focus-mode .focus-panel { padding-top: 12px; padding-bottom: 12px; }
-html.focus-mode .focus-panel h2 { margin-bottom: 6px; }
-html.focus-mode .focus-goal { padding: 8px 18px; margin-bottom: 8px; }
-html.focus-mode .focus-goal-title { margin-bottom: 2px; font-size: 0.9rem; }
-html.focus-mode .focus-goal-q { display: none; }
-html.focus-mode .focus-stepper { gap: 20px; margin-bottom: 8px; }
-html.focus-mode .focus-step-btn { width: 32px; height: 32px; font-size: 18px; border-radius: 9px; }
-html.focus-mode .focus-amount #focusHours { font-size: 1.8rem; }
-html.focus-mode .focus-start-btn { padding: 9px; margin-top: 0; }
-html.focus-mode .focus-hint { display: none; }
+/* The progress bar + its label are a single unit ("the bar"); in normal mode
+   this wrapper is transparent so the panel keeps its original vertical flow. */
+.focus-progress-wrap { display: contents; }
+
+/* Focus-mode Focus panel: a two-column layout that reads far better inside the
+   short 30% strip — the time stepper and Start/Stop button stack on the LEFT,
+   the progress bar sits on the RIGHT. `display: contents` on .focus-goal lifts
+   the stepper + bar out so they can be placed directly on the panel's grid. */
+html.focus-mode .focus-panel {
+    display: grid;
+    grid-template-columns: minmax(190px, 260px) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+        "head    head"
+        "stepper bar"
+        "button  bar";
+    column-gap: 32px;
+    row-gap: 12px;
+    align-content: center;
+    padding: 16px 26px;
+}
+html.focus-mode .focus-goal { display: contents; }
+html.focus-mode .focus-panel h2 { grid-area: head; margin: 0 0 4px; }
+html.focus-mode .focus-goal-title,
+html.focus-mode .focus-goal-q,
+html.focus-mode .focus-hint { display: none; }        /* redundant / moot mid-session */
+
+html.focus-mode .focus-stepper {
+    grid-area: stepper;
+    gap: 22px;
+    margin: 0;
+    align-self: center;
+}
+html.focus-mode .focus-step-btn { width: 34px; height: 34px; font-size: 18px; border-radius: 9px; }
+html.focus-mode .focus-amount #focusHours { font-size: 1.9rem; }
+
+html.focus-mode .focus-start-btn {
+    grid-area: button;
+    margin: 0;
+    padding: 11px;
+    align-self: center;
+}
+
+html.focus-mode .focus-progress-wrap {
+    grid-area: bar;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    min-width: 0;
+}
+html.focus-mode .focus-progress { height: 10px; margin: 0; }
 
 .card {
     background: #FFFFFF;
