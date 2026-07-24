@@ -118,6 +118,12 @@ def dashboard():
 def calendar():
     return render_template('calendar.html')
 
+@bp.route('/engine')
+def engine():
+    # The hidden ENGINE room (frontend/secret/engine.html). engine.js gates it
+    # client-side: without today's unlock it bounces back to /home.
+    return render_template('engine.html')
+
 # Calendar API endpoints
 @bp.route('/api/calendar', methods=['GET'])
 def get_calendar_entries():

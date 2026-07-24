@@ -1,4 +1,5 @@
 from flask import Flask, abort, send_from_directory
+from jinja2 import ChoiceLoader, FileSystemLoader
 
 import sqlite3
 
@@ -17,12 +18,21 @@ STATIC_ROOTS = {
     'js': os.path.join(ROOT_DIR, 'utilities', 'js'),
     'images': os.path.join(ROOT_DIR, 'images'),
     'icons': os.path.join(ROOT_DIR, 'images', 'icons'),
+    # The hidden easter-egg chain (scripts, styles and the /engine page) all
+    # lives under frontend/secret and is served at /static/secret/...
+    'secret': os.path.join(ROOT_DIR, 'frontend', 'secret'),
 }
 
 
 def create_app():
 
     app = Flask(__name__, template_folder=TEMPLATE_FOLDER, static_folder=None)
+
+    # Let templates also resolve out of frontend/secret (the hidden /engine page).
+    app.jinja_loader = ChoiceLoader([
+        app.jinja_loader,
+        FileSystemLoader(os.path.join(ROOT_DIR, 'frontend', 'secret')),
+    ])
 
     @app.route('/static/<path:filename>', endpoint='static')
     def static_files(filename):
