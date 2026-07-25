@@ -34,7 +34,32 @@
         try { localStorage.setItem(key(), '1'); } catch (e) {}
     }
 
+    // The Admin title earned in the hidden ADMIN ROOM shows as green hacker text
+    // before the username on the dashboard.
+    function applyAdminTitle() {
+        var t; try { t = localStorage.getItem('ascenTitle:' + user()); } catch (e) { return; }
+        if (t !== 'Admin') return;
+        var nameEl = document.getElementById('userNameDisplay');
+        if (!nameEl || document.querySelector('.admin-tag')) return;
+        if (!document.getElementById('adminTagStyle')) {
+            var st = document.createElement('style');
+            st.id = 'adminTagStyle';
+            st.textContent =
+                '.admin-tag{color:#2bff88;font-family:"Courier New",monospace;font-weight:700;' +
+                'letter-spacing:1px;margin-right:7px;text-shadow:0 0 8px rgba(43,255,136,.65);' +
+                'animation:adminTagFlicker 3.2s infinite;}' +
+                '@keyframes adminTagFlicker{0%,100%{opacity:1}92%{opacity:1}94%{opacity:.55}96%{opacity:1}}';
+            document.head.appendChild(st);
+        }
+        var tag = document.createElement('span');
+        tag.className = 'admin-tag';
+        tag.textContent = 'Admin';
+        nameEl.parentNode.insertBefore(tag, nameEl);
+    }
+
     function init() {
+        applyAdminTitle();
+
         var quoteEl = document.getElementById('dailyQuote');
         if (!quoteEl) return;
         var container = quoteEl.closest('.quote-container') || quoteEl.parentElement;

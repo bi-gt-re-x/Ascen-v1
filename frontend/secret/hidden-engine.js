@@ -8,6 +8,12 @@
 (function () {
     'use strict';
 
+    function user() {
+        return (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
+    }
+
+    var stability = 99.99, draining = false;
+
     var LOGS = {
         LOG_0001: '"...the engine was never a metaphor."',
         LOG_0002: '"we compiled reality nightly. it held. mostly."',
@@ -39,7 +45,69 @@
         wireFloor(he);
         wireArchives(he);
         wireConsole(he);
+        wireGears(he);
         startAmbient(he);
+    }
+
+    // --- Draggable core gears: pull them off the ring and stability drains ---
+    function wireGears(he) {
+        he.querySelectorAll('.he-cog').forEach(function (cog) {
+            cog.classList.add('he-draggable');
+            cog.addEventListener('pointerdown', function (e) {
+                if (cog._detached && false) return;
+                e.preventDefault();
+                try { cog.setPointerCapture(e.pointerId); } catch (_) {}
+                var rect = cog.getBoundingClientRect();
+                var center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                if (!cog._anchor) cog._anchor = center;    // first grab = its ring seat
+                var off = { x: e.clientX - center.x, y: e.clientY - center.y };
+                var cont = cog.offsetParent.getBoundingClientRect();
+                cog.classList.add('he-dragging');
+                function move(ev) {
+                    var cx = ev.clientX - off.x, cy = ev.clientY - off.y;
+                    cog.style.left = (cx - cont.left) + 'px';
+                    cog.style.top = (cy - cont.top) + 'px';
+                    var d = Math.hypot(cx - cog._anchor.x, cy - cog._anchor.y);
+                    if (d > 100 && !cog._detached) {
+                        cog._detached = true;
+                        cog.classList.add('he-detached');
+                        reactCore(he, true);
+                        startDrain(he);
+                    }
+                }
+                function upFn() {
+                    cog.classList.remove('he-dragging');
+                    document.removeEventListener('pointermove', move);
+                    document.removeEventListener('pointerup', upFn);
+                }
+                document.addEventListener('pointermove', move);
+                document.addEventListener('pointerup', upFn);
+            });
+        });
+    }
+
+    function startDrain(he) {
+        if (draining) return;
+        draining = true;
+        var stabEl = he.querySelector('#heStab');
+        (function loop() {
+            var detached = he.querySelectorAll('.he-cog.he-detached').length;
+            if (detached === 0) { draining = false; return; }
+            stability -= 0.22 * detached + 0.14;
+            if (stability <= 0) { stability = 0; renderStab(he, stabEl); triggerGlitch(he); return; }
+            renderStab(he, stabEl);
+            setTimeout(loop, 90);
+        })();
+    }
+
+    function renderStab(he, el) {
+        if (el) {
+            el.textContent = stability.toFixed(2) + '%';
+            el.classList.toggle('he-warn', stability < 60);
+            el.classList.toggle('he-crit', stability < 25);
+        }
+        he.classList.toggle('he-unstable', stability < 55);
+        he.style.setProperty('--shake', (1 - stability / 100).toFixed(2));
     }
 
     // --- Ceiling: suspended gears at different speeds -----------------------
@@ -217,6 +285,85 @@
             '<circle cx="50" cy="50" r="33" fill="' + col + '"/>' +
             '<circle cx="50" cy="50" r="24" fill="none" stroke="#0c0f16" stroke-width="3"/>' +
             '<circle cx="50" cy="50" r="12" fill="#0a0d13"/></svg>';
+    }
+
+    // --- Stability hit 0: the whole system tears itself apart ---------------
+    function triggerGlitch(he) {
+        if (document.getElementById('heGlitch')) return;
+        he.classList.add('he-glitching');
+        var g = document.createElement('div');
+        g.id = 'heGlitch';
+        g.innerHTML =
+            '<div class="he-glitch-scan"></div>' +
+            '<div class="he-glitch-word he-gw1" data-t="administrator">administrator</div>' +
+            '<div class="he-glitch-word he-gw2" data-t="please enter">please enter</div>';
+        document.body.appendChild(g);
+        requestAnimationFrame(function () { g.classList.add('on'); });
+        setTimeout(function () { buildAdminRoom(he, g); }, 3800);
+    }
+
+    // --- The ADMIN ROOM: where the title is claimed -------------------------
+    function buildAdminRoom(he, glitch) {
+        if (document.getElementById('adminRoom')) return;
+        var ar = document.createElement('div');
+        ar.id = 'adminRoom';
+        ar.innerHTML =
+            '<div class="ar-scan"></div>' +
+            '<div class="ar-rain"></div>' +
+            '<div class="ar-inner">' +
+                '<div class="ar-tag">root@ascen:~# access granted</div>' +
+                '<h1 class="ar-title" data-t="ADMIN ROOM">ADMIN ROOM</h1>' +
+                '<p class="ar-sub">You were never supposed to reach this room.</p>' +
+                '<button class="ar-equip" id="arEquip" type="button">▸ EQUIP TITLE :: Admin</button>' +
+                '<div class="ar-done" id="arDone"></div>' +
+            '</div>';
+        document.body.appendChild(ar);
+        requestAnimationFrame(function () { ar.classList.add('in'); });
+        setTimeout(function () {
+            if (glitch) glitch.remove();
+            he.style.display = 'none';
+        }, 700);
+        adminRain(ar);
+        wireAdmin(ar);
+    }
+
+    function wireAdmin(ar) {
+        var btn = ar.querySelector('#arEquip');
+        var done = ar.querySelector('#arDone');
+        btn.addEventListener('click', function () {
+            try { localStorage.setItem('ascenTitle:' + user(), 'Admin'); } catch (e) {}
+            btn.disabled = true;
+            btn.textContent = '✓ TITLE EQUIPPED :: Admin';
+            btn.classList.add('equipped');
+            done.innerHTML =
+                'The title <b>Admin</b> is now bound to your name.<br>' +
+                '<button class="ar-return" id="arReturn" type="button">▸ RETURN TO DASHBOARD</button>';
+            done.classList.add('show');
+            ar.querySelector('#arReturn').addEventListener('click', function () {
+                window.location.href = '/dashboard';
+            });
+        });
+    }
+
+    // A little green code-rain behind the ADMIN ROOM.
+    function adminRain(ar) {
+        var host = ar.querySelector('.ar-rain');
+        var cv = document.createElement('canvas');
+        host.appendChild(cv);
+        var ctx = cv.getContext('2d');
+        function size() { cv.width = host.offsetWidth; cv.height = host.offsetHeight; }
+        size(); window.addEventListener('resize', size);
+        var cols = Math.floor(cv.width / 14), drops = [];
+        for (var i = 0; i < cols; i++) drops[i] = Math.random() * cv.height / 14;
+        var glyphs = 'ADMIN01<>[]{}=+*#/ｦｧｨABCDEF'.split('');
+        setInterval(function () {
+            ctx.fillStyle = 'rgba(0,6,2,0.1)'; ctx.fillRect(0, 0, cv.width, cv.height);
+            ctx.fillStyle = '#2bff88'; ctx.font = '14px monospace';
+            for (var i = 0; i < drops.length; i++) {
+                ctx.fillText(glyphs[(Math.random() * glyphs.length) | 0], i * 14, drops[i] * 14);
+                drops[i] = (drops[i] * 14 > cv.height && Math.random() > 0.97) ? 0 : drops[i] + 1;
+            }
+        }, 70);
     }
 
     window.AscenHiddenEngine = { reveal: reveal };
