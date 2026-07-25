@@ -38,7 +38,7 @@
     // before the username on the dashboard.
     function applyAdminTitle() {
         var t; try { t = localStorage.getItem('ascenTitle:' + user()); } catch (e) { return; }
-        if (t !== 'Admin') return;
+        if (!t) return;   // no earned title
         var nameEl = document.getElementById('userNameDisplay');
         if (!nameEl || document.querySelector('.admin-tag')) return;
         if (!document.getElementById('adminTagStyle')) {
@@ -53,7 +53,11 @@
         }
         var tag = document.createElement('span');
         tag.className = 'admin-tag';
-        tag.textContent = 'Admin';
+        tag.textContent = t;   // 'Admin' or any custom title set in the ASCEN CORE
+        tag.style.cursor = 'pointer';
+        tag.title = '';
+        // Clicking your title drops you straight back into the Ascen Engine.
+        tag.addEventListener('click', function () { window.location.href = '/engine'; });
         nameEl.parentNode.insertBefore(tag, nameEl);
     }
 

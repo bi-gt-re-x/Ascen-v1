@@ -11,6 +11,10 @@
     function user() {
         return (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
     }
+    function isAdmin() {
+        try { return !!localStorage.getItem('ascenTitle:' + user()); }
+        catch (e) { return false; }
+    }
 
     var stability = 99.99, draining = false;
 
@@ -191,10 +195,13 @@
     }
 
     function hiddenConsole() {
-        return '<div class="he-console" id="heConsole">' +
+        var admin = isAdmin();
+        return '<div class="he-console' + (admin ? ' he-admin' : '') + '" id="heConsole">' +
             '<div class="he-console-scan"></div>' +
             '<div class="he-console-title">ASCEN CORE</div>' +
-            '<div class="he-console-line" id="heConsoleLine">Awaiting Administrator...</div>' +
+            '<div class="he-console-line" id="heConsoleLine">' +
+                (admin ? 'Administrator recognized.' : 'Awaiting Administrator...') + '</div>' +
+            (admin ? '<button class="he-core-btn" id="heCoreBtn" type="button">ASCEN CORE &rarr;</button>' : '') +
         '</div>';
     }
 
@@ -230,8 +237,18 @@
     function wireConsole(he) {
         var con = he.querySelector('#heConsole');
         var line = he.querySelector('#heConsoleLine');
+        var coreBtn = he.querySelector('#heCoreBtn');
+        if (coreBtn) {
+            // Admins don't need to crash the engine — the core opens for them.
+            coreBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                reactCore(he, true);
+                enterAscenCore(he);
+            });
+        }
         con.addEventListener('click', function () {
             reactCore(he, true);
+            if (isAdmin()) { enterAscenCore(he); return; }
             line.textContent = 'Administrator credentials required.';
             con.classList.remove('he-console-deny'); void con.offsetWidth;
             con.classList.add('he-console-deny');
@@ -345,9 +362,10 @@
         });
     }
 
-    // A little green code-rain behind the ADMIN ROOM.
+    // A little green code-rain behind the ADMIN ROOM / ASCEN CORE.
     function adminRain(ar) {
-        var host = ar.querySelector('.ar-rain');
+        var host = ar.querySelector('.ar-rain') || ar.querySelector('.ac-rain');
+        if (!host) return;
         var cv = document.createElement('canvas');
         host.appendChild(cv);
         var ctx = cv.getContext('2d');
@@ -366,5 +384,117 @@
         }, 70);
     }
 
-    window.AscenHiddenEngine = { reveal: reveal };
+    // --- THE ASCEN CORE: the administrator's seat. Do anything. -------------
+    function enterAscenCore(he) {
+        if (document.getElementById('ascenCore')) return;
+        var ac = document.createElement('div');
+        ac.id = 'ascenCore';
+
+        var toggles = [
+            ['OVERCLOCK ENGINE', 'engine overclocked. gears redlined.'],
+            ['INFINITE XP', 'xp cap removed. numbers meaningless now.'],
+            ['GHOST MODE', 'you no longer cast a shadow in the logs.'],
+            ['FREEZE TIME', 'the clock holds its breath.'],
+            ['RECOMPILE REALITY', 'reality rebuilt. hopefully the same.'],
+            ['GOD MODE', 'you were always the administrator.']
+        ];
+        var togHtml = toggles.map(function (t, i) {
+            return '<button class="ac-power" type="button" data-msg="' + t[1] + '" data-i="' + i + '">' +
+                '<span class="ac-power-dot"></span>' + t[0] + '</button>';
+        }).join('');
+
+        ac.innerHTML =
+            '<div class="ac-scan"></div>' +
+            '<div class="ac-rain"></div>' +
+            '<div class="ac-inner">' +
+                '<div class="ac-tag">administrator :: privileges UNLIMITED</div>' +
+                '<h1 class="ac-title" data-t="ASCEN CORE">ASCEN CORE</h1>' +
+                '<p class="ac-sub">The core is yours. You can do anything here.</p>' +
+                '<div class="ac-field">' +
+                    '<label>DISPLAYED TITLE</label>' +
+                    '<div class="ac-row">' +
+                        '<input id="acTitle" spellcheck="false" autocomplete="off" maxlength="24" value="' +
+                            (localStorage.getItem('ascenTitle:' + user()) || 'Admin') + '">' +
+                        '<button id="acSetTitle" type="button">SET</button>' +
+                    '</div>' +
+                    '<div class="ac-hint" id="acTitleHint">shows before your name on the dashboard</div>' +
+                '</div>' +
+                '<div class="ac-powers">' + togHtml + '</div>' +
+                '<div class="ac-term">' +
+                    '<div class="ac-term-log" id="acLog"></div>' +
+                    '<div class="ac-term-row"><span class="ac-prompt">core@ascen:~#</span>' +
+                        '<input class="ac-cmd" id="acCmd" spellcheck="false" autocomplete="off"></div>' +
+                '</div>' +
+                '<button class="ac-return" id="acReturn" type="button">▸ RETURN TO DASHBOARD</button>' +
+            '</div>';
+        document.body.appendChild(ac);
+        requestAnimationFrame(function () { ac.classList.add('in'); });
+        adminRain(ac);
+        wireAscenCore(ac, he);
+    }
+
+    function wireAscenCore(ac, he) {
+        var titleInput = ac.querySelector('#acTitle');
+        var setBtn = ac.querySelector('#acSetTitle');
+        var hint = ac.querySelector('#acTitleHint');
+        function setTitle(v) {
+            v = (v || '').trim().slice(0, 24) || 'Admin';
+            try { localStorage.setItem('ascenTitle:' + user(), v); } catch (e) {}
+            hint.textContent = 'title set to "' + v + '" — it now shows on the dashboard.';
+            hint.classList.add('ok');
+            if (he) reactCore(he, false);
+        }
+        setBtn.addEventListener('click', function () { setTitle(titleInput.value); });
+        titleInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') setTitle(titleInput.value); });
+
+        ac.querySelectorAll('.ac-power').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var on = b.classList.toggle('on');
+                if (he) reactCore(he, true);
+                acLog(ac, (on ? '✓ ' : '× ') + b.textContent.trim() + (on ? ' — ' + b.getAttribute('data-msg') : ' disabled'));
+            });
+        });
+
+        var cmd = ac.querySelector('#acCmd');
+        acLog(ac, 'ASCEN CORE shell — administrator session. type anything.');
+        cmd.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            var raw = cmd.value; var c = raw.trim(); cmd.value = '';
+            acLog(ac, 'core@ascen:~# ' + raw, 'cmd');
+            runCore(ac, he, c);
+        });
+        ac.querySelector('#acReturn').addEventListener('click', function () {
+            window.location.href = '/dashboard';
+        });
+        setTimeout(function () { cmd.focus(); }, 400);
+    }
+
+    function acLog(ac, text, cls) {
+        var log = ac.querySelector('#acLog'); if (!log) return;
+        var d = document.createElement('div');
+        if (cls) d.className = 'ac-' + cls;
+        d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight;
+    }
+
+    function runCore(ac, he, cmd) {
+        var parts = cmd.split(/\s+/); var c = (parts[0] || '').toLowerCase();
+        if (he) reactCore(he, false);
+        switch (c) {
+            case '': break;
+            case 'help': acLog(ac, 'title <name> · whoami · sudo <..> · clear · exit · (anything else just works)'); break;
+            case 'whoami': acLog(ac, 'administrator'); break;
+            case 'title':
+                var v = parts.slice(1).join(' ');
+                try { localStorage.setItem('ascenTitle:' + user(), (v || 'Admin').slice(0, 24)); } catch (e) {}
+                acLog(ac, 'title updated → ' + (v || 'Admin'));
+                var ti = ac.querySelector('#acTitle'); if (ti) ti.value = (v || 'Admin');
+                break;
+            case 'sudo': acLog(ac, 'granted.'); break;
+            case 'clear': ac.querySelector('#acLog').innerHTML = ''; break;
+            case 'exit': window.location.href = '/dashboard'; break;
+            default: acLog(ac, '✓ executed.'); break;   // an admin can do anything
+        }
+    }
+
+    window.AscenHiddenEngine = { reveal: reveal, ascenCore: enterAscenCore };
 })();

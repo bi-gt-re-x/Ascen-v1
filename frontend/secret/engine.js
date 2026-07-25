@@ -20,6 +20,10 @@
         try { return localStorage.getItem('easterEgg:' + user() + ':' + todayStr()) === '1'; }
         catch (e) { return false; }
     }
+    function isAdmin() {
+        try { return !!localStorage.getItem('ascenTitle:' + user()); }
+        catch (e) { return false; }
+    }
 
     function ready(fn) {
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
@@ -27,8 +31,9 @@
     }
 
     ready(function () {
-        // The engine is a secret — only reachable once the quote has been found.
-        if (!unlocked()) { window.location.replace('/home'); return; }
+        // The engine is a secret — reachable once the quote has been found, or
+        // any time by someone who already holds a title (an admin).
+        if (!unlocked() && !isAdmin()) { window.location.replace('/home'); return; }
         buildEngine();
     });
 
@@ -107,6 +112,16 @@
         wireSettings(eng);
         requestAnimationFrame(function () { eng.classList.add('lit'); });
         startCode(eng);
+
+        // Admins skip the whole unlock puzzle — the vault opens for them, and the
+        // ENGINE SETTINGS button reads as a shortcut straight to the gears.
+        if (isAdmin()) {
+            var s = eng.querySelector('.eng-settings-text');
+            if (s) s.textContent = 'ENTER HIDDEN ENGINE';
+            setTimeout(function () {
+                if (window.AscenHiddenEngine) window.AscenHiddenEngine.reveal();
+            }, 1200);
+        }
 
         // Any interaction with the system makes the engine spin up, light up
         // and vent steam for a beat.
@@ -198,7 +213,11 @@
             setTimeout(function () {
                 btn.classList.remove('pressed');
                 eng.classList.remove('powering');
-                if (window.AscenEngineSettings) window.AscenEngineSettings.open();
+                if (isAdmin() && window.AscenHiddenEngine) {
+                    window.AscenHiddenEngine.reveal();            // admins jump to the gears
+                } else if (window.AscenEngineSettings) {
+                    window.AscenEngineSettings.open();
+                }
             }, 260);
         });
     }
