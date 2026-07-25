@@ -81,6 +81,12 @@
                 (k * 0.21) + 's;animation-duration:' + (0.9 + (k % 3) * 0.5) + 's"></span>';
         }).join('');
 
+        // Steam vents around the core — they hiss when the machine reacts.
+        var steam = '';
+        ['32%', '50%', '68%'].forEach(function (x) {
+            steam += '<span class="eng-vent" style="left:' + x + '"><i></i></span>';
+        });
+
         eng.innerHTML =
             '<div class="eng-room"><div class="eng-floor"></div><div class="eng-haze"></div></div>' +
             '<div class="eng-layer eng-pipes">' + pipesSVG() + '</div>' +
@@ -88,6 +94,7 @@
             '<div class="eng-layer eng-belts">' + belts + '</div>' +
             '<div class="eng-layer eng-codewrap">' + floatCode + streams + '</div>' +
             '<div class="eng-layer eng-pistons">' + pistons + '</div>' +
+            '<div class="eng-layer eng-steam">' + steam + '</div>' +
             coreMarkup() +
             '<div class="eng-panel">' + lights + '</div>' +
             '<div class="eng-vignette"></div>' +
@@ -100,6 +107,22 @@
         wireSettings(eng);
         requestAnimationFrame(function () { eng.classList.add('lit'); });
         startCode(eng);
+
+        // Any interaction with the system makes the engine spin up, light up
+        // and vent steam for a beat.
+        window.AscenEngine = {
+            react: function () {
+                eng.classList.remove('eng-reacting'); void eng.offsetWidth;
+                eng.classList.add('eng-reacting');
+                eng.querySelectorAll('.eng-vent').forEach(function (v) {
+                    v.classList.remove('puff'); void v.offsetWidth; v.classList.add('puff');
+                });
+                clearTimeout(window.AscenEngine._t);
+                window.AscenEngine._t = setTimeout(function () {
+                    eng.classList.remove('eng-reacting');
+                }, 1400);
+            }
+        };
     }
 
     function coreMarkup() {
@@ -171,6 +194,7 @@
         btn.addEventListener('click', function () {
             btn.classList.add('pressed');
             eng.classList.add('powering');
+            if (window.AscenEngine) window.AscenEngine.react();   // steam + spin-up
             setTimeout(function () {
                 btn.classList.remove('pressed');
                 eng.classList.remove('powering');

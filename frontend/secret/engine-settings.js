@@ -19,8 +19,8 @@
         { name: 'Frost',    accent: '#79d6ff' },
         { name: 'Matrix',   accent: '#33ff88' }
     ];
-    var COMMANDS = ['help', 'version', 'credits', 'ping', 'clear',
-                    'unlock', 'status', 'echo', 'diagnostics', 'matrix'];
+    // Public commands (what `help` lists) — the secret `unlock hidden` is not here.
+    var COMMANDS = ['help', 'status', 'version', 'diagnostics', 'clear', 'echo', 'reboot', 'exit'];
 
     var panel = null, diagTimer = null;
 
@@ -153,6 +153,7 @@
             sw.addEventListener('click', function () {
                 var on = sw.classList.toggle('on');
                 sw.setAttribute('aria-checked', on ? 'true' : 'false');
+                reactEngine();                          // the machine responds
                 // The subsystem physically spins down / restarts.
                 gear.classList.remove('spin', 'stop'); void gear.offsetWidth;
                 gear.classList.add(on ? 'spin' : 'stop');
@@ -400,22 +401,97 @@
         });
         dash.querySelector('.es-term').addEventListener('click', function () { input.focus(); });
     }
+    function printSeq(out, lines, done, per) {
+        per = per || 380; var i = 0;
+        (function step() {
+            if (i >= lines.length) { if (done) done(); return; }
+            if (lines[i] !== null) out(lines[i]);
+            i++; setTimeout(step, per);
+        })();
+    }
+
     function run(cmd, out, log, dash) {
-        var parts = cmd.split(/\s+/); var c = (parts[0] || '').toLowerCase();
+        var parts = cmd.split(/\s+/);
+        var c = (parts[0] || '').toLowerCase();
+        var arg = (parts[1] || '').toLowerCase();
+        reactEngine();                              // every command stirs the machine
+
         switch (c) {
             case '': break;
-            case 'help': out('commands: ' + COMMANDS.join(', ')); break;
-            case 'version': out('Ascen Engine v0.8.2-alpha  (build 240724)'); break;
-            case 'credits': out('ASCEN — productivity is manufactured here.'); out('gears: you.  code: also you.'); break;
-            case 'ping': out('pong (' + (Math.random() * 0.9 + 0.1).toFixed(2) + 'ms)'); break;
+            case 'help':
+                out('available commands:');
+                out('  ' + COMMANDS.join('   '));
+                break;
+            case 'status':
+                out('Core Systems: ONLINE');
+                out('Modules Loaded: 18');
+                out('Integrity: 100%');
+                out('Hidden Modules: ████████');
+                out('Access: USER');
+                break;
+            case 'version':
+                out('Ascen Engine v0.8.2-alpha  (build 240724)');
+                break;
+            case 'diagnostics':
+                printSeq(out, [
+                    'running diagnostics...',
+                    '[ OK ] XP Engine',
+                    '[ OK ] Task Scheduler',
+                    '[ OK ] Analytics Core',
+                    '[ OK ] Focus Runtime',
+                    '[ OK ] Notification Daemon',
+                    '[ OK ] Rendering Engine',
+                    null
+                ], function () {
+                    out('[ !! ] ' + '▓'.repeat(10) + '   INACCESSIBLE');
+                    out('1 module could not be reached.', 'es-term-err');
+                });
+                break;
             case 'clear': log.innerHTML = ''; break;
-            case 'unlock': out('access denied: Administrator Title required.', 'es-term-err'); break;
-            case 'status': out('all systems ONLINE · core temp nominal · reality: compiled'); break;
             case 'echo': out(parts.slice(1).join(' ')); break;
-            case 'diagnostics': out('cpu 14% | mem 58MB | objects 4,928 | tasks 37 | v0.8.2-alpha'); break;
+            case 'reboot':
+                out('rebooting core...');
+                setTimeout(function () {
+                    log.innerHTML = '';
+                    out('core online.', 'es-term-cmd');
+                }, 1100);
+                break;
+            case 'exit':
+                out('closing session...');
+                setTimeout(close, 700);
+                break;
+
+            /* --- secrets (never listed by help) --- */
+            case 'unlock':
+                if (arg === 'hidden') { unlockHidden(out); }
+                else { out('access denied: unknown module.', 'es-term-err'); }
+                break;
             case 'matrix': out('entering the matrix...'); matrixRain(); break;
+
             default: out('command not found: ' + c, 'es-term-err');
         }
+    }
+
+    // The discovered secret: open the hidden module and the door behind it.
+    function unlockHidden(out) {
+        printSeq(out, [
+            'Verifying...',
+            'Access Token Accepted.',
+            null,
+            'Hidden Module Unlocked.',
+            null,
+            'Initializing...'
+        ], function () {
+            if (panel) panel.classList.add('es-unlocking');   // shake + dim
+            setTimeout(function () {
+                if (window.AscenHiddenEngine) window.AscenHiddenEngine.reveal(close);
+                else if (window.AscenEngine) window.AscenEngine.react();
+            }, 900);
+        }, 460);
+    }
+
+    function reactEngine() {
+        try { if (window.AscenEngine && window.AscenEngine.react) window.AscenEngine.react(); } catch (e) {}
     }
 
     function matrixRain() {
