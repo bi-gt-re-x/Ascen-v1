@@ -1262,7 +1262,7 @@ html[data-theme="dark"] .hfx-toast { background: #e6e8f0; color: #161B22; }
 
 .lp-radar { transform-origin: 50% 50%; }
 
-/* Each of the first two clicks — a little pop. */
+/* Every click — a little pop. */
 @keyframes pentPop {
     0%   { transform: scale(1); }
     40%  { transform: scale(1.2); }
@@ -1271,10 +1271,14 @@ html[data-theme="dark"] .hfx-toast { background: #e6e8f0; color: #161B22; }
 }
 .lp-radar.pentagon-pop { animation: pentPop 0.4s ease; }
 
-/* Third click — a full 360° turn with a confident overshoot. */
+/* Third click — the same pop, which then carries on into a full 360° turn with
+   a confident overshoot. The bounce lives inside this keyframe rather than in a
+   second class, because only one animation can drive the transform at a time. */
 @keyframes pentSpin {
     0%   { transform: rotate(0deg) scale(1); }
-    55%  { transform: rotate(330deg) scale(1.16); }
+    12%  { transform: rotate(14deg) scale(1.2); }
+    22%  { transform: rotate(38deg) scale(0.94); }
+    62%  { transform: rotate(330deg) scale(1.16); }
     100% { transform: rotate(360deg) scale(1); }
 }
 .lp-radar.pentagon-spin { animation: pentSpin 0.72s cubic-bezier(0.4, 0.1, 0.2, 1) both; }

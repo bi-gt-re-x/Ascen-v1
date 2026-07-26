@@ -10,7 +10,7 @@
 (function () {
     'use strict';
 
-    var QUOTE = '"Hmmmm, what if you clicked a 2 dimensional 5 sided shape on a certain page that is scrollable?" -Mysterious,,';
+    var QUOTE = '"The pentagon is the key, find it" -Mysterious,,';
     var NEEDED = 10;        // clicks to unlock
     var RESET_MS = 1500;    // gap that breaks the "in a row" streak
 

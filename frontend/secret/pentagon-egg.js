@@ -1,11 +1,11 @@
 /* pentagon-egg.js — the second clue in the chain.
  *
- * The mysterious quote (unlocked on the dashboard) hints at "a 2 dimensional
- * 5 sided shape on a certain page that is scrollable" — this pentagon in the
- * landing page's Growth Rating card. It only wakes up once that quote has been
- * revealed today. Click it three times: it pops on the first two, and on the
- * third it spins a full turn, after which the whole page shakes, all the cards
- * collapse in on themselves and vanish, and a lone clickable arrow is left.
+ * The mysterious quote (unlocked on the dashboard) says "The pentagon is the
+ * key, find it" — this pentagon in the landing page's Growth Rating card. It
+ * only wakes up once that quote has been revealed today. Every click pops it;
+ * on the third the pop rolls into a full turn, after which the whole page
+ * shakes, all the cards collapse in on themselves and vanish, and a lone
+ * clickable arrow is left.
  */
 (function () {
     'use strict';
@@ -42,15 +42,15 @@
             if (busy) return;
             if (!isDark()) { clicks = 0; return; }   // only reachable in dark mode
             clicks++;
+            // Every click pops — the third one's pop is built into the front of
+            // the spin, so it turns straight out of the same bounce.
+            pent.classList.remove('pentagon-pop');
+            void pent.offsetWidth;                  // restart the animation
             if (clicks < 3) {
-                pent.classList.remove('pentagon-pop');
-                void pent.offsetWidth;              // restart the pop
                 pent.classList.add('pentagon-pop');
             } else {
                 busy = true;
-                pent.classList.remove('pentagon-pop');
-                void pent.offsetWidth;
-                pent.classList.add('pentagon-spin'); // full 360° turn
+                pent.classList.add('pentagon-spin'); // pop into a full 360° turn
                 setTimeout(collapsePage, 720);       // then the page comes apart
             }
         });
