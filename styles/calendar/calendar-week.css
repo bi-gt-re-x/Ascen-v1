@@ -101,6 +101,10 @@
 
 .wk-streak-num { font-size: 22px; font-weight: 800; color: #1a1f26; }
 .wk-streak-sub { font-size: 13px; color: #6b7280; margin-top: 4px; }
+/* Weekly Focus Time reads as one figure — focused against planned — so it
+   borrows the streak card's type scale. */
+.wk-focustime { font-size: 22px; font-weight: 800; color: #1a1f26; }
+.wk-focustime-sub { font-size: 13px; color: #6b7280; margin-top: 4px; }
 
 .wk-charge { background: linear-gradient(180deg, #fbf7f0 0%, #fff 100%); }
 .wk-charge-head { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #1a1f26; margin-bottom: 12px; }
@@ -438,6 +442,7 @@ html[data-theme="dark"] .wk-title,
 html[data-theme="dark"] .wk-panel-title,
 html[data-theme="dark"] .wk-stat-num,
 html[data-theme="dark"] .wk-streak-num,
+html[data-theme="dark"] .wk-focustime,
 html[data-theme="dark"] .wk-charge-head,
 html[data-theme="dark"] .wk-priorities li,
 html[data-theme="dark"] .wk-dayname { color: #f4f4f6; }
@@ -451,6 +456,7 @@ html[data-theme="dark"] .wk-stat { background: #0f141b; border-color: #262c36; }
 html[data-theme="dark"] .wk-stat-label,
 html[data-theme="dark"] .wk-focus-text,
 html[data-theme="dark"] .wk-streak-sub,
+html[data-theme="dark"] .wk-focustime-sub,
 html[data-theme="dark"] .wk-charge-sub,
 html[data-theme="dark"] .wk-daydate,
 html[data-theme="dark"] .wk-progress-pct { color: #9aa4b2; }

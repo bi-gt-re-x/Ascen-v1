@@ -128,6 +128,13 @@
                                 <li><span>--</span><span class="wk-badge">--</span></li>
                             </ol>
                         </section>
+                        <!-- Focused time against the time planned for it (the sum
+                             of each day's focus goal) across the shown week. -->
+                        <section class="wk-panel">
+                            <h3 class="wk-panel-title">⏱️ Weekly Focus Time</h3>
+                            <div class="wk-focustime" id="wkFocusTime">– : –</div>
+                            <div class="wk-focustime-sub">Focused : Planned</div>
+                        </section>
                         <section class="wk-panel">
                             <h3 class="wk-panel-title">🔥 Streak</h3>
                             <div class="wk-streak-num" id="wkStreak">– days</div>
@@ -199,7 +206,6 @@
                         <section class="wk-panel">
                             <div class="day-panel-head">
                                 <h3 class="wk-panel-title">Focus</h3>
-                                <span class="day-panel-link">Edit</span>
                             </div>
                             <div class="day-focus-row">
                                 <span class="day-focus-icon">

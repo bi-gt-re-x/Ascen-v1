@@ -1954,13 +1954,46 @@
         if (h) return h + 'h';
         return m + 'm';
     }
+    // Every task that belongs to the shown day, whether or not it was placed on
+    // the calendar: a task counts on its due date, or — with no due date — on the
+    // day it was created. Done is measured the same way, so "2 / 5" always means
+    // two of that day's five tasks are finished.
+    function dayTaskTally(iso) {
+        var total = 0, done = 0;
+        gTasks.forEach(function (t) {
+            var when = toDate(t.due_date) || toDate(t.created_at);
+            if (!when || isoDay(when) !== iso) return;
+            total++;
+            if (t.status === 'done') done++;
+        });
+        return { total: total, done: done };
+    }
+
+    // XP earned on a day, read from the XP ledger (every xpevent stamped with
+    // that date), so the Day view's number is exactly what was earned between
+    // midnight and midnight — no matter what earned it. Cached per day and
+    // refreshed whenever the sidebar reloads.
+    var dayXpCache = {};
+    function renderDayXp(iso) {
+        if (dayXpCache[iso] !== undefined) { setText('dayStatXp', dayXpCache[iso]); return; }
+        setText('dayStatXp', '–');
+        var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
+        fetch('/api/xp_earned_on?username=' + encodeURIComponent(user) + '&date=' + encodeURIComponent(iso), { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var xp = (data && data.success) ? (Number(data.xp_earned) || 0) : 0;
+                dayXpCache[iso] = xp;
+                // Only paint it if that day is still the one on screen.
+                if (buildDayObj().iso === iso) setText('dayStatXp', xp);
+            })
+            .catch(function () { setText('dayStatXp', 0); });
+    }
+
     function renderDaySidebar(d) {
         var blocks = dayTaskBlocks(d.iso);          // this day's task blocks
         var events = dayEventBlocks(d.iso);         // this day's calendar events
-        var doneBlocks = blocks.filter(function (b) { return b.done; });
-        var total = blocks.length;
-        var done = doneBlocks.length;
-        setText('dayStatTasks', done + ' / ' + total);
+        var tally = dayTaskTally(d.iso);
+        setText('dayStatTasks', tally.done + ' / ' + tally.total);
 
         // Planned time = summed duration of every scheduled block (tasks + events).
         // For TODAY, "Focus Time" instead mirrors the dashboard Focus panel's goal
@@ -1980,9 +2013,8 @@
             focusStat.title = dayGoalEditable ? 'Click to set your focus time' : '';
         }
 
-        // XP earned = XP from tasks completed on this day.
-        var xpToday = doneBlocks.reduce(function (s, b) { return s + (Number(b.xp) || 0); }, 0);
-        setText('dayStatXp', xpToday);
+        // XP earned = everything the ledger recorded for this day (since 12 AM).
+        renderDayXp(d.iso);
 
         var streak = Number(gStats.current_streak) || 0;
         setText('dayStatStreak', streak);
@@ -2105,6 +2137,7 @@
                 var tasks = data.tasks || [];
                 gTasks = tasks;            // cache for the grid, then draw them
                 gStats = stats;            // …and for the Day view's overview sidebar
+                dayXpCache = {};           // XP totals may have moved since last load
                 renderActive();
                 var wk = weekRange(mondayOf(weekOffset));
                 function inWeek(s) { s = (s || '').slice(0, 10); return s && s >= wk.start && s <= wk.end; }
@@ -2140,9 +2173,51 @@
                 setText('wkStreak', streak + (streak === 1 ? ' day' : ' days'));
 
                 renderPriorities(tasks);
+                renderWeeklyFocusTime();
                 scrollToNow();   // grid + data are ready — jump to the current time
             })
             .catch(function () { renderPriorities([]); scrollToNow(); });
+    }
+
+    // --- Weekly Focus Time: focused against planned --------------------------
+    // Focused = the focus time actually tracked across the shown week; planned =
+    // the sum of those days' focus goals. Both come from the account's focus
+    // history, with today taken live from focus.js (its running session hasn't
+    // been synced to the server yet). A day that was never tracked counts zero on
+    // both sides — nothing was planned and nothing was focused.
+    function renderWeeklyFocusTime() {
+        var el = document.getElementById('wkFocusTime');
+        if (!el) return;
+        var wk = weekRange(mondayOf(weekOffset));
+        var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
+        fetch('/api/focus_history?username=' + encodeURIComponent(user) +
+              '&start=' + wk.start + '&end=' + wk.end, { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var days = (data && data.success && data.days) ? data.days : {};
+                var todayIso = isoDay(new Date());
+                var focusedSec = 0, plannedH = 0;
+                Object.keys(days).forEach(function (iso) {
+                    if (iso === todayIso) return;                  // added live below
+                    focusedSec += Number(days[iso].seconds) || 0;
+                    plannedH += Number(days[iso].goal_hours) || 0;
+                });
+                // Today (when the shown week holds it) comes from focus.js, which
+                // knows about a session still running. The server can still be
+                // ahead if today's focus was tracked elsewhere, so take whichever
+                // is larger; the live goal is what's planned right now.
+                var todayRec = days[todayIso];
+                if (todayIso >= wk.start && todayIso <= wk.end && window.Focus) {
+                    focusedSec += Math.max(window.Focus.focusedSeconds(),
+                                           todayRec ? (Number(todayRec.seconds) || 0) : 0);
+                    plannedH += window.Focus.goalHours();
+                } else if (todayRec) {
+                    focusedSec += Number(todayRec.seconds) || 0;
+                    plannedH += Number(todayRec.goal_hours) || 0;
+                }
+                el.textContent = fmtHM(focusedSec / 3600) + ' : ' + fmtHM(plannedH);
+            })
+            .catch(function () { el.textContent = '– : –'; });
     }
     function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
 

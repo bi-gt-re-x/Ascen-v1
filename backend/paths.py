@@ -918,6 +918,77 @@ def _focus_history_for(user):
     return hist if isinstance(hist, dict) else {}
 
 
+@bp.route('/api/focus_history', methods=['GET'])
+def focus_history():
+    """A user's tracked focus for a date range: {iso: {seconds, goal_hours}}.
+
+    The calendar's Weekly Focus Time panel reads this to show focused time
+    against the time that was planned (the day's goal). Days with no record are
+    simply absent — nothing was tracked and nothing was planned.
+    """
+    username = request.args.get('username')
+    start = request.args.get('start') or ''
+    end = request.args.get('end') or ''
+    if not username:
+        return jsonify({"success": False, "message": "Username required"})
+
+    users = read_json_file(USERS_JSON)
+    user = next((u for u in users if u.get('username') == username), None)
+    if not user:
+        return jsonify({"success": False, "message": "User not found"})
+
+    days = {}
+    for day, rec in _focus_history_for(user).items():
+        if start and day < start:
+            continue
+        if end and day > end:
+            continue
+        try:
+            days[day] = {
+                'seconds': max(0.0, float((rec or {}).get('seconds', 0) or 0)),
+                'goal_hours': max(0.0, float((rec or {}).get('goal_hours', 0) or 0)),
+            }
+        except (TypeError, ValueError):
+            continue
+
+    return jsonify({"success": True, "days": days})
+
+
+@bp.route('/api/xp_earned_on', methods=['GET'])
+def xp_earned_on():
+    """XP a user earned on one calendar day, straight from the XP ledger.
+
+    The day runs midnight to midnight: every xpevent stamped with that date
+    counts, whatever earned it. The calendar's Day view reports this as "XP
+    Earned" so the number always means "since 12 AM today".
+    """
+    username = request.args.get('username')
+    day = str(request.args.get('date') or '')
+    if not username or not re.match(r'^\d{4}-\d{2}-\d{2}$', day):
+        return jsonify({"success": False, "message": "Username and date required"})
+
+    xp_earned = 0
+    tasks_completed = 0
+    for event in read_json_file(XPEVENT_JSON):
+        if event.get('user_id') != username:
+            continue
+        # Older events carry only a timestamp; newer ones also carry 'date'.
+        event_day = event.get('date') or str(event.get('timestamp', ''))[:10]
+        if event_day != day:
+            continue
+        try:
+            xp_earned += int(event.get('amount', 0) or 0)
+        except (TypeError, ValueError):
+            pass
+        try:
+            tasks_completed += int(event.get('tasks_completed', 1) or 0)
+        except (TypeError, ValueError):
+            pass
+
+    return jsonify({"success": True, "date": day,
+                    "xp_earned": xp_earned, "tasks_completed": tasks_completed})
+
+
 @bp.route('/api/get_growth_data', methods=['GET'])
 def get_growth_data():
     username = request.args.get('username')
