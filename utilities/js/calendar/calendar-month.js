@@ -268,6 +268,17 @@ const hiddenPlaceholderTasks = {
 
 const dashboardTasks = [];
 
+// Only tasks placed ON the calendar (dragged out a slot there, which sets
+// show_on_calendar) may render on any calendar view. Tasks made on the dashboard
+// are to-dos: they never appear on the week, day or month grids. Every path that
+// feeds tasks into a calendar is gated on this, so a task can only show up by
+// being explicitly flagged — no field, no calendar.
+function isCalendarPlacedTask(task) {
+    var v = task && task.show_on_calendar;
+    return v === true || v === 1 || v === '1' || v === 'true';
+}
+window.isCalendarPlacedTask = isCalendarPlacedTask;
+
 
 
 
@@ -545,7 +556,9 @@ function loadCalendarData() {
 
 
 
-            dashboardTasks.push(...parsed);
+            // Older stores predate the flag and can still hold dashboard to-dos —
+            // keep only what belongs on a calendar.
+            dashboardTasks.push(...parsed.filter(isCalendarPlacedTask));
 
 
 
@@ -1353,11 +1366,15 @@ function getDayTaskIntensity(dateStr) {
 
 
 
-// Add a dashboard task to the calendar
+// Add a task to the calendar. Exposed on window for the dashboard page, so it
+// enforces the same rule as every other entry point: only a task placed on the
+// calendar gets on it — a dashboard to-do is turned away here.
 
 
 
 function addDashboardTaskToCalendar(task) {
+
+    if (!isCalendarPlacedTask(task)) return;
 
 
 
@@ -2518,13 +2535,12 @@ function selectDate(dateStr, element) {
 
 
 
-    // Add dashboard tasks for this date
-
-
-
+    // Add this date's calendar tasks to the day's list. Dashboard to-dos are
+    // filtered out upstream, and skipped again here so nothing added to the
+    // array at runtime can leak onto the day either.
     dashboardTasks.forEach(task => {
 
-
+        if (!isCalendarPlacedTask(task)) return;
 
         if (task.due_date) {
 
@@ -9864,12 +9880,13 @@ window.backendTaskStatuses = {};
 
 // Load the signed-in account's tasks from the backend and merge them into the
 // calendar's task list. localStorage.dashboardTasks only holds tasks created in
-// THIS browser, so account tasks (including ones with due dates and completed
-// ones) never appeared on the calendar. Merging them in makes due-date tasks
-// show on their day, count in Day Completion Progress, and carry their completed
-// state. Additive: existing localStorage tasks are kept; backend tasks are added
-// by id only if not already present. Backend fields are mapped to the shape the
-// calendar expects (title->name, xp_value->xp_reward, status->completed).
+// THIS browser, so account tasks placed on the calendar from another browser
+// never appeared here. Merging them in makes them show on their day, count in
+// Day Completion Progress, and carry their completed state. Only calendar tasks
+// come across — dashboard to-dos are skipped (see isCalendarPlacedTask). Additive:
+// existing localStorage tasks are kept; backend tasks are added by id only if
+// not already present. Backend fields are mapped to the shape the calendar
+// expects (title->name, xp_value->xp_reward, status->completed).
 async function loadBackendTasksIntoCalendar() {
     const username = localStorage.getItem('currentUser') || 'Default';
     try {
@@ -9885,8 +9902,9 @@ async function loadBackendTasksIntoCalendar() {
             // without a per-task status fetch.
             window.backendTaskStatuses[t.id] = { completed: isDone, status: t.status };
 
-            // Respect an explicit opt-out; otherwise show it on the calendar.
-            if (t.show_on_calendar === false) return;
+            // Only tasks placed on the calendar come across — a dashboard to-do
+            // (no flag, or false) never joins the calendar's task list.
+            if (!isCalendarPlacedTask(t)) return;
             if (existing.has(String(t.id))) return;
 
             dashboardTasks.push({

@@ -414,6 +414,9 @@
         var gridEnd = new Date(gridStart.getTime() + (END_HOUR - START_HOUR) * 3600000);
         var out = [];
         gTasks.forEach(function (t) {
+            // Only tasks placed on the calendar draw here. Tasks made on the
+            // dashboard are to-dos and never appear on the grid.
+            if (typeof isCalendarPlacedTask === 'function' && !isCalendarPlacedTask(t)) return;
             var startDT = toDate(t.created_at) || toDate(t.due_date);
             if (!startDT) return;
             var dueDT = toDate(t.due_date);
@@ -439,10 +442,9 @@
                 title: t.title || t.name || 'Task',
                 xp: Number(t.xp_value || t.xp_reward) || 0,
                 done: t.status === 'done',
-                // Only tasks explicitly shown on the calendar take part in overlap
-                // conflicts; plain dashboard/to-do tasks are excluded (see below).
-                onCalendar: (t.show_on_calendar === true || t.show_on_calendar === 1 ||
-                             t.show_on_calendar === '1' || t.show_on_calendar === 'true'),
+                // Everything that reaches here is a calendar task (filtered above),
+                // so it takes part in overlap conflicts.
+                onCalendar: true,
                 priority: String(t.priority || '').toLowerCase(),
                 dueDT: toDate(t.due_date),
                 startDT: startDT,
@@ -916,15 +918,12 @@
             if (eh <= sh) eh = sh + 1;                      // degenerate -> 1h
             var base = { kind: 'event', name: t.task || 'Event', startHM: t.startTime, endHM: t.endTime, colorIndex: t.colorIndex, color: t.color };
             var clamp = function (x) { return Math.max(START_HOUR, Math.min(x, END_HOUR)); };
-            // An event crossing midnight (24:00) is split there so the after-
-            // midnight part renders as its own "continued" block on the next day.
-            if (sh < 24 && eh > 24) {
-                out.push(Object.assign({ start: clamp(sh), end: 24 }, base));
-                out.push(Object.assign({ start: 24, end: clamp(eh), cont: true }, base));
-            } else {
-                // Sizes are strictly the block's actual time span (no minimum).
-                out.push(Object.assign({ start: clamp(sh), end: clamp(eh) }, base));
-            }
+            // One block per event, sized strictly by its actual time span. A
+            // column runs 6 AM to 5 AM the next day, so an event crossing
+            // midnight (say 10:35 PM – 12:05 AM) still fits in this one column —
+            // splitting it at 24:00 only ever put both halves side by side on the
+            // same day, which read as the event mysteriously breaking in two.
+            out.push(Object.assign({ start: clamp(sh), end: clamp(eh) }, base));
         });
         return out;
     }
@@ -1315,7 +1314,7 @@
                 var ca = dayIso + 'T' + startT + ':00';
                 var dd = dayIso + 'T' + endT + ':00';
                 var nid = String(Date.now()) + '-e' + idx;
-                gTasks.push({ id: nid, title: name, status: 'todo', priority: priority, xp_value: xp, created_at: ca, due_date: dd });
+                gTasks.push({ id: nid, title: name, status: 'todo', priority: priority, xp_value: xp, created_at: ca, due_date: dd, show_on_calendar: true });
                 thunks.push(function () { return Promise.resolve(typeof addTaskToBackend === 'function' ? addTaskToBackend({ id: nid, username: user, name: name, priority: priority, xp_reward: xp, due_date: dd, created_at: ca, show_on_calendar: true }) : null); });
             });
             runSequential(thunks);   // deletes then adds, chained (no datastore race)
@@ -1339,7 +1338,7 @@
             var dueDate = dayIso + 'T' + endT + ':00';
             payloads.push({ id: id, username: user, name: name, priority: priority, xp_reward: xp, due_date: dueDate, created_at: createdAt, show_on_calendar: true });
             // Reflect on the grid immediately (mirrors the shape loadSidebar caches).
-            gTasks.push({ id: id, title: name, status: 'todo', priority: priority, xp_value: xp, created_at: createdAt, due_date: dueDate });
+            gTasks.push({ id: id, title: name, status: 'todo', priority: priority, xp_value: xp, created_at: createdAt, due_date: dueDate, show_on_calendar: true });
         });
         persistTasksSequential(payloads);
         closeWeekTaskModal();
@@ -1652,10 +1651,10 @@
                 var compact = (b.end - b.start) * 60 <= 15;
                 var body = compact
                     ? '<div class="wk-event-head">' +
-                          '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
+                          '<div class="wk-event-title">' + esc(b.name) + '</div>' +
                           '<span class="wk-event-start">' + esc(hmLabelShort(b.startHM)) + '</span>' +
                       '</div>'
-                    : '<div class="wk-event-title">' + esc(b.name) + (b.cont ? ' — continued' : '') + '</div>' +
+                    : '<div class="wk-event-title">' + esc(b.name) + '</div>' +
                       '<div class="wk-event-foot"><span class="wk-event-due">' +
                           esc(hmLabel(b.startHM) + ' – ' + hmLabel(b.endHM)) +
                       '</span></div>';
