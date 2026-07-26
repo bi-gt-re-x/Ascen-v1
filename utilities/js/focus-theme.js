@@ -2,10 +2,11 @@
  *
  * While a focus session is running (started from the dashboard's Focus panel
  * or the calendar Day view's Focus button), every page slips into a cinematic
- * focus theme: a dark sweep plays, then the whole UI settles into a dimmer,
+ * focus theme: the page goes light first (Focus Mode dims down from the light
+ * theme), then a dark sweep plays and the whole UI settles into a dimmer,
  * desaturated, more minimal look with a soft vignette. The theme selector is
  * locked for the duration — Focus Mode is its own theme. Stopping the session
- * fades everything back to normal.
+ * fades everything back to normal and hands back the theme that was on before.
  *
  * Reads the same localStorage state focus.js writes ('focus:<user>:<date>' →
  * runningSince), so it works standalone on pages that don't load focus.js
@@ -94,19 +95,56 @@
         cine.classList.add('play');
     }
 
+    // Focus Mode is built on the light theme — it dims and desaturates from
+    // there, so starting a session out of dark mode flips the page to light
+    // first, then drops into focus. The theme that was on before is remembered
+    // and handed back when the session stops.
+    var PREV_THEME_KEY = 'focusPrevTheme';
+    function prevThemeKey() { return PREV_THEME_KEY + ':' + user(); }
+    function currentTheme() {
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+    function switchTheme(theme) {
+        // setTheme persists (cookie + account), so the rest of the session stays
+        // in this theme across navigation. applyTheme is the no-persist fallback.
+        if (typeof window.setTheme === 'function') window.setTheme(theme);
+        else if (typeof window.applyTheme === 'function') window.applyTheme(theme);
+    }
+    function goLightForFocus() {
+        var was = currentTheme();
+        try { localStorage.setItem(prevThemeKey(), was); } catch (e) {}
+        if (was === 'dark') { switchTheme('light'); return true; }
+        return false;
+    }
+    function restoreThemeAfterFocus() {
+        var prev = null;
+        try { prev = localStorage.getItem(prevThemeKey()); localStorage.removeItem(prevThemeKey()); } catch (e) {}
+        if (prev && prev !== currentTheme()) switchTheme(prev);
+    }
+
     var active = null; // unknown until first apply
     function apply(withCinematic) {
         ensureStyles();
         var running = isRunning();
         if (running === active) return;
+        var first = active === null;
         active = running;
         if (running) {
-            if (withCinematic) playEntrySweep();
-            document.documentElement.classList.add('focus-mode');
-            lockTheme(true);
+            // Arriving mid-session (a reload or another page) is already light —
+            // only a session starting here has a dark theme left to flip.
+            var flipped = first ? false : goLightForFocus();
+            var enter = function () {
+                if (withCinematic) playEntrySweep();
+                document.documentElement.classList.add('focus-mode');
+                lockTheme(true);
+            };
+            // Let the light theme land first, then sweep into Focus Mode.
+            if (flipped) setTimeout(enter, 260);
+            else enter();
         } else {
             document.documentElement.classList.remove('focus-mode');
             lockTheme(false);
+            if (!first) restoreThemeAfterFocus();
         }
     }
 

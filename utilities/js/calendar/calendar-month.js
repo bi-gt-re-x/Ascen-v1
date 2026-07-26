@@ -5029,8 +5029,8 @@ function addTaskSection() {
 
     openAddSectionModal();
 
-    // Month calendar → default to monthly recurrence on the selected date.
-    applyDefaultRecurrence('monthly');
+    // New events start as one-offs — "No recurrence" until it's asked for.
+    applyDefaultRecurrence('none');
 
 
 
@@ -5592,17 +5592,31 @@ function handleRecurrenceTypeChange(event) {
 
     }
 
-
+    // Turning recurrence on from the "No recurrence" default starts with no days
+    // picked, which can't be saved — seed the event's own day, unless days are
+    // already chosen (switching back and forth keeps the user's picks).
+    if (recurrenceType === 'weekly' || recurrenceType === 'monthly') {
+        var group = recurrenceType === 'weekly' ? 'dayOfWeek' : 'dayOfMonth';
+        if (!document.querySelector('input[name="' + group + '"]:checked')) applyDefaultRecurrence(recurrenceType);
+    }
 
 }
 
-// Default the Add-Event recurrence to match the view it was opened from: weekly
-// on the week calendar, monthly on the month calendar. The current day is pre-
-// selected so the recurrence is valid, and the matching options panel is shown.
+// Set the Add-Event recurrence. Every view opens on 'none' — a new event is a
+// one-off unless the user says otherwise. When a repeating type is passed the
+// current day is pre-selected so the recurrence is valid, and the matching
+// options panel is shown.
 function applyDefaultRecurrence(type) {
     document.querySelectorAll('input[name="recurrenceType"]').forEach(function (r) { r.checked = (r.value === type); });
     document.getElementById('weeklyOptions').style.display = (type === 'weekly') ? 'block' : 'none';
     document.getElementById('monthlyOptions').style.display = (type === 'monthly') ? 'block' : 'none';
+    // Clear the day pickers this type owns before seeding them below — 'none'
+    // owns both, so it leaves nothing checked behind. The other type's picks are
+    // left alone, so flipping between weekly and monthly doesn't lose them.
+    var owned = type === 'weekly' ? 'input[name="dayOfWeek"]'
+              : type === 'monthly' ? 'input[name="dayOfMonth"]'
+              : 'input[name="dayOfWeek"], input[name="dayOfMonth"]';
+    document.querySelectorAll(owned).forEach(function (cb) { cb.checked = false; });
     if (!selectedDate) return;
     var p = String(selectedDate).split('-').map(Number);
     var d = new Date(p[0], p[1] - 1, p[2]);

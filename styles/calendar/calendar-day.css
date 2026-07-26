@@ -120,6 +120,23 @@
 .day-stat-green { color: #2e9e6b !important; }
 .day-stat-purple { color: #7a6aa8 !important; }
 
+/* Focus Time on today doubles as the goal editor: the green number is clickable
+   and swaps itself for an input that inherits the same size and colour, so the
+   tile never shifts between reading and editing. */
+.wk-stat-num.is-editable { cursor: pointer; }
+.wk-stat-num.is-editable:hover { text-decoration: underline dotted; text-underline-offset: 4px; }
+.day-stat-input {
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid currentColor;
+    border-radius: 0;
+    padding: 0;
+    outline: none;
+}
+
 /* Tasks Left list: a check ring, the task name, and its difficulty pushed to
    the far right (no due/start time). */
 .day-tasks-left { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }

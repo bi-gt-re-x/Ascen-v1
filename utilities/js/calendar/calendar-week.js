@@ -930,7 +930,7 @@
     }
 
     // Open the shared Add-Event modal for a specific day, widened for the week
-    // view and defaulted to weekly recurrence. `times`, when given, pre-fills the
+    // view and defaulted to no recurrence. `times`, when given, pre-fills the
     // start/end pickers (minutes-of-day) — used by the drag-to-create flow.
     function openWeekModalForDate(key, times) {
         if (typeof openAddSectionModal !== 'function') return;
@@ -943,8 +943,8 @@
             setTimePickers('start', times.start);
             setTimePickers('end', times.end);
         }
-        // Week calendar → default to weekly recurrence on the selected day.
-        if (typeof applyDefaultRecurrence === 'function') applyDefaultRecurrence('weekly');
+        // New events start as one-offs — "No recurrence" until it's asked for.
+        if (typeof applyDefaultRecurrence === 'function') applyDefaultRecurrence('none');
     }
 
     // --- Drag-to-create: choose Event or Task, then open the matching modal ----
@@ -1022,6 +1022,15 @@
                 var m = document.getElementById('taskMonthlyOptions');
                 if (w) w.style.display = (t === 'weekly') ? 'block' : 'none';
                 if (m) m.style.display = (t === 'monthly') ? 'block' : 'none';
+                // Turning recurrence on from the "No recurrence" default starts
+                // with no days picked — seed the task's own day, unless days are
+                // already chosen (switching types keeps the user's picks).
+                if ((t === 'weekly' || t === 'monthly') && wkTaskIso) {
+                    var group = t === 'weekly' ? 'taskDayOfWeek' : 'taskDayOfMonth';
+                    if (!document.querySelector('input[name="' + group + '"]:checked')) {
+                        applyTaskDefaultRecurrence(wkTaskIso, t);
+                    }
+                }
             });
         });
         // Edit scope: "All occurrences" reveals the recurrence controls (you can
@@ -1036,7 +1045,7 @@
         });
     }
     // Preselect a recurrence type with the modal's day pre-checked so it's valid,
-    // matching applyDefaultRecurrence for events (week view → weekly by default).
+    // matching applyDefaultRecurrence for events (both open on 'none').
     function applyTaskDefaultRecurrence(iso, type) {
         document.querySelectorAll('input[name="taskRecurrenceType"]').forEach(function (r) { r.checked = (r.value === type); });
         var w = document.getElementById('taskWeeklyOptions');
@@ -1045,7 +1054,12 @@
         if (m) m.style.display = (type === 'monthly') ? 'block' : 'none';
         var p = String(iso).split('-').map(Number);
         var d = new Date(p[0], p[1] - 1, p[2]);
-        document.querySelectorAll('input[name="taskDayOfWeek"], input[name="taskDayOfMonth"]').forEach(function (cb) { cb.checked = false; });
+        // Clear only the day pickers this type owns ('none' owns both), so
+        // flipping between weekly and monthly doesn't lose the other's picks.
+        var owned = type === 'weekly' ? 'input[name="taskDayOfWeek"]'
+                  : type === 'monthly' ? 'input[name="taskDayOfMonth"]'
+                  : 'input[name="taskDayOfWeek"], input[name="taskDayOfMonth"]';
+        document.querySelectorAll(owned).forEach(function (cb) { cb.checked = false; });
         if (type === 'weekly') {
             document.querySelectorAll('input[name="taskDayOfWeek"]').forEach(function (cb) { cb.checked = (parseInt(cb.value, 10) === d.getDay()); });
         } else if (type === 'monthly') {
@@ -1109,8 +1123,8 @@
     }
 
     // Open the task modal to CREATE (drag-to-create). Same layout as Add-Event,
-    // with an XP field and a recurrence block defaulting to weekly on the dragged
-    // day — the week view's event default too.
+    // with an XP field and a recurrence block defaulting to "No recurrence" —
+    // the event default too.
     function openWeekTaskModal(iso, times) {
         var modal = document.getElementById('addTaskModal');
         if (!modal) return;
@@ -1133,7 +1147,8 @@
             setTaskRecurrenceVisible(false);
         } else {
             setTaskRecurrenceVisible(true);
-            applyTaskDefaultRecurrence(iso, 'weekly');
+            // New tasks start as one-offs — "No recurrence" until it's asked for.
+            applyTaskDefaultRecurrence(iso, 'none');
         }
         wkEditOccs = [];
         var scope = document.getElementById('taskEditScopeGroup'); if (scope) scope.style.display = 'none';
@@ -1854,6 +1869,67 @@
         renderDayFocusBtn();
     }
 
+    // --- Focus Time, click-to-edit -------------------------------------------
+    // On today, the green "Focus Time" number in Daily Overview IS the focus goal
+    // (the same one the dashboard's Focus panel sets). Clicking it swaps the text
+    // for an input so the goal can be typed right here; Enter or clicking away
+    // commits and puts the plain green text back, Escape cancels. On any other
+    // day the number is that day's planned block time, so it stays read-only.
+    var dayGoalEditable = false;
+
+    function initDayFocusGoalEditor() {
+        var el = document.getElementById('dayStatFocus');
+        if (!el || el.__goalWired) return;
+        el.__goalWired = true;
+        el.addEventListener('click', function () {
+            if (!dayGoalEditable || !window.Focus) return;
+            if (el.querySelector('input')) return;               // already editing
+            openDayFocusGoalInput(el);
+        });
+    }
+
+    function openDayFocusGoalInput(el) {
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'day-stat-input';
+        input.value = window.Focus.fmtHM(window.Focus.goalHours() * 3600);
+        input.setAttribute('aria-label', 'Focus time goal');
+        el.textContent = '';
+        el.appendChild(input);
+        input.focus();
+        input.select();
+
+        var done = false;
+        function close(commit) {
+            if (done) return;
+            done = true;
+            if (commit) {
+                var h = parseGoalHours(input.value);
+                if (h !== null) window.Focus.setGoalHours(h);     // clamped to 0.5–12h
+            }
+            setText('dayStatFocus', window.Focus.fmtHM(window.Focus.goalHours() * 3600));
+            updateDayFocusCard();                                 // goal + % + bar follow
+        }
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); close(true); }
+            else if (e.key === 'Escape') { e.preventDefault(); close(false); }
+        });
+        input.addEventListener('blur', function () { close(true); });
+    }
+
+    // "3" / "2.5" → hours; "90m" → minutes; "1h 30m" → both. null when nothing
+    // parses, which leaves the goal untouched.
+    function parseGoalHours(raw) {
+        var s = String(raw || '').trim().toLowerCase();
+        var m = s.match(/^(\d+(?:\.\d+)?)\s*h\w*\s*(?:(\d+(?:\.\d+)?)\s*m\w*)?$/);
+        if (m) return parseFloat(m[1]) + (m[2] ? parseFloat(m[2]) / 60 : 0);
+        m = s.match(/^(\d+(?:\.\d+)?)\s*m\w*$/);
+        if (m) return parseFloat(m[1]) / 60;
+        m = s.match(/^(\d+(?:\.\d+)?)$/);
+        if (m) return parseFloat(m[1]);
+        return null;
+    }
+
     // Header Focus button label/state: "Focus" ⇄ "Stop Focus". Runs with the
     // 1s focus-card tick too, so a session started on the dashboard (or another
     // tab) flips this button without any interaction here.
@@ -1892,10 +1968,17 @@
         // (the planned focus time), so both pages always show the same number;
         // other days keep showing their scheduled block time.
         var plannedH = blocks.concat(events).reduce(function (s, b) { return s + (b.end - b.start); }, 0);
-        if (d.today && window.Focus) {
+        dayGoalEditable = !!(d.today && window.Focus);
+        if (dayGoalEditable) {
             setText('dayStatFocus', fmtHM(window.Focus.goalHours()));
         } else {
             setText('dayStatFocus', plannedH > 0 ? fmtHM(plannedH) : '0m');
+        }
+        // Only today's number is the editable goal — flag it so it reads clickable.
+        var focusStat = document.getElementById('dayStatFocus');
+        if (focusStat) {
+            focusStat.classList.toggle('is-editable', dayGoalEditable);
+            focusStat.title = dayGoalEditable ? 'Click to set your focus time' : '';
         }
 
         // XP earned = XP from tasks completed on this day.
@@ -2323,6 +2406,7 @@
             }
         });
         renderDayFocusBtn();
+        initDayFocusGoalEditor();
 
         // Mini-month: its arrows page the month in place; a day click jumps the
         // Day view to that date (which resyncs the mini-month to the new month).
