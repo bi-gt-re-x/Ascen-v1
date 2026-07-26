@@ -162,6 +162,66 @@ Tracked data includes:
 
 ---
 
+# Accounts & Sign-In
+
+Pages that show personal data — Dashboard, Calendar, Goals and Growth — need an
+account. A signed-out visitor who opens one is sent to the home page with the
+account popup already open, and finishing the flow drops them on the page they
+were originally after.
+
+The popup walks one path:
+
+```
+                       ┌──────────── Welcome ────────────┐
+                    Log In                         Create Account
+                       │                                 │
+                       │                     Name · E-mail · Password
+                       │                        (password strength)
+                       │                                 │
+                       │                      verification e-mail sent
+                       │                         "check your inbox"
+                       │                            verify e-mail
+                       └────────────────┬────────────────┘
+                                Complete Profile
+                     (username optional · theme · daily goal)
+                                        │
+                                    Dashboard
+```
+
+Accounts created before this flow still work: they sign in with their username,
+and their stored password is upgraded to a hash the first time they do.
+
+## Optional credentials
+
+Everything below is optional — the app runs without any of it. Copy
+`.env.example` to `.env` and fill in only what you want.
+
+**Sending real verification e-mail.** Without mail credentials the app is in dev
+mode: the verification link is printed to the server console *and* shown in the
+popup, so the flow can be walked start to finish on a laptop with no mail
+account. Set `MAIL_USERNAME` and `MAIL_PASSWORD` and it sends over SMTP instead,
+with no code change. For Gmail, that password is an **App Password**: Google
+Account → Security → 2-Step Verification (must be on) → App passwords → create
+one for "Mail". Recipients can be on any provider — Gmail, Outlook, anything.
+
+**Sign in with Google.** The "Continue with Google" button only appears once
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set, so nothing looks broken
+until then. To create them:
+
+1. Open <https://console.cloud.google.com/> and make (or pick) a project.
+2. APIs & Services → OAuth consent screen → External → fill in the app name and
+   your e-mail → add yourself under Test users.
+3. APIs & Services → Credentials → Create credentials → OAuth client ID →
+   Web application.
+4. Under *Authorised redirect URIs* add exactly:
+   `http://127.0.0.1:5050/auth/google/callback`
+5. Copy the client ID and client secret into `.env`, then restart the app.
+
+Signing in with Google needs no verification e-mail — Google has already proved
+the address — so it goes straight to Complete Profile.
+
+---
+
 # Technology Stack
 
 Frontend

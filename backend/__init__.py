@@ -5,6 +5,7 @@ import sqlite3
 
 import os
 
+from .auth import auth_bp, gate_pages
 from .paths import DATABASE_PATH, TEMPLATE_FOLDER, ROOT_DIR, bp
 from .services.automation import automation_bp
 from .routes.calendar import dayfocus_bp
@@ -65,6 +66,12 @@ def create_app():
     # Register Blueprint
 
     app.register_blueprint(bp)
+
+    app.register_blueprint(auth_bp)
+
+    # Pages that show personal data need an account: this bounces a signed-out
+    # visitor to the home page with the sign-in popup already open.
+    app.before_request(gate_pages)
 
     app.register_blueprint(automation_bp)
 

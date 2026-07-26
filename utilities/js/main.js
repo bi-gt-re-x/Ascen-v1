@@ -1,7 +1,6 @@
 // main.js - Handles main page features (slider, auth UI)
 
 // Global state
-let currentAuthMode = 'signup';
 let currentSlide = 1;
 const totalSlides = 4;
 
@@ -26,59 +25,9 @@ function changeSlide(direction) {
 }
 
 // --- Auth UI Logic ---
-function openAuthModal(mode) {
-    currentAuthMode = mode;
-    const authModal = document.getElementById('authModal');
-    const authTitle = document.getElementById('authTitle');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
-    const authMessage = document.getElementById('authMessage');
-
-    if (authModal) {
-        authModal.classList.remove('hidden');
-        if (authTitle) authTitle.textContent = mode === 'signup' ? 'Sign Up' : 'Log In';
-
-        // Reset fields
-        if (usernameInput) {
-            usernameInput.value = '';
-            usernameInput.classList.remove('error');
-        }
-        if (passwordInput) {
-            passwordInput.value = '';
-            passwordInput.classList.remove('error');
-        }
-        if (confirmPasswordInput) {
-            confirmPasswordInput.value = '';
-            confirmPasswordInput.classList.remove('error');
-        }
-        if (authMessage) authMessage.textContent = '';
-
-        if (mode === 'login') {
-            if (confirmPasswordInput) {
-                confirmPasswordInput.classList.add('hidden');
-                confirmPasswordInput.required = false;
-            }
-        } else {
-            if (confirmPasswordInput) {
-                confirmPasswordInput.classList.remove('hidden');
-                confirmPasswordInput.required = true;
-            }
-        }
-    }
-}
-
-function closeAuthModal() {
-    const authModal = document.getElementById('authModal');
-    const authMessage = document.getElementById('authMessage');
-
-    if (authModal) {
-        authModal.classList.add('hidden');
-    }
-    if (authMessage) {
-        authMessage.textContent = '';
-    }
-}
+// The account popup (choose → log in / create → verify → complete profile) is
+// auth-flow.js's job; it owns #authModal and the header's Log In / Sign Up
+// buttons. What stays here is the signed-in header state and logging out.
 
 // --- User Session Logic ---
 function showGreeting(username) {
@@ -111,63 +60,6 @@ function logout() {
     }
 }
 
-// --- Auth Handler ---
-async function handleAuth(event) {
-    event.preventDefault();
-
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
-    const authMessage = document.getElementById('authMessage');
-
-    const username = usernameInput ? usernameInput.value : '';
-    const password = passwordInput ? passwordInput.value : '';
-    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
-
-    // Reset errors
-    usernameInput.classList.remove('error');
-    passwordInput.classList.remove('error');
-    if (confirmPasswordInput) confirmPasswordInput.classList.remove('error');
-
-    if (currentAuthMode === 'signup' && password !== confirmPassword) {
-        if (authMessage) authMessage.textContent = "Passwords do not match.";
-        passwordInput.classList.add('error');
-        confirmPasswordInput.classList.add('error');
-        return;
-    }
-
-    let result;
-    if (currentAuthMode === 'signup') {
-        result = await signupAPI(username, password);
-    } else {
-        result = await loginAPI(username, password);
-    }
-
-    if (authMessage) authMessage.textContent = result.message;
-
-    if (result.success) {
-        if (currentAuthMode === 'signup') {
-            setTimeout(() => {
-                openAuthModal('login');
-                const msg = document.getElementById('authMessage');
-                if (msg) msg.textContent = "Account created! Please log in.";
-            }, 1500);
-        } else if (currentAuthMode === 'login') {
-            setTimeout(() => {
-                closeAuthModal();
-                localStorage.setItem('currentUser', result.user.username);
-                // Adopt this account's saved theme (from users.json) immediately.
-                if (window.applyTheme) window.applyTheme(result.user.theme || 'light');
-                showGreeting(result.user.username);
-            }, 1500);
-        }
-    } else {
-        // Error handling: wiggle and red border
-        usernameInput.classList.add('error');
-        passwordInput.classList.add('error');
-    }
-}
-
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     // Theme is initialised by theme.js.
@@ -187,20 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Event Listeners
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) loginBtn.addEventListener('click', () => openAuthModal('login'));
-
-    const signupBtn = document.getElementById('signupBtn');
-    if (signupBtn) signupBtn.addEventListener('click', () => openAuthModal('signup'));
-
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) logoutBtn.addEventListener('click', logout);
-
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    if (closeModalBtn) closeModalBtn.addEventListener('click', closeAuthModal);
-
-    const authForm = document.getElementById('authForm');
-    if (authForm) authForm.addEventListener('submit', handleAuth);
 
     const dashboardBtn = document.getElementById('dashboardBtn');
     if (dashboardBtn) {
@@ -223,12 +103,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const nextSlideBtn = document.getElementById('nextSlideBtn');
     if (nextSlideBtn) nextSlideBtn.addEventListener('click', () => changeSlide(1));
-
-    // Modal Click Outside
-    const authModal = document.getElementById('authModal');
-    window.onclick = function(event) {
-        if (event.target == authModal) {
-            closeAuthModal();
-        }
-    }
 });

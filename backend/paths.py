@@ -449,33 +449,46 @@ def signup():
 
 @bp.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
+    """Sign in with a username or an e-mail address.
 
-    # Read users from JSON file
+    Accounts made before the e-mail flow stored their password in the clear;
+    those still open, and a successful sign-in quietly replaces the stored value
+    with a real hash so each account upgrades itself the first time it's used.
+    """
+    # Imported here rather than at module scope: backend.auth reads this
+    # module's stores, so a top-level import would be circular.
+    from .auth import (check_password, find_user, is_verified,
+                       profile_complete, sign_in, HASH_METHOD)
+    from werkzeug.security import generate_password_hash
+
+    data = request.json or {}
+    identifier = str(data.get('username') or data.get('email') or '').strip()
+    password = str(data.get('password') or '')
+
     users = read_json_file(USERS_JSON)
-    
-    # Find user
-    user = None
-    for u in users:
-        if u.get('username') == username and u.get('password_hash') == password:
-            user = u
-            break
-    
-    if user:
-        # Remember who is signed in so the server can route them on the next visit.
-        session['username'] = user['username']
-        theme = user.get('theme', 'light')
-        if theme not in ('light', 'dark'):
-            theme = 'light'
-        resp = jsonify({"success": True, "message": "Login successful!", "user": {"username": user['username'], "id": user['id'], "theme": theme}})
-        # Seed the theme cookie from the account so every page this device loads
-        # renders in the right theme immediately, even before any JS runs.
-        resp.set_cookie('theme', theme, max_age=THEME_COOKIE_MAX_AGE, samesite='Lax')
-        return resp
-    else:
+    user = find_user(users, username=identifier, email=identifier)
+
+    if not user or not check_password(user, password):
         return jsonify({"success": False, "message": "Account doesn't exist or invalid credentials."})
+
+    if not is_verified(user):
+        return jsonify({"success": False, "unverified": True, "email": user.get('email'),
+                        "message": "Confirm your e-mail first — check your inbox."})
+
+    # Upgrade a legacy plaintext password to a hash now that we've seen it.
+    if user.get('password_hash') == password:
+        user['password_hash'] = generate_password_hash(password, method=HASH_METHOD)
+        write_json_file(USERS_JSON, users)
+
+    payload = sign_in(user)
+    theme = payload['theme']
+    resp = jsonify({"success": True, "message": "Login successful!",
+                    "user": {"username": user['username'], "id": user.get('id'), "theme": theme},
+                    "profile_complete": profile_complete(user)})
+    # Seed the theme cookie from the account so every page this device loads
+    # renders in the right theme immediately, even before any JS runs.
+    resp.set_cookie('theme', theme, max_age=THEME_COOKIE_MAX_AGE, samesite='Lax')
+    return resp
 
 @bp.route('/api/logout', methods=['POST'])
 def logout():
