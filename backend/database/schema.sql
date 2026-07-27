@@ -1,0 +1,2 @@
+-- Placeholder. Ascen stores its live data in data/*.json (see connection.py);
+-- nothing here is executed and no SQL database is opened by the app.

@@ -1,0 +1,2 @@
+-- Placeholder. Accounts and their data are created through the app itself;
+-- there is nothing to seed while the datastore is data/*.json.

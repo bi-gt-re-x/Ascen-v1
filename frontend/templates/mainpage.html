@@ -97,19 +97,19 @@
                 <span class="lp-feat-ico lp-ico-teal">&#128203;</span>
                 <h3>Task Management</h3>
                 <p>Organize your schedule with an intuitive task manager. Set priorities, add descriptions, and track progress effortlessly.</p>
-                <a href="{{ url_for('main.dashboard') }}" class="lp-link">Go to Dashboard &#8594;</a>
+                <a href="{{ url_for('dashboard.page') }}" class="lp-link">Go to Dashboard &#8594;</a>
             </article>
             <article class="lp-card lp-feature">
                 <span class="lp-feat-ico lp-ico-green">&#127793;</span>
                 <h3>Growth &amp; Progress</h3>
                 <p>View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.</p>
-                <a href="{{ url_for('main.growth') }}" class="lp-link">Go to Growth &#8594;</a>
+                <a href="{{ url_for('growth.page') }}" class="lp-link">Go to Growth &#8594;</a>
             </article>
             <article class="lp-card lp-feature">
                 <span class="lp-feat-ico lp-ico-gold">&#127919;</span>
                 <h3>Strategic Goal Tracking</h3>
                 <p>Set XP, streak and task goals, then watch them auto-advance as you complete work on the dashboard.</p>
-                <a href="{{ url_for('main.goals') }}" class="lp-link">Go to Goals &#8594;</a>
+                <a href="{{ url_for('goals.page') }}" class="lp-link">Go to Goals &#8594;</a>
             </article>
             <article class="lp-card lp-quote">
                 <p>“Ascen changed how I study — I finally see my progress instead of guessing at it.”</p>
@@ -325,7 +325,7 @@
                         <li>&#10003; Streaks, XP &amp; levels</li>
                         <li>&#10003; Calendar scheduling</li>
                     </ul>
-                    <a href="{{ url_for('main.dashboard') }}" class="lp-btn lp-btn-primary lp-btn-full">Get Started</a>
+                    <a href="{{ url_for('dashboard.page') }}" class="lp-btn lp-btn-primary lp-btn-full">Get Started</a>
                 </div>
             </div>
         </section>
@@ -348,7 +348,7 @@
         <section class="lp-final">
             <h2>Ready to start your ascent?</h2>
             <p>Join and turn today's effort into tomorrow's momentum.</p>
-            <a href="{{ url_for('main.dashboard') }}" class="lp-btn lp-btn-primary lp-btn-lg">Get Started Today</a>
+            <a href="{{ url_for('dashboard.page') }}" class="lp-btn lp-btn-primary lp-btn-lg">Get Started Today</a>
         </section>
 
       </div>
@@ -357,11 +357,11 @@
     <footer class="footer">
         <div class="footer-content">
             <nav class="footer-links">
-                <a href="{{ url_for('main.about_us') }}">About Us</a>
-                <a href="{{ url_for('main.contact_support') }}">Contact Support</a>
-                <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a>
-                <a href="{{ url_for('main.terms_of_service') }}">Terms of Service</a>
-                <a href="{{ url_for('main.careers') }}">Careers</a>
+                <a href="{{ url_for('aboutus.page') }}">About Us</a>
+                <a href="{{ url_for('aboutus.contact_support') }}">Contact Support</a>
+                <a href="{{ url_for('privacypolicy.page') }}">Privacy Policy</a>
+                <a href="{{ url_for('termsofservice.page') }}">Terms of Service</a>
+                <a href="{{ url_for('aboutus.careers') }}">Careers</a>
             </nav>
             <div class="copyright">
                 &copy; 2032 Study Dashboard Inc. All rights reserved.
@@ -466,8 +466,8 @@
 
     <!-- Hidden data for JS to use URLs -->
     <div id="urls"
-         data-calendar="{{ url_for('main.calendar') }}"
-         data-dashboard="{{ url_for('main.dashboard') }}"
+         data-calendar="{{ url_for('calendar.page') }}"
+         data-dashboard="{{ url_for('dashboard.page') }}"
          style="display:none;"></div>
 
 </body>
