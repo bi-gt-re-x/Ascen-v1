@@ -42,7 +42,6 @@ STATIC_ROOTS = {
 #   data/backups/      the JSON stores. Still the live datastore: every read and
 #                      write in the app goes here, until Postgres is wired up.
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
-POSTGRES_DIR = os.path.join(DATA_DIR, 'postgresql')
 STORE_DIR = os.path.join(DATA_DIR, 'backups')
 
 USERS_JSON = os.path.join(STORE_DIR, 'users.json')
@@ -53,11 +52,6 @@ XPEVENT_JSON = os.path.join(STORE_DIR, 'xpevents.json')
 # Every hex colour already handed to a calendar event, so a new event can be
 # given one that is visibly different from the rest.
 EVENTCOLORS_JSON = os.path.join(STORE_DIR, 'eventcolors.json')
-
-DATABASE_DIR = os.path.join(BACKEND_DIR, 'database')
-SCHEMA_SQL = os.path.join(DATABASE_DIR, 'schema.sql')
-SEED_SQL = os.path.join(DATABASE_DIR, 'seed.sql')
-MIGRATIONS_DIR = os.path.join(DATABASE_DIR, 'migrations')
 
 # --- Behaviour -----------------------------------------------------------
 # A year: the theme cookie only has to outlive the session.

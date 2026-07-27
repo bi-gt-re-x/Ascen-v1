@@ -26,7 +26,7 @@ async function apiRequest(url, options = {}) {
 async function fetchDailyQuoteAPI() {
     try {
         const url = 'https://api.api-ninjas.com/v2/randomquotes?categories=success,wisdom';
-        
+
         const response = await fetch(url, {
             headers: {
                 'X-Api-Key': 'rwDm3Irql9pyouTq9m0bdbHfZA2D8hjLFr9aDHeY'
@@ -38,21 +38,21 @@ async function fetchDailyQuoteAPI() {
         }
 
         const data = await response.json();
-        
+
         if (data && data.length > 0) {
             return {
                 content: data[0].quote,
                 author: data[0].author
             };
         }
-        
+
         return null;
     } catch (error) {
         console.error('Error fetching quote:', error);
         return null;
     }
 }
-    
+
 async function saveStatsToBackend(username, level, xp, tasksCompleted) {
     try {
         return await apiRequest('/api/update_stats', {
@@ -191,7 +191,7 @@ async function loginAPI(username, password) {
 
 async function trackTaskCompletion(taskId, username, taskXP) {
     try {
-        
+
         // Call the complete_task endpoint to handle XP, stats, and task status
         const completeResponse = await apiRequest('/api/complete_task', {
             method: 'POST',
@@ -202,7 +202,7 @@ async function trackTaskCompletion(taskId, username, taskXP) {
         });
 
         if (completeResponse.success) {
-            
+
             // Update UI with backend-calculated values
             if (typeof updateStatsUI === 'function') {
                 updateStatsUI(
@@ -214,7 +214,7 @@ async function trackTaskCompletion(taskId, username, taskXP) {
             }
 
             // Send task completion data to calendar.js for green completion state
-            
+
             if (typeof markTaskCompletedInCalendar === 'function') {
                 markTaskCompletedInCalendar(completeResponse.task_id, completeResponse.completion_status);
             } else if (typeof window.markTaskCompletedInCalendar === 'function') {

@@ -27,7 +27,7 @@ let goalToGiveUp = null;
 function openGoalModal() {
     goalModal.style.display = "block";
     document.getElementById('goalTitle').focus();
-    
+
     // Set minimum date to tomorrow for goal deadline, but allow any future year
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -35,7 +35,7 @@ function openGoalModal() {
     document.getElementById('goalDeadline').setAttribute('min', tomorrowStr);
     // Remove any max attribute to allow future years
     document.getElementById('goalDeadline').removeAttribute('max');
-    
+
     // Add event listeners to remove invalid classes when user starts typing
     addInputValidationListeners();
 }
@@ -142,14 +142,14 @@ function closeGoalModal() {
     document.getElementById('editingGoalId').value = '';
     document.getElementById('modalTitle').textContent = 'Add New Goal';
     document.getElementById('saveGoalBtn').textContent = 'Add Goal';
-    
+
     // Clear all invalid classes when modal is closed
     document.getElementById('goalTitle').classList.remove('invalid-input');
     document.getElementById('targetXP').classList.remove('invalid-input');
     document.getElementById('targetStreak').classList.remove('invalid-input');
     document.getElementById('targetTasks').classList.remove('invalid-input');
     document.getElementById('goalDeadline').classList.remove('invalid-date');
-    
+
     updateGoalTypeInputs();
 }
 
@@ -231,7 +231,7 @@ async function loadGoals() {
 
 function checkGoalDeadlines() {
     const now = new Date();
-    
+
     allGoals.forEach(goal => {
         if (goal.deadline && goal.status === 'active') {
             const deadline = new Date(goal.deadline);
@@ -251,7 +251,7 @@ function startGoalTimer(goalId, deadline) {
     if (goalTimers[goalId]) {
         clearInterval(goalTimers[goalId]);
     }
-    
+
     const now = new Date();
     const deadlineTime = deadline.getTime();
 
@@ -278,7 +278,7 @@ function markGoalAsOverdue(goalId) {
     const goalElement = document.getElementById(`goal-${goalId}`);
     if (goalElement) {
         goalElement.classList.add('overdue');
-        
+
         // Update utility buttons to show Give up and More Time
         const utilityButtons = goalElement.querySelector('.goal-utility-buttons');
         if (utilityButtons) {
@@ -348,7 +348,7 @@ function openGoalMoreTimeModal(goalId) {
     currentGoalIdForMoreTime = goalId;
     const moreTimeModal = document.getElementById('goalMoreTimeModal');
     moreTimeModal.style.display = 'block';
-    
+
     // Set minimum date to tomorrow (can't be today or in the past)
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -369,10 +369,10 @@ function closeGoalMoreTimeModal() {
 
 async function updateGoalDeadline() {
     if (!currentGoalIdForMoreTime) return;
-    
+
     const newDeadline = document.getElementById('newGoalDeadline').value;
     const deadlineInput = document.getElementById('newGoalDeadline');
-    
+
     if (!newDeadline) {
         deadlineInput.classList.add('invalid-date');
         return;
@@ -382,11 +382,11 @@ async function updateGoalDeadline() {
     // Parse the deadline date as local time (not UTC)
     const deadlineParts = newDeadline.split('-');
     const deadlineDate = new Date(deadlineParts[0], deadlineParts[1] - 1, deadlineParts[2]);
-    
+
     // Get today's date at midnight local time
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (deadlineDate <= today) {
         deadlineInput.classList.add('invalid-date');
         return;
@@ -394,10 +394,10 @@ async function updateGoalDeadline() {
 
     // Remove error styling if date is valid
     deadlineInput.classList.remove('invalid-date');
-    
+
     const goal = allGoals.find(g => g.id === currentGoalIdForMoreTime);
     if (!goal) return;
-    
+
     try {
         const response = await fetch('/api/update_goal', {
             method: 'POST',
@@ -418,7 +418,7 @@ async function updateGoalDeadline() {
                 status: goal.status
             })
         });
-        
+
         const data = await response.json();
         if (data.success) {
             // Clear existing timer
@@ -426,13 +426,13 @@ async function updateGoalDeadline() {
                 clearTimeout(goalTimers[currentGoalIdForMoreTime]);
                 delete goalTimers[currentGoalIdForMoreTime];
             }
-            
+
             // Update goal in array
             const goalIndex = allGoals.findIndex(g => g.id === currentGoalIdForMoreTime);
             if (goalIndex !== -1) {
                 allGoals[goalIndex].deadline = newDeadline;
             }
-            
+
             // Remove overdue class and show goal controls again
             const goalElement = document.getElementById(`goal-${currentGoalIdForMoreTime}`);
             if (goalElement) {
@@ -441,7 +441,7 @@ async function updateGoalDeadline() {
                 if (goalControls) {
                     goalControls.style.display = 'flex';
                 }
-                
+
                 // Restore normal utility buttons
                 const utilityButtons = goalElement.querySelector('.goal-utility-buttons');
                 if (utilityButtons) {
@@ -452,20 +452,20 @@ async function updateGoalDeadline() {
                     `;
                 }
             }
-            
+
             // Start new timer for the updated deadline
             const deadlineDate = new Date(newDeadline);
             const now = new Date();
             if (deadlineDate > now) {
                 startGoalTimer(currentGoalIdForMoreTime, deadlineDate);
             }
-            
+
             // Update the deadline display in the DOM
             const deadlineSpan = goalElement.querySelector('.goal-deadline');
             if (deadlineSpan) {
                 deadlineSpan.textContent = `Deadline: ${formatDate(newDeadline)}`;
             }
-            
+
             closeGoalMoreTimeModal();
         } else {
             alert('Error updating deadline: ' + (data.message || 'Unknown error'));
@@ -506,7 +506,7 @@ function filterGoals(filter) {
     allGoalItems.forEach(item => {
         const goalId = item.id.replace('goal-', '');
         const goal = allGoals.find(g => g.id === goalId);
-        
+
         if (goal) {
             let shouldShow = false;
             if (filter === 'all') {
@@ -553,32 +553,6 @@ function filterGoals(filter) {
     }
 }
 
-function renderGoals(goals) {
-    const goalsList = document.getElementById('goalsList');
-    
-    // Remove all goal items but keep the no-goals element
-    const goalItems = goalsList.querySelectorAll('.goal-item');
-    goalItems.forEach(item => item.remove());
-
-    let completedCount = 0;
-    let activeCount = 0;
-
-    goals.forEach(goal => {
-        const goalElement = createGoalElement(goal);
-        goalsList.appendChild(goalElement);
-
-        if (goal.status === 'completed') {
-            completedCount++;
-        } else {
-            activeCount++;
-        }
-    });
-
-    // Update the stat counts
-    document.getElementById('completedCount').textContent = completedCount;
-    document.getElementById('activeCount').textContent = activeCount;
-}
-
 function handleProgressInputKeypress(event, goalId) {
     if (event.key === 'Enter') {
         event.preventDefault();
@@ -605,19 +579,19 @@ async function setProgressToGoal(goalId) {
     if (!input) {
         return;
     }
-    
+
     const targetValue = parseInt(input.value);
     if (!targetValue || targetValue < 0) {
         return;
     }
-    
+
     // Clear input after getting value
     input.value = '';
 
     // Calculate current progress
     let currentProgress = 0;
     let targetProgress = 0;
-    
+
     if (goalType === 'xp') {
         currentProgress = goal.current_xp || 0;
         targetProgress = goal.target_xp || 0;
@@ -631,7 +605,7 @@ async function setProgressToGoal(goalId) {
 
     // Calculate the difference to add (or subtract if targetValue < currentProgress)
     let progressToAdd = targetValue - currentProgress;
-    
+
     // Cap the progress to not exceed the target
     const maxAllowed = targetProgress - currentProgress;
     if (progressToAdd > maxAllowed && maxAllowed > 0) {
@@ -746,7 +720,7 @@ async function addProgressToGoal(goalId, amount = null) {
     // Calculate current progress and cap at target
     let currentProgress = 0;
     let targetProgress = 0;
-    
+
     if (goalType === 'xp') {
         currentProgress = goal.current_xp || 0;
         targetProgress = goal.target_xp || 0;
@@ -845,14 +819,6 @@ function updateGoalElement(goalId, goalData) {
     // Update the stat counts + milestones panel
     updateStatCounts();
     renderMilestones();
-}
-
-function removeGoalElement(goalId) {
-    const goalElement = document.getElementById(`goal-${goalId}`);
-    if (goalElement) {
-        goalElement.remove();
-        updateStatCounts();
-    }
 }
 
 function updateStatCounts() {
@@ -1088,14 +1054,14 @@ async function saveGoal() {
     } else {
         targetXPInput.classList.remove('invalid-input');
     }
-    
+
     if (goalType === 'streak' && !targetStreak) {
         targetStreakInput.classList.add('invalid-input');
         hasError = true;
     } else {
         targetStreakInput.classList.remove('invalid-input');
     }
-    
+
     if (goalType === 'tasks' && !targetTasks) {
         targetTasksInput.classList.add('invalid-input');
         hasError = true;
@@ -1115,11 +1081,11 @@ async function saveGoal() {
         // Parse the deadline date as local time (not UTC)
         const deadlineParts = deadline.split('-');
         const deadlineDate = new Date(deadlineParts[0], deadlineParts[1] - 1, deadlineParts[2]);
-        
+
         // Get today's date at midnight local time
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         if (deadlineDate <= today) {
             deadlineInput.classList.add('invalid-date');
             hasError = true;

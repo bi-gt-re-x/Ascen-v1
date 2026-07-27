@@ -4,7 +4,7 @@ let timers = {};
 // Load timers from localStorage on startup
 function loadTimers() {
     const storedTimers = localStorage.getItem('taskTimers');
-    if (storedTimers) { 
+    if (storedTimers) {
         const parsedTimers = JSON.parse(storedTimers);
         const now = Date.now();
 
@@ -161,7 +161,7 @@ function updateTimerDisplay(taskId) {
 function onTimerComplete(taskId) {
     const taskElement = document.getElementById(`task-${taskId}`);
     const timerDisplay = document.getElementById(`timer-${taskId}`);
-    
+
     // Send timer expiration notification to backend
     const currentUser = localStorage.getItem('currentUser');
     if (currentUser && typeof fetch === 'function') {
@@ -181,13 +181,13 @@ function onTimerComplete(taskId) {
             console.error('❌ Error sending timer expiration to backend:', error);
         });
     }
-    
+
     if (taskElement) {
         // Add red styling to timer display specifically
         if (timerDisplay) {
             timerDisplay.classList.add('expired');
         }
-        
+
         // Also add red styling to entire task element (existing behavior)
         taskElement.classList.add('timer-completed');
 
@@ -228,20 +228,20 @@ function onTimerComplete(taskId) {
 function restoreOverdueState(taskId) {
     const taskElement = document.getElementById(`task-${taskId}`);
     const timerDisplay = document.getElementById(`timer-${taskId}`);
-    
+
     // Clear the timer interval to prevent it from running in the background
     if (timers[taskId] && timers[taskId].intervalId) {
         clearInterval(timers[taskId].intervalId);
         timers[taskId].intervalId = null;
     }
-    
+
     if (taskElement && timerDisplay) {
         // Set timer display to "Time's up!"
         timerDisplay.textContent = "Time's up!";
-        
+
         // Add red styling to timer display specifically
         timerDisplay.classList.add('expired');
-        
+
         // Also add red styling and flashing animation to entire task element (existing behavior)
         taskElement.classList.add('timer-completed');
 
@@ -318,7 +318,7 @@ function addMoreTimeToTask(taskId, additionalSeconds) {
             clearInterval(timerData.intervalId);
             timerData.intervalId = null;
         }
-        
+
         const now = Date.now();
 
     if (timerData.endTime <= now) {
@@ -342,11 +342,11 @@ function addMoreTimeToTask(taskId, additionalSeconds) {
         // Remove red styling from both timer display and task element
         const taskElement = document.getElementById(`task-${taskId}`);
         const timerDisplay = document.getElementById(`timer-${taskId}`);
-        
+
         if (timerDisplay) {
             timerDisplay.classList.remove('expired');
         }
-        
+
         if (taskElement) {
             taskElement.classList.remove('timer-completed');
 
@@ -398,7 +398,7 @@ function addMoreTimeToTask(taskId, additionalSeconds) {
         // Restart the timer interval and update display immediately
         startTimerInterval(taskId);
         updateTimerDisplay(taskId);
-        
+
     }
 }
 
@@ -419,29 +419,6 @@ function formatTime(ms) {
         return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     } else {
         return `${pad(minutes)}:${pad(seconds)}`;
-    }
-}
-
-function formatDueTime(endTime) {
-    const dueDate = new Date(endTime);
-    const now = new Date();
-    
-    // If due date is today, show time only
-    if (dueDate.toDateString() === now.toDateString()) {
-        return dueDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    } else {
-        // If due date is tomorrow or later, show date and time
-        return dueDate.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
     }
 }
 

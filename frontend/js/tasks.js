@@ -190,20 +190,6 @@ function showXPPopup(amount) {
     }, 1500);
 }
 
-function updateStreakUI(currentStreak, bestStreak) {
-
-    const currentStreakEl = document.getElementById('currentStreak');
-    const bestStreakEl = document.getElementById('bestStreak');
-
-    if (currentStreakEl) currentStreakEl.textContent = currentStreak || 0;
-    if (bestStreakEl) bestStreakEl.textContent = bestStreak || 0;
-
-    if (typeof window !== 'undefined') {
-        window.currentStreak = currentStreak || 0;
-        window.bestStreak = bestStreak || 0;
-    }
-}
-
 // Updated task deletion function with growth tracking integration
 async function handleTaskDeletionWithGrowthTracking(taskId, taskXP, liElement, currentUser) {
     // Instantly remove from DOM tree context if it hasn't been detached yet

@@ -12,8 +12,6 @@ let xpRequired = 100;
 
 let tasksCompleted = 0;
 
-
-
 // Theming (light/dark) is handled globally by theme.js — sourced from users.json.
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -35,7 +33,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-
     // ... rest of init logic
 
     // Fetch the daily quote in the background — don't await it, so it never
@@ -53,9 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }).catch(() => {});
     }
 
-
-
-
     if (currentUser !== 'Default') {
 
         await loadUserData();
@@ -70,8 +64,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-
-
     // Initialize timers
 
     if (typeof loadTimers === 'function') {
@@ -80,17 +72,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     }
 
-
-
     if (currentUser !== 'Default') {
-
-
 
         // Check for new tasks every minute
 
     }
-
-
 
     // Everything (stats, XP bar, task list) is now in place — fade the page in
     // once as a finished piece so nothing pops in or re-adjusts after the fade.
@@ -103,14 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 });
 
-
-
 document.getElementById('userNameDisplay').innerText = currentUser;
 
-
-
 async function loadUserData() {
-
 
     if (typeof getUserDataAPI !== 'function') {
         return;
@@ -118,10 +99,7 @@ async function loadUserData() {
 
     const data = await getUserDataAPI(currentUser);
 
-
-
     if (data && data.success) {
-
 
         // Load Stats
 
@@ -133,22 +111,15 @@ async function loadUserData() {
 
         const bestStreak = data.stats.best_streak || 0;
 
-
-
-
         // Update streak display
 
         const currentStreakEl = document.getElementById('currentStreak');
         const bestStreakEl = document.getElementById('bestStreak');
         const tasksCompletedEl = document.getElementById('tasksCompleted');
 
-
         if (currentStreakEl) currentStreakEl.textContent = currentStreak;
         if (bestStreakEl) bestStreakEl.textContent = bestStreak;
         if (tasksCompletedEl) tasksCompletedEl.textContent = tasksCompleted;
-
-
-
 
         // Calculate level with infinite progression
 
@@ -157,8 +128,6 @@ async function loadUserData() {
         let xpNeededForLevel = 100;
 
         let tempXp = totalXp;
-
-
 
         while (tempXp >= xpNeededForLevel) {
 
@@ -170,18 +139,11 @@ async function loadUserData() {
 
         }
 
-
-
         level = calculatedLevel;
 
         xp = tempXp; // Current XP within current level
 
         xpRequired = xpNeededForLevel;
-
-
-
-
-
 
         if (typeof updateStatsUI === 'function') {
 
@@ -194,7 +156,6 @@ async function loadUserData() {
     } else {
 
     }
-
 
 }
 
@@ -322,316 +283,6 @@ async function loadTasks() {
 
 // Function to restore timer-completed state after tasks are loaded
 
-function restoreTimerCompletedState() {
-
-    const storedTimers = localStorage.getItem('taskTimers');
-
-    if (!storedTimers) return;
-
-
-
-    const parsedTimers = JSON.parse(storedTimers);
-
-    const now = Date.now();
-
-
-
-    for (const taskId in parsedTimers) {
-
-        const timerData = parsedTimers[taskId];
-
-
-
-        // Check if this is a completed countdown timer
-
-        if (
-
-            (timerData.type === 'countdown' ||
-
-            timerData.type === 'due_date_countdown')
-
-            && timerData.completed
-
-            && now >= timerData.endTime
-
-        ) {
-
-            const taskElement = document.getElementById(`task-${taskId}`);
-
-            const timerDisplay = document.getElementById(`timer-${taskId}`);
-
-
-
-            if (taskElement && timerDisplay) {
-
-                // Set timer display to "Time's up!"
-
-                timerDisplay.textContent = "Time's up!";
-
-
-
-                // Add red styling and flashing animation
-
-                taskElement.classList.add('timer-completed');
-
-
-
-                // Move to the top of its own sub-section (Todo / Calendar)
-
-                const parentList = taskElement.parentNode;
-
-                if (parentList && parentList.firstChild) {
-
-                    parentList.insertBefore(taskElement, parentList.firstChild);
-
-                }
-
-
-
-                // Change button to Terminate/More Time
-
-                const deleteBtn = taskElement.querySelector('.delete-btn');
-
-                if (deleteBtn) {
-
-                    deleteBtn.textContent = 'Terminate';
-
-                    deleteBtn.onclick = function() {
-
-                        if (typeof terminateTask === 'function') {
-
-                            terminateTask(taskId);
-
-                        }
-
-                    };
-
-
-
-                    // Check if More Time button already exists
-
-                    let moreTimeBtn = taskElement.querySelector('.more-time-btn');
-
-                    if (!moreTimeBtn) {
-
-                        // Add More Time button only if it doesn't exist
-
-                        moreTimeBtn = document.createElement('button');
-
-                        moreTimeBtn.textContent = 'More Time';
-
-                        moreTimeBtn.className = 'more-time-btn';
-
-                        moreTimeBtn.onclick = function() {
-
-                            if (typeof addMoreTime === 'function') {
-
-                                addMoreTime(taskId);
-
-                            }
-
-                        };
-
-
-
-                        const taskRight = taskElement.querySelector('.task-right');
-
-                        if (taskRight) {
-
-                            taskRight.insertBefore(moreTimeBtn, deleteBtn);
-
-                        }
-
-                    }
-
-                }
-
-            }
-
-        }
-
-    }
-
-}
-
-
-
-
-
-function resetRecurrenceOptions() {
-
-    // Reset all options
-
-    document.getElementById('recurrenceType').value = 'daily';
-
-    document.getElementById('weeklyOptions').style.display = 'none';
-
-    document.getElementById('monthlyOptions').style.display = 'none';
-
-    document.getElementById('recurrenceEndDate').value = '';
-
-    document.getElementById('recurrenceOccurrences').value = 10;
-
-
-
-    // Uncheck all day checkboxes
-
-    document.querySelectorAll('.day-checkbox').forEach(cb => cb.checked = false);
-
-
-
-    // Populate time selectors
-
-}
-
-
-
-function updateRecurrenceOptions() {
-
-    const recurrenceType = document.getElementById('recurrenceType').value;
-
-    const weeklyOptions = document.getElementById('weeklyOptions');
-
-    const monthlyOptions = document.getElementById('monthlyOptions');
-
-
-
-    weeklyOptions.style.display = recurrenceType === 'weekly' ? 'block' : 'none';
-
-    monthlyOptions.style.display = recurrenceType === 'monthly' ? 'block' : 'none';
-
-}
-
-
-
-function populatePopupTimeSelectors() {
-
-    // Populate popup time selectors
-
-    const popupHourSelect = document.getElementById('popupHour');
-
-    const popupMinuteSelect = document.getElementById('popupMinute');
-
-
-
-    // Populate hours (1-12)
-
-    popupHourSelect.innerHTML = '<option value="">Hour</option>';
-
-    for (let i = 1; i <= 12; i++) {
-
-        const option = document.createElement('option');
-
-        option.value = i;
-
-        option.textContent = i;
-
-        popupHourSelect.appendChild(option);
-
-    }
-
-
-
-    // Populate minutes (0-59)
-
-    popupMinuteSelect.innerHTML = '<option value="">Minute</option>';
-
-    for (let i = 0; i <= 59; i++) {
-
-        const option = document.createElement('option');
-
-        option.value = i;
-
-        option.textContent = i.toString().padStart(2, '0');
-
-        popupMinuteSelect.appendChild(option);
-
-    }
-
-    
-
-    // Set default values to avoid showing 0
-
-    popupHourSelect.value = '';
-
-    popupMinuteSelect.value = '';
-
-}
-
-
-
-function getRecurrenceData() {
-
-    const recurrenceType = document.getElementById('recurrenceType').value;
-
-    const recurrenceEndDate = document.getElementById('recurrenceEndDate').value;
-
-    const recurrenceOccurrences = parseInt(document.getElementById('recurrenceOccurrences').value) || 10;
-
-
-
-    // Get popup time
-
-    const popupHour = document.getElementById('popupHour').value;
-
-    const popupMinute = document.getElementById('popupMinute').value;
-
-    const popupAmPm = document.getElementById('popupAmPm').value;
-
-
-
-    let recurrenceData = {
-
-        type: recurrenceType,
-
-        end_date: recurrenceEndDate || null,
-
-        occurrences: recurrenceEndDate ? null : recurrenceOccurrences,
-
-        popup_hour: popupHour || null,
-
-        popup_minute: popupMinute || null,
-
-        popup_ampm: popupAmPm || null
-
-    };
-
-
-
-    if (recurrenceType === 'weekly') {
-
-        const selectedDays = [];
-
-        document.querySelectorAll('.day-checkbox:checked').forEach(cb => {
-
-            selectedDays.push(parseInt(cb.value));
-
-        });
-
-        if (selectedDays.length === 0) {
-
-            alert('Please select at least one day of the week');
-
-            return null;
-
-        }
-
-        recurrenceData.days_of_week = selectedDays;
-
-    } else if (recurrenceType === 'monthly') {
-
-        recurrenceData.day_of_month = parseInt(document.getElementById('dayOfMonth').value);
-
-    }
-
-
-
-    return recurrenceData;
-
-}
-
-
-
 // Modal Logic
 
 const modal = document.getElementById("taskModal");
@@ -644,13 +295,9 @@ const timerMinutes = document.getElementById("timerMinutes");
 
 const xpSlider = document.getElementById("xpSlider");
 
-
-
 // More Time Modal Logic
 
 let currentTaskIdForMoreTime = null;
-
-
 
 function openMoreTimeModal(taskId) {
 
@@ -659,8 +306,6 @@ function openMoreTimeModal(taskId) {
     const moreTimeModal = document.getElementById("moreTimeModal");
 
     moreTimeModal.style.display = "block";
-
-
 
     // Reset sliders and input boxes
 
@@ -684,8 +329,6 @@ function openMoreTimeModal(taskId) {
 
 }
 
-
-
 function closeMoreTimeModal() {
 
     const moreTimeModal = document.getElementById("moreTimeModal");
@@ -696,166 +339,34 @@ function closeMoreTimeModal() {
 
 }
 
-
-
-function updateMoreTimeFromInput(type, val) {
-
-    // Ensure value is within bounds
-
-    val = Math.max(0, Math.min(type === 'hours' ? 24 : 60, parseInt(val) || 0));
-
-
-
-    // Update slider
-
-    if (type === 'hours') {
-
-        const hoursSlider = document.getElementById('moreTimeHours');
-
-        if (hoursSlider) hoursSlider.value = val;
-
-        document.getElementById('moreHoursVal').textContent = val;
-
-    } else if (type === 'minutes') {
-
-        const minutesSlider = document.getElementById('moreTimeMinutes');
-
-        if (minutesSlider) minutesSlider.value = val;
-
-        document.getElementById('moreMinsVal').textContent = val;
-
-    } else if (type === 'seconds') {
-
-        const secondsSlider = document.getElementById('moreTimeSeconds');
-
-        if (secondsSlider) secondsSlider.value = val;
-
-        document.getElementById('moreSecsVal').textContent = val;
-
-    }
-
-}
-
-
-
-function updateMoreTimeFromSlider(type, val) {
-
-    // Ensure value is within bounds
-
-    val = Math.max(0, Math.min(type === 'hours' ? 24 : 60, parseInt(val) || 0));
-
-
-
-    // Update number input and display
-
-    if (type === 'hours') {
-
-        const hoursInput = document.getElementById('moreTimeHoursInput');
-
-        if (hoursInput) hoursInput.value = val;
-
-        document.getElementById('moreHoursVal').textContent = val;
-
-    } else if (type === 'minutes') {
-
-        const minutesInput = document.getElementById('moreTimeMinutesInput');
-
-        if (minutesInput) minutesInput.value = val;
-
-        document.getElementById('moreMinsVal').textContent = val;
-
-    } else if (type === 'seconds') {
-
-        const secondsInput = document.getElementById('moreTimeSecondsInput');
-
-        if (secondsInput) secondsInput.value = val;
-
-        document.getElementById('moreSecsVal').textContent = val;
-
-    }
-
-}
-
-
-
 //  FIXED CODE FOR dashboard.js
 
 // FIXED handler inside dashboard.js
-
-function confirmMoreTime() {
-
-
-
-
-    const hours = parseInt(document.getElementById('moreTimeHours').value) || 0;
-
-    const minutes = parseInt(document.getElementById('moreTimeMinutes').value) || 0;
-
-    const seconds = parseInt(document.getElementById('moreTimeSeconds').value) || 0;
-
-
-
-
-    
-
-    // Convert inputs straight down to raw total numeric seconds
-
-    const additionalSeconds = (hours * 3600) + (minutes * 60) + seconds;
-
-
-
-    // Execute state patch directly using relative milliseconds to protect values from timezone jumps
-
-    if (typeof currentTaskIdForMoreTime !== 'undefined' && currentTaskIdForMoreTime) {
-
-        if (typeof addMoreTimeToTask === 'function') {
-
-            addMoreTimeToTask(currentTaskIdForMoreTime, additionalSeconds);
-
-        } else {
-
-            console.warn("addMoreTimeToTask structure missing, updating local collection directly");
-
-            // Direct state fallback injection if needed
-
-        }
-
-    }
-
-    
-
-    closeMoreTimeModal();
-
-}
-
-
 
 let currentXP = 10;
 
 let currentDifficulty = 'low';
 
-
-
 function toggleDropdown(dropdownId) {
     const dropdown = document.getElementById(dropdownId);
     const button = dropdown.previousElementSibling;
-    
+
     // Close all other dropdowns first
     const allDropdowns = document.querySelectorAll('.dropdown-content');
     const allButtons = document.querySelectorAll('.dropdown-btn');
-    
+
     allDropdowns.forEach(dd => {
         if (dd.id !== dropdownId) {
             dd.style.display = 'none';
         }
     });
-    
+
     allButtons.forEach(btn => {
         if (btn !== button) {
             btn.classList.remove('active');
         }
     });
-    
+
     // Toggle the clicked dropdown
     if (dropdown.style.display === 'none') {
         dropdown.style.display = 'block';
@@ -888,8 +399,6 @@ function openModal() {
 
     syncTimerMinuteBounds();
 
-
-
     // Reset XP slider and input
 
     xpSlider.value = 10;
@@ -897,8 +406,6 @@ function openModal() {
     document.getElementById('xpInput').value = 10;
 
     updateXPDisplay(10);
-
-
 
     // Reset due date inputs
 
@@ -910,21 +417,15 @@ function openModal() {
 
     document.getElementById('dueAmPm').value = '';
 
-
-
     // Set minimum date to today
 
     const today = new Date().toISOString().split('T')[0];
 
     document.getElementById('dueDate').setAttribute('min', today);
 
-
-
     // Populate hour and minute selectors
 
     populateTimeSelectors();
-
-
 
     // Add event listeners to clear error states
 
@@ -954,15 +455,11 @@ function populateTimeSelectors() {
 
     const minuteSelect = document.getElementById('dueMinute');
 
-
-
     // Clear existing options (except the first one)
 
     hourSelect.innerHTML = '<option value="">Hour</option>';
 
     minuteSelect.innerHTML = '<option value="">Minute</option>';
-
-
 
     // Populate hours (1-12)
 
@@ -977,8 +474,6 @@ function populateTimeSelectors() {
         hourSelect.appendChild(option);
 
     }
-
-
 
     // Populate minutes (0-59)
 
@@ -996,15 +491,11 @@ function populateTimeSelectors() {
 
 }
 
-
-
 function closeModal() {
 
     modal.style.display = "none";
 
 }
-
-
 
 window.onclick = function(event) {
 
@@ -1016,15 +507,11 @@ window.onclick = function(event) {
 
 };
 
-
-
 function updateXPDisplay(val) {
 
     document.getElementById('xpValue').textContent = val;
 
     currentXP = parseInt(val);
-
-
 
     // Sync with input box
 
@@ -1035,8 +522,6 @@ function updateXPDisplay(val) {
         xpInput.value = val;
 
     }
-
-
 
     // Determine difficulty based on XP
 
@@ -1056,15 +541,11 @@ function updateXPDisplay(val) {
 
 }
 
-
-
 function updateXPFromInput(val) {
 
     // Ensure value is within bounds
 
     val = Math.max(10, Math.min(100, parseInt(val) || 10));
-
-
 
     // Update slider
 
@@ -1076,15 +557,11 @@ function updateXPFromInput(val) {
 
     }
 
-
-
     // Update display
 
     updateXPDisplay(val);
 
 }
-
-
 
 // 15-minute minimum task duration: with no hours the minutes floor is 15; once
 // there is an hour or more, minutes may go all the way down to 0.
@@ -1119,8 +596,6 @@ function updateTimerSliderDisplay(type, val) {
         ? Math.max(0, Math.min(12, val))
         : Math.max(timerMinMinutes(), Math.min(60, val));
 
-
-
     // Update display span
 
     if (type === 'hours') {
@@ -1143,8 +618,6 @@ function updateTimerSliderDisplay(type, val) {
 
 }
 
-
-
 function updateTimerFromInput(type, val) {
 
     // Ensure value is within bounds
@@ -1153,8 +626,6 @@ function updateTimerFromInput(type, val) {
     val = (type === 'hours')
         ? Math.max(0, Math.min(12, val))
         : Math.max(timerMinMinutes(), Math.min(60, val));
-
-
 
     // Update slider
 
@@ -1186,8 +657,6 @@ function updateTimerFromInput(type, val) {
 
 }
 
-
-
 function clearErrorStates() {
 
     modalName.classList.remove('input-error');
@@ -1202,15 +671,11 @@ function clearErrorStates() {
 
 }
 
-
-
 function findNextAvailableTimeSlot(durationSeconds) {
 
     const now = new Date();
 
     const currentHour = now.getHours();
-
-
 
     // Define working hours (8 AM - 10 PM)
 
@@ -1218,13 +683,9 @@ function findNextAvailableTimeSlot(durationSeconds) {
 
     const WORK_END_HOUR = 22;
 
-
-
     // Calculate end time if we start now
 
     let endTime = new Date(now.getTime() + (durationSeconds * 1000));
-
-
 
     // If current time is before working hours, schedule for today at 8 AM
 
@@ -1272,13 +733,9 @@ function findNextAvailableTimeSlot(durationSeconds) {
 
     }
 
-
-
     return endTime;
 
 }
-
-
 
 async function addTaskFromModal() {
     // Clear previous error states
@@ -1419,7 +876,6 @@ async function addTaskFromModal() {
         show_on_calendar: showOnCalendarValue
     };
 
-
     // Add to UI immediately, into the matching sub-section (Todo / Calendar).
     if (typeof createTaskElement === 'function') {
         const li = createTaskElement(newTask, handleTaskDeletion);
@@ -1524,14 +980,10 @@ async function addTaskFromModal() {
     closeModal();
 }
 
-
-
 async function handleTaskDeletion(taskId, taskXP, liElement) {
 
     // Log the completed task's XP. The signal reaches the goals page through the
     // backend (the goals page polls /api/last_task_completion for this).
-
-
 
     // Disable the delete button to prevent multiple clicks
 
@@ -1547,21 +999,15 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
 
     }
 
-
-
     // Animation
 
     liElement.classList.add('removing');
-
-
 
     if (typeof stopTaskTimer === 'function') {
 
         stopTaskTimer(taskId);
 
     }
-
-
 
     // Remove task from DOM immediately to prevent multiple clicks
     setTimeout(() => {
@@ -1605,14 +1051,11 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
 
         tasksCompleted++;
 
-
-
         if (typeof showXPPopup === 'function') {
 
             showXPPopup(taskXP);
 
         }
-
 
         // Calculate level with infinite progression
 
@@ -1621,8 +1064,6 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
         let xpNeededForLevel = 100;
 
         let tempXp = xp;
-
-
 
         while (tempXp >= xpNeededForLevel) {
 
@@ -1634,13 +1075,9 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
 
         }
 
-
-
         level = calculatedLevel;
 
         xpRequired = xpNeededForLevel;
-
-
 
         if (typeof updateStatsUI === 'function') {
 
@@ -1657,8 +1094,6 @@ async function handleTaskDeletion(taskId, taskXP, liElement) {
 
 }
 
-
-
 // Allow Enter key
 
 modalName.addEventListener("keypress", function(event) {
@@ -1671,100 +1106,7 @@ modalName.addEventListener("keypress", function(event) {
 
 });
 
-
-
-
-
-
 // Growth Dropdown and Navigation Popup Functions
-
-function showGrowthDropdown() {
-
-    const dropdown = document.getElementById('growthDropdown');
-
-    if (dropdown) {
-
-        dropdown.style.display = 'block';
-
-    }
-
-}
-
-
-
-function hideGrowthDropdown() {
-
-    const dropdown = document.getElementById('growthDropdown');
-
-    if (dropdown) {
-
-        dropdown.style.display = 'none';
-
-    }
-
-}
-
-
-
-function showNavigationPopup() {
-
-    const popup = document.getElementById('navigationPopup');
-
-    if (popup) {
-
-        popup.style.display = 'flex';
-
-    }
-
-}
-
-
-
-function hideNavigationPopup() {
-
-    const popup = document.getElementById('navigationPopup');
-
-    if (popup) {
-
-        popup.style.display = 'none';
-
-    }
-
-}
-
-
-
-function navigateToGrowth() {
-
-    window.location.href = '/growth';
-
-}
-
-
-
-function navigateToHome() {
-
-    window.location.href = '/home';
-
-}
-
-
-
-function navigateToCalendar() {
-
-    window.location.href = '/calendar';
-
-}
-
-
-
-function navigateToGoals() {
-
-    window.location.href = '/goals';
-
-}
-
-
 
 // Sync dashboard task to calendar
 
@@ -1773,8 +1115,6 @@ function syncTaskToCalendar(task) {
     if (!task.due_date) return;
 
     if (task.show_on_calendar === false) return;
-
-
 
     // Get existing dashboard tasks from localStorage
 
@@ -1796,8 +1136,6 @@ function syncTaskToCalendar(task) {
 
     }
 
-
-
     // Check if task already exists
 
     const existingIndex = dashboardTasks.findIndex(t => t.id === task.id);
@@ -1808,12 +1146,9 @@ function syncTaskToCalendar(task) {
 
         localStorage.setItem(userScopedKey('dashboardTasks'), JSON.stringify(dashboardTasks));
 
-
     }
 
 }
-
-
 
 // Remove dashboard task from calendar when completed
 
@@ -1837,8 +1172,6 @@ function removeDashboardTaskFromCalendar(taskId) {
 
     }
 
-
-
     const taskIndex = dashboardTasks.findIndex(t => t.id === taskId);
 
     if (taskIndex !== -1) {
@@ -1847,12 +1180,9 @@ function removeDashboardTaskFromCalendar(taskId) {
 
         localStorage.setItem(userScopedKey('dashboardTasks'), JSON.stringify(dashboardTasks));
 
-
     }
 
 }
-
-
 
 // --- Overlap conflict check at task-creation time ----------------------------
 // A new task spans from its creation (now) to its due date. Neither tasks nor
@@ -2197,7 +1527,6 @@ async function updateCalSuggestion() {
 function isSameDay(a, b) {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
-
 
 // --- Focus panel (real, tracked via focus.js) -----------------------------
 // The hour goal is adjustable (0.5-hr steps, 0.5–12h). Start Focus begins a

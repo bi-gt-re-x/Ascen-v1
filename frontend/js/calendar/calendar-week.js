@@ -62,7 +62,6 @@
         return full[mon.getMonth()] + ' ' + mon.getDate() + ' – ' + full[sun.getMonth()] + ' ' + sun.getDate() + ', ' + sun.getFullYear();
     }
 
-
     // Real user tasks are placed on the grid (fetched in loadSidebar). We do
     // not render placeholder events, and calendar events proper aren't shown yet.
     var gTasks = [];

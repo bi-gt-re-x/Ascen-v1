@@ -10,7 +10,7 @@ function addSliderKeyboardSupport(sliderId) {
         let newVal = val;
         const maxVal = parseInt(this.max);
         const minVal = parseInt(this.min);
-        
+
         // Different increment sizes for different keys
         switch(e.key) {
             case 'ArrowRight':
@@ -64,7 +64,7 @@ function addSliderKeyboardSupport(sliderId) {
                 }
                 break;
         }
-        
+
         if (newVal !== val) {
             this.value = newVal;
             // Trigger oninput manually to update display
@@ -87,34 +87,6 @@ function addSliderKeyboardSupport(sliderId) {
     if (!slider.hasAttribute('tabindex')) {
         slider.setAttribute('tabindex', '0');
     }
-}
-
-// Add keyboard shortcuts help tooltip
-function addKeyboardShortcutsHelp() {
-    const timerSection = document.querySelector('.timer-section');
-    if (!timerSection) return;
-
-    const helpDiv = document.createElement('div');
-    helpDiv.className = 'keyboard-shortcuts-help';
-    helpDiv.innerHTML = `
-        <div class="help-title">Keyboard Shortcuts:</div>
-        <div class="help-item">↑/↓/←/→: Adjust by 1</div>
-        <div class="help-item">Page Up/Down: Adjust by 5-10</div>
-        <div class="help-item">Home/End: Min/Max values</div>
-        <div class="help-item">0-9: Direct input</div>
-    `;
-    
-    // Style the help section
-    helpDiv.style.cssText = `
-        margin-top: 10px;
-        padding: 8px;
-        background: #f8f9fa;
-        border-radius: 4px;
-        font-size: 11px;
-        color: #6c757d;
-    `;
-    
-    timerSection.appendChild(helpDiv);
 }
 
 // Initialize when DOM is ready

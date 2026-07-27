@@ -135,18 +135,6 @@ function traceCurve(ctx, pts) {
     ctx.lineTo(last.x, last.y);
 }
 
-function getBundleSize(maxValue, minStep = 1) {
-    if (maxValue <= 0) return minStep;
-    const magnitude = Math.pow(10, Math.floor(Math.log10(maxValue)));
-    const ratio = maxValue / magnitude;
-    let size;
-    if (ratio <= 1.5)      size = magnitude / 5;
-    else if (ratio <= 3.5) size = magnitude / 2;
-    else if (ratio <= 7)   size = magnitude;
-    else                   size = magnitude * 2;
-    return Math.max(size, minStep);
-}
-
 function initializeZoomState(type, total) {
     zoomState[type] = {
         startIndex: 0,
@@ -154,7 +142,7 @@ function initializeZoomState(type, total) {
         level: 0,
         anchorIndex: Math.floor(total / 2) // Store the zoom anchor point
     };
-    
+
     // Ensure endIndex is at least 0 for new accounts
     if (total === 0) {
         zoomState[type].endIndex = 0;
@@ -566,10 +554,10 @@ function zoomChart(type, direction, event = null) {
             // Distribute space proportionally to available space
             const leftRatio = leftSpace / totalAvailableSpace;
             const rightRatio = rightSpace / totalAvailableSpace;
-            
+
             const leftIncrease = Math.floor(neededIncrease * leftRatio);
             const rightIncrease = neededIncrease - leftIncrease;
-            
+
             state.startIndex = Math.max(0, state.startIndex - leftIncrease);
             state.endIndex = Math.min(total - 1, state.endIndex + rightIncrease);
         } else {
@@ -831,7 +819,6 @@ document.addEventListener('DOMContentLoaded', function () {
     cumulativeFocusCanvas = document.getElementById('cumulativeFocusChart');
     dailyFocusCanvas      = document.getElementById('dailyFocusChart');
 
-
     if (!growthCanvas || !dailyXpCanvas || !avgTaskXpCanvas || !cumulativeFocusCanvas || !dailyFocusCanvas) {
         console.error('Missing canvas elements');
         return;
@@ -842,7 +829,6 @@ document.addEventListener('DOMContentLoaded', function () {
     avgTaskXpCtx       = avgTaskXpCanvas.getContext('2d');
     cumulativeFocusCtx = cumulativeFocusCanvas.getContext('2d');
     dailyFocusCtx      = dailyFocusCanvas.getContext('2d');
-
 
     // Load the graded report card (the primary view on this page).
     loadGrowthRatings();
@@ -891,7 +877,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Make loadGrowthData globally accessible for api.js
     window.loadGrowthData = loadGrowthData;
-    
+
     // Force initial chart draw after data loads
     setTimeout(() => {
         if (chartData.labels.length > 0) {
