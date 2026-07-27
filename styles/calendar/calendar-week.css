@@ -37,14 +37,14 @@
    (toggle, date and Add-Event in one row). */
 .wk-header.sidebar-collapsed { display: flex; flex-wrap: wrap; }
 .wk-header.sidebar-collapsed .wk-headmain { flex: 1 1 auto; padding-left: 0; }
-.wk-arrow, .wk-today, .wk-filters, .wk-addevent {
+.wk-arrow, .wk-today {
     border: 1px solid #e5e8ee; background: #fff; border-radius: 999px;
     cursor: pointer; font-family: inherit; color: #2c302e;
 }
 .wk-arrow { width: 34px; height: 34px; font-size: 15px; line-height: 1; }
 .wk-today { padding: 7px 18px; font-size: 14px; font-weight: 600; }
-.wk-filters, .wk-addevent { padding: 8px 16px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
-.wk-arrow:hover, .wk-today:hover, .wk-filters:hover, .wk-addevent:hover { background: #f6f7f9; }
+
+.wk-arrow:hover, .wk-today:hover { background: #f6f7f9; }
 
 /* ---- Layout: sidebar + grid ---- */
 .wk-main { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 22px; align-items: start; }
@@ -75,7 +75,7 @@
 .wk-stat-num { font-size: 22px; font-weight: 800; color: #1a1f26; }
 .wk-stat-label { font-size: 12px; color: #6b7280; margin-top: 2px; }
 
-.wk-focus-text { margin: 0 0 12px; font-size: 14px; line-height: 1.5; color: #4b5162; }
+
 .wk-focus-input {
     display: block; width: 100%; box-sizing: border-box; margin: 0;
     font: inherit; font-size: 14px; line-height: 1.5; color: #4b5162;
@@ -90,7 +90,7 @@
 }
 .wk-progress { height: 8px; background: #eef0f4; border-radius: 999px; overflow: hidden; }
 .wk-progress-bar { height: 100%; background: #a8845c; border-radius: 999px; }
-.wk-progress-pct { display: block; text-align: right; font-size: 12px; color: #6b7280; margin-top: 6px; }
+
 
 .wk-priorities { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .wk-priorities li { display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #2c302e; }
@@ -106,10 +106,6 @@
 .wk-focustime { font-size: 22px; font-weight: 800; color: #1a1f26; }
 .wk-focustime-sub { font-size: 13px; color: #6b7280; margin-top: 4px; }
 
-.wk-charge { background: linear-gradient(180deg, #fbf7f0 0%, #fff 100%); }
-.wk-charge-head { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #1a1f26; margin-bottom: 12px; }
-.wk-mult { margin-left: auto; font-size: 11px; font-weight: 700; background: #f0e6d6; color: #8a6d3b; padding: 3px 10px; border-radius: 999px; }
-.wk-charge-sub { margin: 10px 0 0; font-size: 13px; color: #6b7280; }
 
 /* ---- Grid ---- */
 .wk-gridwrap { min-width: 0; }
@@ -129,11 +125,7 @@
 .wk-allday-label { font-size: 11px; color: #9297ab; padding: 8px 8px; }
 .wk-allday-cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 6px 0; }
 .wk-allday-cell { display: flex; justify-content: center; }
-.wk-allday-chip {
-    width: calc(100% - 6px); text-align: center; font-size: 12px; font-weight: 600; color: #4b5162;
-    background: #f5f6f8; border: 1px solid #e9ebf0; border-radius: 8px; padding: 5px 6px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+
 /* Editable per-day focus field (one per day column, in the Focus row). */
 .wk-day-focus {
     width: calc(100% - 6px); box-sizing: border-box; text-align: center;
@@ -241,7 +233,7 @@ html[data-theme="dark"] .wk-drag-preview { border-color: #8fbcff; background: rg
 html[data-theme="dark"] .wk-event.wk-event-cal,
 html[data-theme="dark"] .wk-event.wk-event-cal .wk-event-title { color: #ece9f5; }
 
-.wk-event-time { font-size: 11px; opacity: .8; }
+
 .wk-event-due,
 .wk-event-done-time,
 .wk-event-cont { font-size: 11px; opacity: .85; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -283,7 +275,7 @@ html[data-theme="dark"] .wk-card-pop .wk-dd-item { color: #e7e9f2; }
 html[data-theme="dark"] .wk-card-pop .wk-dd-item:hover { background: #262c3a; }
 html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
 .wk-event-xp { font-size: 11px; opacity: .9; flex: none; display: flex; align-items: center; gap: 4px; }
-.wk-event-icon { font-size: 11px; }
+
 
 /* Conflict modal: two blocks overlap >75%. A blocking backdrop centers the
    prompt so the calendar can't be used until one side is deleted (no keep-both). */
@@ -413,20 +405,10 @@ html[data-theme="dark"] .wk-recur-row { color: #e6e8f0; }
 html[data-theme="dark"] .wk-recur-row:hover { background: #232a35; }
 
 /* Category colors */
-.cat-math   { background: #fdf7ec; border-color: #f0e2c8; color: #8a6d3b; }
-.cat-coding { background: #eaf1fe; border-color: #cfe0fb; color: #2c5aa0; }
-.cat-scioly { background: #eafaf0; border-color: #cdeed9; color: #2e7d52; }
-.cat-violin { background: #f2ecfb; border-color: #e0d3f5; color: #6b4ca8; }
-.cat-workout{ background: #fdecec; border-color: #f7d5d5; color: #b0413e; }
-.cat-reading{ background: #f5f6f8; border-color: #e5e8ee; color: #5a6072; }
-.cat-tennis { background: #fdf7ec; border-color: #f0e2c8; color: #8a6d3b; }
-.cat-personal { background: #eafaf0; border-color: #cdeed9; color: #2e7d52; }
-.cat-rest   { background: #fdf7ec; border-color: #f0e2c8; color: #8a6d3b; }
+
 
 /* Day view placeholder (built later) */
-#dayView .wk-placeholder {
-    text-align: center; color: #6b7280; padding: 80px 20px; font-size: 15px;
-}
+
 
 /* ---- Responsive: stack the sidebar above the grid on narrow screens ---- */
 @media (max-width: 1000px) {
@@ -443,23 +425,17 @@ html[data-theme="dark"] .wk-panel-title,
 html[data-theme="dark"] .wk-stat-num,
 html[data-theme="dark"] .wk-streak-num,
 html[data-theme="dark"] .wk-focustime,
-html[data-theme="dark"] .wk-charge-head,
 html[data-theme="dark"] .wk-priorities li,
 html[data-theme="dark"] .wk-dayname { color: #f4f4f6; }
 html[data-theme="dark"] .wk-arrow,
 html[data-theme="dark"] .wk-today,
-html[data-theme="dark"] .wk-filters,
-html[data-theme="dark"] .wk-sidebar-toggle,
-html[data-theme="dark"] .wk-addevent { background: #1b212a; border-color: #2b323c; color: #e6e8f0; }
+html[data-theme="dark"] .wk-sidebar-toggle { background: #1b212a; border-color: #2b323c; color: #e6e8f0; }
 html[data-theme="dark"] .wk-panel { background: #161b22; border-color: #262c36; box-shadow: none; }
 html[data-theme="dark"] .wk-stat { background: #0f141b; border-color: #262c36; }
 html[data-theme="dark"] .wk-stat-label,
-html[data-theme="dark"] .wk-focus-text,
 html[data-theme="dark"] .wk-streak-sub,
 html[data-theme="dark"] .wk-focustime-sub,
-html[data-theme="dark"] .wk-charge-sub,
-html[data-theme="dark"] .wk-daydate,
-html[data-theme="dark"] .wk-progress-pct { color: #9aa4b2; }
+html[data-theme="dark"] .wk-daydate { color: #9aa4b2; }
 html[data-theme="dark"] .wk-focus-input {
     background: #0f141b; border-color: #262c36; color: #c9d1d9;
 }
@@ -477,8 +453,8 @@ html[data-theme="dark"] .wk-day-focus:focus {
     box-shadow: 0 0 0 3px rgba(168,132,92,.22);
 }
 html[data-theme="dark"] .wk-progress { background: #262c36; }
-html[data-theme="dark"] .wk-charge { background: linear-gradient(180deg, #1c2129 0%, #161b22 100%); }
-html[data-theme="dark"] .wk-allday-chip { background: #0f141b; border-color: #262c36; color: #c9d1d9; }
+
+
 html[data-theme="dark"] .wk-allday-row { border-color: #262c36; }
 html[data-theme="dark"] .wk-daycol { border-color: #21262d; }
 html[data-theme="dark"] .wk-hourline { border-color: #1b2029; }

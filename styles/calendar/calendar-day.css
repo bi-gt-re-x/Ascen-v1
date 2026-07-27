@@ -16,8 +16,7 @@
 /* Focus session running: the button flips to a "stop" look */
 .day-action-btn.is-running { background: #d9534f; border-color: #d9534f; color: #fff; }
 .day-action-btn.is-running:hover { background: #c9453f; border-color: #c9453f; }
-.day-action-primary { background: #1a1f26; border-color: #1a1f26; color: #fff; }
-.day-action-primary:hover { background: #2b323c; border-color: #2b323c; }
+
 
 /* ---- Two-column body: day grid on the left, overview sidebar on the right ---- */
 .day-layout {
@@ -51,13 +50,7 @@
     outline: none; border-color: #a8845c;
     box-shadow: 0 0 0 3px rgba(168,132,92,.15);
 }
-.day-allday-add {
-    flex: none; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
-    border: 1px solid #eef0f4; background: #fafbfc; border-radius: 10px;
-    color: #6b7280; cursor: pointer; transition: background .15s ease, color .15s ease;
-}
-.day-allday-add svg { width: 16px; height: 16px; }
-.day-allday-add:hover { background: #f0f1f4; color: #2c302e; }
+
 
 /* Scroll area shares .wk-scroll (56px time gutter + 1 day column). */
 .day-scroll { grid-template-columns: 56px minmax(0, 1fr); }
@@ -225,12 +218,12 @@ html[data-theme="dark"] .day-action-btn { background: #161b22; border-color: #2b
 html[data-theme="dark"] .day-action-btn:hover { background: #1c222c; }
 html[data-theme="dark"] .day-action-btn.is-running { background: #d9534f; border-color: #d9534f; color: #fff; }
 html[data-theme="dark"] .day-action-btn.is-running:hover { background: #c9453f; border-color: #c9453f; }
-html[data-theme="dark"] .day-action-primary { background: #e6e9f0; border-color: #e6e9f0; color: #12161c; }
-html[data-theme="dark"] .day-action-primary:hover { background: #cfd3db; border-color: #cfd3db; }
+
+
 html[data-theme="dark"] .day-allday-input { background: #0f141b; border-color: #262c36; color: #e6e9f0; }
 html[data-theme="dark"] .day-allday-input::placeholder { color: #6b7280; }
-html[data-theme="dark"] .day-allday-add { background: #0f141b; border-color: #262c36; color: #9aa2af; }
-html[data-theme="dark"] .day-allday-add:hover { background: #1c222c; color: #e6e9f0; }
+
+
 html[data-theme="dark"] .day-mini-title { color: #e6e9f0; }
 html[data-theme="dark"] .day-mini-arrow { color: #9aa2af; }
 html[data-theme="dark"] .day-mini-arrow:hover { background: #1c222c; color: #e6e9f0; }

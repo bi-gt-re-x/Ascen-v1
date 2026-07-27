@@ -37,7 +37,7 @@
             <div class="card-header">
                 <h1>Growth Analytics</h1>
             </div>
-            
+
             <!-- Tab Navigation -->
             <div class="tab-navigation">
                 <button class="tab-btn active" onclick="switchTab('cumulative')" id="cumulative-tab">Cumulative Growth</button>
@@ -46,7 +46,7 @@
                 <button class="tab-btn" onclick="switchTab('cumulativeFocus')" id="cumulativeFocus-tab">Cumulative Focus</button>
                 <button class="tab-btn" onclick="switchTab('dailyFocus')" id="dailyFocus-tab">Daily Focus</button>
             </div>
-            
+
             <!-- Tab Content -->
             <div class="tab-content">
                 <!-- Cumulative Growth Tab -->
@@ -56,7 +56,7 @@
                         <canvas id="growthChart"></canvas>
                     </div>
                 </div>
-                
+
                 <!-- Daily XP Tab -->
                 <div class="tab-pane" id="daily-content">
                     <div class="chart-container">
@@ -64,7 +64,7 @@
                         <canvas id="dailyXpChart"></canvas>
                     </div>
                 </div>
-                
+
                 <!-- Average Task XP Tab -->
                 <div class="tab-pane" id="average-content">
                     <div class="chart-container">
@@ -264,18 +264,18 @@
                     chartContainer.classList.remove('fade-in');
                 }
             });
-            
+
             // Remove active class from all tab buttons
             const tabs = document.querySelectorAll('.tab-btn');
             tabs.forEach(tab => tab.classList.remove('active'));
-            
+
             // Show selected tab pane
             const selectedPane = document.getElementById(tabName + '-content');
             selectedPane.classList.add('active');
-            
+
             // Add active class to selected tab button
             document.getElementById(tabName + '-tab').classList.add('active');
-            
+
             // Add fade-in animation to the selected chart container
             const chartContainer = selectedPane.querySelector('.chart-container');
             if (chartContainer) {
@@ -283,7 +283,7 @@
                 void chartContainer.offsetWidth;
                 chartContainer.classList.add('fade-in');
             }
-            
+
             // Initialize chart for the active tab
             setTimeout(() => {
                 initializeChart(tabName);

@@ -29,57 +29,13 @@ body {
 }
 
 /* Goals container */
-.goals-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    min-height: 100vh;
-    padding: 8px 20px 0 20px;
-}
+
 
 /* Large blue square - Main glassmorphic container */
-.blue-square {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1.5px solid rgba(100, 200, 255, 0.3);
-    border-radius: 16px;
-    /* Fixed design width — fit-scale.js zooms the whole panel to fit the
-       viewport, keeping its original proportions. Phones (<900px) fall back
-       to the fluid rule in the media query below. */
-    width: 1200px;
-    max-width: none;
-    /* Trimmed ~5% shorter (was 760px) so there's less empty space at the
-       bottom, and nudged up via a smaller top margin (was 50px). */
-    min-height: 720px;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        0 0 60px rgba(100, 200, 255, 0.1);
-    animation: fadeIn 1s ease-out;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    margin: 20px 0 0 0;
-}
+
 
 /* Header Section */
-.top-tab {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border-bottom: 1.5px solid rgba(100, 200, 255, 0.2);
-    padding: 20px 30px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
 
-.top-tab h2 {
-    color: white;
-    font-size: 1.5em;
-    font-weight: 600;
-    margin: 0;
-    letter-spacing: 0.5px;
-}
 
 .add-goal-btn {
     background: rgba(100, 200, 255, 0.2);
@@ -101,168 +57,13 @@ body {
 }
 
 /* Glassmorphism effect */
-.glassmorphism {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
+
 
 /* Stats boxes */
-.stats-boxes {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-    gap: 1.25rem;
-    padding: 1.875rem;
-}
 
-.stat-box {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1.5px solid rgba(100, 200, 255, 0.3);
-    border-radius: 12px;
-    padding: 25px;
-    text-align: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-    animation: fadeIn 1.2s ease-out;
-}
-
-body.classic .stat-box {
-    background: rgba(255, 255, 255, 0.95);
-}
-
-body.professional .stat-box {
-    background: rgba(227, 242, 253, 0.95);
-}
-
-body.vintage-paper .stat-box {
-    background: rgba(255, 248, 225, 0.95);
-}
-
-    background: rgba(10, 0, 20, 0.4);
-    backdrop-filter: blur(15px);
-    border: 1.5px solid rgba(255, 0, 255, 0.3);
-    padding: 30px;
-    box-shadow: 
-        0 0 20px rgba(255, 0, 255, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-body.desert-solitude .stat-box {
-    background: rgba(255, 243, 224, 0.95);
-}
-
-body.arctic-aurora .stat-box {
-    background: rgba(237, 231, 246, 0.95);
-    border: 1.5px solid black;
-}
-
-body.retro-city .stat-box {
-    background: rgba(252, 228, 236, 0.95);
-}
-
-body.galactic-skies .stat-box {
-    background: rgba(232, 234, 246, 0.95);
-}
-
-body.platinum-gold .stat-box {
-    background: rgba(255, 248, 225, 0.95);
-}
-
-body.tropical-jungle .stat-box {
-    background: rgba(232, 245, 233, 0.95);
-}
-
-body.volcanic-ash .stat-box {
-    background: rgba(245, 245, 245, 0.95);
-}
-
-body.classic .stat-box {
-    background: rgba(255, 255, 255, 0.95);
-}
-
-body.professional .stat-box {
-    background: rgba(227, 242, 253, 0.95);
-}
-
-body.vintage-paper .stat-box {
-    background: rgba(255, 248, 225, 0.95);
-}
-
-    background: rgba(10, 0, 20, 0.4);
-    backdrop-filter: blur(15px);
-    border: 1.5px solid rgba(255, 0, 255, 0.3);
-    padding: 30px;
-    box-shadow: 
-        0 0 20px rgba(255, 0, 255, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-body.desert-solitude .stat-box {
-    background: rgba(255, 243, 224, 0.95);
-}
-
-body.arctic-aurora .stat-box {
-    background: rgba(237, 231, 246, 0.95);
-    border: 1.5px solid black;
-}
-
-body.retro-city .stat-box {
-    background: rgba(252, 228, 236, 0.95);
-}
-
-body.galactic-skies .stat-box {
-    background: rgba(232, 234, 246, 0.95);
-}
-
-body.platinum-gold .stat-box {
-    background: rgba(255, 248, 225, 0.95);
-}
-
-body.tropical-jungle .stat-box {
-    background: rgba(232, 245, 233, 0.95);
-}
-
-body.volcanic-ash .stat-box {
-    background: rgba(245, 245, 245, 0.95);
-}
-
-.stat-box:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-}
-
-.stat-number {
-    font-size: 2.5em;
-    font-weight: bold;
-    margin-bottom: 8px;
-    color: rgba(100, 200, 255, 1);
-}
-
-.completed-box .stat-number {
-    color: rgba(100, 200, 255, 1);
-}
-
-.active-box .stat-number {
-    color: rgba(100, 200, 255, 1);
-}
-
-.stat-label {
-    font-size: 0.9em;
-    color: black;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
 
 /* Goals list section */
-.goals-list-section {
-    flex: 1;
-    padding: 0 30px 30px 30px;
-    min-height: 400px;
-}
+
 
 /* Tab Navigation */
 .tab-navigation {
@@ -342,37 +143,7 @@ body.volcanic-ash .stat-box {
 }
 
 /* Desert Solitude Theme for Bottom Navigation */
-body.desert-solitude .bottom-nav {
-    background: rgba(210, 180, 140, 0.4);
-    backdrop-filter: blur(10px);
-    border: 2px solid #5d4037;
-    box-shadow: 0 8px 32px rgba(93, 64, 55, 0.2);
-}
 
-body.desert-solitude .nav-pill {
-    background: rgba(210, 180, 140, 0.6);
-    border: 1.5px solid #5d4037;
-    color: #5d4037;
-}
-
-body.desert-solitude .nav-pill:hover {
-    background: #D18B67;
-    color: white;
-    border-color: #5d4037;
-    box-shadow: 0 0 15px rgba(209, 139, 103, 0.4);
-}
-
-body.desert-solitude .nav-pill.primary {
-    background: rgba(210, 180, 140, 0.6);
-    color: #5d4037;
-    border-color: #5d4037;
-}
-
-body.desert-solitude .nav-pill.primary:hover {
-    background: #D18B67;
-    color: white;
-    border-color: #5d4037;
-}
 
 /* Goals list */
 .goals-list {
@@ -926,113 +697,25 @@ body.desert-solitude .nav-pill.primary:hover {
 }
 
 /* Theme integration */
-body.classic .blue-square {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(12px);
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
-}
 
-body.classic .top-tab h2,
-body.classic .goals-header h3 {
-    color: white;
-}
-
-body.professional .blue-square {
-    background: rgba(240, 240, 240, 0.95);
-    border: 2px solid black;
-}
-
-body.professional .top-tab h2,
-body.professional .goals-header h3 {
-    color: #333;
-}
-
-body.professional .modal-content {
-    border-color: #1565c0;
-}
-
-body.professional .modal-content h2 {
-    color: #1565c0;
-}
-
-body.professional .modal-content input:focus,
-body.professional .modal-content textarea:focus {
-    border-color: #1565c0;
-}
-
-body.professional .confirm-add-btn {
-    background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
-}
-
-body.professional .confirm-add-btn:hover {
-    box-shadow: 0 8px 20px rgba(21, 101, 192, 0.4);
-}
 
 /* Consistent modal styling across all themes */
-body.classic .modal-content,
-body.vintage-paper .modal-content,
-body.desert-solitude .modal-content,
-body.arctic-aurora .modal-content,
-body.retro-city .modal-content,
-body.galactic-skies .modal-content,
-body.platinum-gold .modal-content,
-body.tropical-jungle .modal-content,
-body.volcanic-ash .modal-content {
+body.classic .modal-content {
     background-color: white;
     border: 2px solid #1a237e;
 }
 
-body.classic .modal-content h2,
-body.vintage-paper .modal-content h2,
-body.desert-solitude .modal-content h2,
-body.arctic-aurora .modal-content h2,
-body.retro-city .modal-content h2,
-body.galactic-skies .modal-content h2,
-body.platinum-gold .modal-content h2,
-body.tropical-jungle .modal-content h2,
-body.volcanic-ash .modal-content h2 {
+body.classic .modal-content h2 {
     color: #1a237e;
 }
 
-body.classic .modal-content label,
-body.vintage-paper .modal-content label,
-body.desert-solitude .modal-content label,
-body.arctic-aurora .modal-content label,
-body.retro-city .modal-content label,
-body.galactic-skies .modal-content label,
-body.platinum-gold .modal-content label,
-body.tropical-jungle .modal-content label,
-body.volcanic-ash .modal-content label {
+body.classic .modal-content label {
     color: #333;
 }
 
 body.classic .modal-content input,
 body.classic .modal-content textarea,
-body.classic .modal-content select,
-body.vintage-paper .modal-content input,
-body.vintage-paper .modal-content textarea,
-body.vintage-paper .modal-content select,
-body.desert-solitude .modal-content input,
-body.desert-solitude .modal-content textarea,
-body.desert-solitude .modal-content select,
-body.arctic-aurora .modal-content input,
-body.arctic-aurora .modal-content textarea,
-body.arctic-aurora .modal-content select,
-body.retro-city .modal-content input,
-body.retro-city .modal-content textarea,
-body.retro-city .modal-content select,
-body.galactic-skies .modal-content input,
-body.galactic-skies .modal-content textarea,
-body.galactic-skies .modal-content select,
-body.platinum-gold .modal-content input,
-body.platinum-gold .modal-content textarea,
-body.platinum-gold .modal-content select,
-body.tropical-jungle .modal-content input,
-body.tropical-jungle .modal-content textarea,
-body.tropical-jungle .modal-content select,
-body.volcanic-ash .modal-content input,
-body.volcanic-ash .modal-content textarea,
-body.volcanic-ash .modal-content select {
+body.classic .modal-content select {
     background-color: white;
     color: #333;
     border: 2px solid #e0e0e0;
@@ -1040,545 +723,32 @@ body.volcanic-ash .modal-content select {
 
 body.classic .modal-content input:focus,
 body.classic .modal-content textarea:focus,
-body.classic .modal-content select:focus,
-body.vintage-paper .modal-content input:focus,
-body.vintage-paper .modal-content textarea:focus,
-body.vintage-paper .modal-content select:focus,
-body.desert-solitude .modal-content input:focus,
-body.desert-solitude .modal-content textarea:focus,
-body.desert-solitude .modal-content select:focus,
-body.arctic-aurora .modal-content input:focus,
-body.arctic-aurora .modal-content textarea:focus,
-body.arctic-aurora .modal-content select:focus,
-body.retro-city .modal-content input:focus,
-body.retro-city .modal-content textarea:focus,
-body.retro-city .modal-content select:focus,
-body.galactic-skies .modal-content input:focus,
-body.galactic-skies .modal-content textarea:focus,
-body.galactic-skies .modal-content select:focus,
-body.platinum-gold .modal-content input:focus,
-body.platinum-gold .modal-content textarea:focus,
-body.platinum-gold .modal-content select:focus,
-body.tropical-jungle .modal-content input:focus,
-body.tropical-jungle .modal-content textarea:focus,
-body.tropical-jungle .modal-content select:focus,
-body.volcanic-ash .modal-content input:focus,
-body.volcanic-ash .modal-content textarea:focus,
-body.volcanic-ash .modal-content select:focus {
+body.classic .modal-content select:focus {
     border-color: #1a237e;
 }
 
-body.classic .confirm-add-btn,
-body.vintage-paper .confirm-add-btn,
-body.desert-solitude .confirm-add-btn,
-body.arctic-aurora .confirm-add-btn,
-body.retro-city .confirm-add-btn,
-body.galactic-skies .confirm-add-btn,
-body.platinum-gold .confirm-add-btn,
-body.tropical-jungle .confirm-add-btn,
-body.volcanic-ash .confirm-add-btn {
+body.classic .confirm-add-btn {
     background: #1a237e;
 }
 
-body.classic .confirm-add-btn:hover,
-body.vintage-paper .confirm-add-btn:hover,
-body.desert-solitude .confirm-add-btn:hover,
-body.arctic-aurora .confirm-add-btn:hover,
-body.retro-city .confirm-add-btn:hover,
-body.galactic-skies .confirm-add-btn:hover,
-body.platinum-gold .confirm-add-btn:hover,
-body.tropical-jungle .confirm-add-btn:hover,
-body.volcanic-ash .confirm-add-btn:hover {
+body.classic .confirm-add-btn:hover {
     background: #283593;
     box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
 }
 
 /* Additional professional theme styling for light gray background */
-body.professional .goal-item {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1.5px solid rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(12px);
-}
 
-body.professional .goal-item.completed {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1.5px solid rgba(76, 175, 80, 0.3);
-}
-
-body.professional .goal-title {
-    color: #333;
-}
-
-body.professional .goal-description {
-    color: #666;
-}
-
-body.professional .goal-xp {
-    color: #1565c0;
-}
-
-body.professional .goal-deadline {
-    color: #666;
-}
-
-body.professional .goal-type-badge {
-    background: rgba(21, 101, 192, 0.15);
-    border: 1.5px solid rgba(21, 101, 192, 0.3);
-    color: #1565c0;
-}
-
-body.professional .goal-utility-btn {
-    background: rgba(21, 101, 192, 0.08);
-    border: 1.5px solid rgba(21, 101, 192, 0.2);
-    color: #1565c0;
-}
-
-body.professional .goal-utility-btn:hover {
-    background: rgba(21, 101, 192, 0.15);
-    border-color: rgba(21, 101, 192, 0.4);
-}
-
-body.professional .goal-utility-btn.delete {
-    border-color: rgba(211, 47, 47, 0.3);
-    color: #d32f2f;
-}
-
-body.professional .goal-utility-btn.delete:hover {
-    background: rgba(211, 47, 47, 0.1);
-    border-color: rgba(211, 47, 47, 0.5);
-}
-
-body.professional .goal-utility-btn.edit {
-    border-color: rgba(245, 124, 0, 0.3);
-    color: #f57c00;
-}
-
-body.professional .goal-utility-btn.edit:hover {
-    background: rgba(245, 124, 0, 0.1);
-    border-color: rgba(245, 124, 0, 0.5);
-}
-
-body.professional .goal-completed-badge {
-    background: rgba(56, 142, 60, 0.15);
-    border: 1.5px solid rgba(56, 142, 60, 0.3);
-    color: #388e3c;
-}
-
-body.professional .progress-bar-container {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-body.professional .progress-text {
-    color: #666;
-}
-
-body.professional .goal-controls input {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1.5px solid rgba(21, 101, 192, 0.3);
-    color: #333;
-}
-
-body.professional .goal-controls button {
-    background: rgba(21, 101, 192, 0.2);
-    border: 1.5px solid rgba(21, 101, 192, 0.4);
-    color: #1565c0;
-}
-
-body.professional .goal-controls button:hover {
-    background: rgba(21, 101, 192, 0.3);
-}
-
-body.professional .tab-btn {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1.5px solid rgba(21, 101, 192, 0.3);
-    color: #1565c0;
-}
-
-body.professional .tab-btn:hover,
-body.professional .tab-btn.active {
-    background: rgba(21, 101, 192, 0.2);
-    color: #1565c0;
-    border-color: rgba(21, 101, 192, 0.5);
-    border-bottom: 2px solid rgba(21, 101, 192, 0.8);
-}
-
-body.professional .add-goal-btn {
-    background: rgba(21, 101, 192, 0.15);
-    border: 1.5px solid rgba(21, 101, 192, 0.3);
-    color: #1565c0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-body.professional .add-goal-btn:hover {
-    background: rgba(21, 101, 192, 0.25);
-    box-shadow: 0 4px 16px rgba(21, 101, 192, 0.2);
-    transform: translateY(-1px);
-}
-
-
-body.professional .no-goals {
-    color: #333;
-}
-
-body.vintage-paper .blue-square {
-    background: linear-gradient(135deg, #8d6e63 0%, #a1887f 50%, #bcaaa4 100%);
-}
-
-body.vintage-paper .top-tab h2,
-body.vintage-paper .goals-header h3 {
-    color: #3e2723;
-}
-
-    background: rgba(10, 0, 20, 0.5);
-    backdrop-filter: blur(15px);
-    border: 1.5px solid rgba(255, 0, 255, 0.3);
-    box-shadow: 
-        0 0 20px rgba(255, 0, 255, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-    color: #00ffff;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-}
-
-    color: #ff00ff !important;
-    text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
-    font-size: 2.5em;
-    font-weight: bold;
-}
-
-    color: rgba(255, 255, 255, 0.7) !important;
-    font-size: 0.85em;
-    font-weight: 400;
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
-}
-
-    color: #ff00ff;
-    text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
-}
-
-    color: #00ffff;
-    text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
-}
-
-body.desert-solitude .blue-square {
-    background: linear-gradient(135deg, #ffcc80 0%, #ffab40 50%, #8d6e63 100%);
-}
-
-body.desert-solitude .top-tab h2,
-body.desert-solitude .goals-header h3 {
-    color: white;
-}
-
-body.arctic-aurora .blue-square {
-    background: linear-gradient(135deg, #b3e5fc 0%, #e1bee7 50%, #d1c4e9 100%);
-    border: 2px solid black;
-}
-
-body.arctic-aurora .top-tab h2,
-body.arctic-aurora .goals-header h3 {
-    color: white;
-}
-
-body.arctic-aurora .stat-number {
-    color: black !important;
-}
-
-body.arctic-aurora .stat-label {
-    color: black;
-}
-
-body.arctic-aurora .goal-title {
-    color: black;
-}
-
-body.arctic-aurora .goal-description {
-    color: black;
-}
-
-body.arctic-aurora .goal-xp {
-    color: black;
-}
-
-body.arctic-aurora .goal-deadline {
-    color: black;
-}
-
-body.arctic-aurora .goal-type-badge {
-    color: black;
-}
-
-body.arctic-aurora .goal-utility-btn {
-    color: black;
-}
-
-body.arctic-aurora .progress-text {
-    color: black;
-}
-
-body.arctic-aurora .goal-controls input {
-    color: black;
-}
-
-body.arctic-aurora .goal-controls button {
-    color: black;
-}
-
-body.arctic-aurora .progress-bar-fill {
-    background: linear-gradient(to right, #b39ddb, #9575cd);
-    box-shadow: 0 0 10px rgba(179, 157, 219, 0.5);
-}
-
-body.arctic-aurora .tab-btn {
-    color: black;
-}
-
-body.arctic-aurora .tab-btn:hover,
-body.arctic-aurora .tab-btn.active {
-    background: rgba(179, 157, 219, 0.2);
-    border-color: black;
-    color: black;
-}
-
-body.arctic-aurora .add-goal-btn {
-    background: rgba(179, 157, 219, 0.2);
-    border-color: black;
-    color: black;
-}
-
-body.arctic-aurora .add-goal-btn:hover {
-    background: rgba(179, 157, 219, 0.3);
-    box-shadow: 0 0 20px rgba(179, 157, 219, 0.3);
-}
-
-body.arctic-aurora .nav-pill {
-    border-color: black;
-}
-
-body.arctic-aurora .nav-pill:hover {
-    background: rgba(179, 157, 219, 0.2);
-    box-shadow: 0 0 15px rgba(179, 157, 219, 0.3);
-}
-
-body.arctic-aurora .nav-pill.primary {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: black;
-}
-
-body.arctic-aurora .goal-utility-btn {
-    border-color: black;
-}
-
-body.arctic-aurora .goal-utility-btn:hover {
-    background: rgba(179, 157, 219, 0.2);
-}
-
-body.arctic-aurora .goal-controls button {
-    background: rgba(179, 157, 219, 0.3);
-    border-color: black;
-}
-
-body.arctic-aurora .goal-controls button:hover {
-    background: rgba(179, 157, 219, 0.4);
-    box-shadow: 0 0 15px rgba(179, 157, 219, 0.3);
-}
-
-body.arctic-aurora .goal-status.active {
-    background: rgba(179, 157, 219, 0.2);
-    color: black;
-}
-
-body.arctic-aurora .goal-status.completed {
-    background: rgba(129, 199, 132, 0.2);
-    color: black;
-}
-
-body.arctic-aurora .goal-completed-badge {
-    color: black;
-}
-
-body.arctic-aurora .no-goals {
-    color: black;
-}
-
-body.retro-city .blue-square {
-    background: rgba(15, 15, 25, 0.7);
-    border: 1.5px solid rgba(255, 0, 255, 0.4);
-    box-shadow: 0 0 20px rgba(255, 0, 255, 0.2);
-}
-
-body.retro-city .top-tab h2,
-body.retro-city .goals-header h3 {
-    color: white;
-}
-
-body.galactic-skies .blue-square {
-    background: rgba(10, 12, 30, 0.4);
-    backdrop-filter: blur(20px);
-    border: 1.5px solid rgba(255, 255, 255, 0.15);
-}
-
-body.galactic-skies .top-tab h2,
-body.galactic-skies .goals-header h3 {
-    color: white;
-}
-
-body.platinum-gold .blue-square {
-    background: rgba(255, 180, 100, 0.2);
-    backdrop-filter: blur(12px);
-    border: 1.5px solid rgba(255, 255, 255, 0.4);
-}
-
-body.platinum-gold .top-tab h2,
-body.platinum-gold .goals-header h3 {
-    color: white;
-}
-
-body.tropical-jungle .blue-square {
-    background: rgba(20, 40, 20, 0.5);
-    backdrop-filter: blur(15px);
-    border: 1.5px solid rgba(200, 255, 200, 0.2);
-}
-
-body.tropical-jungle .top-tab h2,
-body.tropical-jungle .goals-header h3 {
-    color: white;
-}
-
-body.volcanic-ash .blue-square {
-    background: rgba(20, 20, 22, 0.65);
-    backdrop-filter: blur(12px);
-    border: 1.5px solid rgba(255, 80, 0, 0.3);
-}
-
-body.volcanic-ash .top-tab h2,
-body.volcanic-ash .goals-header h3 {
-    color: white;
-}
-
-body.volcanic-ash .theme-selector select {
-    color: white;
-}
-
-    color: white;
-}
 
 /* Cyber Grid specific overrides for grouped selectors */
-    background: rgba(10, 0, 20, 0.85) !important;
-    backdrop-filter: blur(20px) !important;
-    border: 1.5px solid rgba(255, 0, 255, 0.4) !important;
-    box-shadow: 
-        0 0 25px rgba(255, 0, 255, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-}
 
-    color: #00ffff !important;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5) !important;
-}
 
-    color: #ffffff !important;
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3) !important;
-}
-
-    background: rgba(10, 0, 20, 0.5) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1.5px solid rgba(255, 0, 255, 0.3) !important;
-    color: #ffffff !important;
-    box-shadow: 
-        0 0 10px rgba(255, 0, 255, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-}
-
-    border-color: rgba(255, 0, 255, 0.6) !important;
-    box-shadow: 
-        0 0 15px rgba(255, 0, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
-}
-
-    background: rgba(10, 0, 20, 0.6) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1.5px solid rgba(255, 0, 255, 0.4) !important;
-    color: #ff00ff !important;
-    box-shadow: 
-        0 0 15px rgba(255, 0, 255, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-    text-shadow: 0 0 8px rgba(255, 0, 255, 0.5) !important;
-}
-
-    background: rgba(10, 0, 20, 0.8) !important;
-    border-color: rgba(255, 0, 255, 0.6) !important;
-    box-shadow: 
-        0 0 20px rgba(255, 0, 255, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-}
-
-body.retro-city .theme-selector select {
-    color: white;
-}
-
-body.arctic-aurora .theme-selector select {
-    color: black;
-}
-
-body.classic .theme-selector select,
-body.professional .theme-selector select,
-body.vintage-paper .theme-selector select,
-body.desert-solitude .theme-selector select {
-    color: black;
-}
-
-body.classic .nav-pill,
-body.professional .nav-pill,
-body.vintage-paper .nav-pill,
-body.desert-solitude .nav-pill,
-body.arctic-aurora .nav-pill {
+body.classic .nav-pill {
     color: black;
 }
 
 /* Responsive design — below the fit-scale zoom threshold (PHONE_MAX in
    fit-scale.js), drop the fixed design width and use a fluid, stacked layout. */
-@media (max-width: 900px) {
-    .blue-square {
-        width: 100%;
-        max-width: 100%;
-        min-height: 500px;
-        margin-top: 0;
-    }
 
-    .top-tab h2 {
-        font-size: 1.2em;
-    }
-
-    .stats-boxes {
-        flex-direction: column;
-        gap: 15px;
-        padding: 30px 20px;
-    }
-
-    .stat-box {
-        min-width: auto;
-        padding: 20px;
-    }
-
-    .stat-number {
-        font-size: 2em;
-    }
-
-    .goals-list-section {
-        padding: 0 20px 20px 20px;
-    }
-
-    .goals-header {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
-    }
-
-    .dashboard-bottom-btn {
-        padding: 12px 30px;
-        font-size: 14px;
-    }
-}
 
 /* ============================================================
    CLEAN LIGHT RESKIN — black (#2C302E) + tan (#A38A70) on the
@@ -1588,30 +758,10 @@ body.arctic-aurora .nav-pill {
 body { color: #2C302E; }
 
 /* Main container becomes a clean white card that fits the screen */
-body.classic .blue-square {
-    background: #ffffff;
-    backdrop-filter: none;
-    border: 1.5px solid #e6e8f0;
-    border-radius: 24px;
-    /* Width/height come from the base .blue-square design size; fit-scale.js
-       zooms the whole panel to fit the viewport. */
-    box-shadow: 0 12px 34px rgba(44, 48, 46, 0.08);
-    margin: 10px auto 0 auto;
-    overflow: visible;
-}
+
 
 /* Header */
-body.classic .top-tab {
-    background: transparent;
-    backdrop-filter: none;
-    border-bottom: 1.5px solid #eef0f4;
-    padding: 24px 32px;
-}
 
-body.classic .top-tab h2 {
-    color: #2C302E;
-    font-weight: 700;
-}
 
 body.classic .add-goal-btn {
     background: #ffffff;
@@ -1630,23 +780,7 @@ body.classic .add-goal-btn:hover {
 }
 
 /* Stat boxes */
-body.classic .stat-box {
-    background: #ffffff;
-    backdrop-filter: none;
-    border: 1.5px solid #e6e8f0;
-    border-radius: 16px;
-    box-shadow: 0 6px 18px rgba(44, 48, 46, 0.06);
-}
 
-body.classic .stat-box:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 24px rgba(44, 48, 46, 0.12);
-}
-
-body.classic .stat-number { color: #2C302E; }
-body.classic .active-box .stat-number { color: #2C302E; }
-body.classic .completed-box .stat-number { color: #A38A70; }
-body.classic .stat-label { color: #6C757D; }
 
 /* Filter tabs */
 body.classic .tab-btn {
@@ -1888,7 +1022,7 @@ body.classic .confirm-add-btn:hover {
 }
 
 /* Let the goals list use the enlarged container; tan scrollbar (not blue) */
-body.classic .goals-list-section { min-height: 0; flex: 1; display: flex; flex-direction: column; }
+
 body.classic .goals-list,
 body.dark .goals-list {
     max-height: calc(85vh - 330px);
@@ -1977,26 +1111,6 @@ body.dark {
     color: #e6e8f0;
 }
 
-body.dark .blue-square {
-    background: #161B22;
-    backdrop-filter: none;
-    border: 1.5px solid #30363D;
-    border-radius: 24px;
-    /* Width/height come from the base .blue-square design size; fit-scale.js
-       zooms the whole panel to fit the viewport. */
-    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
-    margin: 10px auto 0 auto;
-    overflow: visible;
-}
-
-body.dark .top-tab {
-    background: transparent;
-    backdrop-filter: none;
-    border-bottom: 1.5px solid #21262D;
-    padding: 24px 32px;
-}
-
-body.dark .top-tab h2 { color: #e6e8f0; font-weight: 700; }
 
 body.dark .add-goal-btn {
     background: #21262D;
@@ -2008,17 +1122,6 @@ body.dark .add-goal-btn {
 }
 body.dark .add-goal-btn:hover { background: #A38A70; border-color: #A38A70; color: #0D1117; }
 
-body.dark .stat-box {
-    background: #1b2029;
-    backdrop-filter: none;
-    border: 1.5px solid #30363D;
-    border-radius: 16px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-}
-body.dark .stat-number { color: #e6e8f0; }
-body.dark .active-box .stat-number { color: #e6e8f0; }
-body.dark .completed-box .stat-number { color: #d8b489; }
-body.dark .stat-label { color: #9aa0b5; }
 
 body.dark .tab-btn {
     background: #21262D;
