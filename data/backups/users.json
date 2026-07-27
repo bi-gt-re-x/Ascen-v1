@@ -45,7 +45,7 @@
     "level": 10,
     "charge": 0,
     "tasks_completed": 70,
-    "current_streak": 3,
+    "current_streak": 0,
     "best_streak": 3,
     "last_task_date": "2026-07-23",
     "day_state": "newday",
@@ -73,5 +73,61 @@
     "level": 1,
     "theme": "light",
     "created_at": "2026-07-22T09:50:23.389568"
+  },
+  {
+    "id": "1784926246867",
+    "username": "dude",
+    "password_hash": "2",
+    "xp": 20,
+    "level": 1,
+    "theme": "light",
+    "created_at": "2026-07-24T15:50:46.867453",
+    "focus_history": {
+      "2026-07-25": {
+        "seconds": 438.0,
+        "goal_hours": 12.0
+      },
+      "2026-07-26": {
+        "seconds": 4.0,
+        "goal_hours": 2.0
+      }
+    },
+    "day_focus": {
+      "2026-07-25": "gh"
+    },
+    "tasks_completed": 2,
+    "current_streak": 1,
+    "best_streak": 1,
+    "last_task_date": "2026-07-26",
+    "day_state": "oldday"
+  },
+  {
+    "id": "1785084084815",
+    "username": "SMYLES",
+    "name": "Myles Zhang",
+    "email": "hanwenks@gmail.com",
+    "password_hash": "pbkdf2:sha256:1000000$eRfYTkavaouvqBY3$a3d9a2f056dbbed56cef0e8a018d5cac4141bb1611f03b62fadf80f5cddf8c2e",
+    "provider": "local",
+    "email_verified": true,
+    "verify_token": null,
+    "verify_sent_at": "2026-07-26T11:41:24.815441",
+    "profile_complete": true,
+    "xp": 180,
+    "level": 2,
+    "theme": "light",
+    "created_at": "2026-07-26T11:41:24.815441",
+    "verified_at": "2026-07-26T11:41:31.343809",
+    "daily_goal": 200,
+    "tasks_completed": 3,
+    "current_streak": 1,
+    "best_streak": 1,
+    "last_task_date": "2026-07-26",
+    "day_state": "newday",
+    "focus_history": {
+      "2026-07-26": {
+        "seconds": 118.0,
+        "goal_hours": 2.0
+      }
+    }
   }
 ]

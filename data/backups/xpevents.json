@@ -1811,5 +1811,50 @@
     "timestamp": "2026-07-23T10:11:34.678230",
     "date": "2026-07-23",
     "tasks_completed": 1
+  },
+  {
+    "id": "1785078053267",
+    "user_id": "dude",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T10:00:53.267339",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785078054353",
+    "user_id": "dude",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T10:00:54.353784",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785109746661",
+    "user_id": "SMYLES",
+    "amount": 75,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T18:49:06.661921",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785109747861",
+    "user_id": "SMYLES",
+    "amount": 43,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T18:49:07.861954",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785109750413",
+    "user_id": "SMYLES",
+    "amount": 62,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T18:49:10.413314",
+    "date": "2026-07-26",
+    "tasks_completed": 1
   }
 ]

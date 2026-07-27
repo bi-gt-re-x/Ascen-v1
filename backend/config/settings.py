@@ -25,24 +25,34 @@ SECRET_FOLDER = os.path.join(ROOT_DIR, 'frontend', 'secret')
 # templates still resolves. See backend/routes/assets.py.
 STATIC_ROOTS = {
     'css': os.path.join(ROOT_DIR, 'styles'),
-    'js': os.path.join(ROOT_DIR, 'utilities', 'js'),
-    'images': os.path.join(ROOT_DIR, 'images'),
-    'icons': os.path.join(ROOT_DIR, 'images', 'icons'),
+    'js': os.path.join(ROOT_DIR, 'frontend', 'js'),
+    'images': os.path.join(ROOT_DIR, 'utils', 'images'),
+    'icons': os.path.join(ROOT_DIR, 'utils', 'icons'),
+    'fonts': os.path.join(ROOT_DIR, 'utils', 'fonts'),
+    'assets': os.path.join(ROOT_DIR, 'utils', 'assets'),
     'secret': SECRET_FOLDER,
 }
 
 # --- Datastore -----------------------------------------------------------
-# The live data is the JSON files below. database.db is a leftover from an
-# early SQLite attempt: nothing opens it.
+# data/ is laid out for the PostgreSQL move that hasn't happened yet:
+#
+#   data/postgresql/   the table definitions, one .sql per table. Nothing runs
+#                      them — they are the target schema, kept beside the data
+#                      they describe so the two can't drift.
+#   data/backups/      the JSON stores. Still the live datastore: every read and
+#                      write in the app goes here, until Postgres is wired up.
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
-USERS_JSON = os.path.join(DATA_DIR, 'users.json')
-TASKS_JSON = os.path.join(DATA_DIR, 'tasks.json')
-CALENDAR_JSON = os.path.join(DATA_DIR, 'calendar.json')
-GOALS_JSON = os.path.join(DATA_DIR, 'goals.json')
-XPEVENT_JSON = os.path.join(DATA_DIR, 'xpevents.json')
+POSTGRES_DIR = os.path.join(DATA_DIR, 'postgresql')
+STORE_DIR = os.path.join(DATA_DIR, 'backups')
+
+USERS_JSON = os.path.join(STORE_DIR, 'users.json')
+TASKS_JSON = os.path.join(STORE_DIR, 'tasks.json')
+CALENDAR_JSON = os.path.join(STORE_DIR, 'calendar.json')
+GOALS_JSON = os.path.join(STORE_DIR, 'goals.json')
+XPEVENT_JSON = os.path.join(STORE_DIR, 'xpevents.json')
 # Every hex colour already handed to a calendar event, so a new event can be
 # given one that is visibly different from the rest.
-EVENTCOLORS_JSON = os.path.join(DATA_DIR, 'eventcolors.json')
+EVENTCOLORS_JSON = os.path.join(STORE_DIR, 'eventcolors.json')
 
 DATABASE_DIR = os.path.join(BACKEND_DIR, 'database')
 SCHEMA_SQL = os.path.join(DATABASE_DIR, 'schema.sql')

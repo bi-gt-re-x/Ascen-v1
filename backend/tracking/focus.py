@@ -1,6 +1,6 @@
 """Focus time: how long the user actually sat down and worked.
 
-The session itself runs client-side (utilities/js/focus.js keeps the timer in
+The session itself runs client-side (frontend/js/focus.js keeps the timer in
 localStorage). What is tracked here is each day's total, mirrored into the
 account as `focus_history`: {"YYYY-MM-DD": {"seconds": n, "goal_hours": n}} —
 so the calendar's Weekly Focus Time panel, the growth chart and focus-type

@@ -230,5 +230,27 @@
     "deadline": "",
     "status": "active",
     "created_at": "2026-07-24T10:07:06.865807"
+  },
+  {
+    "id": "1785110011644",
+    "user_id": "SMYLES",
+    "title": "9999",
+    "description": "r",
+    "progress": 0,
+    "target_value": 1000,
+    "goal_type": "xp",
+    "target_xp": 1000,
+    "current_xp": 0,
+    "target_streak": 0,
+    "current_streak": 0,
+    "target_tasks": 0,
+    "current_tasks": 0,
+    "target_focus": 0,
+    "current_focus": 0,
+    "focus_baseline_seconds": 0,
+    "priority": 10,
+    "deadline": "2026-07-28",
+    "status": "active",
+    "created_at": "2026-07-26T18:53:31.645393"
   }
 ]
