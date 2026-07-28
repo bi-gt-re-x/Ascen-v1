@@ -22,10 +22,11 @@
     <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/api.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/auth-flow.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-fx.js') }}" defer></script>
     <script src="{{ url_for('static', filename='secret/pentagon-egg.js') }}" defer></script>
 </head>
-<body>
+<body{% if current_user %} data-signed-in="1"{% endif %}>
 
     <header class="site-nav">
         <div class="nav-inner">
@@ -96,19 +97,19 @@
                 <span class="lp-feat-ico lp-ico-teal">&#128203;</span>
                 <h3>Task Management</h3>
                 <p>Organize your schedule with an intuitive task manager. Set priorities, add descriptions, and track progress effortlessly.</p>
-                <a href="{{ url_for('main.dashboard') }}" class="lp-link">Go to Dashboard &#8594;</a>
+                <a href="{{ url_for('dashboard.page') }}" class="lp-link">Go to Dashboard &#8594;</a>
             </article>
             <article class="lp-card lp-feature">
                 <span class="lp-feat-ico lp-ico-green">&#127793;</span>
                 <h3>Growth &amp; Progress</h3>
                 <p>View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.</p>
-                <a href="{{ url_for('main.growth') }}" class="lp-link">Go to Growth &#8594;</a>
+                <a href="{{ url_for('growth.page') }}" class="lp-link">Go to Growth &#8594;</a>
             </article>
             <article class="lp-card lp-feature">
                 <span class="lp-feat-ico lp-ico-gold">&#127919;</span>
                 <h3>Strategic Goal Tracking</h3>
                 <p>Set XP, streak and task goals, then watch them auto-advance as you complete work on the dashboard.</p>
-                <a href="{{ url_for('main.goals') }}" class="lp-link">Go to Goals &#8594;</a>
+                <a href="{{ url_for('goals.page') }}" class="lp-link">Go to Goals &#8594;</a>
             </article>
             <article class="lp-card lp-quote">
                 <p>“Ascen changed how I study — I finally see my progress instead of guessing at it.”</p>
@@ -324,7 +325,7 @@
                         <li>&#10003; Streaks, XP &amp; levels</li>
                         <li>&#10003; Calendar scheduling</li>
                     </ul>
-                    <a href="{{ url_for('main.dashboard') }}" class="lp-btn lp-btn-primary lp-btn-full">Get Started</a>
+                    <a href="{{ url_for('dashboard.page') }}" class="lp-btn lp-btn-primary lp-btn-full">Get Started</a>
                 </div>
             </div>
         </section>
@@ -336,10 +337,10 @@
                 <p>Built on a clean, dependable stack.</p>
             </header>
             <div class="lp-tech">
-                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-teal">&#128421;</span><div><h4>Frontend</h4><p>HTML · CSS · JavaScript</p></div></div>
-                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-green">&#128295;</span><div><h4>Backend</h4><p>Python · Flask</p></div></div>
-                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-gold">&#128190;</span><div><h4>Storage</h4><p>Local storage · JSON</p></div></div>
-                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-purple">&#128202;</span><div><h4>Visualization</h4><p>Canvas · SVG charts</p></div></div>
+                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-teal">&#128421;</span><div><h4>Frontend</h4><p>HTML · CSS · React · TypeScript</p></div></div>
+                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-green">&#128295;</span><div><h4>Backend</h4><p>FastAPI · Flask</p></div></div>
+                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-gold">&#128190;</span><div><h4>Database</h4><p>PostgreSQL · JSON</p></div></div>
+                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-purple">&#128202;</span><div><h4>Visualization</h4><p>Images · Icons</p></div></div>
             </div>
         </section>
 
@@ -347,7 +348,7 @@
         <section class="lp-final">
             <h2>Ready to start your ascent?</h2>
             <p>Join and turn today's effort into tomorrow's momentum.</p>
-            <a href="{{ url_for('main.dashboard') }}" class="lp-btn lp-btn-primary lp-btn-lg">Get Started Today</a>
+            <a href="{{ url_for('dashboard.page') }}" class="lp-btn lp-btn-primary lp-btn-lg">Get Started Today</a>
         </section>
 
       </div>
@@ -356,11 +357,11 @@
     <footer class="footer">
         <div class="footer-content">
             <nav class="footer-links">
-                <a href="{{ url_for('main.about_us') }}">About Us</a>
-                <a href="{{ url_for('main.contact_support') }}">Contact Support</a>
-                <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a>
-                <a href="{{ url_for('main.terms_of_service') }}">Terms of Service</a>
-                <a href="{{ url_for('main.careers') }}">Careers</a>
+                <a href="{{ url_for('aboutus.page') }}">About Us</a>
+                <a href="{{ url_for('aboutus.contact_support') }}">Contact Support</a>
+                <a href="{{ url_for('privacypolicy.page') }}">Privacy Policy</a>
+                <a href="{{ url_for('termsofservice.page') }}">Terms of Service</a>
+                <a href="{{ url_for('aboutus.careers') }}">Careers</a>
             </nav>
             <div class="copyright">
                 &copy; 2032 Study Dashboard Inc. All rights reserved.
@@ -368,26 +369,105 @@
         </div>
     </footer>
 
-    <!-- Auth Modal -->
-    <div id="authModal" class="modal hidden">
-        <div class="modal-content">
-            <span id="closeModalBtn" class="close">&times;</span>
-            <h2 id="authTitle">Sign Up</h2>
+    <!-- ============ AUTH POPUP ============
+         One white card that walks the whole journey: choose a path, then either
+         log in, or create an account -> confirm the e-mail -> complete the
+         profile -> dashboard. Every step is a panel in here; auth-flow.js shows
+         one at a time. -->
+    <div id="authModal" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authHeading">
+        <div class="auth-card">
+            <button type="button" id="closeModalBtn" class="auth-close" aria-label="Close">&times;</button>
 
-            <form id="authForm">
-                <input type="text" id="username" placeholder="Username" required aria-label="Username">
-                <input type="password" id="password" placeholder="Password" required aria-label="Password">
-                <input type="password" id="confirmPassword" placeholder="Confirm Password" class="hidden" aria-label="Confirm Password">
-                <button type="submit" id="submitBtn" class="submit-btn">Submit</button>
-            </form>
-            <p id="authMessage"></p>
+            <div class="auth-brandline">Ascen</div>
+            <h2 id="authHeading" class="auth-heading">Welcome</h2>
+            <p id="authSub" class="auth-sub">Log in or create an account to continue.</p>
+
+            <!-- Step 1 - the fork -->
+            <section class="auth-step" data-step="choose">
+                <button type="button" class="auth-primary" data-goto="login">Log In</button>
+                <button type="button" class="auth-secondary" data-goto="create">Create Account</button>
+                <div class="auth-or auth-google-only" hidden><span>or</span></div>
+                <a href="/auth/google" class="auth-google auth-google-only" hidden>
+                    <span class="auth-google-g">G</span> Continue with Google
+                </a>
+            </section>
+
+            <!-- Log in -->
+            <section class="auth-step hidden" data-step="login">
+                <form id="loginForm" novalidate>
+                    <label class="auth-label" for="loginId">E-mail or username</label>
+                    <input class="auth-input" type="text" id="loginId" autocomplete="username" required>
+                    <label class="auth-label" for="loginPassword">Password</label>
+                    <input class="auth-input" type="password" id="loginPassword" autocomplete="current-password" required>
+                    <button type="submit" class="auth-primary">Log In</button>
+                </form>
+                <div class="auth-or auth-google-only" hidden><span>or</span></div>
+                <a href="/auth/google" class="auth-google auth-google-only" hidden>
+                    <span class="auth-google-g">G</span> Continue with Google
+                </a>
+                <button type="button" class="auth-link" data-goto="choose">&larr; Back</button>
+            </section>
+
+            <!-- Create account -->
+            <section class="auth-step hidden" data-step="create">
+                <form id="createForm" novalidate>
+                    <label class="auth-label" for="createName">Name</label>
+                    <input class="auth-input" type="text" id="createName" autocomplete="name" required>
+                    <label class="auth-label" for="createEmail">E-mail</label>
+                    <input class="auth-input" type="email" id="createEmail" autocomplete="email" required>
+                    <label class="auth-label" for="createPassword">Password</label>
+                    <input class="auth-input" type="password" id="createPassword" autocomplete="new-password" required>
+                    <div class="auth-strength" id="pwStrength" aria-live="polite">
+                        <div class="auth-strength-bar"><span id="pwStrengthFill"></span></div>
+                        <div class="auth-strength-label" id="pwStrengthLabel">Password strength</div>
+                    </div>
+                    <button type="submit" class="auth-primary">Create Account</button>
+                </form>
+                <button type="button" class="auth-link" data-goto="choose">&larr; Back</button>
+            </section>
+
+            <!-- Check your inbox -->
+            <section class="auth-step hidden" data-step="inbox">
+                <div class="auth-inbox-mark">&#9993;</div>
+                <p class="auth-inbox-text">
+                    We sent a verification link to <strong id="inboxEmail">your e-mail</strong>.
+                    Open it to confirm your address.
+                </p>
+                <div class="auth-devlink" id="devLinkWrap" hidden>
+                    <p>No mail server is configured yet, so here is that link:</p>
+                    <a id="devLink" href="#" class="auth-primary">Verify Email</a>
+                </div>
+                <button type="button" class="auth-link" id="resendBtn">Send it again</button>
+            </section>
+
+            <!-- Complete profile -->
+            <section class="auth-step hidden" data-step="profile">
+                <form id="profileForm" novalidate>
+                    <label class="auth-label" for="profileUsername">Choose a username <span class="auth-optional">(optional)</span></label>
+                    <input class="auth-input" type="text" id="profileUsername" autocomplete="username" placeholder="Leave blank to keep the suggested one">
+                    <label class="auth-label">Select a theme</label>
+                    <div class="auth-choices" id="themeChoices">
+                        <button type="button" class="auth-choice is-on" data-theme="light">Light</button>
+                        <button type="button" class="auth-choice" data-theme="dark">Dark</button>
+                    </div>
+                    <label class="auth-label">Choose a daily goal</label>
+                    <div class="auth-choices" id="goalChoices">
+                        <button type="button" class="auth-choice" data-goal="50">Light<span>50 XP</span></button>
+                        <button type="button" class="auth-choice is-on" data-goal="100">Steady<span>100 XP</span></button>
+                        <button type="button" class="auth-choice" data-goal="200">Serious<span>200 XP</span></button>
+                    </div>
+                    <button type="submit" class="auth-primary">Go to Dashboard</button>
+                </form>
+            </section>
+
+            <p id="authMessage" class="auth-message" aria-live="polite"></p>
         </div>
     </div>
 
     <!-- Hidden data for JS to use URLs -->
     <div id="urls"
-         data-calendar="{{ url_for('main.calendar') }}"
-         data-dashboard="{{ url_for('main.dashboard') }}"
+         data-calendar="{{ url_for('calendar.page') }}"
+         data-dashboard="{{ url_for('dashboard.page') }}"
          style="display:none;"></div>
 
 </body>

@@ -22,7 +22,7 @@
     </style>
 </head>
 <body>
-    <button class="nav-btn home-btn" onclick="window.location.href='{{ url_for('main.home') }}'" style="position: absolute; top: 10px; left: 10px;">Home</button>
+    <button class="nav-btn home-btn" onclick="window.location.href='{{ url_for('home.page') }}'" style="position: absolute; top: 10px; left: 10px;">Home</button>
 
     <div class="content-container">
         <h1>Terms of Service</h1>
@@ -35,7 +35,7 @@
 
         <h2>2. Your Account and Data</h2>
         <ul>
-            <li>Your profile, tasks, goals, and progress data are stored locally on your device, as described in our <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a>.</li>
+            <li>Your profile, tasks, goals, and progress data are stored locally on your device, as described in our <a href="{{ url_for('privacypolicy.page') }}">Privacy Policy</a>.</li>
             <li>You are responsible for the content you enter into the app and for backing up your data if you wish to keep it.</li>
             <li>Because data is stored locally, clearing your browser storage or deleting the app's data files will permanently erase your progress.</li>
         </ul>

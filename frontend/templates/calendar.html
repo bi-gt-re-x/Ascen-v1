@@ -128,6 +128,13 @@
                                 <li><span>--</span><span class="wk-badge">--</span></li>
                             </ol>
                         </section>
+                        <!-- Focused time against the time planned for it (the sum
+                             of each day's focus goal) across the shown week. -->
+                        <section class="wk-panel">
+                            <h3 class="wk-panel-title">⏱️ Weekly Focus Time</h3>
+                            <div class="wk-focustime" id="wkFocusTime">– : –</div>
+                            <div class="wk-focustime-sub">Focused : Planned</div>
+                        </section>
                         <section class="wk-panel">
                             <h3 class="wk-panel-title">🔥 Streak</h3>
                             <div class="wk-streak-num" id="wkStreak">– days</div>
@@ -199,7 +206,6 @@
                         <section class="wk-panel">
                             <div class="day-panel-head">
                                 <h3 class="wk-panel-title">Focus</h3>
-                                <span class="day-panel-link">Edit</span>
                             </div>
                             <div class="day-focus-row">
                                 <span class="day-focus-icon">
@@ -261,19 +267,19 @@
     </div>
 
     <nav class="bottom-nav">
-        <a href="{{ url_for('main.home') }}" class="nav-pill">
+        <a href="{{ url_for('home.page') }}" class="nav-pill">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
             Home
         </a>
-        <a href="{{ url_for('main.dashboard') }}" class="nav-pill">
+        <a href="{{ url_for('dashboard.page') }}" class="nav-pill">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             Dashboard
         </a>
-        <a href="{{ url_for('main.growth') }}" class="nav-pill">
+        <a href="{{ url_for('growth.page') }}" class="nav-pill">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg>
             Growth
         </a>
-        <a href="{{ url_for('main.goals') }}" class="nav-pill">
+        <a href="{{ url_for('goals.page') }}" class="nav-pill">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
             Goals
         </a>

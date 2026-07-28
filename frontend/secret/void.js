@@ -1,10 +1,10 @@
-/* void.js — the riddle at the end of the mutated calendar.
+/* void.js — the riddle at the end of the chain.
  *
- * When the pentagon's arrow drops you into /calendar#void, the calendar is
- * frozen and a single riddle hangs in the dark:
+ * When the pentagon's arrow drops you into /calendar#void, the page is emptied
+ * (void.css hides all of it) and a single riddle hangs in the dark:
  *
- *   "The person who makes me doesn't want me, the person who buys me doesn't
- *    use me, and the person who uses me will never see me."   →  coffin
+ *   "I have no legs, but I can run. I have no lungs, but I need air. I feed on
+ *    fuel, and my heart beats with a roar."   →  engine
  *
  * Answer it and jagged cracks race across the screen, the page shatters into
  * shards that rain down, and you drop through into /engine.
@@ -14,9 +14,9 @@
 
     if (!document.documentElement.classList.contains('egg-void')) return;
 
-    var ANSWER = 'coffin';
-    var RIDDLE = "The person who makes me doesn't want me, the person who buys " +
-                 "me doesn't use me, and the person who uses me will never see me.";
+    var ANSWER = 'engine';
+    var RIDDLE = "I have no legs, but I can run. I have no lungs, but I need air. " +
+                 "I feed on fuel, and my heart beats with a roar. What am I?";
 
     function ready(fn) {
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
@@ -24,16 +24,10 @@
     }
 
     ready(function () {
-        lockCalendar();
+        // Nothing here is meant to be read or dragged — only answered.
+        document.body.style.userSelect = 'none';
         buildRiddle();
     });
-
-    // The frozen calendar can't be touched.
-    function lockCalendar() {
-        var card = document.querySelector('.calendar-card');
-        if (card) card.style.pointerEvents = 'none';
-        document.body.style.userSelect = 'none';
-    }
 
     function buildRiddle() {
         var wrap = document.createElement('div');

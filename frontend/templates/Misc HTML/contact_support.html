@@ -42,7 +42,7 @@
     </style>
 </head>
 <body>
-    <button class="nav-btn home-btn" onclick="window.location.href='{{ url_for('main.home') }}'" style="position: absolute; top: 10px; left: 10px;">Home</button>
+    <button class="nav-btn home-btn" onclick="window.location.href='{{ url_for('home.page') }}'" style="position: absolute; top: 10px; left: 10px;">Home</button>
 
     <div class="content-container">
         <h1>Contact Support</h1>
@@ -69,7 +69,7 @@
         <div class="faq">
             <details>
                 <summary>Where is my data stored?</summary>
-                <p>Everything lives locally — in your browser's local storage and in JSON files on the machine running the app. Nothing is uploaded to a cloud service. See our <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a> for details.</p>
+                <p>Everything lives locally — in your browser's local storage and in JSON files on the machine running the app. Nothing is uploaded to a cloud service. See our <a href="{{ url_for('privacypolicy.page') }}">Privacy Policy</a> for details.</p>
             </details>
             <details>
                 <summary>I lost my streak — can it be restored?</summary>

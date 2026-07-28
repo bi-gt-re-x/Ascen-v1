@@ -34,7 +34,7 @@
     </style>
 </head>
 <body>
-    <button class="nav-btn home-btn" onclick="window.location.href='{{ url_for('main.home') }}'" style="position: absolute; top: 10px; left: 10px;">Home</button>
+    <button class="nav-btn home-btn" onclick="window.location.href='{{ url_for('home.page') }}'" style="position: absolute; top: 10px; left: 10px;">Home</button>
 
     <div class="content-container">
         <h1>About Us</h1>
@@ -70,7 +70,7 @@
         <h2>Where We're Headed</h2>
         <p>Ascen is under active development, and every feature is tested the same way it was born: in real study sessions. If it doesn't help you focus, finish, and level up, it doesn't ship.</p>
 
-        <p>Ready to start your ascent? <a href="{{ url_for('main.dashboard') }}">Head to the dashboard</a> and turn today's effort into tomorrow's momentum.</p>
+        <p>Ready to start your ascent? <a href="{{ url_for('dashboard.page') }}">Head to the dashboard</a> and turn today's effort into tomorrow's momentum.</p>
     </div>
 
 </body>

@@ -6,11 +6,15 @@
  * ominous glow while the whole screen shakes. The unlock is remembered per
  * user per day (localStorage), so a reload keeps the mysterious quote (and
  * dashboard.js is told to stop overwriting it via window.__mysteriousQuoteActive).
+ *
+ * It ends where the chain does: once the ADMIN ROOM has handed out a title,
+ * the clue is retired and the daily quote goes back to normal — the title badge
+ * beside the username is what's left of the secret.
  */
 (function () {
     'use strict';
 
-    var QUOTE = '"Hmmmm, what if you clicked a 2 dimensional 5 sided shape on a certain page that is scrollable?" -Mysterious,,';
+    var QUOTE = '"The pentagon is the key, find it" -Mysterious,,';
     var NEEDED = 10;        // clicks to unlock
     var RESET_MS = 1500;    // gap that breaks the "in a row" streak
 
@@ -34,10 +38,16 @@
         try { localStorage.setItem(key(), '1'); } catch (e) {}
     }
 
-    // The Admin title earned in the hidden ADMIN ROOM shows as green hacker text
-    // before the username on the dashboard.
+    // Does this account hold a title from the hidden ADMIN ROOM?
+    function earnedTitle() {
+        try { return localStorage.getItem('ascenTitle:' + user()); } catch (e) { return null; }
+    }
+
+    // The Admin title earned in the hidden ADMIN ROOM sits before the username
+    // on the dashboard as a badge: a dark rounded plate with a green rim that
+    // glows inside and out, and glowing green text on it.
     function applyAdminTitle() {
-        var t; try { t = localStorage.getItem('ascenTitle:' + user()); } catch (e) { return; }
+        var t = earnedTitle();
         if (!t) return;   // no earned title
         var nameEl = document.getElementById('userNameDisplay');
         if (!nameEl || document.querySelector('.admin-tag')) return;
@@ -45,8 +55,15 @@
             var st = document.createElement('style');
             st.id = 'adminTagStyle';
             st.textContent =
-                '.admin-tag{color:#2bff88;font-family:"Courier New",monospace;font-weight:700;' +
-                'letter-spacing:1px;margin-right:7px;text-shadow:0 0 8px rgba(43,255,136,.65);' +
+                '.admin-tag{display:inline-flex;align-items:center;justify-content:center;' +
+                'padding:4px 16px;margin-right:9px;vertical-align:middle;' +
+                'color:#7dffbe;font-family:"Courier New",monospace;font-weight:700;' +
+                'font-size:0.86em;letter-spacing:0.5px;line-height:1.25;' +
+                'background:radial-gradient(ellipse at center,#123a28 0%,#050b08 100%);' +
+                'border:1.5px solid #3ff59a;border-radius:9px;' +
+                'text-shadow:0 0 9px rgba(93,255,178,.9),0 0 20px rgba(43,255,136,.5);' +
+                'box-shadow:0 0 12px rgba(43,255,136,.55),0 0 26px rgba(43,255,136,.25),' +
+                'inset 0 0 14px rgba(43,255,136,.35);' +
                 'animation:adminTagFlicker 3.2s infinite;}' +
                 '@keyframes adminTagFlicker{0%,100%{opacity:1}92%{opacity:1}94%{opacity:.55}96%{opacity:1}}';
             document.head.appendChild(st);
@@ -67,6 +84,15 @@
         var quoteEl = document.getElementById('dailyQuote');
         if (!quoteEl) return;
         var container = quoteEl.closest('.quote-container') || quoteEl.parentElement;
+
+        // The clue's job is done once the title has been earned. Hand the line
+        // back to the daily quote — no ominous styling, no replacement text, and
+        // no further reveals — so the dashboard reads normally from here on.
+        if (earnedTitle()) {
+            window.__mysteriousQuoteActive = false;
+            if (container) container.classList.remove('quote-ominous', 'quote-spotlight');
+            return;
+        }
 
         // Already unlocked today: show it straight away, no theatrics, and claim
         // the quote line so the async daily-quote fetch leaves it alone.

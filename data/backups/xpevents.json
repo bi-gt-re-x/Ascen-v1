@@ -1,0 +1,1860 @@
+[
+  {
+    "id": "1781450610795",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:30.795412"
+  },
+  {
+    "id": "1781450611584",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:31.584100"
+  },
+  {
+    "id": "1781450611751",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:31.751835"
+  },
+  {
+    "id": "1781450611901",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:31.901438"
+  },
+  {
+    "id": "1781450612083",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:32.083693"
+  },
+  {
+    "id": "1781450612267",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:32.267385"
+  },
+  {
+    "id": "1781450616967",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:36.967972"
+  },
+  {
+    "id": "1781450617117",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:37.117114"
+  },
+  {
+    "id": "1781450617283",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:23:37.283108"
+  },
+  {
+    "id": "1781450928691",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:28:48.691640"
+  },
+  {
+    "id": "1781450934575",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:28:54.575412"
+  },
+  {
+    "id": "1781450953617",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:29:13.617416"
+  },
+  {
+    "id": "1781451668661",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:41:08.661421"
+  },
+  {
+    "id": "1781451669313",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:41:09.313103"
+  },
+  {
+    "id": "1781451669649",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:41:09.649533"
+  },
+  {
+    "id": "1781451669882",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:41:09.882756"
+  },
+  {
+    "id": "1781451670099",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:41:10.099380"
+  },
+  {
+    "id": "1781451670320",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:41:10.320283"
+  },
+  {
+    "id": "1781451671157",
+    "user_id": "gayguy",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:41:11.157571"
+  },
+  {
+    "id": "1781451900893",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:00.893862"
+  },
+  {
+    "id": "1781451901398",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:01.398111"
+  },
+  {
+    "id": "1781451901546",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:01.546734"
+  },
+  {
+    "id": "1781451901713",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:01.713383"
+  },
+  {
+    "id": "1781451904547",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:04.547962"
+  },
+  {
+    "id": "1781451905047",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:05.047510"
+  },
+  {
+    "id": "1781451905399",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:05.399407"
+  },
+  {
+    "id": "1781451905597",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:05.597151"
+  },
+  {
+    "id": "1781451905763",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:05.763877"
+  },
+  {
+    "id": "1781451905946",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:05.946159"
+  },
+  {
+    "id": "1781451906446",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:06.446649"
+  },
+  {
+    "id": "1781451906981",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:06.981186"
+  },
+  {
+    "id": "1781451907463",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:07.463106"
+  },
+  {
+    "id": "1781451907912",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:07.912566"
+  },
+  {
+    "id": "1781451908214",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:08.214565"
+  },
+  {
+    "id": "1781451908396",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:08.396457"
+  },
+  {
+    "id": "1781451908561",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:08.561987"
+  },
+  {
+    "id": "1781451908729",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:08.729995"
+  },
+  {
+    "id": "1781451908879",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:08.879575"
+  },
+  {
+    "id": "1781451909047",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:09.047458"
+  },
+  {
+    "id": "1781451909363",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:09.363069"
+  },
+  {
+    "id": "1781451909531",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:09.531623"
+  },
+  {
+    "id": "1781451909713",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:09.713554"
+  },
+  {
+    "id": "1781451909880",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:09.880483"
+  },
+  {
+    "id": "1781451910064",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:10.064921"
+  },
+  {
+    "id": "1781451910280",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:10.280189"
+  },
+  {
+    "id": "1781451910480",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:10.480347"
+  },
+  {
+    "id": "1781451910663",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:10.663359"
+  },
+  {
+    "id": "1781451910880",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:10.880613"
+  },
+  {
+    "id": "1781451911063",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:11.063243"
+  },
+  {
+    "id": "1781451911265",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:11.265945"
+  },
+  {
+    "id": "1781451911447",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:11.447740"
+  },
+  {
+    "id": "1781451911731",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:11.731376"
+  },
+  {
+    "id": "1781451911913",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:11.913865"
+  },
+  {
+    "id": "1781451912098",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:12.098599"
+  },
+  {
+    "id": "1781451912263",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:12.263939"
+  },
+  {
+    "id": "1781451912430",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:12.430792"
+  },
+  {
+    "id": "1781451912597",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:12.597110"
+  },
+  {
+    "id": "1781451912780",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:45:12.780238"
+  },
+  {
+    "id": "1781451995572",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:46:35.572983"
+  },
+  {
+    "id": "1781451995714",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:46:35.714197"
+  },
+  {
+    "id": "1781451995862",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:46:35.862060"
+  },
+  {
+    "id": "1781451996001",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:46:36.001551"
+  },
+  {
+    "id": "1781451996147",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:46:36.147509"
+  },
+  {
+    "id": "1781451996288",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:46:36.288897"
+  },
+  {
+    "id": "1781452035181",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:47:15.181063"
+  },
+  {
+    "id": "1781452403600",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:53:23.600762"
+  },
+  {
+    "id": "1781452404170",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:53:24.170046"
+  },
+  {
+    "id": "1781452404589",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T10:53:24.589516"
+  },
+  {
+    "id": "1781453239597",
+    "user_id": "gayguy",
+    "amount": 25,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T11:07:19.597660"
+  },
+  {
+    "id": "1781453243655",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T11:07:23.655669"
+  },
+  {
+    "id": "1781453247755",
+    "user_id": "gayguy",
+    "amount": 67,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T11:07:27.755216"
+  },
+  {
+    "id": "1781453257047",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T11:07:37.047761"
+  },
+  {
+    "id": "1781455461361",
+    "user_id": "gayguy",
+    "amount": 53,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T11:44:21.361755"
+  },
+  {
+    "id": "1781456287211",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T11:58:07.211170"
+  },
+  {
+    "id": "1781456825672",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T12:07:05.672481"
+  },
+  {
+    "id": "1781460973985",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T13:16:13.985007"
+  },
+  {
+    "id": "1781461071021",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T13:17:51.021735"
+  },
+  {
+    "id": "1781461571364",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T13:26:11.364023"
+  },
+  {
+    "id": "1781489663588",
+    "user_id": "gayguy",
+    "amount": 87,
+    "reason": "task_completion",
+    "timestamp": "2026-06-14T21:14:23.588117"
+  },
+  {
+    "id": "1781532260136",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T09:04:20.136274"
+  },
+  {
+    "id": "1781533026750",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T09:17:06.750417"
+  },
+  {
+    "id": "1781533044166",
+    "user_id": "gayguy",
+    "amount": 91,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T09:17:24.166657"
+  },
+  {
+    "id": "1781533648362",
+    "user_id": "gayguy",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T09:27:28.362552"
+  },
+  {
+    "id": "1781533889142",
+    "user_id": "gayguy",
+    "amount": 56,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T09:31:29.142484"
+  },
+  {
+    "id": "1781533918925",
+    "user_id": "gayguy",
+    "amount": 56,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T09:31:58.925312"
+  },
+  {
+    "id": "1781533929838",
+    "user_id": "gayguy",
+    "amount": 82,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T09:32:09.838162"
+  },
+  {
+    "id": "1781535564997",
+    "user_id": "gayguy",
+    "amount": 55,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T09:59:24.997606"
+  },
+  {
+    "id": "1781535902194",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T10:05:02.194250"
+  },
+  {
+    "id": "1781536072405",
+    "user_id": "gayguy",
+    "amount": 93,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T10:07:52.405140"
+  },
+  {
+    "id": "1781536091758",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T10:08:11.758668"
+  },
+  {
+    "id": "1781536766299",
+    "user_id": "gayguy",
+    "amount": 57,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T10:19:26.299705"
+  },
+  {
+    "id": "1781563687864",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T17:48:07.864911"
+  },
+  {
+    "id": "1781563700637",
+    "user_id": "gayguy",
+    "amount": 96,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T17:48:20.637277"
+  },
+  {
+    "id": "1781564240846",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T17:57:20.846634"
+  },
+  {
+    "id": "1781564241295",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T17:57:21.295931"
+  },
+  {
+    "id": "1781564241702",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T17:57:21.702188"
+  },
+  {
+    "id": "1781564389469",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T17:59:49.469882"
+  },
+  {
+    "id": "1781565160138",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-15T18:12:40.138091"
+  },
+  {
+    "id": "1781626812705",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-16T11:20:12.705466"
+  },
+  {
+    "id": "1781628783122",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-16T11:53:03.122530"
+  },
+  {
+    "id": "1781648296977",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-16T17:18:16.977644"
+  },
+  {
+    "id": "1781648409399",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-16T17:20:09.399738"
+  },
+  {
+    "id": "1781704586690",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-17T08:56:26.690274"
+  },
+  {
+    "id": "1782663349993",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-28T11:15:49.993689"
+  },
+  {
+    "id": "1782663353523",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-28T11:15:53.523030"
+  },
+  {
+    "id": "1782663469552",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-28T11:17:49.552798"
+  },
+  {
+    "id": "1782663913241",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-28T11:25:13.241851"
+  },
+  {
+    "id": "1782747800352",
+    "user_id": "gayguy",
+    "amount": 42,
+    "reason": "task_completion",
+    "timestamp": "2026-06-29T10:43:20.352502"
+  },
+  {
+    "id": "1782748006805",
+    "user_id": "gayguy",
+    "amount": 45,
+    "reason": "task_completion",
+    "timestamp": "2026-06-29T10:46:46.805083"
+  },
+  {
+    "id": "1782748014840",
+    "user_id": "gayguy",
+    "amount": 45,
+    "reason": "task_completion",
+    "timestamp": "2026-06-29T10:46:54.840967"
+  },
+  {
+    "id": "1782748106145",
+    "user_id": "gayguy",
+    "amount": 27,
+    "reason": "task_completion",
+    "timestamp": "2026-06-29T10:48:26.145225"
+  },
+  {
+    "id": "1782748113121",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-29T10:48:33.121363"
+  },
+  {
+    "id": "1782748202745",
+    "user_id": "gayguy",
+    "amount": 23,
+    "reason": "task_completion",
+    "timestamp": "2026-06-29T10:50:02.745267"
+  },
+  {
+    "id": "1782748215195",
+    "user_id": "gayguy",
+    "amount": 15,
+    "reason": "task_completion",
+    "timestamp": "2026-06-29T10:50:15.195710"
+  },
+  {
+    "id": "1782841275936",
+    "user_id": "gayguy",
+    "amount": 18,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T12:41:15.936077"
+  },
+  {
+    "id": "1782842155491",
+    "user_id": "gayguy",
+    "amount": 20,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T12:55:55.491786"
+  },
+  {
+    "id": "1782842156892",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T12:55:56.892421"
+  },
+  {
+    "id": "1782842186401",
+    "user_id": "gayguy",
+    "amount": 41,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T12:56:26.401490"
+  },
+  {
+    "id": "1782842232612",
+    "user_id": "gayguy",
+    "amount": 25,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T12:57:12.612548"
+  },
+  {
+    "id": "1782842274705",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T12:57:54.705365"
+  },
+  {
+    "id": "1782862835379",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T18:40:35.379543"
+  },
+  {
+    "id": "1782862842399",
+    "user_id": "gayguy",
+    "amount": 41,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T18:40:42.399394"
+  },
+  {
+    "id": "1782862854992",
+    "user_id": "gayguy",
+    "amount": 44,
+    "reason": "task_completion",
+    "timestamp": "2026-06-30T18:40:54.992869"
+  },
+  {
+    "id": "1782923628303",
+    "user_id": "men",
+    "amount": 54,
+    "reason": "task_completion",
+    "timestamp": "2026-07-01T11:33:48.304020"
+  },
+  {
+    "id": "1783089165468",
+    "user_id": "men",
+    "amount": 41,
+    "reason": "task_completion",
+    "timestamp": "2026-07-03T09:32:45.468880",
+    "date": "2026-07-03",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783113247864",
+    "user_id": "gayguy",
+    "amount": 42,
+    "reason": "task_completion",
+    "timestamp": "2026-07-03T16:14:07.864915",
+    "date": "2026-07-03",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783267342980",
+    "user_id": "gayguy",
+    "amount": 44,
+    "reason": "task_completion",
+    "timestamp": "2026-07-05T11:02:22.980508",
+    "date": "2026-07-05",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783268072269",
+    "user_id": "gayguy",
+    "amount": 37,
+    "reason": "task_completion",
+    "timestamp": "2026-07-05T11:14:32.269310",
+    "date": "2026-07-05",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783271781985",
+    "user_id": "gayguy",
+    "amount": 50,
+    "reason": "task_completion",
+    "timestamp": "2026-07-05T12:16:21.985020",
+    "date": "2026-07-05",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783271830409",
+    "user_id": "gayguy",
+    "amount": 50,
+    "reason": "task_completion",
+    "timestamp": "2026-07-05T12:17:10.409375",
+    "date": "2026-07-05",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783291693708",
+    "user_id": "gayguy",
+    "amount": 73,
+    "reason": "task_completion",
+    "timestamp": "2026-07-05T17:48:13.708483",
+    "date": "2026-07-05",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783349006727",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-06T09:43:26.727265",
+    "date": "2026-07-06",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783349007686",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-06T09:43:27.686269",
+    "date": "2026-07-06",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783349008473",
+    "user_id": "gayguy",
+    "amount": 97,
+    "reason": "task_completion",
+    "timestamp": "2026-07-06T09:43:28.473561",
+    "date": "2026-07-06",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783349009152",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-06T09:43:29.152272",
+    "date": "2026-07-06",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783349009986",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-06T09:43:29.986957",
+    "date": "2026-07-06",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783349010765",
+    "user_id": "gayguy",
+    "amount": 99,
+    "reason": "task_completion",
+    "timestamp": "2026-07-06T09:43:30.765925",
+    "date": "2026-07-06",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783349011500",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-06T09:43:31.500172",
+    "date": "2026-07-06",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783349012611",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-06T09:43:32.611320",
+    "date": "2026-07-06",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783440848532",
+    "user_id": "gayguy",
+    "amount": 5,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T11:14:08.532793",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783440849124",
+    "user_id": "gayguy",
+    "amount": 5,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T11:14:09.124818",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783441033572",
+    "user_id": "gayguy",
+    "amount": 52,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T11:17:13.572540",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783458245343",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T16:04:05.343509",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783458246087",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T16:04:06.087574",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783458246710",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-07T16:04:06.710826",
+    "date": "2026-07-07",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783521613543",
+    "user_id": "gayguy",
+    "amount": 37,
+    "reason": "task_completion",
+    "timestamp": "2026-07-08T09:40:13.543714",
+    "date": "2026-07-08",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783521899210",
+    "user_id": "gayguy",
+    "amount": 49,
+    "reason": "task_completion",
+    "timestamp": "2026-07-08T09:44:59.210113",
+    "date": "2026-07-08",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783543646631",
+    "user_id": "gayguy",
+    "amount": 22,
+    "reason": "task_completion",
+    "timestamp": "2026-07-08T15:47:26.631373",
+    "date": "2026-07-08",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783624338367",
+    "user_id": "gayguy",
+    "amount": 37,
+    "reason": "task_completion",
+    "timestamp": "2026-07-09T14:12:18.367061",
+    "date": "2026-07-09",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783695366920",
+    "user_id": "gayguy",
+    "amount": 99,
+    "reason": "task_completion",
+    "timestamp": "2026-07-10T09:56:06.920424",
+    "date": "2026-07-10",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783695367845",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-10T09:56:07.845785",
+    "date": "2026-07-10",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783713172862",
+    "user_id": "gayguy",
+    "amount": 37,
+    "reason": "task_completion",
+    "timestamp": "2026-07-10T14:52:52.862197",
+    "date": "2026-07-10",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783907042002",
+    "user_id": "gayguy",
+    "amount": 73,
+    "reason": "task_completion",
+    "timestamp": "2026-07-12T20:44:02.002112",
+    "date": "2026-07-12",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783907052107",
+    "user_id": "gayguy",
+    "amount": 74,
+    "reason": "task_completion",
+    "timestamp": "2026-07-12T20:44:12.107225",
+    "date": "2026-07-12",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783907068559",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-12T20:44:28.559017",
+    "date": "2026-07-12",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783955356267",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-13T10:09:16.267185",
+    "date": "2026-07-13",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1783981604305",
+    "user_id": "gayguy",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-13T17:26:44.305914",
+    "date": "2026-07-13",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784039932112",
+    "user_id": "gayguy",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-14T09:38:52.112273",
+    "date": "2026-07-14",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784039933206",
+    "user_id": "gayguy",
+    "amount": 62,
+    "reason": "task_completion",
+    "timestamp": "2026-07-14T09:38:53.206917",
+    "date": "2026-07-14",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784043591026",
+    "user_id": "gayguy",
+    "amount": 84,
+    "reason": "task_completion",
+    "timestamp": "2026-07-14T10:39:51.026843",
+    "date": "2026-07-14",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784310584846",
+    "user_id": "men",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-17T12:49:44.846772",
+    "date": "2026-07-17",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784476597617",
+    "user_id": "men",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-19T10:56:37.617491",
+    "date": "2026-07-19",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784476598352",
+    "user_id": "men",
+    "amount": 200,
+    "reason": "task_completion",
+    "timestamp": "2026-07-19T10:56:38.352509",
+    "date": "2026-07-19",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784476598987",
+    "user_id": "men",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-19T10:56:38.987540",
+    "date": "2026-07-19",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643697742",
+    "user_id": "men",
+    "amount": 88,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:21:37.742640",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643698517",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:21:38.517700",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643699202",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:21:39.202807",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643700020",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:21:40.020763",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643700712",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:21:40.712375",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643701465",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:21:41.465914",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643702204",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:21:42.204089",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643702909",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:21:42.909491",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643724595",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:04.595316",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643725303",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:05.303241",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643726151",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:06.151983",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643726983",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:06.983030",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643727713",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:07.713122",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643728509",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:08.509371",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643729248",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:09.248514",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643730102",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:10.102350",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643731160",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:11.160132",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643732073",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:12.073775",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643732836",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:12.836694",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643734127",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:14.127123",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643734919",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:14.919281",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643735667",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:15.667246",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643736423",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:16.423870",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643737125",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:17.125118",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643737845",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:17.845204",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643738608",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:18.608064",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643739272",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:19.272617",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643740137",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:20.137546",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643740889",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:20.889091",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643741611",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:21.611932",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643742329",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:22.329709",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643742991",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:22.991203",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643743673",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:23.673646",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643744361",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:24.361294",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643745083",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:25.083907",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643745781",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:25.781463",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643746532",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:26.532083",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643747303",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:27.303828",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643748050",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:28.050241",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643748675",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:28.675911",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643749337",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:29.337864",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643750081",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:30.081346",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643750798",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:30.798266",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643751547",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:31.547033",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643752273",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:32.273938",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643753020",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:33.020891",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643753747",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:33.747589",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643754516",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:34.516702",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643755184",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:35.184590",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643755962",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:35.962625",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643756736",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:36.736448",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643757488",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:37.488099",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643758251",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:38.251494",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643759024",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:39.024799",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643759795",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:39.795504",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643760577",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:40.577995",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784643761381",
+    "user_id": "men",
+    "amount": 68,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T09:22:41.381090",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784672538875",
+    "user_id": "gayguy",
+    "amount": 67,
+    "reason": "task_completion",
+    "timestamp": "2026-07-21T17:22:18.875216",
+    "date": "2026-07-21",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784750848986",
+    "user_id": "men",
+    "amount": 47,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T15:07:28.986266",
+    "date": "2026-07-22",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784755832398",
+    "user_id": "men",
+    "amount": 35,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T16:30:32.398450",
+    "date": "2026-07-22",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784755833718",
+    "user_id": "men",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T16:30:33.718831",
+    "date": "2026-07-22",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784755835185",
+    "user_id": "men",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T16:30:35.185673",
+    "date": "2026-07-22",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784756214603",
+    "user_id": "men",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T16:36:54.603374",
+    "date": "2026-07-22",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784756216079",
+    "user_id": "men",
+    "amount": 100,
+    "reason": "task_completion",
+    "timestamp": "2026-07-22T16:36:56.079413",
+    "date": "2026-07-22",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1784819494678",
+    "user_id": "men",
+    "amount": 98,
+    "reason": "task_completion",
+    "timestamp": "2026-07-23T10:11:34.678230",
+    "date": "2026-07-23",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785078053267",
+    "user_id": "dude",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T10:00:53.267339",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785078054353",
+    "user_id": "dude",
+    "amount": 10,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T10:00:54.353784",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785109746661",
+    "user_id": "SMYLES",
+    "amount": 75,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T18:49:06.661921",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785109747861",
+    "user_id": "SMYLES",
+    "amount": 43,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T18:49:07.861954",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  },
+  {
+    "id": "1785109750413",
+    "user_id": "SMYLES",
+    "amount": 62,
+    "reason": "task_completion",
+    "timestamp": "2026-07-26T18:49:10.413314",
+    "date": "2026-07-26",
+    "tasks_completed": 1
+  }
+]

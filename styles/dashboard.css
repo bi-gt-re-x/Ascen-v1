@@ -103,23 +103,6 @@ body {
     color: #A38A70;
 }
 
-.view-dropdown {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: #F8F9FA;
-    border: 1px solid #EAEAEA;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.view-dropdown .dropdown-arrow {
-    font-size: 9px;
-    color: #6C757D;
-}
 
 /* ==========================================================================
    LAYOUT STRUCTURE CONTROLLER
@@ -488,10 +471,6 @@ html.focus-mode .focus-progress { height: 10px; margin: 0; }
     color: #6C757D;
 }
 
-.stat-item .highlight {
-    color: #A38A70;
-    font-weight: 600;
-}
 
 /* Statistics List Rows */
 .stat-row {
@@ -685,15 +664,6 @@ html.focus-mode .focus-progress { height: 10px; margin: 0; }
     flex-direction: column;
 }
 
-.panel-header-band {
-    background: #F8F9FA;
-    color: #2C302E;
-    padding: 12px 16px;
-    font-weight: 600;
-    font-size: 14px;
-    border-bottom: 1.5px solid #EAEAEA;
-    text-align: left;
-}
 
 .task-panel ul,
 .task-list {
@@ -917,28 +887,7 @@ html[data-theme="dark"] .calendar-hint a { color: #d8c3a5; }
 
 
 /* Completed Modifiers */
-.task-panel.completed-panel .task-item {
-    opacity: 0.55;
-}
 
-.task-panel.completed-panel .task-checkbox {
-    background-color: #2C302E;
-    border-color: #2C302E;
-}
-
-.task-panel.completed-panel .task-checkbox::after {
-    content: "";
-    width: 8px;
-    height: 2px;
-    background-color: #FFFFFF;
-    display: block;
-}
-
-.task-panel.completed-panel .task-name,
-.task-panel.completed-panel .task-due-date {
-    text-decoration: line-through;
-    text-decoration-thickness: 1.5px;
-}
 
 /* ==========================================================================
    FOOTER AREA
@@ -1323,30 +1272,16 @@ html[data-theme="dark"] .cal-suggest-bad .cal-suggest-link { color: #ff9297; }
 }
 
 /* Completed Task Styles */
-.task-panel.completed-panel .task-item {
-    opacity: 0.55;
-}
+
 
 /* Checkbox State inside Completed Panel */
-.task-panel.completed-panel .task-checkbox {
-    background-color: #2C302E;
-    border-color: #2C302E;
-}
+
 
 /* Checkmark inside the checkbox */
-.task-panel.completed-panel .task-checkbox::after {
-    content: "✓";
-    color: #FFFFFF;
-    font-size: 13px;
-    font-weight: 700;
-}
+
 
 /* Line-through for text */
-.task-panel.completed-panel .task-name,
-.task-panel.completed-panel .task-due-date {
-    text-decoration: line-through;
-    text-decoration-thickness: 1.5px;
-}
+
 
 /* Custom Styled Active Checkbox State */
 /* Custom Styled Active Checkbox State */
@@ -1457,7 +1392,6 @@ html[data-theme="dark"] .stat-row {
 html[data-theme="dark"] .xp-bar-container {
     background: #30363d;
 }
-html[data-theme="dark"] .stat-item .highlight,
 html[data-theme="dark"] .task-due-date.task-elapsed {
     color: #d8b489;
 }
