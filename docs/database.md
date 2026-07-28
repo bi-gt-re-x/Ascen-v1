@@ -1,15 +1,19 @@
 # Database
 
-Ascen stores its data in `data/postgresql/` — one `.sql` file per part of the
-app, each holding its tables' definitions followed by their rows as `INSERT`
-statements. Schema and data sit in the same file, in the SQL the app is
-migrating toward.
+Ascen stores its data in a SQLite database at `data/ascen.db`. It is git-
+ignored, because it changes every time the app runs.
 
-`data/backups/` holds the JSON stores this replaced. They are a backup of the
-last JSON-era state; nothing reads or writes them any more.
+The database is built from `data/sql/` — one `.sql` file per part of the app,
+each holding its tables' definitions followed by the rows to start from. Those
+files are read once, when `data/ascen.db` does not exist yet: a fresh clone
+comes up with a working database and no setup step. After that the database is
+the only copy of the data, and the seed files stop changing.
+
+`data/backups/` holds the JSON stores that came before. They are a backup of
+the last JSON-era state; nothing reads or writes them any more.
 
 Every read and write goes through `backend/database/connection.py`. Nothing
-else in the codebase opens a file.
+else in the codebase opens the database.
 
 ## What lives where
 
@@ -26,11 +30,10 @@ else in the codebase opens a file.
 
 `user_id` on every row is the **username**, not the account id.
 
-## How a file is laid out
+## How a seed file is laid out
 
-Everything above the first `-- ---- rows: <table> ----` marker is the schema
-and is preserved word for word on every write. Below each marker are that
-table's rows:
+Everything above the first `-- ---- rows: <table> ----` marker is the schema.
+Below each marker are that table's starting rows:
 
 ```sql
 CREATE TABLE IF NOT EXISTS focus_days (
@@ -45,28 +48,44 @@ CREATE TABLE IF NOT EXISTS focus_days (
 INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('dude', '2026-07-26', 4.0, 2.0);
 ```
 
-A write regenerates one table's block and leaves every other byte of the file
-alone, so comments and hand edits to a schema survive.
-
-Values keep their types on the way back: the column's SQL type decides, so
-`INTEGER` comes back an int, `NUMERIC` a float, `BOOLEAN` a bool, `JSONB` the
-decoded object, and `NULL` is None. Quoting is what separates `'1'` the string
-from `1` the number.
+The schema is SQLite, not PostgreSQL: `TEXT` where a server would use
+`TIMESTAMPTZ` or `JSONB`, `INTEGER PRIMARY KEY AUTOINCREMENT` for `BIGSERIAL`,
+and no `GIN` indexes. Everything else — the `CHECK` constraints, the partial
+and expression indexes, the foreign keys — is enforced as written.
 
 ## Behaviour that isn't obvious
 
-**Writes are atomic.** A temp file in the same directory is `os.replace()`d
-over the target, so a concurrent reader sees the whole old file or the whole
-new one — never a truncated one. The threaded dev server makes that real.
+**A NULL column is left out of the row entirely.** `read_table` drops it rather
+than returning `None`. The app reads optional fields as
+`row.get('x', <fallback>)` and tests `'met_deadline' in row`, and those two
+spellings only agree if a value that was never written stays *missing*. Writing
+follows the same rule in reverse: a key the row does not have is stored as NULL
+where the column allows it, and left to its `DEFAULT` where it does not.
+
+**Rows keep insertion order** (`ORDER BY rowid`). The XP ledger is append-only
+and "the latest event" is the last row, not the largest id.
+
+**`write_table` turns foreign keys off while it swaps the rows, and this is not
+optional.** Every table belonging to an account declares `ON DELETE CASCADE`,
+so clearing `users` for a rewrite would take that account's tasks, goals and XP
+with it — and `refresh_streak` rewrites `users` on every page load. The rows
+are being replaced, not deleted, so the cascade must not fire. What the keys
+are for is still checked on the way out: `PRAGMA foreign_key_check` runs
+against the written table before the transaction commits, and a reference that
+points at nothing rolls the whole write back.
+
+**Writes are atomic**, in one transaction, so a reader sees all of the old rows
+or all of the new. WAL is on, so a reader never blocks on the writer.
 
 **Reads write.** `GET /api/get_user_data` decays a stale streak,
 `GET /api/get_goals` re-syncs streak and focus goals, and
-`GET /api/get_growth_ratings` files a snapshot into `analytics.sql`. All three
-save as they go, so the `.sql` files change as the app is used.
+`GET /api/get_growth_ratings` files a snapshot into `metric_snapshots`. All
+three save as they go — into the database, which is why the seed files no
+longer churn.
 
 **Ids are millisecond timestamps**, stepped forward past collisions
-(`connection.new_id`). They are primary keys now, so two rows created in the
-same millisecond can no longer share one.
+(`connection.new_id`). They are primary keys, so two rows created in the same
+millisecond can no longer share one.
 
 **Levels are derived but stored.** Level N costs N × 100 XP; `level` is kept on
 the account so a page renders without recomputing, and is recalculated from the
@@ -76,12 +95,26 @@ total on every completion.
 `password_hash`; sign-in accepts them and rewrites the field as a pbkdf2 hash
 the first time each is used.
 
-## Moving to a real PostgreSQL server
+## Starting over
 
-The files are already the schema and the data, in order:
+Delete `data/ascen.db` and run the app. It is rebuilt from `data/sql/` on the
+next read, back to the state those files describe.
 
-1. `psql -f users.sql` first, then `tasks.sql` and `goals.sql`, then the rest —
-   foreign keys point at `users.username`.
-2. Repoint `backend/database/connection.py` — the load/save pair per table — at
-   the connection instead of the file. Nothing above that layer knows where the
-   data lives, so `tracking/` and `pages/` should not need to change.
+To point at a database somewhere else, set `ASCEN_DB` to its path.
+
+## Moving to a PostgreSQL server
+
+The schema is deliberately plain, so the distance is short:
+
+1. Put the `TIMESTAMPTZ`, `JSONB`, `BIGSERIAL` and `TEXT[]` types back, and the
+   `GIN` index on `library_items.tags`. Nothing else in `data/sql/` changes.
+2. Load the files in the order `config/settings.py:SCHEMA_FILES` gives —
+   `users` first, since every foreign key points at `users.username`.
+3. Repoint `connection.py` at a connection pool instead of a file. `read_table`
+   and `write_table` are the only two functions that run SQL; nothing above
+   them knows where the data lives, so `tracking/` and `pages/` do not change.
+
+The one thing that would need rethinking is `write_table`: replacing a whole
+table on every save is fine for a local file and wasteful over a network. The
+row dicts already carry their primary keys, so it can become an upsert plus a
+delete of what is missing.

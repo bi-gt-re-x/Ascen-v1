@@ -10,3 +10,8 @@ frontend/.env
 
 # Local tool settings
 .claude/settings.local.json
+
+# The live database, rebuilt from data/sql/ when absent
+data/ascen.db
+data/ascen.db-wal
+data/ascen.db-shm

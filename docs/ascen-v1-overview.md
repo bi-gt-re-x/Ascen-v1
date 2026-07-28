@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: b914a0dc-6f30-4713-b9c4-697e858ed39b
-  modified: 2026-07-27T13:45:52.509Z
+  modified: 2026-07-28T15:13:43.649Z
 ---
 
 **Ascen v1** ("Study Dashboard" / "grind-os") is a Flask productivity web app the user has built over ~3 months (2nd attempt after scrapping a first agent-built version). Gamified study/task tracker: tasks, XP/levels, streaks, a calendar, goals, and a growth analytics/report-card page.
@@ -17,14 +17,16 @@ metadata:
 - `styles/` (top level) — all CSS (`styles/calendar/` = active calendar styles). `styles/layout.css` = shared responsive foundation (`.page-shell`, breakpoints 1024/768/480).
 - `frontend/js/` — all JS, moved there 2026-07-27 (api.js, dashboard.js, tasks.js, goal.js, focus.js, focus-theme.js, celebrate.js, theme.js, page-fade.js, fit-scale.js, `js/calendar/` for day/week views, etc.).
 - `utils/` — `images/` (logo.svg), `icons/` (80 calendar svg icons), plus empty `fonts/` and `assets/`.
-- `data/postgresql/*.sql` — **the actual datastore** since 2026-07-27: schema + rows in one file per area (users, tasks, goals, growth=xp ledger, focus, events, analytics=report card). `data/backups/*.json` = the old JSON store, kept as a backup only.
+- `data/ascen.db` — **the actual datastore** since 2026-07-28: a SQLite database, git-ignored. `data/sql/*.sql` = its schema + seed rows, one file per area (users, tasks, goals, growth=xp ledger, focus, events, analytics=report card), read only when the db is missing. `data/backups/*.json` = the old JSON store, kept as a backup only.
 - `docs/` — architecture / api / database / roadmap / changelog, plus copies of these memory files.
 - `frontend/js/fit-scale.js` — proportional "zoom to fit" for `data-fit-width="N"` elements (growth pages); goals page no longer uses it after the 2026-07-22 redesign.
 
 **Non-obvious facts:**
-- Live data is **`data/postgresql/*.sql`**, read/written by `backend/database/connection.py` (parses INSERTs, types values from the column type, rewrites one table's block at a time). Nothing opens `database.db` at all.
+- Live data is **`data/ascen.db`** (SQLite), read/written by `backend/database/connection.py`. Its interface survived two datastore rewrites unchanged — `read_table`/`write_table`/`new_id` + a load/save pair per store — which is why `tracking/` and `pages/` needed zero edits when JSON→.sql→SQLite. Nothing opens the root `database.db` at all.
+- **`read_table` omits NULL columns from the row dict** rather than returning None, because the app relies on `'met_deadline' in task`, `.get('tasks_completed', 1)` and `.get('email_verified', True)` — returning None there would corrupt the report card, undercount the growth chart, and lock 5 of 6 accounts out.
+- **`write_table` must disable foreign keys while it swaps rows.** Every account-owned table is ON DELETE CASCADE and `refresh_streak` rewrites `users` on every page load, so its DELETE-then-INSERT would cascade away all tasks/goals/XP. It re-checks with `PRAGMA foreign_key_check` before commit. Do not "simplify" this away.
 - The whole backend is **tracked in git** — the old `.gitignore` patterns referenced pre-reorg paths and no longer match. (`paths.py` was historically the "hidden master backend file" referenced in 00-Welcome.txt.) `database.db`/`.env` may still be ignored.
-- **`database/connection.py:write_table` is atomic** (temp file + `os.replace`) to avoid torn reads under the threaded dev server. Streak model: `tracking/xp.py:refresh_streak(user)` decays a stale current_streak (lost after a full missed day; best_streak kept) on every `get_user_data`/`get_goals` read, and `complete_task` extends it on consecutive days. Backend is the single source of truth; JS API reads use `cache: 'no-store'`. The `.sql` files get rewritten on normal reads (streak decay, goal sync, and the report card filing a snapshot into analytics.sql), so they show as git-modified whenever the app runs — don't commit that churn.
+- **`write_table` is atomic** (one transaction, WAL on) to avoid torn reads under the threaded dev server. Streak model: `tracking/xp.py:refresh_streak(user)` decays a stale current_streak (lost after a full missed day; best_streak kept) on every `get_user_data`/`get_goals` read, and `complete_task` extends it on consecutive days. Backend is the single source of truth; JS API reads use `cache: 'no-store'`. Reads still write (streak decay, goal sync, report-card snapshots) — but into the db now, so **the old git churn from the datastore is gone**; `data/sql/` no longer changes when the app runs.
 - Older accounts still hold a **plaintext** `password_hash` in users.json; sign-in accepts them and upgrades each one to a pbkdf2 hash the first time it's used (`tracking/auth.py`).
 
 See [[ascen-v1-run-setup]] for how to run it on this Mac.

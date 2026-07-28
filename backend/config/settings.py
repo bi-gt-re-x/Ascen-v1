@@ -34,13 +34,27 @@ STATIC_ROOTS = {
 }
 
 # --- Datastore -----------------------------------------------------------
-#   data/postgresql/   the live datastore: one .sql per part of the app, each
-#                      holding its tables' definitions and their rows.
+#   data/ascen.db      the live database. Everything the app reads and writes
+#                      is in here; it is git-ignored, because it changes every
+#                      time the app runs.
+#   data/sql/          the schema and the seed: one .sql per part of the app,
+#                      each holding its tables' definitions followed by the
+#                      rows to start from. Executed once, when the database
+#                      does not exist yet.
 #   data/backups/      the JSON stores this replaced, kept as a backup of the
 #                      last JSON-era state. Nothing reads or writes them.
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
-SQL_DIR = os.path.join(DATA_DIR, 'postgresql')
+SQL_DIR = os.path.join(DATA_DIR, 'sql')
 BACKUP_DIR = os.path.join(DATA_DIR, 'backups')
+DB_PATH = os.environ.get('ASCEN_DB') or os.path.join(DATA_DIR, 'ascen.db')
+
+# The order data/sql/*.sql is executed in when building the database. It is
+# spelled out rather than sorted because a table has to exist before another
+# one can reference it: users first, then everything that hangs off a user.
+SCHEMA_FILES = [
+    'users', 'tasks', 'goals', 'growth', 'focus', 'events', 'analytics',
+    'achievements', 'history', 'library', 'notes', 'settings',
+]
 
 # --- Behaviour -----------------------------------------------------------
 # A year: the theme cookie only has to outlive the session.

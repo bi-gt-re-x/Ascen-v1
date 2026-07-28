@@ -2,6 +2,43 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-28 — The .sql files become an actual database
+
+The data lives in SQLite at `data/ascen.db` now. `data/sql/` keeps the schema
+and the rows to start from, and is read once — when the database does not exist
+yet — so a fresh clone still comes up working with nothing to install or start.
+`data/postgresql/` is gone; its contents moved to `data/sql/` with the DDL
+rewritten for SQLite.
+
+- `backend/database/connection.py` rewritten on `sqlite3`. The public interface
+  is unchanged — `read_table`, `write_table`, `new_id` and the load/save pair
+  per store — so `tracking/` and `pages/` did not change at all.
+- Schemas converted: `TIMESTAMPTZ`/`JSONB`/`DATE` → `TEXT`, `BIGSERIAL` →
+  `INTEGER PRIMARY KEY AUTOINCREMENT`, `TEXT[]` → JSON in a `TEXT` column,
+  `SMALLINT` → `INTEGER`, `now()` → `datetime('now')`, `left()` → `substr()`,
+  the `growth_daily` view to `CREATE VIEW IF NOT EXISTS`. The `GIN` index on
+  `library_items.tags` has no SQLite equivalent and is dropped. Every `CHECK`,
+  every foreign key and both partial/expression indexes survive as written.
+- **A NULL column is left out of the row dict** rather than returned as `None`.
+  Three call sites depend on it: `'met_deadline' in task` (640 of 714 tasks
+  lack it), `xp_event.get('tasks_completed', 1)` (124 of 234), and
+  `user.get('email_verified', True)` (5 of 6 accounts) — which would otherwise
+  have locked those accounts out.
+- **`write_table` disables foreign keys while it swaps a table's rows.** Every
+  account-owned table is `ON DELETE CASCADE`, and `refresh_streak` rewrites
+  `users` on every page load, so the delete half of the rewrite would have
+  cascaded away every task, goal and XP row. `PRAGMA foreign_key_check` still
+  runs on the written table before commit.
+- Three goals belonging to `user_id = 'Default'`, an account that never
+  existed, were dropped. They had been unreachable since the account gate
+  landed.
+- `data/ascen.db` is git-ignored. The seed files no longer change as the app
+  runs, so the datastore stops showing up as modified in every diff.
+
+Verified by running the old and new code side by side: 371 KB of API responses
+across four accounts, and the only differences are absent `null` keys and
+`100.0` rendering as `100`.
+
 ## 2026-07-27 — The datastore moves into the .sql files
 
 `data/postgresql/*.sql` is now where the data lives, not just where the schema

@@ -32,11 +32,11 @@ analytics *page* doesn't exist, though the grading behind it does.
 
 ## Next
 
-**A real PostgreSQL server.** The data already lives as SQL in
-`data/postgresql/` — schema and rows in the same files — and the whole
-datastore is behind one module (`backend/database/connection.py`). What is left
-is pointing that module at a server instead of the files; the steps are in
-[database.md](database.md).
+**A PostgreSQL server.** The data is in a real database now — SQLite, at
+`data/ascen.db`, behind one module (`backend/database/connection.py`) whose
+only two SQL-running functions are `read_table` and `write_table`. What is left
+is putting the server-only types back in `data/sql/` and pointing those two
+functions at a connection pool; the steps are in [database.md](database.md).
 
 **Fix `/api/update_task_completion`.** The month calendar posts to an endpoint
 that has never existed. Either add it or point that call at

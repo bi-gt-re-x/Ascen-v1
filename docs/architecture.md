@@ -22,7 +22,8 @@ utils/
   fonts/               (empty)               -> /static/fonts/...
   assets/              (empty)               -> /static/assets/...
 data/
-  postgresql/          the live datastore: schema + rows, one .sql per part
+  ascen.db             the live database (SQLite, git-ignored)
+  sql/                 its schema and seed, one .sql per part of the app
   backups/             the JSON stores it replaced, kept as a backup
 docs/                  this folder
 ```
@@ -55,16 +56,15 @@ the page list. Adding a page means writing `backend/pages/<name>.py` with a
 never decides what an account's XP, level or streak is. Scripts fetch with
 `cache: 'no-store'` so a second tab can't show a stale number.
 
-**Writes are atomic.** `database/connection.py` writes to a temp file and
-`os.replace()`s it over the target, because the threaded dev server can read a
-store on one request while another request is rewriting it. A write regenerates
-one table's rows and leaves the rest of the file — schema, comments, other
-tables — untouched.
+**Writes are atomic.** `database/connection.py` replaces a table's rows inside
+one transaction, because the threaded dev server can read a table on one
+request while another request is rewriting it. A reader sees all of the old
+rows or all of the new ones.
 
 **Reads can write.** A stale streak is decayed and self-tracking goals are
 re-synced when they are read, and asking for the report card files a snapshot
-into analytics.sql. So `data/postgresql/*.sql` change as the app is used, with
-no user action.
+into `metric_snapshots`. So the database changes as the app is used, with no
+user action — `data/sql/` does not.
 
 **The theme is server-rendered.** `<html data-theme="...">` is decided from the
 `theme` cookie before a byte is sent, so navigation never flashes the wrong
@@ -78,7 +78,7 @@ tree; `routes/assets.py` maps `/static/<kind>/...` onto them, so every
 
 `pages/` and `tracking/` carry stubs for features that don't exist yet —
 growthtree, achievements, notes, library, history, settings. Each stub says
-what belongs in it, and `data/postgresql/` has their tables, schema only.
+what belongs in it, and `data/sql/` has their tables, schema only.
 
 See [database.md](database.md) for the stores, [api.md](api.md) for the
 endpoints, and [roadmap.md](roadmap.md) for what's next.
