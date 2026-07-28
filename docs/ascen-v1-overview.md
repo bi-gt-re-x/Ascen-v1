@@ -17,14 +17,14 @@ metadata:
 - `styles/` (top level) — all CSS (`styles/calendar/` = active calendar styles). `styles/layout.css` = shared responsive foundation (`.page-shell`, breakpoints 1024/768/480).
 - `frontend/js/` — all JS, moved there 2026-07-27 (api.js, dashboard.js, tasks.js, goal.js, focus.js, focus-theme.js, celebrate.js, theme.js, page-fade.js, fit-scale.js, `js/calendar/` for day/week views, etc.).
 - `utils/` — `images/` (logo.svg), `icons/` (80 calendar svg icons), plus empty `fonts/` and `assets/`.
-- `data/backups/*.json` — **the actual datastore** (moved there 2026-07-27): users, tasks, calendar, goals, xpevents, eventcolors. `data/postgresql/*.sql` = the migration target, not executed.
+- `data/postgresql/*.sql` — **the actual datastore** since 2026-07-27: schema + rows in one file per area (users, tasks, goals, growth=xp ledger, focus, events, analytics=report card). `data/backups/*.json` = the old JSON store, kept as a backup only.
 - `docs/` — architecture / api / database / roadmap / changelog, plus copies of these memory files.
 - `frontend/js/fit-scale.js` — proportional "zoom to fit" for `data-fit-width="N"` elements (growth pages); goals page no longer uses it after the 2026-07-22 redesign.
 
 **Non-obvious facts:**
-- Live data is the **JSON files** under `data/`. Since the 2026-07-26 rewrite nothing opens `database.db` at all (no `init_db`, no sqlite import).
+- Live data is **`data/postgresql/*.sql`**, read/written by `backend/database/connection.py` (parses INSERTs, types values from the column type, rewrites one table's block at a time). Nothing opens `database.db` at all.
 - The whole backend is **tracked in git** — the old `.gitignore` patterns referenced pre-reorg paths and no longer match. (`paths.py` was historically the "hidden master backend file" referenced in 00-Welcome.txt.) `database.db`/`.env` may still be ignored.
-- **`database/connection.py:write_json` is atomic** (temp file + `os.replace`) to avoid torn reads under the threaded dev server. Streak model: `tracking/xp.py:refresh_streak(user)` decays a stale current_streak (lost after a full missed day; best_streak kept) on every `get_user_data`/`get_goals` read, and `complete_task` extends it on consecutive days. Backend is the single source of truth; JS API reads use `cache: 'no-store'`. Data files under `data/` get rewritten on normal reads (streak decay/goal sync), so they show as git-modified whenever the app runs — don't commit that churn.
+- **`database/connection.py:write_table` is atomic** (temp file + `os.replace`) to avoid torn reads under the threaded dev server. Streak model: `tracking/xp.py:refresh_streak(user)` decays a stale current_streak (lost after a full missed day; best_streak kept) on every `get_user_data`/`get_goals` read, and `complete_task` extends it on consecutive days. Backend is the single source of truth; JS API reads use `cache: 'no-store'`. The `.sql` files get rewritten on normal reads (streak decay, goal sync, and the report card filing a snapshot into analytics.sql), so they show as git-modified whenever the app runs — don't commit that churn.
 - Older accounts still hold a **plaintext** `password_hash` in users.json; sign-in accepts them and upgrades each one to a pbkdf2 hash the first time it's used (`tracking/auth.py`).
 
 See [[ascen-v1-run-setup]] for how to run it on this Mac.

@@ -8,28 +8,33 @@ metadata:
   modified: 2026-07-27T14:14:15.034Z
 ---
 
-**Backend rewritten 2026-07-26, folders moved 2026-07-27** (branch `calendar-focus-and-recurrence`): `paths.py` (2200 lines), `auth.py`, `services/`, `models/`, root `task_backend.py`, `utilities/` and `images/` are all gone. Verify paths before relying on them. See [[ascen-v1-overview]], [[ascen-v1-data-schema]], [[ascen-v1-run-setup]].
+**Backend rewritten 2026-07-26; folders moved and the datastore moved to SQL 2026-07-27** (branch `calendar-focus-and-recurrence`): `paths.py` (2200 lines), `auth.py`, `services/`, `models/`, root `task_backend.py`, `utilities/` and `images/` are all gone. Verify paths before relying on them. See [[ascen-v1-overview]], [[ascen-v1-data-schema]], [[ascen-v1-run-setup]].
 
 ```
 run.py                     # shim: from backend.run import app, main (run_mac.py imports app)
 run_mac.py                 # macOS runner, port 5050
 database.db                # SQLite — DEAD; no code opens it any more
 data/
-  backups/                 # THE live datastore (JSON): users tasks calendar goals xpevents eventcolors
-  postgresql/              # 12 .sql table definitions, the migration target; nothing executes them
+  postgresql/              # THE live datastore: schema + rows per file. users tasks goals
+                           #   growth(xp_events) focus(focus_days,day_focus_notes)
+                           #   events(calendar_entries,calendar_events,event_colors)
+                           #   analytics(metric_snapshots). 5 more are schema-only stubs.
+  backups/                 # the old JSON store, kept as a backup; not read or written
 backend/
   app.py                   # create_app(): Flask + jinja ChoiceLoader(frontend/secret)
   run.py                   # loads .env, builds app, main()
   config/settings.py       # ALL paths/keys/tunables + load_dotenv() + apply(app)
-  database/connection.py   # the JSON store: read_json/write_json (atomic) + users()/save_users() etc.
+  database/connection.py   # the .sql store: read_table/write_table (atomic, one table's block
+                           #   at a time) + users()/save_users() etc. + new_id(table)
   database/{schema,seed}.sql migrations/   # placeholders, nothing executes them
   tracking/                # pure logic, no Flask routes
     auth.py    accounts, passwords, verification e-mail, Google, session
     xp.py      ledger + levels + streak (refresh_streak/extend_streak/award_task_completion)
     focus.py   focus_history + the per-day focus note (day_focus)
     event.py   calendar entries/events/colours
-    growth.py  30-day series + the 5-metric report card
-    tree.py analytics.py productivity.py consistency.py   # stubs, features not built
+    growth.py  the 30-day chart series
+    analytics.py  the 5-metric report card + snapshots into analytics.sql
+    tree.py productivity.py consistency.py   # stubs, features not built
   pages/                   # one blueprint per page: route + that page's API
     homepage dashboard tasks calendar goals growth focus aboutus privacypolicy termsofservice
     analytics growthtree achievements notes library history settings   # stubs

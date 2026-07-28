@@ -87,7 +87,7 @@ def legacy_signup():
         return jsonify({"success": False, "message": "Account already exists."})
 
     users.append({
-        "id": str(int(datetime.now().timestamp() * 1000)),
+        "id": db.new_id('users'),
         "username": username,
         "password_hash": auth.hash_password(password),
         "xp": 0,

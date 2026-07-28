@@ -34,24 +34,13 @@ STATIC_ROOTS = {
 }
 
 # --- Datastore -----------------------------------------------------------
-# data/ is laid out for the PostgreSQL move that hasn't happened yet:
-#
-#   data/postgresql/   the table definitions, one .sql per table. Nothing runs
-#                      them — they are the target schema, kept beside the data
-#                      they describe so the two can't drift.
-#   data/backups/      the JSON stores. Still the live datastore: every read and
-#                      write in the app goes here, until Postgres is wired up.
+#   data/postgresql/   the live datastore: one .sql per part of the app, each
+#                      holding its tables' definitions and their rows.
+#   data/backups/      the JSON stores this replaced, kept as a backup of the
+#                      last JSON-era state. Nothing reads or writes them.
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
-STORE_DIR = os.path.join(DATA_DIR, 'backups')
-
-USERS_JSON = os.path.join(STORE_DIR, 'users.json')
-TASKS_JSON = os.path.join(STORE_DIR, 'tasks.json')
-CALENDAR_JSON = os.path.join(STORE_DIR, 'calendar.json')
-GOALS_JSON = os.path.join(STORE_DIR, 'goals.json')
-XPEVENT_JSON = os.path.join(STORE_DIR, 'xpevents.json')
-# Every hex colour already handed to a calendar event, so a new event can be
-# given one that is visibly different from the rest.
-EVENTCOLORS_JSON = os.path.join(STORE_DIR, 'eventcolors.json')
+SQL_DIR = os.path.join(DATA_DIR, 'postgresql')
+BACKUP_DIR = os.path.join(DATA_DIR, 'backups')
 
 # --- Behaviour -----------------------------------------------------------
 # A year: the theme cookie only has to outlive the session.

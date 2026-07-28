@@ -1,13 +1,12 @@
 """Calendar events: what is on the calendar and when.
 
-Two kinds of row share data/calendar.json:
+Two kinds of row, each with its own table in events.sql:
 
   * **entries** — a task placed on a day (`task_id`, `time_block`), which is
     how the calendar shows work that also exists on the dashboard;
   * **events** — a standalone block created on the calendar itself (`name`,
     optional weekly/monthly recurrence and an end date).
 
-Both are dicts in the same list, told apart by which fields they carry, and
 `is_default` marks the built-in events that cannot be deleted.
 
 Event colours live in their own store: every hex colour handed out so far, so
@@ -21,21 +20,21 @@ from backend.database import connection as db
 HEX_COLOR_RE = re.compile(r'^#[0-9a-f]{6}$')
 
 
-def _new_id():
-    return str(int(datetime.now().timestamp() * 1000))
+def _new_id(table):
+    return db.new_id(table)
 
 
 # --------------------------------------------------------------------------
 # Entries: a task on a day
 # --------------------------------------------------------------------------
 def entries_for(username):
-    return [e for e in db.calendar() if e.get('user_id') == username]
+    return [e for e in db.calendar_entries() if e.get('user_id') == username]
 
 
 def create_entry(username, data):
     """Place a task (or a bare time block) on a day."""
-    entries = db.calendar()
-    entry_id = data.get('id', _new_id())
+    entries = db.calendar_entries()
+    entry_id = data.get('id') or _new_id('calendar_entries')
     entries.append({
         "id": entry_id,
         "user_id": username,
@@ -44,32 +43,32 @@ def create_entry(username, data):
         "task_id": data.get('task_id', None),
         "created_at": datetime.now().isoformat(),
     })
-    db.save_calendar(entries)
+    db.save_calendar_entries(entries)
     return entry_id
 
 
 def update_entry(entry_id, username, data):
     """Change a placed entry's day, block or task. False if it isn't theirs."""
-    entries = db.calendar()
+    entries = db.calendar_entries()
     for entry in entries:
         if entry.get('id') == entry_id and entry.get('user_id') == username:
             for field in ('date', 'time_block', 'task_id'):
                 if field in data:
                     entry[field] = data[field]
-            db.save_calendar(entries)
+            db.save_calendar_entries(entries)
             return True
     return False
 
 
 def delete_entry(entry_id, username=None):
     """Drop an entry — scoped to one account when a username is given."""
-    entries = db.calendar()
+    entries = db.calendar_entries()
     if username:
         kept = [e for e in entries
                 if not (e.get('id') == entry_id and e.get('user_id') == username)]
     else:
         kept = [e for e in entries if e.get('id') != entry_id]
-    db.save_calendar(kept)
+    db.save_calendar_entries(kept)
 
 
 # --------------------------------------------------------------------------
@@ -78,9 +77,9 @@ def delete_entry(entry_id, username=None):
 def create_event(name, day, time_block, recurrence_month=None,
                  recurrence_week=None, end_date=None, description=''):
     """A new standalone calendar event."""
-    entries = db.calendar()
+    events = db.calendar_events()
     event = {
-        "id": _new_id(),
+        "id": _new_id('calendar_events'),
         "name": name,
         "recurrence-month": recurrence_month or None,
         "recurrence-week": recurrence_week or None,
@@ -92,29 +91,29 @@ def create_event(name, day, time_block, recurrence_month=None,
         "created_at": datetime.now().isoformat(),
         "is_default": False,
     }
-    entries.append(event)
-    db.save_calendar(entries)
+    events.append(event)
+    db.save_calendar_events(events)
     return {"success": True, "entry_id": event["id"], "message": "Calendar event created"}
 
 
 def delete_event(event_id):
     """Delete a custom event. Built-in (default) events are protected."""
-    entries = db.calendar()
-    event = next((e for e in entries if e.get('id') == event_id), None)
+    events = db.calendar_events()
+    event = next((e for e in events if e.get('id') == event_id), None)
     if not event:
         return {"success": False, "message": "Event not found"}
     if event.get('is_default', False):
         return {"success": False, "message": "Cannot delete default events"}
-    db.save_calendar([e for e in entries if e.get('id') != event_id])
+    db.save_calendar_events([e for e in events if e.get('id') != event_id])
     return {"success": True, "message": "Calendar event deleted"}
 
 
 def default_events():
-    return [e for e in db.calendar() if e.get('is_default', False)]
+    return [e for e in db.calendar_events() if e.get('is_default', False)]
 
 
 def custom_events():
-    return [e for e in db.calendar() if not e.get('is_default', False)]
+    return [e for e in db.calendar_events() if not e.get('is_default', False)]
 
 
 def sync_task(task_id, username, day, time_block=None, recurrence_month=None,
@@ -123,9 +122,9 @@ def sync_task(task_id, username, day, time_block=None, recurrence_month=None,
     task = next((t for t in db.tasks()
                  if t.get('id') == task_id and t.get('user_id') == username), None)
 
-    entries = db.calendar()
+    events = db.calendar_events()
     entry = {
-        "id": _new_id(),
+        "id": _new_id('calendar_events'),
         "name": name or (task.get('title', 'Untitled') if task else 'Untitled'),
         "recurrence-month": recurrence_month or None,
         "recurrence-week": recurrence_week or None,
@@ -136,8 +135,8 @@ def sync_task(task_id, username, day, time_block=None, recurrence_month=None,
         "completed": False,
         "created_at": datetime.now().isoformat(),
     }
-    entries.append(entry)
-    db.save_calendar(entries)
+    events.append(entry)
+    db.save_calendar_events(events)
     return {"success": True, "entry_id": entry["id"], "message": "Task synced to calendar"}
 
 
@@ -152,14 +151,14 @@ def mark_task_completed(task_id, username):
     task['status'] = 'done'
     db.save_tasks(tasks)
 
-    entries = db.calendar()
+    entries = db.calendar_entries()
     updated = 0
     for entry in entries:
         if entry.get('task_id') == task_id and entry.get('user_id') == username:
             entry['completed'] = True
             entry['completed_at'] = datetime.now().isoformat()
             updated += 1
-    db.save_calendar(entries)
+    db.save_calendar_entries(entries)
 
     return {"success": True,
             "message": "Task marked as completed in calendar. "

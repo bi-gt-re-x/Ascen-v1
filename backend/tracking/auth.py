@@ -25,8 +25,8 @@ configured and gains the real thing the moment credentials exist:
     "Continue with Google" button appears and works. Without them the button
     stays hidden rather than showing a control that cannot work.
 
-Accounts live in data/users.json alongside the ones that already existed. Those
-legacy accounts have a plaintext `password_hash` and no e-mail; they keep
+Accounts live in the users table in users.sql alongside the ones that already
+existed. Those legacy accounts have a plaintext `password_hash` and no e-mail; they keep
 working — sign-in accepts a legacy plaintext match and upgrades it to a real
 hash on the spot, and an account with no `email_verified` field is treated as
 verified so nobody is locked out.
@@ -48,8 +48,6 @@ from email.message import EmailMessage
 from flask import request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from backend.config.settings import (CALENDAR_JSON, GOALS_JSON, TASKS_JSON,
-                                     XPEVENT_JSON)
 from backend.database import connection as db
 
 # scrypt (werkzeug's default) needs a hashlib build that isn't guaranteed here,
@@ -161,8 +159,13 @@ def unique_username(users, wanted):
     return '{}{}'.format(base[:16], secrets.token_hex(3))
 
 
+# Every table that keys its rows to an account by username.
+OWNED_TABLES = ('tasks', 'goals', 'xp_events', 'focus_days', 'day_focus_notes',
+                'calendar_entries', 'calendar_events', 'metric_snapshots')
+
+
 def rename_user(old, new):
-    """Rename an account and carry its rows across the other stores.
+    """Rename an account and carry its rows across every other table.
 
     Only used while finishing a brand-new account, so there is normally nothing
     to carry — but doing it properly means a username chosen at the last step
@@ -170,17 +173,15 @@ def rename_user(old, new):
     """
     if old == new:
         return
-    for path in (TASKS_JSON, XPEVENT_JSON, GOALS_JSON, CALENDAR_JSON):
-        rows = db.read_json(path)
-        if not isinstance(rows, list):
-            continue
+    for table in OWNED_TABLES:
+        rows = db.read_table(table)
         touched = False
         for row in rows:
-            if isinstance(row, dict) and row.get('user_id') == old:
+            if row.get('user_id') == old:
                 row['user_id'] = new
                 touched = True
         if touched:
-            db.write_json(path, rows)
+            db.write_table(table, rows)
 
 
 # --------------------------------------------------------------------------
@@ -310,7 +311,7 @@ def create_account(name, email, password):
     users = db.users()
     now = datetime.now().isoformat()
     user = {
-        'id': str(int(datetime.now().timestamp() * 1000)),
+        'id': db.new_id('users'),
         'username': unique_username(users, email.split('@')[0]),
         'name': name,
         'email': email,
@@ -406,7 +407,7 @@ def upsert_google_user(info, email):
     user = find_user(users, email=email)
     if not user:
         user = {
-            'id': str(int(datetime.now().timestamp() * 1000)),
+            'id': db.new_id('users'),
             'username': unique_username(users, email.split('@')[0]),
             'name': info.get('name') or email.split('@')[0],
             'email': email,

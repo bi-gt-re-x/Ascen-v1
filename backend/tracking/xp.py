@@ -2,8 +2,8 @@
 
 Two things live here:
 
-  * the **ledger** — data/xpevents.json, one row per XP-earning moment. It is
-    append-only and is the source of truth for "how much did I earn, and when":
+  * the **ledger** — the xp_events table in growth.sql, one row per XP-earning
+    moment. It is append-only and is the source of truth for "how much did I earn, and when":
     the growth chart, the calendar's daily XP and the report card all read it
     rather than recomputing from tasks.
   * the **progression** stored on the account itself — total xp, level, tasks
@@ -58,7 +58,7 @@ def log_event(username, amount, reason, tasks_completed=1, day=None):
     """Append one row to the ledger and return it."""
     now = datetime.now()
     event = {
-        "id": str(int(now.timestamp() * 1000)),
+        "id": db.new_id('xp_events'),
         "user_id": username,
         "amount": amount,
         "reason": reason,
@@ -129,7 +129,7 @@ def track_daily(username, xp_earned, tasks_completed):
     else:
         now = datetime.now()
         events.append({
-            "id": str(int(now.timestamp() * 1000)),
+            "id": db.new_id('xp_events'),
             "user_id": username,
             "amount": xp_earned,
             "reason": "daily_xp",

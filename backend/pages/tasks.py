@@ -74,7 +74,7 @@ def create_task():
         return jsonify({"success": False, "message": "Username required"})
 
     tasks = db.tasks()
-    task_id = data.get('id', str(int(datetime.now().timestamp() * 1000)))
+    task_id = data.get('id') or db.new_id('tasks')
     tasks.append({
         "id": task_id,
         "user_id": username,

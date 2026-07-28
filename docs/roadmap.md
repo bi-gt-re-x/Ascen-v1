@@ -18,7 +18,6 @@ place each one goes is already decided.
 
 | Feature | Page | Tracking | Table |
 | --- | --- | --- | --- |
-| Analytics | `pages/analytics.py` | `tracking/analytics.py` | `analytics.sql` |
 | Growth tree | `pages/growthtree.py` | `tracking/tree.py` | — |
 | Achievements | `pages/achievements.py` | — | `achievements.sql` |
 | Notes | `pages/notes.py` | — | `notes.sql` |
@@ -27,14 +26,17 @@ place each one goes is already decided.
 | Settings | `pages/settings.py` | — | `settings.sql` |
 
 Productivity and consistency also have tracking stubs. Both are currently
-scores computed inside `tracking/growth.py`; they move out only if either grows
-into a feature of its own.
+scores computed inside `tracking/analytics.py`; they move out only if either
+grows into a feature of its own. `pages/analytics.py` is still a stub — the
+analytics *page* doesn't exist, though the grading behind it does.
 
 ## Next
 
-**PostgreSQL.** The schema is written (`data/postgresql/`), the datastore is
-behind one module (`backend/database/connection.py`), and nothing above that
-layer knows where the data lives. The steps are in [database.md](database.md).
+**A real PostgreSQL server.** The data already lives as SQL in
+`data/postgresql/` — schema and rows in the same files — and the whole
+datastore is behind one module (`backend/database/connection.py`). What is left
+is pointing that module at a server instead of the files; the steps are in
+[database.md](database.md).
 
 **Fix `/api/update_task_completion`.** The month calendar posts to an endpoint
 that has never existed. Either add it or point that call at

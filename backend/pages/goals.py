@@ -245,7 +245,7 @@ def add_goal():
 
     goals = db.goals()
     goals.append({
-        "id": data.get('id', str(int(datetime.now().timestamp() * 1000))),
+        "id": data.get('id') or db.new_id('goals'),
         "user_id": username,
         "title": title,
         "description": data.get('description', ''),

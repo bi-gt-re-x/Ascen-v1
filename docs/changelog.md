@@ -2,6 +2,37 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-27 — The datastore moves into the .sql files
+
+`data/postgresql/*.sql` is now where the data lives, not just where the schema
+was going to. Each file holds its tables' definitions followed by their rows as
+INSERT statements; `data/backups/*.json` is kept as a backup of the last
+JSON-era state and is no longer read or written.
+
+- `backend/database/connection.py` rewritten around the .sql files: reading
+  parses the INSERTs and types each value from its column, writing regenerates
+  one table's rows and leaves the rest of the file — schema, comments, other
+  tables — byte for byte.
+- The two blobs that hung off the user row fan out into tables of their own:
+  `focus_days` and `day_focus_notes` in focus.sql. The single calendar list
+  splits into `calendar_entries` and `calendar_events` in events.sql.
+- The growth ratings moved out of `tracking/growth.py` into
+  `tracking/analytics.py`, and every computation now files a dated row per
+  metric into analytics.sql — so the report card accumulates a history instead
+  of only ever showing today's number. growth.py keeps the chart series.
+- The schemas were rewritten to match the data exactly, including the two
+  hyphenated recurrence columns the calendar writes, which exist as quoted
+  identifiers.
+- achievements, history, library, notes and settings stay schema-only: those
+  features are not built.
+- Ids are primary keys now, so `connection.new_id` steps past collisions —
+  creating four goals in one loop used to hand two of them the same id, and
+  whichever the app found first won.
+
+Verified against the JSON-backed app: all 75 read responses across every
+account came back identical, and 55 of 57 write steps matched. The two that
+differ are the id collision, which the old store had and this one does not.
+
 ## 2026-07-27 — Repo layout: utils, docs, and a Postgres-shaped data folder
 
 Assets, docs and data moved to their final homes. No behaviour changed; the

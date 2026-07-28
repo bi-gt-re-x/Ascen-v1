@@ -1,25 +1,41 @@
 """Focus time: how long the user actually sat down and worked.
 
 The session itself runs client-side (frontend/js/focus.js keeps the timer in
-localStorage). What is tracked here is each day's total, mirrored into the
-account as `focus_history`: {"YYYY-MM-DD": {"seconds": n, "goal_hours": n}} —
-so the calendar's Weekly Focus Time panel, the growth chart and focus-type
-goals all read one number that survives a cleared browser.
+localStorage). What is tracked here is each day's total, one row per user per
+day in focus.sql — so the calendar's Weekly Focus Time panel, the growth chart
+and focus-type goals all read one number that survives a cleared browser.
 
-Also here: the one-line "Focus" note attached to a calendar day
-(`day_focus`: {"YYYY-MM-DD": "text"}), which the Week, Day and Month views all
-show, so an edit in one view lands everywhere.
+Also here: the one-line "Focus" note attached to a calendar day, which the
+Week, Day and Month views all show, so an edit in one view lands everywhere.
 """
 from datetime import datetime
 
 from backend.database import connection as db
-from backend.tracking.auth import find_user, load_user
+from backend.tracking.auth import find_user
 
 
-def history_for(user):
-    """A user record's per-day focus totals, tolerating missing/bad data."""
-    hist = user.get('focus_history')
-    return hist if isinstance(hist, dict) else {}
+def _rows_for(username):
+    return [r for r in db.focus_days() if r.get('user_id') == username]
+
+
+def _seconds(row):
+    try:
+        return max(0.0, float(row.get('seconds', 0) or 0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _goal_hours(row):
+    try:
+        return max(0.0, float(row.get('goal_hours', 0) or 0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def history_for(username):
+    """{iso_date: {seconds, goal_hours}} for one account."""
+    return {r['date']: {'seconds': _seconds(r), 'goal_hours': _goal_hours(r)}
+            for r in _rows_for(username) if r.get('date')}
 
 
 def record_day(username, day, seconds, goal_hours):
@@ -28,22 +44,20 @@ def record_day(username, day, seconds, goal_hours):
     Never lets a stale client (an old tab with cleared localStorage, say)
     shrink a day's already-recorded total.
     """
-    users, user = load_user(username)
-    if not user:
+    if not find_user(db.users(), username=username):
         return None
 
-    hist = user.get('focus_history')
-    if not isinstance(hist, dict):
-        hist = {}
-        user['focus_history'] = hist
+    rows = db.focus_days()
+    row = next((r for r in rows
+                if r.get('user_id') == username and r.get('date') == day), None)
+    if row is None:
+        row = {'user_id': username, 'date': day, 'seconds': 0.0, 'goal_hours': goal_hours}
+        rows.append(row)
 
-    previous = hist.get(day) or {}
-    hist[day] = {
-        'seconds': round(max(seconds, float(previous.get('seconds', 0) or 0)), 1),
-        'goal_hours': goal_hours,
-    }
-    db.save_users(users)
-    return hist[day]
+    row['seconds'] = round(max(seconds, _seconds(row)), 1)
+    row['goal_hours'] = goal_hours
+    db.save_focus_days(rows)
+    return {'seconds': row['seconds'], 'goal_hours': row['goal_hours']}
 
 
 def history_range(username, start='', end=''):
@@ -52,50 +66,27 @@ def history_range(username, start='', end=''):
     Days with no record are simply absent — nothing was tracked and nothing was
     planned.
     """
-    user = find_user(db.users(), username=username)
-    if not user:
+    if not find_user(db.users(), username=username):
         return None
-
-    days = {}
-    for day, record in history_for(user).items():
-        if start and day < start:
-            continue
-        if end and day > end:
-            continue
-        try:
-            days[day] = {
-                'seconds': max(0.0, float((record or {}).get('seconds', 0) or 0)),
-                'goal_hours': max(0.0, float((record or {}).get('goal_hours', 0) or 0)),
-            }
-        except (TypeError, ValueError):
-            continue
-    return days
+    return {day: rec for day, rec in history_for(username).items()
+            if (not start or day >= start) and (not end or day <= end)}
 
 
 def total_seconds(username):
     """An account's all-time tracked focus seconds."""
-    user = find_user(db.users(), username=username)
-    if not user:
-        return 0.0
-    total = 0.0
-    for record in history_for(user).values():
-        try:
-            total += max(0.0, float((record or {}).get('seconds', 0) or 0))
-        except (ValueError, TypeError):
-            continue
-    return total
+    return sum(_seconds(r) for r in _rows_for(username))
 
 
-def seconds_in_window(user, lo_days, hi_days, today):
+def seconds_in_window(username, lo_days, hi_days, today):
     """Focused seconds recorded between `lo_days` and `hi_days` ago."""
     total = 0.0
-    for day, record in history_for(user).items():
+    for row in _rows_for(username):
         try:
-            d = datetime.strptime(str(day)[:10], '%Y-%m-%d').date()
-            if lo_days <= (today - d).days <= hi_days:
-                total += float(record.get('seconds', 0) or 0)
-        except (ValueError, TypeError, AttributeError):
+            d = datetime.strptime(str(row.get('date'))[:10], '%Y-%m-%d').date()
+        except (ValueError, TypeError):
             continue
+        if lo_days <= (today - d).days <= hi_days:
+            total += _seconds(row)
     return total
 
 
@@ -104,26 +95,20 @@ def seconds_in_window(user, lo_days, hi_days, today):
 # --------------------------------------------------------------------------
 def day_notes(username):
     """Every saved day-focus note for a user, keyed by ISO date. None if no user."""
-    user = find_user(db.users(), username=username)
-    if not user:
+    if not find_user(db.users(), username=username):
         return None
-    notes = user.get('day_focus')
-    return notes if isinstance(notes, dict) else {}
+    return {r['date']: r.get('text', '') for r in db.day_focus_notes()
+            if r.get('user_id') == username and r.get('date')}
 
 
 def set_day_note(username, day, text):
     """Upsert one day's focus text; empty text deletes the entry."""
-    users, user = load_user(username)
-    if not user:
+    if not find_user(db.users(), username=username):
         return False
 
-    notes = user.get('day_focus')
-    if not isinstance(notes, dict):
-        notes = {}
-        user['day_focus'] = notes
+    rows = [r for r in db.day_focus_notes()
+            if not (r.get('user_id') == username and r.get('date') == day)]
     if text:
-        notes[day] = text
-    else:
-        notes.pop(day, None)
-    db.save_users(users)
+        rows.append({'user_id': username, 'date': day, 'text': text})
+    db.save_day_focus_notes(rows)
     return True

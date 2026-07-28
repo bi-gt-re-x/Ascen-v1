@@ -22,8 +22,8 @@ utils/
   fonts/               (empty)               -> /static/fonts/...
   assets/              (empty)               -> /static/assets/...
 data/
-  backups/             the live JSON datastore
-  postgresql/          the table definitions we are migrating toward
+  postgresql/          the live datastore: schema + rows, one .sql per part
+  backups/             the JSON stores it replaced, kept as a backup
 docs/                  this folder
 ```
 
@@ -33,7 +33,7 @@ The backend is a stack of layers, each depending only on the ones above it.
 
 ```
 config/       every path, key and tunable. Nothing else hard-codes a path.
-database/     connection.py — the JSON store. The only code that opens a file.
+database/     connection.py — the .sql store. The only code that opens a file.
 tracking/     the rules. XP and streaks, focus, calendar events, growth
               grading, accounts. No Flask routing anywhere in here.
 pages/        one blueprint per page: the route that renders it and the API
@@ -57,11 +57,14 @@ never decides what an account's XP, level or streak is. Scripts fetch with
 
 **Writes are atomic.** `database/connection.py` writes to a temp file and
 `os.replace()`s it over the target, because the threaded dev server can read a
-store on one request while another request is rewriting it.
+store on one request while another request is rewriting it. A write regenerates
+one table's rows and leaves the rest of the file — schema, comments, other
+tables — untouched.
 
 **Reads can write.** A stale streak is decayed and self-tracking goals are
-re-synced when they are read, so every page sees the same live value. This is
-why `data/backups/*.json` show as modified whenever the app runs.
+re-synced when they are read, and asking for the report card files a snapshot
+into analytics.sql. So `data/postgresql/*.sql` change as the app is used, with
+no user action.
 
 **The theme is server-rendered.** `<html data-theme="...">` is decided from the
 `theme` cookie before a byte is sent, so navigation never flashes the wrong
@@ -73,9 +76,9 @@ tree; `routes/assets.py` maps `/static/<kind>/...` onto them, so every
 
 ## What isn't built
 
-`pages/` and `tracking/` both carry stubs for features that don't exist yet —
-analytics, growthtree, achievements, notes, library, history, settings. Each
-stub says what belongs in it. `data/postgresql/` has their tables too.
+`pages/` and `tracking/` carry stubs for features that don't exist yet —
+growthtree, achievements, notes, library, history, settings. Each stub says
+what belongs in it, and `data/postgresql/` has their tables, schema only.
 
 See [database.md](database.md) for the stores, [api.md](api.md) for the
 endpoints, and [roadmap.md](roadmap.md) for what's next.
