@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Ocean wave">
+  <title>Ocean wave</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FD8F2"/><stop offset="1" stop-color="#3E9BC8"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="92" cy="34" r="12" fill="#FFD34E"/>
+  <path d="M0 64c16-14 30-14 44 0s28 14 44 0 24-12 40 0v64H0z" fill="#3E9BD6"/>
+  <path d="M0 82c16-12 30-12 44 0s28 12 44 0 24-10 40 0v46H0z" fill="#2A7BB8"/>
+  <path d="M18 70c8-6 16-6 22 0" stroke="#DFF2FB" stroke-width="5"
+        stroke-linecap="round" fill="none"/>
+</svg>

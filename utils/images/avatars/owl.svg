@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Owl">
+  <title>Owl</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A79BE0"/><stop offset="1" stop-color="#6656B8"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M38 34 46 18l12 12zM90 34 82 18 70 30z" fill="#A9784E"/>
+  <ellipse cx="64" cy="70" rx="38" ry="42" fill="#B98A5C"/>
+  <ellipse cx="64" cy="86" rx="24" ry="24" fill="#E4C79E"/>
+  <circle cx="48" cy="56" r="16" fill="#FBF6EC"/>
+  <circle cx="80" cy="56" r="16" fill="#FBF6EC"/>
+  <circle cx="48" cy="56" r="8" fill="#3B2A24"/>
+  <circle cx="80" cy="56" r="8" fill="#3B2A24"/>
+  <circle cx="50" cy="53" r="2.6" fill="#FFFFFF"/>
+  <circle cx="82" cy="53" r="2.6" fill="#FFFFFF"/>
+  <path d="M64 66l-7 9h14z" fill="#FFAE3D"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Sprout">
+  <title>Sprout</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D8E8A8"/><stop offset="1" stop-color="#94BE58"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M64 96V56" stroke="#4E9E5C" stroke-width="7" stroke-linecap="round"/>
+  <path d="M64 66C48 66 40 56 40 44c14 0 24 8 24 22z" fill="#5FB86A"/>
+  <path d="M64 60c0-16 10-26 26-26 0 14-10 26-26 26z" fill="#7ECB86"/>
+  <path d="M38 90h52l-6 28H44z" fill="#D0714C"/>
+  <path d="M32 84h64v10H32z" fill="#E4835C"/>
+</svg>

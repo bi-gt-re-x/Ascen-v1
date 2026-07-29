@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Fox">
+  <title>Fox</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7C58C"/><stop offset="1" stop-color="#E08C46"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M30 40 26 12l26 16zM98 40l4-28-26 16z" fill="#E2712C"/>
+  <path d="M34 38 32 22l12 8zM94 38l2-16-12 8z" fill="#3B2A24"/>
+  <path d="M64 26c22 0 36 16 36 34s-16 34-36 34-36-16-36-34 14-34 36-34z" fill="#F0863A"/>
+  <path d="M64 60c14 0 24 10 24 20S76 96 64 96 40 90 40 80s10-20 24-20z" fill="#FBF1E4"/>
+  <circle cx="50" cy="58" r="5" fill="#3B2A24"/>
+  <circle cx="78" cy="58" r="5" fill="#3B2A24"/>
+  <path d="M64 74l-7 5h14z" fill="#3B2A24"/>
+</svg>

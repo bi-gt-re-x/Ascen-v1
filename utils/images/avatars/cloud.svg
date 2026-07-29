@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Cloud">
+  <title>Cloud</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CC0EE"/><stop offset="1" stop-color="#3E8FCC"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="48" cy="62" r="18" fill="#FFFFFF"/>
+  <circle cx="70" cy="54" r="22" fill="#FFFFFF"/>
+  <circle cx="88" cy="66" r="16" fill="#FFFFFF"/>
+  <rect x="42" y="62" width="52" height="22" rx="11" fill="#FFFFFF"/>
+  <path d="M50 94v10M64 96v12M78 94v10" stroke="#CFE6F7" stroke-width="6" stroke-linecap="round"/>
+</svg>

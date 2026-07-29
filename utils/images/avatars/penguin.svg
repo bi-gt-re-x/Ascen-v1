@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Penguin">
+  <title>Penguin</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FD4F2"/><stop offset="1" stop-color="#4A9CD1"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <ellipse cx="64" cy="72" rx="34" ry="42" fill="#2F3742"/>
+  <ellipse cx="64" cy="80" rx="22" ry="32" fill="#FBFBFA"/>
+  <circle cx="53" cy="56" r="5.5" fill="#FBFBFA"/>
+  <circle cx="75" cy="56" r="5.5" fill="#FBFBFA"/>
+  <circle cx="53" cy="57" r="2.8" fill="#2F3742"/>
+  <circle cx="75" cy="57" r="2.8" fill="#2F3742"/>
+  <path d="M64 64l-8 6 8 6 8-6z" fill="#FFAE3D"/>
+  <ellipse cx="48" cy="116" rx="11" ry="6" fill="#FFAE3D"/>
+  <ellipse cx="80" cy="116" rx="11" ry="6" fill="#FFAE3D"/>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Bear">
+  <title>Bear</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8C79E"/><stop offset="1" stop-color="#C79355"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="34" cy="38" r="15" fill="#9E6B45"/>
+  <circle cx="94" cy="38" r="15" fill="#9E6B45"/>
+  <circle cx="34" cy="38" r="8" fill="#C99873"/>
+  <circle cx="94" cy="38" r="8" fill="#C99873"/>
+  <circle cx="64" cy="68" r="38" fill="#A8734B"/>
+  <ellipse cx="64" cy="84" rx="21" ry="16" fill="#E8CBA8"/>
+  <circle cx="50" cy="60" r="5" fill="#3B2A24"/>
+  <circle cx="78" cy="60" r="5" fill="#3B2A24"/>
+  <ellipse cx="64" cy="78" rx="8" ry="6" fill="#3B2A24"/>
+  <path d="M64 84v5M64 89c-4 4-8 3-10 0M64 89c4 4 8 3 10 0" stroke="#3B2A24"
+        stroke-width="3.5" stroke-linecap="round" fill="none"/>
+</svg>

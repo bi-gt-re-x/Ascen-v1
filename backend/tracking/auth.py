@@ -49,6 +49,7 @@ from flask import request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.database import connection as db
+from backend.tracking.avatar import avatar_for, avatar_path
 
 # scrypt (werkzeug's default) needs a hashlib build that isn't guaranteed here,
 # so pin the hash to pbkdf2-sha256, which is available everywhere.
@@ -196,6 +197,9 @@ def public_user(user):
         'theme': user.get('theme') if user.get('theme') in ('light', 'dark') else 'light',
         'daily_goal': user.get('daily_goal'),
         'profile_complete': profile_complete(user),
+        # The account's profile picture, worked out from its id rather than
+        # stored — see tracking/avatar.py.
+        'avatar': '/static/' + avatar_path(avatar_for(user)),
     }
 
 
@@ -220,17 +224,6 @@ def signed_in_user():
         session.pop('username', None)
         return None
     return user
-
-
-def theme_for(username):
-    """An account's stored theme, defaulting to light."""
-    if not username:
-        return 'light'
-    user = find_user(db.users(), username=username)
-    if not user:
-        return 'light'
-    theme = user.get('theme', 'light')
-    return theme if theme in ('light', 'dark') else 'light'
 
 
 # --------------------------------------------------------------------------

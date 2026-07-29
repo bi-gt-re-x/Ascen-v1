@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Panda">
+  <title>Panda</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFD6E8"/><stop offset="1" stop-color="#7BA3C4"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="34" cy="36" r="15" fill="#2E2A2A"/>
+  <circle cx="94" cy="36" r="15" fill="#2E2A2A"/>
+  <circle cx="64" cy="66" r="38" fill="#FBFBFA"/>
+  <ellipse cx="48" cy="60" rx="12" ry="14" fill="#2E2A2A" transform="rotate(-14 48 60)"/>
+  <ellipse cx="80" cy="60" rx="12" ry="14" fill="#2E2A2A" transform="rotate(14 80 60)"/>
+  <circle cx="48" cy="60" r="4.5" fill="#FBFBFA"/>
+  <circle cx="80" cy="60" r="4.5" fill="#FBFBFA"/>
+  <ellipse cx="64" cy="80" rx="7" ry="5" fill="#2E2A2A"/>
+  <path d="M64 85c-3 5-8 5-10 2M64 85c3 5 8 5 10 2" stroke="#2E2A2A"
+        stroke-width="3.5" stroke-linecap="round" fill="none"/>
+</svg>

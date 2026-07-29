@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Alien">
+  <title>Alien</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ED9C4"/><stop offset="1" stop-color="#37A98F"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M64 24c20 0 32 15 32 33 0 20-14 35-32 43-18-8-32-23-32-43 0-18 12-33 32-33z" fill="#96E87C"/>
+  <ellipse cx="50" cy="58" rx="11" ry="14" fill="#1F2B33" transform="rotate(-16 50 58)"/>
+  <ellipse cx="78" cy="58" rx="11" ry="14" fill="#1F2B33" transform="rotate(16 78 58)"/>
+  <circle cx="47" cy="53" r="3.5" fill="#FFFFFF"/>
+  <circle cx="75" cy="53" r="3.5" fill="#FFFFFF"/>
+  <path d="M56 82c4 4 12 4 16 0" stroke="#3E8A32" stroke-width="4" stroke-linecap="round" fill="none"/>
+</svg>

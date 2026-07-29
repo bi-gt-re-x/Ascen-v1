@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Guitar">
+  <title>Guitar</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2C69A"/><stop offset="1" stop-color="#D48F4E"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <rect x="59" y="14" width="10" height="52" fill="#7A4F30"/>
+  <rect x="53" y="10" width="22" height="14" rx="4" fill="#5E3B22"/>
+  <circle cx="64" cy="80" r="30" fill="#E09A4E"/>
+  <circle cx="64" cy="58" r="21" fill="#E09A4E"/>
+  <circle cx="64" cy="72" r="11" fill="#4A2E1A"/>
+  <rect x="52" y="92" width="24" height="7" rx="3" fill="#5E3B22"/>
+  <path d="M61 24v68M64 24v68M67 24v68" stroke="#FBF3E4" stroke-width="1.6"/>
+  <path d="M56 14v10M72 14v10" stroke="#C9BCA6" stroke-width="3" stroke-linecap="round"/>
+</svg>

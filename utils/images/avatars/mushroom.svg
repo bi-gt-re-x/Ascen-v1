@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Mushroom">
+  <title>Mushroom</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A8DCB4"/><stop offset="1" stop-color="#54A575"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M40 74h48v26a10 10 0 0 1-10 10H50a10 10 0 0 1-10-10z" fill="#F5E7CE"/>
+  <path d="M16 74c0-26 22-42 48-42s48 16 48 42z" fill="#E8503F"/>
+  <circle cx="42" cy="54" r="9" fill="#FBF3E4"/>
+  <circle cx="78" cy="48" r="7" fill="#FBF3E4"/>
+  <circle cx="94" cy="64" r="6" fill="#FBF3E4"/>
+  <circle cx="58" cy="66" r="5" fill="#FBF3E4"/>
+  <circle cx="55" cy="90" r="3.5" fill="#3B2A24"/>
+  <circle cx="73" cy="90" r="3.5" fill="#3B2A24"/>
+</svg>

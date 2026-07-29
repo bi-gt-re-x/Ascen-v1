@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Bunny">
+  <title>Bunny</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7C9D8"/><stop offset="1" stop-color="#DE8FAE"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <ellipse cx="48" cy="30" rx="10" ry="26" fill="#FBFBFA" transform="rotate(-10 48 30)"/>
+  <ellipse cx="80" cy="30" rx="10" ry="26" fill="#FBFBFA" transform="rotate(10 80 30)"/>
+  <ellipse cx="48" cy="32" rx="5" ry="17" fill="#F5AEC2" transform="rotate(-10 48 32)"/>
+  <ellipse cx="80" cy="32" rx="5" ry="17" fill="#F5AEC2" transform="rotate(10 80 32)"/>
+  <circle cx="64" cy="78" r="32" fill="#FBFBFA"/>
+  <circle cx="53" cy="72" r="4.5" fill="#3B2A2E"/>
+  <circle cx="75" cy="72" r="4.5" fill="#3B2A2E"/>
+  <path d="M64 84l-6 4h12z" fill="#F5AEC2"/>
+  <path d="M64 88c-3 5-8 5-10 2M64 88c3 5 8 5 10 2" stroke="#3B2A2E"
+        stroke-width="3.5" stroke-linecap="round" fill="none"/>
+</svg>

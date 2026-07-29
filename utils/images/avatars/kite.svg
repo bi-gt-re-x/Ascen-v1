@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Kite">
+  <title>Kite</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD4F2"/><stop offset="1" stop-color="#4C99CE"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M64 14 26 56l38 42z" fill="#E8503F"/>
+  <path d="M64 14l38 42-38 42z" fill="#FFC72E"/>
+  <path d="M26 56h76M64 14v84" stroke="#FBFBFA" stroke-width="4"/>
+  <path d="M64 98c6 8-6 12 0 20s-6 8 0 10" stroke="#FBFBFA" stroke-width="4"
+        stroke-linecap="round" fill="none"/>
+  <path d="M56 106h16M58 122h12" stroke="#7ED9C4" stroke-width="5" stroke-linecap="round"/>
+</svg>

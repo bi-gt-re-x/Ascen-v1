@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Book">
+  <title>Book</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F5B79A"/><stop offset="1" stop-color="#D9784F"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M64 34c-12-8-28-10-42-8v66c14-2 30 0 42 8z" fill="#FBF6EC"/>
+  <path d="M64 34c12-8 28-10 42-8v66c-14-2-30 0-42 8z" fill="#F2EADA"/>
+  <path d="M58 34h12v66H58z" fill="#C24E3E"/>
+  <path d="M32 42h20M32 54h20M32 66h20M76 42h20M76 54h20M76 66h20"
+        stroke="#C9BCA6" stroke-width="4" stroke-linecap="round"/>
+</svg>

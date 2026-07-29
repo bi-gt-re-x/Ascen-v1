@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Robot">
+  <title>Robot</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A8D6E8"/><stop offset="1" stop-color="#5A9CBE"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M64 22v10" stroke="#C6D2E6" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="64" cy="20" r="7" fill="#FF7A6B"/>
+  <rect x="14" y="58" width="14" height="22" rx="6" fill="#8FA3BC"/>
+  <rect x="100" y="58" width="14" height="22" rx="6" fill="#8FA3BC"/>
+  <rect x="28" y="34" width="72" height="66" rx="18" fill="#DCE6F2"/>
+  <rect x="40" y="48" width="48" height="26" rx="10" fill="#2E3A4C"/>
+  <circle cx="54" cy="61" r="6" fill="#6FE0C4"/>
+  <circle cx="74" cy="61" r="6" fill="#6FE0C4"/>
+  <rect x="48" y="82" width="32" height="9" rx="4.5" fill="#9FB0C6"/>
+  <path d="M56 82v9M64 82v9M72 82v9" stroke="#DCE6F2" stroke-width="3"/>
+</svg>

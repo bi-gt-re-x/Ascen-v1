@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Cat">
+  <title>Cat</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F5C089"/><stop offset="1" stop-color="#DE9550"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M34 42 32 16l24 14zM94 42l2-26-24 14z" fill="#9E7358"/>
+  <path d="M38 40 37 24l14 9zM90 40l1-16-14 9z" fill="#F2A9B4"/>
+  <circle cx="64" cy="66" r="36" fill="#B3866A"/>
+  <circle cx="52" cy="60" r="5" fill="#2E2320"/>
+  <circle cx="76" cy="60" r="5" fill="#2E2320"/>
+  <path d="M64 74l-6 4h12z" fill="#F2A9B4"/>
+  <path d="M64 78c-3 5-9 5-11 1M64 78c3 5 9 5 11 1" stroke="#2E2320"
+        stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <path d="M22 66h16M22 76h16M106 66H90M106 76H90" stroke="#F5E9DE"
+        stroke-width="3.5" stroke-linecap="round"/>
+</svg>

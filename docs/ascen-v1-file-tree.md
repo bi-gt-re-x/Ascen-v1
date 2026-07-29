@@ -55,7 +55,7 @@ frontend/
   secret/                  # easter-egg chain + engine.html
 styles/                    # all CSS (top level; styles/calendar/ = active)
 utils/icons/               # 80 calendar svg icons (was images/icons)
-utils/images/              # logo.svg (was images/)
+utils/images/              # logo.svg + avatars/ (50 profile-picture svgs)
 utils/fonts/  utils/assets/    # empty scaffolds
 docs/                      # architecture.md api.md database.md roadmap.md changelog.md
                            #   + copies of these memory files

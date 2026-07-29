@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Elephant">
+  <title>Elephant</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BCD2E8"/><stop offset="1" stop-color="#7699BE"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="26" cy="62" r="22" fill="#9BAEC4"/>
+  <circle cx="102" cy="62" r="22" fill="#9BAEC4"/>
+  <circle cx="64" cy="60" r="32" fill="#A9BCD1"/>
+  <path d="M56 84c0 14 2 24 8 30 8-6 12-14 6-20" stroke="#A9BCD1" stroke-width="16"
+        stroke-linecap="round" fill="none"/>
+  <circle cx="52" cy="54" r="4.5" fill="#3A4654"/>
+  <circle cx="76" cy="54" r="4.5" fill="#3A4654"/>
+  <path d="M46 78l-6 12M82 78l6 12" stroke="#FBFBFA" stroke-width="6" stroke-linecap="round"/>
+</svg>

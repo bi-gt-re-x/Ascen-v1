@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Star">
+  <title>Star</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5C6BC8"/><stop offset="1" stop-color="#37409B"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M64.0,26.0 L73.4,53.1 L102.0,53.6 L79.2,70.9 L87.5,98.4 L64.0,82.0 L40.5,98.4 L48.8,70.9 L26.0,53.6 L54.6,53.1 Z" fill="#FFD34E"/>
+  <path d="M64.0,42.0 L69.9,57.9 L86.8,58.6 L73.5,69.1 L78.1,85.4 L64.0,76.0 L49.9,85.4 L54.5,69.1 L41.2,58.6 L58.1,57.9 Z" fill="#FFE9A0" opacity="0.55" transform="translate(0 -4) scale(1 0.9) translate(0 7)"/>
+</svg>

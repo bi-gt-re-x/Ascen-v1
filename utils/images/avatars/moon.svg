@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Crescent moon">
+  <title>Crescent moon</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E4C7A"/><stop offset="1" stop-color="#232C4C"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <mask id="cut">
+    <rect width="128" height="128" fill="#FFFFFF"/>
+    <circle cx="84" cy="54" r="36" fill="#000000"/>
+  </mask>
+  <g mask="url(#cut)">
+    <circle cx="62" cy="66" r="38" fill="#FBF3D8"/>
+    <circle cx="46" cy="52" r="6" fill="#E6DAB2"/>
+    <circle cx="40" cy="76" r="8" fill="#E6DAB2"/>
+    <circle cx="58" cy="92" r="5" fill="#E6DAB2"/>
+  </g>
+  <path d="M96.0,19.0 L98.6,26.4 L106.5,26.6 L100.3,31.4 L102.5,38.9 L96.0,34.5 L89.5,38.9 L91.7,31.4 L85.5,26.6 L93.4,26.4 Z" fill="#FFE27A"/>
+  <path d="M80.0,89.0 L81.8,93.6 L86.7,93.8 L82.9,96.9 L84.1,101.7 L80.0,99.0 L75.9,101.7 L77.1,96.9 L73.3,93.8 L78.2,93.6 Z" fill="#FFE27A"/>
+</svg>

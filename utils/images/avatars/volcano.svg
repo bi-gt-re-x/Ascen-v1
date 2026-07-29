@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Volcano">
+  <title>Volcano</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5D6EA8"/><stop offset="1" stop-color="#333E75"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M12 116 46 48h36l34 68z" fill="#6E5A4C"/>
+  <path d="M46 48h36l8 16H38z" fill="#54443A"/>
+  <path d="M50 52c4 10 10 12 14 22s-2 14 6 18 14-6 12-16 2-14 6-22z" fill="#FF7A3D"/>
+  <ellipse cx="64" cy="46" rx="22" ry="8" fill="#FF9F3D"/>
+  <circle cx="46" cy="30" r="6" fill="#FFC24D"/>
+  <circle cx="84" cy="24" r="5" fill="#FF7A6B"/>
+</svg>

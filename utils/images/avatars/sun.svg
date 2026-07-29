@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Sun">
+  <title>Sun</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FC7F0"/><stop offset="1" stop-color="#3E93CE"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+<rect x="61.5" y="14" width="5" height="14" rx="2.5" fill="#FFB93D" transform="rotate(0 64 64)"/><rect x="61.5" y="14" width="5" height="14" rx="2.5" fill="#FFB93D" transform="rotate(45 64 64)"/><rect x="61.5" y="14" width="5" height="14" rx="2.5" fill="#FFB93D" transform="rotate(90 64 64)"/><rect x="61.5" y="14" width="5" height="14" rx="2.5" fill="#FFB93D" transform="rotate(135 64 64)"/><rect x="61.5" y="14" width="5" height="14" rx="2.5" fill="#FFB93D" transform="rotate(180 64 64)"/><rect x="61.5" y="14" width="5" height="14" rx="2.5" fill="#FFB93D" transform="rotate(225 64 64)"/><rect x="61.5" y="14" width="5" height="14" rx="2.5" fill="#FFB93D" transform="rotate(270 64 64)"/><rect x="61.5" y="14" width="5" height="14" rx="2.5" fill="#FFB93D" transform="rotate(315 64 64)"/>
+  <circle cx="64" cy="64" r="28" fill="#FFD34E"/>
+  <circle cx="55" cy="58" r="3.5" fill="#8A5A12"/>
+  <circle cx="73" cy="58" r="3.5" fill="#8A5A12"/>
+  <path d="M54 72c5 6 15 6 20 0" stroke="#8A5A12" stroke-width="4"
+        stroke-linecap="round" fill="none"/>
+</svg>

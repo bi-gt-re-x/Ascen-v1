@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Bee">
+  <title>Bee</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08F"/><stop offset="1" stop-color="#EDB53A"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <ellipse cx="40" cy="46" rx="18" ry="12" fill="#FFFFFF" opacity="0.85"
+           transform="rotate(-28 40 46)"/>
+  <ellipse cx="88" cy="46" rx="18" ry="12" fill="#FFFFFF" opacity="0.85"
+           transform="rotate(28 88 46)"/>
+  <ellipse cx="64" cy="72" rx="30" ry="34" fill="#FFC72E"/>
+  <path d="M36 62h56M38 80h52M46 96h36" stroke="#3B2E1E" stroke-width="8"
+        stroke-linecap="round"/>
+  <circle cx="55" cy="50" r="4" fill="#3B2E1E"/>
+  <circle cx="73" cy="50" r="4" fill="#3B2E1E"/>
+  <path d="M52 30l4 12M76 30l-4 12" stroke="#3B2E1E" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="52" cy="28" r="4" fill="#3B2E1E"/>
+  <circle cx="76" cy="28" r="4" fill="#3B2E1E"/>
+</svg>

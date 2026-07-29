@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Lion">
+  <title>Lion</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7D89A"/><stop offset="1" stop-color="#DFA741"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+<circle cx="64.0" cy="37.0" r="11" fill="#C97B34"/><circle cx="78.6" cy="41.3" r="11" fill="#C97B34"/><circle cx="88.6" cy="52.8" r="11" fill="#C97B34"/><circle cx="90.7" cy="67.8" r="11" fill="#C97B34"/><circle cx="84.4" cy="81.7" r="11" fill="#C97B34"/><circle cx="71.6" cy="89.9" r="11" fill="#C97B34"/><circle cx="56.4" cy="89.9" r="11" fill="#C97B34"/><circle cx="43.6" cy="81.7" r="11" fill="#C97B34"/><circle cx="37.3" cy="67.8" r="11" fill="#C97B34"/><circle cx="39.4" cy="52.8" r="11" fill="#C97B34"/><circle cx="49.4" cy="41.3" r="11" fill="#C97B34"/>
+  <circle cx="64" cy="64" r="28" fill="#F0B45E"/>
+  <ellipse cx="64" cy="76" rx="17" ry="13" fill="#FBE7C6"/>
+  <circle cx="54" cy="58" r="4.5" fill="#3B2A24"/>
+  <circle cx="74" cy="58" r="4.5" fill="#3B2A24"/>
+  <path d="M64 70l-6 4h12z" fill="#3B2A24"/>
+  <path d="M64 74v4M64 78c-3 4-7 3-9 0M64 78c3 4 7 3 9 0" stroke="#3B2A24"
+        stroke-width="3" stroke-linecap="round" fill="none"/>
+</svg>

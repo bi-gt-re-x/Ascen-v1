@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Tree">
+  <title>Tree</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD8B4"/><stop offset="1" stop-color="#4FA377"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <rect x="58" y="72" width="12" height="34" rx="4" fill="#8A5F3D"/>
+  <circle cx="64" cy="48" r="22" fill="#57B36C"/>
+  <circle cx="44" cy="62" r="17" fill="#48A15E"/>
+  <circle cx="84" cy="62" r="17" fill="#65C079"/>
+  <circle cx="64" cy="66" r="18" fill="#57B36C"/>
+  <path d="M40 106h48" stroke="#3E8A5A" stroke-width="7" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Satellite">
+  <title>Satellite</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6FA9D8"/><stop offset="1" stop-color="#3B6FA8"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <rect x="10" y="50" width="34" height="28" rx="3" fill="#26356B"/>
+  <path d="M10 64h34M21 50v28M33 50v28" stroke="#6E8FE0" stroke-width="3"/>
+  <rect x="84" y="50" width="34" height="28" rx="3" fill="#26356B"/>
+  <path d="M84 64h34M95 50v28M107 50v28" stroke="#6E8FE0" stroke-width="3"/>
+  <rect x="48" y="46" width="32" height="36" rx="6" fill="#EDF2FA"/>
+  <rect x="44" y="60" width="40" height="8" rx="4" fill="#C6D2E6"/>
+  <path d="M64 46V28" stroke="#EDF2FA" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="64" cy="24" r="8" fill="#FFC24D"/>
+</svg>

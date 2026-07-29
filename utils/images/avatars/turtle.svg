@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Turtle">
+  <title>Turtle</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FD8DE"/><stop offset="1" stop-color="#3E9BA8"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <ellipse cx="24" cy="92" rx="11" ry="8" fill="#7ECB86"/>
+  <ellipse cx="104" cy="92" rx="11" ry="8" fill="#7ECB86"/>
+  <ellipse cx="38" cy="104" rx="10" ry="7" fill="#7ECB86"/>
+  <ellipse cx="90" cy="104" rx="10" ry="7" fill="#7ECB86"/>
+  <circle cx="64" cy="30" r="15" fill="#7ECB86"/>
+  <circle cx="58" cy="27" r="3" fill="#26402C"/>
+  <circle cx="70" cy="27" r="3" fill="#26402C"/>
+  <circle cx="64" cy="66" r="38" fill="#4E9E5C"/>
+<circle cx="64.0" cy="51.0" r="7" fill="#3F7F52"/><circle cx="77.0" cy="58.5" r="7" fill="#3F7F52"/><circle cx="77.0" cy="73.5" r="7" fill="#3F7F52"/><circle cx="64.0" cy="81.0" r="7" fill="#3F7F52"/><circle cx="51.0" cy="73.5" r="7" fill="#3F7F52"/><circle cx="51.0" cy="58.5" r="7" fill="#3F7F52"/>
+  <circle cx="64" cy="66" r="8" fill="#3F7F52"/>
+</svg>

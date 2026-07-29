@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Mountain">
+  <title>Mountain</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FD0EC"/><stop offset="1" stop-color="#4C9BC6"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="94" cy="36" r="12" fill="#FFD34E"/>
+  <path d="M4 104 44 44l26 38 12-16 30 38z" fill="#5F8398"/>
+  <path d="M44 44l16 24H30z" fill="#F2F7FB"/>
+  <path d="M82 66l10 13H74z" fill="#F2F7FB"/>
+  <path d="M0 100h128v28H0z" fill="#3E5F72"/>
+</svg>

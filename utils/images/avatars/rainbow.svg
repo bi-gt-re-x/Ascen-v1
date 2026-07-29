@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Rainbow">
+  <title>Rainbow</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD8F2"/><stop offset="1" stop-color="#5AAFDE"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <g fill="none" stroke-width="8" stroke-linecap="round">
+    <path d="M20 88a44 44 0 0 1 88 0" stroke="#FF7A6B"/>
+    <path d="M30 88a34 34 0 0 1 68 0" stroke="#FFB93D"/>
+    <path d="M40 88a24 24 0 0 1 48 0" stroke="#FFD34E"/>
+    <path d="M50 88a14 14 0 0 1 28 0" stroke="#6DC46A"/>
+  </g>
+  <ellipse cx="26" cy="92" rx="18" ry="11" fill="#FFFFFF"/>
+  <ellipse cx="102" cy="92" rx="18" ry="11" fill="#FFFFFF"/>
+</svg>

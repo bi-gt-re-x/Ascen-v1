@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Rocket">
+  <title>Rocket</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A6C4F7"/><stop offset="1" stop-color="#6288DA"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M64 20c13 13 18 30 18 47v17H46V67c0-17 5-34 18-47z" fill="#F6F8FC"/>
+  <path d="M46 74 30 92v10l16-8z" fill="#EF6B6B"/>
+  <path d="M82 74l16 18v10l-16-8z" fill="#EF6B6B"/>
+  <circle cx="64" cy="58" r="11" fill="#7CC7EA"/>
+  <circle cx="64" cy="58" r="11" fill="none" stroke="#3E8FB6" stroke-width="4"/>
+  <path d="M54 84h20v6H54z" fill="#DCE4F0"/>
+  <path d="M64 118c-7-7-9-14-9-20h18c0 6-2 13-9 20z" fill="#FFC24D"/>
+  <path d="M64 110c-3-4-4-8-4-12h8c0 4-1 8-4 12z" fill="#FF8A3D"/>
+</svg>

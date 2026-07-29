@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Pencil">
+  <title>Pencil</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE3A0"/><stop offset="1" stop-color="#EBBA4A"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <g transform="rotate(-38 64 64)">
+    <rect x="52" y="26" width="24" height="58" fill="#FFC72E"/>
+    <path d="M52 26h12v58H52z" fill="#FFD86B"/>
+    <path d="M52 84h24l-12 20z" fill="#F0DCC0"/>
+    <path d="M58 94h12l-6 10z" fill="#3B3B3B"/>
+    <rect x="52" y="14" width="24" height="12" rx="3" fill="#F58BA8"/>
+    <rect x="52" y="24" width="24" height="5" fill="#B9BFC7"/>
+  </g>
+</svg>

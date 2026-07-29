@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Saturn">
+  <title>Saturn</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8E86E0"/><stop offset="1" stop-color="#5B52B8"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="64" cy="60" r="27" fill="#F2A85C"/>
+  <path d="M39 52h50" stroke="#E08F44" stroke-width="5" stroke-linecap="round"/>
+  <path d="M42 70h44" stroke="#E08F44" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="64" cy="64" rx="46" ry="13" fill="none" stroke="#FFE0A8"
+           stroke-width="7" transform="rotate(-18 64 64)"/>
+</svg>

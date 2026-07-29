@@ -57,11 +57,11 @@
                 </select>
             </div>
 
-            {# No avatar image anywhere in the app, so the account's initial
-               stands in for one. #}
-            <div class="topnav-avatar" title="{{ current_user }}" aria-hidden="true">
-                {{ (current_user or '?')[0]|upper }}
-            </div>
+            {# The account's profile picture — one of the fifty drawings in
+               utils/images/avatars/, chosen from the account's id by
+               backend/tracking/avatar.py. #}
+            <img class="topnav-avatar" src="{{ url_for('static', filename=current_avatar) }}"
+                 alt="" title="{{ current_user }}" width="38" height="38">
         </div>
 
     </div>

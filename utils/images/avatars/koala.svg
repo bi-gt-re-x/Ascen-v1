@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Koala">
+  <title>Koala</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFCEDE"/><stop offset="1" stop-color="#7C93AC"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="28" cy="52" r="19" fill="#9AA7B4"/>
+  <circle cx="100" cy="52" r="19" fill="#9AA7B4"/>
+  <circle cx="28" cy="52" r="11" fill="#C9B6BE"/>
+  <circle cx="100" cy="52" r="11" fill="#C9B6BE"/>
+  <circle cx="64" cy="66" r="34" fill="#AFBCC8"/>
+  <circle cx="52" cy="60" r="4.5" fill="#333B44"/>
+  <circle cx="76" cy="60" r="4.5" fill="#333B44"/>
+  <ellipse cx="64" cy="76" rx="12" ry="14" fill="#4A535C"/>
+  <path d="M52 92c6 6 18 6 24 0" stroke="#4A535C" stroke-width="3.5"
+        stroke-linecap="round" fill="none"/>
+</svg>

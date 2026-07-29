@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Cupcake">
+  <title>Cupcake</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7C4DE"/><stop offset="1" stop-color="#DE7FB0"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M38 72h52l-6 40H44z" fill="#E8A45C"/>
+  <path d="M46 72v40M56 72v40M72 72v40M82 72v40" stroke="#C9803C" stroke-width="4"/>
+  <path d="M32 72c0-20 14-32 32-32s32 12 32 32z" fill="#FBFBFA"/>
+  <path d="M40 62c0-14 10-24 24-24s24 10 24 24z" fill="#F5A8C6"/>
+  <circle cx="64" cy="30" r="8" fill="#E8503F"/>
+  <path d="M64 22c2-8 8-10 8-10" stroke="#4E9E5C" stroke-width="4"
+        stroke-linecap="round" fill="none"/>
+  <circle cx="48" cy="58" r="3" fill="#FFD34E"/>
+  <circle cx="80" cy="58" r="3" fill="#7ED9C4"/>
+</svg>

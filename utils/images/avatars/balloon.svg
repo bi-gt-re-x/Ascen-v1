@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Balloon">
+  <title>Balloon</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A8DCF2"/><stop offset="1" stop-color="#54A5D6"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M64 20c18 0 30 14 30 32 0 20-18 34-30 42-12-8-30-22-30-42 0-18 12-32 30-32z"
+        fill="#E8503F"/>
+  <path d="M50 36c4-6 10-9 14-9" stroke="#FBFBFA" stroke-width="6"
+        stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M58 94h12l-6 8z" fill="#B33A2C"/>
+  <path d="M64 102c8 6-8 10 0 16s-6 8-2 10" stroke="#FBFBFA" stroke-width="4"
+        stroke-linecap="round" fill="none"/>
+</svg>

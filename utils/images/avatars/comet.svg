@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Comet">
+  <title>Comet</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A5A96"/><stop offset="1" stop-color="#2A3466"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M4 118 62 56l18 18z" fill="#7FA8EE"/>
+  <path d="M18 116 64 66l12 12z" fill="#BDD6FA"/>
+  <path d="M34 112 66 76l8 8z" fill="#FFF0BE"/>
+  <circle cx="84" cy="46" r="24" fill="#FFC24D"/>
+  <circle cx="84" cy="46" r="16" fill="#FFE27A"/>
+  <circle cx="84" cy="46" r="8" fill="#FFF8DE"/>
+</svg>

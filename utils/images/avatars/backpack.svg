@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Backpack">
+  <title>Backpack</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A8CFF0"/><stop offset="1" stop-color="#5A93CE"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M44 34a20 20 0 0 1 40 0v10H72v-10a8 8 0 0 0-16 0v10H44z" fill="#3E6EA8"/>
+  <rect x="26" y="40" width="76" height="72" rx="20" fill="#4F8FD6"/>
+  <path d="M26 62a38 38 0 0 1 76 0v6H26z" fill="#3E6EA8"/>
+  <rect x="46" y="74" width="36" height="26" rx="8" fill="#DCE8F7"/>
+  <path d="M52 88h24" stroke="#7FA3C9" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="5" fill="#FFC72E"/>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Flying saucer">
+  <title>Flying saucer</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5A6BB5"/><stop offset="1" stop-color="#323A82"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M44 92 24 118h80L84 92z" fill="#B7E8FF" opacity="0.45"/>
+  <path d="M42 62a22 22 0 0 1 44 0z" fill="#9FE0F5"/>
+  <ellipse cx="64" cy="68" rx="46" ry="16" fill="#C9D4E8"/>
+  <ellipse cx="64" cy="64" rx="46" ry="14" fill="#EEF3FA"/>
+  <circle cx="36" cy="70" r="5" fill="#FFC24D"/>
+  <circle cx="64" cy="74" r="5" fill="#FF7A6B"/>
+  <circle cx="92" cy="70" r="5" fill="#7ED9C4"/>
+</svg>

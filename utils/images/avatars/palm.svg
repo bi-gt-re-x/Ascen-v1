@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Palm tree">
+  <title>Palm tree</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FE0F2"/><stop offset="1" stop-color="#4FAED6"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M0 106h128v22H0z" fill="#F2D9A0"/>
+  <path d="M62 106c-4-26 0-44 8-60" stroke="#8A5F3D" stroke-width="11"
+        stroke-linecap="round" fill="none"/>
+  <path d="M70 44c-16-8-32-4-38 8 14-2 26 0 36 6z" fill="#4FA35F"/>
+  <path d="M72 44c16-8 32-2 38 10-14-4-26-2-36 4z" fill="#5FB86A"/>
+  <path d="M70 42c-6-16-2-30 8-36 4 14 2 28-6 38z" fill="#57B36C"/>
+  <path d="M72 46c14 2 24 12 24 26-10-10-20-16-28-18z" fill="#4E9E5C"/>
+  <circle cx="66" cy="52" r="5" fill="#8A5F3D"/>
+  <circle cx="78" cy="54" r="4" fill="#8A5F3D"/>
+</svg>

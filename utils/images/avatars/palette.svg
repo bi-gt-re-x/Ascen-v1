@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Paint palette">
+  <title>Paint palette</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F5D8A8"/><stop offset="1" stop-color="#DCA85C"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <path d="M62 24c26 0 46 16 46 36 0 14-12 18-22 18-8 0-12 4-12 10 0 8-8 14-18 14-24 0-42-18-42-40S38 24 62 24z"
+        fill="#FBF6EC"/>
+  <circle cx="46" cy="46" r="8" fill="#E8503F"/>
+  <circle cx="72" cy="42" r="8" fill="#FFC72E"/>
+  <circle cx="88" cy="60" r="8" fill="#4F8FD6"/>
+  <circle cx="40" cy="70" r="8" fill="#5FB86A"/>
+  <circle cx="58" cy="88" r="8" fill="#A47BD6"/>
+  <path d="M96 96 82 82" stroke="#8A5F3D" stroke-width="8" stroke-linecap="round"/>
+  <path d="M104 104 94 94" stroke="#C9803C" stroke-width="10" stroke-linecap="round"/>
+</svg>

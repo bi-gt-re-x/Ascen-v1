@@ -2,6 +2,22 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-29 — Every account gets a profile picture
+
+Fifty round drawings in `utils/images/avatars/` — astronauts and planets,
+animals, plants and everyday things — replace the letter-in-a-circle the top
+bar used to show. They are original flat SVGs drawn for the app, a couple of KB
+each, so there is nothing licensed or downloaded in the tree.
+
+- Which picture an account gets is **derived, not stored**: `md5(user id) % 50`
+  in `backend/tracking/avatar.py`. No column, no migration, and every account
+  that already existed has one too. `md5` rather than `hash()`, which Python
+  salts per process and would repaint every account on restart.
+- Keyed on the id rather than the username, so a rename keeps the picture.
+- `middleware/context.py` now looks the account row up once and derives both
+  `current_theme` and `current_avatar` from it; `auth.theme_for` went with it.
+  `public_user()` gained an `avatar` URL for the client.
+
 ## 2026-07-28 — The .sql files become an actual database
 
 The data lives in SQLite at `data/ascen.db` now. `data/sql/` keeps the schema

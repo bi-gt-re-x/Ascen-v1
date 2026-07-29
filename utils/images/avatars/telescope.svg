@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Telescope">
+  <title>Telescope</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4F5E9B"/><stop offset="1" stop-color="#2C3668"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <rect x="34" y="46" width="62" height="22" rx="11" fill="#E8EDF7"
+        transform="rotate(-22 64 57)"/>
+  <rect x="82" y="38" width="16" height="26" rx="6" fill="#5C7FD0"
+        transform="rotate(-22 64 57)"/>
+  <circle cx="94" cy="38" r="9" fill="#FFD34E"/>
+  <path d="M60 66 44 106M60 66l22 40" stroke="#C6D2E6" stroke-width="7" stroke-linecap="round"/>
+  <path d="M40 106h50" stroke="#9FB0CC" stroke-width="6" stroke-linecap="round"/>
+</svg>

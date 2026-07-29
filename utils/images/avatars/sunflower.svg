@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Sunflower">
+  <title>Sunflower</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD8F2"/><stop offset="1" stop-color="#4FA0D6"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+<ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFD34E" transform="rotate(0 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFC02E" transform="rotate(30 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFD34E" transform="rotate(60 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFC02E" transform="rotate(90 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFD34E" transform="rotate(120 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFC02E" transform="rotate(150 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFD34E" transform="rotate(180 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFC02E" transform="rotate(210 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFD34E" transform="rotate(240 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFC02E" transform="rotate(270 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFD34E" transform="rotate(300 64 66)"/><ellipse cx="64" cy="34" rx="7" ry="15" fill="#FFC02E" transform="rotate(330 64 66)"/>
+  <circle cx="64" cy="66" r="19" fill="#8A5A2E"/>
+  <circle cx="64" cy="66" r="12" fill="#6E4522"/>
+  <path d="M64 84v34" stroke="#4E9E5C" stroke-width="7" stroke-linecap="round"/>
+  <path d="M64 100c-14-8-22-2-22-2s8 12 22 2z" fill="#57B36C"/>
+</svg>

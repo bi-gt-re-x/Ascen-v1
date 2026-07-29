@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Frog">
+  <title>Frog</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9EDCB8"/><stop offset="1" stop-color="#4CA57A"/></linearGradient></defs>
+  <circle cx="64" cy="64" r="64" fill="url(#bg)"/>
+
+  <circle cx="46" cy="42" r="15" fill="#63C46A"/>
+  <circle cx="82" cy="42" r="15" fill="#63C46A"/>
+  <circle cx="46" cy="42" r="9" fill="#FBFBFA"/>
+  <circle cx="82" cy="42" r="9" fill="#FBFBFA"/>
+  <circle cx="46" cy="43" r="4.5" fill="#2C3A2A"/>
+  <circle cx="82" cy="43" r="4.5" fill="#2C3A2A"/>
+  <ellipse cx="64" cy="76" rx="36" ry="30" fill="#63C46A"/>
+  <ellipse cx="64" cy="88" rx="22" ry="14" fill="#A7E39D"/>
+  <path d="M44 74c8 12 32 12 40 0" stroke="#2C6B37" stroke-width="4.5"
+        stroke-linecap="round" fill="none"/>
+  <circle cx="46" cy="66" r="3" fill="#4AA355"/>
+  <circle cx="82" cy="66" r="3" fill="#4AA355"/>
+</svg>
