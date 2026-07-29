@@ -821,6 +821,42 @@ function updateGoalElement(goalId, goalData) {
     renderMilestones();
 }
 
+// --- Weight, progress and the overall bar --------------------------------
+// A goal's weight is its priority, 1-10. Goals made before priority existed
+// have none; they sit in the middle rather than counting for nothing.
+const DEFAULT_GOAL_WEIGHT = 5;
+
+function goalWeight(goal) {
+    const p = parseInt(goal.priority, 10);
+    if (!p || p < 1) return DEFAULT_GOAL_WEIGHT;
+    return Math.min(10, p);
+}
+
+// 0-100. A completed goal is 100 whatever its stored numbers say — it is
+// finished, and a rounding artefact should not leave it at 99.
+function goalProgressPct(goal) {
+    if (goal.status === 'completed') return 100;
+    return Math.max(0, Math.min(100, goalNumbers(goal).progress || 0));
+}
+
+// Overall progress is the weighted mean of every goal's progress:
+//
+//     sum(progress x weight) / sum(weight)
+//
+// so a heavily weighted goal moves the bar more than a trivial one. With the
+// worked example — 60%/5, 40%/5, 80%/3, 50%/2 — that is
+// (300 + 200 + 240 + 100) / 15 = 56%.
+function overallProgress(goals) {
+    let weighted = 0;
+    let weight = 0;
+    (goals || []).forEach(g => {
+        const w = goalWeight(g);
+        weighted += goalProgressPct(g) * w;
+        weight += w;
+    });
+    return weight ? weighted / weight : 0;
+}
+
 function updateStatCounts() {
     let completedCount = 0;
     let activeCount = 0;
@@ -841,19 +877,11 @@ function updateStatCounts() {
     const totalEl = document.getElementById('totalCount');
     if (totalEl) totalEl.textContent = activeCount + completedCount;
 
-    // Overall progress in the header: how far along every goal is, averaged,
-    // so a half-finished goal counts for half rather than nothing. A completed
-    // goal is 100% whatever its numbers say.
+    // Overall progress in the header — see overallProgress().
     const fill = document.getElementById('overallProgressFill');
     const pctLabel = document.getElementById('overallProgressPct');
     if (fill || pctLabel) {
-        let overall = 0;
-        if (allGoals.length) {
-            const sum = allGoals.reduce((acc, g) => acc + (g.status === 'completed'
-                ? 100
-                : Math.max(0, Math.min(100, goalNumbers(g).progress))), 0);
-            overall = sum / allGoals.length;
-        }
+        const overall = overallProgress(allGoals);
         if (fill) fill.style.width = overall + '%';
         if (pctLabel) pctLabel.textContent = Math.round(overall) + '%';
     }
@@ -1075,10 +1103,11 @@ function createGoalElement(goal) {
                 ${goal.description ? `<p class="goal-description">${escGoalHtml(goal.description)}</p>` : ''}
             </div>
             <div class="goal-side">
-                <div class="goal-priority">
-                    <span class="gp-num">${priority}</span>
-                    <span class="gp-info" tabindex="0">&#9432;<span class="gp-tooltip">How important this goal is &mdash; 1 (low) to 10 (critical)</span></span>
-                    <span class="gp-label">Priority Rank 1-10</span>
+                <div class="goal-stars" role="img"
+                     aria-label="Priority ${priority} out of 10"
+                     title="Priority ${priority} of 10 — its weight in the overall progress bar">
+                    <span class="gs-track">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+                    <span class="gs-fill" style="width: ${priority * 10}%">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
                 </div>
                 <div class="goal-utility-buttons">
                     ${!isCompleted && !isFocus ? `<button type="button" class="goal-utility-btn" onclick="addProgressToGoal('${goal.id}', 1)">+1</button>` : ''}

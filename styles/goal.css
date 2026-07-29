@@ -986,20 +986,6 @@ body.dark .goals-list::-webkit-scrollbar-thumb:hover {
     z-index: 300;
 }
 
-#themeSelect {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background: #ffffff;
-    border: 1.5px solid #e6e8f0;
-    border-radius: 999px;
-    padding: 9px 34px 9px 18px;
-    font: 600 13px 'Century Gothic', sans-serif;
-    color: #2C302E;
-    cursor: pointer;
-    box-shadow: 0 6px 18px rgba(44, 48, 46, 0.10);
-    outline: none;
-}
 
 /* ============================================================
    DARK THEME
@@ -1118,12 +1104,6 @@ body.dark .confirm-add-btn { background: #A38A70; color: #0D1117; }
 body.dark .confirm-add-btn:hover { background: #b89b80; }
 
 /* Theme selector in dark */
-body.dark #themeSelect {
-    background: #161B22;
-    border-color: #30363D;
-    color: #e6e8f0;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
-}
 
 /* Phone (≤480px): let the pill nav wrap instead of overflowing */
 @media (max-width: 480px) {
@@ -1501,38 +1481,32 @@ body.dark .goals-page .goal-description { color: #9aa0b5; }
     flex-shrink: 0;
     text-align: right;
 }
-.goal-priority {
-    background: #f4f5f7;
-    border-radius: 12px;
-    padding: 8px 14px;
-    text-align: right;
-}
-.gp-num { font-size: 20px; font-weight: 800; color: #2c302e; }
-.gp-info {
+/* The goal's weight, as five stars.
+ *
+ * Priority is 1-10 and the row is five stars, so each star is worth two
+ * points and an odd priority lands on a half. That is drawn by laying a
+ * filled row over an empty one and clipping it to priority x 10% — which
+ * gives exact halves for free, rather than needing a half-star glyph.
+ *
+ * The number itself is on the element's title, so the precise value is a
+ * hover away and the Edit dialog still sets it on the 1-10 slider. */
+.goal-stars {
     position: relative;
-    margin-left: 4px;
-    color: #6c757d;
-    cursor: help;
-    outline: none;
-}
-.gp-tooltip {
-    display: none;
-    position: absolute;
-    bottom: calc(100% + 8px);
-    right: -10px;
-    background: #1a1f26;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 8px 12px;
-    border-radius: 8px;
+    display: inline-block;
+    font-size: 19px;
+    line-height: 1;
+    letter-spacing: 2px;
     white-space: nowrap;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-    z-index: 20;
+    cursor: help;
 }
-.gp-info:hover .gp-tooltip,
-.gp-info:focus .gp-tooltip { display: block; }
-.gp-label { display: block; font-size: 11px; color: #6c757d; margin-top: 2px; }
+.gs-track { color: #dfe1e5; }
+.gs-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    color: #A38A70;
+}
 .goals-page .goal-deadline { font-size: 12px; color: #6c757d; }
 
 /* Goal progress bar: black -> tan -> white sweep on a soft track */
@@ -1812,8 +1786,8 @@ body.dark .goals-toolbar .tab-btn:hover { background: #1c222c; color: #e6e8f0; b
 body.dark .goals-toolbar .tab-btn.active { background: #A38A70; border-color: #A38A70; color: #0d1117; }
 body.dark .goals-page .goal-item { background: #161b22; border-color: #2b3242; box-shadow: none; }
 body.dark .goal-target-big { color: #e6e8f0; }
-body.dark .goal-priority { background: #1c222c; }
-body.dark .gp-num { color: #e6e8f0; }
+body.dark .gs-track { color: #30363d; }
+body.dark .gs-fill { color: #d8c3a5; }
 body.dark .goals-page .goal-metric { color: #e6e8f0; }
 body.dark .progress-bar-container.gradient-bar { background: #232a36; border-color: #2b3242; }
 body.dark .gm-hint { background: #1c222c; color: #9aa0b5; }

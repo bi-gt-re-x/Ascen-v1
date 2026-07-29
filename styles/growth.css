@@ -68,7 +68,9 @@ body {
     height: auto;
     padding: 24px;
     box-sizing: border-box;
-    animation: fadeIn 0.8s ease-out;
+    /* No fadeIn here: the whole page already fades in once via
+       styles/page-fade.css, and this one left a translateY(20px) on the
+       container that pushed its bottom past the viewport. */
 }
 
 /* Tab Navigation */
@@ -487,16 +489,24 @@ html, body {
 }
 
 .growth-container {
-    /* min-height (not a fixed 100vh) + visible overflow so a tall card is never
-       clipped — the page scrolls instead. Top-aligned so nothing is centred and
-       cut off at both edges. */
-    min-height: 100vh;
+    min-height: calc(100vh - var(--topnav-h, 64px));
     box-sizing: border-box;
     overflow: visible;
     justify-content: flex-start;
-    /* Nudged down 5% (5vh) of the viewport. */
-    padding-top: calc(16px + 5vh);
+    padding-top: 20px;
     padding-bottom: 16px;
+}
+
+/* Pinned page (see styles/topnav.css): fill exactly what the nav leaves and
+   no more, so a card taller than the space scrolls in here rather than
+   pushing the window. */
+@media (min-width: 1120px) and (min-height: 640px) {
+    .growth-container {
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
 }
 
 /* --- Analytics view: size the card to its content and use a
@@ -568,20 +578,6 @@ html, body {
     z-index: 300;
 }
 
-#themeSelect {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background: #ffffff;
-    border: 1px solid #e6e8f0;
-    border-radius: 999px;
-    padding: 9px 34px 9px 18px;
-    font: 600 13px 'Century Gothic', sans-serif;
-    color: #2C302E;
-    cursor: pointer;
-    box-shadow: 0 6px 18px rgba(44, 48, 46, 0.10);
-    outline: none;
-}
 
 /* --- DARK THEME --- */
 body.dark {
@@ -630,12 +626,6 @@ body.dark .tab-btn.active {
 }
 
 /* Theme selector in dark */
-body.dark #themeSelect {
-    background: #161B22;
-    border-color: #30363D;
-    color: #e6e8f0;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
-}
 
 /* ============================================================
    GROWTH RATINGS v2 — graded report card

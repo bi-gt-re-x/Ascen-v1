@@ -68,6 +68,17 @@ body {
     padding: 0 24px;
 }
 
+/* On a screen the page is pinned to (see styles/topnav.css), the container
+   takes a fixed height rather than a minimum, so the cards divide up exactly
+   what is there and the task list scrolls inside its own card. min-height: 0
+   is what lets the flex children actually shrink to fit. */
+@media (min-width: 1120px) and (min-height: 640px) {
+    .container {
+        height: calc(100% - 33px);
+        min-height: 0;
+    }
+}
+
 .top-section {
     display: grid;
     /* Same 45/55 split, but fr units respect the gap (45%+55%+gap used to
@@ -93,6 +104,10 @@ body {
     margin-bottom: 1.5rem;
     align-items: stretch;
     flex: 2 1 auto;
+    /* A flex item's min-height is auto, which is a floor at its content's
+       height — this row would refuse to shrink and push the page past the
+       viewport instead. The cards inside scroll, so the row may shrink. */
+    min-height: 0;
 }
 
 /* ==========================================================================
@@ -483,6 +498,9 @@ html.focus-mode .focus-progress { height: 10px; margin: 0; }
 .focus-panel {
     display: flex;
     flex-direction: column;
+    /* Scrolls within its card rather than pushing the page taller. */
+    min-height: 0;
+    overflow-y: auto;
 }
 .focus-goal {
     background: #FAFAF8;
