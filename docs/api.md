@@ -41,6 +41,7 @@ A signed-out visitor asking for a gated page is redirected to
 | `POST /api/signup` | The original username + password sign-up, kept for older clients |
 | `GET /auth/google`, `GET /auth/google/callback` | Google sign-in, when configured |
 | `POST /api/set_theme` | `{"theme": "light" \| "dark"}` |
+| `POST /api/avatar` | `{"avatar": "<one of the fifty>"}` — the account menu's picture picker. 401 signed out, 400 for an unknown name |
 
 All in `routes/auth.py`, except the theme (`routes/theme.py`).
 

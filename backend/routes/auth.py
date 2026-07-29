@@ -11,7 +11,7 @@ from flask import (Blueprint, jsonify, redirect, request, session, url_for)
 
 from backend.config.settings import THEME_COOKIE_MAX_AGE
 from backend.database import connection as db
-from backend.tracking import auth
+from backend.tracking import auth, avatar
 
 bp = Blueprint('auth', __name__)
 
@@ -66,6 +66,20 @@ def logout():
     resp = jsonify({"success": True, "message": "Logged out."})
     resp.delete_cookie('theme')
     return resp
+
+
+@bp.route('/api/avatar', methods=['POST'])
+def set_avatar():
+    """Pick the account's profile picture, from the menu under the avatar."""
+    user = auth.signed_in_user()
+    if not user:
+        return jsonify({"success": False, "message": "Sign in first."}), 401
+
+    name = str((request.json or {}).get('avatar') or '')
+    if not avatar.choose_avatar(user['username'], name):
+        return jsonify({"success": False, "message": "Unknown picture."}), 400
+
+    return jsonify({"success": True, "avatar": '/static/' + avatar.avatar_path(name)})
 
 
 @bp.route('/api/signup', methods=['POST'])

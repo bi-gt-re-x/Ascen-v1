@@ -2,6 +2,22 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-29 — An account menu under the avatar
+
+Clicking the avatar opens a square panel: the username with a red Log Out
+button beside it, and under that a row of all fifty pictures that scrolls
+sideways inside the panel rather than widening it. Picking one is instant —
+the tick and the bar's own picture move first and the request only confirms
+them, putting both back if it fails.
+
+- A pick is stored as an `avatar` row in `user_settings`, the key/value table
+  that exists so a preference like this is not a migration. `avatar_for` reads
+  it, and falls back to the derived picture for accounts that never picked.
+- `POST /api/avatar`, in `routes/auth.py`: 401 without a session, 400 for any
+  name that is not one of the fifty, so nothing reaches the row but a real one.
+- The menu opens scrolled to the picture you are wearing, wherever it sits in
+  the fifty.
+
 ## 2026-07-29 — Every account gets a profile picture
 
 Fifty round drawings in `utils/images/avatars/` — astronauts and planets,
@@ -9,10 +25,11 @@ animals, plants and everyday things — replace the letter-in-a-circle the top
 bar used to show. They are original flat SVGs drawn for the app, a couple of KB
 each, so there is nothing licensed or downloaded in the tree.
 
-- Which picture an account gets is **derived, not stored**: `md5(user id) % 50`
-  in `backend/tracking/avatar.py`. No column, no migration, and every account
-  that already existed has one too. `md5` rather than `hash()`, which Python
-  salts per process and would repaint every account on restart.
+- Which picture an account gets is **derived**: `md5(user id) % 50` in
+  `backend/tracking/avatar.py`. No column, no migration, and every account that
+  already existed has one too. `md5` rather than `hash()`, which Python salts
+  per process and would repaint every account on restart. (Picking one from the
+  account menu stores it and overrides this — see the entry above.)
 - Keyed on the id rather than the username, so a rename keeps the picture.
 - `middleware/context.py` now looks the account row up once and derives both
   `current_theme` and `current_avatar` from it; `auth.theme_for` went with it.

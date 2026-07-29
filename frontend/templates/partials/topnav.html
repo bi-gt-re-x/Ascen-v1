@@ -57,12 +57,45 @@
                 </select>
             </div>
 
-            {# The account's profile picture — one of the fifty drawings in
-               utils/images/avatars/, chosen from the account's id by
-               backend/tracking/avatar.py. #}
-            <img class="topnav-avatar" src="{{ url_for('static', filename=current_avatar) }}"
-                 alt="" title="{{ current_user }}" width="38" height="38">
+            {# The account's profile picture, and the menu behind it. The
+               picture is one of the fifty drawings in utils/images/avatars/;
+               backend/tracking/avatar.py decides which. The whole picker is
+               rendered here rather than fetched, because the fifty names are
+               known server-side and the menu should open instantly. #}
+            <div class="topnav-account">
+                <button type="button" class="topnav-avatar-btn" id="accountMenuBtn"
+                        aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
+                    <img class="topnav-avatar" id="topnavAvatar"
+                         src="{{ url_for('static', filename=current_avatar) }}"
+                         alt="" title="{{ current_user }}" width="38" height="38">
+                </button>
+
+                <div class="account-menu" id="accountMenu" hidden>
+                    <div class="account-menu-head">
+                        <span class="account-menu-name" title="{{ current_user }}">{{ current_user }}</span>
+                        <button type="button" class="account-logout" id="accountLogout">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+                            <span>Log Out</span>
+                        </button>
+                    </div>
+
+                    <div class="account-avatar-row" id="accountAvatars" role="radiogroup"
+                         aria-label="Profile picture">
+                        {% for name in avatar_choices %}
+                        <button type="button" role="radio" data-avatar="{{ name }}"
+                                class="account-avatar-option{{ ' is-current' if name == current_avatar_name }}"
+                                aria-checked="{{ 'true' if name == current_avatar_name else 'false' }}"
+                                title="{{ name }}" aria-label="{{ name }}">
+                            <img src="{{ url_for('static', filename='images/avatars/' ~ name ~ '.svg') }}"
+                                 alt="" width="40" height="40" loading="lazy">
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
 </nav>
+
+<script src="{{ url_for('static', filename='js/topnav.js') }}" defer></script>

@@ -16,7 +16,7 @@ metadata:
 - `frontend/templates/` — all Jinja templates (mainpage, dashboard, calendar, growth, goals, `Misc HTML/` footer pages).
 - `styles/` (top level) — all CSS (`styles/calendar/` = active calendar styles). `styles/layout.css` = shared responsive foundation (`.page-shell`, breakpoints 1024/768/480).
 - `frontend/js/` — all JS, moved there 2026-07-27 (api.js, dashboard.js, tasks.js, goal.js, focus.js, focus-theme.js, celebrate.js, theme.js, page-fade.js, fit-scale.js, `js/calendar/` for day/week views, etc.).
-- `utils/` — `images/` (logo.svg + `avatars/`: 50 round profile-picture SVGs, one per account, picked from the account id by `backend/tracking/avatar.py` rather than stored), `icons/` (80 calendar svg icons), plus empty `fonts/` and `assets/`.
+- `utils/` — `images/` (logo.svg + `avatars/`: 50 round profile-picture SVGs, one per account, picked from the account id by `backend/tracking/avatar.py`, or from an `avatar` row in `user_settings` once the account chooses one in the top bar's account menu), `icons/` (80 calendar svg icons), plus empty `fonts/` and `assets/`.
 - `data/ascen.db` — **the actual datastore** since 2026-07-28: a SQLite database, git-ignored. `data/sql/*.sql` = its schema + seed rows, one file per area (users, tasks, goals, growth=xp ledger, focus, events, analytics=report card), read only when the db is missing. `data/backups/*.json` = the old JSON store, kept as a backup only.
 - `docs/` — architecture / api / database / roadmap / changelog, plus copies of these memory files.
 - `frontend/js/fit-scale.js` — proportional "zoom to fit" for `data-fit-width="N"` elements (growth pages); goals page no longer uses it after the 2026-07-22 redesign.

@@ -5,8 +5,10 @@
   * `current_user` — the signed-in username, so a page can recover it into
     localStorage when this browser has none (storage cleared, say) and still
     load the account's data;
-  * `current_avatar` — the static path of the account's profile picture, so
-    the top bar can draw it without a round trip.
+  * `current_avatar` / `current_avatar_name` — the account's profile picture,
+    as a static path and as a bare name, so the top bar can draw it without a
+    round trip and mark it in the picker;
+  * `avatar_choices` — all fifty, for the picker in the account menu.
 
 Theme preference order: the `theme` cookie (set on every change and on login,
 so it arrives with every request and needs neither JS timing nor a live
@@ -19,7 +21,7 @@ from flask import request, session
 
 from backend.database import connection as db
 from backend.tracking.auth import find_user
-from backend.tracking.avatar import FALLBACK, avatar_for, avatar_path
+from backend.tracking.avatar import AVATARS, FALLBACK, avatar_for, avatar_path
 
 
 def register(app):
@@ -37,8 +39,11 @@ def current_theme(user):
 def inject_context():
     username = session.get('username', '')
     user = find_user(db.users(), username=username) if username else None
+    avatar = avatar_for(user) if user else FALLBACK
     return {
         'current_theme': current_theme(user),
         'current_user': username,
-        'current_avatar': avatar_path(avatar_for(user) if user else FALLBACK),
+        'current_avatar': avatar_path(avatar),
+        'current_avatar_name': avatar,
+        'avatar_choices': AVATARS,
     }
