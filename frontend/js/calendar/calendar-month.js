@@ -524,13 +524,16 @@ function findEventForTime(timestamps, hours, minutes) {
 // The tasks are read from the database and nowhere else — `dbTasks` below is
 // the account's rows from the tasks table, exactly as /api/tasks returned
 // them. The browser's own `dashboardTasks` copy is deliberately not consulted:
-// it only holds what was created in this browser, keeps whatever it saved the
-// first time, and drops every task not placed on the calendar — three ways for
-// the shading to disagree with the account's real workload.
+// it only holds what was created in this browser, and it keeps whatever it
+// saved the first time — two ways for the shading to disagree with the
+// account's real workload.
 //
-// Only tasks *due* that day count, and only ones still open: finishing a task
-// lightens its day, and a task with no deadline is not work scheduled for any
-// particular day, so it colours none.
+// What counts is what the day was asked to carry, so a task counts whether or
+// not it has been finished — the shade is a record of the day's load, not a
+// to-do list that empties as the day goes. Two things are left out: a task
+// with no deadline, which is not work scheduled for any particular day, and a
+// task never placed on the calendar, which is a dashboard to-do rather than
+// something the day was planned around.
 //
 // Each task counts for its priority — a high task weighs three times a low one
 // — so a day holding two hard tasks reads heavier than a day holding two easy
@@ -538,9 +541,9 @@ function findEventForTime(timestamps, hours, minutes) {
 // screen, with DAY_FULL_LOAD as a floor under the comparison so a quiet month
 // doesn't paint its one easy task the darkest navy on the map.
 //
-// The index is rebuilt on every render — see renderCalendar — so a reload, a
-// month change or a completion all recompute from current tasks rather than
-// from whatever was cached.
+// The index is rebuilt on every render — see renderCalendar — so a reload or a
+// month change recomputes from current tasks rather than from whatever was
+// cached.
 
 const dayIntensityIndex = { key: '', byDate: {}, max: 0 };
 
@@ -557,8 +560,8 @@ const PRIORITY_WEIGHT = { low: 1, medium: 2, high: 3 };
 // day still measures against that day, so the full colour range stays in use.
 const DAY_FULL_LOAD = 6;
 
-// A day with any open work never fades to nothing, so "some work" and "no
-// work" always look different.
+// A day carrying anything never fades to nothing, so "some work" and "no work"
+// always look different.
 const MIN_SHADE = 12;
 
 function taskDueKey(task) {
@@ -575,14 +578,15 @@ function taskPriorityWeight(task) {
     return PRIORITY_WEIGHT[priority] || PRIORITY_WEIGHT.medium;
 }
 
-// Every open task due in `month`/`year`, totalled per day.
+// Every calendar task due in `month`/`year`, totalled per day.
 function buildDayIntensityIndex(month, year) {
     const byDate = {};
 
     (window.dbTasks || []).forEach(task => {
-        // The stored status is the account's answer on whether it's finished;
-        // a status set this session is already written back into dbTasks.
-        if (task.status === 'done') return;
+        // Same rule the rest of the calendar goes by: a task only belongs to a
+        // day if it was put on the calendar. Finished or not makes no
+        // difference — the day still carried it.
+        if (!isCalendarPlacedTask(task)) return;
 
         const key = taskDueKey(task);
         if (!key) return;
@@ -648,10 +652,10 @@ function getIntensityBlue(percentage) {
 }
 
 // A day's task intensity for the calendar marker (0 = no colour, so a day with
-// nothing due stays unshaded). Open tasks due that day, weighted by priority
-// and measured against the busiest day of the month — higher -> darker blue.
-// Events never contribute, so adding one never darkens a date, and neither do
-// tasks without a due date.
+// nothing due stays unshaded). The tasks due that day, weighted by priority and
+// measured against the busiest day of the month — higher -> darker blue. Events
+// never contribute, so adding one never darkens a date, and neither do tasks
+// without a due date.
 function getDayTaskIntensity(dateStr) {
     return calculateDailyIntensity(dateStr).percentage;
 }
@@ -4308,9 +4312,9 @@ async function loadBackendTasksIntoCalendar() {
         const data = await res.json();
         if (!data || !data.success || !Array.isArray(data.tasks)) return;
 
-        // The rows as the database has them, kept whole and unfiltered: this is
-        // what the day shading counts, and it counts every task the account has
-        // due that day, not just the ones drawn on the calendar.
+        // The rows as the database has them, kept whole: the day shading reads
+        // their priority off these and decides for itself which of them count
+        // (buildDayIntensityIndex).
         window.dbTasks = data.tasks.slice();
 
         const byId = new Map(dashboardTasks.map(t => [String(t.id), t]));
@@ -4425,17 +4429,8 @@ function markTaskCompletedInCalendar(taskId, completionStatus) {
         status: completionStatus
     };
 
-    // Carry the new status into the database copy the shading is counted from,
-    // so the day lightens the moment the task is finished rather than on the
-    // next reload. The backend is told below and agrees when next read.
-    (window.dbTasks || []).forEach(t => {
-        if (String(t.id) === String(taskId)) t.status = completionStatus;
-    });
-    // This module is loaded by the dashboard too, where there is no grid to
-    // repaint — completing a task there must not reach for one.
-    if (document.getElementById('calendarDays')) {
-        renderCalendar(currentMonth, currentYear);
-    }
+    // Nothing to repaint on the month grid: a day is shaded by what it carries,
+    // and finishing a task doesn't take it off the day.
 
     // If dashboardTasks is empty, store the completion in localStorage for when calendar loads
     if (dashboardTasks.length === 0) {
