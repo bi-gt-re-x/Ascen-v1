@@ -837,6 +837,27 @@ function updateStatCounts() {
     document.getElementById('completedCount').textContent = completedCount;
     document.getElementById('activeCount').textContent = activeCount;
 
+    // Every goal this account has ever set, finished or not.
+    const totalEl = document.getElementById('totalCount');
+    if (totalEl) totalEl.textContent = activeCount + completedCount;
+
+    // Overall progress in the header: how far along every goal is, averaged,
+    // so a half-finished goal counts for half rather than nothing. A completed
+    // goal is 100% whatever its numbers say.
+    const fill = document.getElementById('overallProgressFill');
+    const pctLabel = document.getElementById('overallProgressPct');
+    if (fill || pctLabel) {
+        let overall = 0;
+        if (allGoals.length) {
+            const sum = allGoals.reduce((acc, g) => acc + (g.status === 'completed'
+                ? 100
+                : Math.max(0, Math.min(100, goalNumbers(g).progress))), 0);
+            overall = sum / allGoals.length;
+        }
+        if (fill) fill.style.width = overall + '%';
+        if (pctLabel) pctLabel.textContent = Math.round(overall) + '%';
+    }
+
     // Ring donut on the IN PROGRESS card: tan slice = share of goals completed,
     // periwinkle = still active. All-gray when there are no goals yet.
     const ring = document.getElementById('sumRing');
@@ -866,29 +887,93 @@ function updateStatCounts() {
     renderMilestones();
 }
 
-// --- Milestones panel (right column): every completed goal is a milestone ---
+// --- Milestones panel (right column) -------------------------------------
+// Every goal is a milestone, ticked once it is finished: a completed goal gets
+// a filled check, one still running gets an empty ring. Showing both is what
+// makes the panel a checklist rather than a second copy of the goals list.
+//
+// Only the first few fit without the panel outgrowing the goals column, so the
+// rest are behind "View All".
+const MILESTONES_COLLAPSED = 4;
+let milestonesExpanded = false;
+
+function toggleAllMilestones() {
+    milestonesExpanded = !milestonesExpanded;
+    renderMilestones();
+}
+
 function renderMilestones() {
     const list = document.getElementById('milestonesList');
     const empty = document.getElementById('noMilestones');
     if (!list) return;
 
-    const completed = allGoals.filter(g => g.status === 'completed');
+    // Finished ones first: the panel reads as what you have banked, then what
+    // is still outstanding.
+    const goals = allGoals.slice().sort((a, b) =>
+        (a.status === 'completed' ? 0 : 1) - (b.status === 'completed' ? 0 : 1));
+    const shown = milestonesExpanded ? goals : goals.slice(0, MILESTONES_COLLAPSED);
+
     list.innerHTML = '';
-    completed.forEach(goal => {
+    shown.forEach(goal => {
         const { goalType, target, label } = goalNumbers(goal);
         const value = goalType === 'focus'
             ? `${fmtGoalValue(target, 'focus')} Focus`
             : `${target} ${label}`;
+        const done = goal.status === 'completed';
         const row = document.createElement('div');
-        row.className = 'milestone-row';
+        row.className = `milestone-row ${done ? 'is-done' : ''}`;
+        // Delete rides along on hover: completed goals leave the goals list, so
+        // this row is the only place left to remove one from.
         row.innerHTML = `
             <span class="ms-name" title="${escGoalHtml(goal.title)}">${escGoalHtml(goal.title)}</span>
             <span class="ms-value">${value}</span>
-            <button type="button" class="ms-delete" onclick="deleteGoal('${goal.id}')">Delete</button>
+            <span class="ms-state" title="${done ? 'Completed' : 'Still in progress'}">
+                ${done
+                    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>`
+                    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>`}
+            </span>
+            <button type="button" class="ms-delete" title="Delete this goal"
+                    onclick="deleteGoal('${goal.id}')">&times;</button>
         `;
         list.appendChild(row);
     });
-    if (empty) empty.style.display = completed.length ? 'none' : 'block';
+
+    if (empty) empty.style.display = goals.length ? 'none' : 'block';
+
+    // The toggle only earns its place when something is hidden behind it.
+    const viewAll = document.getElementById('milestonesViewAll');
+    if (viewAll) {
+        viewAll.style.display = goals.length > MILESTONES_COLLAPSED ? '' : 'none';
+        viewAll.textContent = milestonesExpanded ? 'Show Less' : 'View All';
+    }
+
+    updateMilestonesTip(goals);
+}
+
+// The line under the panel. Cheering someone on for crushing goals they have
+// not set yet reads badly, so it follows what is actually there.
+function updateMilestonesTip(goals) {
+    const tip = document.getElementById('milestonesTip');
+    const title = document.getElementById('milestonesTipTitle');
+    const body = document.getElementById('milestonesTipBody');
+    if (!tip || !title || !body) return;
+
+    const done = goals.filter(g => g.status === 'completed').length;
+    const active = goals.length - done;
+
+    if (!goals.length) {
+        title.textContent = 'Start somewhere.';
+        body.textContent = 'Set your first goal and it shows up here.';
+    } else if (!done) {
+        title.textContent = 'First one pending.';
+        body.textContent = `${active} goal${active === 1 ? '' : 's'} on the go — finish one to bank it.`;
+    } else if (!active) {
+        title.textContent = 'All clear!';
+        body.textContent = `${done} goal${done === 1 ? '' : 's'} done and nothing outstanding.`;
+    } else {
+        title.textContent = 'Keep it up!';
+        body.textContent = "You're crushing your goals.";
+    }
 }
 
 // Focus goals advance on their own (tracked focus time) — while one is active,
@@ -981,6 +1066,9 @@ function createGoalElement(goal) {
 
     div.innerHTML = `
         <div class="goal-card-head">
+            <div class="goal-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
+            </div>
             <div class="goal-headline">
                 <div class="goal-target-big">${fmtGoalValue(target, goalType)}${isFocus ? '' : ' ' + label}</div>
                 <h3 class="goal-title">${escGoalHtml(goal.title)}</h3>

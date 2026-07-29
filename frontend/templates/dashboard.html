@@ -12,6 +12,7 @@
         window.pageFadeWaitsForData = true;
     </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/page-fade.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/topnav.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,29 +43,9 @@
     <script src="{{ url_for('static', filename='js/goal-notify.js') }}" defer></script>
     <script src="{{ url_for('static', filename='secret/easter-egg.js') }}" defer></script>
 </head>
-<body>
+<body class="has-topnav">
 
-    <nav class="main-nav">
-        <div class="nav-content">
-            <div class="nav-left">
-                <div class="logo">
-                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="A">
-                </div>
-            </div>
-            <div class="nav-center">
-                <a href="/home" class="nav-item active">Home</a>
-                <a href="/goals" class="nav-item">Set / View your goals</a>
-                <a href="/growth" class="nav-item">Growth</a>
-                <a href="/calendar" class="nav-item">Calendar</a>
-            </div>
-            <div class="nav-right">
-                <select id="themeSelect" class="theme-select" aria-label="Theme">
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                </select>
-            </div>
-        </div>
-    </nav>
+    {% include 'partials/topnav.html' %}
 
     <div class="container">
 

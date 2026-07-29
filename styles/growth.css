@@ -348,12 +348,6 @@ body {
     margin-top: 24px;
 }
 
-
-/* Nav bar sits 40px below the bottom of the growth card. */
-.bottom-nav {
-    margin-top: 40px !important;
-}
-
 /* Let the chart area size to its content instead of a fixed calc height */
 .tab-content {
     height: auto;
@@ -376,108 +370,6 @@ body {
     gap: 4px;
     box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
     width: fit-content;
-}
-
-.nav-pill {
-    background: transparent;
-    border: none;
-    color: #5a6072;
-    padding: 10px 20px;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 600;
-    min-width: 0;
-    gap: 8px;
-    transition: background 0.2s ease, color 0.2s ease;
-}
-
-.nav-pill svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-}
-
-.nav-pill:hover {
-    background: #eef0f6;
-    color: #2C302E;
-    transform: none;
-    box-shadow: none;
-}
-
-.nav-pill.active {
-    background: #2C302E;
-    color: #ffffff;
-}
-
-/* Average XP Ratings Button Container */
-
-
-/* Average XP Ratings Button */
-
-
-/* Down Arrow Icon */
-
-
-/* Up Arrow Icon */
-
-
-/* Stats Container */
-
-
-/* Stat Box */
-
-
-/* Charge Bar Section */
-
-
-/* Floating bottom navigation bar */
-.bottom-nav {
-    position: relative;
-    margin: 100px auto 0 auto;
-    transform: translateY(20px);
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(100, 200, 255, 0.3);
-    border-radius: 16px;
-    padding: 12px 30px;
-    display: flex;
-    gap: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    z-index: 100;
-    width: fit-content;
-}
-
-.nav-pill {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(100, 200, 255, 0.3);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 80px;
-}
-
-.nav-pill:hover {
-    background: rgba(100, 200, 255, 0.4);
-    box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
-    transform: translateY(-2px);
-}
-
-.nav-pill.primary {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(100, 200, 255, 0.3);
-    font-weight: 600;
-}
-
-.nav-pill.primary:hover {
-    background: rgba(100, 200, 255, 0.4);
 }
 
 /* ============================================================
@@ -506,38 +398,6 @@ body {
     gap: 4px;
     box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
     width: fit-content;
-}
-
-.bottom-nav .nav-pill {
-    background: transparent;
-    border: none;
-    color: #5a6072;
-    padding: 10px 20px;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 600;
-    min-width: 0;
-    gap: 8px;
-    box-shadow: none;
-    transition: background 0.2s ease, color 0.2s ease;
-}
-
-.bottom-nav .nav-pill svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-}
-
-.bottom-nav .nav-pill:hover {
-    background: #eef0f6;
-    color: #2C302E;
-    transform: none;
-    box-shadow: none;
-}
-
-.bottom-nav .nav-pill.active {
-    background: #2C302E;
-    color: #ffffff;
 }
 
 /* Size the chart container to its content (title + fixed-height canvas) so the
@@ -639,12 +499,6 @@ html, body {
     padding-bottom: 16px;
 }
 
-/* Tighter bottom nav so it fits beneath the cards (nudged 20px lower) */
-.bottom-nav {
-    /* Nudged down a net 2% (5% down, then 3% back up) of the viewport. */
-    margin: calc(51px + 2vh) auto 0 !important;
-}
-
 /* --- Analytics view: size the card to its content and use a
        shorter, viewport-relative chart so it never overflows --- */
 #growthCard {
@@ -714,19 +568,6 @@ html, body {
     z-index: 300;
 }
 
-.theme-selector-wrap::after {
-    content: '';
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    width: 7px;
-    height: 7px;
-    border-right: 2px solid #A38A70;
-    border-bottom: 2px solid #A38A70;
-    transform: translateY(-75%) rotate(45deg);
-    pointer-events: none;
-}
-
 #themeSelect {
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -785,42 +626,6 @@ body.dark .tab-btn {
 body.dark .tab-btn.active {
     background-color: #A38A70;
     border-color: #A38A70;
-    color: #0D1117;
-}
-
-/* "See Average XP Ratings" card on the analytics view */
-
-
-/* Ratings view: stat boxes */
-
-
-/* Corner icons */
-
-
-/* "See Growth Analytics Charts" gold button */
-
-
-/* Charge bar */
-
-
-/* Bottom nav */
-body.dark .bottom-nav {
-    background: #161B22;
-    border-color: #30363D;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
-}
-
-body.dark .bottom-nav .nav-pill {
-    color: #c9d1d9;
-}
-
-body.dark .bottom-nav .nav-pill:hover {
-    background: #21262D;
-    color: #e6e8f0;
-}
-
-body.dark .bottom-nav .nav-pill.active {
-    background: #A38A70;
     color: #0D1117;
 }
 
@@ -1273,5 +1078,4 @@ body.dark .see-ratings-btn:hover {
         justify-content: center;
         max-width: calc(100% - 1.5rem);
     }
-    .bottom-nav .nav-pill { min-width: 0; padding: 8px 12px; font-size: 13px; }
 }

@@ -21,6 +21,7 @@
     </script>
     <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/page-fade.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/topnav.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainpage.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/growth.css') }}">
@@ -28,15 +29,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tenor+Sans&family=Quicksand:wght@400;500;600&family=Lato:wght@300;400;700&family=Noto+Sans:wght@300;400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
 </head>
-<body class="{{ 'dark' if current_theme == 'dark' else 'classic' }}">
+<body class="has-topnav {{ 'dark' if current_theme == 'dark' else 'classic' }}">
+
+    {% include 'partials/topnav.html' %}
 
     <!-- Theme selector (Light / Dark) -->
-    <div class="theme-selector-wrap">
-        <select id="themeSelect" aria-label="Theme">
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-        </select>
-    </div>
 
     <div class="growth-container">
         <div class="growth-card page-shell" id="growthCard" data-fit-shrink-height>
@@ -226,24 +223,6 @@
         </div>
 
         <!-- Floating bottom navigation bar -->
-        <nav class="bottom-nav">
-            <a href="{{ url_for('home.page') }}" class="nav-pill">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
-                Home
-            </a>
-            <a href="{{ url_for('dashboard.page') }}" class="nav-pill">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-                Dashboard
-            </a>
-            <a href="{{ url_for('calendar.page') }}" class="nav-pill">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-                Calendar
-            </a>
-            <a href="{{ url_for('goals.page') }}" class="nav-pill">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
-                Goals
-            </a>
-        </nav>
     </div>
 
     <script>

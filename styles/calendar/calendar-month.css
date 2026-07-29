@@ -69,105 +69,6 @@ body {
 }
 
 
-/* Floating bottom navigation bar */
-
-.bottom-nav {
-
-    position: fixed;
-
-    bottom: 30px;
-
-    left: 50%;
-
-    transform: translateX(-50%);
-
-    background: rgba(255, 255, 255, 0.1);
-
-    backdrop-filter: blur(10px);
-
-    border: 1px solid rgba(100, 200, 255, 0.3);
-
-    border-radius: 16px;
-
-    padding: 12px 30px;
-
-    display: flex;
-
-    gap: 20px;
-
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-
-    z-index: 100;
-
-}
-
-
-.nav-pill {
-
-    background: rgba(255, 255, 255, 0.15);
-
-    border: 1px solid black;
-
-    color: black;
-
-    padding: 10px 20px;
-
-    border-radius: 20px;
-
-    font-size: 14px;
-
-    font-weight: 500;
-
-    cursor: pointer;
-
-    transition: opacity 0.3s ease, transform 0.3s ease;
-
-    text-decoration: none;
-
-    display: inline-flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    min-width: 80px;
-
-}
-
-
-.nav-pill:hover {
-
-    background: rgba(100, 200, 255, 0.4);
-
-    box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
-
-    transform: translateY(-2px);
-
-}
-
-
-.nav-pill.primary {
-
-    background: rgba(255, 255, 255, 0.15);
-
-    border-color: black;
-
-    font-weight: 600;
-
-}
-
-
-.nav-pill.primary:hover {
-
-    background: rgba(100, 200, 255, 0.4);
-
-    box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
-
-    transform: translateY(-2px);
-
-}
-
-
 /* Theme selector in top right corner */
 
 
@@ -177,7 +78,9 @@ body {
    The card's top offset comes from the body's padding-top instead. */
 
 .calendar-container {
-    height: 100vh;
+    /* The fixed top nav takes its height off the top of the viewport, so the
+       card fills what is actually left rather than overflowing by 64px. */
+    height: calc(100vh - var(--topnav-h, 64px));
 }
 
 /* Calendar Card */
@@ -1499,35 +1402,6 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
-body.classic .nav-pill {
-
-    background: rgba(255, 255, 255, 0.2);
-
-    border: 1px solid rgba(255, 255, 255, 0.5);
-
-    color: white;
-
-}
-
-
-body.classic .nav-pill:hover {
-
-    background: rgba(255, 255, 255, 0.4);
-
-    border-color: white;
-
-}
-
-
-body.classic .bottom-nav {
-
-    background: rgba(255, 255, 255, 0.1);
-
-    border: 1px solid rgba(255, 255, 255, 0.3);
-
-}
-
-
 /* Professional Theme */
 
 
@@ -2109,10 +1983,10 @@ body {
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
-    /* Negative top margin pulls the whole container (and card) up by 25px.
-       Only the top is negative — a negative left/right would shift the
-       centred card sideways and overflow the viewport. */
-    margin: -25px 0 0 0;
+    /* This used to pull the container up by 25px into the empty space above
+       it. That space is the top nav now, so the card would slide under the
+       bar; it sits just clear of it instead. */
+    margin: 12px 0 0 0;
     padding: 0;
     display: flex;
     justify-content: center;
@@ -2172,43 +2046,6 @@ body {
     font-size: 30px;
     font-weight: 800;
     letter-spacing: -0.01em;
-}
-
-/* Theme selector — a styled pill fixed to the page's top-right corner */
-.calendar-theme-select {
-    /* Anchored to the calendar card's top-right corner (the card is
-       position: relative), so it stays in the corner at any viewport width
-       instead of floating in the viewport corner outside the card. */
-    position: absolute;
-    top: 28px;
-    right: 32px;
-    z-index: 200;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    padding: 10px 40px 10px 18px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background-color: rgba(255, 255, 255, 0.08);
-    color: #f4f4f6;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    outline: none;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f4f4f6' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-.calendar-theme-select:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-.calendar-theme-select option {
-    background: #1a1f26;
-    color: #f4f4f6;
 }
 
 .nav-arrow {
@@ -2726,61 +2563,6 @@ html[data-theme="dark"] .add-section-btn {
 html[data-theme="dark"] .add-section-btn:hover {
     background: #232a35;
 }
-html[data-theme="dark"] .calendar-theme-select {
-    background-color: #5f5be6;
-    border-color: rgba(255, 255, 255, 0.28);
-    color: #ffffff;
-}
-html[data-theme="dark"] .calendar-theme-select:hover {
-    background-color: #6d69f0;
-    border-color: rgba(255, 255, 255, 0.4);
-}
-
-/* Bottom nav — matched to the other pages (white in-flow pill bar) */
-.bottom-nav {
-    position: relative;
-    left: auto;
-    bottom: auto;
-    transform: none;
-    margin: 0;
-    flex: 0 0 auto;
-    background: #ffffff;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    border: 1px solid #e6e8f0;
-    border-radius: 999px;
-    padding: 8px 10px;
-    display: inline-flex;
-    gap: 4px;
-    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
-    width: fit-content;
-    z-index: 100;
-}
-.bottom-nav .nav-pill {
-    background: transparent;
-    border: none;
-    color: #5a6072;
-    padding: 10px 20px;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 600;
-    min-width: 0;
-    gap: 8px;
-    box-shadow: none;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    transition: background 0.2s ease, color 0.2s ease;
-}
-.bottom-nav .nav-pill svg { width: 16px; height: 16px; flex-shrink: 0; }
-.bottom-nav .nav-pill:hover {
-    background: #eef0f6;
-    color: #2C302E;
-    transform: none;
-    box-shadow: none;
-}
-.bottom-nav .nav-pill.active {
-    background: #2C302E;
-    color: #ffffff;
-}
 
 /* Stack the two columns (and allow scrolling) when the screen is too narrow */
 @media (max-width: 1120px) {
@@ -2797,7 +2579,6 @@ html[data-theme="dark"] .calendar-theme-select:hover {
     }
     #dailyTasks { max-height: 460px; }
     .calendar-topbar { flex-direction: column; align-items: flex-start; gap: 16px; }
-    .bottom-nav { margin: 26px auto 40px; }
 }
 
 /* Daily workload summary row that leads the plan — kept, but tidied for dark */
@@ -2896,14 +2677,6 @@ html[data-theme="light"] .calendar-theme-select {
     box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2317181c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
-html[data-theme="light"] .calendar-theme-select:hover {
-    background-color: #f4f6fa;
-    border-color: rgba(16, 24, 40, 0.24);
-}
-html[data-theme="light"] .calendar-theme-select option {
-    background: #ffffff;
-    color: #17181c;
-}
 
 html[data-theme="light"] .calendar-right {
     border-left: 1px solid rgba(16, 24, 40, 0.08);
@@ -2975,28 +2748,6 @@ html[data-theme="light"] .add-section-btn {
 }
 html[data-theme="light"] .add-section-btn:hover {
     background: #f6f7f9;
-}
-
-/* Borderless white pill nav. The pill labels must be re-coloured here because
-   the legacy body.classic rule paints them white — invisible on the white bar.
-   Scoped high enough to beat body.classic. */
-html[data-theme="light"] .bottom-nav {
-    background: #ffffff;
-    border: none;
-    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
-}
-html[data-theme="light"] .bottom-nav .nav-pill {
-    color: #2c2013;
-    border: none;
-}
-html[data-theme="light"] .bottom-nav .nav-pill:hover {
-    background: rgba(92, 66, 39, 0.14);
-    color: #2c2013;
-}
-html[data-theme="light"] .bottom-nav .nav-pill.active {
-    background: #6b5030;
-    color: #f7efe1;
-    border: none;
 }
 
 /* ── Add/Edit/Delete Section modal in light theme: cream surface, tan-bordered
@@ -3120,17 +2871,6 @@ html[data-theme="dark"] .bottom-nav {
     border: 1px solid #30363d;
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
 }
-html[data-theme="dark"] .bottom-nav .nav-pill {
-    color: #c4c7cf;
-}
-html[data-theme="dark"] .bottom-nav .nav-pill:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-}
-html[data-theme="dark"] .bottom-nav .nav-pill.active {
-    background: #d8b489;
-    color: #161b22;
-}
 
 @media (max-width: 1120px) {
     html[data-theme="dark"] .calendar-right {
@@ -3219,12 +2959,6 @@ html[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
     .calendar-grid { gap: 4px; }
     .calendar-day { min-height: 44px; font-size: 16px; }
     .calendar-day .day-number { width: 36px; height: 36px; }
-    .bottom-nav {
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: calc(100% - 1.5rem);
-    }
-    .bottom-nav .nav-pill { min-width: 0; padding: 8px 12px; font-size: 13px; }
 }
 
 /* Phones: the theme select sits in the card's top-right corner, which on a

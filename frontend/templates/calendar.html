@@ -33,6 +33,7 @@
     </script>
     <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/page-fade.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/topnav.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainpage.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar/calendar-month.css') }}">
@@ -43,14 +44,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tenor+Sans&family=Quicksand:wght@400;500;600&family=Lato:wght@300;400;700&family=Noto+Sans:wght@300;400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="has-topnav">
+
+    {% include 'partials/topnav.html' %}
 
     <div class="calendar-container">
         <div class="calendar-card page-shell">
-            <select id="themeSelect" class="calendar-theme-select" aria-label="Theme">
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-            </select>
             <div class="calendar-topbar">
                 <div class="view-toggle" role="tablist" aria-label="Calendar view">
                     <button type="button" class="view-toggle-btn active" data-view="week" aria-selected="true">Week</button>
@@ -272,24 +271,6 @@
         </div>
     </div>
 
-    <nav class="bottom-nav">
-        <a href="{{ url_for('home.page') }}" class="nav-pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
-            Home
-        </a>
-        <a href="{{ url_for('dashboard.page') }}" class="nav-pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            Dashboard
-        </a>
-        <a href="{{ url_for('growth.page') }}" class="nav-pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg>
-            Growth
-        </a>
-        <a href="{{ url_for('goals.page') }}" class="nav-pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
-            Goals
-        </a>
-    </nav>
 
     <!-- Add Section Modal -->
     <div id="addSectionModal" class="modal">

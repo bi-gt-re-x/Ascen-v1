@@ -30,34 +30,6 @@ body {
     align-items: center;
 }
 
-/* ==========================================================================
-   NAVIGATION BAR
-   ========================================================================== */
-.main-nav {
-    width: 100%;
-    background: #FFFFFF;
-    border-bottom: 1px solid #EAEAEA;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-}
-
-.nav-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.nav-left {
-    display: flex;
-    align-items: center;
-}
-
 .logo {
     width: 36px;
     height: 36px;
@@ -76,31 +48,6 @@ body {
     mix-blend-mode: multiply;
 }
 
-.nav-center {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    justify-content: center;
-    flex: 1;
-}
-
-.nav-item {
-    text-decoration: none;
-    color: #2C302E;
-    font-weight: 400;
-    font-size: 14px;
-    transition: color 0.2s ease;
-}
-
-.nav-item.active {
-    font-weight: 400;
-    text-underline-offset: 4px;
-}
-
-.nav-item:hover {
-    color: #A38A70;
-}
-
 
 /* ==========================================================================
    LAYOUT STRUCTURE CONTROLLER
@@ -114,8 +61,10 @@ body {
        panel below is pinned to a fixed width so only the Tasks card absorbs
        the extra room. */
     max-width: 1370px;
-    margin: 100px auto 5px;
-    min-height: calc(100vh - 105px);
+    /* The top nav is fixed and body.has-topnav already reserves its height,
+       so this is only the gap between the bar and the first card. */
+    margin: 28px auto 5px;
+    min-height: calc(100vh - var(--topnav-h, 64px) - 33px);
     padding: 0 24px;
 }
 
@@ -1207,25 +1156,6 @@ html[data-theme="dark"] .cal-suggest-bad .cal-suggest-link { color: #ff9297; }
         /* Stack at natural height on mobile — don't stretch cards to fill. */
         flex: 0 0 auto;
     }
-
-    /* Let the nav grow and wrap as whole items instead of breaking labels
-       into multiple lines inside the fixed 60px bar. */
-    .nav-content {
-        height: auto;
-        min-height: 60px;
-        flex-wrap: wrap;
-        padding: 0.5rem 1rem;
-        row-gap: 0.25rem;
-    }
-
-    .nav-center {
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .nav-item {
-        white-space: nowrap;
-    }
 }
 
 /* ==========================================================================
@@ -1332,19 +1262,6 @@ html[data-theme="dark"] .cal-suggest-bad .cal-suggest-link { color: #ff9297; }
    ========================================================================== */
 html[data-theme="dark"] body {
     background: #0d1117;
-    color: #f0f2f5;
-}
-
-/* Navigation */
-html[data-theme="dark"] .main-nav {
-    background: #161b22;
-    border-bottom: 1px solid #30363d;
-}
-html[data-theme="dark"] .nav-item {
-    color: #8b949e;
-}
-html[data-theme="dark"] .nav-item.active,
-html[data-theme="dark"] .nav-item:hover {
     color: #f0f2f5;
 }
 /* Invert the dark logo mark so it reads on the dark nav */
