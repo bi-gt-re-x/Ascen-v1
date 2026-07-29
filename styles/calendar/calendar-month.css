@@ -2448,6 +2448,12 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     padding: 0;
     margin: 0;
 }
+/* The badge floats over the bottom line of the card, which is also where the
+   time row sits. A card showing a full start–end range reaches under it, so
+   hold the times clear of the badge's width. */
+#dailyTasks .task-section.task-completed .timestamp-section {
+    padding-right: 56px;
+}
 #dailyTasks .completed-badge .completed-check {
     width: 17px;
     height: 17px;

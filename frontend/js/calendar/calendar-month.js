@@ -369,7 +369,11 @@ function saveCalendarData() {
 
             cleanedDateContent[dateStr] = {
 
-                timestamps: dateContent[dateStr].timestamps.map(ts => {
+                // A finished to-do's card is derived from the database every
+                // time its day is opened (see selectDate), so it is not saved
+                // here. Keeping a copy would leave the card on the day after
+                // the task was re-opened or deleted somewhere else.
+                timestamps: dateContent[dateStr].timestamps.filter(ts => !ts.completedTodo).map(ts => {
 
                     if (ts.subtasks && ts.subtasks.length > 0) {
 
@@ -530,10 +534,11 @@ function findEventForTime(timestamps, hours, minutes) {
 //
 // What counts is what the day was asked to carry, so a task counts whether or
 // not it has been finished — the shade is a record of the day's load, not a
-// to-do list that empties as the day goes. Two things are left out: a task
-// with no deadline, which is not work scheduled for any particular day, and a
-// task never placed on the calendar, which is a dashboard to-do rather than
-// something the day was planned around.
+// to-do list that empties as the day goes. Which day it lands on is
+// taskCalendarDay's answer: its deadline for a calendar task, and for a
+// dashboard to-do the day it was finished, since that is the only day a to-do
+// is ever on the calendar. A calendar task with no deadline is not work
+// scheduled for any particular day, so it colours none.
 //
 // Each task counts for its priority — a high task weighs three times a low one
 // — so a day holding two hard tasks reads heavier than a day holding two easy
@@ -564,11 +569,22 @@ const DAY_FULL_LOAD = 6;
 // always look different.
 const MIN_SHADE = 12;
 
-function taskDueKey(task) {
-    if (!task || !task.due_date) return null;
-    const d = new Date(task.due_date);
+// A timestamp as "YYYY-M-D", the key the month grid writes on its cells.
+function dayKeyOf(stamp) {
+    if (!stamp) return null;
+    const d = new Date(stamp);
     if (isNaN(d.getTime())) return null;
     return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+// Which day a task belongs to, or null if it belongs to none. A calendar task
+// sits on its deadline. A dashboard to-do is never planned onto a day, so it
+// sits on no day at all until it is finished — then it sits on the day it was
+// finished, which is when the work actually happened.
+function taskCalendarDay(task) {
+    if (!task) return null;
+    if (isCalendarPlacedTask(task)) return dayKeyOf(task.due_date);
+    return task.status === 'done' ? dayKeyOf(task.completed_at) : null;
 }
 
 // A task's share of its day. An unset or unrecognised priority counts as
@@ -578,17 +594,12 @@ function taskPriorityWeight(task) {
     return PRIORITY_WEIGHT[priority] || PRIORITY_WEIGHT.medium;
 }
 
-// Every calendar task due in `month`/`year`, totalled per day.
+// Every task landing in `month`/`year`, totalled per day.
 function buildDayIntensityIndex(month, year) {
     const byDate = {};
 
     (window.dbTasks || []).forEach(task => {
-        // Same rule the rest of the calendar goes by: a task only belongs to a
-        // day if it was put on the calendar. Finished or not makes no
-        // difference — the day still carried it.
-        if (!isCalendarPlacedTask(task)) return;
-
-        const key = taskDueKey(task);
+        const key = taskCalendarDay(task);
         if (!key) return;
 
         const parts = key.split('-').map(Number);
@@ -1139,226 +1150,87 @@ function selectDate(dateStr, element) {
 
     }
 
-    // Add this date's calendar tasks to the day's list. Dashboard to-dos are
-    // filtered out upstream, and skipped again here so nothing added to the
-    // array at runtime can leak onto the day either.
+    // Add this date's calendar tasks to the day's list, one entry each.
+    //
+    // Every task used to be tucked in as a subtask of whichever event block
+    // covered its time, and updateBottomSection then lifted it straight back
+    // out into an entry of its own — so the detour decided nothing, except on a
+    // day with no blocks to tuck it under, where the task was dropped and never
+    // appeared at all. It gets its own entry from the start now. The times here
+    // are provisional: updateBottomSection recomputes them from the task, along
+    // with its completed state, and keeps them in step.
+    //
+    // Dashboard to-dos are filtered out upstream, and skipped again here so
+    // nothing added to the array at runtime can leak onto the day either; a
+    // finished to-do reaches the day by the separate rule below.
     dashboardTasks.forEach(task => {
 
         if (!isCalendarPlacedTask(task)) return;
 
-        if (task.due_date) {
-
-            const dueDate = new Date(task.due_date);
-
-            const taskDateStr = `${dueDate.getFullYear()}-${dueDate.getMonth() + 1}-${dueDate.getDate()}`;
-
-            if (taskDateStr === dateStr) {
-
-                const hours = dueDate.getHours();
-
-                const minutes = dueDate.getMinutes();
-
-                const startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-
-                // Format time for display (12-hour format)
-
-                const displayHours = hours % 12 || 12;
-
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-
-                const displayTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-
-                // Calculate end time (assume 1 hour duration)
-
-                const endTimeDate = new Date(dueDate.getTime() + 60 * 60 * 1000);
-
-                const endTime = `${endTimeDate.getHours().toString().padStart(2, '0')}:${endTimeDate.getMinutes().toString().padStart(2, '0')}`;
-
-                // Check if this task already exists in the date (as timestamp or subtask)
-
-                const existingTimestamp = dateContent[dateStr].timestamps.find(
-
-                    ts => ts.isDashboardTask && ts.dashboardTaskId === task.id
-
-                );
-
-                // Also check if task already exists as a subtask
-
-                let existingSubtask = false;
-
-                dateContent[dateStr].timestamps.forEach(ts => {
-
-                    if (ts.subtasks && ts.subtasks.some(st => st.taskId === task.id)) {
-
-                        existingSubtask = true;
-
-                    }
-
-                });
-
-                if (!existingTimestamp && !existingSubtask) {
-
-                    // Format time for display (12-hour format)
-
-                    const displayHours = hours % 12 || 12;
-
-                    const ampm = hours >= 12 ? 'PM' : 'AM';
-
-                    const displayTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-
-                    // Find the event that contains this task's due time
-
-                    const targetEvent = findEventForTime(dateContent[dateStr].timestamps, hours, minutes);
-
-                    if (targetEvent) {
-
-                        // Add as subtask to the matching time-based event
-
-                        if (!targetEvent.subtasks) {
-
-                            targetEvent.subtasks = [];
-
-                        }
-
-                        targetEvent.subtasks.push({
-
-                            text: `${task.name} due at ${displayTime}`,
-
-                            xp: task.xp || task.xp_reward || task.difficulty || 0,
-
-                            taskId: task.id
-
-                        });
-
-                        targetEvent.hasSubtasks = true;
-
-                    } else if (dateContent[dateStr].timestamps.length > 0) {
-
-                        // Fallback: add to first available event if no time match found
-
-                        const firstEvent = dateContent[dateStr].timestamps[0];
-
-                        if (!firstEvent.subtasks) {
-
-                            firstEvent.subtasks = [];
-
-                        }
-
-                        firstEvent.subtasks.push({
-
-                            text: `${task.name} due at ${displayTime}`,
-
-                            xp: task.xp || task.xp_reward || task.difficulty || 0,
-
-                            taskId: task.id
-
-                        });
-
-                        firstEvent.hasSubtasks = true;
-
-                    }
-
-                }
-
-            }
-
-        } else {
-
-            // Task without due date - add to timestamp where it was created
-
-            // Use the task's created_at timestamp if available, otherwise use current time
-
-            const createdAt = task.created_at ? new Date(task.created_at) : new Date();
-
-            const taskDateStr = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`;
-
-            if (taskDateStr === dateStr) {
-
-                const hours = createdAt.getHours();
-
-                const minutes = createdAt.getMinutes();
-
-                // Format time for display (12-hour format)
-
-                const displayHours = hours % 12 || 12;
-
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-
-                const displayTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-
-                // Check if this task already exists as a subtask
-
-                let existingSubtask = false;
-
-                dateContent[dateStr].timestamps.forEach(ts => {
-
-                    if (ts.subtasks && ts.subtasks.some(st => st.taskId === task.id)) {
-
-                        existingSubtask = true;
-
-                    }
-
-                });
-
-                if (!existingSubtask) {
-
-                    // Find the event that contains this task's creation time
-
-                    const targetEvent = findEventForTime(dateContent[dateStr].timestamps, hours, minutes);
-
-                    if (targetEvent) {
-
-                        // Add as subtask to the matching time-based event
-
-                        if (!targetEvent.subtasks) {
-
-                            targetEvent.subtasks = [];
-
-                        }
-
-                        targetEvent.subtasks.push({
-
-                            text: `${task.name} created at ${displayTime}`,
-
-                            xp: task.xp || task.xp_reward || task.difficulty || 0,
-
-                            taskId: task.id
-
-                        });
-
-                        targetEvent.hasSubtasks = true;
-
-                    } else if (dateContent[dateStr].timestamps.length > 0) {
-
-                        // Fallback: add to first available event if no time match found
-
-                        const firstEvent = dateContent[dateStr].timestamps[0];
-
-                        if (!firstEvent.subtasks) {
-
-                            firstEvent.subtasks = [];
-
-                        }
-
-                        firstEvent.subtasks.push({
-
-                            text: `${task.name} created at ${displayTime}`,
-
-                            xp: task.xp || task.xp_reward || task.difficulty || 0,
-
-                            taskId: task.id
-
-                        });
-
-                        firstEvent.hasSubtasks = true;
-
-                    }
-
-                }
-
-            }
-
-        }
+        // A task sits on its deadline, or — having none — on the day it was
+        // created, which is the only day it can be said to belong to.
+        const placedAt = task.due_date ? new Date(task.due_date)
+            : (task.created_at ? new Date(task.created_at) : new Date());
+
+        if (isNaN(placedAt.getTime())) return;
+
+        if (`${placedAt.getFullYear()}-${placedAt.getMonth() + 1}-${placedAt.getDate()}` !== dateStr) return;
+
+        const known = dateContent[dateStr].timestamps.some(
+            ts => (ts.isDashboardTask && String(ts.dashboardTaskId) === String(task.id)) ||
+                  (ts.subtasks && ts.subtasks.some(st => String(st.taskId) === String(task.id)))
+        );
+
+        if (known) return;
+
+        const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+        dateContent[dateStr].timestamps.push({
+            startTime: hhmm(placedAt),
+            endTime: task.due_date ? hhmm(placedAt) : '',
+            task: task.name,
+            isDashboardTask: true,
+            dashboardTaskId: task.id,
+            xp: task.xp || task.xp_reward || task.difficulty || 0,
+            completed: !!task.completed
+        });
+
+    });
+
+    // A dashboard to-do lands on the calendar the moment it is finished, on the
+    // day it was finished. A to-do is never planned onto a day, so there is
+    // nothing to show while it is still open — but once it's done, when it got
+    // done is worth a place on the month. It carries an end time and no start
+    // time, because a completion is a moment, not a block of the day.
+    //
+    // These are read from the database rather than from dashboardTasks, which
+    // holds only calendar tasks, and they are rebuilt on every visit to the day
+    // (saveCalendarData drops them) so the day always shows what the account
+    // actually has, never a copy left behind by an earlier session.
+    (window.dbTasks || []).forEach(task => {
+
+        if (isCalendarPlacedTask(task)) return;   // already placed, by due date
+
+        if (taskCalendarDay(task) !== dateStr) return;
+
+        const finished = new Date(task.completed_at);
+
+        const already = dateContent[dateStr].timestamps.some(
+            ts => ts.isDashboardTask && String(ts.dashboardTaskId) === String(task.id)
+        );
+
+        if (already) return;
+
+        dateContent[dateStr].timestamps.push({
+            startTime: '',
+            endTime: `${String(finished.getHours()).padStart(2, '0')}:${String(finished.getMinutes()).padStart(2, '0')}`,
+            task: task.title || '',
+            isDashboardTask: true,
+            dashboardTaskId: task.id,
+            xp: Number(task.xp_value) || 0,
+            completed: true,
+            completedTodo: true
+        });
 
     });
 
@@ -1463,19 +1335,26 @@ function updateBottomSection(dateStr) {
         });
     }
 
-    // Sort timestamps chronologically
+    // Sort timestamps chronologically. A finished to-do has only an end time,
+    // so it sorts by the moment it was finished; anything else sorts by when it
+    // starts.
 
     if (content.timestamps && content.timestamps.length > 0) {
 
-        content.timestamps.sort((a, b) => {
+        const minutesOf = (value) => {
+            const parts = String(value || '').split(':').map(Number);
+            if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+            return parts[0] * 60 + parts[1];
+        };
 
-            const timeA = a.startTime.split(':').map(Number);
+        const sortKey = (entry) => {
+            const start = minutesOf(entry.startTime);
+            if (start !== null) return start;
+            const end = minutesOf(entry.endTime);
+            return end !== null ? end : 0;
+        };
 
-            const timeB = b.startTime.split(':').map(Number);
-
-            return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-
-        });
+        content.timestamps.sort((a, b) => sortKey(a) - sortKey(b));
 
     }
 
@@ -1695,6 +1574,18 @@ function updateBottomSection(dateStr) {
             const cardTags = (taskKindBadge || difficultyBadge)
                 ? `<div class="card-tags">${taskKindBadge}${difficultyBadge}</div>` : '';
 
+            // The time row shows only the times the entry actually has, and the
+            // dash only when it has both. A finished to-do is placed on the day
+            // by when it was finished and has no start time, so it shows a lone
+            // end time rather than an empty "--:--" field beside it.
+            const startField = section.startTime
+                ? `<input type="time" class="start-time" value="${section.startTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'startTime', this.value)">`
+                : '';
+            const endField = section.endTime
+                ? `<input type="time" class="end-time" value="${section.endTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'endTime', this.value)">`
+                : '';
+            const timeRow = `<div class="timestamp-section">${startField}${startField && endField ? '<span>-</span>' : ''}${endField}</div>`;
+
             // Check if this section has sub-tasks
 
             const hasSubtasks = section.subtasks && section.subtasks.length > 0;
@@ -1712,11 +1603,7 @@ function updateBottomSection(dateStr) {
                 <div class="card-body">
                     ${cardTags}
                     <input type="text" class="task-input-inline" value="${section.task}" placeholder="What will you do..." ${readonlyAttr} onchange="updateTimestamp(${index}, 'task', this.value)">
-                    <div class="timestamp-section">
-                        <input type="time" class="start-time" value="${section.startTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'startTime', this.value)">
-                        <span>-</span>
-                        <input type="time" class="end-time" value="${section.endTime}" ${timeReadonlyAttr} onchange="updateTimestamp(${index}, 'endTime', this.value)">
-                    </div>
+                    ${timeRow}
                 </div>
                 ${cardMenu}
                 ${completedBadge}
