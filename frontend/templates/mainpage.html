@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Study Dashboard</title>
+    <script>
+        // Hide the page until it is parsed, so it fades in once as a single
+        // piece. page-fade.js reveals it on DOMContentLoaded.
+        document.documentElement.classList.add('js-fade');
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-fade.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainpage.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -470,5 +476,6 @@
          data-dashboard="{{ url_for('dashboard.page') }}"
          style="display:none;"></div>
 
+    <script src="{{ url_for('static', filename='js/page-fade.js') }}" defer></script>
 </body>
 </html>

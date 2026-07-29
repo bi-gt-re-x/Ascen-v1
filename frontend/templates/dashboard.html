@@ -6,8 +6,12 @@
     <title>Study Dashboard</title>
     <script>
         // Hide the page until its data is loaded so it fades in once, fully built.
+        // dashboard.js calls revealPage() when its fetches resolve; this flag stops
+        // page-fade.js revealing the page early, on DOMContentLoaded.
         document.documentElement.classList.add('js-fade');
+        window.pageFadeWaitsForData = true;
     </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-fade.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">

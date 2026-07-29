@@ -1,9 +1,7 @@
 /* Goals Page Styles */
 
-/* Single smooth page fade (JS-gated so the page never stays blank without JS).
-   The page loads hidden and reveals in one piece once its goals are ready. */
-html.js-fade body { opacity: 0; }
-html.js-fade.page-ready body { opacity: 1; transition: opacity 0.45s ease; }
+/* The page fade lives in styles/page-fade.css, which every page loads. Keeping
+   a copy here would win on source order and break the fade-out. */
 
 @keyframes fadeIn {
     from {

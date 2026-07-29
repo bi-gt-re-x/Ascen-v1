@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Growth</title>
     <script>
+        // Hide the page until it is parsed, so it fades in once as a single
+        // piece. page-fade.js reveals it on DOMContentLoaded.
+        document.documentElement.classList.add('js-fade');
+    </script>
+    <script>
         // The signed-in account (server session) is the source of truth for whose
         // data this page loads: sync it into currentUser on every load, overriding
         // any stale value this browser kept from an earlier sign-in. With no
@@ -15,6 +20,7 @@
         })();
     </script>
     <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-fade.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainpage.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/growth.css') }}">
@@ -363,5 +369,6 @@
     <script src="{{ url_for('static', filename='js/growth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/fit-scale.js') }}"></script>
 
+    <script src="{{ url_for('static', filename='js/page-fade.js') }}" defer></script>
 </body>
 </html>

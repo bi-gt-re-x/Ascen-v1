@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Contact Support</title>
+    <script>
+        // Hide the page until it is parsed, so it fades in once as a single
+        // piece. page-fade.js reveals it on DOMContentLoaded.
+        document.documentElement.classList.add('js-fade');
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-fade.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainpage.css') }}">
     <style>
         body { font-family: 'Century Gothic', sans-serif; padding: 20px; line-height: 1.6; }
@@ -97,5 +103,6 @@
         </ul>
     </div>
 
+    <script src="{{ url_for('static', filename='js/page-fade.js') }}" defer></script>
 </body>
 </html>
