@@ -519,33 +519,47 @@ function findEventForTime(timestamps, hours, minutes) {
 
 }
 
-// A day's intensity: how much work is actually still on that day.
+// A day's intensity: how many tasks that day is carrying.
 //
-// Only tasks *due* that day count, and only ones still open — finishing a task
+// The tasks are read from the database and nowhere else — `dbTasks` below is
+// the account's rows from the tasks table, exactly as /api/tasks returned
+// them. The browser's own `dashboardTasks` copy is deliberately not consulted:
+// it only holds what was created in this browser, keeps whatever it saved the
+// first time, and drops every task not placed on the calendar — three ways for
+// the shading to disagree with the account's real workload.
+//
+// Only tasks *due* that day count, and only ones still open: finishing a task
 // lightens its day, and a task with no deadline is not work scheduled for any
 // particular day, so it colours none.
 //
-// The measure is the XP (difficulty) of those tasks, scaled against the busiest
-// day of the month on screen, so the month always uses the full colour range
-// whether the account plans in 10-XP or 200-XP tasks. XP is what the account
-// actually records as difficulty; if a whole month carries none, the count of
-// open tasks stands in so the map still says something.
+// Each task counts for its priority — a high task weighs three times a low one
+// — so a day holding two hard tasks reads heavier than a day holding two easy
+// ones. That weight is measured against the busiest day of the month on
+// screen, with DAY_FULL_LOAD as a floor under the comparison so a quiet month
+// doesn't paint its one easy task the darkest navy on the map.
 //
-// The index is rebuilt from the task list on every render — see renderCalendar
-// — so a reload, a month change or a completion all recompute from current
-// tasks rather than from whatever was cached.
+// The index is rebuilt on every render — see renderCalendar — so a reload, a
+// month change or a completion all recompute from current tasks rather than
+// from whatever was cached.
 
-const dayIntensityIndex = { key: '', byDate: {}, max: 0, basis: 'xp' };
+const dayIntensityIndex = { key: '', byDate: {}, max: 0 };
 
-// A task is done if any of the three places that track it say so: the merged
-// list's own flag, a backend status, or a `status` straight off the API.
-function isTaskDone(task) {
-    if (!task) return false;
-    if (task.completed === true) return true;
-    if (task.status === 'done') return true;
-    const cached = window.backendTaskStatuses && window.backendTaskStatuses[task.id];
-    return !!(cached && cached.completed);
-}
+// The account's tasks as the database holds them. Filled by
+// loadBackendTasksIntoCalendar; the day shading is counted from this alone, so
+// until that fetch lands no day is shaded (it re-renders when it does).
+window.dbTasks = window.dbTasks || [];
+
+// What a task of each priority contributes to its day.
+const PRIORITY_WEIGHT = { low: 1, medium: 2, high: 3 };
+
+// The weight that reads as a fully-loaded day — two high-priority tasks. Used
+// as the floor for the month's scale, never as a cap: a month with a heavier
+// day still measures against that day, so the full colour range stays in use.
+const DAY_FULL_LOAD = 6;
+
+// A day with any open work never fades to nothing, so "some work" and "no
+// work" always look different.
+const MIN_SHADE = 12;
 
 function taskDueKey(task) {
     if (!task || !task.due_date) return null;
@@ -554,38 +568,42 @@ function taskDueKey(task) {
     return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
+// A task's share of its day. An unset or unrecognised priority counts as
+// medium, which is what the tasks table defaults a new row to.
+function taskPriorityWeight(task) {
+    const priority = String((task && task.priority) || '').toLowerCase();
+    return PRIORITY_WEIGHT[priority] || PRIORITY_WEIGHT.medium;
+}
+
 // Every open task due in `month`/`year`, totalled per day.
 function buildDayIntensityIndex(month, year) {
     const byDate = {};
-    let sawXP = false;
 
-    dashboardTasks.forEach(task => {
-        if (isTaskDone(task)) return;
+    (window.dbTasks || []).forEach(task => {
+        // The stored status is the account's answer on whether it's finished;
+        // a status set this session is already written back into dbTasks.
+        if (task.status === 'done') return;
+
         const key = taskDueKey(task);
         if (!key) return;
 
         const parts = key.split('-').map(Number);
         if (parts[0] !== year || parts[1] - 1 !== month) return;
 
-        const xp = Number(task.xp_reward != null ? task.xp_reward : task.xp_value) || 0;
-        if (xp > 0) sawXP = true;
-        const entry = byDate[key] || (byDate[key] = { count: 0, xp: 0 });
+        const entry = byDate[key] || (byDate[key] = { count: 0, weight: 0, xp: 0 });
         entry.count += 1;
-        entry.xp += xp;
+        entry.weight += taskPriorityWeight(task);
+        entry.xp += Number(task.xp_value) || 0;
     });
 
-    // With no XP recorded anywhere this month, weigh days by how many tasks
-    // are on them instead — otherwise every day would divide to zero.
-    const basis = sawXP ? 'xp' : 'count';
     let max = 0;
     Object.keys(byDate).forEach(k => {
-        max = Math.max(max, byDate[k][basis]);
+        max = Math.max(max, byDate[k].weight);
     });
 
     dayIntensityIndex.key = `${year}-${month}`;
     dayIntensityIndex.byDate = byDate;
     dayIntensityIndex.max = max;
-    dayIntensityIndex.basis = basis;
 }
 
 // `dateStr` is "YYYY-M-D" as the grid writes it.
@@ -595,16 +613,15 @@ function calculateDailyIntensity(dateStr) {
         return { taskCount: 0, avgXP: 0, percentage: 0 };
     }
 
-    const load = entry[dayIntensityIndex.basis];
-    const max = dayIntensityIndex.max;
-    // The busiest day is 100%; a day with any open work never rounds to 0, so
-    // "some work" and "no work" always look different.
-    const percentage = max > 0 ? Math.max(1, Math.round((load / max) * 100)) : 0;
+    // The busiest day of the month is 100%, unless the whole month is lighter
+    // than one full day's work — then a full day is the yardstick instead.
+    const reference = Math.max(dayIntensityIndex.max, DAY_FULL_LOAD);
+    const percentage = Math.round((entry.weight / reference) * 100);
 
     return {
         taskCount: entry.count,
         avgXP: Math.round(entry.xp / entry.count),
-        percentage: Math.min(percentage, 100)
+        percentage: Math.min(100, Math.max(MIN_SHADE, percentage))
     };
 }
 
@@ -630,14 +647,12 @@ function getIntensityBlue(percentage) {
     return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
-// A day's task intensity for the calendar marker (0 = no colour). Based purely on
-// the real workload: the XP-weighted difficulty of dashboard tasks due that day
-// (plus no-due-date tasks created that day). Events never contribute, so adding
-// an event anywhere never changes a date's colour. Higher value -> darker blue.
+// A day's task intensity for the calendar marker (0 = no colour, so a day with
+// nothing due stays unshaded). Open tasks due that day, weighted by priority
+// and measured against the busiest day of the month — higher -> darker blue.
+// Events never contribute, so adding one never darkens a date, and neither do
+// tasks without a due date.
 function getDayTaskIntensity(dateStr) {
-    // Open tasks due that day, relative to the busiest day of the month.
-    // Events never contribute, so adding one never darkens a date, and neither
-    // do tasks without a due date.
     return calculateDailyIntensity(dateStr).percentage;
 }
 
@@ -1606,8 +1621,6 @@ function updateBottomSection(dateStr) {
 
             li.className = 'task-section';
 
-            // Tasks are colour-coded by difficulty (red/yellow/blue); events get a
-            // bright colour from a varied palette that avoids the task colours.
             if (section.isDashboardTask) {
                 li.classList.add('dashboard-task');
                 const xp = section.xp || 0;
@@ -1615,14 +1628,14 @@ function updateBottomSection(dateStr) {
                 else if (xp >= 33) li.classList.add('priority-medium');
                 else li.classList.add('priority-low');
             } else {
-                // Events are colour-coded per identity: one colour per event,
-                // shared by all its recurrences (see EVENT_COLOR_PALETTE). The
-                // tint is applied inline with !important so it beats the base
-                // .calendar-event background/border rule.
+                // Events take the theme's card colour, same as tasks: the dark
+                // card on the dark theme, the tan one on the light. Their own
+                // palette colour used to be painted on inline here, which beat
+                // every stylesheet rule (an inline !important always does) and
+                // left the day's list a row of mismatched tints under both
+                // themes. The per-event colour is still what the Week view
+                // draws its blocks in — this only stops it reaching the cards.
                 li.classList.add('calendar-event');
-                const rgb = eventRgb(section);
-                li.style.setProperty('background', `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.16)`, 'important');
-                li.style.setProperty('border', `1px solid rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.55)`, 'important');
             }
 
             // Add completion styling (green when completed, yellow when in progress)
@@ -4295,6 +4308,11 @@ async function loadBackendTasksIntoCalendar() {
         const data = await res.json();
         if (!data || !data.success || !Array.isArray(data.tasks)) return;
 
+        // The rows as the database has them, kept whole and unfiltered: this is
+        // what the day shading counts, and it counts every task the account has
+        // due that day, not just the ones drawn on the calendar.
+        window.dbTasks = data.tasks.slice();
+
         const byId = new Map(dashboardTasks.map(t => [String(t.id), t]));
         let added = 0;
         data.tasks.forEach(t => {
@@ -4406,6 +4424,18 @@ function markTaskCompletedInCalendar(taskId, completionStatus) {
         completed: completionStatus === 'done',
         status: completionStatus
     };
+
+    // Carry the new status into the database copy the shading is counted from,
+    // so the day lightens the moment the task is finished rather than on the
+    // next reload. The backend is told below and agrees when next read.
+    (window.dbTasks || []).forEach(t => {
+        if (String(t.id) === String(taskId)) t.status = completionStatus;
+    });
+    // This module is loaded by the dashboard too, where there is no grid to
+    // repaint — completing a task there must not reach for one.
+    if (document.getElementById('calendarDays')) {
+        renderCalendar(currentMonth, currentYear);
+    }
 
     // If dashboardTasks is empty, store the completion in localStorage for when calendar loads
     if (dashboardTasks.length === 0) {
