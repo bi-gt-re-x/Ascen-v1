@@ -519,70 +519,93 @@ function findEventForTime(timestamps, hours, minutes) {
 
 }
 
-// Calculate daily intensity based on task difficulty and number of tasks
+// A day's intensity: how much work is actually still on that day.
+//
+// Only tasks *due* that day count, and only ones still open — finishing a task
+// lightens its day, and a task with no deadline is not work scheduled for any
+// particular day, so it colours none.
+//
+// The measure is the XP (difficulty) of those tasks, scaled against the busiest
+// day of the month on screen, so the month always uses the full colour range
+// whether the account plans in 10-XP or 200-XP tasks. XP is what the account
+// actually records as difficulty; if a whole month carries none, the count of
+// open tasks stands in so the map still says something.
+//
+// The index is rebuilt from the task list on every render — see renderCalendar
+// — so a reload, a month change or a completion all recompute from current
+// tasks rather than from whatever was cached.
 
-// Intensity is based ONLY on dashboard tasks (tasks with due dates from backend)
+const dayIntensityIndex = { key: '', byDate: {}, max: 0, basis: 'xp' };
 
-// Formula: (total_task_difficulty / 10) * number_of_tasks
+// A task is done if any of the three places that track it say so: the merged
+// list's own flag, a backend status, or a `status` straight off the API.
+function isTaskDone(task) {
+    if (!task) return false;
+    if (task.completed === true) return true;
+    if (task.status === 'done') return true;
+    const cached = window.backendTaskStatuses && window.backendTaskStatuses[task.id];
+    return !!(cached && cached.completed);
+}
 
-// It is NOT affected by subtasks or manual calendar tasks
+function taskDueKey(task) {
+    if (!task || !task.due_date) return null;
+    const d = new Date(task.due_date);
+    if (isNaN(d.getTime())) return null;
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
 
-// Intensity decreases as tasks are completed
+// Every open task due in `month`/`year`, totalled per day.
+function buildDayIntensityIndex(month, year) {
+    const byDate = {};
+    let sawXP = false;
 
-function calculateDailyIntensity(dateStr) {
+    dashboardTasks.forEach(task => {
+        if (isTaskDone(task)) return;
+        const key = taskDueKey(task);
+        if (!key) return;
 
-    // Parse the dateStr to normalize it (handle both "2026-5-26" and "2026-05-26" formats)
+        const parts = key.split('-').map(Number);
+        if (parts[0] !== year || parts[1] - 1 !== month) return;
 
-    const dateParts = dateStr.split('-').map(Number);
-
-    const targetDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-
-    targetDate.setHours(0, 0, 0, 0); // Normalize to midnight
-
-    const tasksForDay = dashboardTasks.filter(task => {
-
-        if (!task.due_date) return false;
-
-        const dueDate = new Date(task.due_date);
-
-        dueDate.setHours(0, 0, 0, 0); // Normalize to midnight
-
-        // Compare dates by year, month, and day
-
-        return dueDate.getFullYear() === targetDate.getFullYear() &&
-
-               dueDate.getMonth() === targetDate.getMonth() &&
-
-               dueDate.getDate() === targetDate.getDate();
-
+        const xp = Number(task.xp_reward != null ? task.xp_reward : task.xp_value) || 0;
+        if (xp > 0) sawXP = true;
+        const entry = byDate[key] || (byDate[key] = { count: 0, xp: 0 });
+        entry.count += 1;
+        entry.xp += xp;
     });
 
-    if (tasksForDay.length === 0) {
+    // With no XP recorded anywhere this month, weigh days by how many tasks
+    // are on them instead — otherwise every day would divide to zero.
+    const basis = sawXP ? 'xp' : 'count';
+    let max = 0;
+    Object.keys(byDate).forEach(k => {
+        max = Math.max(max, byDate[k][basis]);
+    });
 
+    dayIntensityIndex.key = `${year}-${month}`;
+    dayIntensityIndex.byDate = byDate;
+    dayIntensityIndex.max = max;
+    dayIntensityIndex.basis = basis;
+}
+
+// `dateStr` is "YYYY-M-D" as the grid writes it.
+function calculateDailyIntensity(dateStr) {
+    const entry = dayIntensityIndex.byDate[dateStr];
+    if (!entry || !entry.count) {
         return { taskCount: 0, avgXP: 0, percentage: 0 };
-
     }
 
-    const totalXP = tasksForDay.reduce((sum, task) => sum + (task.xp || task.xp_reward || 0), 0);
-
-    const avgXP = totalXP / tasksForDay.length;
-
-    // Calculate intensity percentage using formula: (total_task_difficulty / 10) * number_of_tasks
-
-    const currentPercentage = (totalXP / 10) * tasksForDay.length;
-
-    const roundedPercentage = Math.min(Math.round(currentPercentage), 100);
+    const load = entry[dayIntensityIndex.basis];
+    const max = dayIntensityIndex.max;
+    // The busiest day is 100%; a day with any open work never rounds to 0, so
+    // "some work" and "no work" always look different.
+    const percentage = max > 0 ? Math.max(1, Math.round((load / max) * 100)) : 0;
 
     return {
-
-        taskCount: tasksForDay.length,
-
-        avgXP: Math.round(avgXP),
-
-        percentage: roundedPercentage
-
+        taskCount: entry.count,
+        avgXP: Math.round(entry.xp / entry.count),
+        percentage: Math.min(percentage, 100)
     };
-
 }
 
 // Get intensity color based on percentage (green -> yellow -> red)
@@ -611,27 +634,11 @@ function getIntensityBlue(percentage) {
 // the real workload: the XP-weighted difficulty of dashboard tasks due that day
 // (plus no-due-date tasks created that day). Events never contribute, so adding
 // an event anywhere never changes a date's colour. Higher value -> darker blue.
-// Count dashboard tasks that have no due date and were created on `dateStr`.
-// These live on their creation day (start time = when they were made), so the
-// day needs to reflect them even though calculateDailyIntensity is due-date based.
-function countNoDueDateTasksOn(dateStr) {
-    return dashboardTasks.filter(task => {
-        if (task.due_date || !task.created_at) return false;
-        const c = new Date(task.created_at);
-        if (isNaN(c.getTime())) return false;
-        return `${c.getFullYear()}-${c.getMonth() + 1}-${c.getDate()}` === dateStr;
-    }).length;
-}
-
 function getDayTaskIntensity(dateStr) {
-    // XP-weighted difficulty of real dashboard tasks due that day.
-    const dash = calculateDailyIntensity(dateStr);
-    let pct = dash.taskCount > 0 ? dash.percentage : 0;
-    // Events do NOT affect a day's intensity — only real tasks (and their XP-
-    // weighted difficulty) do, so adding an event never darkens a date.
-    // No-due-date tasks pop on their creation day too.
-    pct += countNoDueDateTasksOn(dateStr) * 20;
-    return Math.min(pct, 100);
+    // Open tasks due that day, relative to the busiest day of the month.
+    // Events never contribute, so adding one never darkens a date, and neither
+    // do tasks without a due date.
+    return calculateDailyIntensity(dateStr).percentage;
 }
 
 // Add a task to the calendar. Exposed on window for the dashboard page, so it
@@ -926,6 +933,12 @@ function initializeCalendar() {
 }
 
 function renderCalendar(month, year) {
+
+    // Recount every day's open tasks before painting. Every path that changes
+    // the picture — first load, the backend merge finishing, completing a task,
+    // moving month — comes back through here, so the shading is never left
+    // showing a stale count.
+    buildDayIntensityIndex(month, year);
 
     const monthYearElement = document.getElementById('monthYear');
 
@@ -4275,11 +4288,14 @@ window.backendTaskStatuses = {};
 async function loadBackendTasksIntoCalendar() {
     const username = localStorage.getItem('currentUser') || 'Default';
     try {
-        const res = await fetch('/api/tasks?username=' + encodeURIComponent(username));
+        // no-store: this is what the day shading is counted from, so it has to
+        // be the account's tasks as they are now, not a cached copy.
+        const res = await fetch('/api/tasks?username=' + encodeURIComponent(username),
+                                { cache: 'no-store' });
         const data = await res.json();
         if (!data || !data.success || !Array.isArray(data.tasks)) return;
 
-        const existing = new Set(dashboardTasks.map(t => String(t.id)));
+        const byId = new Map(dashboardTasks.map(t => [String(t.id), t]));
         let added = 0;
         data.tasks.forEach(t => {
             const isDone = t.status === 'done';
@@ -4290,9 +4306,8 @@ async function loadBackendTasksIntoCalendar() {
             // Only tasks placed on the calendar come across — a dashboard to-do
             // (no flag, or false) never joins the calendar's task list.
             if (!isCalendarPlacedTask(t)) return;
-            if (existing.has(String(t.id))) return;
 
-            dashboardTasks.push({
+            const mapped = {
                 id: t.id,
                 name: t.title,
                 due_date: t.due_date,
@@ -4303,10 +4318,32 @@ async function loadBackendTasksIntoCalendar() {
                 show_on_calendar: true,
                 completed: isDone,
                 isDashboardTask: true
-            });
-            existing.add(String(t.id));
+            };
+
+            const known = byId.get(String(t.id));
+            if (known) {
+                // The account is the authority on a task it already knows
+                // about. This used to skip them, so a task completed, moved or
+                // re-scored anywhere else kept whatever this browser saved the
+                // first time — and the day shading counted that stale copy for
+                // good. Keys the calendar owns locally are left alone.
+                Object.assign(known, mapped);
+                return;
+            }
+
+            dashboardTasks.push(mapped);
+            byId.set(String(t.id), mapped);
             added++;
         });
+
+        // A task deleted elsewhere should stop colouring its day. Only ones
+        // that came from the account are dropped; anything created in this
+        // browser and not yet saved stays.
+        const live = new Set(data.tasks.map(t => String(t.id)));
+        for (let i = dashboardTasks.length - 1; i >= 0; i--) {
+            const t = dashboardTasks[i];
+            if (t.isDashboardTask && !live.has(String(t.id))) dashboardTasks.splice(i, 1);
+        }
 
         // Re-render so the merged tasks appear on the grid and in the selected
         // day's list + progress.
