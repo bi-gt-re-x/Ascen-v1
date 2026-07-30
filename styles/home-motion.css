@@ -872,6 +872,215 @@ html[data-theme="dark"] .lp-cal-body.is-target { background: rgba(124, 131, 255,
 }
 
 /* ============================================================
+   Feature cards
+   ============================================================ */
+.lp-feature {
+    transition: transform 320ms var(--hm-ease), box-shadow 320ms var(--hm-ease),
+                background 320ms var(--hm-ease), border-color 320ms var(--hm-ease);
+}
+.lp-feature .lp-feat-ico { transition: transform 380ms var(--hm-ease); }
+.lp-arrow {
+    display: inline-block;
+    transition: transform 300ms var(--hm-ease);
+}
+.lp-feature:hover {
+    transform: translate3d(0, -10px, 0);
+    box-shadow: 0 22px 46px rgba(16, 24, 40, 0.16);
+    background: var(--lp-surface);
+    border-color: var(--lp-accent);
+}
+.lp-feature:hover .lp-feat-ico { transform: rotate(-8deg) scale(1.08); }
+.lp-feature:hover .lp-arrow { transform: translateX(6px); }
+html[data-theme="dark"] .lp-feature:hover { box-shadow: 0 22px 46px rgba(0, 0, 0, 0.55); }
+
+/* ============================================================
+   Philosophy — the icons draw themselves
+   ============================================================ */
+.ph-ico svg { width: 26px; height: 26px; display: block; }
+.ph-ico path {
+    stroke-dasharray: var(--ph-len, 120);
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 900ms var(--hm-ease-soft);
+}
+.ph-armed .ph-ico path { stroke-dashoffset: var(--ph-len, 120); }
+
+.lp-phi {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 520ms var(--hm-ease), transform 520ms var(--hm-ease);
+}
+.ph-armed .lp-phi { opacity: 0; transform: translate3d(0, 18px, 0); }
+
+/* ============================================================
+   Technology stack
+   ============================================================ */
+.lp-tech { position: relative; }
+
+/* The wires run behind the cards, between their centres. */
+.tech-wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 0;
+}
+.lp-techitem { position: relative; z-index: 1; }
+.tech-wire {
+    fill: none;
+    stroke: var(--lp-accent);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    opacity: 0.6;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 700ms var(--hm-ease-soft);
+}
+.tech-armed .tech-wire { stroke-dashoffset: var(--wire-len, 200); }
+
+.tech-node {
+    fill: var(--lp-accent);
+    transform-origin: center;
+    transform-box: fill-box;
+    transform: scale(1);
+    opacity: 0.85;
+    transition: transform 380ms cubic-bezier(0.34, 1.5, 0.5, 1), opacity 300ms var(--hm-ease);
+}
+.tech-armed .tech-node { transform: scale(0); opacity: 0; }
+
+.lp-techitem {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 500ms var(--hm-ease), transform 500ms var(--hm-ease);
+}
+.tech-armed .lp-techitem { opacity: 0; transform: translate3d(0, 22px, 0); }
+.lp-techitem .lp-feat-ico { transition: transform 420ms var(--hm-ease); }
+.tech-armed .lp-techitem .lp-feat-ico { transform: rotate(-10deg); }
+
+/* Each named technology arrives on its own. */
+.tech-bit {
+    display: inline-block;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 340ms var(--hm-ease), transform 340ms var(--hm-ease);
+}
+.tech-armed .tech-bit { opacity: 0; transform: translate3d(0, 6px, 0); }
+
+/* ============================================================
+   The trend arrows
+   ============================================================ */
+.lp-trend .tr-arrow {
+    display: inline-block;
+    transition: transform 420ms var(--hm-ease), opacity 420ms var(--hm-ease);
+}
+.tr-armed .lp-trend .tr-arrow { transform: translateY(6px); opacity: 0; }
+.lp-trend .tr-num { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   Switching theme
+   ============================================================
+   Only while the switch is happening: a class goes on <html> for the length of
+   the fade and comes off again. Leaving these transitions on permanently would
+   put every surface on a timer for any change at all — a card that recolours on
+   hover would lag half a second behind the pointer. */
+html.theme-shift,
+html.theme-shift body,
+html.theme-shift .lp-card,
+html.theme-shift .site-nav,
+html.theme-shift .lp-hero,
+html.theme-shift .dd-frame,
+html.theme-shift .dd-card,
+html.theme-shift .dd-side,
+html.theme-shift .td-task,
+html.theme-shift .account-menu,
+html.theme-shift .footer {
+    transition: background-color 500ms var(--hm-ease-soft),
+                background-image 500ms var(--hm-ease-soft),
+                border-color 500ms var(--hm-ease-soft),
+                color 500ms var(--hm-ease-soft),
+                box-shadow 500ms var(--hm-ease-soft) !important;
+}
+
+/* ============================================================
+   The closing call to action
+   ============================================================ */
+.lp-final { position: relative; overflow: hidden; }
+/* The glow behind it comes up as the section arrives and stays. */
+.lp-final::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 120%;
+    height: 260%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    background: radial-gradient(closest-side, rgba(99, 102, 241, 0.18), transparent 72%);
+    opacity: 0;
+    transition: opacity 1200ms var(--hm-ease-soft);
+}
+.lp-final.is-lit::before { opacity: 1; }
+html[data-theme="dark"] .lp-final::before {
+    background: radial-gradient(closest-side, rgba(124, 131, 255, 0.26), transparent 72%);
+}
+.lp-final > * { position: relative; z-index: 1; }
+
+/* A slow breath every four seconds, so the button reads as waiting rather than
+   as decoration. It stops the moment the pointer is on it. */
+.lp-btn-lg.is-breathing { animation: ctaPulse 4s var(--hm-ease-soft) infinite; }
+.lp-btn-lg.is-breathing:hover { animation: none; }
+@keyframes ctaPulse {
+    0%, 84%, 100% { transform: scale(1); box-shadow: 0 8px 20px rgba(99, 102, 241, 0.28); }
+    92%           { transform: scale(1.035); box-shadow: 0 14px 34px rgba(99, 102, 241, 0.45); }
+}
+
+.lp-btn-lg {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background-image: linear-gradient(100deg, var(--lp-accent) 0%, #8b5cf6 50%, var(--lp-accent) 100%);
+    background-size: 220% 100%;
+    background-position: 0% 0;
+    transition: transform 280ms var(--hm-ease), background-position 700ms var(--hm-ease-soft),
+                box-shadow 280ms var(--hm-ease);
+}
+.lp-btn-lg:hover {
+    transform: scale(1.045);
+    background-position: 100% 0;
+    box-shadow: 0 16px 38px rgba(99, 102, 241, 0.42);
+}
+/* The shine that travels across on hover. */
+.lp-btn-lg::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    left: -50%;
+    z-index: -1;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    transform: skewX(-18deg);
+}
+.lp-btn-lg:hover::before { animation: ctaShine 900ms var(--hm-ease-soft); }
+@keyframes ctaShine {
+    from { left: -50%; }
+    to   { left: 130%; }
+}
+
+/* The ripple, placed at the click by home-final.js. */
+.cta-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0);
+    animation: ctaRipple 620ms var(--hm-ease) forwards;
+}
+@keyframes ctaRipple {
+    to { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+
+/* ============================================================
    Less motion, please
    ============================================================
    Nothing drifts, nothing draws, nothing waits its turn. The curtain is not
@@ -923,6 +1132,24 @@ html[data-theme="dark"] .lp-cal-body.is-target { background: rgba(124, 131, 255,
     .xp-armed .xp-line i { transform: scaleY(1); }
     .ch-grid-line, .ch-line, .ch-area, .ch-dot, .ch-tip, .ch-bar,
     #ringArc, .xp-line i, .xp-row, .xp-flip-in, .xp-bar-wrap i { transition: none; }
+
+    /* Philosophy, tech stack, trends and the closing button: everything shown,
+       nothing pulsing, shining or rippling. */
+    .lp-btn-lg.is-breathing,
+    .lp-btn-lg:hover::before,
+    .cta-ripple { animation: none; }
+    .ph-armed .ph-ico path { stroke-dashoffset: 0; }
+    .ph-armed .lp-phi,
+    .tech-armed .lp-techitem,
+    .tech-armed .tech-bit { opacity: 1; transform: none; }
+    .tech-armed .lp-techitem .lp-feat-ico { transform: none; }
+    .tech-armed .tech-wire { stroke-dashoffset: 0; }
+    .tech-armed .tech-node { transform: none; opacity: 0.85; }
+    .tr-armed .lp-trend .tr-arrow { opacity: 1; transform: none; }
+    .lp-final::before { transition: none; }
+    .lp-feature, .lp-feature .lp-feat-ico, .lp-arrow, .ph-ico path, .lp-phi,
+    .lp-techitem, .tech-bit, .tech-wire, .lp-trend .tr-arrow, .lp-btn-lg { transition: none; }
+    html.theme-shift, html.theme-shift * { transition: none !important; }
 
     .hm-rise, .hm-word, .hm-pop,
     .brand-mark .hm-stroke, .brand-mark .hm-foot,

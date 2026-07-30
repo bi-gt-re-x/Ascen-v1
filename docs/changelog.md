@@ -2,6 +2,47 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-29 — The landing page becomes a demonstration
+
+Five passes over `/home`, so the page shows the app working instead of
+describing it. Everything is hand-written CSS and vanilla JS — no library, no
+build step — and every piece of it degrades to a static page.
+
+- **The opening.** A black curtain lifts, the logo draws itself stroke-first,
+  then the greeting, date, headline (a word at a time), subtitle and buttons
+  each take their turn. Behind every section: a grid, a slow gradient, drifting
+  particles on one canvas, and a glow trailing the cursor.
+- **A simulated dashboard** that fills itself in — sidebar, nav icons, cards,
+  XP bar in three pulls, counters, a level flip and a rating stepping C to A —
+  then floats on a seven-second cycle.
+- **Two workflow demos.** A task is checked off, confettis, slides out, and its
+  XP flies to the bar; an event is dragged Monday to Tuesday, snaps in with an
+  overshoot, and the streak catches.
+- **Charts that draw themselves**, measured rather than hard-coded:
+  `getTotalLength()` for the dash, `getPointAtLength()` for the points. Bars
+  grow on an overshoot curve, the gauge winds, the XP timeline writes itself.
+- **The finish.** Feature-card hover, philosophy icons stroking themselves on,
+  connector wires across the tech stack, a 500ms theme fade, and a closing CTA
+  that glows, breathes, shines and ripples.
+
+Three things worth carrying forward:
+
+- **Animated elements are written in CSS in their *finished* state.** A script
+  adds one class to put them back to the start and removes it a frame later.
+  With no JS, a parse error, or `prefers-reduced-motion`, the page is just the
+  page — it never sits blank waiting for a script that did not run. The usual
+  arrangement (hide in CSS, reveal in JS) fails the opposite way.
+- **`window.HomePlay`** is the shared kit: `onView` (play on enter, reset on
+  leave, everything cancellable), `countThrough` (waypoint counters) and a
+  cancellable `timeline`.
+- **SVG bars are scaled, not resized.** Animating `y`/`height` through the CSS
+  box looked right and was not: Chrome takes a unitless `y` and drops a
+  unitless `height`, which left every bar flat with its markup value destroyed.
+
+The Technology Stack section also stopped claiming React, TypeScript, FastAPI
+and PostgreSQL, none of which this project uses. It reads HTML · CSS · Vanilla
+JS, Python · Flask · Jinja, SQLite, SVG · Canvas.
+
 ## 2026-07-29 — An account menu under the avatar
 
 Clicking the avatar opens a square panel: the username with a red Log Out

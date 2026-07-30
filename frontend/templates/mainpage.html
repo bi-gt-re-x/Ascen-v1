@@ -38,6 +38,7 @@
     <script src="{{ url_for('static', filename='js/home-calendar.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-charts.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-streak.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/home-final.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-fx.js') }}" defer></script>
     <script src="{{ url_for('static', filename='secret/pentagon-egg.js') }}" defer></script>
 </head>
@@ -173,19 +174,19 @@
                 <span class="lp-feat-ico lp-ico-teal">&#128203;</span>
                 <h3>Task Management</h3>
                 <p>Organize your schedule with an intuitive task manager. Set priorities, add descriptions, and track progress effortlessly.</p>
-                <a href="{{ url_for('dashboard.page') }}" class="lp-link">Go to Dashboard &#8594;</a>
+                <a href="{{ url_for('dashboard.page') }}" class="lp-link">Go to Dashboard <span class="lp-arrow">&#8594;</span></a>
             </article>
             <article class="lp-card lp-feature">
                 <span class="lp-feat-ico lp-ico-green">&#127793;</span>
                 <h3>Growth &amp; Progress</h3>
                 <p>View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.</p>
-                <a href="{{ url_for('growth.page') }}" class="lp-link">Go to Growth &#8594;</a>
+                <a href="{{ url_for('growth.page') }}" class="lp-link">Go to Growth <span class="lp-arrow">&#8594;</span></a>
             </article>
             <article class="lp-card lp-feature">
                 <span class="lp-feat-ico lp-ico-gold">&#127919;</span>
                 <h3>Strategic Goal Tracking</h3>
                 <p>Set XP, streak and task goals, then watch them auto-advance as you complete work on the dashboard.</p>
-                <a href="{{ url_for('goals.page') }}" class="lp-link">Go to Goals &#8594;</a>
+                <a href="{{ url_for('goals.page') }}" class="lp-link">Go to Goals <span class="lp-arrow">&#8594;</span></a>
             </article>
             <article class="lp-card lp-quote">
                 <p>“Ascen changed how I study — I finally see my progress instead of guessing at it.”</p>
@@ -420,11 +421,25 @@
                 <h2>Design Philosophy</h2>
                 <p>Clean, calm focus tools and minimalist analytics — built to keep you moving, not fiddling.</p>
             </header>
-            <div class="lp-philo">
-                <div class="lp-card lp-phi"><span class="lp-feat-ico lp-ico-teal">&#9878;</span><h4>Consistency over Intensity</h4><p>Small daily wins beat rare all-nighters. Streaks reward showing up.</p></div>
-                <div class="lp-card lp-phi"><span class="lp-feat-ico lp-ico-green">&#128200;</span><h4>Measurable Progress</h4><p>Every action turns into a number you can see and improve.</p></div>
-                <div class="lp-card lp-phi"><span class="lp-feat-ico lp-ico-gold">&#127942;</span><h4>Rewarding Productivity</h4><p>XP, levels and grades make finishing work feel genuinely good.</p></div>
-                <div class="lp-card lp-phi"><span class="lp-feat-ico lp-ico-purple">&#10024;</span><h4>Simplicity First</h4><p>No clutter. Just the few tools that actually move the needle.</p></div>
+            {# Line icons rather than emoji, so each one can draw itself in —
+               home-final.js strokes them on when the section arrives. #}
+            <div class="lp-philo" id="philoGrid">
+                <div class="lp-card lp-phi">
+                    <span class="lp-feat-ico lp-ico-teal ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></span>
+                    <h4>Consistency over Intensity</h4><p>Small daily wins beat rare all-nighters. Streaks reward showing up.</p>
+                </div>
+                <div class="lp-card lp-phi">
+                    <span class="lp-feat-ico lp-ico-green ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg></span>
+                    <h4>Measurable Progress</h4><p>Every action turns into a number you can see and improve.</p>
+                </div>
+                <div class="lp-card lp-phi">
+                    <span class="lp-feat-ico lp-ico-gold ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5v2a3 3 0 0 0 3 3M16 5h3v2a3 3 0 0 1-3 3"/><path d="M12 13v4M9 20h6"/></svg></span>
+                    <h4>Rewarding Productivity</h4><p>XP, levels and grades make finishing work feel genuinely good.</p>
+                </div>
+                <div class="lp-card lp-phi">
+                    <span class="lp-feat-ico lp-ico-purple ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></svg></span>
+                    <h4>Simplicity First</h4><p>No clutter. Just the few tools that actually move the needle.</p>
+                </div>
             </div>
         </section>
 
@@ -464,11 +479,14 @@
                 <h2>Technology Stack</h2>
                 <p>Built on a clean, dependable stack.</p>
             </header>
-            <div class="lp-tech">
-                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-teal">&#128421;</span><div><h4>Frontend</h4><p>HTML · CSS · React · TypeScript</p></div></div>
-                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-green">&#128295;</span><div><h4>Backend</h4><p>FastAPI · Flask</p></div></div>
-                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-gold">&#128190;</span><div><h4>Database</h4><p>PostgreSQL · JSON</p></div></div>
-                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-purple">&#128202;</span><div><h4>Visualization</h4><p>Images · Icons</p></div></div>
+            {# What the app is actually built on. It used to claim React,
+               TypeScript, FastAPI and PostgreSQL, none of which are here. #}
+            <div class="lp-tech" id="techGrid">
+                <svg class="tech-wires" id="techWires" aria-hidden="true"></svg>
+                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-teal">&#128421;</span><div><h4>Frontend</h4><p>HTML &middot; CSS &middot; Vanilla JS</p></div></div>
+                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-green">&#128295;</span><div><h4>Backend</h4><p>Python &middot; Flask &middot; Jinja</p></div></div>
+                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-gold">&#128190;</span><div><h4>Database</h4><p>SQLite</p></div></div>
+                <div class="lp-card lp-techitem"><span class="lp-feat-ico lp-ico-purple">&#128202;</span><div><h4>Visualization</h4><p>SVG &middot; Canvas</p></div></div>
             </div>
         </section>
 
