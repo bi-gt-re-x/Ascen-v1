@@ -27,6 +27,20 @@
     var STREAK_FROM = 27;
     var STREAK_TO = 28;
 
+    /* Where the dragged event lands on Tuesday, and what that slot is called.
+     *
+     * Tuesday already holds "Goal review" from 14% to 44% of the column, so
+     * dropping at 30% — the middle, which is where a naive drop goes — would
+     * bury one under the other. 50% clears it with room to spare.
+     *
+     * The column's own scale is set by the event being dragged: it starts at
+     * 4% labelled 9:00 and is 22% tall for its hour, so 22% is an hour and
+     * 50% is 9:00 plus (50-4)/22 hours — eleven o'clock. Moving an event has
+     * to move its time with it, or the card is showing two different answers.
+     */
+    var DROP_TOP = 50;
+    var DROP_TIME = '11:00–12:00';
+
     document.addEventListener('DOMContentLoaded', function () {
         var play = window.HomePlay;
         var card = document.getElementById('calDemo');
@@ -43,6 +57,8 @@
         // Remember where the dragged event started, so a replay can put it back.
         var homeParent = drag.parentNode;
         var homeTop = drag.style.top;
+        var dragTime = drag.querySelector('small');
+        var homeTime = dragTime ? dragTime.textContent : '';
 
         var tl = null;
         var effects = [];
@@ -66,6 +82,7 @@
             drag.style.removeProperty('--cal-dx');
             drag.style.removeProperty('--cal-dy');
             drag.style.top = homeTop;
+            if (dragTime) dragTime.textContent = homeTime;
             if (drag.parentNode !== homeParent) homeParent.appendChild(drag);
 
             to.classList.remove('is-target');
@@ -145,10 +162,10 @@
             tl.at(1250, function () {
                 var a = drag.getBoundingClientRect();
                 var b = to.getBoundingClientRect();
-                // Land a third of the way down Tuesday, horizontally centred on
-                // the column.
+                // Centred on Tuesday's column, and low enough to clear the
+                // event already sitting there — see DROP_TOP.
                 var dx = b.left + b.width / 2 - (a.left + a.width / 2);
-                var dy = b.top + b.height * 0.30 - a.top;
+                var dy = b.top + b.height * (DROP_TOP / 100) - a.top;
                 drag.style.setProperty('--cal-dx', dx + 'px');
                 drag.style.setProperty('--cal-dy', dy + 'px');
                 to.classList.add('is-target');
@@ -162,14 +179,15 @@
                 cursor.classList.remove('is-press');
                 to.classList.remove('is-target');
 
-                var before = drag.getBoundingClientRect();
-                var host = to.getBoundingClientRect();
                 drag.classList.remove('is-dragging');
                 drag.style.removeProperty('--cal-dx');
                 drag.style.removeProperty('--cal-dy');
                 to.appendChild(drag);
-                // Percent, because .lp-ev is positioned that way in the column.
-                drag.style.top = ((before.top - host.top) / host.height * 100) + '%';
+                // The transform put it at exactly DROP_TOP of the column, so
+                // handing ownership over at that same percentage leaves it
+                // where it already is on screen — no jump at the handover.
+                drag.style.top = DROP_TOP + '%';
+                if (dragTime) dragTime.textContent = DROP_TIME;
                 drag.classList.add('is-dropped');
             });
 
@@ -215,10 +233,11 @@
 
         function still() {
             card.classList.remove('cal-armed');
-            // The outcome, painted directly: the event on Tuesday and the
-            // streak already counted.
+            // The outcome, painted directly: the event on Tuesday at its new
+            // time, and the streak already counted.
             to.appendChild(drag);
-            drag.style.top = '30%';
+            drag.style.top = DROP_TOP + '%';
+            if (dragTime) dragTime.textContent = DROP_TIME;
             streakNum.textContent = String(STREAK_TO);
         }
 

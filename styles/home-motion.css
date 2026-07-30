@@ -676,6 +676,202 @@ html[data-theme="dark"] .lp-cal-body.is-target { background: rgba(124, 131, 255,
 }
 
 /* ============================================================
+   Charts
+   ============================================================
+   The line, the grid and the area are the SVG that was already in the page;
+   home-charts.js measures each path and drives it. The dash lengths come from
+   getTotalLength() rather than being written here, so editing a chart's `d`
+   never leaves the animation drawing the wrong amount. */
+.ch-grid-line { transition: opacity 420ms var(--hm-ease-soft); }
+.ch-armed .ch-grid-line { opacity: 0; }
+
+.ch-line { transition: stroke-dashoffset 1250ms var(--hm-ease-soft), stroke-width 200ms var(--hm-ease); }
+.ch-area { transition: opacity 620ms var(--hm-ease-soft); }
+.ch-armed .ch-area { opacity: 0; }
+
+/* Points are added by the script, spaced along the measured path. */
+.ch-dot {
+    transform-origin: center;
+    transform-box: fill-box;
+    transition: transform 320ms var(--hm-ease), opacity 260ms var(--hm-ease);
+    cursor: pointer;
+}
+.ch-armed .ch-dot { transform: scale(0); opacity: 0; }
+.ch-dot.is-hot { transform: scale(1.75); }
+
+.ch-tip {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: var(--lp-heading);
+    color: var(--lp-surface);
+    font-size: 0.74rem;
+    font-weight: 700;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate3d(-50%, -4px, 0);
+    transition: opacity 220ms var(--hm-ease), transform 260ms var(--hm-ease);
+}
+.ch-tip.is-on { opacity: 1; transform: translate3d(-50%, -14px, 0); }
+
+.lp-chart { position: relative; }
+
+/* --- bars --------------------------------------------------------------- */
+/* Grown with a transform rather than by animating y/height. SVG geometry
+   properties are only half-animatable through the CSS box — Chrome takes an
+   unitless `y` and drops an unitless `height` — and a scale keeps the whole
+   thing off the layout thread anyway. `transform-box: fill-box` is what makes
+   `transform-origin: bottom` mean the bottom of the bar rather than the bottom
+   of the SVG. */
+.ch-bar {
+    transform-origin: bottom;
+    transform-box: fill-box;
+    transform: scaleY(1);
+    transition: transform 720ms cubic-bezier(0.34, 1.42, 0.5, 1), opacity 220ms var(--hm-ease);
+    cursor: pointer;
+}
+.ch-armed .ch-bar { transform: scaleY(0); }
+/* Last, so hovering wins over both states above. */
+.ch-bar.is-hot {
+    transform: translateY(-3px) scaleY(1.06);
+    opacity: 0.82;
+    transition-duration: 220ms;
+}
+.lp-bars-sm { position: relative; overflow: visible; }
+
+/* ============================================================
+   The growth rating gauge
+   ============================================================ */
+#ringArc { transition: stroke-dashoffset 1400ms var(--hm-ease-soft); }
+.lp-grade-badge { display: inline-grid; place-items: center; }
+.lp-grade-badge.gr-pop { animation: ddGradePop 380ms var(--hm-ease); }
+
+/* ============================================================
+   The streak
+   ============================================================ */
+.sk-flames { display: inline-block; white-space: nowrap; }
+.sk-flames span {
+    display: inline-block;
+    transform-origin: 50% 90%;
+}
+.sk-flames span.is-new { animation: skIgnite 620ms var(--hm-ease); }
+@keyframes skIgnite {
+    0%   { transform: scale(0) translateY(6px); opacity: 0; }
+    55%  { transform: scale(1.35) translateY(-3px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+/* Once lit, they never sit perfectly still. */
+.sk-flames.is-lit span { animation: skFlicker 2.4s var(--hm-ease-soft) infinite; }
+.sk-flames.is-lit span:nth-child(2) { animation-delay: 0.5s; }
+.sk-flames.is-lit span:nth-child(3) { animation-delay: 1s; }
+@keyframes skFlicker {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50%      { transform: scale(1.07) rotate(-3deg); }
+}
+
+.lp-streak { position: relative; overflow: hidden; }
+.sk-spark {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #f59e0b;
+    pointer-events: none;
+    z-index: 3;
+}
+#skNum { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   The XP timeline
+   ============================================================ */
+.xp-track { position: relative; padding-left: 18px; }
+/* The rail the events hang off, drawn top to bottom before they arrive. */
+.xp-line {
+    position: absolute;
+    left: 4px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--lp-border);
+    overflow: hidden;
+}
+.xp-line i {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--lp-accent);
+    transform-origin: top center;
+    transform: scaleY(1);
+    transition: transform 760ms var(--hm-ease-soft);
+}
+.xp-armed .xp-line i { transform: scaleY(0); }
+
+.xp-row {
+    position: relative;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 420ms var(--hm-ease), transform 420ms var(--hm-ease);
+}
+.xp-armed .xp-row { opacity: 0; transform: translate3d(-10px, 0, 0); }
+/* The node on the rail. */
+.xp-row::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: var(--lp-accent);
+    box-shadow: 0 0 0 3px var(--lp-surface);
+}
+
+/* The flip is sized by whichever face is in normal flow, so the *longer* one
+   holds the box open — "Level 10 unlocked" is wider than "Level 9", and with
+   the short face in flow the long one overflowed the card. The short face is
+   the absolute one, laid over it and right-aligned to match the row. */
+.xp-flip {
+    display: inline-block;
+    perspective: 400px;
+    min-width: 0;
+    text-align: right;
+}
+.xp-flip-in {
+    display: block;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 640ms var(--hm-ease-soft);
+}
+.xp-flip.is-flipped .xp-flip-in { transform: rotateX(-180deg); }
+.xp-face { display: block; backface-visibility: hidden; white-space: nowrap; }
+.xp-face-back { display: block; transform: rotateX(180deg); }
+.xp-face-front { position: absolute; inset: 0; }
+
+/* The row is a flex pair; let the label give way rather than pushing the
+   badge past the card's edge on a narrow card. */
+.lp-level-top { gap: 10px; align-items: baseline; }
+.lp-level-top > span:first-child { flex: 0 1 auto; min-width: 0; }
+
+.xp-bar-wrap { position: relative; overflow: hidden; }
+.xp-bar-wrap i { transition: width 900ms var(--hm-ease-soft); }
+/* The light that runs across the bar once it is full. */
+.xp-bar-wrap.is-full::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.85) 50%, transparent 80%);
+    animation: xpSweep 1100ms var(--hm-ease-soft);
+}
+@keyframes xpSweep {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(100%); }
+}
+
+/* ============================================================
    Less motion, please
    ============================================================
    Nothing drifts, nothing draws, nothing waits its turn. The curtain is not
@@ -713,6 +909,20 @@ html[data-theme="dark"] .lp-cal-body.is-target { background: rgba(124, 131, 255,
     .td-armed .td-task { opacity: 1; transform: none; }
     .cal-armed .lp-ev { opacity: 1; transform: none; }
     .td-task, .td-box, .td-box svg, .td-xp-bar i, .lp-ev, .lp-cal-body { transition: none; }
+
+    /* Charts, gauge, streak and timeline: drawn, filled and counted already. */
+    .sk-flames span,
+    .sk-flames.is-lit span,
+    .lp-grade-badge.gr-pop,
+    .xp-bar-wrap.is-full::after { animation: none; }
+    .ch-armed .ch-grid-line,
+    .ch-armed .ch-area,
+    .xp-armed .xp-row { opacity: 1; }
+    .ch-armed .ch-dot { opacity: 1; transform: none; }
+    .ch-armed .ch-bar { transform: scaleY(1); }
+    .xp-armed .xp-line i { transform: scaleY(1); }
+    .ch-grid-line, .ch-line, .ch-area, .ch-dot, .ch-tip, .ch-bar,
+    #ringArc, .xp-line i, .xp-row, .xp-flip-in, .xp-bar-wrap i { transition: none; }
 
     .hm-rise, .hm-word, .hm-pop,
     .brand-mark .hm-stroke, .brand-mark .hm-foot,

@@ -36,6 +36,8 @@
     <script src="{{ url_for('static', filename='js/home-dashboard.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-tasks.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-calendar.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/home-charts.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/home-streak.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-fx.js') }}" defer></script>
     <script src="{{ url_for('static', filename='secret/pentagon-egg.js') }}" defer></script>
 </head>
@@ -282,12 +284,12 @@
                         <strong class="lp-metric-num">8.4<small> hrs</small></strong>
                         <svg viewBox="0 0 200 44" class="lp-spark"><polyline points="0,36 28,30 56,32 84,18 112,24 140,10 170,16 200,6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
-                    <div class="lp-card lp-metric lp-metric-row">
-                        <div class="lp-ring lp-ring-sm"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" stroke-opacity="0.15" stroke-width="8"/><circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="8" transform="rotate(-90 40 40)"/></svg><em>96%</em></div>
+                    <div class="lp-card lp-metric lp-metric-row" id="ringCard">
+                        <div class="lp-ring lp-ring-sm"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" stroke-opacity="0.15" stroke-width="8"/><circle id="ringArc" cx="40" cy="40" r="32" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="8" transform="rotate(-90 40 40)"/></svg><em id="ringNum">96%</em></div>
                         <div><span class="lp-metric-label">Best Completion Rate</span><span class="lp-metric-note">245 of 255 tasks on time</span></div>
                     </div>
-                    <div class="lp-card lp-metric lp-metric-row">
-                        <span class="lp-grade-badge">S</span>
+                    <div class="lp-card lp-metric lp-metric-row" id="gradeCard">
+                        <span class="lp-grade-badge" id="gradeBadge">S</span>
                         <div><span class="lp-metric-label">Best Efficiency Ratio</span><span class="lp-metric-note">100% deadlines &middot; avg 42 min/task</span></div>
                     </div>
                 </div>
@@ -363,19 +365,34 @@
                 <p>Break large goals into achievable steps. Every completed task earns XP toward your next level.</p>
             </header>
             <div class="lp-streak-grid">
-                <div class="lp-card lp-streak">
+                <div class="lp-card lp-streak" id="streakDemo">
                     <span class="lp-metric-label">Current Streak</span>
-                    <strong class="lp-streak-num">&#128293; 28 Days</strong>
+                    <strong class="lp-streak-num"><span class="sk-flames" id="skFlames">&#128293;</span> <span id="skNum">28</span> Days</strong>
                     <span class="lp-metric-note">Streak counting</span>
                 </div>
-                <div class="lp-card lp-xphist">
+                <div class="lp-card lp-xphist" id="xpDemo">
                     <div class="lp-stats-head">XP History</div>
-                    <div class="lp-stat"><span>&#127942; Level 10 unlocked</span><b>+200 XP</b></div>
-                    <div class="lp-stat"><span>&#9989; Completed project</span><b>+200 XP</b></div>
-                    <div class="lp-stat"><span>&#9989; Completed project</span><b>+200 XP</b></div>
+                    <div class="xp-track" id="xpTrack">
+                        <span class="xp-line"><i></i></span>
+                        <div class="lp-stat xp-row"><span>&#127942; Level 10 unlocked</span><b>+200 XP</b></div>
+                        <div class="lp-stat xp-row"><span>&#9989; Completed project</span><b>+200 XP</b></div>
+                        <div class="lp-stat xp-row"><span>&#9989; Completed project</span><b>+200 XP</b></div>
+                    </div>
                     <div class="lp-level">
-                        <div class="lp-level-top"><span>Leveling</span><span>Level 10 unlocked</span></div>
-                        <span class="lp-prev-bar"><i style="width:78%"></i></span>
+                        <div class="lp-level-top">
+                            <span>Leveling</span>
+                            {# The longer face is the one in normal flow, so the
+                               box is as wide as the widest text it will ever
+                               show. With the short face in flow, "Level 10
+                               unlocked" would overflow the card on the flip. #}
+                            <span class="xp-flip" id="xpLevel">
+                                <span class="xp-flip-in">
+                                    <span class="xp-face xp-face-front">Level 9</span>
+                                    <span class="xp-face xp-face-back">Level 10 unlocked</span>
+                                </span>
+                            </span>
+                        </div>
+                        <span class="lp-prev-bar xp-bar-wrap"><i id="xpBar" style="width:78%"></i></span>
                     </div>
                 </div>
                 <div class="lp-card lp-track">
