@@ -7,8 +7,14 @@ Notable changes, newest first. Dates are the day the work landed on the branch.
 The testimonial on the landing page is now a way in. Click it and it twitches;
 keep clicking and each one shakes it harder — a wee shiver on the first, the
 card thrown about by the ninth — and on the tenth the page itself quakes, the
-light goes out and the void riddle is hanging there. Ten clicks in a row, on
-the same 1.5-second streak rule the dashboard logo's ten clicks use.
+light goes out and the void riddle is hanging there. Ten clicks, at any pace.
+
+The count started out as a streak, copied from the dashboard logo's ten clicks,
+and that made the whole thing dead on arrival: a logo is something you drum on,
+but a card is clicked deliberately, about once a second, and every gap over a
+second and a half put the count back to one. It shook once and never again. A
+synthetic `element.click()` loop passed it easily, which is exactly why it took
+a real, slowly-paced pointer to see. Nothing resets the count now.
 
 - The riddle opens **in place** rather than at `/calendar#void`, where the
   pentagon's arrow leads: that page needs an account, and a visitor reading a

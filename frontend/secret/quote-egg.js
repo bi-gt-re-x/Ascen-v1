@@ -6,15 +6,17 @@
  * quakes, the light goes out, and you drop into the riddle at /calendar#void:
  * the same one waiting at the end of the pentagon's chain.
  *
- * The ten are a streak, exactly as the dashboard logo's ten clicks are: leave
- * more than RESET_MS between two of them and the count starts over (and the
- * shaking starts small again).
+ * Ten clicks, at whatever pace: the count is not a streak. It was one at first
+ * — the dashboard logo's ten clicks have to be in a row, and this followed it —
+ * but a card is not a logo you drum on. Clicking a testimonial to see what it
+ * does is a deliberate, once-a-second sort of clicking, and every gap over the
+ * limit put the count back to one, so the door never opened and the shake never
+ * grew past its first twitch. Now nothing resets it.
  */
 (function () {
     'use strict';
 
     var NEEDED = 10;        // clicks to open the door
-    var RESET_MS = 1500;    // gap that breaks the "in a row" streak
 
     var reduced = window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -24,25 +26,16 @@
         if (!quote) return;
 
         var clicks = 0;
-        var last = 0;
         var busy = false;
-        var timer = null;
 
         quote.addEventListener('click', function () {
             if (busy) return;
-            var now = Date.now();
-            if (now - last > RESET_MS) clicks = 0;   // streak broken — start again
-            last = now;
             clicks++;
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(function () { clicks = 0; }, RESET_MS);
-
             if (clicks < NEEDED) {
                 shake(quote, clicks);
                 return;
             }
             busy = true;
-            if (timer) clearTimeout(timer);
             openTheVoid();
         });
     }
@@ -51,7 +44,16 @@
     // tightens as it widens, so the last few read as angrier rather than merely
     // looser. The numbers are handed to the keyframes as custom properties.
     function shake(el, n) {
-        if (reduced) return;
+        // Reduced motion gets no shaking, but it can't get nothing either: with
+        // no answer to a click there is no reason to try a second one. It dims
+        // instead, once per click, and deepens the same way.
+        if (reduced) {
+            el.style.setProperty('--qk-dim', (1 - n * 0.05).toFixed(2));
+            el.classList.remove('quote-dim');
+            void el.offsetWidth;
+            el.classList.add('quote-dim');
+            return;
+        }
         el.style.setProperty('--qk-x', (1 + n * 1.5).toFixed(2) + 'px');
         el.style.setProperty('--qk-r', (n * 0.18).toFixed(2) + 'deg');
         el.style.setProperty('--qk-t', Math.max(0.26, 0.52 - n * 0.02).toFixed(2) + 's');
