@@ -54,7 +54,8 @@
                 });
             });
 
-        mark(document.querySelector('.lp-calendar'), 'up');
+        // The calendar is left alone too — home-calendar.js plays a drag across
+        // it and needs its transforms to itself.
         mark(document.querySelector('.lp-final'), 'up');
 
         var io = new IntersectionObserver(function (entries) {
