@@ -107,6 +107,32 @@
             </div>
         </section>
 
+        <!-- ============ FEATURE STRIP ============ -->
+        <section class="lp-strip">
+            <article class="lp-card lp-feature">
+                <span class="lp-feat-ico lp-ico-teal">&#128203;</span>
+                <h3>Task Management</h3>
+                <p>Organize your schedule with an intuitive task manager. Set priorities, add descriptions, and track progress effortlessly.</p>
+                <a href="{{ url_for('dashboard.page') }}" class="lp-link">Go to Dashboard <span class="lp-arrow">&#8594;</span></a>
+            </article>
+            <article class="lp-card lp-feature">
+                <span class="lp-feat-ico lp-ico-green">&#127793;</span>
+                <h3>Growth &amp; Progress</h3>
+                <p>View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.</p>
+                <a href="{{ url_for('growth.page') }}" class="lp-link">Go to Growth <span class="lp-arrow">&#8594;</span></a>
+            </article>
+            <article class="lp-card lp-feature">
+                <span class="lp-feat-ico lp-ico-gold">&#127919;</span>
+                <h3>Strategic Goal Tracking</h3>
+                <p>Set XP, streak and task goals, then watch them auto-advance as you complete work on the dashboard.</p>
+                <a href="{{ url_for('goals.page') }}" class="lp-link">Go to Goals <span class="lp-arrow">&#8594;</span></a>
+            </article>
+            <article class="lp-card lp-quote">
+                <p>“Ascen changed how I study — I finally see my progress instead of guessing at it.”</p>
+                <span class="lp-quote-by">Sarah J. · Student</span>
+            </article>
+        </section>
+
         <!-- ============ DASHBOARD PREVIEW ============
              Not a screenshot: a working mock the reader watches fill in.
              home-dashboard.js runs it when the section scrolls into view. -->
@@ -166,32 +192,6 @@
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- ============ FEATURE STRIP ============ -->
-        <section class="lp-strip">
-            <article class="lp-card lp-feature">
-                <span class="lp-feat-ico lp-ico-teal">&#128203;</span>
-                <h3>Task Management</h3>
-                <p>Organize your schedule with an intuitive task manager. Set priorities, add descriptions, and track progress effortlessly.</p>
-                <a href="{{ url_for('dashboard.page') }}" class="lp-link">Go to Dashboard <span class="lp-arrow">&#8594;</span></a>
-            </article>
-            <article class="lp-card lp-feature">
-                <span class="lp-feat-ico lp-ico-green">&#127793;</span>
-                <h3>Growth &amp; Progress</h3>
-                <p>View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.</p>
-                <a href="{{ url_for('growth.page') }}" class="lp-link">Go to Growth <span class="lp-arrow">&#8594;</span></a>
-            </article>
-            <article class="lp-card lp-feature">
-                <span class="lp-feat-ico lp-ico-gold">&#127919;</span>
-                <h3>Strategic Goal Tracking</h3>
-                <p>Set XP, streak and task goals, then watch them auto-advance as you complete work on the dashboard.</p>
-                <a href="{{ url_for('goals.page') }}" class="lp-link">Go to Goals <span class="lp-arrow">&#8594;</span></a>
-            </article>
-            <article class="lp-card lp-quote">
-                <p>“Ascen changed how I study — I finally see my progress instead of guessing at it.”</p>
-                <span class="lp-quote-by">Sarah J. · Student</span>
-            </article>
         </section>
 
         <!-- ============ DEEP DIVE: TASK MANAGEMENT ============ -->

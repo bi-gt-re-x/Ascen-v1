@@ -39,6 +39,10 @@ Three things worth carrying forward:
   box looked right and was not: Chrome takes a unitless `y` and drops a
   unitless `height`, which left every bar flat with its markup value destroyed.
 
+The feature strip — Task Management, Growth, Goals and the quote — now sits
+directly under the hero, ahead of the dashboard demo, so the four links are the
+first thing after the headline.
+
 The Technology Stack section also stopped claiming React, TypeScript, FastAPI
 and PostgreSQL, none of which this project uses. It reads HTML · CSS · Vanilla
 JS, Python · Flask · Jinja, SQLite, SVG · Canvas.
