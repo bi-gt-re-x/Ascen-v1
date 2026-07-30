@@ -41,6 +41,11 @@
     <script src="{{ url_for('static', filename='js/home-final.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-fx.js') }}" defer></script>
     <script src="{{ url_for('static', filename='secret/pentagon-egg.js') }}" defer></script>
+    {# The testimonial's ten clicks end in the same void the pentagon's arrow
+       leads to, so the riddle and its dark come along to the landing page. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='secret/void.css') }}">
+    <script src="{{ url_for('static', filename='secret/void.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='secret/quote-egg.js') }}" defer></script>
 </head>
 <body{% if current_user %} data-signed-in="1"{% endif %}>
 

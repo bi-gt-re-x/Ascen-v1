@@ -871,6 +871,33 @@ html[data-theme="dark"] .hfx-toast { background: #e6e8f0; color: #161B22; }
 }
 .lp-radar.pentagon-spin { animation: pentSpin 0.72s cubic-bezier(0.4, 0.1, 0.2, 1) both; }
 
+/* The testimonial's ten clicks. One keyframe, driven by custom properties that
+   quote-egg.js turns up on every click — a wee shiver on the first, the card
+   thrown about by the ninth. The tenth doesn't shake the card: it shakes the
+   page (pageQuake, below) and drops into the riddle. */
+.lp-quote { --qk-x: 2px; --qk-r: 0.2deg; --qk-t: 0.5s; }
+@keyframes quoteShake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    12% { transform: translate(calc(var(--qk-x) * -1), 0) rotate(calc(var(--qk-r) * -1)); }
+    28% { transform: translate(var(--qk-x), 0) rotate(var(--qk-r)); }
+    44% { transform: translate(calc(var(--qk-x) * -0.8), 0) rotate(calc(var(--qk-r) * -0.7)); }
+    60% { transform: translate(calc(var(--qk-x) * 0.65), 0) rotate(calc(var(--qk-r) * 0.5)); }
+    76% { transform: translate(calc(var(--qk-x) * -0.4), 0) rotate(calc(var(--qk-r) * -0.3)); }
+    90% { transform: translate(calc(var(--qk-x) * 0.2), 0) rotate(0); }
+}
+.lp-quote.quote-shake {
+    animation: quoteShake var(--qk-t) cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* …and the light going out behind the last one. It sits under the riddle and
+   under the cracks and shards that break it open (void.css, 10004+). */
+#quoteVoidFade {
+    position: fixed; inset: 0; z-index: 10000;
+    background: #05070a; opacity: 0; pointer-events: none;
+    transition: opacity 0.85s ease;
+}
+#quoteVoidFade.show { opacity: 1; }
+
 /* The whole page shakes. */
 @keyframes pageQuake {
     0%, 100% { transform: translate(0, 0) rotate(0); }
@@ -957,6 +984,7 @@ html[data-theme="dark"] #pentArrow { color: #f0d38a; border-color: rgba(240, 211
 
 @media (prefers-reduced-motion: reduce) {
     .lp-radar.pentagon-pop, .lp-radar.pentagon-spin,
+    .lp-quote.quote-shake,
     .home-main.page-quake { animation: none; }
     .lp.page-collapse > * { animation: none; opacity: 0; }
     #pentArrow.show { animation: none; }

@@ -8,11 +8,14 @@
  *
  * Answer it and jagged cracks race across the screen, the page shatters into
  * shards that rain down, and you drop through into /engine.
+ *
+ * Two ways in, one riddle. Arriving with html.egg-void already set — the
+ * calendar, via the pentagon — opens it on load; anything else opens it by
+ * hand through VoidRiddle.open(), which is how the landing page's testimonial
+ * (quote-egg.js) reaches the same dark room without leaving the page.
  */
 (function () {
     'use strict';
-
-    if (!document.documentElement.classList.contains('egg-void')) return;
 
     var ANSWER = 'engine';
     var RIDDLE = "I have no legs, but I can run. I have no lungs, but I need air. " +
@@ -23,11 +26,31 @@
         else fn();
     }
 
-    ready(function () {
+    // The day's unlock — the same flag the dashboard's ten clicks on the logo
+    // set, and the one /engine checks on arrival. Stamped when the riddle is
+    // answered, so whichever way somebody reached the question, solving it is
+    // enough to be let through. (Coming by the pentagon, it is already set.)
+    function markUnlocked() {
+        try {
+            var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
+            var d = new Date();
+            var p = function (n) { return n < 10 ? '0' + n : '' + n; };
+            var day = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+            localStorage.setItem('easterEgg:' + user + ':' + day, '1');
+        } catch (e) {}
+    }
+
+    // Hang the riddle in the dark. Safe to call twice — the second call finds
+    // it already there and leaves it alone.
+    function open() {
+        if (document.getElementById('voidRiddle')) return;
         // Nothing here is meant to be read or dragged — only answered.
         document.body.style.userSelect = 'none';
         buildRiddle();
-    });
+    }
+    window.VoidRiddle = { open: open };
+
+    if (document.documentElement.classList.contains('egg-void')) ready(open);
 
     function buildRiddle() {
         var wrap = document.createElement('div');
@@ -69,6 +92,7 @@
         var input = document.getElementById('voidRiddleInput');
         if (input) input.blur();
         wrap.classList.add('solved');          // riddle recedes into the dark
+        markUnlocked();                        // the answer is the key
 
         drawCracks(function () {
             shatter(function () {

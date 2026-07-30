@@ -2,6 +2,25 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-30 — A second door into the riddle
+
+The testimonial on the landing page is now a way in. Click it and it twitches;
+keep clicking and each one shakes it harder — a wee shiver on the first, the
+card thrown about by the ninth — and on the tenth the page itself quakes, the
+light goes out and the void riddle is hanging there. Ten clicks in a row, on
+the same 1.5-second streak rule the dashboard logo's ten clicks use.
+
+- The riddle opens **in place** rather than at `/calendar#void`, where the
+  pentagon's arrow leads: that page needs an account, and a visitor reading a
+  testimonial usually hasn't got one. `void.js` now exposes `VoidRiddle.open()`
+  for it and still opens itself on arrival at the calendar, and `void.css`'s
+  emptying of the page covers `.home-main` too. Same void, same question, same
+  drop into `/engine`.
+- **Answering the riddle is now itself the day's unlock.** `/engine` checks the
+  flag the dashboard's logo sets and bounced anyone who arrived without it — so
+  by this new door you could solve the riddle and be thrown back to the home
+  page. Solving it stamps the flag; coming by the pentagon, it was already set.
+
 ## 2026-07-30 — The calendar becomes something you can work in
 
 Two things the calendar showed but wouldn't let you do: finish a task, and move
