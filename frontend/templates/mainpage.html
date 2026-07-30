@@ -58,14 +58,18 @@
         </div>
     </header>
 
+    {# Which of these two the page opens on is decided here rather than left to
+       main.js, which reads localStorage: an account signed in on the server but
+       with no localStorage (cleared storage, another browser) was being offered
+       Log In / Sign Up. main.js still swaps them on log out. #}
     <div class="account-row">
         <div id="authContainer">
-            <div class="auth-buttons" id="authButtons">
+            <div class="auth-buttons{% if current_user %} hidden{% endif %}" id="authButtons">
                 <button id="loginBtn" class="auth-btn">Log In</button>
                 <button id="signupBtn" class="auth-btn auth-btn-primary">Sign Up</button>
             </div>
-            <div class="user-greeting hidden" id="userGreeting">
-                <span id="greetingText">Hello, User</span>
+            <div class="user-greeting{% if not current_user %} hidden{% endif %}" id="userGreeting">
+                <span id="greetingText">Hello, {{ current_user or 'User' }}</span>
                 <button id="logoutBtn" class="logout-btn">Log Out</button>
             </div>
         </div>
@@ -80,8 +84,15 @@
                 <span class="lp-eyebrow"><span class="date-container" id="dateDisplay"></span></span>
                 <h1 class="lp-hero-title">Ascen: The <em>“Only”</em> App for Unstoppable Growth and Productivity</h1>
                 <p class="lp-hero-sub">Master every hour. Crush every goal. Ascen turns your study sessions into measurable momentum — tasks, streaks, growth analytics and goals in one place.</p>
+                {# Every call to action on this page is a pitch to a visitor who
+                   has no account yet. Someone already signed in has nothing left
+                   to be sold, so their buttons just say where they go. #}
                 <div class="lp-hero-actions">
+                    {% if current_user %}
+                    <button id="dashboardBtn" class="lp-btn lp-btn-primary">Go to Dashboard <span class="lp-arrow">&#8594;</span></button>
+                    {% else %}
                     <button id="dashboardBtn" class="lp-btn lp-btn-primary">Claim Your Productivity Breakthrough <span class="lp-chevd">&#9662;</span></button>
+                    {% endif %}
                     <button id="calendarBtn" class="lp-btn lp-btn-ghost"><span class="pill-icon">&#128197;</span> Open Calendar</button>
                 </div>
             </div>
@@ -468,7 +479,7 @@
                         <li>&#10003; Streaks, XP &amp; levels</li>
                         <li>&#10003; Calendar scheduling</li>
                     </ul>
-                    <a href="{{ url_for('dashboard.page') }}" class="lp-btn lp-btn-primary lp-btn-full">Get Started</a>
+                    <a href="{{ url_for('dashboard.page') }}" class="lp-btn lp-btn-primary lp-btn-full">{% if current_user %}Go to Dashboard{% else %}Get Started{% endif %}</a>
                 </div>
             </div>
         </section>
@@ -494,7 +505,7 @@
         <section class="lp-final">
             <h2>Ready to start your ascent?</h2>
             <p>Join and turn today's effort into tomorrow's momentum.</p>
-            <a href="{{ url_for('dashboard.page') }}" class="lp-btn lp-btn-primary lp-btn-lg">Get Started Today</a>
+            <a href="{{ url_for('dashboard.page') }}" class="lp-btn lp-btn-primary lp-btn-lg">{% if current_user %}Go to Your Dashboard{% else %}Get Started Today{% endif %}</a>
         </section>
 
       </div>
