@@ -252,6 +252,208 @@ html[data-theme="dark"] .brand-mark { color: #f4f7fa; }
 .lp-btn-primary:hover::after { opacity: 1; }
 
 /* ============================================================
+   The simulated dashboard
+   ============================================================
+   Two nested elements, and the nesting is load-bearing: .dd-stage carries the
+   entrance (it slides up and fades in once), .dd-frame carries the endless
+   float. One element cannot do both — the float's keyframes would overwrite
+   the entrance's transform the moment they started. */
+.dd-stage {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 700ms var(--hm-ease), transform 700ms var(--hm-ease);
+}
+.dd-stage.dd-armed { opacity: 0; transform: translate3d(0, 38px, 0); }
+
+.dd-frame {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    background: var(--lp-surface);
+    border: 1px solid var(--lp-border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: var(--lp-shadow);
+}
+/* Never perfectly still: six pixels of rise, a quarter of a degree of tilt,
+   and a shadow that deepens with it, over seven seconds. */
+.dd-frame.dd-float { animation: ddFloat 7s var(--hm-ease-soft) infinite; }
+@keyframes ddFloat {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+    }
+    50% {
+        transform: translate3d(0, -6px, 0) rotate(0.22deg) scale(1.004);
+        box-shadow: 0 24px 50px rgba(16, 24, 40, 0.14);
+    }
+}
+html[data-theme="dark"] .dd-frame.dd-float { animation-name: ddFloatDark; }
+@keyframes ddFloatDark {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+    }
+    50% {
+        transform: translate3d(0, -6px, 0) rotate(0.22deg) scale(1.004);
+        box-shadow: 0 28px 56px rgba(0, 0, 0, 0.6);
+    }
+}
+
+/* --- sidebar ------------------------------------------------------------ */
+.dd-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 0;
+    background: var(--lp-surface-2);
+    border-right: 1px solid var(--lp-border);
+    opacity: 1;
+    transition: opacity 520ms var(--hm-ease);
+}
+.dd-armed .dd-side { opacity: 0; }
+
+.dd-side-mark { width: 26px; height: 26px; color: var(--lp-heading); }
+.dd-side-mark svg { width: 100%; height: 100%; display: block; }
+
+.dd-nav { display: flex; flex-direction: column; gap: 10px; }
+.dd-nav-i {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    color: var(--lp-muted);
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 380ms var(--hm-ease), transform 380ms var(--hm-ease);
+}
+.dd-nav-i svg { width: 19px; height: 19px; }
+.dd-nav-i.is-active { background: var(--lp-accent); color: #fff; }
+.dd-armed .dd-nav-i { opacity: 0; transform: translate3d(-10px, 0, 0); }
+
+/* --- main panel --------------------------------------------------------- */
+.dd-main { padding: 20px 22px 24px; }
+
+.dd-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.dd-top b { display: block; color: var(--lp-heading); font-size: 1.05rem; }
+.dd-top small { display: block; color: var(--lp-muted); font-size: 0.82rem; margin-top: 2px; }
+.dd-top-pill {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--lp-muted);
+    border: 1px solid var(--lp-border);
+    border-radius: 999px;
+    padding: 5px 12px;
+}
+
+.dd-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+.dd-card {
+    background: var(--lp-surface-2);
+    border: 1px solid var(--lp-border);
+    border-radius: 14px;
+    padding: 14px 16px 16px;
+    min-height: 96px;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 500ms var(--hm-ease), transform 500ms var(--hm-ease);
+}
+.dd-card-wide { grid-column: span 3; }
+.dd-armed .dd-card { opacity: 0; transform: translate3d(0, 16px, 0); }
+
+.dd-label {
+    display: block;
+    color: var(--lp-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin-bottom: 6px;
+}
+.dd-num {
+    display: block;
+    color: var(--lp-heading);
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    /* The counter swaps digits every frame; a tabular figure keeps the number
+       from jittering sideways as it climbs. */
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- the XP bar --------------------------------------------------------- */
+.dd-bar {
+    margin-top: 12px;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--lp-border);
+    overflow: hidden;
+}
+.dd-bar i {
+    display: block;
+    height: 100%;
+    width: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--lp-accent), var(--lp-accent-2));
+    transform-origin: left center;
+    transform: scaleX(1);
+    /* Scaled rather than resized: width animates on the layout thread, a
+       transform does not. */
+    transition: transform 620ms var(--hm-ease-soft);
+}
+
+/* --- the level badge, flipping ------------------------------------------ */
+.dd-flip {
+    display: inline-block;
+    perspective: 420px;
+    color: var(--lp-heading);
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.dd-flip-in {
+    display: block;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 700ms var(--hm-ease-soft);
+}
+.dd-flip.is-flipped .dd-flip-in { transform: rotateX(-180deg); }
+.dd-face { display: block; backface-visibility: hidden; }
+.dd-face-back { position: absolute; inset: 0; transform: rotateX(180deg); }
+
+/* --- the growth rating letter ------------------------------------------- */
+.dd-grade {
+    display: inline-block;
+    color: var(--lp-accent-2);
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.dd-grade.dd-grade-pop { animation: ddGradePop 420ms var(--hm-ease); }
+@keyframes ddGradePop {
+    0%   { transform: scale(0.72); opacity: 0; }
+    55%  { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 720px) {
+    .dd-frame { grid-template-columns: 58px 1fr; }
+    .dd-cards { grid-template-columns: repeat(2, 1fr); }
+    .dd-card-wide { grid-column: span 2; }
+    .dd-num, .dd-flip, .dd-grade { font-size: 1.5rem; }
+}
+
+/* ============================================================
    Less motion, please
    ============================================================
    Nothing drifts, nothing draws, nothing waits its turn. The curtain is not
@@ -270,6 +472,15 @@ html[data-theme="dark"] .brand-mark { color: #f4f7fa; }
     }
     .hm-armed .brand-mark .hm-stroke { fill-opacity: 1; stroke-dashoffset: 0; }
     .hm-armed .brand-mark .hm-foot { opacity: 1; transform: scale(1); }
+
+    /* The dashboard shows its finished state and holds still. */
+    .dd-frame.dd-float,
+    .dd-grade.dd-grade-pop { animation: none; }
+    .dd-stage.dd-armed { opacity: 1; transform: none; }
+    .dd-armed .dd-side,
+    .dd-armed .dd-nav-i,
+    .dd-armed .dd-card { opacity: 1; transform: none; }
+    .dd-stage, .dd-side, .dd-nav-i, .dd-card, .dd-bar i, .dd-flip-in { transition: none; }
 
     .hm-rise, .hm-word, .hm-pop,
     .brand-mark .hm-stroke, .brand-mark .hm-foot,

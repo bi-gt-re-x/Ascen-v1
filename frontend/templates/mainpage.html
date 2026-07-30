@@ -30,8 +30,10 @@
     <script src="{{ url_for('static', filename='js/api.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/auth-flow.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/home-play.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-ambient.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-intro.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/home-dashboard.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/home-fx.js') }}" defer></script>
     <script src="{{ url_for('static', filename='secret/pentagon-egg.js') }}" defer></script>
 </head>
@@ -97,6 +99,67 @@
                     <div class="lp-prev-overall">Overall <strong>88</strong></div>
                 </div>
                 <div class="lp-hero-glyph">&#128197;</div>
+            </div>
+        </section>
+
+        <!-- ============ DASHBOARD PREVIEW ============
+             Not a screenshot: a working mock the reader watches fill in.
+             home-dashboard.js runs it when the section scrolls into view. -->
+        <section class="lp-section">
+            <header class="lp-head">
+                <h2>Your dashboard, as you would use it</h2>
+                <p>Finish work, and the numbers move. Nothing here is a picture — this is the real thing, running.</p>
+            </header>
+            <div class="dd-stage" id="dashDemo" aria-hidden="true">
+                <div class="dd-frame">
+                    <aside class="dd-side">
+                        <span class="dd-side-mark">
+                            <svg viewBox="0 0 100 100"><path fill-rule="evenodd" fill="currentColor" stroke="currentColor" stroke-width="4" stroke-linejoin="round" d="M49 19 L81 80 L17 80 Z M49 49 L63 75 L37 75 Z"/></svg>
+                        </span>
+                        <nav class="dd-nav">
+                            <span class="dd-nav-i is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+                            <span class="dd-nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span>
+                            <span class="dd-nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg></span>
+                            <span class="dd-nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></span>
+                            <span class="dd-nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
+                        </nav>
+                    </aside>
+
+                    <div class="dd-main">
+                        <div class="dd-top">
+                            <div>
+                                <b>Dashboard</b>
+                                <small>Daily XP &middot; Streak</small>
+                            </div>
+                            <span class="dd-top-pill">This week</span>
+                        </div>
+
+                        <div class="dd-cards">
+                            <article class="dd-card dd-card-wide">
+                                <span class="dd-label">Total XP</span>
+                                <strong class="dd-num" id="ddXp">0</strong>
+                                <div class="dd-bar"><i id="ddBar"></i></div>
+                            </article>
+                            <article class="dd-card">
+                                <span class="dd-label">Level</span>
+                                <span class="dd-flip" id="ddLevel">
+                                    <span class="dd-flip-in">
+                                        <span class="dd-face dd-face-front">8</span>
+                                        <span class="dd-face dd-face-back">9</span>
+                                    </span>
+                                </span>
+                            </article>
+                            <article class="dd-card">
+                                <span class="dd-label">Growth Rating</span>
+                                <span class="dd-grade" id="ddGrade">C</span>
+                            </article>
+                            <article class="dd-card">
+                                <span class="dd-label">Tasks completed</span>
+                                <strong class="dd-num" id="ddTasks">0</strong>
+                            </article>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
