@@ -217,6 +217,24 @@ html[data-theme="dark"] .wk-move-preview.is-bad > span { color: #f2a3a3; }
 .wk-event.is-moving { opacity: .35; cursor: grabbing; }
 body.wk-moving, body.wk-moving * { cursor: grabbing !important; }
 
+/* The two edge strips. Dragging one changes that end's time on its own, so they
+   read as resize targets rather than as part of the block: a faint bar on hover
+   is the whole of their appearance. The top strip stops short of the ⋮ menu, and
+   both sit under it in the stack, so the menu is never covered. A short block
+   gets thinner strips so its middle — where the name and the ⋮ live — survives. */
+.wk-resize {
+    position: absolute; left: 0; z-index: 3; height: 7px;
+    cursor: ns-resize; background: transparent;
+    transition: background 120ms ease;
+}
+.wk-resize-top { top: 0; right: 22px; }
+.wk-resize-bot { bottom: 0; right: 0; }
+.wk-event.is-compact .wk-resize { height: 5px; }
+.wk-resize:hover { background: currentColor; opacity: .35; }
+body.wk-moving .wk-resize:hover { background: transparent; }
+/* Whichever edge is being dragged, the pointer keeps the resize cursor. */
+body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
+
 .wk-event {
     position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 6px 8px;
     border: 1px solid transparent; overflow: hidden; box-sizing: border-box;

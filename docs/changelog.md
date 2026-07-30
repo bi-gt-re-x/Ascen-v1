@@ -23,6 +23,12 @@ a block. Both are now direct.
   — is refused outright: the preview turns red and releasing leaves the block
   where it was. Blocks therefore still cannot overlap, the same rule the grid
   enforces when they are created.
+- **Drag one edge to re-time that end.** A seven-pixel strip along a block's top
+  and bottom resizes rather than moves: the start time or the end time changes
+  and the other end stays pinned. Same refusal on overlap, and a block can't be
+  dragged shorter than five minutes. The top strip stops short of the ⋮ menu, and
+  both sit above the title in the stack, so neither the menu nor the
+  click-to-finish name is ever swallowed by them.
 
 Two notes for later:
 
@@ -33,6 +39,11 @@ Two notes for later:
   block that only covers part of its task (a continuation) can't either.
 - **Collision is measured off the live DOM**, not the render-time `dragBusy`
   map, so it stays true while the pointer crosses into another day's column.
+- **A block is drawn four pixels shorter than it lasts** (the gap that keeps
+  neighbours apart), and blocks under a minimum height are drawn taller. Both
+  drags therefore work in the true span — the times, not the rendered box —
+  because reading a block's end off the DOM would either let a drop land a
+  minute inside its neighbour or quietly stretch a short block to fit its box.
 
 ## 2026-07-29 — The landing page becomes a demonstration
 

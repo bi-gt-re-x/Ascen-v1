@@ -617,6 +617,14 @@
         return '<button type="button" class="wk-card-menu" aria-label="Options">' + dots + '</button>';
     }
 
+    // The two grab strips along a block's top and bottom edges. Dragging one
+    // changes that end's time alone; the rest of the block moves the whole
+    // thing. The top strip stops short of the ⋮ menu so that stays clickable.
+    function resizeHandles() {
+        return '<span class="wk-resize wk-resize-top" aria-hidden="true"></span>' +
+               '<span class="wk-resize wk-resize-bot" aria-hidden="true"></span>';
+    }
+
     // The dropdown is a body-level popover (not nested in the block) so the
     // block's overflow:hidden can't clip it. Only one is open at a time.
     function closeCardPop() {
@@ -1635,25 +1643,32 @@
         });
     }
 
-    // --- Drag a block to another slot ----------------------------------------
+    // --- Drag a block: whole, or by one edge ---------------------------------
     // Press anywhere inside a block that isn't its ⋮ menu or (on a task) its
     // click-to-finish name, and the block follows the pointer: up and down to
     // change the time, across to change the day (the Week grid; the Day view has
-    // the one column). The slot under the pointer is previewed with the times it
-    // would take, and a slot overlapping ANY other block — task or event, by so
-    // much as a minute — is refused: the preview turns red, and releasing there
-    // leaves the block exactly where it was. Nothing can be dropped onto
-    // something else, which is the same rule the grid already enforces when
-    // blocks are created.
+    // the one column). Press its top or bottom edge instead and only that end
+    // moves — the start time or the end time, with the other end staying put.
     //
-    // The move keeps the block's length, so only its start (and day) change.
-    // An event's new times go to the month store; a task is re-created on the new
+    // Either way the result is previewed with the times it would take, and a
+    // slot overlapping ANY other block — task or event, by so much as a minute —
+    // is refused: the preview turns red, and releasing there leaves the block
+    // exactly as it was. Nothing can be dropped onto something else, which is
+    // the same rule the grid already enforces when blocks are created.
+    //
+    // An event's new times go to the month store; a task is re-created on its new
     // slot, since the backend can't move a task's created_at (the edit flow in
     // confirmWeekTask does the same).
     var moveState = null;
     var __moveDocWired = false;
     var MOVE_MIN_PX = 4;        // pointer travel before a press counts as a drag
     var suppressClick = false;  // set on drop, so the release isn't also a click
+    // Blocks are drawn BLOCK_GAP shorter than their time span (see the -4 in
+    // buildColumnInner) so neighbours don't touch. Every measurement here works
+    // in the true span — the rendered height plus that gap — or a drop could
+    // land a minute or two inside its neighbour and be met with the overlap
+    // modal the moment the grid redrew.
+    var BLOCK_GAP = 4;
 
     function pad2(n) { return n < 10 ? '0' + n : '' + n; }
     function minToHM(m) {
@@ -1693,32 +1708,41 @@
         }
         return null;
     }
-    // Would the block sit clear of everything else in this column? Measured off
-    // the live DOM rather than the render-time dragBusy map, so it stays true
-    // while the pointer moves between columns.
-    function slotIsFree(col, top, h, self) {
+    // Would the slot [top, bottom) sit clear of everything else in this column?
+    // Measured off the live DOM rather than the render-time dragBusy map, so it
+    // stays true while the pointer moves between columns, and in true spans, so
+    // "clear" here means clear once the grid redraws too.
+    function slotIsFree(col, top, bottom, self) {
         var EPS = 0.5;                       // touching edges are not an overlap
-        var bottom = top + h;
         var others = col.querySelectorAll('.wk-event');
         for (var i = 0; i < others.length; i++) {
             if (others[i] === self) continue;
             var oTop = others[i].offsetTop;
-            var oBottom = oTop + others[i].offsetHeight;
+            var oBottom = oTop + others[i].offsetHeight + BLOCK_GAP;
             if (Math.min(bottom, oBottom) - Math.max(top, oTop) > EPS) return false;
         }
         return true;
     }
 
+    // The slot the drag is proposing, in true-span pixels from the column's top.
+    // Moving carries the block's length along; dragging an edge moves that end
+    // alone, with the other one pinned.
+    function proposedSlot(st) {
+        if (st.mode === 'move') return { top: st.newTop, bottom: st.newTop + st.span0 };
+        return { top: st.newTop, bottom: st.newBottom };
+    }
+
     function moveLabel(st) {
-        var startMin = pxToClockMin(st.newTop);
-        return hmLabel(minToHM(startMin)) + ' – ' + hmLabel(minToHM(startMin + st.durMin));
+        var slot = proposedSlot(st);
+        return hmLabel(minToHM(pxToClockMin(slot.top))) + ' – ' +
+               hmLabel(minToHM(pxToClockMin(slot.bottom)));
     }
 
     function moveBegin(st) {
         st.moved = true;
         st.block.classList.add('is-moving');
         document.body.style.userSelect = 'none';   // no text selection mid-drag
-        document.body.classList.add('wk-moving');
+        document.body.classList.add(st.mode === 'move' ? 'wk-moving' : 'wk-resizing');
         var preview = document.createElement('div');
         preview.className = 'wk-move-preview';
         preview.appendChild(document.createElement('span'));
@@ -1727,18 +1751,33 @@
     }
 
     function moveApply(st) {
-        var col = columnAt(st.cols, st.lastClientX) || st.col;
-        if (col !== st.col) {
-            st.col = col;
-            st.iso = col.getAttribute('data-iso');
-            col.appendChild(st.preview);
+        if (st.mode === 'move') {
+            // The whole block: it can change day as well as time, so the column
+            // under the pointer decides where the preview lives.
+            var col = columnAt(st.cols, st.lastClientX) || st.col;
+            if (col !== st.col) {
+                st.col = col;
+                st.iso = col.getAttribute('data-iso');
+                col.appendChild(st.preview);
+            }
+            var y = snapPx(st.lastClientY - col.getBoundingClientRect().top - st.grabDY);
+            st.newTop = Math.max(0, Math.min(y, st.gridH - st.span0));
+        } else {
+            // One edge: the day is fixed, and the end being dragged can't pass
+            // the other one — a block always keeps at least five minutes.
+            var edgeY = snapPx(st.lastClientY - st.col.getBoundingClientRect().top);
+            if (st.mode === 'top') {
+                st.newTop = Math.max(0, Math.min(edgeY, st.bottom0 - MIN5_PX));
+                st.newBottom = st.bottom0;
+            } else {
+                st.newTop = st.top0;
+                st.newBottom = Math.min(st.gridH, Math.max(edgeY, st.top0 + MIN5_PX));
+            }
         }
-        var y = snapPx(st.lastClientY - col.getBoundingClientRect().top - st.grabDY);
-        y = Math.max(0, Math.min(y, st.gridH - st.h));
-        st.newTop = y;
-        st.ok = slotIsFree(col, y, st.h, st.block);
-        st.preview.style.top = y + 'px';
-        st.preview.style.height = st.h + 'px';
+        var slot = proposedSlot(st);
+        st.ok = slotIsFree(st.col, slot.top, slot.bottom, st.block);
+        st.preview.style.top = slot.top + 'px';
+        st.preview.style.height = Math.max(2, slot.bottom - slot.top - BLOCK_GAP) + 'px';
         st.preview.classList.toggle('is-bad', !st.ok);
         st.preview.firstChild.textContent = st.ok ? moveLabel(st) : 'Something is already here';
     }
@@ -1748,7 +1787,7 @@
         var scroller = st.scroller;
         if (!scroller) return 0;
         var r = scroller.getBoundingClientRect();
-        if (st.lastClientY > r.bottom - DRAG_EDGE && st.newTop < st.gridH - st.h) {
+        if (st.lastClientY > r.bottom - DRAG_EDGE && proposedSlot(st).bottom < st.gridH) {
             return Math.min(DRAG_MAX_STEP, Math.max(3, (st.lastClientY - (r.bottom - DRAG_EDGE)) / DRAG_EDGE * DRAG_MAX_STEP));
         }
         if (st.lastClientY < r.top + DRAG_EDGE && st.newTop > 0) {
@@ -1783,15 +1822,20 @@
         }
         return null;
     }
-    // Move one event occurrence to a new day + start, keeping its length and
-    // everything else about it (name, colour, any fields the month view added).
+    // Re-time one event occurrence, keeping everything else about it (name,
+    // colour, any fields the month view added). A move can also land it on
+    // another day, which means lifting the entry into that day's store.
     function moveEventTo(st) {
         var found = findEventEntry(st.srcIso, st.name, st.shm, st.ehm);
         if (!found) return false;
-        var startMin = pxToClockMin(st.newTop);
+        var slot = proposedSlot(st);
+        var startMin = pxToClockMin(slot.top);
         found.store.timestamps.splice(found.index, 1);
         found.entry.startTime = minToHM(startMin);
-        found.entry.endTime = minToHM(startMin + st.durMin);
+        // A move carries the event's exact length across; an edge drag reads the
+        // new end off the grid.
+        found.entry.endTime = minToHM(st.mode === 'move' ? startMin + st.durMin
+                                                         : pxToClockMin(slot.bottom));
         var dstKey = monthKey(st.iso);
         if (typeof dateContent !== 'undefined') {
             if (!dateContent[dstKey]) dateContent[dstKey] = { timestamps: [] };
@@ -1807,8 +1851,12 @@
     function moveTaskTo(st) {
         var t = taskById(st.id);
         if (!t) return false;
-        var startDT = pxToDate(st.iso, st.newTop);
-        var endDT = new Date(startDT.getTime() + st.durMs);
+        var slot = proposedSlot(st);
+        var startDT = pxToDate(st.iso, slot.top);
+        // A move keeps the task's exact length (down to the seconds it was
+        // created with); dragging an edge takes that end from the grid.
+        var endDT = st.mode === 'move' ? new Date(startDT.getTime() + st.durMs)
+                                       : pxToDate(st.iso, slot.bottom);
         var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
         var oldId = String(t.id);
         var newId = String(Date.now()) + '-m';
@@ -1857,14 +1905,22 @@
             if (!col) return;
             e.preventDefault();
             var kind = block.getAttribute('data-kind');
+            // A press on one of the two edge strips resizes that end; anywhere
+            // else in the block moves the whole thing.
+            var handle = e.target.closest('.wk-resize');
+            var mode = !handle ? 'move'
+                : (handle.classList.contains('wk-resize-top') ? 'top' : 'bottom');
+            var top0 = block.offsetTop;
             var st = {
                 cols: cols, scroller: scroller, block: block, col: col, kind: kind,
-                gridH: gridH, h: block.offsetHeight, top0: block.offsetTop,
+                mode: mode, gridH: gridH,
+                top0: top0, bottom0: 0, span0: 0,
                 srcIso: col.getAttribute('data-iso'), iso: col.getAttribute('data-iso'),
                 grabDY: e.clientY - block.getBoundingClientRect().top,
                 startX: e.clientX, startY: e.clientY,
                 lastClientX: e.clientX, lastClientY: e.clientY,
-                newTop: block.offsetTop, ok: true, moved: false, preview: null, rafId: null
+                newTop: top0, newBottom: top0,
+                ok: true, moved: false, preview: null, rafId: null
             };
             if (kind === 'event') {
                 st.name = block.getAttribute('data-name');
@@ -1873,6 +1929,7 @@
                 var sh = hmToHour(st.shm), eh = hmToHour(st.ehm);
                 if (eh <= sh) eh += 24;                       // crosses midnight
                 st.durMin = Math.round((eh - sh) * 60);
+                st.span0 = (st.durMin / 60) * HOUR_H;
             } else {
                 st.id = block.getAttribute('data-id');
                 var t = taskById(st.id);
@@ -1881,7 +1938,13 @@
                 if (!t || !sd || !ed || ed <= sd) return;     // nothing sane to move
                 st.durMs = ed.getTime() - sd.getTime();
                 st.durMin = Math.round(st.durMs / 60000);
+                st.span0 = (st.durMs / 3600000) * HOUR_H;
             }
+            // The span comes from the times, not the rendered height: a block
+            // under the minimum height is drawn taller than it lasts, and reading
+            // its end off the DOM would stretch it to match on the way past.
+            st.bottom0 = top0 + st.span0;
+            st.newBottom = st.bottom0;
             moveState = st;
         });
 
@@ -1913,6 +1976,7 @@
             if (st.rafId != null) cancelAnimationFrame(st.rafId);
             if (!st.moved) return;                    // a plain click, not a drag
             document.body.classList.remove('wk-moving');
+            document.body.classList.remove('wk-resizing');
             document.body.style.userSelect = '';
             if (st.preview && st.preview.parentNode) st.preview.parentNode.removeChild(st.preview);
             st.block.classList.remove('is-moving');
@@ -1920,9 +1984,11 @@
             // capture handler below, or after a beat if no click follows).
             suppressClick = true;
             setTimeout(function () { suppressClick = false; }, 300);
-            // Refused, or never actually left its slot: leave everything alone.
+            // Refused, or nothing about the slot actually changed: leave it alone.
             if (!st.ok) return;
-            if (st.iso === st.srcIso && Math.abs(st.newTop - st.top0) < 0.5) return;
+            if (st.iso === st.srcIso &&
+                Math.abs(st.newTop - st.top0) < 0.5 &&
+                Math.abs(proposedSlot(st).bottom - st.bottom0) < 0.5) return;
             commitMove(st);
         });
 
@@ -2002,7 +2068,7 @@
                     '" data-shm="' + esc(b.startHM) + '" data-ehm="' + esc(b.endHM) + '" style="' + nestPos(b) +
                     ';background:' + col.fill + ';border-color:' + col.border +
                     ';border-left-color:' + col.left + '">' +
-                    leadIcon(b.name) + cardMenuBtn(b.h) + body +
+                    leadIcon(b.name) + cardMenuBtn(b.h) + resizeHandles() + body +
                     '</div>';
             }
             // Task block. Colour-coded by state: completed = green, else by
@@ -2049,7 +2115,7 @@
             return '<div class="wk-event wk-task ' + stateCls + (compactTask ? ' is-compact' : '') + '" data-kind="task"' +
                 ' data-move="' + (movable ? '1' : '0') + '"' +
                 ' data-iso="' + esc(d.iso) + '" data-id="' + esc(String(b.id)) + '" style="' + nestPos(b) + '">' +
-                leadIcon(b.title) + cardMenuBtn(b.h) +
+                leadIcon(b.title) + cardMenuBtn(b.h) + (movable ? resizeHandles() : '') +
                 '<div class="wk-event-head">' +
                     titleEl +
                     (startText ? '<span class="wk-event-start">' + esc(startText) + '</span>' : '') +
