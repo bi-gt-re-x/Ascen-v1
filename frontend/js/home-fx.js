@@ -3,6 +3,7 @@
  * 1. Scroll reveals: sections/cards slide in from the side as they enter the
  *    viewport and slide back out when they leave (IntersectionObserver toggles
  *    .rv-in both ways). Directions are assigned here so the HTML stays clean.
+ *    The hero's text is left alone — home-intro.js choreographs that.
  * 2. Count-up stats: numbers animate from 0 the first time they scroll into view.
  * 3. Daily/Weekly tabs on the Performance chart actually switch the chart.
  * 4. Theme swatches apply the theme (Light/Dark) or explain they're coming soon.
@@ -38,8 +39,9 @@
             targets.push(el);
         }
 
-        // Hero: text from the left, art from the right.
-        mark(document.querySelector('.lp-hero-text'), 'left');
+        // The hero is not marked here. home-intro.js runs its own opening
+        // across those same elements, and two scripts animating one element's
+        // opacity and transform would fight over it.
         mark(document.querySelector('.lp-hero-art'), 'right');
 
         // Section headers drift up; grid children alternate left/right with a
