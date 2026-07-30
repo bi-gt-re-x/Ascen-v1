@@ -2,6 +2,38 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-30 — The calendar becomes something you can work in
+
+Two things the calendar showed but wouldn't let you do: finish a task, and move
+a block. Both are now direct.
+
+- **Click a task's name to finish it.** Hovering the name of an unfinished task
+  turns it into a target — a green tick slides in on the Week and Day grids, a
+  "Mark complete" hint rises on the Month view's plan cards — and one click
+  finishes it. The completion runs `trackTaskCompletion`, the dashboard's own
+  path, so the XP, the level, the streak and any "complete N tasks" goal all
+  move exactly as they would there. `js/calendar/task-complete.js` holds the one
+  in-flight guard (a double click can't award twice) and announces
+  `calendartaskcomplete`, which is how a task finished in one view redraws in
+  the others.
+- **Drag a block to reschedule it.** Press anywhere in a block that isn't its ⋮
+  menu or its click-to-finish name and it follows the pointer: up and down for
+  the time, across for the day. The slot under the pointer is previewed with the
+  times it would take, and a slot that overlaps ANY other block — task or event
+  — is refused outright: the preview turns red and releasing leaves the block
+  where it was. Blocks therefore still cannot overlap, the same rule the grid
+  enforces when they are created.
+
+Two notes for later:
+
+- **A task's slot is moved by re-creating it.** The backend can't move a
+  `created_at`, so a dragged task is deleted and re-added on its new slot, which
+  is what editing its time through the modal already did. That's also why a
+  finished task can't be dragged — re-creating it would re-open it — and why a
+  block that only covers part of its task (a continuation) can't either.
+- **Collision is measured off the live DOM**, not the render-time `dragBusy`
+  map, so it stays true while the pointer crosses into another day's column.
+
 ## 2026-07-29 — The landing page becomes a demonstration
 
 Five passes over `/home`, so the page shows the app working instead of

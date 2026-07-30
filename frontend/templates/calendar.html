@@ -650,6 +650,9 @@
     <script src="{{ url_for('static', filename='js/focus.js') }}"></script>
     <script src="{{ url_for('static', filename='js/focus-theme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar/day-focus.js') }}"></script>
+    <!-- Click-to-finish, shared by all three views. Loaded before them so the
+         views can call CalendarTaskComplete the moment they're wired. -->
+    <script src="{{ url_for('static', filename='js/calendar/task-complete.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar/calendar-month.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar/calendar-week.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar/calendar-day.js') }}"></script>

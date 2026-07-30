@@ -1570,6 +1570,18 @@ function updateBottomSection(dateStr) {
             const completedBadge = (section.isDashboardTask && section.completed)
                 ? `<span class="completed-badge">Completed <svg class="completed-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`
                 : '';
+
+            // An unfinished task can be checked off from here: its name is the
+            // target, and hovering the card shows the hint where the "Completed"
+            // badge will end up. Events have nothing to complete.
+            const canComplete = !!(section.isDashboardTask && !section.completed && section.dashboardTaskId);
+            if (canComplete) li.classList.add('can-complete');
+            const completeHint = canComplete
+                ? `<span class="complete-hint">Mark complete <svg class="completed-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`
+                : '';
+            const nameAttrs = canComplete
+                ? ` role="button" title="Click to mark complete" onclick="completeTaskSection(${index})"`
+                : '';
             // Tasks show a tag row (Task N + difficulty pill); events have neither.
             const cardTags = (taskKindBadge || difficultyBadge)
                 ? `<div class="card-tags">${taskKindBadge}${difficultyBadge}</div>` : '';
@@ -1602,11 +1614,12 @@ function updateBottomSection(dateStr) {
                 ${eventIcon}
                 <div class="card-body">
                     ${cardTags}
-                    <input type="text" class="task-input-inline" value="${section.task}" placeholder="What will you do..." ${readonlyAttr} onchange="updateTimestamp(${index}, 'task', this.value)">
+                    <input type="text" class="task-input-inline" value="${section.task}" placeholder="What will you do..." ${readonlyAttr} onchange="updateTimestamp(${index}, 'task', this.value)"${nameAttrs}>
                     ${timeRow}
                 </div>
                 ${cardMenu}
                 ${completedBadge}
+                ${completeHint}
 
 
 
@@ -3027,6 +3040,50 @@ function removeTaskSection(index) {
     openDeleteModal(section);
 
 }
+
+// Click a pending task's name on a plan card to finish it. The completion goes
+// through CalendarTaskComplete — the dashboard's own path, so the XP, the
+// streak and any "complete N tasks" goal all move exactly as they would there —
+// and the card is only redrawn as done once the server has recorded it.
+function completeTaskSection(index) {
+
+    if (!selectedDate || !dateContent[selectedDate]) return;
+
+    const section = dateContent[selectedDate].timestamps[index];
+
+    if (!section || !section.isDashboardTask || section.completed) return;
+
+    const taskId = section.dashboardTaskId;
+
+    if (!taskId || !window.CalendarTaskComplete) return;
+
+    const card = document.querySelectorAll('#dailyTasks .task-section')[index];
+
+    if (card) card.classList.add('is-completing');   // dimmed + inert while it flies
+
+    window.CalendarTaskComplete.run(taskId, section.xp || 0).then((ok) => {
+
+        if (card) card.classList.remove('is-completing');
+
+        if (!ok) return;   // nothing was awarded — leave the card as it was
+
+        // markTaskCompletedInCalendar (run inside the completion) has already
+        // updated the stored task; mirror it onto this entry so the card flips
+        // to "Completed" without waiting on a reload, and re-shade the month
+        // grid, whose day tints count only the tasks still open.
+        section.completed = true;
+
+        saveCalendarData();
+
+        updateBottomSection(selectedDate);
+
+        renderCalendar(currentMonth, currentYear);
+
+    });
+
+}
+
+window.completeTaskSection = completeTaskSection;
 
 // Toggle a plan card's ⋮ overflow menu (Edit / Remove). Only one open at a time.
 function toggleCardMenu(event) {

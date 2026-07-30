@@ -2464,6 +2464,48 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     box-sizing: border-box;
 }
 
+/* ── Click a task's name to finish it ─────────────────────────────────────────
+   An unfinished task's title is the target. Hovering the card raises a "Mark
+   complete" hint in the very spot the "Completed" badge will occupy once it is
+   done, and hovering the title itself turns it green — so the affordance is
+   where the pointer already is, and the result is where the eye already looks. */
+#dailyTasks .task-section.can-complete .task-input-inline {
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+#dailyTasks .task-section.can-complete .task-input-inline:hover { color: #3fb950 !important; }
+#dailyTasks .complete-hint {
+    position: absolute;
+    right: 18px;
+    bottom: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #9a9ca6;
+    font-weight: 600;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;   /* the title is what's clickable, not the hint */
+    transition: opacity 0.15s ease;
+}
+#dailyTasks .task-section.can-complete:hover .complete-hint { opacity: 1; }
+#dailyTasks .complete-hint .completed-check {
+    width: 17px;
+    height: 17px;
+    padding: 2px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid currentColor;
+    color: inherit;
+    box-sizing: border-box;
+}
+/* Hold the time row clear of the hint, exactly as a done card holds it clear
+   of the badge — otherwise a full start–end range runs under it on hover. */
+#dailyTasks .task-section.can-complete .timestamp-section { padding-right: 128px; }
+/* Mid-request: dimmed and inert until the server answers, so a second click
+   can't land while the first is still in the air. */
+#dailyTasks .task-section.is-completing { opacity: 0.55; pointer-events: none; }
+
 /* Day Completion Progress ring (hosted in #taskCounter) + add button */
 .task-counter {
     background: rgba(255, 255, 255, 0.04);
@@ -2729,7 +2771,9 @@ html[data-theme="light"] #dailyTasks .task-kind-badge {
 }
 html[data-theme="light"] #dailyTasks .task-section .timestamp-section input[type="time"],
 html[data-theme="light"] #dailyTasks .timestamp-section span,
-html[data-theme="light"] #dailyTasks .completed-badge { color: #7a6650 !important; }
+html[data-theme="light"] #dailyTasks .completed-badge,
+html[data-theme="light"] #dailyTasks .complete-hint { color: #7a6650 !important; }
+html[data-theme="light"] #dailyTasks .task-section.can-complete .task-input-inline:hover { color: #2e7d52 !important; }
 html[data-theme="light"] #dailyTasks .card-menu-btn { color: #5c4630; }
 html[data-theme="light"] #dailyTasks .card-menu-btn:hover { background: rgba(92, 66, 39, 0.16); color: #2c2013; }
 html[data-theme="light"] #dailyTasks .card-menu {

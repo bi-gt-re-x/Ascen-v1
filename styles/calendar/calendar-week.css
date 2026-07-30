@@ -190,6 +190,33 @@
 }
 html[data-theme="dark"] .wk-drag-preview { border-color: #8fbcff; background: rgba(143, 188, 255, .18); }
 
+/* Drag-to-move: the slot the held block would land on, labelled with the times
+   it would take. Red, and captioned, when something is already there — that
+   drop is refused and the block stays where it was. */
+.wk-move-preview {
+    position: absolute; left: 4px; right: 4px; z-index: 7; pointer-events: none;
+    border-radius: 8px; border: 1.5px dashed #2c5aa0;
+    background: rgba(44, 90, 160, .16);
+    display: flex; align-items: flex-start; overflow: hidden;
+}
+.wk-move-preview > span {
+    padding: 3px 7px; font-size: 11px; font-weight: 700; color: #2c5aa0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wk-move-preview.is-bad { border-color: #c0392b; background: rgba(192, 57, 43, .16); }
+.wk-move-preview.is-bad > span { color: #c0392b; }
+html[data-theme="dark"] .wk-move-preview { border-color: #8fbcff; background: rgba(143, 188, 255, .18); }
+html[data-theme="dark"] .wk-move-preview > span { color: #cfe0ff; }
+html[data-theme="dark"] .wk-move-preview.is-bad { border-color: #f2a3a3; background: rgba(242, 163, 163, .16); }
+html[data-theme="dark"] .wk-move-preview.is-bad > span { color: #f2a3a3; }
+
+/* A block that can be picked up says so; the one being dragged fades out of the
+   way of its own preview. The grabbing cursor is held on the body for the whole
+   drag, so it doesn't flicker back over gaps between blocks. */
+.wk-event[data-move="1"] { cursor: grab; }
+.wk-event.is-moving { opacity: .35; cursor: grabbing; }
+body.wk-moving, body.wk-moving * { cursor: grabbing !important; }
+
 .wk-event {
     position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 6px 8px;
     border: 1px solid transparent; overflow: hidden; box-sizing: border-box;
@@ -225,6 +252,32 @@ html[data-theme="dark"] .wk-drag-preview { border-color: #8fbcff; background: rg
    a green check sign + green text, so the block's colours don't change. */
 .wk-event.wk-task.is-done { color: #2e7d52; }
 .wk-event-check { font-weight: 800; margin-right: 1px; }
+
+/* Click-to-finish: the name of an unfinished task is a target. Hovering it
+   slides a green tick in ahead of the title and turns the name green, so the
+   affordance appears exactly where the reader is already pointing. The tick
+   takes its width from a transition rather than display:none so the title
+   doesn't jump the moment the pointer lands. */
+.wk-task-name { cursor: pointer; }
+.wk-task-tick {
+    display: inline-block; overflow: hidden; vertical-align: baseline;
+    max-width: 0; opacity: 0; color: #2e7d52; font-weight: 800;
+    transition: max-width .14s ease, opacity .14s ease, margin-right .14s ease;
+}
+.wk-task-name:hover .wk-task-tick,
+.wk-task-name:focus-visible .wk-task-tick { max-width: 1.2em; opacity: 1; margin-right: 3px; }
+.wk-task-name:hover, .wk-task-name:focus-visible { color: #2e7d52; }
+.wk-task-name:focus-visible { outline: 2px solid #2e7d52; outline-offset: 1px; border-radius: 4px; }
+/* Mid-request: the block is dimmed and inert until the server answers, so a
+   second click can't land while the first is still in the air. */
+.wk-event.wk-task.is-completing, .day-task-item.is-completing { opacity: .55; pointer-events: none; }
+
+/* Tasks Left rows behave the same way, with the row's ring as the tick. */
+.day-task-item .day-task-ring { transition: background .14s ease, border-color .14s ease; }
+.day-task-item:hover .day-task-ring { border-color: #2e9e6b; }
+.day-task-name:hover, .day-task-name:focus-visible { color: #2e7d52; }
+.day-task-name:hover ~ .day-task-diff { opacity: .55; }
+.day-task-item:has(.day-task-name:hover) .day-task-ring { background: #2e9e6b; border-color: #2e9e6b; }
 
 /* Calendar events: light 40%-transparent fills (set inline, from a palette that
    avoids the task colours); dark text for contrast over the translucent fill. */
@@ -464,3 +517,11 @@ html[data-theme="dark"] .wk-event.wk-task.prio-low    { background: #16233a; bor
 html[data-theme="dark"] .wk-event.wk-task.prio-medium { background: #2d2718; border-color: #4d4327; color: #e6c979; border-left-color: #e6c979; }
 html[data-theme="dark"] .wk-event.wk-task.prio-high   { background: #341c1c; border-color: #5a2f2f; color: #f2a3a3; border-left-color: #f2a3a3; }
 html[data-theme="dark"] .wk-event.wk-task.is-done { color: #86d6a5; }
+/* Click-to-finish, dark: the same green, lightened to stay readable on the
+   muted block fills. */
+html[data-theme="dark"] .wk-task-tick,
+html[data-theme="dark"] .wk-task-name:hover,
+html[data-theme="dark"] .wk-task-name:focus-visible,
+html[data-theme="dark"] .day-task-name:hover,
+html[data-theme="dark"] .day-task-name:focus-visible { color: #86d6a5; }
+html[data-theme="dark"] .wk-task-name:focus-visible { outline-color: #86d6a5; }

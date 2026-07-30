@@ -570,6 +570,44 @@
         }
     }
 
+    // --- Click a task's name to finish it -------------------------------------
+    // The Week and Day grids and the Day view's "Tasks Left" all mark their
+    // pending task names .wk-task-name. Clicking one hands the task to
+    // CalendarTaskComplete (the dashboard's own completion path) and waits for
+    // the 'calendartaskcomplete' event below to redraw — so nothing is shown as
+    // done until the server has actually recorded it.
+    function completeTaskByName(nameEl) {
+        var host = nameEl.closest('.wk-task') || nameEl.closest('.day-task-item');
+        if (!host) return;
+        var id = host.getAttribute('data-id');
+        if (!id || !window.CalendarTaskComplete || window.CalendarTaskComplete.isBusy(id)) return;
+        var task = null;
+        gTasks.forEach(function (t) { if (String(t.id) === String(id)) task = t; });
+        if (task && task.status === 'done') return;
+        var xp = task ? (Number(task.xp_value || task.xp_reward) || 0) : 0;
+        host.classList.add('is-completing');   // dimmed + "…" while the request runs
+        window.CalendarTaskComplete.run(id, xp).then(function () {
+            host.classList.remove('is-completing');
+        });
+    }
+
+    // A task finished anywhere on this page — a grid block, a Tasks Left row, or
+    // a card in the Month panel — lands here. Stamp the cached copy so the grid
+    // can redraw at once, then reload for the authoritative numbers.
+    function onTaskCompleted(id) {
+        var hit = false;
+        gTasks.forEach(function (t) {
+            if (String(t.id) === String(id) && t.status !== 'done') {
+                t.status = 'done';
+                t.completed_at = new Date().toISOString();
+                hit = true;
+            }
+        });
+        if (!hit) return;
+        renderActive();
+        loadSidebar(true);   // true: don't yank the grid back to the current time
+    }
+
     // --- Per-block overflow (three-dots) menu: edit / delete -------------------
     // The dots glyph adapts to the block's height: a short block gets a
     // horizontal ellipsis (⋯) so it fits the thin strip; a taller block gets
@@ -1597,6 +1635,307 @@
         });
     }
 
+    // --- Drag a block to another slot ----------------------------------------
+    // Press anywhere inside a block that isn't its ⋮ menu or (on a task) its
+    // click-to-finish name, and the block follows the pointer: up and down to
+    // change the time, across to change the day (the Week grid; the Day view has
+    // the one column). The slot under the pointer is previewed with the times it
+    // would take, and a slot overlapping ANY other block — task or event, by so
+    // much as a minute — is refused: the preview turns red, and releasing there
+    // leaves the block exactly where it was. Nothing can be dropped onto
+    // something else, which is the same rule the grid already enforces when
+    // blocks are created.
+    //
+    // The move keeps the block's length, so only its start (and day) change.
+    // An event's new times go to the month store; a task is re-created on the new
+    // slot, since the backend can't move a task's created_at (the edit flow in
+    // confirmWeekTask does the same).
+    var moveState = null;
+    var __moveDocWired = false;
+    var MOVE_MIN_PX = 4;        // pointer travel before a press counts as a drag
+    var suppressClick = false;  // set on drop, so the release isn't also a click
+
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+    function minToHM(m) {
+        m = Math.round(((m % 1440) + 1440) % 1440);
+        return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60);
+    }
+    // Grid pixels (from a column's top) -> the real moment they stand for. The
+    // column starts at START_HOUR, so pixels past midnight land on the next day —
+    // which is what makes an overnight task keep its true dates.
+    function pxToDate(iso, px) {
+        var d = new Date(iso + 'T00:00:00');
+        d.setHours(START_HOUR, 0, 0, 0);
+        return new Date(d.getTime() + (px / HOUR_H) * 3600000);
+    }
+    function isoStamp(d) {
+        return isoDay(d) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+    }
+    function taskById(id) {
+        for (var i = 0; i < gTasks.length; i++) {
+            if (String(gTasks[i].id) === String(id)) return gTasks[i];
+        }
+        return null;
+    }
+
+    // Every column the given container holds. The Day view's container IS its
+    // single column; the Week grid holds seven.
+    function columnsOf(container) {
+        if (!container) return [];
+        if (container.classList && container.classList.contains('wk-daycol')) return [container];
+        return Array.prototype.slice.call(container.querySelectorAll('.wk-daycol'));
+    }
+    function columnAt(container, clientX) {
+        var cols = columnsOf(container);
+        for (var i = 0; i < cols.length; i++) {
+            var r = cols[i].getBoundingClientRect();
+            if (clientX >= r.left && clientX <= r.right) return cols[i];
+        }
+        return null;
+    }
+    // Would the block sit clear of everything else in this column? Measured off
+    // the live DOM rather than the render-time dragBusy map, so it stays true
+    // while the pointer moves between columns.
+    function slotIsFree(col, top, h, self) {
+        var EPS = 0.5;                       // touching edges are not an overlap
+        var bottom = top + h;
+        var others = col.querySelectorAll('.wk-event');
+        for (var i = 0; i < others.length; i++) {
+            if (others[i] === self) continue;
+            var oTop = others[i].offsetTop;
+            var oBottom = oTop + others[i].offsetHeight;
+            if (Math.min(bottom, oBottom) - Math.max(top, oTop) > EPS) return false;
+        }
+        return true;
+    }
+
+    function moveLabel(st) {
+        var startMin = pxToClockMin(st.newTop);
+        return hmLabel(minToHM(startMin)) + ' – ' + hmLabel(minToHM(startMin + st.durMin));
+    }
+
+    function moveBegin(st) {
+        st.moved = true;
+        st.block.classList.add('is-moving');
+        document.body.style.userSelect = 'none';   // no text selection mid-drag
+        document.body.classList.add('wk-moving');
+        var preview = document.createElement('div');
+        preview.className = 'wk-move-preview';
+        preview.appendChild(document.createElement('span'));
+        st.col.appendChild(preview);
+        st.preview = preview;
+    }
+
+    function moveApply(st) {
+        var col = columnAt(st.cols, st.lastClientX) || st.col;
+        if (col !== st.col) {
+            st.col = col;
+            st.iso = col.getAttribute('data-iso');
+            col.appendChild(st.preview);
+        }
+        var y = snapPx(st.lastClientY - col.getBoundingClientRect().top - st.grabDY);
+        y = Math.max(0, Math.min(y, st.gridH - st.h));
+        st.newTop = y;
+        st.ok = slotIsFree(col, y, st.h, st.block);
+        st.preview.style.top = y + 'px';
+        st.preview.style.height = st.h + 'px';
+        st.preview.classList.toggle('is-bad', !st.ok);
+        st.preview.firstChild.textContent = st.ok ? moveLabel(st) : 'Something is already here';
+    }
+
+    // Edge auto-scroll, as in drag-to-create: nearer the edge, faster.
+    function moveEdgeScroll(st) {
+        var scroller = st.scroller;
+        if (!scroller) return 0;
+        var r = scroller.getBoundingClientRect();
+        if (st.lastClientY > r.bottom - DRAG_EDGE && st.newTop < st.gridH - st.h) {
+            return Math.min(DRAG_MAX_STEP, Math.max(3, (st.lastClientY - (r.bottom - DRAG_EDGE)) / DRAG_EDGE * DRAG_MAX_STEP));
+        }
+        if (st.lastClientY < r.top + DRAG_EDGE && st.newTop > 0) {
+            return -Math.min(DRAG_MAX_STEP, Math.max(3, ((r.top + DRAG_EDGE) - st.lastClientY) / DRAG_EDGE * DRAG_MAX_STEP));
+        }
+        return 0;
+    }
+    function moveAutoTick() {
+        if (!moveState) return;
+        var st = moveState;
+        var amt = moveEdgeScroll(st);
+        if (st.scroller && amt !== 0) {
+            var before = st.scroller.scrollTop;
+            st.scroller.scrollTop += amt;
+            if (st.scroller.scrollTop !== before) moveApply(st);
+            st.rafId = requestAnimationFrame(moveAutoTick);
+        } else {
+            st.rafId = null;   // idle; the next mousemove restarts it
+        }
+    }
+
+    // Find an event's entry in the month store by the identity the block carries.
+    function findEventEntry(iso, name, shm, ehm) {
+        var store = (typeof dateContent !== 'undefined') ? dateContent[monthKey(iso)] : null;
+        if (!store || !Array.isArray(store.timestamps)) return null;
+        for (var i = 0; i < store.timestamps.length; i++) {
+            var t = store.timestamps[i];
+            if (t && !t.isDashboardTask && t.task === name &&
+                t.startTime === shm && t.endTime === ehm) {
+                return { store: store, index: i, entry: t };
+            }
+        }
+        return null;
+    }
+    // Move one event occurrence to a new day + start, keeping its length and
+    // everything else about it (name, colour, any fields the month view added).
+    function moveEventTo(st) {
+        var found = findEventEntry(st.srcIso, st.name, st.shm, st.ehm);
+        if (!found) return false;
+        var startMin = pxToClockMin(st.newTop);
+        found.store.timestamps.splice(found.index, 1);
+        found.entry.startTime = minToHM(startMin);
+        found.entry.endTime = minToHM(startMin + st.durMin);
+        var dstKey = monthKey(st.iso);
+        if (typeof dateContent !== 'undefined') {
+            if (!dateContent[dstKey]) dateContent[dstKey] = { timestamps: [] };
+            if (!Array.isArray(dateContent[dstKey].timestamps)) dateContent[dstKey].timestamps = [];
+            dateContent[dstKey].timestamps.push(found.entry);
+        }
+        if (typeof saveCalendarData === 'function') saveCalendarData();
+        return true;
+    }
+    // Re-create the task on its new slot. The backend has no way to move a
+    // created_at, so this deletes and re-adds (chained, no datastore race) —
+    // exactly what editing a task's time through the modal does.
+    function moveTaskTo(st) {
+        var t = taskById(st.id);
+        if (!t) return false;
+        var startDT = pxToDate(st.iso, st.newTop);
+        var endDT = new Date(startDT.getTime() + st.durMs);
+        var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
+        var oldId = String(t.id);
+        var newId = String(Date.now()) + '-m';
+        var name = t.title || t.name || '';
+        var xp = Number(t.xp_value || t.xp_reward) || 0;
+        var priority = t.priority || xpToPriority(xp);
+        var createdAt = isoStamp(startDT);
+        var dueDate = isoStamp(endDT);
+
+        gTasks = gTasks.filter(function (x) { return String(x.id) !== oldId; });
+        gTasks.push({ id: newId, title: name, status: 'todo', priority: priority,
+                      xp_value: xp, created_at: createdAt, due_date: dueDate,
+                      show_on_calendar: true });
+        runSequential([
+            function () { return Promise.resolve(typeof deleteTaskFromBackendWithoutTracking === 'function' ? deleteTaskFromBackendWithoutTracking(oldId) : null); },
+            function () { return Promise.resolve(typeof addTaskToBackend === 'function' ? addTaskToBackend({ id: newId, username: user, name: name, priority: priority, xp_reward: xp, due_date: dueDate, created_at: createdAt, show_on_calendar: true }) : null); }
+        ]);
+        return true;
+    }
+
+    function commitMove(st) {
+        var done = st.kind === 'event' ? moveEventTo(st) : moveTaskTo(st);
+        if (!done) return;
+        renderActive();
+        // An event lives in the month view's store, so the month grid's shading
+        // and its day panel are showing the old day until they're redrawn.
+        if (st.kind === 'event') {
+            if (typeof renderCalendar === 'function') renderCalendar(currentMonth, currentYear);
+            if (typeof updateBottomSection === 'function' && selectedDate) updateBottomSection(selectedDate);
+        }
+    }
+
+    function initDragMove(cols, scroller) {
+        if (!cols || cols.__moveWired) return;
+        cols.__moveWired = true;
+        var gridH = (END_HOUR - START_HOUR) * HOUR_H;
+
+        cols.addEventListener('mousedown', function (e) {
+            if (e.button !== 0) return;
+            var block = e.target.closest ? e.target.closest('.wk-event') : null;
+            if (!block || block.getAttribute('data-move') !== '1') return;
+            // The two reserved zones: the ⋮ menu (edit / delete) and, on a task,
+            // the name that finishes it. A press there is that control's, not a drag.
+            if (e.target.closest('.wk-card-menu') || e.target.closest('.wk-task-name')) return;
+            var col = block.closest('.wk-daycol');
+            if (!col) return;
+            e.preventDefault();
+            var kind = block.getAttribute('data-kind');
+            var st = {
+                cols: cols, scroller: scroller, block: block, col: col, kind: kind,
+                gridH: gridH, h: block.offsetHeight, top0: block.offsetTop,
+                srcIso: col.getAttribute('data-iso'), iso: col.getAttribute('data-iso'),
+                grabDY: e.clientY - block.getBoundingClientRect().top,
+                startX: e.clientX, startY: e.clientY,
+                lastClientX: e.clientX, lastClientY: e.clientY,
+                newTop: block.offsetTop, ok: true, moved: false, preview: null, rafId: null
+            };
+            if (kind === 'event') {
+                st.name = block.getAttribute('data-name');
+                st.shm = block.getAttribute('data-shm');
+                st.ehm = block.getAttribute('data-ehm');
+                var sh = hmToHour(st.shm), eh = hmToHour(st.ehm);
+                if (eh <= sh) eh += 24;                       // crosses midnight
+                st.durMin = Math.round((eh - sh) * 60);
+            } else {
+                st.id = block.getAttribute('data-id');
+                var t = taskById(st.id);
+                var sd = t ? toDate(t.created_at) : null;
+                var ed = t ? toDate(t.due_date) : null;
+                if (!t || !sd || !ed || ed <= sd) return;     // nothing sane to move
+                st.durMs = ed.getTime() - sd.getTime();
+                st.durMin = Math.round(st.durMs / 60000);
+            }
+            moveState = st;
+        });
+
+        if (__moveDocWired) return;
+        __moveDocWired = true;
+
+        document.addEventListener('mousemove', function (e) {
+            if (!moveState) return;
+            var st = moveState;
+            st.lastClientX = e.clientX;
+            st.lastClientY = e.clientY;
+            if (!st.moved) {
+                // Below the threshold this is still a click (the ⋮ menu and the
+                // click-to-finish name both need presses to stay clicks).
+                if (Math.abs(e.clientX - st.startX) < MOVE_MIN_PX &&
+                    Math.abs(e.clientY - st.startY) < MOVE_MIN_PX) return;
+                moveBegin(st);
+            }
+            moveApply(st);
+            if (st.rafId == null && moveEdgeScroll(st) !== 0) {
+                st.rafId = requestAnimationFrame(moveAutoTick);
+            }
+        });
+
+        document.addEventListener('mouseup', function () {
+            if (!moveState) return;
+            var st = moveState;
+            moveState = null;
+            if (st.rafId != null) cancelAnimationFrame(st.rafId);
+            if (!st.moved) return;                    // a plain click, not a drag
+            document.body.classList.remove('wk-moving');
+            document.body.style.userSelect = '';
+            if (st.preview && st.preview.parentNode) st.preview.parentNode.removeChild(st.preview);
+            st.block.classList.remove('is-moving');
+            // The release also fires a click. Swallow that one (cleared by the
+            // capture handler below, or after a beat if no click follows).
+            suppressClick = true;
+            setTimeout(function () { suppressClick = false; }, 300);
+            // Refused, or never actually left its slot: leave everything alone.
+            if (!st.ok) return;
+            if (st.iso === st.srcIso && Math.abs(st.newTop - st.top0) < 0.5) return;
+            commitMove(st);
+        });
+
+        // The click that follows a drag would otherwise reach whatever the pointer
+        // was released over — finishing a task, or opening its menu.
+        document.addEventListener('click', function (e) {
+            if (!suppressClick) return;
+            suppressClick = false;
+            e.stopPropagation();
+            e.preventDefault();
+        }, true);
+    }
+
     // Draw the seven day columns from the cached real tasks. Kept separate so it
     // can redraw when tasks arrive (async) without rebuilding headers/focus.
     // Build one day's inner grid HTML (hour lines + positioned blocks) for the iso
@@ -1658,6 +1997,7 @@
                           esc(hmLabel(b.startHM) + ' – ' + hmLabel(b.endHM)) +
                       '</span></div>';
                 return '<div class="wk-event wk-event-cal' + (compact ? ' is-compact' : '') + '" data-kind="event"' +
+                    ' data-move="1"' +
                     ' data-iso="' + esc(d.iso) + '" data-name="' + esc(b.name) +
                     '" data-shm="' + esc(b.startHM) + '" data-ehm="' + esc(b.endHM) + '" style="' + nestPos(b) +
                     ';background:' + col.fill + ';border-color:' + col.border +
@@ -1691,14 +2031,27 @@
             // time on one row, dropping the due/XP footer that won't fit.
             var compactTask = (b.end - b.start) * 60 <= 15;
             var startText = b.startDT ? (compactTask ? timeLabelShort(b.startDT) : timeLabel(b.startDT)) : '';
+            // The name of an unfinished task is the check-it-off target: hovering
+            // it swaps in a tick, and a click finishes the task (see
+            // wireTaskComplete). A finished one is a plain title again.
+            var titleBody = esc(b.title) + (b.cont ? ' — continued' : '');
+            var titleEl = b.done
+                ? '<div class="wk-event-title"><span class="wk-event-check">✓</span> ' + titleBody + '</div>'
+                : '<div class="wk-event-title wk-task-name" role="button" tabindex="0"' +
+                      ' title="Click to mark complete">' +
+                      '<span class="wk-task-tick" aria-hidden="true">✓</span>' + titleBody +
+                  '</div>';
+            // Draggable unless the block isn't the whole task: a finished one is a
+            // record of when it was done, and a block that runs on from (or into)
+            // another day is only part of its task — moving either would be
+            // rewriting history rather than rescheduling.
+            var movable = !b.done && !b.cont && !b.contDT;
             return '<div class="wk-event wk-task ' + stateCls + (compactTask ? ' is-compact' : '') + '" data-kind="task"' +
+                ' data-move="' + (movable ? '1' : '0') + '"' +
                 ' data-iso="' + esc(d.iso) + '" data-id="' + esc(String(b.id)) + '" style="' + nestPos(b) + '">' +
                 leadIcon(b.title) + cardMenuBtn(b.h) +
                 '<div class="wk-event-head">' +
-                    '<div class="wk-event-title">' +
-                        (b.done ? '<span class="wk-event-check">✓</span> ' : '') +
-                        esc(b.title) + (b.cont ? ' — continued' : '') +
-                    '</div>' +
+                    titleEl +
                     (startText ? '<span class="wk-event-start">' + esc(startText) + '</span>' : '') +
                 '</div>' +
                 (compactTask ? '' :
@@ -2031,10 +2384,13 @@
                     var p = String(b.priority || '').toLowerCase();
                     var cls = p === 'high' ? 'high' : (p === 'medium' ? 'med' : 'low');
                     var label = p ? (p.charAt(0).toUpperCase() + p.slice(1)) : '—';
-                    return '<li class="day-task-item">' +
+                    // Same deal as a grid block: the name is the check-it-off
+                    // target, and the ring beside it fills in on hover.
+                    return '<li class="day-task-item" data-id="' + esc(String(b.id)) + '">' +
                         '<span class="day-task-ring"></span>' +
                         iconForName(b.title) +
-                        '<span class="day-task-name">' + esc(b.title) + '</span>' +
+                        '<span class="day-task-name wk-task-name" role="button" tabindex="0"' +
+                            ' title="Click to mark complete">' + esc(b.title) + '</span>' +
                         '<span class="day-task-diff ' + cls + '">' + esc(label) + '</span>' +
                     '</li>';
                 }).join('');
@@ -2126,7 +2482,10 @@
     // Rate/XP are all derived from the tasks created in that window so they stay
     // internally consistent (Completed <= Total, Rate <= 100%). Streak is the
     // account's live streak.
-    function loadSidebar() {
+    // keepScroll: reload the data without jumping the grid back to the current
+    // time. Finishing a task reloads from here, and a reader who scrolled to a
+    // different hour to click it should stay where they were.
+    function loadSidebar(keepScroll) {
         var user = (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
         fetch('/api/get_user_data?username=' + encodeURIComponent(user), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
@@ -2173,9 +2532,9 @@
 
                 renderPriorities(tasks);
                 renderWeeklyFocusTime();
-                scrollToNow();   // grid + data are ready — jump to the current time
+                if (!keepScroll) scrollToNow();   // grid + data ready — jump to now
             })
-            .catch(function () { renderPriorities([]); scrollToNow(); });
+            .catch(function () { renderPriorities([]); if (!keepScroll) scrollToNow(); });
     }
 
     // --- Weekly Focus Time: focused against planned --------------------------
@@ -2520,6 +2879,32 @@
         }
         wireCardMenu(document.getElementById('wkDayCols'));
         wireCardMenu(document.getElementById('dayCol'));
+
+        // Click (or Enter/Space on the focused name) finishes the task. Delegated,
+        // so it keeps working across every redraw of the grid and the task list.
+        function wireTaskComplete(container) {
+            if (!container || container.__doneWired) return;
+            container.__doneWired = true;
+            container.addEventListener('click', function (e) {
+                var name = e.target.closest ? e.target.closest('.wk-task-name') : null;
+                if (!name) return;
+                e.stopPropagation();   // not a click on the block behind it
+                completeTaskByName(name);
+            });
+            container.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+                var name = e.target.closest ? e.target.closest('.wk-task-name') : null;
+                if (!name) return;
+                e.preventDefault();
+                completeTaskByName(name);
+            });
+        }
+        wireTaskComplete(document.getElementById('wkDayCols'));
+        wireTaskComplete(document.getElementById('dayCol'));
+        wireTaskComplete(document.getElementById('dayTasksLeft'));
+        document.addEventListener('calendartaskcomplete', function (e) {
+            onTaskCompleted(e.detail && e.detail.id);
+        });
         document.addEventListener('click', closeCardPop);
         window.addEventListener('resize', closeCardPop);
         var wkScroll = document.querySelector('#weekView .wk-scroll');
@@ -2531,6 +2916,11 @@
         // column both, each with its own scroller for edge auto-scroll.
         initDragCreate(document.getElementById('wkDayCols'), document.querySelector('#weekView .wk-scroll'));
         initDragCreate(document.getElementById('dayCol'), document.querySelector('#dayView .wk-scroll'));
+
+        // Drag a block itself to reschedule it — across days on the week grid,
+        // up and down the hours on both.
+        initDragMove(document.getElementById('wkDayCols'), document.querySelector('#weekView .wk-scroll'));
+        initDragMove(document.getElementById('dayCol'), document.querySelector('#dayView .wk-scroll'));
 
         // Keep the "now" lines (week + day) tracking the clock, re-placed each minute.
         setInterval(function () { renderNowLine(); renderDayNowLine(); }, 60000);
