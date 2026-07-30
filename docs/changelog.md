@@ -2,6 +2,23 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-30 — The hidden chain had no first step
+
+Its opening move is ten clicks on the app icon, and `easter-egg.js` was looking
+for `document.querySelector('.logo')`. No page has a `.logo` — the top bar's
+icon is `.topnav-brand`, and has been since the shared top nav was introduced —
+so the script returned before wiring anything up. Nothing after it could be
+reached either: no clue, so no pentagon, so no engine. It looked for all the
+world like a chain of broken features rather than one dead selector.
+
+- The icon is found by both names now, and in **dark mode it stops being the
+  link home it appears to be**: the click is prevented, the icon pops (a bounce
+  that grows with the count, beside the screen shake that was already there),
+  and the tenth reveals the clue. In the light, or once the clue is out, it is
+  an ordinary link again.
+- **No streak.** Ten clicks at any pace. They had to land within 1.5s of each
+  other, which is not how anybody clicks a logo on purpose.
+
 ## 2026-07-30 — A second door into the riddle
 
 The testimonial on the landing page is now a way in. Click it and it twitches;

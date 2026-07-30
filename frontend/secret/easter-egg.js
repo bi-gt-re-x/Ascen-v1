@@ -1,7 +1,10 @@
 /* easter-egg.js — the hidden quote.
  *
- * Click the app icon (the nav logo) 10 times in a row and the day's quote
- * slips away, replaced — for the rest of the day — by a cryptic clue. The
+ * Click the app icon (the nav logo) 10 times in the dark and the day's quote
+ * slips away, replaced — for the rest of the day — by a cryptic clue. In dark
+ * mode the icon stops behaving like the link home it is: the click goes
+ * nowhere, the icon pops, and the tenth reveals the clue. In the light, or once
+ * the clue is out, it is a plain link again. The
  * swap is sleek: the old quote glides out, the new one rises in with an
  * ominous glow while the whole screen shakes. The unlock is remembered per
  * user per day (localStorage), so a reload keeps the mysterious quote (and
@@ -16,7 +19,6 @@
 
     var QUOTE = '"The pentagon is the key, find it" -Mysterious,,';
     var NEEDED = 10;        // clicks to unlock
-    var RESET_MS = 1500;    // gap that breaks the "in a row" streak
 
     function user() {
         return (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
@@ -102,28 +104,45 @@
             if (container) container.classList.add('quote-ominous');
         }
 
-        var icon = document.querySelector('.logo');
+        // The app icon in the top bar. It is .topnav-brand — a link home — and
+        // this used to look for a .logo that no page has, so the whole chain has
+        // been unreachable: no clue, no pentagon, no engine. Both names are
+        // accepted now, older markup included.
+        var icon = document.querySelector('.topnav-brand') || document.querySelector('.logo');
         if (!icon) return;
         icon.style.cursor = 'pointer';
         icon.setAttribute('title', '');   // no tooltip hint — it's a secret
 
+        // No streak: ten clicks, at whatever pace suits. They used to have to
+        // land within RESET_MS of each other, which is a rate nobody clicks a
+        // logo at on purpose — every pause put the count back to nothing.
         var clicks = 0;
-        var resetTimer = null;
 
-        icon.addEventListener('click', function () {
-            if (isUnlocked()) return;     // one reveal per day
-            if (!isDark()) { clicks = 0; return; }   // only reachable in dark mode
+        icon.addEventListener('click', function (e) {
+            // In the light, or once today's clue is out, the icon is just the
+            // link home it appears to be.
+            if (isUnlocked() || !isDark()) { clicks = 0; return; }
+            // In the dark it stops being a link and starts counting: the click
+            // goes nowhere, the icon pops, and the tenth brings the quote.
+            e.preventDefault();
             clicks++;
-            if (resetTimer) clearTimeout(resetTimer);
-            resetTimer = setTimeout(function () { clicks = 0; }, RESET_MS);
             if (clicks >= NEEDED) {
                 clicks = 0;
-                if (resetTimer) clearTimeout(resetTimer);
                 reveal(quoteEl, container);
             } else {
-                wobble(clicks);   // little wobble that grows bigger each click
+                pop(icon, clicks);   // the icon bounces…
+                wobble(clicks);      // …and the screen shakes harder each time
             }
         });
+    }
+
+    // The icon's own answer to a click: a bounce that grows with the count, so
+    // the tenth is plainly the end of something that has been building.
+    function pop(icon, n) {
+        icon.style.setProperty('--pop', (1.06 + n * 0.02).toFixed(2));
+        icon.classList.remove('easter-pop');
+        void icon.offsetWidth;               // restart the animation
+        icon.classList.add('easter-pop');
     }
 
     // A per-click wobble whose amplitude climbs with the streak (click 1 = a

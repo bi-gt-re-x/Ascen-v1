@@ -921,6 +921,20 @@ body.easter-wobble {
     animation: easterWobble 0.3s ease both;
 }
 
+/* The icon's own answer to each click: a bounce that grows with the count
+   (--pop, raised by easter-egg.js), so the tenth is plainly the end of
+   something that has been building. */
+@keyframes easterPop {
+    0%   { transform: scale(1); }
+    38%  { transform: scale(var(--pop, 1.1)); }
+    68%  { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+.topnav-brand.easter-pop, .logo.easter-pop {
+    animation: easterPop 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: 50% 50%;
+}
+
 /* The reveal's climax shake — the biggest of all, more violent than click 9. */
 @keyframes easterShake {
     0%, 100% { transform: translate(0, 0) rotate(0); }
@@ -963,6 +977,7 @@ body.easter-shake {
     #dailyQuote.quote-slide-in { animation: none; transition: none; transform: none; opacity: 1; }
     body.easter-wobble,
     body.easter-shake { animation: none; }
+    /* The pop stays: it is small, and it is the only sign a click counted. */
     #easterDark { transition: none; }
 }
 
