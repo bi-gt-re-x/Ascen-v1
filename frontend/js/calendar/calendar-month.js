@@ -1094,7 +1094,12 @@ function syncDayPanelToMonth() {
 
     if (!left || !title || !panel) return;
 
-    panel.style.paddingTop = '';   // measure the panel where it naturally sits
+    // Measure everything where it naturally sits: no shift, no offset.
+    left.style.transform = '';
+
+    right.style.transform = '';
+
+    panel.style.paddingTop = '';
 
     // On a narrow screen the two columns stack, one under the other, and there
     // is no line to share — pushing the panel down there would only leave a
@@ -1106,6 +1111,36 @@ function syncDayPanelToMonth() {
     const offset = title.getBoundingClientRect().top - leftTop;
 
     panel.style.paddingTop = offset > 1 ? Math.round(offset) + 'px' : '';
+
+    liftMonthColumns(left, right, title);
+
+}
+
+// Both sides of the month then rise by 20% of the screen. A flat 20vh is more
+// than the page has to give on a normal laptop: the two headings end up behind
+// the top bar and the view selector, which are fixed and don't move out of the
+// way. So the lift is 20% of the screen or the room actually above the headings,
+// whichever is less — the full 20% on a tall screen, as much of it as fits on a
+// short one.
+function liftMonthColumns(left, right, title) {
+
+    const GAP = 12;   // breathing room below the fixed chrome
+
+    let chromeBottom = 0;
+
+    document.querySelectorAll('.topnav, .view-toggle').forEach(el => {
+        chromeBottom = Math.max(chromeBottom, el.getBoundingClientRect().bottom);
+    });
+
+    const headroom = title.getBoundingClientRect().top - (chromeBottom + GAP);
+
+    const lift = Math.max(0, Math.min(window.innerHeight * 0.2, headroom));
+
+    const shift = lift > 1 ? `translateY(${-Math.round(lift)}px)` : '';
+
+    left.style.transform = shift;
+
+    right.style.transform = shift;
 
 }
 

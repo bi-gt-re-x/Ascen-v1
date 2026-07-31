@@ -2,6 +2,25 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-31 — The month view moves up the page
+
+Both sides of the month — the name and its grid, the plan and its events, the
+progress ring — rise by 20% of the screen height, closing the empty band the
+vertical centring left under the top bar.
+
+Twenty per cent is what there is room for on a tall screen and more than there
+is on a short one: at 1440×900 a flat 20vh (180px) drives both headings up
+behind the fixed top bar and the view selector, which don't move out of the way.
+So the shift is the smaller of 20% of the screen and the room actually above the
+headings — the full 260px at 1440×1300, 88px at 1440×900, and nothing at all
+below 1120px, where the columns stack and the calendar is already at the top.
+
+It is set alongside the heading alignment (`syncDayPanelToMonth`), so the two
+are always worked out from the same measurement and the headings stay on one
+line at every size. The shift is applied without a CSS transition on purpose: a
+transition needs frames, and this runs at moments — a hidden pane being
+revealed, a background tab — when there are none.
+
 ## 2026-07-31 — The calendar's controls find their corner
 
 Week / Day / Month led the page from the top-left, on a row of its own above

@@ -3092,3 +3092,14 @@ body.has-topnav {
 /* The month view has no header row of its own — its date lives inside the left
    column — so the selector needs the room kept clear above both columns. */
 #monthView .calendar-body { padding-top: 52px; }
+
+/* Both sides of the month view sit 20% of the screen higher — see
+   syncDayPanelToMonth in calendar-month.js, which sets the shift on both
+   columns. It is set there rather than here because a flat -20vh drives the
+   headings up behind the fixed top bar on a normal laptop screen; the script
+   lifts by 20% of the screen or by whatever room is actually above them,
+   whichever is less. */
+#monthView .calendar-left,
+#monthView .calendar-right {
+    will-change: transform;
+}
