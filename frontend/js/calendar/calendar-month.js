@@ -1068,7 +1068,60 @@ function renderCalendar(month, year) {
 
     }
 
+    syncDayPanelToMonth();
+
 }
+
+// Line the day panel up with the month. The dates block is centred vertically
+// in its column (the auto margins above the header and below the grid split the
+// free space), so its heading sits well down the page while "What You'll Do
+// Today" started at the very top and the two headings read as unrelated. The
+// panel is given the same offset from the top as the month name, so the two
+// lines meet — measured rather than guessed, because where the month name lands
+// depends on the height of the card and of the grid under it.
+//
+// No feedback loop: the columns stretch to the card's height, which the card
+// sets, so shifting the panel down can't move the month name.
+function syncDayPanelToMonth() {
+
+    const left = document.querySelector('#monthView .calendar-left');
+
+    const title = document.getElementById('monthYear');
+
+    const right = document.querySelector('#monthView .calendar-right');
+
+    const panel = right && right.querySelector('.calendar-bottom-section');
+
+    if (!left || !title || !panel) return;
+
+    panel.style.paddingTop = '';   // measure the panel where it naturally sits
+
+    // On a narrow screen the two columns stack, one under the other, and there
+    // is no line to share — pushing the panel down there would only leave a
+    // hole between the calendar and the plan.
+    const leftTop = left.getBoundingClientRect().top;
+
+    if (Math.abs(right.getBoundingClientRect().top - leftTop) > 2) return;
+
+    const offset = title.getBoundingClientRect().top - leftTop;
+
+    panel.style.paddingTop = offset > 1 ? Math.round(offset) + 'px' : '';
+
+}
+
+// Re-align a moment after a resize rather than during it: crossing the width
+// where the two columns stop stacking changes the whole layout, and measuring
+// mid-flight reads the arrangement that is on its way out. A timer, not an
+// animation frame — a hidden tab has none of those.
+let dayPanelSyncTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(dayPanelSyncTimer);
+    dayPanelSyncTimer = setTimeout(syncDayPanelToMonth, 80);
+});
+// The Week/Day/Month toggle calls this when the month view is revealed: nothing
+// can be measured while the pane is display:none, so the alignment is worked
+// out the moment it is on screen.
+window.syncDayPanelToMonth = syncDayPanelToMonth;
 
 function selectDate(dateStr, element) {
 
@@ -1914,6 +1967,10 @@ function updateBottomSection(dateStr) {
             </div>`;
 
     }
+
+    // The ring just changed the left column's height, which is what the month
+    // name is centred against — so the panel's alignment is worked out again.
+    syncDayPanelToMonth();
 
 }
 

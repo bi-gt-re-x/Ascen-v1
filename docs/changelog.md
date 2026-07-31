@@ -2,6 +2,31 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-31 — The calendar's controls find their corner
+
+Week / Day / Month led the page from the top-left, on a row of its own above
+whichever view was showing. It is one control shared by all three views, so
+rather than three copies it comes out of the flow and pins to the card's
+top-right corner — landing opposite each view's date selector, on the same
+line, in every view.
+
+- **Week and Day**: the date and its arrows on the left, the selector on the
+  right, one row.
+- **Day**: the Focus button is gone. Focus is started from the dashboard's own
+  panel, and the Day view's Focus card still shows and edits the same session.
+- **Month**: the "Add New Event" button is gone, and "What You'll Do Today" now
+  starts on the same line as the month name. The dates block is centred
+  vertically in its column, so where the month name lands depends on the height
+  of the card and the grid beneath it — the panel's offset is measured from it
+  (`syncDayPanelToMonth`) rather than guessed, and re-measured when the month is
+  drawn, when the view is revealed and after a resize. Below 1120px the columns
+  stack and there is no shared line, so the offset is dropped.
+
+Two things learned the hard way, both the same lesson: `requestAnimationFrame`
+never fires for a pane that is `display: none`, and it doesn't fire in a
+background tab either. The reveal hook and the resize handler measure straight
+away or on a timer instead.
+
 ## 2026-07-31 — Growth and the calendar lose their card
 
 Both pages drew themselves inside a panel: a rounded card, inset from every

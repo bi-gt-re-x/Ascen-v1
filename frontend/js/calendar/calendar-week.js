@@ -2746,6 +2746,13 @@
         } else if (view === 'day') {
             renderDay();
             requestAnimationFrame(scrollDayToNow);
+        } else if (view === 'month' && typeof window.syncDayPanelToMonth === 'function') {
+            // The month's two headings line up with each other, and nothing
+            // could be measured for that while this pane was hidden. The pane
+            // is visible by now, so this measures straight away rather than in
+            // an animation frame — a frame that never comes if the tab is in
+            // the background is exactly how this alignment goes missing.
+            window.syncDayPanelToMonth();
         }
     }
 

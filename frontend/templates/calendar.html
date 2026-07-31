@@ -85,10 +85,6 @@
                             <h3>What You'll Do Today</h3>
                             <div id="dailyFocusHolder" class="daily-focus-holder"></div>
                             <ul id="dailyTasks"></ul>
-                            <button onclick="addTaskSection()" class="add-section-btn">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                                Add New Event
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -173,12 +169,11 @@
                         </div>
                         <button class="wk-today">Today</button>
                     </div>
-                    <div class="day-header-actions">
-                        <button type="button" class="day-action-btn" id="dayFocusBtn" title="Start a focus session">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg>
-                            <span id="dayFocusBtnLabel">Focus</span>
-                        </button>
-                    </div>
+                    {# The right of this row belongs to the Week/Day/Month
+                       selector, which the topbar pins to the corner. The Focus
+                       button that used to sit here is gone — focus is started
+                       from the dashboard's own panel, and the Day view's Focus
+                       card still shows and edits the same session. #}
                 </div>
                 <div class="day-layout">
                     <div class="day-gridpane">

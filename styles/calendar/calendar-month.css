@@ -3060,3 +3060,35 @@ body.has-topnav {
 
 /* More room between the two columns now that there is width to spend. */
 .calendar-body { gap: clamp(20px, 2.4vw, 44px); }
+
+/* ============================================================
+   THE VIEW SELECTOR MOVES TO THE CORNER
+   ============================================================
+   Week / Day / Month used to lead the page from the top-left, on a row of its
+   own, with each view's date heading below it. It is one control shared by all
+   three views, so rather than three copies it comes out of the flow and pins to
+   the card's top-right corner — landing opposite each view's date selector, on
+   the same line, in every view. */
+.calendar-card { position: relative; }
+.calendar-topbar {
+    position: absolute;
+    top: 10px;
+    right: clamp(18px, 3vw, 52px);
+    margin: 0;
+    z-index: 6;
+}
+
+/* The date rows now share their line with the selector, so they reserve room
+   for it on the right and stand at least as tall as it is. */
+#weekView .wk-header,
+#dayView .wk-header.day-header {
+    min-height: 52px;
+    padding-right: 320px;
+}
+/* The week's date sits in the column beside the sidebar toggle; with the
+   selector opposite it, the extra left indent is no longer what centres it. */
+#weekView .wk-headmain { padding-left: 0; }
+
+/* The month view has no header row of its own — its date lives inside the left
+   column — so the selector needs the room kept clear above both columns. */
+#monthView .calendar-body { padding-top: 52px; }
