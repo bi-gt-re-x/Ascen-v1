@@ -34,6 +34,96 @@ let zoomState = {
 // Every chart type, in one place, so the shared loops stay in sync.
 const CHART_TYPES = ['cumulative', 'daily', 'avgTask', 'cumulativeFocus', 'dailyFocus'];
 
+// The tabs don't all name their chart the way the chart names itself: the
+// "Average Task XP Daily" tab is 'average', its chart is 'avgTask'. One map, so
+// a tab name can always be turned into the type the drawing code knows.
+const TAB_TO_TYPE = {
+    cumulative: 'cumulative',
+    daily: 'daily',
+    average: 'avgTask',
+    avgTask: 'avgTask',
+    cumulativeFocus: 'cumulativeFocus',
+    dailyFocus: 'dailyFocus'
+};
+
+// ============================================================
+// GROW-IN ANIMATION
+// ============================================================
+// A chart arrives by growing out of its baseline into the shape the data
+// actually has: every point's height is multiplied by a progress that eases
+// from 0 to 1, so the curve and its fill rise together and settle on the real
+// figures. Progress lives per chart, so one animating never disturbs another.
+//
+// It plays when a graph is chosen and when the page first has data to show —
+// not on the 30-second refresh, nor on zoom, hover or resize, which redraw at
+// whatever progress is current and so stay instant.
+const ANIM_MS = 780;
+const chartAnim = {};      // type -> 0…1, how far into its entrance it is
+const chartAnimRaf = {};
+let sparkAnim = 1;         // the ratings card's mini sparkline, same idea
+let sparkAnimRaf = null;
+// Charts start flat and are grown in by their first animation, so nothing is
+// ever seen at full height before its entrance plays.
+CHART_TYPES.forEach(t => { chartAnim[t] = 0; });
+
+function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+// Run `onFrame(progress)` from 0 to 1 over ANIM_MS. Returns the raf id so the
+// caller can cancel a run that a second one has superseded.
+function runAnimation(onFrame, onDone) {
+    const started = (window.performance || Date).now();
+    let id = null;
+    const step = (now) => {
+        const t = Math.min(1, (now - started) / ANIM_MS);
+        onFrame(easeOutCubic(t));
+        if (t < 1) { id = requestAnimationFrame(step); onDone(id, false); }
+        else onDone(null, true);
+    };
+    id = requestAnimationFrame(step);
+    return id;
+}
+
+function animateChart(type) {
+    type = TAB_TO_TYPE[type] || type;
+    if (CHART_TYPES.indexOf(type) === -1) return;
+    if (chartAnimRaf[type]) { cancelAnimationFrame(chartAnimRaf[type]); chartAnimRaf[type] = null; }
+    // Reduced motion: the chart is simply there, at its real height.
+    if (prefersReducedMotion()) { chartAnim[type] = 1; drawChart(type); return; }
+    chartAnim[type] = 0;
+    // Flatten it in this frame, not in the first animation frame: a chart that
+    // was already drawn at full height would otherwise stand there until the
+    // first callback and then drop, which reads as a flicker rather than a start.
+    drawChart(type);
+    chartAnimRaf[type] = runAnimation(
+        (p) => { chartAnim[type] = p; drawChart(type); },
+        (id) => { chartAnimRaf[type] = id; }
+    );
+}
+
+function animateSparkline() {
+    // The ratings card's sparkline is optional markup — no canvas, nothing to
+    // grow, and no point running a raf loop that draws nothing for a second.
+    if (!document.getElementById('ratingsSparkline')) { sparkAnim = 1; return; }
+    if (sparkAnimRaf) { cancelAnimationFrame(sparkAnimRaf); sparkAnimRaf = null; }
+    if (prefersReducedMotion()) { sparkAnim = 1; drawRatingsSparkline(); return; }
+    sparkAnim = 0;
+    drawRatingsSparkline();          // flat in this frame, as above
+    sparkAnimRaf = runAnimation(
+        (p) => { sparkAnim = p; drawRatingsSparkline(); },
+        (id) => { sparkAnimRaf = id; }
+    );
+}
+
+// The chart behind the tab that is currently selected.
+function activeChartType() {
+    const btn = document.querySelector('#growthCard .tab-btn.active');
+    const name = btn ? btn.id.replace('-tab', '') : 'cumulative';
+    return TAB_TO_TYPE[name] || 'cumulative';
+}
+
 // ============================================================
 // UTILITIES
 // ============================================================
@@ -189,9 +279,14 @@ function computeGeometry(type) {
     const xStep = values.length > 1 ? plotW / (values.length - 1) : 0;
     const yScale = plotH / finalMax;
 
+    // Heights are scaled by the chart's entrance progress, so a chart mid-
+    // animation is drawn — line, fill, hover marker and all — at the height it
+    // has reached rather than the one it is heading for.
+    const prog = chartAnim[type] == null ? 1 : chartAnim[type];
+
     const points = values.map((v, i) => ({
         x: CHART_PAD.left + xStep * i,
-        y: baseY - Math.max(0, v) * yScale,
+        y: baseY - Math.max(0, v) * yScale * prog,
         value: v,
         index: i
     }));
@@ -451,7 +546,7 @@ function drawRatingsSparkline() {
     const xStep = (w - pad * 2) / (values.length - 1);
     const pts = values.map((v, i) => ({
         x: pad + xStep * i,
-        y: (h - pad) - ((v - minV) / range) * (h - pad * 2)
+        y: (h - pad) - ((v - minV) / range) * (h - pad * 2) * sparkAnim
     }));
 
     const col = chartColors();
@@ -800,12 +895,26 @@ async function loadGrowthData() {
         // New accounts (< 3 days old) show a placeholder instead of the chart.
         showChartPlaceholder = (typeof data.days_since_creation === 'number' && data.days_since_creation < 3);
         processData(data.growth_data);
+        playEntranceOnce();
 
     } catch {
         console.warn('Failed to load growth data, using default 7-day chart');
         showChartPlaceholder = false;
         processData([]); // Will create default 7-day chart with 0 values
+        playEntranceOnce();
     }
+}
+
+// The first arrival of data is the page's own entrance: the sparkline on the
+// card in front of you draws itself in, and so does whichever chart the tabs
+// are currently on. The 30-second refresh that follows must not replay it —
+// a chart quietly re-growing every half minute would be a tic, not an entrance.
+let entrancePlayed = false;
+function playEntranceOnce() {
+    if (entrancePlayed) return;
+    entrancePlayed = true;
+    animateSparkline();
+    animateChart(activeChartType());
 }
 
 // ============================================================
@@ -870,18 +979,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    window.initializeChart = function (tabName) {
+    // Size the buffers, then bring the chosen chart in. `animate` is false for
+    // a redraw that isn't a choice — the theme switch repaints through here and
+    // should simply repaint.
+    window.initializeChart = function (tabName, animate) {
         resizeCanvases();
-        drawChart(tabName);
+        const type = TAB_TO_TYPE[tabName] || tabName;
+        if (animate === false) { chartAnim[type] = 1; drawChart(type); return; }
+        animateChart(type);
     };
+    window.animateChart = animateChart;
 
     // Make loadGrowthData globally accessible for api.js
     window.loadGrowthData = loadGrowthData;
 
-    // Force initial chart draw after data loads
+    // Force initial chart draw after data loads. The chart on show is left to
+    // its entrance — redrawing it here would freeze it at the height it had
+    // reached at half a second.
     setTimeout(() => {
         if (chartData.labels.length > 0) {
-            CHART_TYPES.forEach(drawChart);
+            const showing = activeChartType();
+            CHART_TYPES.forEach(t => { if (t !== showing || !chartAnimRaf[t]) drawChart(t); });
         }
     }, 500);
 });

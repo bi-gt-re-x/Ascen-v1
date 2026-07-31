@@ -2,6 +2,31 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-31 — Growth's charts arrive by growing (Ascent 1.0.0)
+
+The five analytics charts and the ratings sparkline are hand-drawn on canvas,
+and they used to appear finished. Now a chart arrives the way the account it
+describes did: every point's height is multiplied by a progress that eases from
+0 to 1 over 780ms, so the curve and its fill rise out of the baseline together
+and settle on the real figures.
+
+- It plays when a graph is **chosen** and when the page **first has data**, and
+  nowhere else. The thirty-second refresh, zoom, hover and resize all redraw at
+  whatever progress is current, so they stay instant — a chart quietly
+  re-growing every half minute would be a tic, not an entrance.
+- The progress is applied in `computeGeometry`, which the hover reads too, so a
+  crosshair caught mid-entrance lands on the line rather than where the line is
+  going to be.
+- The first flat frame is drawn synchronously, not in the first animation
+  frame: a chart already at full height would otherwise stand there and then
+  drop, which reads as a flicker rather than a start.
+- `prefers-reduced-motion` gets the finished chart, immediately.
+
+One thing the tabs didn't agree on: the "Average Task XP Daily" tab is called
+`average` and its chart is called `avgTask`, so `initializeChart('average')`
+had been drawing nothing at all — the chart only appeared because the resize it
+triggers redraws everything. `TAB_TO_TYPE` settles the naming in one place.
+
 ## 2026-07-30 — The hidden chain had no first step
 
 Its opening move is ten clicks on the app icon, and `easter-egg.js` was looking

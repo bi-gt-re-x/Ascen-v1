@@ -233,7 +233,8 @@
             if (typeof window.initializeChart === 'function') {
                 const activeBtn = document.querySelector('#growthCard .tab-btn.active');
                 const activeTab = activeBtn ? activeBtn.id.replace('-tab', '') : 'cumulative';
-                window.initializeChart(activeTab);
+                // A repaint in new colours, not a fresh entrance (the false).
+                window.initializeChart(activeTab, false);
             }
         });
 
@@ -269,7 +270,7 @@
                 chartContainer.classList.add('fade-in');
             }
 
-            // Initialize chart for the active tab
+            // Size the chart to its now-visible box, then let it grow in.
             setTimeout(() => {
                 initializeChart(tabName);
             }, 100);
