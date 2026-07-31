@@ -2,6 +2,29 @@
 
 Notable changes, newest first. Dates are the day the work landed on the branch.
 
+## 2026-07-31 — Growth and the calendar lose their card
+
+Both pages drew themselves inside a panel: a rounded card, inset from every
+edge, with the real content inside it and a margin of empty page all the way
+round — two frames between the data and the screen. The card is gone from both.
+Its background, border, radius and shadow are dropped, the `--shell-fluid` /
+`--shell-max` caps are lifted to the full width, and the room it was spending
+on itself goes to the content.
+
+- **Growth**: the chart's own white panel goes too (the dark theme had already
+  made it transparent; the light theme now agrees), so the graph is drawn
+  straight onto the page. The charts grew from `clamp(180px, 34vh, 340px)` to
+  `clamp(260px, 56vh, 760px)` — better than half the screen instead of a third.
+  The report-card view spans the page as well.
+- **Calendar**: the week grid runs the width of the screen, the two columns
+  have `clamp(20px, 2.4vw, 44px)` between them instead of 15px, and the page's
+  own side padding is gone — the card was the only reason for it.
+
+Nothing was resized in JS: the canvases size themselves to their rendered box
+(`resizeCanvases`), so the charts simply came out bigger. `fit-scale.js` only
+ever shrinks, and at 1024×700 it barely engages (zoom 0.98), so short screens
+still fit without a scrollbar.
+
 ## 2026-07-31 — Growth's charts arrive by growing (Ascent 1.0.0)
 
 The five analytics charts and the ratings sparkline are hand-drawn on canvas,

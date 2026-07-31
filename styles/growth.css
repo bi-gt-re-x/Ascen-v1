@@ -1069,3 +1069,74 @@ body.dark .see-ratings-btn:hover {
         max-width: calc(100% - 1.5rem);
     }
 }
+
+/* ============================================================
+   FULL BLEED — the page is the container
+   ============================================================
+   The analytics used to live on a card: a white (or dark) rounded panel inset
+   from every edge, so the charts were drawn inside a box inside a page, with
+   two sets of margins between the data and the screen. The panel is gone. What
+   was its chrome — background, border, radius, shadow — is dropped, its width
+   caps are lifted to the full page, and the room it was spending on itself goes
+   to the charts, which are now half again as tall. */
+#growthCard.growth-card {
+    --shell-fluid: 100%;
+    --shell-max: 100%;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 6px clamp(20px, 3.4vw, 56px) 0;
+    margin-top: 6px;
+    top: 0;
+}
+/* The themed rules paint the card per theme; there is no card to paint now. */
+body.dark #growthCard.growth-card,
+body.classic #growthCard.growth-card,
+html[data-theme="dark"] #growthCard.growth-card,
+html[data-theme="light"] #growthCard.growth-card {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+/* The charts take the space back: from a third of the screen to well over half,
+   with a floor that keeps them readable on short laptops and a cap so an
+   enormous monitor doesn't stretch one line across a whole wall. */
+#growthChart,
+#dailyXpChart,
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
+    height: clamp(260px, 56vh, 760px);
+}
+
+/* The tab row and the title breathe a little wider now that the page is theirs. */
+#growthCard .tabs { margin-bottom: 22px; }
+#growthCard .chart-title { margin-bottom: 18px; }
+
+/* The report card side of the page spans it too. */
+#ratingsView.ratings-view {
+    --shell-fluid: 100%;
+    --shell-max: 100%;
+    padding-inline: clamp(20px, 3.4vw, 56px);
+    gap: clamp(20px, 2.4vw, 40px);
+}
+
+/* The chart's own white panel goes with the card. In the dark theme it was
+   already transparent — the chart drew straight onto the surface behind it —
+   and now it does that in the light theme too, so the graph sits on the page
+   itself in both. */
+.chart-container {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 0 8px;
+}
+#growthChart,
+#dailyXpChart,
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
+    background: transparent;
+}

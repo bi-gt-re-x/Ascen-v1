@@ -3023,3 +3023,40 @@ html[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
     }
     .calendar-topbar { margin-top: 46px; }
 }
+
+/* ============================================================
+   FULL BLEED — the page is the container
+   ============================================================
+   The calendar used to sit on a card: a rounded panel inset from every edge,
+   with the grid inside it and a margin of page showing all the way round. The
+   panel is gone — its background, border, radius and shadow with it — and the
+   width caps are lifted so the grid runs the width of the screen. The space it
+   was spending on itself goes to the calendar: the columns are wider, the
+   sidebar has more room, and the whole thing sits closer to the edges. */
+.calendar-card {
+    --shell-fluid: 100%;
+    --shell-max: 100%;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 10px clamp(18px, 3vw, 52px) 16px;
+}
+html[data-theme="light"] .calendar-card,
+html[data-theme="dark"] .calendar-card,
+body.classic .calendar-card {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+/* The page's own padding was framing the card; the card is the page now, so it
+   keeps only the clearance the fixed top bar needs. */
+body.has-topnav {
+    padding-left: 0;
+    padding-right: 0;
+}
+.calendar-container { margin-top: 4px; }
+
+/* More room between the two columns now that there is width to spend. */
+.calendar-body { gap: clamp(20px, 2.4vw, 44px); }
