@@ -1,21 +1,33 @@
 # Architecture
 
-Ascen is a Flask app with server-rendered pages and a JSON datastore. There is
-no build step and no framework on the frontend: templates render, scripts fetch
-JSON, the backend owns every rule.
+Ascen is a FastAPI app over a SQLite datastore. The backend owns every rule and
+answers JSON; the frontend is mid-move from server-rendered Jinja pages driven
+by vanilla scripts to a React + TypeScript app under `frontend/src/`.
+
+Both frontends are live at once, on purpose. The Jinja pages still render and
+still work, so the app stays usable while React takes the pages over one at a
+time. `backend/routes/pages.py` is the whole list of what still renders
+server-side, and it shrinks to nothing as that finishes.
 
 ## The shape of the repo
 
 ```
-run.py                 entry point — a shim over backend/run.py
-run_mac.py             same, on port 5050 (macOS gives 5000 to AirPlay)
+run.py                 entry point — a shim over backend/run.py, port 5050
 
-backend/               the Flask app  (see "Layers" below)
+package.json           the frontend's build, at the root beside run.py
+vite.config.ts         points Vite at frontend/ and proxies the API
+tsconfig.json          one config, covering frontend/src and vite.config.ts
+
+backend/               the FastAPI app  (see "Layers" below)
 frontend/
-  templates/           all Jinja templates
-  js/                  all client scripts (served at /static/js/...)
+  index.html           the React app's entry
+  html/                the original server-rendered pages, still live
+  js/                  their scripts (served at /static/js/...)
   secret/              the easter-egg chain and the hidden /engine page
-styles/                all CSS (served at /static/css/...)
+  public/              favicon, manifest, robots.txt
+  src/                 the React app — pages, components, services, styles
+    styles/            all CSS, shared by both frontends
+                       (served at /static/css/... for the old pages)
 utils/
   icons/               80 calendar SVGs      -> /static/icons/...
   images/              logo, and avatars/    -> /static/images/...
@@ -35,21 +47,25 @@ The backend is a stack of layers, each depending only on the ones above it.
 
 ```
 config/       every path, key and tunable. Nothing else hard-codes a path.
-database/     connection.py — the .sql store. The only code that opens a file.
+database/     connection.py — the SQLite store. The only code that opens a file.
 tracking/     the rules. XP and streaks, focus, calendar events, growth
-              grading, accounts. No Flask routing anywhere in here.
-pages/        one blueprint per page: the route that renders it and the API
-              endpoints that page calls. Reads the request, asks a tracker,
+              grading, accounts. No web framework anywhere in here.
+api/          one router per page: the endpoints that page calls, and the
+              request bodies they accept. Reads the request, asks a tracker,
               shapes the JSON.
-routes/       the routes that belong to no single page — accounts, theme,
-              static assets — plus the list of every blueprint to register.
+routes/       the routes that belong to no single page — accounts, theme, the
+              Jinja pages, static assets — plus the list of routers to register.
 middleware/   what happens around every request: the account gate, and the
               theme + current_user that every template gets.
 ```
 
-`app.py` assembles them and knows no page by name; `routes/__init__.py` holds
-the page list. Adding a page means writing `backend/pages/<name>.py` with a
-`bp` and adding its name to `PAGE_MODULES`.
+`main.py` assembles them and knows no page by name; `routes/__init__.py` holds
+the router list. Adding a page's API means writing `backend/api/<name>.py` with
+a `router` and adding its name to `API_MODULES`.
+
+`tracking/` and `database/` are the layers that survived the move off Flask
+untouched — every rule that took months to get right is the same code. What was
+rewritten is the web layer above them.
 
 ## Rules worth knowing
 
@@ -72,14 +88,21 @@ user action — `data/sql/` does not.
 theme. See `middleware/context.py` and `routes/theme.py`.
 
 **Static URLs are stable.** Assets live in top-level folders, not one `static/`
-tree; `routes/assets.py` maps `/static/<kind>/...` onto them, so every
+tree; `routes/assets.py` mounts each one under `/static/<kind>/...`, so every
 `url_for('static', filename='css/...')` keeps working wherever a folder moves.
+
+**A failure is HTTP 200.** Every endpoint answers `{"success": ...}`, and a
+failure is `{"success": false, "message": "..."}` sent with **200** — the
+client checks the flag, not the status. `api/reply.py` is the only place a
+response is built, so that holds by construction, and `main.py` catches
+FastAPI's own validation errors and puts them back into the same shape. An
+endpoint that started returning 4xx would break its caller silently.
 
 ## What isn't built
 
-`pages/` and `tracking/` carry stubs for features that don't exist yet —
-growthtree, achievements, notes, library, history, settings. Each stub says
-what belongs in it, and `data/sql/` has their tables, schema only.
+`api/` and `tracking/` carry stubs for features that don't exist yet —
+growthtree, achievements, notes, library, history, settings, analytics. Each
+stub says what belongs in it, and `data/sql/` has their tables, schema only.
 
 See [database.md](database.md) for the stores, [api.md](api.md) for the
 endpoints, and [roadmap.md](roadmap.md) for what's next.

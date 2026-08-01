@@ -4,7 +4,7 @@
 
 Reads .env first so mail and Google credentials are in the environment before
 anything looks for them, then builds the app. PORT overrides the port; macOS
-gives 5000 to AirPlay, which is what run_mac.py is for.
+gives 5000 to AirPlay, which is why the default here is 5050.
 """
 import os
 import sys
@@ -19,16 +19,25 @@ from backend.config import settings                       # noqa: E402
 
 settings.load_dotenv()
 
-from backend.app import create_app                        # noqa: E402
+from backend.main import create_app                       # noqa: E402
 
 app = create_app()
 
 
 def main():
-    """Serve the app on PORT (default 5000)."""
-    port = int(os.environ.get('PORT', settings.DEFAULT_PORT))
-    app.config['SERVER_NAME'] = '127.0.0.1:{}'.format(port)
-    app.run(debug=True, port=port)
+    """Serve the app on PORT.
+
+    Passed as an import string rather than the app object so uvicorn's reloader
+    can rebuild it in the worker process — handing it a live object disables
+    reload with a warning.
+    """
+    import uvicorn
+
+    uvicorn.run('backend.run:app',
+                host='127.0.0.1',
+                port=int(os.environ.get('PORT', settings.DEFAULT_PORT)),
+                reload=True,
+                reload_dirs=[os.path.join(ROOT_DIR, 'backend')])
 
 
 if __name__ == '__main__':

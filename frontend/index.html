@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="description" content="Ascen — a gamified productivity tracker: tasks, XP, streaks, a calendar, goals and growth analytics." />
+    <title>Ascen</title>
+    <script>
+      /* The theme, before the first paint.
+       *
+       * The server-rendered pages get data-theme in the HTML they are sent, so
+       * they never flash. A single-page app has no such luxury: index.html is
+       * one static file. Reading the same `theme` cookie the backend sets, here
+       * in the head, gets the same result — the attribute is right before any
+       * CSS is applied and before React has loaded. src/context/ThemeContext
+       * takes over from here. */
+      (function () {
+        var m = document.cookie.match(/(?:^|;\s*)theme=(light|dark)/);
+        if (m) document.documentElement.setAttribute('data-theme', m[1]);
+      })();
+    </script>
+  </head>
+  <!-- `has-topnav` is what the stylesheets use to push a page clear of the
+       fixed bar; every page in this app has one, so it lives here rather than
+       being toggled. Same class the server-rendered pages carry. -->
+  <body class="has-topnav">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

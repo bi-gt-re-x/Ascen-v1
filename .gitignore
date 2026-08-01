@@ -3,10 +3,15 @@ __pycache__/
 *.pyc
 .venv/
 .venv-mac/
+.venv-fastapi/
 
-# Environment files
+# Node
+node_modules/
+frontend/dist/
+
+# Environment files. One .env at the root serves both halves — vite.config.ts
+# points envDir back here so the frontend reads the same file the backend does.
 .env
-frontend/.env
 
 # Local tool settings
 .claude/settings.local.json

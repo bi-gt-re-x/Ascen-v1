@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Terms of Service</title>
+    <script>
+        // Hide the page until it is parsed, so it fades in once as a single
+        // piece. page-fade.js reveals it on DOMContentLoaded.
+        document.documentElement.classList.add('js-fade');
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-fade.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/homepage.css') }}">
+    <style>
+        body { font-family: 'Century Gothic', sans-serif; padding: 20px; line-height: 1.6; }
+        h1 { color: inherit; }
+        .content-container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 10px;
+            max-width: 800px;
+            margin: 50px auto;
+            color: #333;
+        }
+        .content-container h2 { margin-top: 1.5em; font-size: 1.2em; }
+        .content-container ul { padding-left: 1.4em; }
+        .effective-date { color: #777; font-style: italic; }
+    </style>
+</head>
+<body>
+    <button class="nav-btn home-btn" onclick="window.location.href='{{ url_for('home.page') }}'" style="position: absolute; top: 10px; left: 10px;">Home</button>
+
+    <div class="content-container">
+        <h1>Terms of Service</h1>
+        <p class="effective-date">Effective date: July 22, 2026</p>
+
+        <p>Welcome to Ascen, a study and productivity tracker ("the app", "the service"). By using Ascen, you agree to these terms. If you do not agree, please do not use the app.</p>
+
+        <h2>1. The Service</h2>
+        <p>Ascen provides tools for managing tasks, setting goals, scheduling work on a calendar, running focus sessions, and tracking your progress through streaks, XP, levels, and growth analytics. The service is provided free of charge — there are no paid tiers, subscriptions, or in-app purchases.</p>
+
+        <h2>2. Your Account and Data</h2>
+        <ul>
+            <li>Your profile, tasks, goals, and progress data are stored locally on your device, as described in our <a href="{{ url_for('privacypolicy.page') }}">Privacy Policy</a>.</li>
+            <li>You are responsible for the content you enter into the app and for backing up your data if you wish to keep it.</li>
+            <li>Because data is stored locally, clearing your browser storage or deleting the app's data files will permanently erase your progress.</li>
+        </ul>
+
+        <h2>3. Acceptable Use</h2>
+        <p>You agree to use Ascen only for lawful purposes. You may not:</p>
+        <ul>
+            <li>Attempt to disrupt, overload, or interfere with the operation of the service.</li>
+            <li>Attempt to gain unauthorized access to data belonging to other users of the same installation.</li>
+            <li>Use the app to store or distribute unlawful content.</li>
+        </ul>
+
+        <h2>4. Intellectual Property</h2>
+        <p>The Ascen name, design, and software are the property of the project's authors. The content you create in the app — your tasks, goals, and notes — remains yours.</p>
+
+        <h2>5. Availability and Changes</h2>
+        <p>Ascen is under active development. Features may be added, changed, or removed at any time without notice. We do not guarantee that the service will be uninterrupted or error-free, or that your progress data (including XP, streaks, and levels) will always be preserved across updates.</p>
+
+        <h2>6. Disclaimer of Warranties</h2>
+        <p>The service is provided "as is" and "as available", without warranties of any kind, express or implied, including fitness for a particular purpose. Productivity statistics, growth ratings, and analytics are provided for motivation and self-tracking only.</p>
+
+        <h2>7. Limitation of Liability</h2>
+        <p>To the maximum extent permitted by law, the authors of Ascen shall not be liable for any indirect, incidental, or consequential damages arising from your use of the app, including loss of data or loss of progress.</p>
+
+        <h2>8. Changes to These Terms</h2>
+        <p>We may update these terms from time to time. The current version will always be posted on this page with its effective date. Continued use of the app after changes take effect constitutes acceptance of the revised terms.</p>
+
+        <h2>9. Contact</h2>
+        <p>Questions about these terms? Reach out through the project's repository or the contact information provided where you obtained the app.</p>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/page-fade.js') }}" defer></script>
+</body>
+</html>

@@ -7,6 +7,45 @@
 (function () {
     'use strict';
 
+    // --- collapsing the bar -------------------------------------------------
+    // The class lives on <html> so styles/topnav.css can shrink --topnav-h,
+    // which is what every page measures itself against. The partial has
+    // already put the class on for a bar that was left shut, so this only
+    // brings the button's labelling in line and handles the clicks.
+    (function () {
+        var toggle = document.getElementById('topnavToggle');
+        if (!toggle) return;
+
+        var root = document.documentElement;
+
+        function apply(collapsed) {
+            root.classList.toggle('nav-collapsed', collapsed);
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            var label = (collapsed ? 'Expand' : 'Collapse') + ' navigation';
+            toggle.setAttribute('aria-label', label);
+            toggle.title = label;
+        }
+
+        apply(root.classList.contains('nav-collapsed'));
+
+        // The click is left to reach the document, so an open account menu
+        // closes rather than being hidden mid-air by the collapse.
+        toggle.addEventListener('click', function () {
+            var collapsed = !root.classList.contains('nav-collapsed');
+            apply(collapsed);
+            try {
+                localStorage.setItem('topnavCollapsed', collapsed ? '1' : '0');
+            } catch (e) { /* private mode: it just will not be remembered */ }
+
+            // Pages that lay themselves out in JS off the space they are given
+            // (the calendar's grid) need telling that the space changed. After
+            // the height transition, so they measure the settled page.
+            window.setTimeout(function () {
+                window.dispatchEvent(new Event('resize'));
+            }, 240);
+        });
+    })();
+
     var button = document.getElementById('accountMenuBtn');
     var menu = document.getElementById('accountMenu');
     if (!button || !menu) return;

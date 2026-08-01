@@ -1,0 +1,520 @@
+/* The app's top navigation bar — see frontend/templates/partials/topnav.html.
+ *
+ * Colours are the dashboard's, so the bar belongs to the same app as the page
+ * under it: ink #2C302E on #FFFFFF with #EAEAEA borders in light, and the
+ * #0D1117 / #161B22 / #30363D set in dark.
+ *
+ * The bar is fixed, so it cannot be pushed around by whatever layout a page
+ * uses. `body.has-topnav` pays for that by reserving the height back as
+ * padding — every page that includes the partial carries that class.
+ */
+
+:root {
+    --topnav-h: 64px;
+}
+
+/* --- The bar ---------------------------------------------------------- */
+.topnav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 900;
+    height: var(--topnav-h);
+    background: #FFFFFF;
+    border-bottom: 1px solid #EAEAEA;
+    transition: height .22s ease;
+}
+
+.topnav-inner {
+    height: 100%;
+    max-width: 1680px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+/* Brand and the right-hand controls are the same width, so the links sit
+   optically centred in the bar rather than centred in what is left over. */
+.topnav-brand,
+.topnav-right {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+}
+
+.topnav-right {
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* --- Brand ------------------------------------------------------------ */
+.topnav-brand {
+    gap: 10px;
+    text-decoration: none;
+    color: #2C302E;
+}
+
+.topnav-brand img {
+    width: 30px;
+    height: 30px;
+    display: block;
+}
+
+.topnav-brand span {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* --- Links ------------------------------------------------------------ */
+.topnav-links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 1 auto;
+}
+
+.topnav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    text-decoration: none;
+    color: #6C757D;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color .16s ease, color .16s ease;
+}
+
+.topnav-link svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+}
+
+.topnav-link:hover {
+    color: #2C302E;
+    background: #F8F9FA;
+}
+
+/* The page you are on: a filled pill in the bronze the rest of the app uses
+   for "this one". */
+.topnav-link.active {
+    color: #FFFFFF;
+    background: #A38A70;
+}
+
+.topnav-link.active:hover {
+    color: #FFFFFF;
+    background: #967e65;
+}
+
+/* --- Theme control ---------------------------------------------------- */
+/* The sun is decorative and sits under a transparent <select>, which keeps
+   theme.js's #themeSelect / change binding exactly as it was. */
+.topnav-theme {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #EAEAEA;
+    border-radius: 999px;
+    padding: 0 8px 0 10px;
+    height: 38px;
+    background: #FFFFFF;
+}
+
+.topnav-sun {
+    width: 17px;
+    height: 17px;
+    color: #6C757D;
+    flex: none;
+    pointer-events: none;
+}
+
+.topnav-theme select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: #2C302E;
+    font: inherit;
+    font-size: 14px;
+    padding: 0 18px 0 8px;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* The chevron, drawn rather than shipped as an asset. */
+.topnav-theme::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    width: 7px;
+    height: 7px;
+    border-right: 1.8px solid #6C757D;
+    border-bottom: 1.8px solid #6C757D;
+    transform: translateY(-2px) rotate(45deg);
+    pointer-events: none;
+}
+
+/* --- Avatar ----------------------------------------------------------- */
+/* The account's profile picture. The drawings are already round, so the
+   border-radius is only there to keep the edge clean at any size and to hold
+   the shape if an image ever fails to load. */
+.topnav-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: block;
+    object-fit: cover;
+    background: #E8ECF2;
+    user-select: none;
+    flex: none;
+}
+
+/* --- Account menu ------------------------------------------------------ */
+/* Opens under the avatar: the username and Log Out on one line, then the row
+   of all fifty pictures. Square-cornered, and a fixed width — the row of fifty
+   scrolls sideways inside it rather than widening it. */
+.topnav-account {
+    position: relative;
+    flex: none;
+}
+
+.topnav-avatar-btn {
+    display: block;
+    padding: 0;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    cursor: pointer;
+    line-height: 0;
+}
+.topnav-avatar-btn:focus-visible {
+    outline: 2px solid #2C302E;
+    outline-offset: 2px;
+}
+
+.account-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 950;
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    background: #FFFFFF;
+    border: 1px solid #EAEAEA;
+    border-radius: 4px;
+    box-shadow: 0 18px 44px rgba(16, 24, 40, 0.16);
+}
+.account-menu[hidden] { display: none; }
+
+.account-menu-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid #EAEAEA;
+}
+
+/* A long username shortens rather than pushing the button out of the menu. */
+.account-menu-name {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+    font-weight: 600;
+    color: #2C302E;
+}
+
+.account-logout {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border: none;
+    border-radius: 4px;
+    background: #D93A34;
+    color: #FFFFFF;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.account-logout:hover { background: #C0302B; }
+.account-logout:disabled { opacity: 0.6; cursor: default; }
+.account-logout svg { width: 16px; height: 16px; }
+
+/* All fifty in one line. overflow-x carries them; `flex: none` on the options
+   is what stops the row from squeezing them to fit instead of scrolling. */
+.account-avatar-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #C9CDD4 transparent;
+    overscroll-behavior-x: contain;
+}
+.account-avatar-row::-webkit-scrollbar { height: 8px; }
+.account-avatar-row::-webkit-scrollbar-track { background: transparent; }
+.account-avatar-row::-webkit-scrollbar-thumb {
+    background: #C9CDD4;
+    border-radius: 4px;
+}
+
+.account-avatar-option {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #F2F4F7;
+    cursor: pointer;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+.account-avatar-option:hover { background: #E4E8EE; }
+.account-avatar-option.is-current { outline-color: #2C302E; }
+.account-avatar-option img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: block;
+}
+
+/* --- Collapse --------------------------------------------------------- */
+/* The chevron at the right end, and the shut state it toggles.
+ *
+ * Collapsing is one declaration: --topnav-h drops to a strip just tall enough
+ * to hold the chevron. The bar's own height, the padding body.has-topnav
+ * reserves, and every page that sizes itself off the variable (the calendar
+ * card's 100vh - var(--topnav-h), the goals board, growth, the dashboard) all
+ * follow from it, so the page below grows into the space without any of them
+ * knowing the bar can close. */
+.topnav-toggle {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    margin-left: 2px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: #6C757D;
+    cursor: pointer;
+    transition: background-color .16s ease, color .16s ease;
+}
+
+.topnav-toggle:hover {
+    background: #F8F9FA;
+    color: #2C302E;
+}
+
+.topnav-toggle:focus-visible {
+    outline: 2px solid #2C302E;
+    outline-offset: 2px;
+}
+
+.topnav-toggle svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    transition: transform .22s ease;
+}
+
+/* Shut: the chevron turns over to point down — the direction it will take the
+   bar next. */
+html.nav-collapsed .topnav-toggle svg {
+    transform: rotate(180deg);
+}
+
+html.nav-collapsed {
+    --topnav-h: 26px;
+}
+
+/* Everything but the chevron goes; the strip that is left is the handle for
+   opening it again. */
+html.nav-collapsed .topnav-brand,
+html.nav-collapsed .topnav-links,
+html.nav-collapsed .topnav-theme,
+html.nav-collapsed .topnav-account {
+    display: none;
+}
+
+html.nav-collapsed .topnav-toggle {
+    width: 30px;
+    height: 22px;
+    border-radius: 6px;
+}
+
+/* --- Page offset ------------------------------------------------------ */
+/* The bar is out of flow; give the height back so nothing starts underneath
+   it. Pages set their own horizontal padding, so only the top is touched.
+ *
+ * border-box matters here: the calendar pins its body to height 100vh with
+ * overflow hidden, and with the default content-box that padding would be
+ * added to the 100vh and push the bottom of the page out of sight. Inside the
+ * border box it does what it should — take the nav's height out of the space
+ * the page has to fill. */
+body.has-topnav {
+    box-sizing: border-box;
+    padding-top: var(--topnav-h);
+    transition: padding-top .22s ease;
+}
+
+/* The app pages fill the viewport and never scroll it — anything longer than
+ * the space available scrolls inside its own panel (the goals list, the
+ * dashboard's task list, the calendar card), so the chrome stays put. The
+ * landing page is the exception and does not carry this class.
+ *
+ * Only once there is a screen big enough to hold a page, though. Under
+ * 1120px the calendar drops to a stacked layout that is meant to scroll, and
+ * the goals columns stack at 900px; pinning the viewport there would put the
+ * bottom of those pages out of reach instead of merely off-screen. Below
+ * this, the page scrolls as it always did. */
+@media (min-width: 1120px) and (min-height: 640px) {
+    body.has-topnav {
+        height: 100vh;
+        overflow: hidden;
+    }
+}
+
+/* A page that pins something of its own to the top (the calendar's toolbar)
+   has to start below the bar too. */
+body.has-topnav .sticky-under-topnav {
+    top: var(--topnav-h);
+}
+
+/* --- Dark ------------------------------------------------------------- */
+html[data-theme="dark"] .topnav {
+    background: #161B22;
+    border-bottom-color: #30363D;
+}
+
+html[data-theme="dark"] .topnav-brand {
+    color: #F0F2F5;
+}
+
+/* The mark is drawn in near-black, which disappears against the dark bar —
+   the same invert the dashboard's old nav used. */
+html[data-theme="dark"] .topnav-brand img {
+    mix-blend-mode: screen;
+    filter: invert(1);
+}
+
+html[data-theme="dark"] .topnav-link {
+    color: #8B949E;
+}
+
+html[data-theme="dark"] .topnav-link:hover {
+    color: #F0F2F5;
+    background: #21262D;
+}
+
+html[data-theme="dark"] .topnav-link.active {
+    color: #0D1117;
+    background: #D8C3A5;
+}
+
+html[data-theme="dark"] .topnav-link.active:hover {
+    background: #e4d3ba;
+}
+
+html[data-theme="dark"] .topnav-theme {
+    background: #161B22;
+    border-color: #30363D;
+}
+
+html[data-theme="dark"] .topnav-theme select {
+    color: #F0F2F5;
+}
+
+html[data-theme="dark"] .topnav-theme select option {
+    background: #161B22;
+    color: #F0F2F5;
+}
+
+html[data-theme="dark"] .topnav-sun,
+html[data-theme="dark"] .topnav-theme::after {
+    color: #8B949E;
+    border-color: #8B949E;
+}
+
+html[data-theme="dark"] .topnav-avatar {
+    background: #232A33;
+}
+
+html[data-theme="dark"] .topnav-toggle {
+    color: #8B949E;
+}
+
+html[data-theme="dark"] .topnav-toggle:hover {
+    background: #21262D;
+    color: #F0F2F5;
+}
+
+html[data-theme="dark"] .topnav-toggle:focus-visible {
+    outline-color: #7FB3FF;
+}
+
+html[data-theme="dark"] .account-menu {
+    background: #161B22;
+    border-color: #30363D;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+}
+html[data-theme="dark"] .account-menu-head { border-bottom-color: #30363D; }
+html[data-theme="dark"] .account-menu-name { color: #E6EDF3; }
+html[data-theme="dark"] .account-avatar-option { background: #21262D; }
+html[data-theme="dark"] .account-avatar-option:hover { background: #2D333B; }
+html[data-theme="dark"] .account-avatar-option.is-current {
+    outline-color: #7FB3FF;
+    background: #1F2A3A;
+}
+html[data-theme="dark"] .account-avatar-row {
+    scrollbar-color: #3A424D transparent;
+}
+html[data-theme="dark"] .account-avatar-row::-webkit-scrollbar-thumb {
+    background: #3A424D;
+}
+
+/* --- Narrower screens -------------------------------------------------- */
+/* The labels go first: five icons still name themselves, and the bar stays
+   one row rather than wrapping into the page. */
+@media (max-width: 1024px) {
+    .topnav-inner { gap: 12px; padding: 0 16px; }
+    .topnav-link { padding: 9px 12px; }
+    .topnav-link span { display: none; }
+    .topnav-link svg { width: 20px; height: 20px; }
+}
+
+@media (max-width: 768px) {
+    :root { --topnav-h: 58px; }
+    .topnav-brand span { display: none; }
+    .topnav-theme { padding: 0 6px 0 8px; height: 34px; }
+    .topnav-theme select { font-size: 13px; padding: 0 16px 0 6px; }
+    .topnav-avatar { width: 34px; height: 34px; }
+}
+
+@media (max-width: 480px) {
+    .topnav-inner { gap: 8px; padding: 0 10px; }
+    .topnav-link { padding: 8px 9px; }
+    .topnav-theme { display: none; }
+}

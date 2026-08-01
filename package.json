@@ -1,0 +1,36 @@
+{
+  "name": "ascen",
+  "private": true,
+  "version": "1.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.18.2"
+  },
+  "//react-router-dom": [
+    "`npm audit` reports one high advisory here and it is the right trade.",
+    "GHSA-qwww-vcr4-c8h2 covers 7.12.0 - 8.2.0, but 8.2.0 is not published, so",
+    "there is no fixed release to move to. The flaw is in RSC mode, which this",
+    "app does not use: it is a client-side BrowserRouter with no server actions.",
+    "Staying below the range is worse, not better — 7.11.0 and earlier carry 14",
+    "advisories fixed in 7.12-7.18, including open redirect via <Link> and",
+    "useNavigate, XSS via open redirects, and RCE in the vendored turbo-stream.",
+    "Several of those ARE reachable from plain client-side routing.",
+    "Move to >8.2.0 once it ships, and delete this note."
+  ],
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0"
+  }
+}

@@ -226,23 +226,27 @@ the address — so it goes straight to Complete Profile.
 
 Frontend
 
-* HTML
+* React
+* TypeScript
+* Vite
 * CSS
-* JavaScript
 
 Backend
 
 * Python
-* Flask
+* FastAPI
+* Uvicorn
 
 Storage
 
-* Local storage
-* JSON-based user data
+* SQLite (`data/ascen.db`, built from `data/sql/`)
 
 Visualization
 
 * Chart.js
+
+Interactive API documentation is generated from the code and served at
+`/docs` while the app is running.
 
 ---
 

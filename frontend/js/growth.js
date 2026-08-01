@@ -822,7 +822,10 @@ window.loadGrowthRatings = loadGrowthRatings;
 // ============================================================
 
 function resizeCanvases() {
-    const minWidth = 400, minHeight = 300;
+    // The buffer floor used to be 300px. The card is height-fitted now, so on
+    // a short screen the canvas box can legitimately be smaller than that —
+    // and a 300px buffer squeezed into a 200px box draws a squashed chart.
+    const minWidth = 400, minHeight = 150;
     [growthCanvas, dailyXpCanvas, avgTaskXpCanvas, cumulativeFocusCanvas, dailyFocusCanvas].forEach(canvas => {
         if (!canvas) return;
         const parent = canvas.parentElement;
@@ -929,7 +932,12 @@ document.addEventListener('DOMContentLoaded', function () {
     dailyFocusCanvas      = document.getElementById('dailyFocusChart');
 
     if (!growthCanvas || !dailyXpCanvas || !avgTaskXpCanvas || !cumulativeFocusCanvas || !dailyFocusCanvas) {
-        console.error('Missing canvas elements');
+        // The analytics page loads this file for loadGrowthRatings() and has no
+        // charts on it, so absent canvases are expected there, not a fault. Only
+        // a page that has some but not all of them is actually broken.
+        var some = growthCanvas || dailyXpCanvas || avgTaskXpCanvas
+                || cumulativeFocusCanvas || dailyFocusCanvas;
+        if (some) console.error('Missing canvas elements');
         return;
     }
 

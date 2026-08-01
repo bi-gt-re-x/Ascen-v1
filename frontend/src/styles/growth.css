@@ -1,0 +1,1215 @@
+/* Growth Page Styles */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+body {
+    /* Grow with content and allow vertical scroll — the page is fluid now, so
+       nothing is force-fit into one non-scrolling 100vh screen. */
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Rounded navigation buttons */
+.nav-btn {
+    border-radius: 25px !important;
+    border: 2px solid black;
+    background: white;
+    color: black;
+    padding: 10px 20px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.8s ease-out;
+}
+
+.home-btn {
+    animation-delay: 0.2s;
+}
+
+
+.nav-btn:hover {
+    background: white;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
+    transform: scale(1.05);
+}
+
+/* Position buttons at bottom */
+.home-btn {
+    position: fixed !important;
+    bottom: 20px !important;
+    top: auto !important;
+}
+
+.home-btn {
+    left: 20px !important;
+}
+
+
+/* Theme selector in top right corner */
+
+
+/* Main growth container - centers content on the page */
+.growth-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    height: auto;
+    padding: 24px;
+    box-sizing: border-box;
+    /* No fadeIn here: the whole page already fades in once via
+       styles/page-fade.css, and this one left a translateY(20px) on the
+       container that pushed its bottom past the viewport. */
+}
+
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 0 20px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    background-color: #f0f0f0;
+    color: #2C302E;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Century Gothic', sans-serif;
+    border: 2px solid #e0e0e0;
+}
+
+.tab-btn:hover {
+    background-color: #e8e8e8;
+    transform: translateY(-2px);
+}
+
+.tab-btn.active {
+    background-color: #2C302E;
+    color: white;
+    border-color: #2C302E;
+}
+
+/* Tab Content */
+.tab-content {
+    position: relative;
+    height: calc(100% - 120px);
+}
+
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* White rounded rectangle with navy blue/blackish edges */
+.growth-card {
+    background: white;
+    border-radius: 50px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 40px;
+    /* Fluid width via .page-shell: min(--shell-fluid, --shell-max), centered.
+       Shrinks with the viewport instead of a fixed design width. */
+    --shell-fluid: 97%;
+    --shell-max: 1680px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 4px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border: 2px solid #2C302E;
+    position: relative;
+    top: 50px;
+    animation: fadeIn 1s ease-out;
+}
+
+/* Darker edge effect */
+.growth-card::before {
+    opacity: 0;
+    animation: fadeIn 0.5s ease-out forwards;
+    animation-delay: 1s;
+}
+
+/* Growth title styling */
+.growth-card h1 {
+    color: black;
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 2.2em;
+    font-weight: 300;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 1.2s ease-out;
+}
+
+/* Card header with navigation button */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+/* Daily XP navigation button */
+
+
+/* Growth description styling */
+.growth-card p {
+    color: #424242;
+    text-align: center;
+    font-size: 1.1em;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    animation: fadeIn 1.4s ease-out;
+}
+
+/* Chart Container */
+.chart-container {
+    width: 100%;
+    /* Height follows the canvas inside (a later rule already forced auto). */
+    margin: 10px 0;
+    position: relative;
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    padding-left: 30px;
+    padding-bottom: 30px;
+    box-sizing: border-box;
+}
+
+/* Chart Canvas */
+#growthChart,
+#dailyXpChart,
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+    background: white;
+    margin-top: 10px;
+    margin-left: 0;
+    opacity: 1;
+}
+
+/* Fade-in animation for chart containers when switching tabs */
+.chart-container.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.tab-pane {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tab-pane.active {
+    opacity: 1;
+}
+
+/* Chart Title */
+.chart-title {
+    text-align: center;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #2C302E;
+    margin-bottom: 10px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .growth-card {
+        margin: 20px auto;
+        padding: 30px 20px;
+    }
+
+    .growth-card h1 {
+        font-size: 2em;
+    }
+
+    .growth-card p {
+        font-size: 1.1em;
+    }
+
+}
+
+/* Theme integration */
+body.classic .growth-card {
+    border-color: #37474f;
+}
+
+body.classic .growth-card h1,
+body.classic .growth-card p {
+    color: black;
+}
+
+
+/* Professional Theme Navy Blue Glow Effects */
+
+
+/* ============================================================
+   MODERN GROWTH ANALYTICS LOOK (matches the reference design)
+   ============================================================ */
+/* Cleaner card: light edge, soft shadow */
+.growth-card {
+    border: 1px solid #e6e8f0 !important;
+    border-radius: 28px !important;
+    box-shadow: 0 12px 34px rgba(44, 48, 46, 0.08) !important;
+}
+
+/* Uppercase, spaced, muted title */
+.growth-card h1 {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 400;
+    color: #2C302E;
+    font-size: 1.9em;
+    text-shadow: none;
+}
+
+/* Tab pills */
+.tab-btn {
+    background-color: #f2f3f7;
+    border: 1px solid #e4e6ee;
+    color: #5a6072;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.tab-btn:hover {
+    background-color: #e9ebf2;
+    transform: translateY(-1px);
+}
+
+.tab-btn.active {
+    background-color: #2C302E;
+    color: #ffffff;
+    border-color: #2C302E;
+}
+
+/* Chart title */
+.chart-title {
+    color: #2C302E;
+    letter-spacing: 0.01em;
+}
+
+/* "See Average XP Ratings" card */
+
+
+#ratingsSparkline {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+
+/* ============================================================
+   LAYOUT: taller card, ratings card sits just below the chart,
+   and a refined professional bottom navigation bar.
+   ============================================================ */
+/* Allow the page to grow taller than the viewport if needed */
+body {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+/* Card grows with its content; a single min-height lives on #growthCard below. */
+.growth-card {
+    height: auto;
+}
+
+/* Size the main growth card and anchor its bottom "See Average XP Ratings"
+   button 10px above the card's bottom edge. Flex column lets the button be
+   pushed to the bottom (margin-top: auto) so the card can be extended a bit
+   without leaving a gap below the button. */
+#growthCard {
+    padding-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    /* Neutralize the base card's +50px relative shift and bottom margin. */
+    top: 0;
+    margin-bottom: 0;
+    margin-top: 24px;
+}
+
+/* Let the chart area size to its content instead of a fixed calc height */
+.tab-content {
+    height: auto;
+}
+
+/* Ratings card flows right under the chart, 5px below it */
+
+
+/* Professional floating bottom navigation */
+.bottom-nav {
+    position: relative;
+    transform: none;
+    margin: 28px auto 36px;
+    background: #ffffff;
+    backdrop-filter: none;
+    border: 1px solid #e6e8f0;
+    border-radius: 999px;
+    padding: 8px 10px;
+    display: inline-flex;
+    gap: 4px;
+    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
+    width: fit-content;
+}
+
+/* ============================================================
+   AUTHORITATIVE OVERRIDES (kept last so they win over the
+   original bottom-nav / ratings rules above)
+   ============================================================ */
+/* Let the tab/chart area size to its content so nothing overflows below it */
+.tab-content {
+    height: auto !important;
+}
+
+/* Ratings card flows right under the chart, 5px below it */
+
+
+/* Professional floating bottom navigation */
+.bottom-nav {
+    position: relative;
+    transform: none;
+    margin: 28px auto 36px;
+    background: #ffffff;
+    backdrop-filter: none;
+    border: 1px solid #e6e8f0;
+    border-radius: 999px;
+    padding: 8px 10px;
+    display: inline-flex;
+    gap: 4px;
+    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
+    width: fit-content;
+}
+
+/* Size the chart container to its content (title + fixed-height canvas) so the
+   chart never overflows onto the ratings card below it. The x-axis labels are
+   drawn inside the canvas, so no bottom padding is needed. */
+.chart-container {
+    height: auto;
+    margin: 0;
+    padding-bottom: 0;
+}
+
+#growthChart,
+#dailyXpChart,
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
+    /* Responsive height, small floor so short screens aren't forced tall.
+       (The later rule wins; kept in sync so both agree.) */
+    height: clamp(180px, 34vh, 340px);
+    margin: 0;
+    display: block;
+}
+
+/* ============================================================
+   GROWTH RATINGS VIEW — two-card redesign (#blankCard)
+   ============================================================ */
+/* Wrapper is a transparent container holding two white cards. */
+.ratings-view {
+    /* Sizing via the shared .page-shell class (caps set on #ratingsView below). */
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+
+/* --- Top card: header --- */
+
+
+/* --- Top card: stat boxes --- */
+
+
+/* --- Top card: "See Growth Analytics Charts" button --- */
+
+
+/* --- Charge card --- */
+
+
+/* Charge bar: light track, gradient fill, white segment dividers, in-flow. */
+
+
+/* ============================================================
+   GROWTH RATINGS VIEW — 2x taller cards, growing downward.
+   Each card is a flex column with a min-height of twice its
+   natural height; space-evenly spreads the extra room as even,
+   natural spacing. The view stays top-anchored (24px), so the
+   cards extend downward without moving the top.
+   ============================================================ */
+
+
+/* Top card: 332px -> 664px */
+.ratings-view .rt-card:not(.charge-card) {
+    min-height: 664px;
+}
+
+/* Charge card: 209px -> 418px */
+
+
+/* Taller stat boxes and charge bar so the enlarged cards feel filled,
+   not just padded. */
+
+
+/* Let space-evenly own the vertical rhythm: drop the fixed margins that
+   would otherwise stack on top of the distributed spacing. */
+
+
+/* ============================================================
+   NO VERTICAL SCROLL — fit the whole growth page (both the
+   analytics charts view and the ratings view) within a single
+   viewport. The container is exactly 100vh and clips any
+   overflow; the cards are sized (mostly in vh) to stay inside.
+   ============================================================ */
+html, body {
+    /* Grow with content and allow vertical scroll instead of clipping a card
+       that's taller than one screen (e.g. the ratings report on narrow/short
+       viewports). */
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.growth-container {
+    min-height: calc(100vh - var(--topnav-h, 64px));
+    box-sizing: border-box;
+    overflow: visible;
+    justify-content: flex-start;
+    padding-top: 20px;
+    padding-bottom: 16px;
+}
+
+/* Pinned page (see styles/topnav.css): fill exactly what the nav leaves and
+   no more, so a card taller than the space scrolls in here rather than
+   pushing the window. */
+@media (min-width: 1120px) and (min-height: 640px) {
+    .growth-container {
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+}
+
+/* --- Analytics view: size the card to its content and use a
+       shorter, viewport-relative chart so it never overflows --- */
+#growthCard {
+    margin-top: 0;
+}
+
+#growthChart,
+#dailyXpChart,
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
+    height: clamp(180px, 34vh, 340px);
+}
+
+/* --- Ratings view: shrink both cards back down to fit one screen --- */
+.ratings-view .rt-card:not(.charge-card) {
+    min-height: 40vh;
+}
+
+
+/* ============================================================
+   Extend both the analytics card and the ratings view: 55px
+   taller at the top, 30px taller at the bottom (still within
+   the single non-scrolling viewport).
+   ============================================================ */
+/* Analytics card stays extended via min-height, but the title sits at the very
+   top of the card (normal top padding). The button, which has margin-top:auto,
+   is pushed to the bottom, so the extra height opens up between chart and button. */
+#growthCard {
+    padding-top: 30px;
+    padding-bottom: 30px;
+    /* Single source of the card's height. vh is safe now that the card is no
+       longer CSS-zoomed; 78vh keeps the "extended card" look and still fits
+       720p-height screens without scrolling. */
+    min-height: 78vh;
+}
+
+/* Pin the "Growth Analytics" title to the very top of the card. */
+#growthCard .card-header {
+    margin-top: 0;
+}
+
+#growthCard .card-header h1 {
+    margin-top: 0;
+}
+
+/* Ratings view: top card extends 55px up, charge card extends 30px down. */
+.ratings-view .rt-card:not(.charge-card) {
+    min-height: calc(40vh + 55px);
+}
+
+
+/* Nudge only the tab buttons + chart down 10px. The header stays put (it's
+   above this), and the bottom button stays anchored (its margin-top:auto just
+   absorbs 10px less free space). */
+#growthCard .tab-navigation {
+    margin-top: 34px;
+}
+
+/* ============================================================
+   THEME SELECTOR (fixed, top-right) + DARK THEME
+   ============================================================ */
+.theme-selector-wrap {
+    position: fixed;
+    top: 18px;
+    right: 24px;
+    z-index: 300;
+}
+
+
+/* --- DARK THEME --- */
+body.dark {
+    background: radial-gradient(135% 120% at 82% -10%, #161b22 0%, #0d1117 52%) fixed !important;
+    color: #e6e8f0;
+}
+
+body.dark .growth-card {
+    background: #161b22 !important;
+    border: 1px solid #30363d !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.dark .growth-card h1 {
+    color: #e6e8f0;
+}
+
+/* Chart sits directly on the dark card; the canvas draws light lines/labels. */
+body.dark .chart-container {
+    background: transparent;
+}
+
+body.dark .chart-title {
+    color: #e6e8f0;
+}
+
+body.dark #growthChart,
+body.dark #dailyXpChart,
+body.dark #averageXpChart,
+body.dark #cumulativeFocusChart,
+body.dark #dailyFocusChart {
+    background: transparent;
+}
+
+/* Tabs */
+body.dark .tab-btn {
+    background-color: #21262D;
+    border-color: #30363D;
+    color: #c9d1d9;
+}
+
+body.dark .tab-btn.active {
+    background-color: #A38A70;
+    border-color: #A38A70;
+    color: #0D1117;
+}
+
+/* Theme selector in dark */
+
+/* ============================================================
+   GROWTH RATINGS v2 — graded report card
+   ============================================================ */
+/* The report card fills most of the screen — a wide centered column with a
+   clean, professional sans-serif throughout. */
+#ratingsView.ratings-view {
+    /* Fluid width via .page-shell: width = min(--shell-fluid, --shell-max).
+       This view is also height-fit-zoomed by fit-scale.js (fitShrinkHeight),
+       which shrinks the whole panel by `zoom` to fit short screens. With zoom
+       applied, the browser paints width = min(fluid% of viewport, max * zoom).
+       A modest --shell-max (e.g. 1440px) made `max * zoom` the binding term on
+       laptops (e.g. MacBook Air ~0.74 zoom -> 1440*0.74 = 1067px, only ~74% of
+       a 1440px viewport), so the cards stayed narrow no matter the fluid %.
+       Setting a large --shell-max lets the fluid % win instead, so the cards
+       fill ~95%+ of the width on small screens. It can never overflow: the
+       fluid% term always caps the painted width below the viewport. On big
+       screens tall enough that no zoom is needed, the cards cap at --shell-max.
+       Vertical height is unchanged — the height-fit zoom always fills the same
+       available vertical space regardless of width. Phones (<900px) stack. */
+    --shell-fluid: 98%;
+    --shell-max: 2400px;
+    margin-top: 10px;   /* nudge the cards down from the top */
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    /* Two roughly-equal columns: Grade card (left) + scoring details (right).
+       display is set to flex by showRatings() when the view is revealed. */
+    align-items: stretch;
+    gap: 30px;
+}
+
+.ratings-main {
+    flex: 1.1 1 0;
+    min-width: 0;
+}
+
+/* --- Left: Grade summary card --- */
+.grade-card {
+    height: 100%;
+    background: #ffffff;
+    border: 1px solid #e7e9f0;
+    border-top: 4px solid var(--grade-color, #c7a24e);   /* graded accent bar */
+    border-radius: 22px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04),
+                0 12px 32px rgba(16, 24, 40, 0.07);
+    padding: 40px 46px 42px;
+    box-sizing: border-box;
+}
+
+.grade-card-title {
+    margin: 0 0 10px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #1f2430;
+}
+
+/* Big grade letter — deliberately no box / outline. */
+.grade-hero-badge.grade-badge {
+    display: block;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    margin: 4px auto 8px;
+    text-align: center;
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0;
+    color: var(--grade-color, #9ca3af) !important;
+    font-size: 92px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.grade-unified {
+    margin: 0 0 26px;
+    text-align: center;
+    font-size: 15px;
+    color: #6b7280;
+}
+
+/* Metric breakdown table */
+.grade-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    border: 1px solid #eceef3;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.grade-table th {
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #9297ab;
+    background: #fafbfc;
+    border-bottom: 1px solid #eceef3;
+}
+
+.grade-table td {
+    padding: 15px 18px;
+    color: #3a3f4b;
+    border-bottom: 1px solid #f2f3f7;
+    vertical-align: middle;
+}
+
+.grade-table tbody tr:last-child td { border-bottom: none; }
+.grade-table tbody tr:hover td { background: #fafbfc; }
+.gt-metric { font-weight: 600; color: #1f2430; white-space: nowrap; }
+.gt-emoji { margin-right: 8px; }
+.grade-table .gt-badge.grade-badge {
+    min-width: 34px;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 9px;
+    font-size: 15px;
+}
+
+/* How it's calculated */
+.grade-calc {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid #eceef3;
+}
+
+.grade-calc-title {
+    margin: 0 0 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    font-weight: 800;
+    color: #1f2430;
+}
+
+.grade-calc-intro {
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #6b7280;
+}
+
+.grade-calc-list {
+    margin: 0 0 16px;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #5a6072;
+}
+
+.grade-calc-list strong { color: #3a3f4b; }
+.grade-formula {
+    margin: 0;
+    padding: 12px 16px;
+    background: rgba(201, 168, 106, 0.10);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #a07a2a;
+}
+
+.grade-charts-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 26px;
+    padding: 14px 28px;
+    border: 1.5px solid #1c1c1c;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #A8845C;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.grade-charts-btn:hover { background: #fbf7f0; transform: translateY(-1px); }
+/* --- Right: scoring breakdown details --- */
+.ratings-scales {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.details-title {
+    margin: 0 0 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #1f2430;
+}
+
+.detail-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #ffffff;
+    border: 1px solid #e7e9f0;
+    border-left: 4px solid #c9a86a;   /* refined gold accent */
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04),
+                0 8px 22px rgba(16, 24, 40, 0.06);
+    padding: 26px 30px;
+    box-sizing: border-box;
+    flex: 1 1 0;       /* the 4 cards share the column height */
+    min-height: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.detail-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05),
+                0 14px 30px rgba(16, 24, 40, 0.10);
+}
+
+.detail-icon {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    color: #c9a86a;
+}
+
+.detail-icon svg { width: 100%; height: 100%; }
+.detail-body h3 {
+    margin: 0 0 7px;
+    font-family: 'Inter', sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1f2430;
+}
+
+.detail-body p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.55;
+    color: #6b7280;
+}
+
+/* --- Dark theme --- */
+body.dark .grade-card,
+body.dark .detail-card {
+    background: #161b22;
+    border: 1px solid #2b323c;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+}
+
+body.dark .grade-card { border-top: 4px solid var(--grade-color, #c9a86a); }
+body.dark .detail-card { border-left: 4px solid #b08d5f; }
+body.dark .detail-card:hover {
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .grade-card-title,
+body.dark .details-title,
+body.dark .gt-metric,
+body.dark .grade-calc-title,
+body.dark .detail-body h3 { color: #e6e8f0; }
+body.dark .grade-unified,
+body.dark .grade-calc-intro,
+body.dark .grade-calc-list,
+body.dark .detail-body p { color: #9aa4b2; }
+body.dark .grade-calc-list strong { color: #c9d1d9; }
+body.dark .grade-calc { border-top-color: #2b323c; }
+body.dark .grade-formula { background: rgba(201, 168, 106, 0.12); color: #d6b988; }
+body.dark .grade-table { border-color: #2b323c; }
+body.dark .grade-table th { color: #8b93a7; background: #1b212a; border-bottom-color: #2b323c; }
+body.dark .grade-table td { color: #c9d1d9; border-bottom-color: #21262d; }
+body.dark .grade-table tbody tr:hover td { background: #1b212a; }
+body.dark .grade-charts-btn {
+    background: linear-gradient(145deg, #24211d 0%, #1a1815 100%);
+    border-color: #B08D5F;
+    color: #E7D3B3;
+}
+
+body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
+/* --- Overall hero: skinny, always at the top --- */
+
+
+/* "vs last week" momentum line, directly under the overall score */
+
+
+/* --- Grade badge (shared by hero + cards) --- */
+.grade-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 46px;
+    height: 46px;
+    padding: 0 14px;
+    border-radius: 13px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 24px;
+    line-height: 1;
+    color: #ffffff;
+    background: var(--grade-color, #9ca3af);
+    box-shadow: 0 4px 14px var(--grade-shadow, rgba(0, 0, 0, 0.15));
+}
+
+.grade-badge-lg {
+    min-width: 78px;
+    height: 78px;
+    border-radius: 18px;
+    font-size: 42px;
+}
+
+/* --- 2x2 metric grid --- */
+
+
+/* Pin each card's grade badge to the card's top-right corner (a direct child
+   of the card, so it anchors to the card, not the name row). */
+
+
+/* Decorative line-art on the right of each card, sitting behind the content. */
+
+
+/* Week-over-week % chip on each card */
+
+
+/* --- Grade colour system: S gold, A green, B blue, C yellow, D orange, F red --- */
+.grade-S { --grade-color: #cf9a12; --grade-shadow: rgba(207, 154, 18, 0.38); }
+.grade-A { --grade-color: #16a34a; --grade-shadow: rgba(22, 163, 74, 0.30); }
+.grade-B { --grade-color: #2563eb; --grade-shadow: rgba(37, 99, 235, 0.30); }
+.grade-C { --grade-color: #eab308; --grade-shadow: rgba(234, 179, 8, 0.30); }
+.grade-D { --grade-color: #ed7014; --grade-shadow: rgba(237, 112, 20, 0.30); }
+.grade-F { --grade-color: #dc2626; --grade-shadow: rgba(220, 38, 38, 0.30); }
+.grade-none { --grade-color: #9ca3af; --grade-shadow: rgba(156, 163, 175, 0.22); }
+/* S is special: a gold gradient with dark text. C/none use dark text on their
+   lighter fills so the letter stays readable. */
+.grade-badge.grade-S {
+    background: linear-gradient(135deg, #f2c94c, #cf9a12);
+    color: #3a2c00;
+}
+
+.grade-badge.grade-C { color: #3a2f00; }
+.grade-badge.grade-none { color: #ffffff; }
+/* --- Wide, prominent "See Growth Ratings" button (on the charts view) --- */
+.see-ratings-wrap {
+    margin-top: auto;      /* anchor to the bottom of the charts card */
+    padding-top: 16px;     /* nudged up 10px */
+    display: flex;
+    justify-content: center;
+}
+
+.see-ratings-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 660px;
+    padding: 22px 46px;                                              /* bigger */
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;                                                /* bigger */
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    /* Light theme: white fill, black border, tan text. */
+    color: #A8845C;                                                 /* tan text */
+    background: #ffffff;                                            /* white fill */
+    border: 2px solid #1c1c1c;                                      /* black border */
+    border-radius: 16px;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 10px 26px rgba(44, 48, 46, 0.12);
+    transition: transform 0.2s ease, box-shadow 0.25s ease, background 0.25s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.see-ratings-btn:hover {
+    transform: translateY(-3px);
+    background: #fbf7f0;                                            /* subtle warm tint */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                0 14px 32px rgba(168, 132, 92, 0.22);
+}
+
+/* --- Dark theme: neutral slate + gold, glassy cards --- */
+
+
+/* Dark theme: black/dark-fill button with a light-brown outline and light-tan
+   text (this dark style is intentionally dark-theme only). */
+body.dark .see-ratings-btn {
+    color: #E7D3B3;                                                 /* light tan text */
+    background: linear-gradient(145deg, #24211d 0%, #1a1815 100%);  /* dark fill */
+    border-color: #B08D5F;                                          /* light brown outline */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 26px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .see-ratings-btn:hover {
+    background: linear-gradient(145deg, #2a2622 0%, #1f1c18 100%);
+    border-color: #C9A86A;                                          /* outline brightens */
+    /* Warm glow ring on hover. */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06),
+                0 14px 32px rgba(176, 141, 95, 0.30),
+                0 0 0 4px rgba(176, 141, 95, 0.14);
+}
+
+/* Narrow screens (below the fit-scale zoom threshold): drop the fixed design
+   widths, stack to a single column, and scale the type and badges down so
+   nothing overflows on phones. Matches PHONE_MAX in fit-scale.js. */
+@media (max-width: 900px) {
+    .growth-card {
+        width: auto;
+        max-width: 100%;
+        min-height: 0;
+    }
+
+    #ratingsView.ratings-view {
+        width: 100%;
+        max-width: 100%;
+        flex-direction: column;   /* stack: report first, then the scales */
+    }
+
+    .ratings-main, .ratings-scales { flex: 1 1 auto; width: 100%; }
+       /* too crowded on phones */
+
+
+    .grade-badge-lg { min-width: 58px; height: 58px; font-size: 30px; }
+
+
+    .grade-badge { min-width: 38px; height: 38px; font-size: 19px; padding: 0 10px; }
+}
+
+/* Phone (≤480px): let the pill nav wrap instead of overflowing */
+@media (max-width: 480px) {
+    .bottom-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: calc(100% - 1.5rem);
+    }
+}
+
+/* ============================================================
+   FULL BLEED — the page is the container
+   ============================================================
+   The analytics used to live on a card: a white (or dark) rounded panel inset
+   from every edge, so the charts were drawn inside a box inside a page, with
+   two sets of margins between the data and the screen. The panel is gone. What
+   was its chrome — background, border, radius, shadow — is dropped, its width
+   caps are lifted to the full page, and the room it was spending on itself goes
+   to the charts, which are now half again as tall. */
+#growthCard.growth-card {
+    --shell-fluid: 100%;
+    --shell-max: 100%;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 6px clamp(20px, 3.4vw, 56px) 0;
+    margin-top: 6px;
+    top: 0;
+}
+/* The themed rules paint the card per theme; there is no card to paint now. */
+body.dark #growthCard.growth-card,
+body.classic #growthCard.growth-card,
+html[data-theme="dark"] #growthCard.growth-card,
+html[data-theme="light"] #growthCard.growth-card {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+/* The charts take the space back: from a third of the screen to well over half,
+   with a floor that keeps them readable on short laptops and a cap so an
+   enormous monitor doesn't stretch one line across a whole wall. */
+#growthChart,
+#dailyXpChart,
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
+    height: clamp(260px, 56vh, 760px);
+}
+
+/* The tab row and the title breathe a little wider now that the page is theirs. */
+#growthCard .tabs { margin-bottom: 22px; }
+#growthCard .chart-title { margin-bottom: 18px; }
+
+/* The report card side of the page spans it too. */
+#ratingsView.ratings-view {
+    --shell-fluid: 100%;
+    --shell-max: 100%;
+    padding-inline: clamp(20px, 3.4vw, 56px);
+    gap: clamp(20px, 2.4vw, 40px);
+}
+
+/* The chart's own white panel goes with the card. In the dark theme it was
+   already transparent — the chart drew straight onto the surface behind it —
+   and now it does that in the light theme too, so the graph sits on the page
+   itself in both. */
+.chart-container {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 0 8px;
+}
+#growthChart,
+#dailyXpChart,
+#averageXpChart,
+#cumulativeFocusChart,
+#dailyFocusChart {
+    background: transparent;
+}
+
+/* ============================================================
+   The charts card fits the screen it is given
+   ============================================================
+
+   This page used to carry two views — the charts and the graded report card —
+   and the sizing above is from when it had to accommodate both. The report
+   card is its own page now (Analytics), so the charts card can simply fill
+   what the top bar leaves.
+
+   It could not before: `min-height: 78vh` plus fixed paddings, a 34px gap
+   above the tabs and a chart clamped at `34vh` added up past the viewport on a
+   laptop screen, and the "See Analytics" button at the bottom fell below the
+   fold with no page scroll to reach it.
+
+   So the card becomes a flex column pinned to the available height, and the
+   canvas takes the slack. That works because growth.js sizes each drawing
+   buffer from the canvas's own rendered box and redraws on resize
+   (`resizeCanvases`), so the chart follows the layout rather than fixing it.
+
+   Below 560px tall the page goes back to scrolling — see the base rules — and
+   this does not apply. */
+@media (min-height: 560px) {
+    .growth-container {
+        padding-top: 10px;
+        padding-bottom: 12px;
+    }
+
+    #growthCard {
+        /* One source of height, replacing the 78vh floor. */
+        min-height: 0;
+        height: calc(100vh - var(--topnav-h, 64px) - 22px);
+        padding-top: 20px;
+        padding-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* The title sits closer to the tabs than it did: that gap was most of what
+       pushed the button off screen. */
+    #growthCard .card-header { margin-bottom: 0; }
+    #growthCard .tab-navigation { margin-top: clamp(8px, 2vh, 34px); }
+
+    /* Everything between the tabs and the button shares the slack. */
+    #growthCard .tab-content { flex: 1 1 auto; min-height: 0; }
+    #growthCard .tab-pane.active {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+    #growthCard .chart-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    #growthCard .chart-title { flex: none; }
+
+    #growthChart,
+    #dailyXpChart,
+    #averageXpChart,
+    #cumulativeFocusChart,
+    #dailyFocusChart {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 150px;
+    }
+
+    /* margin-top:auto already anchors this; with the card now exactly the
+       height of the screen, that anchor is the bottom of the screen. */
+    #growthCard .see-ratings-wrap { flex: none; padding-top: 12px; }
+}

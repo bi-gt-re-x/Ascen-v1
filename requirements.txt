@@ -1,0 +1,23 @@
+# Ascen — backend dependencies.
+#
+#   python3 -m venv .venv-fastapi
+#   .venv-fastapi/bin/python -m pip install -r requirements.txt
+#   .venv-fastapi/bin/python run.py
+#
+fastapi>=0.115
+uvicorn[standard]>=0.30
+
+# Renders the Jinja templates in frontend/templates/. Kept while the React
+# frontend is built alongside the old pages — see backend/routes/pages.py.
+jinja2>=3.1
+
+# Signs the session cookie for Starlette's SessionMiddleware.
+itsdangerous>=2.1
+
+# Only for werkzeug.security's password hashing. Accounts already in the
+# database hold pbkdf2 hashes in werkzeug's format, so reading them back needs
+# the same code that wrote them — see backend/tracking/auth.py.
+werkzeug>=3.0
+
+# Form parsing on the OAuth callback.
+python-multipart>=0.0.9

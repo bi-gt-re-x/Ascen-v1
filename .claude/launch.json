@@ -2,10 +2,22 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "grindos-mac",
-      "runtimeExecutable": ".venv-mac/bin/python",
-      "runtimeArgs": ["run_mac.py"],
+      "name": "ascen-api",
+      "runtimeExecutable": ".venv-fastapi/bin/python",
+      "runtimeArgs": ["run.py"],
       "port": 5050
+    },
+    {
+      "name": "ascen-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "js-amazon-website",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5173", "--directory", "/Users/myles/Myles Coding/JS Projects/JS-Amazon-Website"],
+      "port": 5173
     }
   ]
 }

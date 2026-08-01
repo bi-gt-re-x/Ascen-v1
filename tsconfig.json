@@ -1,0 +1,36 @@
+{
+  // One config for the whole project: the app in frontend/src, and
+  // vite.config.ts beside this file. They were two configs while the tooling
+  // lived in frontend/, which needed a project reference to bridge them; from
+  // the root, `types: ["node"]` on a single config covers both.
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    // vite.config.ts imports node:url; the app code never touches these.
+    "types": ["node", "vite/client"],
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./frontend/src/*"]
+    }
+  },
+  "include": ["frontend/src", "vite.config.ts"]
+}

@@ -6,29 +6,37 @@ needs the answer before any JS runs, which is what the cookie set here is for â€
 the account's stored theme is the durable copy, the cookie is the one read on
 every request. See backend/middleware/context.py for the read side.
 """
-from flask import Blueprint, jsonify, request, session
+from typing import Optional
 
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from backend.api.reply import fail, ok
 from backend.config.settings import THEME_COOKIE_MAX_AGE
 from backend.database import connection as db
 from backend.tracking.auth import load_user
 
-bp = Blueprint('theme', __name__)
+router = APIRouter(tags=['theme'])
 
 
-@bp.route('/api/set_theme', methods=['POST'])
-def set_theme():
-    data = request.json or {}
-    theme = data.get('theme')
-    if theme not in ('light', 'dark'):
-        return jsonify({"success": False, "message": "Theme must be 'light' or 'dark'."}), 400
+class SetTheme(BaseModel):
+    theme: Optional[str] = None
+
+
+@router.post('/api/set_theme')
+def set_theme(request: Request, body: SetTheme):
+    if body.theme not in ('light', 'dark'):
+        return fail("Theme must be 'light' or 'dark'.", status=400)
 
     persisted = False
-    users, user = load_user(session.get('username'))
+    users, user = load_user(request.session.get('username'))
     if user:
-        user['theme'] = theme
+        user['theme'] = body.theme
         db.save_users(users)
         persisted = True
 
-    resp = jsonify({"success": True, "persisted": persisted})
-    resp.set_cookie('theme', theme, max_age=THEME_COOKIE_MAX_AGE, samesite='Lax')
-    return resp
+    response = JSONResponse(ok(persisted=persisted))
+    response.set_cookie('theme', body.theme,
+                        max_age=THEME_COOKIE_MAX_AGE, samesite='lax')
+    return response

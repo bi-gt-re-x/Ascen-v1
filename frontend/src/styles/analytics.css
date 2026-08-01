@@ -1,0 +1,26 @@
+/* analytics — the graded report card.
+ *
+ * This was the second half of the growth page, revealed by a script, so all of
+ * its styling still lives in growth.css alongside the charts it shared a card
+ * with — every `grade-*`, `rt-card` and `ratings-*` rule is there. analytics.html
+ * loads growth.css first and then this file, which holds only what differs now
+ * that it is a page of its own.
+ *
+ * Its React component is src/pages/Analytics.tsx.
+ */
+
+/* On the combined page this view was hidden until the button was pressed, and
+   was revealed with `display: flex` set inline by the script. There is no
+   script and no inline style now, so the layout has to come from here. */
+.analytics-container .ratings-view {
+    display: flex;
+}
+
+/* The charts card is pinned to the height of the screen; the report card is
+   content-sized, so it scrolls when it is taller than the screen rather than
+   being clipped. */
+.analytics-container {
+    align-items: flex-start;
+    padding-top: 10px;
+    padding-bottom: 16px;
+}

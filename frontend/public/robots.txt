@@ -1,0 +1,22 @@
+# Ascen
+#
+# Everything behind an account is personal data and has nothing to offer a
+# crawler; the marketing and policy pages are the only ones worth indexing.
+
+User-agent: *
+Disallow: /dashboard
+Disallow: /calendar
+Disallow: /goals
+Disallow: /growth
+Disallow: /tasks
+Disallow: /analytics
+Disallow: /focus
+Disallow: /achievements
+Disallow: /notes
+Disallow: /library
+Disallow: /history
+Disallow: /settings
+Disallow: /api/
+Disallow: /auth/
+Disallow: /verify/
+Allow: /

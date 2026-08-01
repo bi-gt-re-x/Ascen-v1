@@ -12,16 +12,16 @@ The file each endpoint lives in is in the right-hand column.
 
 | Route | Notes | File |
 | --- | --- | --- |
-| `GET /` | Signed in → `/dashboard`, else the home page | `pages/homepage.py` |
-| `GET /home` | The home page, and the host of the sign-in popup | `pages/homepage.py` |
-| `GET /dashboard` | Account required | `pages/dashboard.py` |
-| `GET /calendar` | Account required | `pages/calendar.py` |
-| `GET /goals` | Account required | `pages/goals.py` |
-| `GET /growth` | Account required | `pages/growth.py` |
-| `GET /about-us`, `/careers`, `/contact-support` | | `pages/aboutus.py` |
-| `GET /privacy-policy` | | `pages/privacypolicy.py` |
-| `GET /terms-of-service` | | `pages/termsofservice.py` |
-| `GET /engine` | Hidden; gated client-side by today's unlock | `pages/homepage.py` |
+| `GET /` | Signed in → `/dashboard`, else the home page | `routes/pages.py` |
+| `GET /home` | The home page, and the host of the sign-in popup | `routes/pages.py` |
+| `GET /dashboard` | Account required | `routes/pages.py` |
+| `GET /calendar` | Account required | `routes/pages.py` |
+| `GET /goals` | Account required | `routes/pages.py` |
+| `GET /growth` | Account required | `routes/pages.py` |
+| `GET /about-us`, `/careers`, `/contact-support` | | `routes/pages.py` |
+| `GET /privacy-policy` | | `routes/pages.py` |
+| `GET /terms-of-service` | | `routes/pages.py` |
+| `GET /engine` | Hidden; gated client-side by today's unlock | `routes/pages.py` |
 
 A signed-out visitor asking for a gated page is redirected to
 `/home?auth=login&next=<path>` (`middleware/gate.py`).
@@ -45,7 +45,7 @@ A signed-out visitor asking for a gated page is redirected to
 
 All in `routes/auth.py`, except the theme (`routes/theme.py`).
 
-## Dashboard — `pages/dashboard.py`
+## Dashboard — `api/dashboard.py`
 
 | Endpoint | Does |
 | --- | --- |
@@ -53,7 +53,7 @@ All in `routes/auth.py`, except the theme (`routes/theme.py`).
 | `POST /api/update_stats` | Write back level / xp / tasks_completed |
 | `POST /api/track_daily_xp` | Fold a batch into today's ledger row |
 
-## Tasks — `pages/tasks.py`
+## Tasks — `api/tasks.py`
 
 | Endpoint | Does |
 | --- | --- |
@@ -69,7 +69,7 @@ All in `routes/auth.py`, except the theme (`routes/theme.py`).
 | `POST /api/add_task`, `POST /api/delete_task` | Older names, kept |
 | `POST /api/delete_task_no_tracking` | Delete with no XP/streak side effects |
 
-## Goals — `pages/goals.py`
+## Goals — `api/goals.py`
 
 | Endpoint | Does |
 | --- | --- |
@@ -80,7 +80,7 @@ All in `routes/auth.py`, except the theme (`routes/theme.py`).
 | `POST /api/update_goal_progress` | Add to one counter by hand, capped at target |
 | `POST /api/auto_apply_task_xp` | Apply a completed task's XP to active XP goals |
 
-## Calendar — `pages/calendar.py`
+## Calendar — `api/calendar.py`
 
 | Endpoint | Does |
 | --- | --- |
@@ -96,14 +96,14 @@ All in `routes/auth.py`, except the theme (`routes/theme.py`).
 | `GET/POST /api/day_focus` | The one-line focus note on a day |
 | `GET /api/xp_earned_on?username=&date=` | One day's XP, midnight to midnight |
 
-## Focus — `pages/focus.py`
+## Focus — `api/focus.py`
 
 | Endpoint | Does |
 | --- | --- |
 | `POST /api/focus_sync` | Mirror a day's focus total (never lowers a recorded total) |
 | `GET /api/focus_history?username=&start=&end=` | `{iso: {seconds, goal_hours}}` |
 
-## Growth — `pages/growth.py`
+## Growth — `api/growth.py`
 
 | Endpoint | Does |
 | --- | --- |

@@ -33,6 +33,11 @@ verified so nobody is locked out.
 
 This module holds the rules only. The HTTP endpoints are in
 backend/routes/auth.py.
+
+The session lives in a signed cookie, managed by Starlette's SessionMiddleware
+(see backend/main.py). `request.session` is a plain dict, so the three
+functions that touch it take the request rather than reaching for a global —
+which is also what makes them testable without a live server.
 """
 import json
 import os
@@ -45,7 +50,9 @@ import urllib.request
 from datetime import date, datetime
 from email.message import EmailMessage
 
-from flask import request, session
+# werkzeug only for its password hashing. Accounts already in the database hold
+# pbkdf2 hashes werkzeug wrote, so verifying them needs the same code — nothing
+# else here depends on it, and no web framework comes with it.
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.database import connection as db
@@ -203,25 +210,25 @@ def public_user(user):
     }
 
 
-def sign_in(user):
+def sign_in(request, user):
     """Put the account in the session and hand back its public shape."""
-    session['username'] = user['username']
-    session.pop('pending_user', None)
+    request.session['username'] = user['username']
+    request.session.pop('pending_user', None)
     return public_user(user)
 
 
-def sign_out():
-    session.pop('username', None)
+def sign_out(request):
+    request.session.pop('username', None)
 
 
-def signed_in_user():
+def signed_in_user(request):
     """The signed-in account, or None. Drops a session pointing at a dead account."""
-    username = session.get('username')
+    username = request.session.get('username')
     if not username:
         return None
     user = find_user(db.users(), username=username)
     if not user:
-        session.pop('username', None)
+        request.session.pop('username', None)
         return None
     return user
 
@@ -233,11 +240,19 @@ def mail_configured():
     return bool(os.environ.get('MAIL_USERNAME') and os.environ.get('MAIL_PASSWORD'))
 
 
-def base_url():
+def base_url(request=None):
+    """The origin links in outgoing e-mail point at.
+
+    APP_BASE_URL wins when it is set, which is the only way to get this right
+    once the app is reachable somewhere other than the machine it runs on.
+    Otherwise it is taken from the request that is asking.
+    """
     configured = os.environ.get('APP_BASE_URL')
     if configured:
         return configured.rstrip('/')
-    return request.url_root.rstrip('/')
+    if request is not None:
+        return str(request.base_url).rstrip('/')
+    return 'http://127.0.0.1:5050'
 
 
 def _send_mail(to_address, subject, body):
@@ -269,13 +284,13 @@ def _send_mail(to_address, subject, body):
     return True
 
 
-def send_verification(user):
+def send_verification(user, request=None):
     """Mail the account its verification link.
 
     Returns (sent, link). In dev mode `sent` is False and the link is handed
     back so the popup can show it — the flow stays walkable with no mail set up.
     """
-    link = '{}/verify/{}'.format(base_url(), user['verify_token'])
+    link = '{}/verify/{}'.format(base_url(request), user['verify_token'])
     body = (
         "Hi {},\n\n"
         "Confirm your e-mail to finish setting up your Ascen account:\n\n"
@@ -350,14 +365,14 @@ def google_configured():
     return bool(os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_CLIENT_SECRET'))
 
 
-def google_redirect_uri():
-    return '{}/auth/google/callback'.format(base_url())
+def google_redirect_uri(request=None):
+    return '{}/auth/google/callback'.format(base_url(request))
 
 
-def google_consent_url(state):
+def google_consent_url(state, request=None):
     params = {
         'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
-        'redirect_uri': google_redirect_uri(),
+        'redirect_uri': google_redirect_uri(request),
         'response_type': 'code',
         'scope': 'openid email profile',
         'state': state,
@@ -382,13 +397,13 @@ def _get_json(url, token):
         return json.loads(res.read().decode('utf-8'))
 
 
-def google_profile(code):
+def google_profile(code, request=None):
     """Trade an authorization code for the signer-in's Google profile."""
     token = _post_form(GOOGLE_TOKEN_URL, {
         'code': code,
         'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
         'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET'),
-        'redirect_uri': google_redirect_uri(),
+        'redirect_uri': google_redirect_uri(request),
         'grant_type': 'authorization_code',
     })
     return _get_json(GOOGLE_USERINFO_URL, token.get('access_token', ''))

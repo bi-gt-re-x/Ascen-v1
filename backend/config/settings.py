@@ -4,7 +4,7 @@ Nothing in the backend hard-codes a path or a key: modules import them from
 here, so moving a folder or changing a cookie lifetime is a one-line edit.
 
 Values that may come from the environment (secret key, mail, port) are read
-when `apply()` runs rather than at import time, so `load_dotenv()` in the entry
+through a function rather than at import time, so `load_dotenv()` in the entry
 point still gets the first word.
 """
 import os
@@ -15,17 +15,28 @@ BACKEND_DIR = os.path.dirname(CONFIG_DIR)
 ROOT_DIR = os.path.dirname(BACKEND_DIR)
 
 # --- Frontend ------------------------------------------------------------
-TEMPLATE_FOLDER = os.path.join(ROOT_DIR, 'frontend', 'templates')
+FRONTEND_DIR = os.path.join(ROOT_DIR, 'frontend')
+SRC_DIR = os.path.join(FRONTEND_DIR, 'src')
+
+# The original server-rendered pages. They still render and still work while
+# the React app in frontend/src/ takes them over one at a time — see
+# backend/routes/pages.py.
+TEMPLATE_FOLDER = os.path.join(FRONTEND_DIR, 'html')
+
 # The hidden easter-egg chain (scripts, styles and the /engine page) lives
 # outside the normal template tree and is served at /static/secret/...
-SECRET_FOLDER = os.path.join(ROOT_DIR, 'frontend', 'secret')
+SECRET_FOLDER = os.path.join(FRONTEND_DIR, 'secret')
 
-# Static assets sit in top-level folders rather than one static/ tree, but keep
-# their classic /static/<kind>/... URLs so every url_for('static', ...) in the
-# templates still resolves. See backend/routes/assets.py.
+# Static assets sit in folders of their own rather than one static/ tree, but
+# keep their classic /static/<kind>/... URLs so every url_for('static', ...) in
+# the old pages still resolves. See backend/routes/assets.py.
+#
+# `css` points into the React app's styles/ because the stylesheets moved there
+# whole — the old pages and the new components render from the same CSS, which
+# is what stops the two frontends drifting apart while both are live.
 STATIC_ROOTS = {
-    'css': os.path.join(ROOT_DIR, 'styles'),
-    'js': os.path.join(ROOT_DIR, 'frontend', 'js'),
+    'css': os.path.join(SRC_DIR, 'styles'),
+    'js': os.path.join(FRONTEND_DIR, 'js'),
     'images': os.path.join(ROOT_DIR, 'utils', 'images'),
     'icons': os.path.join(ROOT_DIR, 'utils', 'icons'),
     'fonts': os.path.join(ROOT_DIR, 'utils', 'fonts'),
@@ -63,8 +74,35 @@ THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 # XP needed for level N is N * 100.
 LEVEL_XP_STEP = 100
 
-DEFAULT_PORT = 5000
-DEFAULT_SERVER_NAME = '127.0.0.1:5000'
+# macOS gives port 5000 to ControlCenter (AirPlay Receiver), so the app has
+# always actually run on 5050. Under Flask that took a wrapper (run_mac.py)
+# because SERVER_NAME was baked in at 5000; FastAPI needs no such setting, so
+# the real port is simply the default now and the wrapper is gone.
+DEFAULT_PORT = 5050
+
+# The signed cookie the session lives in. Named the same as Flask's default so
+# a browser holding the old one is signed out cleanly rather than confused by
+# two cookies claiming the same thing.
+SESSION_COOKIE = 'session'
+SESSION_MAX_AGE = 60 * 60 * 24 * 14
+
+# Where the React dev server runs. The API and the Vite dev server are separate
+# origins during development, and the session cookie has to survive the hop —
+# so these are allowed with credentials. In production the built frontend is
+# served by this app and nothing is cross-origin.
+DEV_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
+
+
+def secret_key():
+    """What the session cookie is signed with.
+
+    Read on each call rather than at import, so `load_dotenv()` in the entry
+    point still gets the first word. Changing it signs everyone out.
+    """
+    return os.environ.get('SECRET_KEY', 'grind-os-dev-secret-change-me')
 
 
 def load_dotenv(path=None):
@@ -87,12 +125,3 @@ def load_dotenv(path=None):
             key, value = key.strip(), value.strip().strip('"').strip("'")
             if key and key not in os.environ:
                 os.environ[key] = value
-
-
-def apply(app):
-    """Push the Flask-level settings onto an app instance."""
-    # Signs the session cookie, which is how we know who is signed in.
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'grind-os-dev-secret-change-me')
-    # Needed for url_for outside a request context. run_mac.py overrides it
-    # because macOS gives port 5000 to AirPlay.
-    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', DEFAULT_SERVER_NAME)
