@@ -2645,9 +2645,12 @@
     }
     function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
 
-    // --- Top Priorities: the outstanding tasks worth the most XP -------------
-    // Pending (not-done) tasks ranked by XP, highest first, top 3. Done tasks
-    // aren't priorities, so if nothing is outstanding we show a "-- --" row.
+    // --- Top Priorities: every unfinished task of the week -------------------
+    // Pending (not-done) tasks ranked by XP, highest first. All of them, not a
+    // top three: this panel is the week's outstanding work, so a task being
+    // fourth by XP does not make it not outstanding. The count sits in the
+    // heading and the sidebar scrolls when the list is long. Done tasks aren't
+    // priorities, so with nothing outstanding we show a "-- --" row.
     function renderPriorities(tasks) {
         var ol = document.querySelector('.wk-priorities');
         if (!ol) return;
@@ -2664,12 +2667,15 @@
             return t.status !== 'done' && inShownWeek(t);
         });
         pending.sort(function (a, b) { return (Number(b.xp_value) || 0) - (Number(a.xp_value) || 0); });
-        var top = pending.slice(0, 3);
-        if (!top.length) {
+
+        var count = document.getElementById('wkPrioritiesCount');
+        if (count) count.textContent = pending.length ? '(' + pending.length + ')' : '';
+
+        if (!pending.length) {
             ol.innerHTML = '<li><span>--</span><span class="wk-badge">--</span></li>';
             return;
         }
-        ol.innerHTML = top.map(function (t, i) {
+        ol.innerHTML = pending.map(function (t, i) {
             var p = String(t.priority || '').toLowerCase();
             var cls = p === 'high' ? 'high' : (p === 'medium' ? 'med' : 'low');
             var label = p ? p.charAt(0).toUpperCase() + p.slice(1) : '—';

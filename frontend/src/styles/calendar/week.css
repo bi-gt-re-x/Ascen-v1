@@ -121,7 +121,7 @@
     border-radius: 12px; padding: 5px 14px; margin-top: 2px;
 }
 
-.wk-allday-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; border-top: 1px solid #dfe4ec; border-bottom: 1px solid #dfe4ec; }
+.wk-allday-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; border-top: 1px solid #c3ccd9; border-bottom: 1px solid #c3ccd9; }
 .wk-allday-label { font-size: 11px; color: #9297ab; padding: 8px 8px; }
 .wk-allday-cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 6px 0; }
 .wk-allday-cell { display: flex; justify-content: center; }
@@ -169,8 +169,8 @@
  * there are seven of one and a hundred and sixty of the other.
  *
  * The dark theme overrides both further down; only the light theme reads these. */
-.wk-daycol { position: relative; border-left: 1px solid #dde2ea; }
-.wk-hourline { position: absolute; left: 0; right: 0; border-top: 1px solid #e4e8ef; }
+.wk-daycol { position: relative; border-left: 1px solid #c3ccd9; }
+.wk-hourline { position: absolute; left: 0; right: 0; border-top: 1px solid #d3d9e2; }
 
 /* "Now" indicator: a red line across the whole week grid at the current time,
    with a matching red time badge on the left (time-label) edge. */
@@ -554,3 +554,20 @@ html[data-theme="dark"] .wk-task-name:focus-visible,
 html[data-theme="dark"] .day-task-name:hover,
 html[data-theme="dark"] .day-task-name:focus-visible { color: #86d6a5; }
 html[data-theme="dark"] .wk-task-name:focus-visible { outline-color: #86d6a5; }
+
+/* The Top Priorities count, beside its heading.
+ *
+ * The panel lists every unfinished task of the week rather than a top three,
+ * so the number is worth showing — and the list gets its own scroll, because
+ * a heavy week should not push the panels below it off the sidebar. */
+.wk-priorities-count {
+    font-weight: 600;
+    color: #9297ab;
+    margin-left: 4px;
+}
+html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
+
+.wk-priorities {
+    max-height: 34vh;
+    overflow-y: auto;
+}
