@@ -56,6 +56,7 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/goals" element={<Goals />} />
               <Route path="/growth" element={<Growth />} />
+              <Route path="/analytics" element={<Analytics />} />
               <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
               <Route path="/calendar/day" element={<CalendarDay />} />
               <Route path="/calendar/week" element={<CalendarWeek />} />
@@ -67,7 +68,6 @@ export default function App() {
                 personal data once it exists. */}
             <Route element={<RequireAccount />}>
               <Route path="/tasks" element={<Tasks />} />
-              <Route path="/analytics" element={<Analytics />} />
               <Route path="/growth-tree" element={<GrowthTree />} />
               <Route path="/focus" element={<Focus />} />
               <Route path="/achievements" element={<Achievements />} />

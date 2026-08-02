@@ -58,6 +58,22 @@ export function duration(seconds: number): string {
   return `${total}s`;
 }
 
+/**
+ * Minutes as "1h 20m", "45m", or "2h".
+ *
+ * `duration` above says "0s" for nothing, which is right for a stopwatch and
+ * wrong for a figure whose unit is minutes — the report card's focus row reads
+ * "0m / 90m focused" the day before anything has been tracked.
+ */
+export function minutes(value: number): string {
+  const total = Math.max(0, Math.round(value || 0));
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+
+  if (hours > 0) return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
+  return `${rest}m`;
+}
+
 /** Seconds as "01:24:03" or "24:03" — for a running timer. */
 export function clock(seconds: number): string {
   const total = Math.max(0, Math.round(seconds));

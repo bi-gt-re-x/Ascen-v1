@@ -108,20 +108,11 @@ def calendar(request: Request):
     return render(request, 'calendar.html')
 
 
-@page('/analytics')
-def analytics(request: Request):
-    """The graded report card.
-
-    Was the second half of the growth page, toggled into view by a script.
-    It is a page of its own now, which is why growth.html no longer carries a
-    hidden copy of it."""
-    return render(request, 'analytics.html')
-
-
-# /about-us, /privacy-policy, /terms-of-service, /goals and /growth used to be
-# here. React has them now — see backend/routes/spa.py, which is the list of
-# what has moved. The templates they rendered are still in frontend/html/ as
-# the reference the ports were made against; nothing serves them.
+# /about-us, /privacy-policy, /terms-of-service, /goals, /growth and
+# /analytics used to be here. React has them now — see backend/routes/spa.py,
+# which is the list of what has moved. The templates they rendered are still in
+# frontend/html/ as the reference the ports were made against; nothing serves
+# them.
 
 
 @page('/careers')

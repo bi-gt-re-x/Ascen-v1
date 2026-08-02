@@ -2,11 +2,9 @@
  *
  * This was the second half of the growth page, revealed by a script, so all of
  * its styling still lives in growth.css alongside the charts it shared a card
- * with — every `grade-*`, `rt-card` and `ratings-*` rule is there. analytics.html
- * loads growth.css first and then this file, which holds only what differs now
- * that it is a page of its own.
- *
- * Its React component is src/pages/Analytics.tsx.
+ * with — every `grade-*`, `rt-card` and `ratings-*` rule is there.
+ * src/pages/Analytics.tsx imports growth.css first and then this file, which
+ * holds only what differs now that it is a page of its own.
  */
 
 /* On the combined page this view was hidden until the button was pressed, and

@@ -4,7 +4,9 @@
  * Three copies of the answer exist and they are kept in step here:
  *
  *   1. `<html data-theme="...">` — what the CSS reads. Set before React loads
- *      by the inline script in index.html, so there is no flash.
+ *      by the inline script in index.html, so there is no flash. The body
+ *      class beside it (`dark` / `classic`) is the same answer in the older
+ *      stylesheets' dialect; see the effect below.
  *   2. The `theme` cookie — what the backend reads, so a server-rendered page
  *      arrives already correct. The backend sets it; this only reads it.
  *   3. The account's stored theme — the durable copy, which follows the user
@@ -42,6 +44,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    // The second styling system. The pages ported off Jinja are dressed by the
+    // stylesheets that were written for them, and those key off the body class
+    // — `body.dark .grade-card` paints the report card, `body.classic .tab-btn`
+    // the growth tabs — where the newer pages key off `html[data-theme]`. Both
+    // are kept in step here for the same reason frontend/js/theme.js keeps both
+    // in step there: a page should not care which era its CSS comes from.
+    // 'classic' is the legacy name for light.
+    document.body.classList.remove('classic', 'dark');
+    document.body.classList.add(theme === 'dark' ? 'dark' : 'classic');
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
