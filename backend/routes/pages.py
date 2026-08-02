@@ -128,9 +128,10 @@ def analytics(request: Request):
     return render(request, 'analytics.html')
 
 
-@page('/about-us')
-def about_us(request: Request):
-    return render(request, 'aboutus.html')
+# /about-us, /privacy-policy and /terms-of-service used to be here. React has
+# them now — see backend/routes/spa.py, which is the list of what has moved.
+# The templates they rendered are still in frontend/html/ as the reference the
+# port was made against; nothing serves them.
 
 
 @page('/careers')
@@ -141,16 +142,6 @@ def careers(request: Request):
 @page('/contact-support')
 def contact_support(request: Request):
     return render(request, 'contact-support.html')
-
-
-@page('/privacy-policy')
-def privacy_policy(request: Request):
-    return render(request, 'privacy-policy.html')
-
-
-@page('/terms-of-service')
-def terms_of_service(request: Request):
-    return render(request, 'terms-of-service.html')
 
 
 @page('/engine')

@@ -18,6 +18,13 @@ ROOT_DIR = os.path.dirname(BACKEND_DIR)
 FRONTEND_DIR = os.path.join(ROOT_DIR, 'frontend')
 SRC_DIR = os.path.join(FRONTEND_DIR, 'src')
 
+# The built React app — `npm run build` writes it. This app serves it for the
+# pages React has taken over (backend/routes/spa.py), so one origin answers
+# for the whole site and there is no second port to know about. It is a build
+# output and git-ignored, so the folder may not exist; spa.py says so plainly
+# rather than 404ing when it doesn't.
+DIST_DIR = os.path.join(FRONTEND_DIR, 'dist')
+
 # The original server-rendered pages. They still render and still work while
 # the React app in frontend/src/ takes them over one at a time — see
 # backend/routes/pages.py.
