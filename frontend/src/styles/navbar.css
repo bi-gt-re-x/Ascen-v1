@@ -532,8 +532,36 @@ html[data-theme="dark"] .account-avatar-row::-webkit-scrollbar-thumb {
     .topnav-avatar { width: 34px; height: 34px; }
 }
 
+/* Below 480 the bar runs out of room: the brand, five icons, the account
+   control and the collapse chevron together are wider than the viewport. What
+   happened before was the worst of both — the wordmark overflowed its own box
+   and printed on top of the first icon, and the account control was pushed off
+   the right-hand edge where it could not be reached at all.
+
+   So the bar gives things up in order of how little they cost. The collapse
+   chevron goes first: it trades bar height for page height, and on a phone the
+   bar is already as short as it gets. The theme control goes with it — the
+   choice is on the settings page and in the profile step. What is left — the
+   way home, the five destinations, and signing in — all fits, and `overflow:
+   hidden` on the brand means that if some future addition does not, the
+   wordmark truncates instead of printing over its neighbour. */
 @media (max-width: 480px) {
     .topnav-inner { gap: 8px; padding: 0 10px; }
-    .topnav-link { padding: 8px 9px; }
+    .topnav-link { padding: 8px 7px; }
     .topnav-theme { display: none; }
+    .topnav-toggle { display: none; }
+    /* The equal-share trick above is what centres the links on a wide bar. It
+       is the wrong trade here: an equal share of 375px is not enough for the
+       wordmark, so it ellipsised down to "A…" while the links had room to
+       spare. Both ends take their natural width instead and the links take
+       what is left, which is what keeps the wordmark readable. */
+    .topnav-brand,
+    .topnav-right { flex: 0 0 auto; }
+    .topnav-links { flex: 1 1 auto; min-width: 0; justify-content: center; }
+    .topnav-brand { overflow: hidden; }
+    .topnav-brand-name {
+        font-size: 17px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }

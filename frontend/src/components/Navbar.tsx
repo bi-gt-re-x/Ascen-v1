@@ -22,7 +22,7 @@
  * be slower. They are in src/services/avatars.ts.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth, useTheme } from '@/hooks';
 import { AVATARS, avatarPath } from '@/services/avatars';
 import { auth } from '@/services';
@@ -279,10 +279,22 @@ export function Navbar() {
             </div>
           )}
 
+          {/* A plain Link, not a NavLink: it points at /home, so on the
+              landing page NavLink would mark it active and paint it as the
+              filled "you are here" pill, which it is not.
+
+              It carries an icon for the same reason the five destinations do —
+              below 1024px `.topnav-link span` is hidden, and a link whose only
+              child is that span rendered as an empty pill. */}
           {!signedIn && (
-            <NavLink className="topnav-link" to="/home?auth=login">
+            <Link className="topnav-link" to="/home?auth=login">
+              <svg {...stroke}>
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <path d="M10 17l5-5-5-5" />
+                <path d="M15 12H3" />
+              </svg>
               <span>Log In</span>
-            </NavLink>
+            </Link>
           )}
 
           <button
