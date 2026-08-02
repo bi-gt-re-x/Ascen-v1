@@ -30,17 +30,26 @@
 <nav class="topnav" aria-label="Main">
     <div class="topnav-inner" id="topnavInner">
 
-        <a class="topnav-brand" href="{{ url_for('home.page') }}">
-            <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="">
-            <span>Ascen</span>
-        </a>
+        {# The mark and the wordmark are two different things now.
+
+           The wordmark is the way back to the landing page, and the only one
+           left in the bar — the Home tab is gone, so the five links below are
+           the app's own pages and nothing else.
+
+           The mark is not a link at all. It is where the hidden chain starts:
+           secret/easter-egg.js counts clicks on it, and while it was half of
+           a link home every one of those clicks also tried to navigate. A
+           plain span keeps it out of the tab order and out of the a11y tree's
+           list of things to do, which is right for something with no
+           advertised function. #}
+        <div class="topnav-brand">
+            <span class="topnav-brand-mark" id="topnavBrandMark">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="">
+            </span>
+            <a class="topnav-brand-name" href="{{ url_for('home.page') }}">Ascen</a>
+        </div>
 
         <div class="topnav-links">
-            <a class="topnav-link {{ 'active' if request.path.startswith('/home') else '' }}"
-               href="{{ url_for('home.page') }}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
-                <span>Home</span>
-            </a>
             <a class="topnav-link {{ 'active' if request.path.startswith('/dashboard') else '' }}"
                href="{{ url_for('dashboard.page') }}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>

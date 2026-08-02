@@ -8,6 +8,12 @@
       "port": 5050
     },
     {
+      "name": "ascen-api-alt",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "PORT=5090 .venv-fastapi/bin/python run.py"],
+      "port": 5090
+    },
+    {
       "name": "ascen-web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],

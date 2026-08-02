@@ -79,6 +79,41 @@ body {
     }
 }
 
+/* …but 640px of viewport is not enough for this page, and pinning it there
+ * does not fit the page into the screen — it cuts the bottom off it.
+ *
+ * The dashboard needs about 830px: 64 for the bar, 214 for the profile row,
+ * 431 for the Focus card, 44 for the quote, and the gaps between them. The
+ * Focus card's 431 is not negotiable — 24 of padding, a goal box, the Start
+ * button and the hint, 24 more, and 3 of border, none of which shrink — so on
+ * a 1280x720 window (a normal one, just not full screen) the row was handed
+ * 322px and the last 109 went under the card's edge, taking Start Focus with
+ * it. The daily quote, squeezed to 8px of its 44, went the same way.
+ *
+ * So below 840px the page scrolls, the way it already does below 1120px wide.
+ * The row keeps a definite height there rather than growing to fit, so the
+ * Tasks list still scrolls inside its own card instead of running the page
+ * out to the length of the list.
+ *
+ * Focus mode is left alone: it restacks this row to fill the space the
+ * profile row vacates and sizes itself from that. */
+@media (min-width: 769px) and (max-height: 839px) {
+    body.has-topnav {
+        height: auto;
+        overflow: visible;
+    }
+
+    .container {
+        height: auto;
+        min-height: calc(100vh - var(--topnav-h, 64px) - 33px);
+    }
+
+    html:not(.focus-mode) .bottom-section {
+        flex: none;
+        height: 431px;
+    }
+}
+
 .top-section {
     display: grid;
     /* Same 45/55 split, but fr units respect the gap (45%+55%+gap used to
@@ -858,12 +893,23 @@ html[data-theme="dark"] .calendar-hint a { color: #d8c3a5; }
    FOOTER AREA
    ========================================================================== */
 .quote-container {
-    margin-top: 32px;
+    /* Close under the Tasks card, not adrift below it. The row above already
+       carries 24px of its own margin, so this is the second half of the gap
+       and the only half worth spending — 32 of it put the quote nearer the
+       bottom edge of the page than the cards it belongs to. */
+    margin-top: 8px;
     text-align: center;
     font-style: italic;
     color: #6C757D;
     font-size: 14px;
     overflow: hidden;   /* keeps the slide-out from spilling / adding scrollbars */
+    /* A line of text has nothing to give, so it does not offer any. As a
+       shrinkable flex item it was the first thing the pinned page took height
+       from — and `overflow: hidden` above waives the automatic minimum size
+       that would otherwise have floored it at one line, so it went to 13px of
+       its 44 and the quote was clipped through the middle. The row above
+       scrolls inside its own cards; let the height come from there. */
+    flex: none;
 }
 
 /* ==========================================================================
@@ -930,7 +976,7 @@ body.easter-wobble {
     68%  { transform: scale(0.95); }
     100% { transform: scale(1); }
 }
-.topnav-brand.easter-pop, .logo.easter-pop {
+.topnav-brand-mark.easter-pop, .topnav-brand.easter-pop, .logo.easter-pop {
     animation: easterPop 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
     transform-origin: 50% 50%;
 }

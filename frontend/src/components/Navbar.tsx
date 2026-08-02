@@ -45,17 +45,10 @@ const stroke = {
   strokeLinejoin: 'round' as const,
 };
 
+// The app's own pages, and only those. Home is not among them: the wordmark
+// in the brand is the way back to the landing page, and one route home in the
+// bar is enough. See partials/topnav.html, which lists the same five.
 const TABS: Tab[] = [
-  {
-    to: '/home',
-    label: 'Home',
-    icon: (
-      <svg {...stroke}>
-        <path d="M3 10.5 12 3l9 7.5" />
-        <path d="M5 9.5V21h14V9.5" />
-      </svg>
-    ),
-  },
   {
     to: '/dashboard',
     label: 'Dashboard',
@@ -165,10 +158,16 @@ export function Navbar() {
   return (
     <nav className="topnav" aria-label="Main">
       <div className="topnav-inner" id="topnavInner">
-        <NavLink className="topnav-brand" to="/home">
-          <img src="/static/images/logo.svg" alt="" />
-          <span>Ascen</span>
-        </NavLink>
+        {/* The mark is a span, not a link: secret/easter-egg.js counts clicks
+            on it. The wordmark beside it is the link home. */}
+        <div className="topnav-brand">
+          <span className="topnav-brand-mark" id="topnavBrandMark">
+            <img src="/static/images/logo.svg" alt="" />
+          </span>
+          <NavLink className="topnav-brand-name" to="/home">
+            Ascen
+          </NavLink>
+        </div>
 
         <div className="topnav-links">
           {TABS.map((tab) => (

@@ -104,11 +104,18 @@
             if (container) container.classList.add('quote-ominous');
         }
 
-        // The app icon in the top bar. It is .topnav-brand — a link home — and
-        // this used to look for a .logo that no page has, so the whole chain has
-        // been unreachable: no clue, no pentagon, no engine. Both names are
-        // accepted now, older markup included.
-        var icon = document.querySelector('.topnav-brand') || document.querySelector('.logo');
+        // The app icon in the top bar — .topnav-brand-mark, which is the mark
+        // on its own and no longer part of a link. The wordmark beside it is
+        // the link home, and it is deliberately not this element: binding to
+        // the whole .topnav-brand would have counted clicks on the wordmark
+        // too and then cancelled the navigation they asked for.
+        //
+        // The older names are still accepted, so a page that has not been
+        // rebuilt yet keeps its chain: .topnav-brand (the single-link bar) and
+        // .logo (the pre-topnav dashboard).
+        var icon = document.querySelector('.topnav-brand-mark')
+                || document.querySelector('.topnav-brand')
+                || document.querySelector('.logo');
         if (!icon) return;
         icon.style.cursor = 'pointer';
         icon.setAttribute('title', '');   // no tooltip hint — it's a secret

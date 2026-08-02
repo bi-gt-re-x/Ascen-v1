@@ -36,11 +36,16 @@
     gap: 24px;
 }
 
-/* Brand and the right-hand controls are the same width, so the links sit
-   optically centred in the bar rather than centred in what is left over. */
+/* Brand and the right-hand controls take an equal share of what the links do
+   not use, which is what actually centres the links in the bar. `flex-basis:
+   auto` did not: each side grew by the same amount from a different starting
+   width, so the links ended up pushed off-centre by half the difference —
+   left, because the theme control, avatar and chevron outweigh the wordmark.
+   From a basis of 0 the two sides come out the same width. */
 .topnav-brand,
 .topnav-right {
-    flex: 1 0 auto;
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     align-items: center;
 }
@@ -51,10 +56,17 @@
 }
 
 /* --- Brand ------------------------------------------------------------ */
+/* Two elements, not one: the mark (a span, and the easter egg's target) and
+   the wordmark (the only link home in the bar). See partials/topnav.html. */
 .topnav-brand {
     gap: 10px;
-    text-decoration: none;
     color: #2C302E;
+}
+
+.topnav-brand-mark {
+    display: flex;
+    align-items: center;
+    flex: none;
 }
 
 .topnav-brand img {
@@ -63,10 +75,13 @@
     display: block;
 }
 
-.topnav-brand span {
+.topnav-brand-name {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.01em;
+    text-decoration: none;
+    color: inherit;
+    white-space: nowrap;
 }
 
 /* --- Links ------------------------------------------------------------ */
@@ -409,7 +424,8 @@ html[data-theme="dark"] .topnav {
     border-bottom-color: #30363D;
 }
 
-html[data-theme="dark"] .topnav-brand {
+html[data-theme="dark"] .topnav-brand,
+html[data-theme="dark"] .topnav-brand-name {
     color: #F0F2F5;
 }
 
@@ -507,7 +523,10 @@ html[data-theme="dark"] .account-avatar-row::-webkit-scrollbar-thumb {
 
 @media (max-width: 768px) {
     :root { --topnav-h: 58px; }
-    .topnav-brand span { display: none; }
+    /* The wordmark used to be hidden here, back when the whole brand was one
+       link and the mark beside it still went home. It is the only way home in
+       the bar now, so it shrinks instead of disappearing. */
+    .topnav-brand-name { font-size: 18px; }
     .topnav-theme { padding: 0 6px 0 8px; height: 34px; }
     .topnav-theme select { font-size: 13px; padding: 0 16px 0 6px; }
     .topnav-avatar { width: 34px; height: 34px; }
