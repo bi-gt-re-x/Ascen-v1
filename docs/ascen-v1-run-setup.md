@@ -21,8 +21,12 @@ npm install
 Two servers, both from the repo root:
 ```
 .venv-fastapi/bin/python run.py     # API + the original pages, :5050
-npm run dev                         # the React app, :5173 (proxies to :5050)
+npm run dev                         # the React app, :5090 (proxies to :5050)
 ```
+**Open :5090, not :5050, while developing.** The dev server proxies `/api`,
+`/static`, `/auth` and `/verify` through to the backend, so the whole app works
+on that one origin — and it serves the React pages from source with hot reload
+rather than from the last `npm run build`.
 `.claude/launch.json` has `ascen-api` and `ascen-web` for preview_start. The old Flask venv `.venv-mac/` is dead weight now.
 
 Direct background run (no reloader):

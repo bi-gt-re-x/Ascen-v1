@@ -98,8 +98,8 @@ SESSION_MAX_AGE = 60 * 60 * 24 * 14
 # so these are allowed with credentials. In production the built frontend is
 # served by this app and nothing is cross-origin.
 DEV_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
+    'http://localhost:5090',
+    'http://127.0.0.1:5090',
 ]
 
 

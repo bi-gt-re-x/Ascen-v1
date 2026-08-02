@@ -10,7 +10,7 @@ import { fileURLToPath, URL } from 'node:url';
  * brings it back out to the root, so there is one .env for the whole project
  * rather than one per half.
  *
- * The dev server runs on 5173 and the API on 5050. Everything the backend owns
+ * The dev server runs on 5090 and the API on 5050. Everything the backend owns
  * is proxied rather than called cross-origin, so the session cookie is
  * same-origin in development exactly as it is in production. `/static` is
  * proxied too, because the old pages' assets — the avatars, the 80 calendar
@@ -32,7 +32,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 5090,
+    strictPort: true,
     proxy: {
       '/api': api,
       '/static': api,
