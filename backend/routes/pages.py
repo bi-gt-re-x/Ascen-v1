@@ -103,13 +103,8 @@ def dashboard(request: Request):
     return render(request, 'dashboard.html')
 
 
-@page('/calendar')
-def calendar(request: Request):
-    return render(request, 'calendar.html')
-
-
-# /about-us, /privacy-policy, /terms-of-service, /goals, /growth and
-# /analytics used to be here. React has them now — see backend/routes/spa.py,
+# /about-us, /privacy-policy, /terms-of-service, /goals, /growth, /analytics
+# and /calendar used to be here. React has them now — see backend/routes/spa.py,
 # which is the list of what has moved. The templates they rendered are still in
 # frontend/html/ as the reference the ports were made against; nothing serves
 # them.

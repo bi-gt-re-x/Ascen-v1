@@ -1,7 +1,14 @@
 export { useApi } from './useApi';
 export type { UseApiResult } from './useApi';
 export { useAuth } from './useAuth';
+export { useCalendarStore } from './useCalendarStore';
+export type { EventDraft, Scope, UseCalendarStore } from './useCalendarStore';
+export { useCalendarTasks } from './useCalendarTasks';
+export type { UseCalendarTasks } from './useCalendarTasks';
+export { useDayFocus } from './useDayFocus';
+export type { UseDayFocus } from './useDayFocus';
 export { useDocumentTitle } from './useDocumentTitle';
+export { useNow } from './useNow';
 export { fmtHM, focusedSeconds, useFocusSession } from './useFocusSession';
 export type { FocusState, UseFocusSession } from './useFocusSession';
 export { useTheme } from './useTheme';

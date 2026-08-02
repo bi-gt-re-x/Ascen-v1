@@ -39,6 +39,13 @@ SPA_ROUTES = (
     '/goals',
     '/growth',
     '/analytics',
+    # The calendar is one page in three views. It was one URL and a script
+    # that swapped panes; it is three routes now, and /calendar keeps working
+    # by redirecting to the week — see src/App.tsx.
+    '/calendar',
+    '/calendar/day',
+    '/calendar/week',
+    '/calendar/month',
 )
 
 INDEX = os.path.join(DIST_DIR, 'index.html')
