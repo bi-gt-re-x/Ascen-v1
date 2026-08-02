@@ -1831,3 +1831,61 @@ body.dark .goal-modal-modern select {
     .sum-icon { width: 58px; height: 58px; }
     .sum-icon svg { width: 27px; height: 27px; }
 }
+
+/* ============================================================
+   FULL BLEED — the page is the container
+   ============================================================
+   The same move the growth and calendar pages already made: everything here
+   lived inside one big rounded panel, inset from every edge, so the goals were
+   drawn in a box inside a page with two sets of margins between them and the
+   screen. The panel is gone — background, border, radius and shadow dropped,
+   the width caps lifted to the page — and the room it was spending on itself
+   goes to the content.
+
+   The fixed height goes with it. That height existed to give the panel a shape
+   worth having; without it the page can simply take what the top bar leaves,
+   which is what makes this fit a short screen and fill a tall one. */
+.goals-page {
+    max-width: 100%;
+    padding: 6px clamp(20px, 3.4vw, 56px) 0;
+}
+
+.goals-shell {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    /* Fill what the top bar leaves rather than a fixed 600-1240px band, so the
+       list grows on a tall screen and stops short of the bottom on a short one
+       instead of overflowing it. */
+    height: calc(100vh - var(--topnav-h, 64px) - 14px);
+    min-height: 0;
+}
+
+/* There is no card to paint per theme any more. */
+body.dark .goals-shell,
+html[data-theme="dark"] .goals-shell {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+/* The two columns get the panel's inner padding back as space between them. */
+.goals-columns {
+    gap: clamp(24px, 2.8vw, 56px);
+}
+
+/* The cards were sized to sit inside a 2180px-capped panel; on a full-width
+   page they can breathe, and the summary row keeps its three-across shape
+   rather than stretching each card to a third of a very wide screen. */
+.goals-summary-row {
+    gap: clamp(14px, 1.4vw, 26px);
+}
+
+/* Short screens: the fixed viewport height stops being a help once there is
+   less room than the header and one goal need, so the page scrolls instead. */
+@media (max-height: 620px) {
+    .goals-shell { height: auto; min-height: 0; overflow: visible; }
+    .goals-page { padding-bottom: 24px; }
+}
