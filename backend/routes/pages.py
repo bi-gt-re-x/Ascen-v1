@@ -108,11 +108,6 @@ def calendar(request: Request):
     return render(request, 'calendar.html')
 
 
-@page('/goals')
-def goals(request: Request):
-    return render(request, 'goals.html')
-
-
 @page('/growth')
 def growth(request: Request):
     return render(request, 'growth.html')
@@ -128,10 +123,10 @@ def analytics(request: Request):
     return render(request, 'analytics.html')
 
 
-# /about-us, /privacy-policy and /terms-of-service used to be here. React has
-# them now — see backend/routes/spa.py, which is the list of what has moved.
-# The templates they rendered are still in frontend/html/ as the reference the
-# port was made against; nothing serves them.
+# /about-us, /privacy-policy, /terms-of-service and /goals used to be here.
+# React has them now — see backend/routes/spa.py, which is the list of what has
+# moved. The templates they rendered are still in frontend/html/ as the
+# reference the ports were made against; nothing serves them.
 
 
 @page('/careers')
