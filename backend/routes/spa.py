@@ -37,6 +37,7 @@ SPA_ROUTES = (
     '/privacy-policy',
     '/terms-of-service',
     '/goals',
+    '/growth',
 )
 
 INDEX = os.path.join(DIST_DIR, 'index.html')
