@@ -33,6 +33,11 @@ router = APIRouter(include_in_schema=False)
 # that map is what `url_for('aboutus.page')` resolves to inside the templates
 # that are still rendered, and those templates still link here.
 SPA_ROUTES = (
+    # The front door. The choice it makes — signed in to the dashboard,
+    # everyone else to the landing page — is `FrontDoor` in src/App.tsx now.
+    '/',
+    '/home',
+    '/dashboard',
     '/about-us',
     '/privacy-policy',
     '/terms-of-service',

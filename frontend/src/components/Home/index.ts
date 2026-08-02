@@ -3,9 +3,23 @@
  *
  * Split the way the original's scripts were: the written sections in one file,
  * and each demonstration that moves in a file of its own, named after the
- * frontend/js/home-*.js it was ported from.
+ * frontend/js/home-*.js it was ported from. The hooks are the same split for
+ * the motion that belongs to no single section — the opening, the reveals, the
+ * charts, and the last of it.
  */
+export { Ambient } from './Ambient';
+export { AuthModal, DEEP_LINKED } from './AuthModal';
+export type { AuthStep } from './AuthModal';
+export { CalendarDemo } from './CalendarDemo';
 export { DashboardDemo } from './DashboardDemo';
+export { Performance } from './Performance';
+export { StreakLevel } from './StreakLevel';
+export { TaskDemo } from './TaskDemo';
+export { Trend } from './Trend';
+export { useCharts } from './useCharts';
+export { useFinalMotion } from './useFinalMotion';
+export { useIntro } from './useIntro';
+export { useCountUps, useReveals } from './useReveals';
 export {
   FeatureStrip,
   FinalCta,

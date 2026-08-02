@@ -14,6 +14,7 @@ import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Loading, Navbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
+import { useAuth } from '@/hooks';
 import Dashboard from '@/pages/Dashboard';
 
 const Homepage = lazy(() => import('@/pages/Homepage'));
@@ -36,6 +37,21 @@ const CalendarDay = lazy(() => import('@/pages/Calendar/Day'));
 const CalendarWeek = lazy(() => import('@/pages/Calendar/Week'));
 const CalendarMonth = lazy(() => import('@/pages/Calendar/Month'));
 
+/**
+ * The front door.
+ *
+ * Signed in goes to the dashboard, everyone else lands on the home page — the
+ * rule the server route at '/' used to apply before React owned that path too
+ * (backend/routes/spa.py). Waiting on `status` matters for the same reason it
+ * does in RequireAccount: treating "still asking" as signed out would flash the
+ * landing page at an account on its way to the dashboard.
+ */
+function FrontDoor() {
+  const { status } = useAuth();
+  if (status === 'loading') return <Loading />;
+  return <Navigate to={status === 'signed-in' ? '/dashboard' : '/home'} replace />;
+}
+
 export default function App() {
   return (
     <>
@@ -44,7 +60,7 @@ export default function App() {
         <Suspense fallback={<Loading />}>
           <Routes>
             {/* Public */}
-            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/" element={<FrontDoor />} />
             <Route path="/home" element={<Homepage />} />
             <Route path="/about-us" element={<AboutUs />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />

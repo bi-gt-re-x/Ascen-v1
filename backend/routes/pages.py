@@ -20,12 +20,10 @@ backend/middleware/gate.py.
 """
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
-from starlette.responses import RedirectResponse
 
 from backend.config.settings import SECRET_FOLDER, TEMPLATE_FOLDER
 from backend.middleware import context
 from backend.routes.assets import static_url
-from backend.tracking.auth import signed_in_user
 
 router = APIRouter(include_in_schema=False)
 
@@ -84,30 +82,14 @@ def render(request, template):
 # --------------------------------------------------------------------------
 # The pages
 # --------------------------------------------------------------------------
-@page('/')
-def index(request: Request):
-    """The front door: signed in goes to the dashboard, everyone else lands."""
-    if signed_in_user(request):
-        return RedirectResponse('/dashboard', status_code=303)
-    return render(request, 'homepage.html')
-
-
-@page('/home')
-def home(request: Request):
-    """The home page, and the host of the sign-in popup (?auth=login|profile)."""
-    return render(request, 'homepage.html')
-
-
-@page('/dashboard')
-def dashboard(request: Request):
-    return render(request, 'dashboard.html')
-
-
-# /about-us, /privacy-policy, /terms-of-service, /goals, /growth, /analytics
-# and /calendar used to be here. React has them now — see backend/routes/spa.py,
-# which is the list of what has moved. The templates they rendered are still in
-# frontend/html/ as the reference the ports were made against; nothing serves
-# them.
+# /, /home, /dashboard, /about-us, /privacy-policy, /terms-of-service, /goals,
+# /growth, /analytics and /calendar used to be here. React has them all now —
+# see backend/routes/spa.py, which is the list of what has moved. The templates
+# they rendered are still in frontend/html/ as the reference the ports were made
+# against; nothing serves them.
+#
+# What is left below is what has no React counterpart yet: two written pages,
+# and the hidden one.
 
 
 @page('/careers')

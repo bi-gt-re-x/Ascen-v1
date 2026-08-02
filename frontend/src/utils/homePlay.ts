@@ -131,6 +131,57 @@ export function countThrough(
   };
 }
 
+export interface Effects {
+  /** Add a throwaway element to `host` and keep it for `clear`. */
+  spawn(host: HTMLElement, el: HTMLElement): HTMLElement;
+  /** Run a Web Animation and keep it for `clear`. */
+  animate(
+    el: HTMLElement,
+    frames: Keyframe[],
+    options: KeyframeAnimationOptions,
+  ): void;
+  /** Cancel every animation and remove every spawned element. */
+  clear(): void;
+}
+
+/**
+ * The confetti, the sparks and the flying XP badges — everything a demo makes
+ * on the fly and has to be able to take back.
+ *
+ * Three of the original's demos kept the same pair of arrays and the same
+ * eight lines to empty them. A reader who scrolls past a half-played demo and
+ * comes back must see it start clean, which means the leftovers of the last
+ * run have to be cancellable rather than left to finish over a card that has
+ * already been reset.
+ */
+export function effects(): Effects {
+  let running: Animation[] = [];
+  let spawned: HTMLElement[] = [];
+
+  return {
+    spawn(host, el) {
+      host.appendChild(el);
+      spawned.push(el);
+      return el;
+    },
+    animate(el, frames, options) {
+      running.push(el.animate(frames, options));
+    },
+    clear() {
+      running.forEach((animation) => {
+        try {
+          animation.cancel();
+        } catch {
+          // Already finished, or its element is gone. Either way, done.
+        }
+      });
+      running = [];
+      spawned.forEach((el) => el.remove());
+      spawned = [];
+    },
+  };
+}
+
 /**
  * Two frames of breathing room.
  *
@@ -164,7 +215,48 @@ export interface PlaySpec {
 /**
  * Runs `spec.play` when the element scrolls into view and `spec.reset` when it
  * leaves, so the demo is always either playing forward or back at its start —
- * never stuck halfway.
+ * never stuck halfway. Hands back its own teardown.
+ *
+ * Most demos own their root and reach this through `useInViewPlay` below. This
+ * plainer form is for the ones found by query inside a single effect — the
+ * charts, the tech grid — where there is no ref to hang a hook off.
+ */
+export function onView(el: Element, spec: PlaySpec): () => void {
+  if (reduced || !('IntersectionObserver' in window)) {
+    if (spec.still) spec.still();
+    else spec.play?.();
+    return () => {};
+  }
+
+  let playing = false;
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          if (playing) return;
+          playing = true;
+          spec.reset?.();
+          spec.play?.();
+        } else if (playing) {
+          playing = false;
+          spec.reset?.();
+        }
+      });
+    },
+    { threshold: spec.threshold ?? 0.35 },
+  );
+
+  io.observe(el);
+  return () => {
+    io.disconnect();
+    // Leaving the page mid-run must not leave timers behind: the demo's own
+    // reset is what owns them, so it runs on teardown too.
+    spec.reset?.();
+  };
+}
+
+/**
+ * `onView` for a component's own root element.
  *
  * `spec` is read through a ref rather than being a dependency, so a demo whose
  * callbacks close over fresh state does not tear down and rebuild its observer
@@ -180,41 +272,15 @@ export function useInViewPlay(
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
     // Called through the ref, never destructured: the observer outlives the
     // render that created it, and the callbacks it fires must be the current
     // ones, not the first ones.
-    if (reduced || !('IntersectionObserver' in window)) {
-      if (latest.current.still) latest.current.still();
-      else latest.current.play?.();
-      return;
-    }
-
-    let playing = false;
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            if (playing) return;
-            playing = true;
-            latest.current.reset?.();
-            latest.current.play?.();
-          } else if (playing) {
-            playing = false;
-            latest.current.reset?.();
-          }
-        });
-      },
-      { threshold: latest.current.threshold ?? 0.35 },
-    );
-
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      // Leaving the page mid-run must not leave timers behind: the demo's own
-      // reset is what owns them, so it runs on unmount too.
-      latest.current.reset?.();
-    };
+    return onView(el, {
+      play: () => latest.current.play?.(),
+      reset: () => latest.current.reset?.(),
+      still: latest.current.still ? () => latest.current.still?.() : undefined,
+      threshold: latest.current.threshold,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref]);
 }

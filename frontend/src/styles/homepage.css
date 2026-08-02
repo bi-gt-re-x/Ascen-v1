@@ -782,7 +782,21 @@ html[data-theme="dark"] .lp-trend.up { color: #4ade80; }
 
 /* The side-slide reveals translate elements ±56px, which would otherwise
    create a horizontal scrollbar while they're offscreen. */
+/* The reveals below park elements 56px to one side until they are scrolled to,
+   and on a narrow screen that is 56px of page nobody asked for: the document
+   gains a horizontal scroll, and the whole landing page can be dragged sideways
+   off its own edge.
+
+   `overflow-x: clip` on the landing page contains it at the source. It is
+   `clip` and not `hidden` on purpose — `hidden` would make .home-main a scroll
+   container, which forces `overflow-y` to `auto` and would cut the cards' drop
+   shadows off at the top and bottom. `clip` leaves the other axis alone.
+
+   The rule on <html> stays as the backstop it always was. On its own it was not
+   enough: an `overflow: hidden` root still scrolls programmatically, so the
+   page could be pushed sideways even though the overflow was invisible. */
 html { overflow-x: hidden; }
+.home-main { overflow-x: clip; }
 
 /* Reveal states: hidden offset -> in place. The observer toggles .rv-in both
    ways, so scrolling past an element slides it back out to its side. */

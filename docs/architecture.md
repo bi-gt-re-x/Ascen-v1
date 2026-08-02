@@ -7,7 +7,8 @@ by vanilla scripts to a React + TypeScript app under `frontend/src/`.
 Both frontends are live at once, on purpose. The Jinja pages still render and
 still work, so the app stays usable while React takes the pages over one at a
 time. `backend/routes/pages.py` is the whole list of what still renders
-server-side, and it shrinks to nothing as that finishes.
+server-side, and it shrinks to nothing as that finishes — it is down to
+`/careers`, `/contact-support` and the hidden `/engine`.
 
 ## The shape of the repo
 

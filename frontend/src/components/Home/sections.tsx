@@ -11,7 +11,9 @@
  * pages through Jinja's `url_for` are router <Link>s, so following one inside
  * the app does not reload it.
  */
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Trend } from './Trend';
+import type { Theme } from '@/types';
 
 /** The date in the hero's eyebrow — what frontend/js/main.js wrote there. */
 function today(): string {
@@ -23,11 +25,41 @@ function today(): string {
   });
 }
 
-export function Hero({ signedIn }: { signedIn: boolean }) {
+/** The time of day, and the account's name when there is one. */
+function greeting(name: string | null): string {
+  const hour = new Date().getHours();
+  const part =
+    hour < 5
+      ? 'Good night'
+      : hour < 12
+        ? 'Good morning'
+        : hour < 18
+          ? 'Good afternoon'
+          : 'Good evening';
+  return name ? `${part}, ${name}` : part;
+}
+
+/**
+ * The `hm-rise` and `hm-pop` classes below are what useIntro moves. The
+ * original added them from script; they are part of what these elements are,
+ * so they are written here — and because they only do anything while `hm-armed`
+ * is on <html>, a page where the intro never runs is unaffected by them.
+ */
+export function Hero({
+  signedIn,
+  username,
+  onGetStarted,
+}: {
+  signedIn: boolean;
+  username: string | null;
+  /** Opens the account popup. Signed-out visitors have nowhere else to go. */
+  onGetStarted: () => void;
+}) {
   return (
     <section className="lp-hero">
       <div className="lp-hero-text">
-        <span className="lp-eyebrow">
+        <span className="lp-greet hm-rise">{greeting(username)}</span>
+        <span className="lp-eyebrow hm-rise">
           <span className="date-container" id="dateDisplay">
             {today()}
           </span>
@@ -35,20 +67,25 @@ export function Hero({ signedIn }: { signedIn: boolean }) {
         <h1 className="lp-hero-title">
           Ascen: The <em>“Only”</em> App for Unstoppable Growth and Productivity
         </h1>
-        <p className="lp-hero-sub">
+        <p className="lp-hero-sub hm-rise">
           Master every hour. Crush every goal. Ascen turns your study sessions into
           measurable momentum — tasks, streaks, growth analytics and goals in one place.
         </p>
         {/* Every call to action on this page is a pitch to a visitor who has no
             account yet. Someone already signed in has nothing left to be sold,
             so their buttons just say where they go. */}
-        <div className="lp-hero-actions">
+        <div className="lp-hero-actions hm-pop">
           {signedIn ? (
             <Link to="/dashboard" className="lp-btn lp-btn-primary" id="dashboardBtn">
               Go to Dashboard <span className="lp-arrow">→</span>
             </Link>
           ) : (
-            <button type="button" id="dashboardBtn" className="lp-btn lp-btn-primary">
+            <button
+              type="button"
+              id="dashboardBtn"
+              className="lp-btn lp-btn-primary"
+              onClick={onGetStarted}
+            >
               Claim Your Productivity Breakthrough <span className="lp-chevd">▾</span>
             </button>
           )}
@@ -145,10 +182,22 @@ const FEATURES = [
 ];
 
 export function FeatureStrip() {
+  const navigate = useNavigate();
+
   return (
     <section className="lp-strip">
       {FEATURES.map((f) => (
-        <article className="lp-card lp-feature" key={f.title}>
+        // The whole card is the target, not just the link in it. The link is
+        // still a real link — keyboard, middle-click and "open in new tab" all
+        // work — so the card only handles a click that missed it.
+        <article
+          className="lp-card lp-feature lp-clickable"
+          key={f.title}
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest('a')) return;
+            navigate(f.to);
+          }}
+        >
           <span className={`lp-feat-ico ${f.ico}`}>{f.glyph}</span>
           <h3>{f.title}</h3>
           <p>{f.body}</p>
@@ -197,14 +246,14 @@ export function TaskStats() {
           <span>Total completed</span>
           <span className="lp-stat-v">
             <b>1,105</b>
-            <i className="lp-trend up">▲ 8%</i>
+            <Trend value={8} suffix="%" />
           </span>
         </div>
         <div className="lp-stat">
           <span>Goals completed</span>
           <span className="lp-stat-v">
             <b>18</b>
-            <i className="lp-trend up">▲ 3</i>
+            <Trend value={3} />
           </span>
         </div>
         <div className="lp-stat">
@@ -324,7 +373,42 @@ export function Philosophy() {
   );
 }
 
-export function Pricing({ signedIn }: { signedIn: boolean }) {
+/**
+ * The four squares under "Theme Selector". Two are real themes and two are not
+ * built, which is what the toast is for — the original said so rather than
+ * hiding them, and the swatches are part of the pitch.
+ */
+const SWATCHES: { css: string; title: string; theme: Theme | null }[] = [
+  { css: 'lp-sw-light', title: 'Light', theme: 'light' },
+  { css: 'lp-sw-dark', title: 'Dark', theme: 'dark' },
+  { css: 'lp-sw-mid', title: 'Slate', theme: null },
+  { css: 'lp-sw-ink', title: 'Ink', theme: null },
+];
+
+export function Pricing({
+  signedIn,
+  onTheme,
+  onToast,
+}: {
+  signedIn: boolean;
+  onTheme: (theme: Theme) => void;
+  onToast: (message: string) => void;
+}) {
+  /** The pop replays on every click, so the class comes off and goes back on. */
+  const pick = (event: React.MouseEvent | React.KeyboardEvent, index: number) => {
+    const swatch = SWATCHES[index];
+    if (!swatch) return;
+    if (swatch.theme) {
+      onTheme(swatch.theme);
+      const el = event.currentTarget as HTMLElement;
+      el.classList.remove('lp-swatch-pop');
+      void el.offsetWidth;
+      el.classList.add('lp-swatch-pop');
+    } else {
+      onToast(`${swatch.title} theme is coming soon`);
+    }
+  };
+
   return (
     <section className="lp-section">
       <SectionHead
@@ -335,10 +419,22 @@ export function Pricing({ signedIn }: { signedIn: boolean }) {
         <div className="lp-card lp-themes">
           <div className="lp-stats-head">Theme Selector</div>
           <div className="lp-swatches">
-            <span className="lp-swatch lp-sw-light" title="Light" />
-            <span className="lp-swatch lp-sw-dark" title="Dark" />
-            <span className="lp-swatch lp-sw-mid" title="Slate" />
-            <span className="lp-swatch lp-sw-ink" title="Ink" />
+            {SWATCHES.map((swatch, i) => (
+              <span
+                key={swatch.title}
+                className={`lp-swatch ${swatch.css}`}
+                title={swatch.title}
+                role="button"
+                tabIndex={0}
+                onClick={(event) => pick(event, i)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    pick(event, i);
+                  }
+                }}
+              />
+            ))}
           </div>
           <p className="lp-muted-p">
             Light &amp; dark themes follow you across every page and persist to your account.
@@ -361,11 +457,16 @@ export function Pricing({ signedIn }: { signedIn: boolean }) {
   );
 }
 
+/**
+ * Each technology is its own `.tech-bit` so useFinalMotion can bring them in
+ * one at a time. The original wrote "HTML · CSS · Vanilla JS" and split it at
+ * runtime; the parts are the parts, so they are written as a list.
+ */
 const TECH = [
-  { ico: 'lp-ico-teal', glyph: '🖥', title: 'Frontend', body: 'HTML · CSS · Vanilla JS' },
-  { ico: 'lp-ico-green', glyph: '🔧', title: 'Backend', body: 'Python · Flask · Jinja' },
-  { ico: 'lp-ico-gold', glyph: '💾', title: 'Database', body: 'SQLite' },
-  { ico: 'lp-ico-purple', glyph: '📊', title: 'Visualization', body: 'SVG · Canvas' },
+  { ico: 'lp-ico-teal', glyph: '🖥', title: 'Frontend', bits: ['HTML', 'CSS', 'Vanilla JS'] },
+  { ico: 'lp-ico-green', glyph: '🔧', title: 'Backend', bits: ['Python', 'Flask', 'Jinja'] },
+  { ico: 'lp-ico-gold', glyph: '💾', title: 'Database', bits: ['SQLite'] },
+  { ico: 'lp-ico-purple', glyph: '📊', title: 'Visualization', bits: ['SVG', 'Canvas'] },
 ];
 
 export function TechStack() {
@@ -383,7 +484,14 @@ export function TechStack() {
             <span className={`lp-feat-ico ${t.ico}`}>{t.glyph}</span>
             <div>
               <h4>{t.title}</h4>
-              <p>{t.body}</p>
+              <p>
+                {t.bits.map((bit, i) => (
+                  <span key={bit}>
+                    {i > 0 && ' · '}
+                    <span className="tech-bit">{bit}</span>
+                  </span>
+                ))}
+              </p>
             </div>
           </div>
         ))}

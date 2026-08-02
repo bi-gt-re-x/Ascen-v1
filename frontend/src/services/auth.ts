@@ -54,6 +54,19 @@ export interface LoginResult {
 }
 
 /**
+ * What `/api/login` answers.
+ *
+ * One failure is not like the others: an account that exists, with the right
+ * password, that has not confirmed its e-mail yet. The popup sends that one
+ * back to "check your inbox" rather than showing it as a rejection, which is
+ * why these two fields ride along on the envelope.
+ */
+export type LoginAnswer = ApiResult<LoginResult> & {
+  unverified?: boolean;
+  email?: string | null;
+};
+
+/**
  * Sign in with a username or an e-mail address, and the password.
  *
  * Accounts made before the e-mail flow stored their password in the clear;
@@ -63,8 +76,8 @@ export interface LoginResult {
 export async function login(
   identifier: string,
   password: string,
-): Promise<ApiResult<LoginResult>> {
-  const result = await post<LoginResult>('/api/login', {
+): Promise<LoginAnswer> {
+  const result: LoginAnswer = await post<LoginResult>('/api/login', {
     username: identifier,
     password,
   });

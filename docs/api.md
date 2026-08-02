@@ -10,17 +10,22 @@ The file each endpoint lives in is in the right-hand column.
 
 ## Pages
 
+`routes/spa.py` serves the built React app; `routes/pages.py` renders the Jinja
+templates that are left. A path appears in exactly one of the two.
+
 | Route | Notes | File |
 | --- | --- | --- |
-| `GET /` | Signed in → `/dashboard`, else the home page | `routes/pages.py` |
-| `GET /home` | The home page, and the host of the sign-in popup | `routes/pages.py` |
-| `GET /dashboard` | Account required | `routes/pages.py` |
-| `GET /calendar` | Account required | `routes/pages.py` |
-| `GET /goals` | Account required | `routes/pages.py` |
-| `GET /growth` | Account required | `routes/pages.py` |
-| `GET /about-us`, `/careers`, `/contact-support` | | `routes/pages.py` |
-| `GET /privacy-policy` | | `routes/pages.py` |
-| `GET /terms-of-service` | | `routes/pages.py` |
+| `GET /` | Signed in → `/dashboard`, else `/home` (decided in `App.tsx`) | `routes/spa.py` |
+| `GET /home` | The landing page, and the host of the sign-in popup | `routes/spa.py` |
+| `GET /dashboard` | Account required | `routes/spa.py` |
+| `GET /calendar`, `/calendar/day`, `/calendar/week`, `/calendar/month` | Account required; `/calendar` redirects to the week | `routes/spa.py` |
+| `GET /goals` | Account required | `routes/spa.py` |
+| `GET /growth` | Account required | `routes/spa.py` |
+| `GET /analytics` | Account required | `routes/spa.py` |
+| `GET /about-us` | | `routes/spa.py` |
+| `GET /privacy-policy` | | `routes/spa.py` |
+| `GET /terms-of-service` | | `routes/spa.py` |
+| `GET /careers`, `/contact-support` | Not ported yet | `routes/pages.py` |
 | `GET /engine` | Hidden; gated client-side by today's unlock | `routes/pages.py` |
 
 A signed-out visitor asking for a gated page is redirected to

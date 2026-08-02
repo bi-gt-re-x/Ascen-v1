@@ -855,7 +855,12 @@ html[data-theme="dark"] .lp-cal-body.is-target { background: rgba(124, 131, 255,
 .lp-level-top { gap: 10px; align-items: baseline; }
 .lp-level-top > span:first-child { flex: 0 1 auto; min-width: 0; }
 
-.xp-bar-wrap { position: relative; overflow: hidden; }
+/* `display: block` because .lp-prev-bar is a <span> that gets its height from
+   being a flex item everywhere else it is used — in the hero's .lp-prev-row.
+   Here its parent (.lp-level) is a plain block, so the span stayed inline, and
+   `height: 6px` does not apply to an inline box: the track and the fill inside
+   it both collapsed to nothing. */
+.xp-bar-wrap { display: block; position: relative; overflow: hidden; }
 .xp-bar-wrap i { transition: width 900ms var(--hm-ease-soft); }
 /* The light that runs across the bar once it is full. */
 .xp-bar-wrap.is-full::after {
