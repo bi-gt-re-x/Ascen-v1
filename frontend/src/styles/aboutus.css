@@ -1,5 +1,39 @@
-/* aboutus — not built yet.
+/* About Us — only what this page has that the other written pages do not.
  *
- * The page's stylesheet, so the place it goes is already decided. Its
- * component lives at src/pages/AboutUs.tsx.
+ * The shell it sits in (the card, the headings, the dark theme) is shared with
+ * the Privacy Policy and the Terms of Service: see src/styles/content-page.css,
+ * which the component imports alongside this file. What is left is the four
+ * belief cards under "What We Believe".
  */
+
+.values-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 1em;
+}
+
+.value-card {
+    background: #f7f7f7;
+    border-radius: 8px;
+    padding: 18px;
+}
+
+.value-card h3 {
+    margin: 0 0 6px;
+    font-size: 1em;
+}
+
+.value-card p {
+    margin: 0;
+    font-size: 0.92em;
+    color: #555;
+}
+
+html[data-theme="dark"] .value-card {
+    background: #0f141b;
+}
+
+html[data-theme="dark"] .value-card p {
+    color: #9aa4b2;
+}
