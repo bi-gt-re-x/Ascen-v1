@@ -9,6 +9,7 @@ export { useDayFocus } from './useDayFocus';
 export type { UseDayFocus } from './useDayFocus';
 export { useDocumentTitle } from './useDocumentTitle';
 export { useNow } from './useNow';
+export { usePinnedViewport } from './usePinnedViewport';
 export { fmtHM, focusedSeconds, useFocusSession } from './useFocusSession';
 export type { FocusState, UseFocusSession } from './useFocusSession';
 export { useTheme } from './useTheme';

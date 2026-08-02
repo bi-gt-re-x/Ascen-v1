@@ -11,10 +11,10 @@
  * first paint of the landing page is exactly the wrong first impression.
  */
 import { Suspense, lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Loading, Navbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
-import { useAuth } from '@/hooks';
+import { useAuth, usePinnedViewport } from '@/hooks';
 import Dashboard from '@/pages/Dashboard';
 
 const Homepage = lazy(() => import('@/pages/Homepage'));
@@ -52,7 +52,33 @@ function FrontDoor() {
   return <Navigate to={status === 'signed-in' ? '/dashboard' : '/home'} replace />;
 }
 
+/**
+ * The routes that fill the viewport rather than scrolling it.
+ *
+ * Everything else — the landing page, the written pages, and the stubs that
+ * are not built yet — is a document and scrolls. That is the safe default:
+ * a page wrongly pinned loses everything below the fold with no way to reach
+ * it, while a page wrongly left scrolling just scrolls.
+ *
+ * The dashboard is deliberately not on this list. It is four rows tall now and
+ * whether it fits depends on the screen, so pinning it would mean guessing a
+ * viewport height to pin above — and a guess that is too low does not shorten
+ * the page, it hides the bottom of it. Left alone, the browser answers exactly
+ * the question that matters: taller than the window, it scrolls; shorter, no
+ * scrollbar appears. Its task list still scrolls inside its own card, which is
+ * what the pinning was really for — see .dash-main in styles/dashboard-home.css.
+ */
+const PINNED = ['/goals', '/growth', '/analytics', '/calendar'];
+
+function pinsViewport(pathname: string): boolean {
+  return PINNED.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
 export default function App() {
+  usePinnedViewport(pinsViewport(useLocation().pathname));
+
   return (
     <>
       <Navbar />

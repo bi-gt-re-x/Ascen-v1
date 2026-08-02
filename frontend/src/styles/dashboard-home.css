@@ -1,0 +1,833 @@
+/* ==========================================================================
+   dashboard-home.css — the dashboard's own layout and cards
+
+   Loaded alongside dashboard.css, which still dresses the pieces this page
+   shares with the rest of the app: the Focus panel, the Add Task dialog, the
+   level-up celebration, focus mode's colour scheme, and the dark theme for all
+   of those. What is here is only the page around them.
+
+   Every class in this file is prefixed `dash-`, and the one shared name it
+   reuses is `.card` — the white/14px/1.5px-border base that dashboard.css
+   already defines in both themes, so a card added here is dark-mode-correct
+   without a second rule.
+
+   Palette, matching the rest of the app:
+       #2C302E  ink            #6C757D  muted ink
+       #A38A70  bronze accent  #EAEAEA  border
+       #22A06B  positive       #C0392B  urgent
+   Dark theme mirrors dashboard.css: #161b22 card, #30363d border,
+   #e6edf3 ink, #8b949e muted.
+   ========================================================================== */
+
+/* ==========================================================================
+   PAGE SHELL
+   ========================================================================== */
+
+/* body is a centred flex column (dashboard.css), so <main> is a flex item and
+   sizes to its content rather than stretching. The page wants the full width
+   to centre itself inside. Scoped with :has so no other route is touched. */
+body:has(.dash) .app-main {
+    width: 100%;
+}
+
+.dash {
+    width: 100%;
+    max-width: 1370px;
+    margin: 26px auto 28px;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-sizing: border-box;
+    text-align: left;
+}
+
+/* ==========================================================================
+   GREETING
+   ========================================================================== */
+.dash-greeting {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.dash-hello {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #2C302E;
+}
+
+.dash-sub {
+    margin: 6px 0 0;
+    font-size: 0.95rem;
+    color: #6C757D;
+}
+
+.dash-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #6C757D;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   THE FOUR STAT CARDS
+   ========================================================================== */
+.dash-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.dash-stat {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.dash-stat-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2C302E;
+}
+
+/* A tinted disc behind a card's icon. The tint says what kind of number the
+   card holds, so each one is set with the icon rather than shared. */
+.dash-stat-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    flex: none;
+}
+.dash-ico-focus  { background: #E7F5EE; color: #22A06B; }
+.dash-ico-streak { background: #FDEEE4; color: #E07A34; }
+.dash-ico-week   { background: #F0F2F5; color: #6C757D; }
+.dash-ico-flag   { background: #F0F2F5; color: #6C757D; }
+.dash-ico-pulse  { background: #F0F2F5; color: #6C757D; }
+
+/* ---- The big figure the Focus and Streak cards lead with ---------------- */
+.dash-big {
+    margin: 2px 0 0;
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.05;
+    color: #2C302E;
+}
+.dash-big-unit {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #6C757D;
+}
+.dash-stat-sub {
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+    color: #6C757D;
+}
+.dash-stat-foot {
+    margin: auto 0 8px;   /* auto-top pins it to the card's foot */
+    padding-top: 14px;
+    font-size: 0.82rem;
+    color: #6C757D;
+}
+
+/* ---- Today's Progress --------------------------------------------------- */
+.dash-today-body {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
+}
+
+.dash-ring {
+    position: relative;
+    width: 104px;
+    height: 104px;
+    flex: none;
+}
+.dash-ring svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.dash-ring-track,
+.dash-ring-fill {
+    fill: none;
+    stroke-width: 11;
+}
+.dash-ring-track { stroke: #EFEBE6; }
+.dash-ring-fill {
+    stroke: #A38A70;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.5s ease;
+}
+.dash-ring-centre {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    pointer-events: none;
+}
+.dash-ring-pct {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #2C302E;
+    line-height: 1;
+}
+.dash-ring-label {
+    font-size: 0.66rem;
+    color: #6C757D;
+    text-align: center;
+}
+
+/* The three counts beside the ring. A <dl>, because each one is a label and
+   its value — but read value-first, so the number leads the row. */
+.dash-today-figures {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    border-left: 1.5px solid #EAEAEA;
+    padding-left: 20px;
+}
+.dash-figure {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+}
+.dash-figure dd {
+    order: -1;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #2C302E;
+    min-width: 2.4ch;
+    text-align: right;
+}
+.dash-figure dt {
+    font-size: 0.85rem;
+    color: #6C757D;
+    white-space: nowrap;
+}
+
+/* ---- XP Overview -------------------------------------------------------- */
+.dash-xp-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.dash-xp-level {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #2C302E;
+}
+.dash-xp-count {
+    font-size: 0.8rem;
+    color: #6C757D;
+    white-space: nowrap;
+}
+.dash-xp-today {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: auto 0 0;
+    padding-top: 16px;
+    font-size: 0.85rem;
+    color: #6C757D;
+}
+.dash-xp-today strong { color: #22A06B; font-weight: 700; }
+.dash-xp-today svg { color: #22A06B; flex: none; }
+
+/* ---- The bars ----------------------------------------------------------- */
+.dash-bar {
+    height: 8px;
+    border-radius: 20px;
+    background: #E9ECEF;
+    overflow: hidden;
+}
+.dash-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    background: #A38A70;
+    transition: width 0.4s ease;
+}
+.dash-bar-green {
+    margin-top: 8px;
+}
+.dash-bar-green .dash-bar-fill { background: #22A06B; }
+
+/* ==========================================================================
+   TASKS + FOCUS ROW
+
+   The Focus panel keeps the fixed width it has always had, so widening the
+   page only widens the task list — the panel's stepper and button are sized
+   for that width and stretch badly.
+
+   The row is given a **definite** height rather than growing to fit, and that
+   is what puts the scrollbar inside the task list instead of on the page. A
+   min-height would not do it: the row would simply grow to whatever the list
+   needed, and 244 open tasks would run the page out to the length of them.
+
+   431px is the Focus panel's own height and always has been — 24 of padding,
+   the goal box, the Start button, the hint, 24 more, and the border, none of
+   which shrink. Matching the row to it means neither card is cropped and the
+   two line up.
+   ========================================================================== */
+.dash {
+    --dash-row-h: 431px;
+}
+
+.dash-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 508px;
+    gap: 20px;
+    align-items: stretch;
+    height: var(--dash-row-h);
+    min-height: 0;
+}
+
+/* ---- The card shell the three panels share ------------------------------ */
+.dash-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 20px 22px;
+}
+
+.dash-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #2C302E;
+}
+
+/* The link at a card's foot. `margin-top: auto` presses it to the bottom, so
+   three cards of different content still line their links up. */
+.dash-panel-link {
+    margin-top: auto;
+    padding-top: 14px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #6C757D;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.dash-panel-link:hover { color: #A38A70; }
+
+/* ---- Header: title, tabs, Add Task -------------------------------------- */
+.dash-panel-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.dash-panel-head .dash-panel-title { flex: none; }
+
+.dash-tabs {
+    display: flex;
+    gap: 4px;
+    margin: 0 auto;
+    padding: 4px;
+    background: #F4F5F7;
+    border-radius: 10px;
+}
+.dash-tab {
+    border: none;
+    background: none;
+    padding: 6px 14px;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #6C757D;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.dash-tab:hover { color: #2C302E; }
+.dash-tab.is-active {
+    background: #A38A70;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.dash-add {
+    flex: none;
+    border: none;
+    background: #24282C;
+    color: #FFFFFF;
+    padding: 9px 16px;
+    border-radius: 9px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.dash-add:hover { background: #2C302E; }
+
+/* ---- The list ----------------------------------------------------------- */
+/* The scroll region is this wrapper, not the lists inside it: the two groups
+   have to scroll as one, or the Calendar heading would sit still while its
+   rows moved. It takes the space the header and the foot link leave, and
+   scrolls when the list is longer than that. */
+.dash-task-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.dash-task-head {
+    margin: 0 0 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9AA0A6;
+}
+
+.dash-task-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dash-task-empty {
+    margin: 0;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: #9AA0A6;
+}
+
+.dash-task {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    background: #FBFAF9;
+    border: 1.5px solid #EFEDE9;
+    border-radius: 10px;
+    transition: background-color 0.2s ease, border-color 0.2s ease,
+                opacity 0.35s ease, transform 0.35s ease,
+                margin 0.35s ease, padding 0.35s ease, max-height 0.35s ease;
+    max-height: 90px;
+    overflow: hidden;
+}
+.dash-task:hover { background: #F6F4F1; border-color: #E4E0DA; }
+
+.dash-task-check {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #C9BCAE;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    color: #FFFFFF;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.dash-task-check:hover { border-color: #A38A70; }
+.dash-task-check:focus-visible {
+    outline: 2px solid #A38A70;
+    outline-offset: 2px;
+}
+
+.dash-task-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.dash-task-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #2C302E;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The priority line under the title: a coloured dot and its word. */
+.dash-task-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.76rem;
+    font-weight: 500;
+}
+.dash-task-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+.dash-task-tag.tone-high { color: #C0392B; }
+.dash-task-tag.tone-med  { color: #B26B00; }
+.dash-task-tag.tone-low  { color: #6C757D; }
+
+.dash-task-when {
+    flex: none;
+    font-size: 0.82rem;
+    color: #6C757D;
+    white-space: nowrap;
+}
+.dash-task-nodue { font-style: italic; color: #9AA0A6; }
+.dash-task-xp { color: #22A06B; font-weight: 600; }
+
+/* ---- Completing: check, green, gone ------------------------------------- */
+.dash-task.is-checked {
+    background: #E7F5EE;
+    border-color: #B6E3CC;
+}
+.dash-task.is-checked .dash-task-check {
+    background: #22A06B;
+    border-color: #22A06B;
+}
+.dash-task.is-checked .dash-task-name {
+    color: #6C757D;
+    text-decoration: line-through;
+}
+.dash-task.is-leaving {
+    opacity: 0;
+    transform: translateX(18px);
+    max-height: 0;
+    margin-top: -8px;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+}
+/* A row in the Completed tab is already finished — it does not animate, and
+   its checkbox is not a button. */
+.dash-task.is-done { transition: none; }
+.dash-task.is-done .dash-task-check { cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+    .dash-task,
+    .dash-ring-fill,
+    .dash-bar-fill { transition: none; }
+}
+
+/* ==========================================================================
+   THE THREE SUMMARY CARDS
+   ========================================================================== */
+.dash-insights {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: stretch;
+}
+
+.dash-insight { min-height: 0; }
+.dash-insight-title { margin-bottom: 16px; font-size: 1rem; }
+
+/* ---- Weekly Overview ---------------------------------------------------- */
+.dash-week-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+}
+.dash-week-cell {
+    border: 1.5px solid #EFEDE9;
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    min-width: 0;
+}
+.dash-week-cell dd {
+    margin: 0 0 4px;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #2C302E;
+}
+.dash-week-cell dt {
+    font-size: 0.7rem;
+    color: #6C757D;
+    line-height: 1.25;
+}
+
+/* ---- Top Priorities ----------------------------------------------------- */
+.dash-priority-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+.dash-priority-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 0.9rem;
+    color: #2C302E;
+}
+.dash-priority-rank { color: #9AA0A6; flex: none; }
+.dash-priority-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-badge {
+    flex: none;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+.dash-badge.tone-high { background: #FDECEC; color: #C0392B; }
+.dash-badge.tone-med  { background: #FFF4E5; color: #B26B00; }
+.dash-badge.tone-low  { background: #F0F2F5; color: #6C757D; }
+
+/* ---- Recent Activity ---------------------------------------------------- */
+.dash-activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+}
+.dash-activity-list li {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    font-size: 0.88rem;
+    color: #6C757D;
+}
+.dash-activity-ico { flex: none; color: #A38A70; }
+.dash-activity-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dash-activity-name strong { color: #2C302E; font-weight: 600; }
+.dash-activity-xp {
+    flex: none;
+    color: #22A06B;
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+.dash-activity-at {
+    flex: none;
+    font-size: 0.8rem;
+    min-width: 5.5ch;
+    text-align: right;
+}
+
+/* ==========================================================================
+   FOCUS MODE (html.focus-mode, set by the focus session)
+
+   While a session runs the page gets out of the way: the greeting, the four
+   stat cards and the three summary cards fold away, and the Tasks/Focus row
+   takes the space they leave. dashboard.css restacks the Focus panel itself
+   into its short two-column strip — those rules key off `.focus-panel`, which
+   is why the panel keeps that class.
+   ========================================================================== */
+.dash-greeting,
+.dash-stats,
+.dash-insights {
+    transition: opacity 0.45s ease, transform 0.6s ease,
+                margin 0.6s ease, max-height 0.6s ease;
+    max-height: 400px;
+}
+html.focus-mode .dash-greeting,
+html.focus-mode .dash-stats,
+html.focus-mode .dash-insights {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-20px);
+    margin-top: -20px;
+    overflow: hidden;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.45s ease, transform 0.6s ease,
+                margin 0.6s ease, max-height 0.6s ease,
+                visibility 0s linear 0.6s;
+}
+
+/* Focus on top, Tasks underneath, in the ratio dashboard.css's focus-mode
+   panel layout is drawn for. The row takes the height the three folded rows
+   gave up rather than staying at 431 — which is the whole point of folding
+   them — so here it is sized against the viewport instead. */
+html.focus-mode .dash-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 3fr) minmax(0, 7fr);
+    height: calc(100vh - var(--topnav-h, 64px) - 110px);
+    min-height: var(--dash-row-h);
+}
+html.focus-mode .dash-tasks { max-height: none; }
+html.focus-mode .dash-main .focus-panel { order: -1; min-height: 0; }
+html.focus-mode .dash-main .dash-tasks { order: 1; min-height: 0; }
+
+/* ==========================================================================
+   FITTING THE SCREEN
+
+   Nothing here pins the page, and that is the point. `/dashboard` is left off
+   the PINNED list in src/App.tsx, so `body.pins-viewport` is never set on it
+   and the browser decides: on a screen tall enough to hold the whole page no
+   scrollbar appears, and on one that is not, the page scrolls. Pinning would
+   mean naming a viewport height to pin above, and a page pinned to a screen it
+   does not fit is not shortened — it is cut off.
+
+   The scrolling the layout *does* commit to is the one inside the task list,
+   and that comes from the row's definite height above, not from the page.
+   ========================================================================== */
+
+/* ==========================================================================
+   NARROWER SCREENS
+   ========================================================================== */
+@media (max-width: 1240px) {
+    .dash-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-insights { grid-template-columns: minmax(0, 1fr); }
+
+    /* Stacked, the row's two cards can no longer share one height — 431px
+       between them would halve both. Each takes its own, and the page scrolls
+       instead of the list. */
+    .dash-main {
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+    }
+    .dash-tasks { max-height: var(--dash-row-h); }
+}
+
+@media (max-width: 768px) {
+    .dash { padding: 0 16px; margin-top: 18px; gap: 16px; }
+    .dash-stats { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .dash-hello { font-size: 1.4rem; }
+    .dash-panel-head { flex-wrap: wrap; }
+    .dash-tabs { margin: 0; order: 1; width: 100%; justify-content: center; }
+    .dash-add { margin-left: auto; }
+    .dash-week-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* The due date drops below the title rather than squeezing it out. */
+    .dash-task { flex-wrap: wrap; }
+    .dash-task-when { width: 100%; padding-left: 32px; }
+}
+
+/* ==========================================================================
+   DARK THEME
+   ========================================================================== */
+html[data-theme="dark"] .dash-hello,
+html[data-theme="dark"] .dash-stat-title,
+html[data-theme="dark"] .dash-panel-title,
+html[data-theme="dark"] .dash-big,
+html[data-theme="dark"] .dash-ring-pct,
+html[data-theme="dark"] .dash-xp-level,
+html[data-theme="dark"] .dash-figure dd,
+html[data-theme="dark"] .dash-week-cell dd,
+html[data-theme="dark"] .dash-task-name,
+html[data-theme="dark"] .dash-priority-list li,
+html[data-theme="dark"] .dash-activity-name strong {
+    color: #e6edf3;
+}
+
+html[data-theme="dark"] .dash-sub,
+html[data-theme="dark"] .dash-date,
+html[data-theme="dark"] .dash-stat-sub,
+html[data-theme="dark"] .dash-stat-foot,
+html[data-theme="dark"] .dash-ring-label,
+html[data-theme="dark"] .dash-xp-count,
+html[data-theme="dark"] .dash-xp-today,
+html[data-theme="dark"] .dash-figure dt,
+html[data-theme="dark"] .dash-week-cell dt,
+html[data-theme="dark"] .dash-task-when,
+html[data-theme="dark"] .dash-panel-link,
+html[data-theme="dark"] .dash-activity-list li,
+html[data-theme="dark"] .dash-tab {
+    color: #8b949e;
+}
+
+html[data-theme="dark"] .dash-task-head,
+html[data-theme="dark"] .dash-task-empty,
+html[data-theme="dark"] .dash-task-nodue,
+html[data-theme="dark"] .dash-priority-rank {
+    color: #6e7681;
+}
+
+html[data-theme="dark"] .dash-ring-track { stroke: #30363d; }
+html[data-theme="dark"] .dash-bar { background: #21262d; }
+html[data-theme="dark"] .dash-today-figures { border-left-color: #30363d; }
+
+html[data-theme="dark"] .dash-task,
+html[data-theme="dark"] .dash-week-cell {
+    background: #1a1f26;
+    border-color: #30363d;
+}
+html[data-theme="dark"] .dash-task:hover { background: #21262d; border-color: #3a424d; }
+html[data-theme="dark"] .dash-task-check { border-color: #4a5462; }
+html[data-theme="dark"] .dash-task.is-checked {
+    background: #13291d;
+    border-color: #24503a;
+}
+html[data-theme="dark"] .dash-task.is-checked .dash-task-name { color: #8b949e; }
+
+html[data-theme="dark"] .dash-tabs { background: #21262d; }
+html[data-theme="dark"] .dash-tab:hover { color: #e6edf3; }
+html[data-theme="dark"] .dash-tab.is-active { background: #A38A70; color: #16191d; }
+html[data-theme="dark"] .dash-add { background: #30363d; }
+html[data-theme="dark"] .dash-add:hover { background: #3a424d; }
+html[data-theme="dark"] .dash-panel-link:hover { color: #d8c3a5; }
+
+html[data-theme="dark"] .dash-ico-focus  { background: #13291d; color: #7ee0a6; }
+html[data-theme="dark"] .dash-ico-streak { background: #2e2116; color: #e79f23; }
+html[data-theme="dark"] .dash-ico-week,
+html[data-theme="dark"] .dash-ico-flag,
+html[data-theme="dark"] .dash-ico-pulse  { background: #21262d; color: #8b949e; }
+
+html[data-theme="dark"] .dash-task-tag.tone-high { color: #ff9297; }
+html[data-theme="dark"] .dash-task-tag.tone-med  { color: #f4d47c; }
+html[data-theme="dark"] .dash-task-tag.tone-low  { color: #8b949e; }
+
+html[data-theme="dark"] .dash-badge.tone-high { background: #2e1618; color: #ff9297; }
+html[data-theme="dark"] .dash-badge.tone-med  { background: #2e2716; color: #f4d47c; }
+html[data-theme="dark"] .dash-badge.tone-low  { background: #21262d; color: #8b949e; }
+
+html[data-theme="dark"] .dash-xp-today strong,
+html[data-theme="dark"] .dash-xp-today svg,
+html[data-theme="dark"] .dash-activity-xp,
+html[data-theme="dark"] .dash-task-xp { color: #7ee0a6; }
+html[data-theme="dark"] .dash-bar-green .dash-bar-fill { background: #2ea56f; }

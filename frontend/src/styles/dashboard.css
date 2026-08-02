@@ -79,30 +79,25 @@ body {
     }
 }
 
-/* …but 640px of viewport is not enough for this page, and pinning it there
- * does not fit the page into the screen — it cuts the bottom off it.
+/* …but 640px of viewport is not enough for a page of this shape, and pinning
+ * it there does not fit the page into the screen — it cuts the bottom off it.
+ * So below a certain height it scrolls, the way it already does below 1120px
+ * wide.
  *
- * The dashboard needs about 830px: 64 for the bar, 214 for the profile row,
- * 431 for the Focus card, 44 for the quote, and the gaps between them. The
- * Focus card's 431 is not negotiable — 24 of padding, a goal box, the Start
- * button and the hint, 24 more, and 3 of border, none of which shrink — so on
- * a 1280x720 window (a normal one, just not full screen) the row was handed
- * 322px and the last 109 went under the card's edge, taking Start Focus with
- * it. The daily quote, squeezed to 8px of its 44, went the same way.
+ * Where that height is, and the unpinning itself, moved to
+ * styles/dashboard-home.css when the dashboard was rebuilt: the new page has
+ * four rows rather than two and needs about 900px, and the rule that unpins is
+ * scoped to the dashboard there. It was not scoped here, and it could not be —
+ * this stylesheet is loaded on every route (App.tsx imports the dashboard
+ * eagerly), so `body.pins-viewport { height: auto }` written plainly was
+ * unpinning the calendar, goals and growth pages too, on any window under
+ * 840px tall. Those pages fit at 640 and are meant to stay pinned.
  *
- * So below 840px the page scrolls, the way it already does below 1120px wide.
- * The row keeps a definite height there rather than growing to fit, so the
- * Tasks list still scrolls inside its own card instead of running the page
- * out to the length of the list.
- *
- * Focus mode is left alone: it restacks this row to fill the space the
- * profile row vacates and sizes itself from that. */
+ * `.container` and `.bottom-section` below belong to the layout this page had
+ * before the rebuild. Nothing renders them now; the rules are kept only until
+ * the rest of this stylesheet is pruned back to the parts still in use — the
+ * Add Task dialog, the Focus panel, the level-up celebration and the quote. */
 @media (min-width: 769px) and (max-height: 839px) {
-    body.has-topnav {
-        height: auto;
-        overflow: visible;
-    }
-
     .container {
         height: auto;
         min-height: calc(100vh - var(--topnav-h, 64px) - 33px);

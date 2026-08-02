@@ -1,20 +1,25 @@
 /**
  * One task on the dashboard's list.
  *
- * The checkbox is a **div**, not an `<input type="checkbox">` — that is what
- * styles/dashboard.css dresses (a 20px rounded box with a bronze border that
- * gets a ✓ written into it), and an input with those rules on it renders as a
- * native control wearing the wrong clothes. The scaffold version used an input.
+ * The checkbox is a **div**, not an `<input type="checkbox">`: what the
+ * stylesheet dresses is a rounded box with a bronze border that gets a ✓
+ * written into it, and an input wearing those rules renders as a native
+ * control in the wrong clothes. It carries `role="checkbox"` and answers the
+ * keyboard, so it is still a checkbox to anything that asks.
  *
- * Completing is a three-beat animation the original built by hand: the check
- * appears, the row goes green, and after a beat it collapses and leaves. The
- * classes are `completing`, `completed-state` and `removing`, all defined in
- * dashboard.css; what is here is the sequence, not the styling.
+ * Completing is a three-beat animation: the check appears, the row goes green,
+ * and after a beat it collapses and leaves. The classes are `is-checked` and
+ * `is-leaving`; what is here is the sequence, not the styling.
  *
- * A task with no due date says so. It used to show a count-up timer, and the
- * original dropped that on the grounds that there is nothing to count toward.
+ * Under the title is the task's priority, colour-coded. The design this came
+ * from showed a category there — see the note on `priorityMeta` for why it
+ * cannot be one.
+ *
+ * A completed row is not clickable: re-opening a finished task is an edit, and
+ * this list does not edit.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { priorityMeta } from './summary';
 import type { Task } from '@/types';
 
 /** How long the ✓ shows before the row starts leaving. */
@@ -25,10 +30,19 @@ const REMOVE_MS = 420;
 export interface TaskRowProps {
   task: Task;
   busy?: boolean;
+  /** A row in the Completed tab: shown finished, and inert. */
+  done?: boolean;
   onComplete: (task: Task) => void;
 }
 
-export function TaskRow({ task, busy = false, onComplete }: TaskRowProps) {
+/** "Jul 30, 2:30 PM" — the same shape the calendar prints a due time in. */
+function dueLabel(due: Date): string {
+  const day = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const time = due.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return `${day}, ${time}`;
+}
+
+export function TaskRow({ task, busy = false, done = false, onComplete }: TaskRowProps) {
   const [phase, setPhase] = useState<'idle' | 'checked' | 'leaving'>('idle');
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -41,7 +55,7 @@ export function TaskRow({ task, busy = false, onComplete }: TaskRowProps) {
 
   const complete = useCallback(() => {
     // Guard against a second click while the row is on its way out.
-    if (phase !== 'idle' || busy) return;
+    if (done || phase !== 'idle' || busy) return;
     setPhase('checked');
     timers.current.push(
       setTimeout(() => {
@@ -49,53 +63,59 @@ export function TaskRow({ task, busy = false, onComplete }: TaskRowProps) {
         timers.current.push(setTimeout(() => onComplete(task), REMOVE_MS));
       }, CHECK_MS),
     );
-  }, [phase, busy, onComplete, task]);
+  }, [done, phase, busy, onComplete, task]);
 
+  const checked = done || phase !== 'idle';
   const classes = [
-    'task-item',
-    phase !== 'idle' ? 'completing' : '',
-    phase !== 'idle' ? 'completed-state' : '',
-    phase === 'leaving' ? 'removing' : '',
+    'dash-task',
+    checked ? 'is-checked' : '',
+    phase === 'leaving' ? 'is-leaving' : '',
+    done ? 'is-done' : '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  const due = task.due_date ? new Date(task.due_date) : null;
+  const priority = priorityMeta(task.priority);
+  const parsed = task.due_date ? new Date(task.due_date) : null;
+  const due = parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
 
   return (
-    <li className={classes} id={`task-${task.id}`}>
-      <div className="task-left">
-        <div
-          className="task-checkbox"
-          role="checkbox"
-          aria-checked={phase !== 'idle'}
-          aria-label={`Complete ${task.title}`}
-          tabIndex={0}
-          onClick={complete}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              complete();
-            }
-          }}
-        >
-          {phase !== 'idle' ? '✓' : ''}
-        </div>
-        <span className="task-name">{task.title}</span>
+    <li className={classes}>
+      <div
+        className="dash-task-check"
+        role="checkbox"
+        aria-checked={checked}
+        aria-label={done ? `${task.title} completed` : `Complete ${task.title}`}
+        aria-disabled={done || undefined}
+        tabIndex={done ? -1 : 0}
+        onClick={complete}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            complete();
+          }
+        }}
+      >
+        {checked ? '✓' : ''}
       </div>
 
-      {due ? (
-        <span className="task-due-date">
-          Due:{' '}
-          {due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })},{' '}
-          {due.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-          })}
+      <div className="dash-task-body">
+        <span className="dash-task-name">{task.title || 'Untitled'}</span>
+        <span className={`dash-task-tag tone-${priority.tone}`}>
+          <span className="dash-task-dot" aria-hidden="true" />
+          {priority.label}
         </span>
-      ) : (
-        <span className="task-due-date task-nodue">No due date</span>
-      )}
+      </div>
+
+      <span className="dash-task-when">
+        {done ? (
+          <span className="dash-task-xp">+{Number(task.xp_value) || 0} XP</span>
+        ) : due ? (
+          `Due: ${dueLabel(due)}`
+        ) : (
+          <span className="dash-task-nodue">No due date</span>
+        )}
+      </span>
     </li>
   );
 }

@@ -397,16 +397,24 @@ body.has-topnav {
 
 /* The app pages fill the viewport and never scroll it — anything longer than
  * the space available scrolls inside its own panel (the goals list, the
- * dashboard's task list, the calendar card), so the chrome stays put. The
- * landing page is the exception and does not carry this class.
+ * dashboard's task list, the calendar card), so the chrome stays put.
  *
- * Only once there is a screen big enough to hold a page, though. Under
- * 1120px the calendar drops to a stacked layout that is meant to scroll, and
- * the goals columns stack at 900px; pinning the viewport there would put the
- * bottom of those pages out of reach instead of merely off-screen. Below
- * this, the page scrolls as it always did. */
+ * This is a class of its own rather than more of `has-topnav`, because those
+ * are two different questions and only one of them has the same answer on
+ * every page. Every page has the bar and needs its height reserved; only the
+ * app pages pin the viewport. While the pages were Jinja the two travelled
+ * together — a template that carried `has-topnav` was an app page by
+ * definition, and the landing page had no bar at all — but the React app
+ * renders one bar above every route, landing page included, and setting both
+ * from index.html left the whole landing page unscrollable below the fold.
+ *
+ * src/App.tsx decides which routes get this. Only once there is a screen big
+ * enough to hold a page, though: under 1120px the calendar drops to a stacked
+ * layout that is meant to scroll, and the goals columns stack at 900px;
+ * pinning the viewport there would put the bottom of those pages out of reach
+ * instead of merely off-screen. Below this, the page scrolls as it always did. */
 @media (min-width: 1120px) and (min-height: 640px) {
-    body.has-topnav {
+    body.pins-viewport {
         height: 100vh;
         overflow: hidden;
     }

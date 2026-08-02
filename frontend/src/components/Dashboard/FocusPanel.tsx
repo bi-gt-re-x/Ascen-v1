@@ -8,17 +8,23 @@
  *
  * Stopping asks first. An accidental click should not end a session, and the
  * original grew a confirmation for exactly that reason.
+ *
+ * The session is passed in rather than read here, because the dashboard's
+ * Focus Time stat card shows the same day. Two `useFocusSession` calls would
+ * each hold their own copy of the day's localStorage record, and pressing +
+ * below would move this panel's goal while the card went on showing the old
+ * one. The page owns it; both displays read the one object.
  */
 import { useState } from 'react';
-import { useFocusSession } from '@/hooks/useFocusSession';
 import '@/styles/focus-session.css';
+import type { UseFocusSession } from '@/hooks/useFocusSession';
 
 export interface FocusPanelProps {
-  username: string | null;
+  session: UseFocusSession;
 }
 
-export function FocusPanel({ username }: FocusPanelProps) {
-  const focus = useFocusSession(username);
+export function FocusPanel({ session }: FocusPanelProps) {
+  const focus = session;
   const [confirming, setConfirming] = useState(false);
 
   const focusedHours = focus.focused / 3600;

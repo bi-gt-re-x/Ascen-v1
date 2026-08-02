@@ -1,79 +1,62 @@
 /**
- * The dashboard — the account's stats, its task list, and the focus session.
+ * The dashboard — the account's day, at a glance.
  *
- * Ported from frontend/html/dashboard.html and frontend/js/dashboard.js, with
- * the task row from tasks.js and the session from focus.js. The markup and
- * class names are the originals, so styles/dashboard.css dresses this page
- * unchanged: the port is a change of mechanism, not of appearance.
+ * Four rows: a greeting, four stat cards, the Tasks list beside the Focus
+ * panel, and three summary cards along the bottom. Every one of them is
+ * counted from a single `/api/get_user_data` call, by the pure functions in
+ * components/Dashboard/summary.ts — nothing on this page fetches for itself, so
+ * no two panels can disagree about what a task is.
  *
- * The rule the original followed and this one keeps: **the backend decides.**
- * Completing a task does not compute the new XP, level or streak locally — it
- * posts, and re-reads. The same call also moves goals and the XP ledger, and
- * re-reading is the only way this page and the goals page agree without a
- * second copy of those rules.
+ * The rule the page has always followed and still does: **the backend
+ * decides.** Completing a task does not compute the new XP, level or streak
+ * locally — it posts, and re-reads. That same call also moves goals and the XP
+ * ledger, and re-reading is the only way this page and the goals page agree
+ * without a second copy of those rules.
  *
- * What the earlier version of this file was missing, and is here now: the Add
- * Task dialog, the Focus panel, the quote line, and a task row that matches
- * what the stylesheet expects.
+ * The focus session is owned here rather than inside the Focus panel, because
+ * two things now show it: the panel and the Focus Time stat card. One
+ * `useFocusSession` shared between them is what keeps the goal on the card
+ * moving when the + on the panel is pressed.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ErrorState, Loading } from '@/components';
 import {
+  FocusCard,
   FocusPanel,
   LevelUp,
+  RecentActivity,
+  StreakCard,
   TaskModal,
-  TaskRow,
+  TaskPanel,
+  TodayCard,
+  TopPriorities,
+  WeeklyOverview,
+  XpCard,
 } from '@/components/Dashboard';
+import {
+  bucketTasks,
+  daySummary,
+  recentActivity,
+  topPriorities,
+  weekSummary,
+} from '@/components/Dashboard/summary';
 import { useDocumentTitle, useUserData } from '@/hooks';
+import { useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
-import { format } from '@/utils';
+import { dates } from '@/utils';
+import type { TaskTab } from '@/components/Dashboard';
 import type { NewTask } from '@/services/tasks';
 import type { Task } from '@/types';
 import '@/styles/dashboard.css';
-
-/**
- * A task belongs to the calendar half of the list when it is scheduled.
- *
- * The original decided this from `show_on_calendar` plus a due date; this is
- * the same test, kept in one place so the two halves cannot both claim a task.
- */
-function isCalendarTask(task: Task): boolean {
-  return Boolean(task.show_on_calendar && task.due_date);
-}
-
-function TaskSection({
-  heading,
-  items,
-  busyId,
-  onComplete,
-}: {
-  heading: string;
-  items: Task[];
-  busyId: string | null;
-  onComplete: (task: Task) => void;
-}) {
-  return (
-    <div className="task-subsection">
-      <h3 className="task-subhead">{heading}</h3>
-      <ul className="task-list">
-        {items.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            busy={busyId === task.id}
-            onComplete={onComplete}
-          />
-        ))}
-      </ul>
-      {items.length === 0 && <p className="task-empty">Nothing here yet.</p>}
-    </div>
-  );
-}
+import '@/styles/dashboard-home.css';
 
 export default function Dashboard() {
   useDocumentTitle('Dashboard');
 
   const { data, error, loading, reload, username } = useUserData();
+  const session = useFocusSession(username);
+
+  const [tab, setTab] = useState<TaskTab>('today');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -81,28 +64,44 @@ export default function Dashboard() {
   /** The level to celebrate, set when a completion crosses a level boundary. */
   const [levelled, setLevelled] = useState<number | null>(null);
 
+  // Today is read once per render rather than per panel, so a page left open
+  // across midnight moves all of its cards over on the same tick.
+  const now = new Date();
+  const todayIso = dates.isoDate(now);
+  const monday = dates.startOfWeek(now);
+  const mondayIso = dates.isoDate(monday);
+  const sundayIso = dates.isoDate(dates.addDays(monday, 6));
+
+  const tasks = useMemo(() => data?.tasks ?? [], [data]);
+  const buckets = useMemo(() => bucketTasks(tasks, todayIso), [tasks, todayIso]);
+  const day = useMemo(() => daySummary(tasks, todayIso), [tasks, todayIso]);
+  const week = useMemo(
+    () => weekSummary(tasks, mondayIso, sundayIso),
+    [tasks, mondayIso, sundayIso],
+  );
+  const priorities = useMemo(() => topPriorities(buckets.today), [buckets.today]);
+  const activity = useMemo(() => recentActivity(tasks), [tasks]);
+
   const complete = useCallback(
     async (task: Task) => {
       if (!username) return;
       setBusyId(task.id);
       setFailure(null);
-      // The level before the write. The response carries `new_level`, so the
-      // backend still decides what the level is — this only notices that it
-      // went up, which is what the celebration is for.
-      const was = data ? format.levelForTotalXp(data.stats.xp).level : 0;
       try {
         const result = await taskService.completeTask(username, task.id);
         if (!result.success) {
           setFailure(result.message);
           return;
         }
+        // The response carries the new level, so the backend still decides what
+        // the level is. Comparing against the one it replaces only notices that
+        // it went up, which is what the celebration is for.
+        const was = data?.stats.level ?? 0;
         if (result.new_level > was) setLevelled(result.new_level);
         reload();
       } catch (cause) {
         setFailure(
-          cause instanceof Error
-            ? cause.message
-            : 'Could not complete that task.',
+          cause instanceof Error ? cause.message : 'Could not complete that task.',
         );
       } finally {
         setBusyId(null);
@@ -125,9 +124,7 @@ export default function Dashboard() {
         setAdding(false);
         reload();
       } catch (cause) {
-        setFailure(
-          cause instanceof Error ? cause.message : 'Could not add that task.',
-        );
+        setFailure(cause instanceof Error ? cause.message : 'Could not add that task.');
       } finally {
         setSaving(false);
       }
@@ -137,165 +134,74 @@ export default function Dashboard() {
 
   if (loading) return <Loading label="Loading your dashboard" />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
-  if (!data)
-    return <ErrorState message="No data came back." onRetry={reload} />;
-
-  const { stats } = data;
-  const level = format.levelForTotalXp(stats.xp);
-  const open = data.tasks.filter((task) => task.status === 'todo');
-  const todo = open.filter((task) => !isCalendarTask(task));
-  const scheduled = open.filter(isCalendarTask);
+  if (!data) return <ErrorState message="No data came back." onRetry={reload} />;
 
   return (
-    <div className="container">
-      <div className="top-section">
-        <div className="card user-stats">
-          <h2>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8" />
-            </svg>
-            User Profile
-          </h2>
-          <div className="username-row">
-            <span className="label">Name:</span>
-            <span className="username" id="userNameDisplay">
-              {username}
-            </span>
-          </div>
-          <div className="xp-section">
-            <div className="xp-label-row">
-              <span>
-                XP: {format.number(level.xpInLevel)} /{' '}
-                {format.number(level.xpRequired)}
-              </span>
-            </div>
-            <div className="xp-bar-container">
-              <div
-                className="xp-bar-fill"
-                style={{ width: `${level.percent}%` }}
-                role="progressbar"
-                aria-valuenow={Math.round(level.percent)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Level ${level.level} progress`}
-              />
-            </div>
-            <div className="stats-footer">
-              <span className="stat-item">Level: {level.level}</span>
-            </div>
-          </div>
+    <div className="dash">
+      {/* The greeting slides away with the stat row while a focus session
+          runs — see html.focus-mode in styles/dashboard-home.css. */}
+      <header className="dash-greeting">
+        <div>
+          <h1 className="dash-hello">
+            {dates.greeting(now)}, {username}! <span aria-hidden="true">👋</span>
+          </h1>
+          <p className="dash-sub">Ready to crush your goals today?</p>
         </div>
+        <p className="dash-date">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M3 10h18M8 3v4M16 3v4" />
+          </svg>
+          {dates.formatDate(now, {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })}
+        </p>
+      </header>
 
-        <div className="card streak-stats">
-          <h2>Statistics</h2>
-          <div className="stat-row">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#A38A70"
-              strokeWidth="2"
-            >
-              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-              <polyline points="17 6 23 6 23 12" />
-            </svg>
-            <span>
-              Current Streak: <strong>{stats.current_streak}</strong> Days
-            </span>
-          </div>
-          <div className="stat-row">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#A38A70"
-              strokeWidth="2"
-            >
-              <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.5-3.3" />
-            </svg>
-            <span>
-              Best Streak: <strong>{stats.best_streak}</strong> Days
-            </span>
-          </div>
-          <div className="stat-row">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#A38A70"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="m9 12 2 2 4-4" />
-            </svg>
-            <span>
-              Tasks Completed:{' '}
-              <strong>{format.number(stats.tasks_completed)}</strong>
-            </span>
-          </div>
-        </div>
+      <div className="dash-stats">
+        <TodayCard day={day} />
+        <XpCard stats={data.stats} xpToday={day.xp} />
+        <FocusCard session={session} />
+        <StreakCard stats={data.stats} />
       </div>
 
-      <div className="bottom-section">
-        <div className="card task-manager">
-          <div className="task-header">
-            <h2>Tasks</h2>
-            <button
-              type="button"
-              className="add-task-btn"
-              onClick={() => setAdding(true)}
-            >
-              + Add Task
-            </button>
-          </div>
+      {failure && <ErrorState message={failure} />}
 
-          {failure && <ErrorState message={failure} />}
-
-          <div className="task-groups">
-            <TaskSection
-              heading="Todo Tasks"
-              items={todo}
-              busyId={busyId}
-              onComplete={complete}
-            />
-            <TaskSection
-              heading="Calendar Tasks"
-              items={scheduled}
-              busyId={busyId}
-              onComplete={complete}
-            />
-          </div>
-        </div>
-
-        <FocusPanel username={username} />
+      <div className="dash-main">
+        <TaskPanel
+          buckets={buckets}
+          tab={tab}
+          onTabChange={setTab}
+          busyId={busyId}
+          onComplete={(task) => void complete(task)}
+          onAdd={() => setAdding(true)}
+        />
+        <FocusPanel session={session} />
       </div>
 
-      {/* The line the hidden chain replaces on its tenth click — secret/
-          easter-egg.js owns this element once today's clue is unlocked. The
-          original also fetched a random quote from a third-party API on every
-          load, with the key sitting in the page source; that is deliberately
-          not carried over. */}
+      <div className="dash-insights">
+        <WeeklyOverview week={week} />
+        <TopPriorities tasks={priorities} />
+        <RecentActivity entries={activity} />
+      </div>
+
+      {/* The line the hidden chain replaces on its tenth click — the easter egg
+          owns this element once the day's clue is unlocked, which is why it
+          keeps the id and the class the animation is written against
+          (.quote-container / #dailyQuote in styles/dashboard.css). The original
+          also fetched a random quote from a third-party API on every load, with
+          the key sitting in the page source; that is deliberately not carried
+          over. */}
       <div className="quote-container">
         <p id="dailyQuote">
-          &quot;The secret of getting ahead is getting started.&quot; - Mark
-          Twain
+          &quot;The secret of getting ahead is getting started.&quot; - Mark Twain
         </p>
       </div>
 
-      {levelled !== null && (
-        <LevelUp level={levelled} onDone={() => setLevelled(null)} />
-      )}
+      {levelled !== null && <LevelUp level={levelled} onDone={() => setLevelled(null)} />}
 
       <TaskModal
         open={adding}

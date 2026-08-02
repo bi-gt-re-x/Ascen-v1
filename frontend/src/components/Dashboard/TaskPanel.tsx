@@ -1,0 +1,147 @@
+/**
+ * The Tasks card: three tabs over one list, split into its two halves.
+ *
+ * The tabs are a filter, not three lists — `bucketTasks` does the splitting and
+ * this only chooses which bucket to draw. Inside a bucket the list keeps the
+ * Todo / Calendar division the dashboard has always drawn, because those two
+ * behave differently: a calendar task also occupies a block on the week grid.
+ *
+ * The list is capped. This account has 238 upcoming tasks, and a card that
+ * renders all of them is a card nobody scrolls to the bottom of — so it shows
+ * the first `VISIBLE` and says how many more there are, with "View all tasks"
+ * going to the page whose job that is.
+ */
+import { Link } from 'react-router-dom';
+import { TaskRow } from './TaskRow';
+import { isCalendarTask } from './summary';
+import type { TaskBuckets } from './summary';
+import type { Task } from '@/types';
+
+/** How many rows a tab shows before it defers to the tasks page. */
+const VISIBLE = 6;
+
+export type TaskTab = 'today' | 'upcoming' | 'completed';
+
+const TABS: Array<{ id: TaskTab; label: string }> = [
+  { id: 'today', label: 'Today' },
+  { id: 'upcoming', label: 'Upcoming' },
+  { id: 'completed', label: 'Completed' },
+];
+
+export interface TaskPanelProps {
+  buckets: TaskBuckets;
+  tab: TaskTab;
+  onTabChange: (tab: TaskTab) => void;
+  busyId: string | null;
+  onComplete: (task: Task) => void;
+  onAdd: () => void;
+}
+
+function Section({
+  heading,
+  items,
+  done,
+  busyId,
+  onComplete,
+}: {
+  heading: string;
+  items: Task[];
+  done: boolean;
+  busyId: string | null;
+  onComplete: (task: Task) => void;
+}) {
+  return (
+    <div className="dash-task-group">
+      <h3 className="dash-task-head">{heading}</h3>
+      {items.length === 0 ? (
+        <p className="dash-task-empty">Nothing here yet.</p>
+      ) : (
+        <ul className="dash-task-list">
+          {items.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              done={done}
+              busy={busyId === task.id}
+              onComplete={onComplete}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function TaskPanel({
+  buckets,
+  tab,
+  onTabChange,
+  busyId,
+  onComplete,
+  onAdd,
+}: TaskPanelProps) {
+  const all = buckets[tab];
+  const shown = all.slice(0, VISIBLE);
+  const hidden = all.length - shown.length;
+
+  return (
+    <section className="card dash-panel dash-tasks">
+      <header className="dash-panel-head">
+        <h2 className="dash-panel-title">Tasks</h2>
+
+        <div className="dash-tabs" role="tablist" aria-label="Which tasks to show">
+          {TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              className={`dash-tab${tab === id ? ' is-active' : ''}`}
+              onClick={() => onTabChange(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <button type="button" className="dash-add" onClick={onAdd}>
+          + Add Task
+        </button>
+      </header>
+
+      <div className="dash-task-scroll">
+        {tab === 'completed' ? (
+          <Section
+            heading="Completed Tasks"
+            items={shown}
+            done
+            busyId={busyId}
+            onComplete={onComplete}
+          />
+        ) : (
+          <>
+            <Section
+              heading="Todo Tasks"
+              items={shown.filter((task) => !isCalendarTask(task))}
+              done={false}
+              busyId={busyId}
+              onComplete={onComplete}
+            />
+            <Section
+              heading="Calendar Tasks"
+              items={shown.filter(isCalendarTask)}
+              done={false}
+              busyId={busyId}
+              onComplete={onComplete}
+            />
+          </>
+        )}
+      </div>
+
+      <Link className="dash-panel-link" to="/tasks">
+        {hidden > 0 ? `View all tasks (${hidden} more)` : 'View all tasks'}
+        <span aria-hidden="true"> →</span>
+      </Link>
+    </section>
+  );
+}

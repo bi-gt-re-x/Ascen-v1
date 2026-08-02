@@ -1,0 +1,142 @@
+/**
+ * The three cards along the bottom: the week, what to do next, what was done.
+ *
+ * Each one is a summary with a way out of it — the card answers the question at
+ * a glance and the link at its foot goes to the page that answers it properly.
+ * Two of those pages (/tasks, /history) are routed but not built yet; the links
+ * point at them anyway, so they start working the day those pages do rather
+ * than needing to be found and rewired.
+ */
+import { Link } from 'react-router-dom';
+import { priorityMeta } from './summary';
+import { format } from '@/utils';
+import type { Activity, WeekSummary } from './summary';
+import type { Task } from '@/types';
+
+// --------------------------------------------------------------------------
+// Weekly Overview
+// --------------------------------------------------------------------------
+/**
+ * The week's four numbers, in a two-by-two block.
+ *
+ * These are the figures the mock-up this page was built from showed under
+ * *Today's Progress* as well — they are the week's, and they are shown once,
+ * here.
+ */
+export function WeeklyOverview({ week }: { week: WeekSummary }) {
+  const figures = [
+    { value: format.number(week.total), label: 'Total Tasks' },
+    { value: format.number(week.done), label: 'Completed' },
+    { value: `${week.rate}%`, label: 'Completion Rate' },
+    { value: format.number(week.xp), label: 'XP Earned' },
+  ];
+
+  return (
+    <section className="card dash-panel dash-insight">
+      <h2 className="dash-panel-title dash-insight-title">
+        <span className="dash-stat-ico dash-ico-week" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+          </svg>
+        </span>
+        Weekly Overview
+      </h2>
+
+      <dl className="dash-week-grid">
+        {figures.map(({ value, label }) => (
+          <div className="dash-week-cell" key={label}>
+            <dd>{value}</dd>
+            <dt>{label}</dt>
+          </div>
+        ))}
+      </dl>
+
+      <Link className="dash-panel-link" to="/analytics">
+        View full analytics<span aria-hidden="true"> →</span>
+      </Link>
+    </section>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Top Priorities
+// --------------------------------------------------------------------------
+export function TopPriorities({ tasks }: { tasks: Task[] }) {
+  return (
+    <section className="card dash-panel dash-insight">
+      <h2 className="dash-panel-title dash-insight-title">
+        <span className="dash-stat-ico dash-ico-flag" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 21V4h9l1 2h6v9h-7l-1-2H4" />
+          </svg>
+        </span>
+        Top Priorities
+      </h2>
+
+      {tasks.length === 0 ? (
+        <p className="dash-task-empty">Nothing outstanding today.</p>
+      ) : (
+        <ol className="dash-priority-list">
+          {tasks.map((task, index) => {
+            const priority = priorityMeta(task.priority);
+            return (
+              <li key={task.id}>
+                <span className="dash-priority-rank">{index + 1}.</span>
+                <span className="dash-priority-name">{task.title || 'Untitled'}</span>
+                <span className={`dash-badge tone-${priority.tone}`}>{priority.label}</span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      <Link className="dash-panel-link" to="/tasks">
+        Edit priorities<span aria-hidden="true"> →</span>
+      </Link>
+    </section>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Recent Activity
+// --------------------------------------------------------------------------
+export function RecentActivity({ entries }: { entries: Activity[] }) {
+  return (
+    <section className="card dash-panel dash-insight">
+      <h2 className="dash-panel-title dash-insight-title">
+        <span className="dash-stat-ico dash-ico-pulse" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12h4l3 8 4-16 3 8h6" />
+          </svg>
+        </span>
+        Recent Activity
+      </h2>
+
+      {entries.length === 0 ? (
+        <p className="dash-task-empty">Nothing completed yet.</p>
+      ) : (
+        <ul className="dash-activity-list">
+          {entries.map((entry) => (
+            <li key={entry.id}>
+              <svg className="dash-activity-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="m8.5 12 2.5 2.5 4.5-5" />
+              </svg>
+              <span className="dash-activity-name">
+                Completed <strong>&ldquo;{entry.title}&rdquo;</strong>
+              </span>
+              <span className="dash-activity-xp">+{format.number(entry.xp)} XP</span>
+              <span className="dash-activity-at">
+                {entry.at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Link className="dash-panel-link" to="/history">
+        View all activity<span aria-hidden="true"> →</span>
+      </Link>
+    </section>
+  );
+}
