@@ -1,15 +1,25 @@
 /**
- * The three states every page that fetches has to render.
+ * The states a page renders instead of itself.
  *
- * Not in the original component list, but every page needs all three and
- * writing them per page is how they drift — one says "Loading...", the next
- * shows a blank screen, a third renders an empty list that looks like a bug.
+ * Not in the original component list, but every page that fetches needs all of
+ * these and writing them per page is how they drift — one says "Loading...",
+ * the next shows a blank screen, a third renders an empty list that looks like
+ * a bug.
  *
- * `NotBuilt` is the one that matters most right now: nine pages exist as
- * routes with no feature behind them, and a placeholder that says so plainly
- * is more honest than a page that looks broken.
+ * `NotBuilt` is the one that matters most right now: eight routes exist with no
+ * feature behind them, and a placeholder that says so plainly is more honest
+ * than a page that looks broken. pages/Unbuilt.tsx is the table of them.
+ *
+ * The stylesheet is imported here rather than by the pages that show a state,
+ * because for most of this file's life none of them did and none of these
+ * classes had any rules at all — see the note at the top of page-state.css.
+ *
+ * `EmptyState` used to live here and was never rendered by anything: the two
+ * places with an empty list (the task panel, the activity feed) each say
+ * something specific to that list, which is better than a shared component
+ * saying nothing in particular. Git history has it.
  */
-import type { ReactNode } from 'react';
+import '@/styles/page-state.css';
 
 export function Loading({ label = 'Loading' }: { label?: string }) {
   return (
@@ -35,21 +45,6 @@ export function ErrorState({
           Try again
         </button>
       )}
-    </div>
-  );
-}
-
-export function EmptyState({
-  title,
-  children,
-}: {
-  title: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="page-state page-state-empty">
-      <p className="page-state-title">{title}</p>
-      {children}
     </div>
   );
 }

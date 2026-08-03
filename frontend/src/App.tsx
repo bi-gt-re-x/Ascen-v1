@@ -16,19 +16,16 @@ import { Loading, Navbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
 import { useAuth, usePinnedViewport } from '@/hooks';
 import Dashboard from '@/pages/Dashboard';
+// Not lazy, unlike every other page here: the routes below are generated from
+// `UNBUILT_PATHS`, so the module has to be loaded to build the routing table at
+// all. Splitting it would put the same few hundred bytes of strings in a second
+// chunk that is always already fetched.
+import Unbuilt, { PATHS as UNBUILT_PATHS } from '@/pages/Unbuilt';
 
 const Homepage = lazy(() => import('@/pages/Homepage'));
-const Tasks = lazy(() => import('@/pages/Tasks'));
 const Goals = lazy(() => import('@/pages/Goals'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
 const Growth = lazy(() => import('@/pages/Growth'));
-const GrowthTree = lazy(() => import('@/pages/GrowthTree'));
-const Focus = lazy(() => import('@/pages/Focus'));
-const Achievements = lazy(() => import('@/pages/Achievements'));
-const Notes = lazy(() => import('@/pages/Notes'));
-const Library = lazy(() => import('@/pages/Library'));
-const History = lazy(() => import('@/pages/History'));
-const Settings = lazy(() => import('@/pages/Settings'));
 const AboutUs = lazy(() => import('@/pages/AboutUs'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
@@ -107,16 +104,13 @@ export default function App() {
 
             {/* Not built yet, but routed, so the structure is real and the
                 links resolve. Gated with the rest — every one of them shows
-                personal data once it exists. */}
+                personal data once it exists. Building one for real means giving
+                it its own module and its own line here, and dropping its entry
+                from pages/Unbuilt.tsx. */}
             <Route element={<RequireAccount />}>
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/growth-tree" element={<GrowthTree />} />
-              <Route path="/focus" element={<Focus />} />
-              <Route path="/achievements" element={<Achievements />} />
-              <Route path="/notes" element={<Notes />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/settings" element={<Settings />} />
+              {UNBUILT_PATHS.map((path) => (
+                <Route key={path} path={path} element={<Unbuilt />} />
+              ))}
             </Route>
 
             <Route path="*" element={<Navigate to="/home" replace />} />

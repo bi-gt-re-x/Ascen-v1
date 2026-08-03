@@ -1,7 +1,8 @@
 """Focus time: how long the user actually sat down and worked.
 
-The session itself runs client-side (focus.js keeps the timer in
-localStorage). What is tracked here is each day's total, one row per user per
+The session itself runs client-side (src/hooks/useFocusSession.ts keeps the
+timer in localStorage, as focus.js did before the port — same key, same shape).
+What is tracked here is each day's total, one row per user per
 day in focus.sql — so the calendar's Weekly Focus Time panel, the growth chart
 and focus-type goals all read one number that survives a cleared browser.
 

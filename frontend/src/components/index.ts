@@ -1,22 +1,18 @@
 /**
- * Shared components.
+ * Shared components — the ones that belong to no single page.
  *
- * The flat ones are the building blocks every page uses; the folders group the
- * pieces that belong to one feature (Calendar, Goals, Growth, Charts) and are
- * imported from their own path — `@/components/Calendar` — so this file does
- * not become a list of everything in the app.
+ * The folders beside this file group the pieces that belong to one feature
+ * (Calendar, Goals, Growth, Analytics, Dashboard, Home) and are imported from
+ * their own path — `@/components/Calendar` — so this list stays short.
+ *
+ * It is short now because it was a speculative UI kit and is not any more.
+ * Button, Card, Modal, ProgressBar, Sidebar and the Charts folder were written
+ * against a structure the app might grow into and never imported by anything;
+ * they were deleted rather than left as a second way to build a card that
+ * disagrees with the `.card` every real page already uses. Git history has
+ * them if a page ever wants one back.
  */
 export { Ambient } from './Ambient';
 export type { AmbientProps } from './Ambient';
-export { Button } from './Button';
-export type { ButtonProps, ButtonSize, ButtonVariant } from './Button';
-export { Card } from './Card';
-export type { CardProps } from './Card';
-export { Modal } from './Modal';
-export type { ModalProps } from './Modal';
 export { Navbar } from './Navbar';
-export { EmptyState, ErrorState, Loading, NotBuilt } from './PageState';
-export { ProgressBar } from './ProgressBar';
-export type { ProgressBarProps } from './ProgressBar';
-export { Sidebar } from './Sidebar';
-export type { SidebarItem, SidebarProps } from './Sidebar';
+export { ErrorState, Loading, NotBuilt } from './PageState';

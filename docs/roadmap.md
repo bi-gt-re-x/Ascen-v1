@@ -38,10 +38,6 @@ only two SQL-running functions are `read_table` and `write_table`. What is left
 is putting the server-only types back in `data/sql/` and pointing those two
 functions at a connection pool; the steps are in [database.md](database.md).
 
-**Fix `/api/update_task_completion`.** The month calendar posts to an endpoint
-that has never existed. Either add it or point that call at
-`/api/complete_task`.
-
 **Hash the remaining plaintext passwords.** Legacy accounts upgrade themselves
 on their next sign-in; the ones that never sign in stay plaintext.
 

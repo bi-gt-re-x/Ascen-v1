@@ -1,0 +1,123 @@
+/**
+ * The eight pages that are routed but not built.
+ *
+ * They were eight files, and eight files of twenty lines each that differed
+ * only in three strings is a table pretending to be a module tree. Here it is
+ * the table, and one component that reads the path it was rendered at.
+ *
+ * The point of these is honesty. Each route in the top bar and in the app's
+ * structure resolves to something that says what it will be, rather than to a
+ * blank screen that reads as a bug — and it names the files it will be built
+ * from, so the placeholder doubles as the note for whoever picks it up.
+ *
+ * `PATHS` is exported because App.tsx builds the routes from it. Adding a page
+ * here is one entry, not a file and a lazy import and a <Route>. Building one
+ * for real is the reverse: give it its own module, drop its entry, and the
+ * route in App.tsx stops being generated and becomes its own line.
+ *
+ * The eight stylesheets that used to sit beside these — achievements.css,
+ * notes.css and the rest — were five-line comments reserving a filename. A
+ * page that does not exist does not need a stylesheet to not have rules in;
+ * the real one can create it on the day it has something to style.
+ */
+import { useLocation } from 'react-router-dom';
+import { NotBuilt } from '@/components';
+import { useDocumentTitle } from '@/hooks';
+
+interface Unbuilt {
+  name: string;
+  description: string;
+  /** What it will be built from — a stub endpoint, a schema, a script to port. */
+  files: string[];
+}
+
+const PAGES: Record<string, Unbuilt> = {
+  '/tasks': {
+    name: 'Tasks',
+    description:
+      'A page of its own for the task list — filtering, sorting and bulk edits that the dashboard panel has no room for.',
+    files: [
+      'backend/api/tasks.py — the endpoints already exist',
+      'src/services/tasks.ts — already wired',
+    ],
+  },
+  '/growth-tree': {
+    name: 'Growth Tree',
+    description:
+      'A branching skill tree: which nodes are unlocked, and what unlocks the next one.',
+    files: ['backend/api/growthtree.py — a stub', 'backend/tracking/tree.py — a stub'],
+  },
+  '/focus': {
+    name: 'Focus',
+    description:
+      'The focus timer as a page rather than a dashboard panel, with the session history behind it.',
+    files: [
+      'backend/api/focus.py — sync and history already exist',
+      'src/services/focus.ts — already wired',
+      'frontend/js/timer.js — the timer to port',
+    ],
+  },
+  '/achievements': {
+    name: 'Achievements',
+    description:
+      'Badges earned for milestones — streaks held, levels reached, goals finished.',
+    files: [
+      'backend/api/achievements.py — a stub',
+      'data/sql/achievements.sql — tables exist, schema only',
+    ],
+  },
+  '/notes': {
+    name: 'Notes',
+    description: 'Free-form notes attached to days, tasks or goals.',
+    files: [
+      'backend/api/notes.py — a stub',
+      'data/sql/notes.sql — tables exist, schema only',
+    ],
+  },
+  '/library': {
+    name: 'Library',
+    description: 'Saved resources and reference material.',
+    files: [
+      'backend/api/library.py — a stub',
+      'data/sql/library.sql — tables exist, schema only',
+    ],
+  },
+  '/history': {
+    name: 'History',
+    description: 'A searchable record of everything already done.',
+    files: [
+      'backend/api/history.py — a stub',
+      'data/sql/history.sql — tables exist, schema only',
+    ],
+  },
+  '/settings': {
+    name: 'Settings',
+    description: 'Account preferences beyond the theme toggle and the avatar picker.',
+    files: [
+      'backend/api/settings.py — a stub',
+      'data/sql/settings.sql — user_settings already holds the avatar',
+    ],
+  },
+};
+
+/** The routes App.tsx generates from this file. */
+export const PATHS = Object.keys(PAGES);
+
+export default function Unbuilt() {
+  const { pathname } = useLocation();
+  // Only the paths above route here, so the fallback is unreachable in
+  // practice. It exists because reading a Record by a string is not a promise
+  // to the type system, and a page that renders nothing would be the one thing
+  // this component exists to prevent.
+  const page = PAGES[pathname] ?? {
+    name: 'Not built',
+    description: 'This part of the app does not exist yet.',
+    files: [],
+  };
+
+  useDocumentTitle(page.name);
+
+  return (
+    <NotBuilt name={page.name} description={page.description} files={page.files} />
+  );
+}

@@ -1,0 +1,121 @@
+/* page-state.css — loading, error and not-built-yet.
+ *
+ * These rules did not exist. components/PageState.tsx has been emitting
+ * `.page-state`, `.page-spinner`, `.page-state-title`, `.page-state-note` and
+ * `.page-state-files` since it was written, and no stylesheet in the app
+ * defined any of them — so every spinner was an empty <span> with no size, and
+ * the eight not-built pages were a heading and a bare <ul> flush against the
+ * left edge. Nothing was broken enough to look broken, which is why it lasted.
+ *
+ * Imported by the component rather than by each page that shows a state, the
+ * way FocusPanel and Ambient carry their own — a component that cannot be
+ * rendered without its rules should not rely on a page remembering to bring
+ * them.
+ *
+ * Colours follow the rest of the app: #2C302E ink, #6C757D muted, #A38A70
+ * bronze, #EAEAEA border, and dashboard.css's dark mirror (#161b22 surface,
+ * #30363d border, #e6edf3 ink, #8b949e muted).
+ */
+
+.page-state {
+    /* Centred in the space the page would have filled, not pinned to the top
+       of it: a spinner in the corner of an empty screen reads as a fragment of
+       a page that failed rather than as a page on its way. */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 45vh;
+    padding: 40px 24px;
+    text-align: center;
+    color: #6C757D;
+    font-size: 15px;
+}
+
+.page-state p { margin: 0; }
+
+/* --- loading ------------------------------------------------------------ */
+.page-spinner {
+    width: 28px;
+    height: 28px;
+    border: 2.5px solid #EAEAEA;
+    /* One coloured arc on an otherwise even ring is what reads as rotation. */
+    border-top-color: #A38A70;
+    border-radius: 50%;
+    animation: pageSpin 700ms linear infinite;
+}
+
+@keyframes pageSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* A spinner that cannot spin is a dot. Say "loading" and hold still instead. */
+@media (prefers-reduced-motion: reduce) {
+    .page-spinner {
+        animation: none;
+        border-top-color: #EAEAEA;
+        opacity: 0.5;
+    }
+}
+
+/* --- error -------------------------------------------------------------- */
+.page-state-error {
+    color: #C0392B;
+    /* An error is a message, not a screenful — it sits where it is put, which
+       on the dashboard is a banner between two rows. */
+    min-height: 0;
+    padding: 18px 24px;
+    gap: 10px;
+}
+
+/* --- empty, and not built yet ------------------------------------------- */
+.page-state-title {
+    color: #2C302E;
+    font-size: 21px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.page-state-note {
+    color: #A38A70;
+    font-weight: 600;
+}
+
+/* The files a page will be built from: a note to whoever picks it up, so it is
+   dressed as one — quieter than the page's own text, and monospaced because
+   every line in it is a path. */
+.page-state-files {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 14px 18px;
+    background: #F6F7F9;
+    border: 1px solid #EAEAEA;
+    border-radius: 10px;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.9;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.page-state-files code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #6C757D;
+    white-space: nowrap;
+}
+
+/* --- dark --------------------------------------------------------------- */
+html[data-theme="dark"] .page-state { color: #8b949e; }
+html[data-theme="dark"] .page-state-title { color: #e6edf3; }
+html[data-theme="dark"] .page-spinner { border-color: #30363d; border-top-color: #A38A70; }
+html[data-theme="dark"] .page-state-error { color: #ff7b72; }
+html[data-theme="dark"] .page-state-files {
+    background: #161b22;
+    border-color: #30363d;
+}
+html[data-theme="dark"] .page-state-files code { color: #8b949e; }
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-theme="dark"] .page-spinner { border-top-color: #30363d; }
+}

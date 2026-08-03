@@ -116,7 +116,9 @@ All in `routes/auth.py`, except the theme (`routes/theme.py`).
 | `GET /api/get_growth_ratings?username=` | The five-metric report card + weekly trends |
 | `GET /api/get_xp_data?username=` | The ledger rolled up: level, totals, series |
 
-## Known gap
+## Closed gap
 
-`calendar-month.js` posts to
-`/api/update_task_completion`, which has never existed server-side. It 404s.
+`calendar-month.js` posted to `/api/update_task_completion`, which never
+existed server-side, so it 404'd on every calendar completion. The React month
+view calls `/api/complete_task` like everything else, and that script is gone —
+the endpoint was never worth adding, only the call was worth correcting.
