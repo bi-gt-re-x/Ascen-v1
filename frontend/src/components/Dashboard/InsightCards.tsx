@@ -9,6 +9,7 @@
  */
 import { Link } from 'react-router-dom';
 import { priorityMeta } from './summary';
+import { useCountUp } from '@/hooks';
 import { format } from '@/utils';
 import type { Activity, WeekSummary } from './summary';
 import type { Task } from '@/types';
@@ -24,11 +25,20 @@ import type { Task } from '@/types';
  * here.
  */
 export function WeeklyOverview({ week }: { week: WeekSummary }) {
+  // Counted up on arrival and travelled between values after, like the stat row
+  // above — completing one task moves all four of these at once, and four
+  // figures that jump together are four figures nobody watches. One hook call
+  // per cell rather than a loop, because hooks cannot be called from one.
+  const total = useCountUp(week.total);
+  const done = useCountUp(week.done);
+  const rate = useCountUp(week.rate);
+  const xp = useCountUp(week.xp);
+
   const figures = [
-    { value: format.number(week.total), label: 'Total Tasks' },
-    { value: format.number(week.done), label: 'Completed' },
-    { value: `${week.rate}%`, label: 'Completion Rate' },
-    { value: format.number(week.xp), label: 'XP Earned' },
+    { value: format.number(total), label: 'Total Tasks' },
+    { value: format.number(done), label: 'Completed' },
+    { value: `${Math.round(rate)}%`, label: 'Completion Rate' },
+    { value: format.number(xp), label: 'XP Earned' },
   ];
 
   return (

@@ -7,7 +7,14 @@
  * below, not here.
  *
  * All four read from what the page already has. Nothing in this file fetches.
+ *
+ * Every figure on the row travels to its new value rather than being replaced
+ * by it — see hooks/useCountUp.ts for why, and for the rule about feeding it
+ * the value at the precision it is shown at. The rings and bars are drawn from
+ * those same animated numbers, so the arc, the bar and the label they belong to
+ * always agree mid-flight; nothing here is transitioned separately in CSS.
  */
+import { useCountUp } from '@/hooks';
 import { format } from '@/utils';
 import type { UseFocusSession } from '@/hooks/useFocusSession';
 import type { DaySummary } from './summary';
@@ -29,7 +36,12 @@ const RING_C = 2 * Math.PI * RING_R;
  * computed from the real circumference instead.
  */
 function ProgressRing({ percent, label }: { percent: number; label: string }) {
-  const filled = (Math.max(0, Math.min(100, percent)) / 100) * RING_C;
+  // One animated figure drives both the arc and the reading in the middle, so
+  // the ring can never be somewhere the number underneath it is not. The label
+  // is announced from the target rather than the tween — a screen reader should
+  // be told where the ring got to, not read out every frame on the way.
+  const shown = useCountUp(percent);
+  const filled = (Math.max(0, Math.min(100, shown)) / 100) * RING_C;
 
   return (
     <div className="dash-ring">
@@ -45,7 +57,7 @@ function ProgressRing({ percent, label }: { percent: number; label: string }) {
         />
       </svg>
       <div className="dash-ring-centre">
-        <span className="dash-ring-pct">{percent}%</span>
+        <span className="dash-ring-pct">{Math.round(shown)}%</span>
         <span className="dash-ring-label">{label}</span>
       </div>
     </div>
@@ -65,6 +77,10 @@ function ProgressRing({ percent, label }: { percent: number; label: string }) {
 export function TodayCard({ day }: { day: DaySummary }) {
   const caption = day.total === 0 ? 'Nothing due' : day.percent >= 60 ? 'On Track' : 'In Progress';
 
+  const total = useCountUp(day.total);
+  const done = useCountUp(day.done);
+  const xp = useCountUp(day.xp);
+
   return (
     <section className="card dash-stat dash-stat-today">
       <h2 className="dash-stat-title">Today&apos;s Progress</h2>
@@ -73,15 +89,15 @@ export function TodayCard({ day }: { day: DaySummary }) {
         <dl className="dash-today-figures">
           <div className="dash-figure">
             <dt>Tasks</dt>
-            <dd>{format.number(day.total)}</dd>
+            <dd>{format.number(total)}</dd>
           </div>
           <div className="dash-figure">
             <dt>Completed</dt>
-            <dd>{format.number(day.done)}</dd>
+            <dd>{format.number(done)}</dd>
           </div>
           <div className="dash-figure">
             <dt>XP Earned</dt>
-            <dd>{format.number(day.xp)}</dd>
+            <dd>{format.number(xp)}</dd>
           </div>
         </dl>
       </div>
@@ -103,19 +119,28 @@ export function TodayCard({ day }: { day: DaySummary }) {
 export function XpCard({ stats, xpToday }: { stats: UserStats; xpToday: number }) {
   const level = format.levelForTotalXp(stats.xp);
 
+  // The bar is drawn from the XP figure beside it rather than from its own
+  // tween, so the two cannot disagree halfway. The level is left to change at
+  // once: it is a name for where you are, not a quantity, and counting through
+  // 4, 5, 6 would claim to have passed levels that were never occupied. The
+  // crossing itself is what <LevelUp/> is for.
+  const xpInLevel = useCountUp(level.xpInLevel);
+  const today = useCountUp(xpToday);
+  const percent = level.xpRequired > 0 ? (xpInLevel / level.xpRequired) * 100 : 0;
+
   return (
     <section className="card dash-stat">
       <h2 className="dash-stat-title">XP Overview</h2>
       <div className="dash-xp-head">
         <span className="dash-xp-level">Level {level.level}</span>
         <span className="dash-xp-count">
-          {format.number(level.xpInLevel)} / {format.number(level.xpRequired)} XP
+          {format.number(xpInLevel)} / {format.number(level.xpRequired)} XP
         </span>
       </div>
       <div className="dash-bar">
         <div
           className="dash-bar-fill"
-          style={{ width: `${level.percent}%` }}
+          style={{ width: `${percent}%` }}
           role="progressbar"
           aria-valuenow={Math.round(level.percent)}
           aria-valuemin={0}
@@ -128,7 +153,7 @@ export function XpCard({ stats, xpToday }: { stats: UserStats; xpToday: number }
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
           <polyline points="17 6 23 6 23 12" />
         </svg>
-        <strong>+{format.number(xpToday)} XP</strong> today
+        <strong>+{format.number(today)} XP</strong> today
       </p>
     </section>
   );
@@ -146,7 +171,14 @@ export function XpCard({ stats, xpToday }: { stats: UserStats; xpToday: number }
  * the panel would move its goal while this card went on showing the old one.
  */
 export function FocusCard({ session }: { session: UseFocusSession }) {
-  const hours = session.focused / 3600;
+  // Rounded to the tenth it is shown at *before* it is animated. The session
+  // ticks every second, but this reading only moves every six minutes, and
+  // feeding the hook the raw total would leave it tweening all day for changes
+  // too small to render.
+  const hours = useCountUp(Math.round((session.focused / 3600) * 10) / 10);
+  // Already whole percents out of the hook that computes it, so the same rule
+  // holds: it moves when the bar would move.
+  const percent = useCountUp(session.percent);
 
   return (
     <section className="card dash-stat">
@@ -167,7 +199,7 @@ export function FocusCard({ session }: { session: UseFocusSession }) {
       <div className="dash-bar dash-bar-green">
         <div
           className="dash-bar-fill"
-          style={{ width: `${session.percent}%` }}
+          style={{ width: `${percent}%` }}
           role="progressbar"
           aria-valuenow={session.percent}
           aria-valuemin={0}
@@ -193,6 +225,11 @@ export function StreakCard({ stats }: { stats: UserStats }) {
   const current = Number(stats.current_streak) || 0;
   const best = Number(stats.best_streak) || 0;
 
+  // Both counters run, but the word beside them is chosen from the real figure,
+  // so a streak of 1 never reads "0 days" on its way up.
+  const shownCurrent = Math.round(useCountUp(current));
+  const shownBest = Math.round(useCountUp(best));
+
   return (
     <section className="card dash-stat">
       <h2 className="dash-stat-title">
@@ -204,11 +241,11 @@ export function StreakCard({ stats }: { stats: UserStats }) {
         Current Streak
       </h2>
       <p className="dash-big">
-        {current} <span className="dash-big-unit">{current === 1 ? 'day' : 'days'}</span>
+        {shownCurrent} <span className="dash-big-unit">{current === 1 ? 'day' : 'days'}</span>
       </p>
       <p className="dash-stat-sub">{current === 0 ? 'Keep it going!' : 'Nice run — keep it up.'}</p>
       <p className="dash-stat-foot">
-        Best Streak: {best} {best === 1 ? 'day' : 'days'}
+        Best Streak: {shownBest} {best === 1 ? 'day' : 'days'}
       </p>
     </section>
   );

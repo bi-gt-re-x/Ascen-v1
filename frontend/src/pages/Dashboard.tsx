@@ -133,9 +133,17 @@ export default function Dashboard() {
     [username, reload],
   );
 
-  if (loading) return <Loading label="Loading your dashboard" />;
-  if (error) return <ErrorState message={error} onRetry={reload} />;
-  if (!data) return <ErrorState message="No data came back." onRetry={reload} />;
+  // Every one of these is guarded on there being nothing to show, not on there
+  // being something happening. `reload()` after a completion sets `loading`
+  // again while keeping the data it already has, and the page used to answer
+  // that by throwing itself away and coming back as a spinner — which is what
+  // made a completed task read as a page flash rather than as a number going
+  // up. Holding the last good data means the cards stay mounted across the
+  // re-read, and their figures travel to the new values instead of being
+  // rebuilt from zero (hooks/useCountUp.ts). A reload that fails keeps the page
+  // and says so in the banner below rather than replacing it.
+  if (loading && !data) return <Loading label="Loading your dashboard" />;
+  if (!data) return <ErrorState message={error ?? 'No data came back.'} onRetry={reload} />;
 
   return (
     <div className="dash">
@@ -173,7 +181,10 @@ export default function Dashboard() {
         <StreakCard stats={data.stats} />
       </div>
 
-      {failure && <ErrorState message={failure} />}
+      {/* Whichever went wrong last: the write the reader just asked for, or the
+          re-read behind it. Both are shown here, over the page they failed to
+          change, rather than in place of it. */}
+      {(failure ?? error) && <ErrorState message={failure ?? error ?? ''} />}
 
       <div className="dash-main">
         <TaskPanel
