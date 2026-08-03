@@ -571,3 +571,162 @@ html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
     max-height: 34vh;
     overflow-y: auto;
 }
+
+
+/* ==========================================================================
+   SIDEBAR PANELS — the overview column's own furniture
+   ==========================================================================
+   Added with the redesign of the week's overview. Everything here follows the
+   palette the rest of this file already uses — #1a1f26 ink, #6b7280 muted,
+   #eef0f4 rules, #fafbfc insets, #a8845c accent — rather than the blues of the
+   design it came from, so the column reads as part of this calendar and not as
+   a panel borrowed from somewhere else. The XP breakdown is the one exception:
+   its bars are categories, and categories need hues that differ.
+   ========================================================================== */
+
+/* ---- This Week Progress: the ring, and the week's three figures ---- */
+.wk-weekly { display: flex; align-items: center; gap: 18px; }
+
+.wk-ring { position: relative; width: 76px; height: 76px; flex: none; }
+.wk-ring svg { width: 100%; height: 100%; display: block; }
+.wk-ring-track,
+.wk-ring-fill { fill: none; stroke-width: 7; }
+.wk-ring-track { stroke: #eef0f4; }
+.wk-ring-fill { stroke: #a8845c; stroke-linecap: round; }
+.wk-ring-centre {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; line-height: 1.1;
+}
+.wk-ring-pct { font-size: 17px; font-weight: 800; color: #1a1f26; }
+.wk-ring-label { font-size: 9px; font-weight: 600; color: #6b7280; }
+
+.wk-weekly-figures { display: flex; flex-direction: column; gap: 7px; margin: 0; min-width: 0; }
+.wk-weekly-figures > div { display: flex; align-items: baseline; gap: 8px; }
+.wk-weekly-figures dd { margin: 0; font-size: 18px; font-weight: 800; color: #1a1f26; }
+.wk-weekly-figures dt { font-size: 12px; color: #6b7280; }
+
+/* ---- The per-day XP sparkline ---- */
+.wk-spark { margin-top: 14px; }
+.wk-spark svg { width: 100%; height: 44px; display: block; overflow: visible; }
+.wk-spark-area { fill: rgba(168, 132, 92, .07); stroke: none; }
+.wk-spark-line {
+    fill: none; stroke: #a8845c; stroke-width: 1.2;
+    stroke-linejoin: round; stroke-linecap: round;
+    /* The box is stretched to the panel's width, so an untouched stroke would
+       be drawn wide and thin. This keeps it an even hairline. */
+    vector-effect: non-scaling-stroke;
+}
+.wk-spark-dot { fill: #fff; stroke: #a8845c; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.wk-spark-dot.is-today { fill: #a8845c; }
+.wk-spark-days {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    margin-top: 2px; font-size: 11px; color: #9aa0ad; text-align: center;
+}
+.wk-spark-days .is-today { color: #a8845c; font-weight: 700; }
+
+/* ---- XP Breakdown ---- */
+/* The heading's "Sample" tag. It is deliberately plain rather than alarming:
+   the rows are not wrong, they are not yet this account's — see
+   SAMPLE_BREAKDOWN in WeekSidebar.tsx. */
+.wk-sample {
+    margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+    background: #f2f3f7; color: #8a9099;
+    font-size: 10px; font-weight: 700; letter-spacing: .02em;
+    text-transform: uppercase; vertical-align: middle;
+}
+
+.wk-break-total {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #eef0f4;
+    font-size: 13px; color: #6b7280;
+}
+.wk-break-total strong { font-size: 17px; font-weight: 800; color: #1a1f26; }
+
+.wk-break { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.wk-break li {
+    /* Label, bar, figure — the bars share a column so their lengths can be
+       compared, which is the only thing this panel is for. */
+    display: grid; grid-template-columns: 52px minmax(0, 1fr) 50px;
+    align-items: center; gap: 10px;
+}
+.wk-break-label { font-size: 12px; color: #4b5162; }
+.wk-break-track { height: 7px; background: #eef0f4; border-radius: 999px; overflow: hidden; }
+.wk-break-fill { display: block; height: 100%; border-radius: 999px; }
+.wk-break-xp { font-size: 11px; color: #9aa0ad; text-align: right; }
+
+.wk-break-fill.tone-blue   { background: #4f6bed; }
+.wk-break-fill.tone-green  { background: #22a06b; }
+.wk-break-fill.tone-gold   { background: #e0b23c; }
+.wk-break-fill.tone-purple { background: #8b5cf6; }
+.wk-break-fill.tone-grey   { background: #c3c9d4; }
+
+/* ---- Streak dots ---- */
+.wk-dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 14px; }
+.wk-dot-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.wk-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #eef0f4; color: transparent;
+    font-size: 12px; font-weight: 700; line-height: 1;
+}
+.wk-dot.is-done { background: #e7f5ee; color: #22a06b; }
+/* A day that has not arrived is not a day that was missed. */
+.wk-dot.is-future { background: transparent; border: 1.5px solid #e4e7ec; }
+.wk-dot-day { font-size: 11px; color: #9aa0ad; }
+
+/* ---- Upcoming ---- */
+.wk-upcoming { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.wk-upcoming li {
+    display: flex; align-items: center; gap: 10px;
+    background: #fafbfc; border: 1px solid #eef0f4; border-radius: 12px; padding: 10px 12px;
+}
+.wk-upcoming-ico { font-size: 15px; flex: none; line-height: 1; }
+.wk-upcoming-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wk-upcoming-name {
+    font-size: 13px; font-weight: 600; color: #1a1f26;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wk-upcoming-when { font-size: 11px; color: #6b7280; }
+
+/* ---- Weekly Focus Time ---- */
+/* Focused reads as the figure; planned is what it is measured against, so it
+   is the same line at a smaller weight rather than a line of its own. */
+.wk-focustime-of { font-size: 15px; font-weight: 600; color: #6b7280; }
+.wk-focustime + .wk-progress { margin-top: 12px; }
+
+/* The way out of a summary, matching .dash-panel-link on the dashboard: a
+   button because it navigates through the router, dressed as the link it is. */
+.wk-panel-link {
+    display: inline-block; margin-top: 12px; padding: 0;
+    background: none; border: 0; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 600; color: #a8845c;
+}
+.wk-panel-link:hover { text-decoration: underline; }
+
+.wk-empty { margin: 0; font-size: 13px; color: #9aa0ad; }
+
+/* ---- Dark ---- */
+html[data-theme="dark"] .wk-ring-pct,
+html[data-theme="dark"] .wk-weekly-figures dd,
+html[data-theme="dark"] .wk-break-total strong,
+html[data-theme="dark"] .wk-upcoming-name { color: #f4f4f6; }
+html[data-theme="dark"] .wk-ring-track { stroke: #262c36; }
+html[data-theme="dark"] .wk-ring-label,
+html[data-theme="dark"] .wk-weekly-figures dt,
+html[data-theme="dark"] .wk-break-total,
+html[data-theme="dark"] .wk-break-label,
+html[data-theme="dark"] .wk-upcoming-when,
+html[data-theme="dark"] .wk-dot-day,
+html[data-theme="dark"] .wk-break-xp,
+html[data-theme="dark"] .wk-spark-days,
+html[data-theme="dark"] .wk-empty { color: #9aa4b2; }
+html[data-theme="dark"] .wk-break-total { border-bottom-color: #262c36; }
+html[data-theme="dark"] .wk-break-track,
+html[data-theme="dark"] .wk-dot { background: #0f141b; }
+html[data-theme="dark"] .wk-dot.is-done { background: rgba(34, 160, 107, .18); color: #4ade80; }
+html[data-theme="dark"] .wk-dot.is-future { background: transparent; border-color: #262c36; }
+html[data-theme="dark"] .wk-upcoming li { background: #0f141b; border-color: #262c36; }
+html[data-theme="dark"] .wk-sample { background: #21262d; color: #8b949e; }
+html[data-theme="dark"] .wk-spark-dot { fill: #161b22; }
+html[data-theme="dark"] .wk-spark-area { fill: rgba(168, 132, 92, .10); }

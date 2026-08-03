@@ -5,10 +5,14 @@
  * of the calendar.html template. The markup and class names are the
  * originals, so styles/calendar/week.css dresses this unchanged.
  *
- * Everything on the page is scoped to the week on screen — the grid, the four
- * overview numbers, the priorities, the focus time — because a column of
- * figures answering questions about different weeks is worse than no column at
- * all. Stepping a week steps all of it.
+ * Everything on the page is scoped to the week on screen — the grid, the
+ * overview figures, the per-day XP line, the streak dots, the priorities, the
+ * focus time — because a column of figures answering questions about different
+ * weeks is worse than no column at all. Stepping a week steps all of it.
+ *
+ * The one exception is Upcoming, which is deliberately about what comes *after*
+ * the shown week: everything inside it is already drawn on the grid, and a list
+ * repeating that would be the same thing twice.
  *
  * A past week's overview is frozen: its numbers come from the snapshot saved
  * while it was the current week, so editing a task months later cannot rewrite
@@ -16,6 +20,7 @@
  * whatever it holds when the week ends is what stays.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   CalendarShell,
   ConflictDialog,
@@ -34,7 +39,7 @@ import {
   useNow,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
-import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
+import { useFocusSession } from '@/hooks/useFocusSession';
 import { focus as focusService } from '@/services';
 import { dates } from '@/utils';
 import {
@@ -46,6 +51,7 @@ import {
   type Block,
 } from '@/utils/calendarGrid';
 import {
+  isoOf,
   loadWeekSnapshots,
   loadWeeklyFocus,
   monthKey,
@@ -65,6 +71,15 @@ function mondayOf(date: Date): Date {
   return monday;
 }
 
+/** "16:30" as "4:30 PM". Empty in, "All Day" out — an entry with no time has none. */
+function clockLabel(hhmm: string): string {
+  const [hours, minutes] = hhmm.split(':').map(Number);
+  if (hours === undefined || Number.isNaN(hours) || minutes === undefined) return 'All Day';
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  return `${hour12}:${String(minutes).padStart(2, '0')} ${suffix}`;
+}
+
 /** "July 13 – July 19, 2026". */
 function weekTitle(monday: Date): string {
   const sunday = dates.addDays(monday, 6);
@@ -81,6 +96,7 @@ export default function Week() {
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
   const now = useNow();
+  const navigate = useNavigate();
 
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const [collapsed, setCollapsed] = useState(() => {
@@ -203,7 +219,7 @@ export default function Week() {
    * about yet — but the server can be ahead when today's focus was tracked in
    * another browser, so the larger of the two wins.
    */
-  const focusTime = useMemo(() => {
+  const focus = useMemo(() => {
     let focusedSeconds = 0;
     let plannedHours = 0;
 
@@ -222,8 +238,95 @@ export default function Week() {
       plannedHours += Number(today.goal_hours) || 0;
     }
 
-    return `${fmtHM(focusedSeconds)} : ${fmtHM(plannedHours * 3600)}`;
+    return { focused: focusedSeconds, planned: plannedHours * 3600 };
   }, [history, mondayIso, session.focused, session.goalHours, sundayIso, todayIso]);
+
+  /**
+   * The seven days, as the sidebar's sparkline and streak dots need them.
+   *
+   * XP is counted from completion stamps rather than from due dates: the
+   * question the line answers is "when did the work happen", and a task
+   * finished on Friday is Friday's whatever day it was scheduled for. A day
+   * with a completion is a day the streak dot is filled — the same test, so the
+   * line and the dots can never tell different stories about the same day.
+   */
+  const weekDays = useMemo(
+    () =>
+      days.map((day) => {
+        let xp = 0;
+        let done = 0;
+        tasks.forEach((task) => {
+          if (task.status !== 'done') return;
+          if ((task.completed_at || '').slice(0, 10) !== day.iso) return;
+          done += 1;
+          xp += Number(task.xp_value) || 0;
+        });
+        return {
+          initial: day.name.charAt(0),
+          xp,
+          active: done > 0,
+          future: day.iso > todayIso,
+          today: day.iso === todayIso,
+        };
+      }),
+    [days, tasks, todayIso],
+  );
+
+  /**
+   * What is coming after the week on screen — tasks by due date, events by the
+   * day they sit on, soonest first.
+   *
+   * Deliberately *after* the shown week rather than after today: everything
+   * inside the week is already drawn on the grid beside this, and repeating it
+   * in a list headed "Upcoming" would be the same thing twice.
+   */
+  const upcoming = useMemo(() => {
+    const day = (stamp: string | undefined) => (stamp || '').slice(0, 10);
+    const pretty = (iso: string) =>
+      dates.formatDate(dates.fromIsoDate(iso), {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+
+    const entries = tasks
+      .filter((task) => task.status === 'todo' && day(task.due_date) > sundayIso)
+      .map((task) => ({
+        id: `task-${task.id}`,
+        iso: day(task.due_date),
+        sortAt: `${day(task.due_date)} ${(task.due_date || '').slice(11, 16) || '99:99'}`,
+        icon: '📌',
+        title: task.title || 'Untitled',
+        when: clockLabel((task.due_date || '').slice(11, 16)),
+      }));
+
+    Object.entries(store.data).forEach(([key, entry]) => {
+      const iso = isoOf(key);
+      if (iso <= sundayIso) return;
+      entry.timestamps.forEach((section, index) => {
+        if (section.isDashboardTask) return; // already counted as a task
+        entries.push({
+          id: `event-${key}-${index}`,
+          iso,
+          sortAt: `${iso} ${section.startTime || '99:99'}`,
+          icon: '🗓️',
+          title: section.task || 'Untitled',
+          when: clockLabel(section.startTime),
+        });
+      });
+    });
+
+    return entries
+      .sort((a, b) => (a.sortAt < b.sortAt ? -1 : a.sortAt > b.sortAt ? 1 : 0))
+      .slice(0, 4)
+      .map(({ id, icon, title, when, iso }) => ({
+        id,
+        icon,
+        title,
+        when,
+        date: pretty(iso),
+      }));
+  }, [store.data, sundayIso, tasks]);
 
   /** A block's menu, resolved back to the thing the dialogs work on. */
   const openFor = useCallback(
@@ -326,13 +429,16 @@ export default function Week() {
         <WeekSidebar
           stats={overview}
           streak={Number(stats.current_streak) || 0}
-          focusTime={focusTime}
+          focus={focus}
+          days={weekDays}
+          upcoming={upcoming}
           priorities={priorities}
           focusText={focusText}
           onFocusTextChange={(text) => {
             setFocusText(text);
             saveWeeklyFocus(username, mondayIso, text);
           }}
+          onViewAnalytics={() => navigate('/analytics')}
           collapsed={collapsed}
         />
 
