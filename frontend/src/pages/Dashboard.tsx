@@ -21,6 +21,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ErrorState, Loading } from '@/components';
 import {
+  DailyQuote,
   FocusCard,
   FocusPanel,
   LevelUp,
@@ -188,18 +189,7 @@ export default function Dashboard() {
         <RecentActivity entries={activity} />
       </div>
 
-      {/* The line the hidden chain replaces on its tenth click — the easter egg
-          owns this element once the day's clue is unlocked, which is why it
-          keeps the id and the class the animation is written against
-          (.quote-container / #dailyQuote in styles/dashboard.css). The original
-          also fetched a random quote from a third-party API on every load, with
-          the key sitting in the page source; that is deliberately not carried
-          over. */}
-      <div className="quote-container">
-        <p id="dailyQuote">
-          &quot;The secret of getting ahead is getting started.&quot; - Mark Twain
-        </p>
-      </div>
+      <DailyQuote />
 
       {levelled !== null && <LevelUp level={levelled} onDone={() => setLevelled(null)} />}
 

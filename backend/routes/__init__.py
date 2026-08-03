@@ -28,6 +28,7 @@ API_MODULES = (
     'goals',
     'growth',
     'focus',
+    'quote',
 )
 
 SHARED_MODULES = (

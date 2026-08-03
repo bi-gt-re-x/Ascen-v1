@@ -8,6 +8,7 @@
  * exports functions rather than components.
  */
 export { FocusCard, StreakCard, TodayCard, XpCard } from './StatCards';
+export { DailyQuote } from './DailyQuote';
 export { FocusPanel } from './FocusPanel';
 export type { FocusPanelProps } from './FocusPanel';
 export { RecentActivity, TopPriorities, WeeklyOverview } from './InsightCards';

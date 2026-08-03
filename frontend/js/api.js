@@ -21,32 +21,22 @@ async function apiRequest(url, options = {}) {
 }
 
 /**
- * Fetches a daily quote from API Ninjas with categories success,wisdom
+ * Fetches the daily quote from our own backend.
+ *
+ * This used to call api-ninjas.com directly with the API key written into this
+ * file, which put a live credential into every page's source — anything the
+ * browser can send, a reader can copy. The key lives in the server environment
+ * now and backend/api/quote.py makes the call; see the note at the top of it.
+ *
+ * That endpoint always answers, falling back to a built-in line when every
+ * upstream is unreachable, so the null return here is only for a failed
+ * request to our own server.
  */
 async function fetchDailyQuoteAPI() {
     try {
-        const url = 'https://api.api-ninjas.com/v2/randomquotes?categories=success,wisdom';
-
-        const response = await fetch(url, {
-            headers: {
-                'X-Api-Key': 'rwDm3Irql9pyouTq9m0bdbHfZA2D8hjLFr9aDHeY'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`API request failed with status ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data && data.length > 0) {
-            return {
-                content: data[0].quote,
-                author: data[0].author
-            };
-        }
-
-        return null;
+        const data = await apiRequest('/api/daily_quote');
+        if (!data || !data.success || !data.quote) return null;
+        return { content: data.quote, author: data.author };
     } catch (error) {
         console.error('Error fetching quote:', error);
         return null;
