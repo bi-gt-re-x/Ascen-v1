@@ -19,7 +19,7 @@
  * moving when the + on the panel is pressed.
  */
 import { useCallback, useMemo, useState } from 'react';
-import { Ambient, ErrorState, Loading } from '@/components';
+import { Ambient, ErrorState, Loading, STATS_CHANGED } from '@/components';
 import {
   DailyQuote,
   FocusCard,
@@ -100,6 +100,10 @@ export default function Dashboard() {
         const was = data?.stats.level ?? 0;
         if (result.new_level > was) setLevelled(result.new_level);
         reload();
+        // The rail shows the level and the XP total and is mounted outside the
+        // router, so it never re-reads on its own. This is the one thing that
+        // moves those numbers.
+        window.dispatchEvent(new Event(STATS_CHANGED));
       } catch (cause) {
         setFailure(
           cause instanceof Error ? cause.message : 'Could not complete that task.',

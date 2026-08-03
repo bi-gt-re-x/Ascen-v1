@@ -3063,12 +3063,11 @@ body.classic .calendar-card {
     box-shadow: none !important;
 }
 
-/* The page's own padding was framing the card; the card is the page now, so it
-   keeps only the clearance the fixed top bar needs. */
-body.has-topnav {
-    padding-left: 0;
-    padding-right: 0;
-}
+/* A `body.has-topnav { padding-left: 0; padding-right: 0 }` stood here, to strip
+   the page padding that framed the card back when the navigation was a bar. The
+   navigation is a rail now and that padding-left is what reserves its width, so
+   zeroing it would put the calendar underneath it. The class is gone with the
+   bar; the rule is deleted rather than renamed. */
 .calendar-container { margin-top: 4px; }
 
 /* More room between the two columns now that there is width to spend. */

@@ -18,7 +18,7 @@ import App from './App';
 import { AuthProvider, ThemeProvider } from '@/context';
 
 import '@/styles/layout.css';
-import '@/styles/navbar.css';
+import '@/styles/rail.css';
 
 const container = document.getElementById('root');
 if (!container) {

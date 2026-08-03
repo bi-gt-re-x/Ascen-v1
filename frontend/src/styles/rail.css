@@ -1,0 +1,556 @@
+/* The app's navigation rail — see src/components/Rail.tsx.
+ *
+ * Colours are the dashboard's, so the rail belongs to the same app as the page
+ * beside it: ink #2C302E on #FFFFFF with #EAEAEA borders in light, and the
+ * #0D1117 / #161B22 / #30363D set in dark.
+ *
+ * The rail is fixed, so it cannot be pushed around by whatever layout a page
+ * uses. `body.has-rail` pays for that by reserving the width back as padding.
+ *
+ * **`--topnav-h` is still declared, and is 0.** This was a bar across the top
+ * and that variable was its height; a dozen stylesheets across the app size
+ * themselves with `calc(100vh - var(--topnav-h))`. The rail costs no height, so
+ * subtracting nothing is not a shim — it is the right answer, and it is why the
+ * navigation could turn ninety degrees without touching one page's arithmetic.
+ * Do not delete it, and do not give it a value.
+ */
+
+:root {
+    --rail-w: 240px;
+    --topnav-h: 0px;
+}
+
+/* --- The rail ---------------------------------------------------------- */
+.rail {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 900;
+    width: var(--rail-w);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 14px 16px;
+    background: #FFFFFF;
+    border-right: 1px solid #EAEAEA;
+    transition: width .22s ease;
+}
+
+/* --- Brand ------------------------------------------------------------- */
+/* Two elements, not one: the mark (a span, and the easter egg's target) and
+   the wordmark (the only link home). The collapse chevron rides with them. */
+.rail-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px 22px;
+    color: #2C302E;
+}
+
+.rail-brand-mark {
+    display: flex;
+    align-items: center;
+    flex: none;
+}
+
+.rail-brand-mark img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    display: block;
+    /* Drops the image's white background into the white rail. */
+    mix-blend-mode: multiply;
+}
+
+.rail-brand-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rail-toggle {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 7px;
+    background: none;
+    color: #9297A3;
+    cursor: pointer;
+}
+.rail-toggle:hover { background: #F2F4F7; color: #2C302E; }
+.rail-toggle:focus-visible { outline: 2px solid #2C302E; outline-offset: 1px; }
+.rail-toggle svg { width: 17px; height: 17px; }
+html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
+
+/* --- Destinations ------------------------------------------------------ */
+.rail-links {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    /* Takes the space the foot does not, so the account block sits on the
+       bottom edge however few destinations there are. */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+.rail-links::-webkit-scrollbar { width: 0; }
+
+.rail-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: #6C757D;
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.rail-link svg {
+    width: 19px;
+    height: 19px;
+    flex: none;
+}
+
+.rail-link span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rail-link:hover { background: #F4F6F8; color: #2C302E; }
+
+/* The page you are on. Tinted rather than filled: a rail is read down its
+   length, and one solid block in a column of eight shouts. */
+.rail-link.active {
+    background: #F1EDE7;
+    color: #2C302E;
+}
+.rail-link.active svg { color: #A38A70; }
+
+/* --- The foot: theme, then the account --------------------------------- */
+.rail-foot {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid #F0F2F5;
+}
+
+/* --- Dark mode switch --------------------------------------------------- */
+.rail-theme {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #EAEAEA;
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #6C757D;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+}
+.rail-theme:hover { background: #F8F9FB; }
+.rail-theme:focus-visible { outline: 2px solid #2C302E; outline-offset: 2px; }
+.rail-theme-ico { display: flex; flex: none; }
+.rail-theme-ico svg { width: 17px; height: 17px; }
+.rail-theme-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.rail-switch {
+    flex: none;
+    width: 34px;
+    height: 19px;
+    border-radius: 999px;
+    background: #E2E6EC;
+    padding: 2px;
+    box-sizing: border-box;
+    transition: background .18s ease;
+}
+.rail-switch i {
+    display: block;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .28);
+    transition: transform .18s ease;
+}
+.rail-theme.is-dark .rail-switch { background: #A38A70; }
+.rail-theme.is-dark .rail-switch i { transform: translateX(15px); }
+
+/* --- Account ------------------------------------------------------------ */
+.rail-account { position: relative; }
+
+.rail-account-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 12px;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+}
+.rail-account-btn:hover { background: #F4F6F8; }
+.rail-account-btn:focus-visible { outline: 2px solid #2C302E; outline-offset: 2px; }
+
+.rail-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: block;
+    object-fit: cover;
+    background: #E8ECF2;
+    user-select: none;
+    flex: none;
+}
+
+.rail-account-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.rail-account-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2C302E;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Shown beside the name only while the rail is collapsed to icons, where the
+   row below it is hidden. Open, the row below says it with the XP. */
+.rail-account-level { display: none; }
+
+.rail-xp-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #9297A3;
+}
+
+.rail-xp-bar {
+    height: 5px;
+    margin: 5px 8px 0;
+    border-radius: 999px;
+    background: #EDEFF3;
+    overflow: hidden;
+}
+.rail-xp-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #A38A70;
+    transition: width .45s cubic-bezier(0.22, 0.68, 0.28, 1);
+}
+
+/* --- Account menu ------------------------------------------------------- */
+/* Opens up and to the right of the avatar. The rail's foot is at the bottom of
+   the screen, so a menu dropping below it would be off the window; and the rail
+   is only 240px wide, so it opens beside rather than inside. */
+.account-menu {
+    position: absolute;
+    bottom: 0;
+    left: calc(100% + 12px);
+    z-index: 950;
+    width: 320px;
+    max-width: calc(100vw - var(--rail-w) - 24px);
+    background: #FFFFFF;
+    border: 1px solid #EAEAEA;
+    border-radius: 4px;
+    box-shadow: 0 18px 44px rgba(16, 24, 40, 0.16);
+}
+.account-menu[hidden] { display: none; }
+
+.account-menu-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid #EAEAEA;
+}
+
+/* A long username shortens rather than pushing the button out of the menu. */
+.account-menu-name {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+    font-weight: 600;
+    color: #2C302E;
+}
+
+.account-logout {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border: none;
+    border-radius: 4px;
+    background: #D93A34;
+    color: #FFFFFF;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.account-logout:hover { background: #C0302B; }
+.account-logout:disabled { opacity: 0.6; cursor: default; }
+.account-logout svg { width: 16px; height: 16px; }
+
+/* All fifty in one line. overflow-x carries them; `flex: none` on the options
+   is what stops the row from squeezing them to fit instead of scrolling. */
+.account-avatar-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #C9CDD4 transparent;
+    overscroll-behavior-x: contain;
+}
+.account-avatar-row::-webkit-scrollbar { height: 8px; }
+.account-avatar-row::-webkit-scrollbar-track { background: transparent; }
+.account-avatar-row::-webkit-scrollbar-thumb {
+    background: #C9CDD4;
+    border-radius: 4px;
+}
+
+.account-avatar-option {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #F2F4F7;
+    cursor: pointer;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+.account-avatar-option:hover { background: #E4E8EE; }
+.account-avatar-option.is-current { outline-color: #2C302E; }
+.account-avatar-option img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: block;
+}
+
+/* --- Collapsed --------------------------------------------------------- */
+/* One declaration does it: --rail-w drops to a strip wide enough for the icons,
+   and the rail's own width, the padding body.has-rail reserves, and every page
+   that sizes itself off the variable all follow from it — so the page beside it
+   widens into the space without any of them knowing the rail can close. */
+html.nav-collapsed {
+    --rail-w: 74px;
+}
+
+html.nav-collapsed .rail { padding-left: 10px; padding-right: 10px; }
+html.nav-collapsed .rail-brand { justify-content: center; padding-bottom: 18px; gap: 0; }
+html.nav-collapsed .rail-brand-name,
+html.nav-collapsed .rail-link span,
+html.nav-collapsed .rail-theme-label,
+html.nav-collapsed .rail-switch,
+html.nav-collapsed .rail-account-name,
+html.nav-collapsed .rail-xp-row { display: none; }
+
+html.nav-collapsed .rail-link,
+html.nav-collapsed .rail-theme { justify-content: center; padding-left: 0; padding-right: 0; }
+html.nav-collapsed .rail-account-btn { justify-content: center; }
+html.nav-collapsed .rail-account-body { display: none; }
+html.nav-collapsed .rail-xp-bar { margin-inline: 4px; }
+
+/* The chevron has nowhere to sit beside a hidden wordmark, so it goes under the
+   mark rather than out of reach. */
+html.nav-collapsed .rail-brand { flex-direction: column; gap: 10px; }
+
+/* --- What the rail costs the page --------------------------------------- */
+/* border-box matters here: the calendar pins its body to height 100vh with
+ * overflow hidden, and with the default content-box this padding would be added
+ * to the 100vh and push the page's edge out of sight. Inside the border box it
+ * does what it should — take the rail's width out of the space the page has. */
+body.has-rail {
+    box-sizing: border-box;
+    padding-left: var(--rail-w);
+    transition: padding-left .22s ease;
+}
+
+/* The app pages fill the viewport and never scroll it — anything longer than
+ * the space available scrolls inside its own panel (the goals list, the
+ * dashboard's task list, the calendar card), so the chrome stays put.
+ *
+ * This is a class of its own rather than more of `has-rail`, because those are
+ * two different questions and only one of them has the same answer on every
+ * page. Every page has the rail and needs its width reserved; only the app
+ * pages pin the viewport, and src/App.tsx decides which. Only once there is a
+ * screen big enough to hold a page, though: under 1120px the calendar drops to
+ * a stacked layout that is meant to scroll, and the goals columns stack at
+ * 900px; pinning the viewport there would put the bottom of those pages out of
+ * reach instead of merely off-screen. */
+@media (min-width: 1120px) and (min-height: 640px) {
+    body.pins-viewport {
+        height: 100vh;
+        overflow: hidden;
+    }
+}
+
+/* A page that pins something of its own to the top (the calendar's toolbar)
+   used to have to start below the bar. There is no bar now, so this is 0 — kept
+   for the same reason --topnav-h is. */
+body.has-rail .sticky-under-topnav {
+    top: var(--topnav-h);
+}
+
+/* --- Dark --------------------------------------------------------------- */
+html[data-theme="dark"] .rail {
+    background: #161B22;
+    border-right-color: #30363D;
+}
+
+html[data-theme="dark"] .rail-brand,
+html[data-theme="dark"] .rail-brand-name { color: #F0F2F5; }
+
+/* The mark is drawn in near-black, which disappears against the dark rail. */
+html[data-theme="dark"] .rail-brand-mark img {
+    mix-blend-mode: screen;
+    filter: invert(1);
+}
+
+html[data-theme="dark"] .rail-link { color: #8B949E; }
+html[data-theme="dark"] .rail-link:hover { color: #F0F2F5; background: #21262D; }
+html[data-theme="dark"] .rail-link.active { color: #F0F2F5; background: #2A2118; }
+html[data-theme="dark"] .rail-link.active svg { color: #D8C3A5; }
+
+html[data-theme="dark"] .rail-toggle { color: #8B949E; }
+html[data-theme="dark"] .rail-toggle:hover { background: #21262D; color: #F0F2F5; }
+html[data-theme="dark"] .rail-toggle:focus-visible { outline-color: #7FB3FF; }
+
+html[data-theme="dark"] .rail-foot { border-top-color: #21262D; }
+html[data-theme="dark"] .rail-theme {
+    background: #161B22;
+    border-color: #30363D;
+    color: #8B949E;
+}
+html[data-theme="dark"] .rail-theme:hover { background: #1B222B; }
+html[data-theme="dark"] .rail-switch { background: #30363D; }
+html[data-theme="dark"] .rail-switch i { background: #E6EDF3; }
+
+html[data-theme="dark"] .rail-avatar { background: #232A33; }
+html[data-theme="dark"] .rail-account-btn:hover { background: #21262D; }
+html[data-theme="dark"] .rail-account-name { color: #F0F2F5; }
+html[data-theme="dark"] .rail-xp-row { color: #8B949E; }
+html[data-theme="dark"] .rail-xp-bar { background: #21262D; }
+
+html[data-theme="dark"] .account-menu {
+    background: #161B22;
+    border-color: #30363D;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+}
+html[data-theme="dark"] .account-menu-head { border-bottom-color: #30363D; }
+html[data-theme="dark"] .account-menu-name { color: #E6EDF3; }
+html[data-theme="dark"] .account-avatar-option { background: #21262D; }
+html[data-theme="dark"] .account-avatar-option:hover { background: #2D333B; }
+html[data-theme="dark"] .account-avatar-option.is-current {
+    outline-color: #7FB3FF;
+    background: #1F2A3A;
+}
+html[data-theme="dark"] .account-avatar-row { scrollbar-color: #3A424D transparent; }
+html[data-theme="dark"] .account-avatar-row::-webkit-scrollbar-thumb { background: #3A424D; }
+
+/* --- Narrower screens --------------------------------------------------- */
+/* The labels go first: eight icons still name themselves, and every page gets
+   back 166px of width, which matters far more here than the words do. */
+@media (max-width: 1100px) {
+    :root { --rail-w: 74px; }
+    .rail { padding-left: 10px; padding-right: 10px; }
+    .rail-brand { flex-direction: column; justify-content: center; gap: 10px; padding-bottom: 18px; }
+    .rail-brand-name,
+    .rail-link span,
+    .rail-theme-label,
+    .rail-switch,
+    .rail-account-name,
+    .rail-xp-row { display: none; }
+    .rail-link,
+    .rail-theme { justify-content: center; padding-left: 0; padding-right: 0; }
+    .rail-account-btn { justify-content: center; }
+    .rail-account-body { display: none; }
+    .rail-xp-bar { margin-inline: 4px; }
+}
+
+/* Narrower than the icons and a page can both use, the rail lies down along the
+   bottom — a strip of destinations, which is what a phone expects anyway. The
+   page pays for it in padding-bottom instead of padding-left. */
+@media (max-width: 640px) {
+    :root { --rail-w: 0px; --rail-h: 62px; }
+
+    .rail {
+        top: auto;
+        right: 0;
+        width: auto;
+        height: var(--rail-h);
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        padding: 0 8px;
+        border-right: none;
+        border-top: 1px solid #EAEAEA;
+    }
+    html[data-theme="dark"] .rail { border-top-color: #30363D; }
+
+    /* The brand and the account block are the two things a phone can do
+       without: the wordmark's job is done by the dashboard tab, and the account
+       menu is reachable from the settings page. */
+    .rail-brand,
+    .rail-foot { display: none; }
+
+    .rail-links {
+        flex-direction: row;
+        justify-content: space-around;
+        overflow-x: auto;
+        gap: 2px;
+    }
+    .rail-link { padding: 8px 10px; }
+
+    body.has-rail {
+        padding-left: 0;
+        padding-bottom: var(--rail-h);
+    }
+    /* Nothing is pinned at this size anyway, but be explicit: a viewport this
+       short with a strip taken out of it has nowhere to put a pinned page. */
+    body.pins-viewport { height: auto; overflow: visible; }
+}

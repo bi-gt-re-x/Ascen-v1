@@ -14,5 +14,5 @@
  */
 export { Ambient } from './Ambient';
 export type { AmbientProps } from './Ambient';
-export { Navbar } from './Navbar';
+export { Rail, STATS_CHANGED } from './Rail';
 export { ErrorState, Loading, NotBuilt } from './PageState';

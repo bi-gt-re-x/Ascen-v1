@@ -12,7 +12,7 @@
  */
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { Loading, Navbar } from '@/components';
+import { Loading, Rail } from '@/components';
 import { RequireAccount } from './RequireAccount';
 import { useAuth, usePinnedViewport } from '@/hooks';
 import Dashboard from '@/pages/Dashboard';
@@ -78,7 +78,7 @@ export default function App() {
 
   return (
     <>
-      <Navbar />
+      <Rail />
       <main className="app-main">
         <Suspense fallback={<Loading />}>
           <Routes>

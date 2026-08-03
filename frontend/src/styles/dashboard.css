@@ -66,8 +66,8 @@ body {
        panel below is pinned to a fixed width so only the Tasks card absorbs
        the extra room. */
     max-width: 1370px;
-    /* The top nav is fixed and body.has-topnav already reserves its height,
-       so this is only the gap between the bar and the first card. */
+    /* The navigation is a fixed rail down the left and body.has-rail already
+       reserves its width, so this is only the gap above the first card. */
     margin: 28px auto 5px;
     min-height: calc(100vh - var(--topnav-h, 64px) - 33px);
     padding: 0 24px;
@@ -976,7 +976,7 @@ body.easter-wobble {
     68%  { transform: scale(0.95); }
     100% { transform: scale(1); }
 }
-.topnav-brand-mark.easter-pop, .topnav-brand.easter-pop, .logo.easter-pop {
+.rail-brand-mark.easter-pop, .rail-brand.easter-pop, .logo.easter-pop {
     animation: easterPop 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
     transform-origin: 50% 50%;
 }

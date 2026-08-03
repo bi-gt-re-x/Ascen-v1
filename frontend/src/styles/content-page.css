@@ -35,7 +35,7 @@ body:has(.content-container) {
     max-width: 800px;
     /* The original's 50px top margin was clearing nothing — those pages had no
        top bar, only a Home button floating over the corner. This one sits
-       under the real bar, whose height body.has-topnav has already reserved,
+       clear of the rail, whose width body.has-rail has already reserved,
        so this is the gap below it rather than room made for it. */
     margin: 28px auto 50px;
     color: #333;

@@ -1136,7 +1136,7 @@ body.dark .confirm-add-btn:hover { background: #b89b80; }
     max-width: min(2180px, calc(100vw - 88px));
     margin: 0 auto;
     /* The floating theme selector and the bottom nav are both gone — the top
-       nav's height is reserved by body.has-topnav, so this is just breathing
+       rail's width is reserved by body.has-rail, so this is just breathing
        room above and below the shell. */
     padding: 28px 0 40px;
 }

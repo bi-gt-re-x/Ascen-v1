@@ -22,14 +22,14 @@
       })();
     </script>
   </head>
-  <!-- `has-topnav` is what the stylesheets use to push a page clear of the
-       fixed bar; every page in this app has one, so it lives here rather than
-       being toggled. Same class the server-rendered pages carry.
+  <!-- `has-rail` is what the stylesheets use to keep a page clear of the fixed
+       navigation rail down the left; every page in this app has one, so it lives
+       here rather than being toggled.
 
        Pinning the viewport is a separate class and NOT set here — it is true
        of the app pages and false of the landing page, so src/App.tsx sets it
-       per route. See body.pins-viewport in src/styles/navbar.css. -->
-  <body class="has-topnav">
+       per route. See body.pins-viewport in src/styles/rail.css. -->
+  <body class="has-rail">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
