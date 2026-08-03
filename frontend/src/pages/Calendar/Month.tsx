@@ -1,7 +1,7 @@
 /**
  * The Month view — the map on the left, the chosen day on the right.
  *
- * Ported from frontend/js/calendar/calendar-month.js and the `#monthView` half
+ * Ported from calendar-month.js and the `#monthView` half
  * of the calendar.html template. The markup and class names are the
  * originals, so styles/calendar/month.css dresses this unchanged — including
  * the day list and the progress ring, which that stylesheet reaches by id.

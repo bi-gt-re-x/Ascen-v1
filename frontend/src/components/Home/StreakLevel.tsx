@@ -1,5 +1,5 @@
 /**
- * Streak & Level — the port of frontend/js/home-streak.js, plus the tracking
+ * Streak & Level — the port of home-streak.js, plus the tracking
  * card that sits beside the two demonstrations.
  *
  * The streak. Three flames light one after another, the count climbs

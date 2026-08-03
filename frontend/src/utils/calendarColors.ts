@@ -12,7 +12,7 @@
  * and blues, with purple, pink, grey and brown as accents rather than half the
  * page.
  *
- * Ported from the colour half of frontend/js/calendar/calendar-month.js. The
+ * Ported from the colour half of calendar-month.js. The
  * palette below it is the one events had before hex colours; legacy events
  * still carry only a `colorIndex`, so it has to stay.
  */

@@ -1,7 +1,7 @@
 /**
  * One goal, with its progress.
  *
- * The markup is the one frontend/js/goal.js built by hand in
+ * The markup is the one goal.js built by hand in
  * `createGoalElement` — `.goal-item`, `.goal-card-head`, `.gradient-bar` and
  * the rest — because styles/goals.css dresses those class names and the port
  * is a change of mechanism, not of appearance. The scaffold version of this

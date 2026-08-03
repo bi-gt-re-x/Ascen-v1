@@ -1,5 +1,5 @@
 /**
- * The charts draw themselves — the port of frontend/js/home-charts.js.
+ * The charts draw themselves — the port of home-charts.js.
  *
  * Every chart on the page is SVG that is already in the markup. Nothing here
  * invents data; it measures what is there and animates it into place:

@@ -1,5 +1,5 @@
 /**
- * What every demo on the landing page needs — the port of frontend/js/home-play.js.
+ * What every demo on the landing page needs — the port of home-play.js.
  *
  * The demos (the dashboard mock, the task list, the calendar, the charts) all
  * work the same way: they sit still until the reader scrolls to them, run once,

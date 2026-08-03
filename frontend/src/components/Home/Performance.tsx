@@ -2,8 +2,8 @@
  * Performance Metrics — the featured chart, the two stat cards and the gauge.
  *
  * Ported from the section of frontend/html/homepage.html of the same name,
- * with the Daily/Weekly tabs from frontend/js/home-fx.js and the growth-rating
- * gauge from frontend/js/home-charts.js.
+ * with the Daily/Weekly tabs from home-fx.js and the growth-rating
+ * gauge from home-charts.js.
  *
  * The tabs are the one place the original reached into the SVG and rewrote its
  * `d` by hand. Here the path is simply what the chosen series says it is, and

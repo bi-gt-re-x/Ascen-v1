@@ -15,7 +15,7 @@
  * the third after 800ms of quiet, because a note is typed a character at a
  * time and the endpoint should not be.
  *
- * Ported from frontend/js/calendar/day-focus.js.
+ * Ported from day-focus.js.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { focus as focusService } from '@/services';

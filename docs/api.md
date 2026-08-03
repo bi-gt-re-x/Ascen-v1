@@ -118,5 +118,5 @@ All in `routes/auth.py`, except the theme (`routes/theme.py`).
 
 ## Known gap
 
-`frontend/js/calendar/calendar-month.js` posts to
+`calendar-month.js` posts to
 `/api/update_task_completion`, which has never existed server-side. It 404s.

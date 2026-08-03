@@ -1,5 +1,5 @@
 /**
- * The graph-paper background — the port of frontend/js/home-ambient.js.
+ * The graph-paper background — the port of home-ambient.js.
  *
  * One fixed layer behind everything, holding four quiet things: a grid, a slow
  * colour gradient, a field of drifting particles, and a glow that follows the

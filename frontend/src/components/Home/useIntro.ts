@@ -1,5 +1,5 @@
 /**
- * The landing page's opening — the port of frontend/js/home-intro.js.
+ * The landing page's opening — the port of home-intro.js.
  *
  * A single timeline, run once when the page arrives:
  *

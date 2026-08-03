@@ -9,7 +9,7 @@
  * gone: the four templates left in frontend/html/ are the landing page and the
  * About Us family, and none of them carried it.
  *
- * Three behaviours the template delegated to frontend/js/topnav.js are done
+ * Three behaviours the template delegated to topnav.js are done
  * here instead, in React rather than by hand:
  *
  *   * the collapse toggle, whose state is remembered in localStorage under the

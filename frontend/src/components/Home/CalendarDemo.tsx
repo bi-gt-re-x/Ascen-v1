@@ -1,5 +1,5 @@
 /**
- * Planning a week, played out — the port of frontend/js/home-calendar.js.
+ * Planning a week, played out — the port of home-calendar.js.
  *
  * The week grid fills in, a pointer picks "Math revision" up off Monday and
  * carries it to Tuesday, the column it is over lights up, the event snaps in

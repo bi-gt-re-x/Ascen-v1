@@ -1,5 +1,5 @@
 /**
- * The growth page's canvas charts — the drawing half of frontend/js/growth.js.
+ * The growth page's canvas charts — the drawing half of growth.js.
  *
  * Five charts share one renderer and differ only by which series they read and
  * how they label a value: cumulative XP, daily XP, average task XP, cumulative

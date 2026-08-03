@@ -3,7 +3,7 @@
  *
  * One call, and it goes to *our* backend rather than to the quote provider.
  * The old frontend called api-ninjas.com straight from the browser with the
- * key written into frontend/js/api.js, which shipped a live credential in the
+ * key written into api.js, which shipped a live credential in the
  * page source. backend/api/quote.py holds the key now, picks a source and
  * caches the day's answer; see the note at the top of that file.
  *

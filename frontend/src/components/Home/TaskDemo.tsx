@@ -1,5 +1,5 @@
 /**
- * Finishing a task, played out — the port of frontend/js/home-tasks.js.
+ * Finishing a task, played out — the port of home-tasks.js.
  *
  * The workflow the app is built on, shown rather than described: a pointer
  * moves to the first task, clicks it, the box fills, a little confetti goes up,

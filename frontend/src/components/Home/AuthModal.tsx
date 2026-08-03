@@ -1,5 +1,5 @@
 /**
- * The account popup — the port of frontend/js/auth-flow.js.
+ * The account popup — the port of auth-flow.js.
  *
  * One white card, five panels, walked in this order:
  *

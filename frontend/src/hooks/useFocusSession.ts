@@ -1,5 +1,5 @@
 /**
- * The focus session — the port of frontend/js/focus.js.
+ * The focus session — the port of focus.js.
  *
  * Elapsed time is **timestamp-based**, and that is the whole design. Starting
  * a session records `runningSince` (epoch ms); the focused total is

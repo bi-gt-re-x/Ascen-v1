@@ -2,7 +2,7 @@
  * Analytics — the graded report card.
  *
  * Ported from the analytics.html template and the ratings half of
- * frontend/js/growth.js. The markup and class names are the originals, so
+ * growth.js. The markup and class names are the originals, so
  * styles/growth.css — where every `grade-*`, `ratings-*` and `detail-card`
  * rule still lives, because this page and /growth were one page until the
  * split — dresses it unchanged.

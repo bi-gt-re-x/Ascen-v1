@@ -1,5 +1,5 @@
 /**
- * The last of the landing page's motion — the port of frontend/js/home-final.js.
+ * The last of the landing page's motion — the port of home-final.js.
  *
  * Five small things, none of which needed a component of its own:
  *

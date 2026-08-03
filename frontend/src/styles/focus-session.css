@@ -1,7 +1,7 @@
 /* The "Really stop?" confirmation, shared by the dashboard's Focus panel and
  * the calendar Day view's Focus button — stopping a session always asks first.
  *
- * frontend/js/focus.js injected these rules into a <style> tag at runtime,
+ * focus.js injected these rules into a <style> tag at runtime,
  * because the two pages that needed them had no stylesheet in common. A
  * component can just import a file, so they are a file now. The rules are the
  * injected ones, unchanged apart from being formatted to read.

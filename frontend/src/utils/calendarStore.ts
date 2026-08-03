@@ -3,7 +3,7 @@
  *
  * Events created on the calendar (the "Add New Event" dialog and everything
  * that recurs from it) have always lived in localStorage under
- * `calendarData:<account>`, written by frontend/js/calendar/calendar-month.js.
+ * `calendarData:<account>`, written by calendar-month.js.
  * The backend has endpoints for calendar entries, but the month, week and day
  * views never used them, so every event any user of this app has ever made is
  * in this store and nowhere else. Moving the port onto the API would therefore

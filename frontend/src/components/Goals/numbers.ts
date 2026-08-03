@@ -1,6 +1,6 @@
 /**
  * How a goal's numbers are read — the port of the arithmetic in
- * frontend/js/goal.js.
+ * goal.js.
  *
  * All of it is display logic over fields the backend already decides, kept in
  * one place because four different components need the same answers and a

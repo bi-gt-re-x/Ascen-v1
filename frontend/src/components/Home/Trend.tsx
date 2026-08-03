@@ -1,7 +1,7 @@
 /**
  * The little green "▲ 8%" beside a statistic.
  *
- * The original wrote these as plain text and frontend/js/home-final.js took
+ * The original wrote these as plain text and home-final.js took
  * them apart at runtime — splitting "▲ 8%" into an arrow that can slide and a
  * number that can count. There is no reason to build the markup and then parse
  * it back: the parts are the parts, so they are rendered as such.

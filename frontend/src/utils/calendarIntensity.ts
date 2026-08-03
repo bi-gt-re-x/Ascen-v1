@@ -13,7 +13,7 @@
  * browser's own copy of a task holds whatever it saved the first time, which
  * is a second way for the shading to disagree with the account's real load.
  *
- * Ported from the intensity half of frontend/js/calendar/calendar-month.js.
+ * Ported from the intensity half of calendar-month.js.
  */
 import { isCalendarPlaced } from './calendarGrid';
 import type { Task } from '@/types';

@@ -1,6 +1,6 @@
 /**
  * Scroll reveals and count-up statistics — the port of the first two halves of
- * frontend/js/home-fx.js.
+ * home-fx.js.
  *
  * Reveals: sections and cards slide in from the side as they enter the
  * viewport and slide back out when they leave. Which way each one comes from is

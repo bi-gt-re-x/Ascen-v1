@@ -11,7 +11,7 @@
  * They are painted with `currentColor` through a CSS mask (`.cal-ico`), so an
  * icon always matches the text beside it in either theme.
  *
- * Ported unchanged from the icon half of frontend/js/calendar/calendar-week.js.
+ * Ported unchanged from the icon half of calendar-week.js.
  */
 
 /** First match wins, so the specific rules come before the general ones. */

@@ -1,7 +1,7 @@
 """The dashboard's daily quote.
 
 This endpoint exists so the key does not have to be in the browser. The old
-frontend called api-ninjas.com directly from frontend/js/api.js with
+frontend called api-ninjas.com directly from api.js with
 
     headers: {'X-Api-Key': 'rwDm3Irql9...'}
 

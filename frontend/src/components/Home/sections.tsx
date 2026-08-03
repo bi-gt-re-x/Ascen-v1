@@ -15,7 +15,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Trend } from './Trend';
 import type { Theme } from '@/types';
 
-/** The date in the hero's eyebrow — what frontend/js/main.js wrote there. */
+/** The date in the hero's eyebrow — what main.js wrote there. */
 function today(): string {
   return new Date().toLocaleDateString(undefined, {
     weekday: 'long',

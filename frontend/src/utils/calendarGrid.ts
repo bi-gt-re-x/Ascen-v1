@@ -11,7 +11,7 @@
  * runs past midnight in one piece on the column it started on instead of
  * breaking in two across the boundary.
  *
- * Ported from the rendering half of frontend/js/calendar/calendar-week.js.
+ * Ported from the rendering half of calendar-week.js.
  */
 import { eventBlockColors, type BlockColors } from './calendarColors';
 import { isoOf, monthKey, type CalendarData } from './calendarStore';

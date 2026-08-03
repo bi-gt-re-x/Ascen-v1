@@ -1,8 +1,8 @@
 /**
  * Home — the landing page.
  *
- * Ported from frontend/html/homepage.html and the eleven frontend/js/home-*.js
- * files, with the account popup from frontend/js/auth-flow.js. It is the last
+ * Ported from frontend/html/homepage.html and the eleven home-*.js
+ * files, with the account popup from auth-flow.js. It is the last
  * and largest of the ports, and the shape it lands in is the same one the
  * original had: the page is the running order, and each thing that moves is its
  * own file beside this one, named after the script it came from.

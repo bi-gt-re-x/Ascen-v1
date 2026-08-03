@@ -48,7 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // stylesheets that were written for them, and those key off the body class
     // — `body.dark .grade-card` paints the report card, `body.classic .tab-btn`
     // the growth tabs — where the newer pages key off `html[data-theme]`. Both
-    // are kept in step here for the same reason frontend/js/theme.js keeps both
+    // are kept in step here for the same reason theme.js keeps both
     // in step there: a page should not care which era its CSS comes from.
     // 'classic' is the legacy name for light.
     document.body.classList.remove('classic', 'dark');

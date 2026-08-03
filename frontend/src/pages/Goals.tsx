@@ -1,7 +1,7 @@
 /**
  * Goals — targets, their progress, and the milestones they become.
  *
- * Ported from frontend/js/goal.js (1,371 lines) and the goals.html template.
+ * Ported from goal.js (1,371 lines) and the goals.html template.
  * The markup and class names are the originals, so styles/goals.css dresses
  * this page unchanged; what has actually changed is where the truth lives.
  *

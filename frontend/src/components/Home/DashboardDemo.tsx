@@ -1,6 +1,6 @@
 /**
  * The simulated dashboard on the landing page — the port of
- * frontend/js/home-dashboard.js.
+ * home-dashboard.js.
  *
  * A mock of the real dashboard that fills itself in when the reader scrolls to
  * it, so the section shows the app working rather than a screenshot of it.
