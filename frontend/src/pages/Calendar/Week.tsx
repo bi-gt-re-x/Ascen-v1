@@ -2,7 +2,7 @@
  * The Week view — seven columns, 6 AM to 5 AM, with the overview beside them.
  *
  * Ported from frontend/js/calendar/calendar-week.js and the `#weekView` half
- * of frontend/html/calendar.html. The markup and class names are the
+ * of the calendar.html template. The markup and class names are the
  * originals, so styles/calendar/week.css dresses this unchanged.
  *
  * Everything on the page is scoped to the week on screen — the grid, the four

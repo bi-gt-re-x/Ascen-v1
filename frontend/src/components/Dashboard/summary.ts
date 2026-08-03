@@ -188,31 +188,63 @@ export interface WeekSummary {
 }
 
 /**
- * The week's four numbers.
+ * The week's four numbers — `daySummary` above, over seven days.
  *
- * Counted the same way the calendar's Week sidebar counts them — tasks
- * *created* inside the week, and how many of those are finished — so the
- * dashboard and the Week view never show a reader two different weeks. The
- * snapshot freezing that the Week view does for past weeks is not repeated
- * here: this card only ever shows the current week, which is the one that is
- * meant to keep moving.
+ * **Completed and XP Earned are counted from completion stamps**, so they say
+ * what was done between Monday and Sunday, whenever the task was scheduled.
+ * That is the whole correction here. This card used to count the *cohort* of
+ * tasks scheduled inside the week and report how many of those were finished,
+ * which is a different question and read as a much smaller answer: a week in
+ * which six tasks were completed for 241 XP showed "Completed 1" and "XP
+ * Earned 72", because five of the six had been scheduled in earlier weeks.
+ * Nothing on the card said so, and a figure headed XP Earned that is not the XP
+ * you earned is simply wrong.
+ *
+ * `total` is the week's plate, on the same principle: what is still open and
+ * due inside it, plus what has been finished in it. A task that is both is
+ * counted once, as done. Overdue and undated tasks are *not* pulled in — the
+ * day card does that because an overdue task is genuinely today's problem, but
+ * on a seven-day view it would put 47 undated tasks into a total that is meant
+ * to describe one week.
+ *
+ * This is what makes the two cards on the page agree. It also means the figures
+ * here no longer match the Week sidebar in the calendar (pages/Calendar/Week),
+ * which still counts the cohort and is right to: it is scoped to whichever week
+ * is on screen, past ones included, where "what has been completed since" is
+ * not a question the view can ask. Same words, two honest answers, because the
+ * two views are asking about different things.
  */
 export function weekSummary(
   tasks: Task[],
   mondayIso: string,
   sundayIso: string,
 ): WeekSummary {
-  const inWeek = tasks.filter((task) => {
-    const created = dayOf(task.created_at);
-    return Boolean(created) && created >= mondayIso && created <= sundayIso;
-  });
-  const done = inWeek.filter((task) => task.status === 'done');
+  let open = 0;
+  let done = 0;
+  let xp = 0;
 
+  tasks.forEach((task) => {
+    if (task.status === 'done') {
+      // A completion with no stamp — the column was added partway through this
+      // account's history — cannot be placed in a week, and '' fails this test
+      // rather than needing a case of its own.
+      const at = dayOf(task.completed_at);
+      if (at < mondayIso || at > sundayIso) return;
+      done += 1;
+      xp += xpOf(task);
+      return;
+    }
+    if (task.status !== 'todo') return;
+    const due = dayOf(task.due_date);
+    if (due >= mondayIso && due <= sundayIso) open += 1;
+  });
+
+  const total = open + done;
   return {
-    total: inWeek.length,
-    done: done.length,
-    rate: inWeek.length ? Math.round((done.length / inWeek.length) * 100) : 0,
-    xp: done.reduce((sum, task) => sum + xpOf(task), 0),
+    total,
+    done,
+    rate: total ? Math.round((done / total) * 100) : 0,
+    xp,
   };
 }
 

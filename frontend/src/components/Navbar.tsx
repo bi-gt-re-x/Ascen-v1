@@ -1,12 +1,13 @@
 /**
  * The top bar.
  *
- * The React counterpart of frontend/html/partials/topnav.html, and it emits
- * the **same markup with the same class names on purpose** — `.topnav-inner`,
- * `.topnav-link`, `.topnav-right`, `.account-menu` — because both frontends
- * are dressed by the one src/styles/navbar.css. Rename a class here and the
- * bar loses its styling; rename it in the stylesheet and the old pages lose
- * theirs. They move together until the old pages are gone.
+ * The only top bar in the app now. It began as the React counterpart of the
+ * partials/topnav.html include and emits the same markup with the same class
+ * names — `.topnav-inner`, `.topnav-link`, `.topnav-right`, `.account-menu` —
+ * which was a constraint while both frontends shared src/styles/navbar.css and
+ * is now simply what the stylesheet is written against. The include itself is
+ * gone: the four templates left in frontend/html/ are the landing page and the
+ * About Us family, and none of them carried it.
  *
  * Three behaviours the template delegated to frontend/js/topnav.js are done
  * here instead, in React rather than by hand:

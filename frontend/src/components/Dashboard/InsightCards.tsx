@@ -23,6 +23,10 @@ import type { Task } from '@/types';
  * These are the figures the mock-up this page was built from showed under
  * *Today's Progress* as well — they are the week's, and they are shown once,
  * here.
+ *
+ * Completed and XP Earned are what was finished between Monday and Sunday,
+ * whatever week the task was scheduled for; see `weekSummary` for why that is
+ * the only reading of those two labels that is true.
  */
 export function WeeklyOverview({ week }: { week: WeekSummary }) {
   // Counted up on arrival and travelled between values after, like the stat row

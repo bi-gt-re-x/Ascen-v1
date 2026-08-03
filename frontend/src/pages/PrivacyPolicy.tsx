@@ -1,7 +1,7 @@
 /**
  * The privacy policy.
  *
- * Ported from frontend/html/privacy-policy.html, word for word — the wording
+ * Ported from the privacy-policy.html template, word for word — the wording
  * of a published policy is not something a port gets to improve, so the text
  * below is the text that page served.
  *

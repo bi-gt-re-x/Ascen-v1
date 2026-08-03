@@ -85,11 +85,15 @@ def render(request, template):
 # /, /home, /dashboard, /about-us, /privacy-policy, /terms-of-service, /goals,
 # /growth, /analytics and /calendar used to be here. React has them all now —
 # see backend/routes/spa.py, which is the list of what has moved. The templates
-# they rendered are still in frontend/html/ as the reference the ports were made
-# against; nothing serves them.
+# those routes rendered have been deleted along with them: they were kept for a
+# while as the reference the ports were made against, and a template nothing
+# renders is a second copy of a page that can quietly drift from the real one.
+# Git history is where they are if a port ever needs checking.
 #
 # What is left below is what has no React counterpart yet: two written pages,
-# and the hidden one.
+# and the hidden one. frontend/html/ holds their templates, plus the landing
+# page and About Us — kept as the reference for two ports that are still
+# settling.
 
 
 @page('/careers')

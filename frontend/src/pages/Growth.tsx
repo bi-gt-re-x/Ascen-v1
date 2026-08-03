@@ -1,7 +1,7 @@
 /**
  * Growth — the five series, drawn on canvas.
  *
- * Ported from frontend/html/growth.html and the charting half of
+ * Ported from the growth.html template and the charting half of
  * frontend/js/growth.js. The markup and class names are the originals, so
  * styles/growth.css dresses this unchanged — including the canvases, which
  * that stylesheet sizes **by id**, which is why each one still carries its

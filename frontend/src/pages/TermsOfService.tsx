@@ -1,7 +1,7 @@
 /**
  * The terms of service.
  *
- * Ported from frontend/html/terms-of-service.html, word for word, for the same
+ * Ported from the terms-of-service.html template, word for word, for the same
  * reason the privacy policy is: published terms are not a port's to reword.
  *
  * The one link inside the prose pointed at the privacy policy through Jinja's

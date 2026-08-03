@@ -3,7 +3,7 @@
  *
  * Ported from the `renderDay` half of frontend/js/calendar/calendar-week.js
  * (calendar-day.js was already a no-op pointing there) and the `#dayView` part
- * of frontend/html/calendar.html. The column is built by the same code as a
+ * of the calendar.html template. The column is built by the same code as a
  * Week column, so the two views cannot disagree about what a day holds.
  *
  * The sidebar is where this view earns its place. The mini-month keeps its own
