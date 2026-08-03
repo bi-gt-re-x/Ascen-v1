@@ -16,17 +16,24 @@
 
 }
 
-body {
-
-    min-height: 100vh;
-
-    margin: 0;
-
-    padding: 0;
-
-    overflow: hidden;
-
-}
+/* The bare `body { min-height: 100vh; margin: 0; padding: 0; overflow: hidden }`
+   that stood here is deleted, and the `overflow: hidden` in it is why.
+ *
+ * It made sense when the calendar was a served page: `body` meant *this* page,
+ * and the page was one screen that clipped rather than scrolled. In the React
+ * app this stylesheet is fetched when a calendar view mounts and then stays in
+ * the document for the rest of the session — so the moment anyone opened the
+ * calendar, `body { overflow: hidden }` applied to the dashboard, the goals
+ * page and everything else, and none of them could be scrolled again until a
+ * reload. Loading late is also what made it win: the lazy chunk's CSS is
+ * appended after the main bundle's, so it beat dashboard.css on source order.
+ *
+ * Nothing replaces it. Pinning the calendar to one screen is `body.pins-viewport`
+ * in styles/navbar.css, which App.tsx sets per route and which only applies
+ * above 1120x640 — this rule applied at every size and broke the calendar's own
+ * scrolling on a small window, which is exactly what that media query exists to
+ * avoid. min-height, margin and padding are already on the body rule in
+ * styles/dashboard.css, which is in the main bundle and always loaded. */
 
 
 /* Rounded navigation buttons */
@@ -1960,7 +1967,13 @@ html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297;
    Appended last so it takes precedence over the base rules above.
    ============================================================ */
 
-body {
+/* Scoped to the calendar, like every other `body` rule in this file. Unscoped,
+   its `height: 100vh; overflow: hidden` was the reason no page in the app could
+   be scrolled once the calendar had been opened — see the note at the top. The
+   layout it sets up (the flex column, the padding that clears the fixed theme
+   button, the gap) is real and the calendar needs it, so this one is kept and
+   confined rather than deleted. */
+body:has(.calendar-container) {
     background: #0e0f12; /* dark theme page background (default) */
     /* Fit the whole page in the viewport — no vertical page scroll */
     height: 100vh;
@@ -2614,7 +2627,7 @@ html[data-theme="dark"] .add-section-btn:hover {
 
 /* Stack the two columns (and allow scrolling) when the screen is too narrow */
 @media (max-width: 1120px) {
-    body { height: auto; min-height: 100vh; overflow: auto; display: block; }
+    body:has(.calendar-container) { height: auto; min-height: 100vh; overflow: auto; display: block; }
     .calendar-container { padding: 32px 20px 24px; }
     .calendar-card { height: auto; max-height: none; overflow: visible; }
     .calendar-body { flex-direction: column; gap: 24px; }
@@ -3153,7 +3166,7 @@ body.has-topnav {
 /* Shorter than the grid can shrink to: give the page itself back its scroll,
    so nothing can end up unreachable however small the window gets. */
 @media (min-width: 1121px) and (max-height: 560px) {
-    body { height: auto; min-height: 100vh; overflow-y: auto; }
+    body:has(.calendar-container) { height: auto; min-height: 100vh; overflow-y: auto; }
     .calendar-container { height: auto; }
     .calendar-card { height: auto; max-height: none; overflow: visible; }
 }

@@ -13,10 +13,15 @@
  * route nobody visits does not cost a page of CSS it never uses.
  */
 
-body {
+/* Scoped, because this stylesheet outlives the page that asks for it: it is
+   fetched when /about-us, /privacy-policy or /terms-of-service mounts and then
+   stays in the document, so as a bare `body` rule it was setting Century Gothic
+   and this page's prose colour on the dashboard for the rest of the session.
+   Same reason the overflow declarations came out of goals.css and growth.css —
+   see the note in styles/calendar/month.css. margin and min-height are on the
+   always-loaded body rule in styles/dashboard.css. */
+body:has(.content-container) {
     font-family: 'Century Gothic', 'Inter', 'Segoe UI', sans-serif;
-    margin: 0;
-    min-height: 100vh;
     background: #f4f6f8;
     color: #1f2733;
     line-height: 1.6;
@@ -64,7 +69,7 @@ body {
    written before there was one and never revisited. It is a panel in the same
    family as the dashboard's cards now, and the prose reads at the same weight
    in both themes. */
-html[data-theme="dark"] body {
+html[data-theme="dark"] body:has(.content-container) {
     background: #0d1117;
     color: #e6edf3;
 }

@@ -14,16 +14,25 @@
     }
 }
 
-body {
-    min-height: 100vh;
+/* Scoped to the page, because this stylesheet outlives it.
+ *
+ * This was a bare `body` rule, from when goals was a served page and `body`
+ * meant *this* page. The React app fetches this file when /goals mounts and
+ * then keeps it in the document, so every declaration here was applying to the
+ * dashboard and everything else for the rest of the session — white body text
+ * and Montserrat on pages that ask for neither.
+ *
+ * The two overflow declarations are gone rather than scoped. Any overflow on
+ * `body` other than `visible` stops it propagating to the viewport, and the
+ * page then refuses to scroll at all — `overflow-y: auto` did it just as
+ * surely as `hidden`. Whether this page scrolls is `body.pins-viewport`
+ * (styles/navbar.css), which App.tsx sets per route and which already unpins
+ * below 1120x640 for exactly the small-viewport reason the old comment gave.
+ * min-height, margin and padding are on the always-loaded body rule in
+ * styles/dashboard.css. */
+body:has(.goals-page) {
     font-family: 'Inter', 'Montserrat', sans-serif;
     color: white;
-    margin: 0;
-    padding: 0;
-    /* Desktop still fits one screen (no scrollbar appears), but small
-       viewports can scroll vertically instead of clipping content. */
-    overflow-x: hidden;
-    overflow-y: auto;
 }
 
 /* Goals container */
@@ -692,7 +701,7 @@ body.classic .confirm-add-btn:hover {
    existing light background. Overrides the glassmorphic navy look.
    ============================================================ */
 
-body { color: #2C302E; }
+body:has(.goals-page) { color: #2C302E; }
 
 /* Main container becomes a clean white card that fits the screen */
 

@@ -12,14 +12,22 @@
 
 }
 
-body {
-    /* Grow with content and allow vertical scroll — the page is fluid now, so
-       nothing is force-fit into one non-scrolling 100vh screen. */
-    min-height: 100vh;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-}
+/* Three bare `body` rules stood in this file — here, and at the two places
+ * marked below. They are gone.
+ *
+ * Every one of them set an overflow, and an overflow on `body` other than
+ * `visible` stops it propagating to the viewport, at which point the page will
+ * not scroll at all. That did not matter while growth was a served page and
+ * `body` meant *this* page; in the React app this stylesheet is fetched when
+ * /growth or /analytics mounts and then stays in the document, so after one
+ * visit the dashboard could not be scrolled either.
+ *
+ * What each was reaching for is already handled: min-height, margin and padding
+ * by the always-loaded body rule in styles/dashboard.css, and whether the page
+ * is pinned to one screen by `body.pins-viewport` in styles/navbar.css, which
+ * App.tsx sets per route and unpins below 1120x640. Horizontal clipping that
+ * this page actually needs belongs on .growth-container, not on body. */
+
 
 /* Rounded navigation buttons */
 .nav-btn {
@@ -324,12 +332,7 @@ body.classic .growth-card p {
    LAYOUT: taller card, ratings card sits just below the chart,
    and a refined professional bottom navigation bar.
    ============================================================ */
-/* Allow the page to grow taller than the viewport if needed */
-body {
-    height: auto;
-    min-height: 100vh;
-    overflow-y: auto;
-}
+/* (the second bare `body` rule was here — see the note at the top) */
 
 /* Card grows with its content; a single min-height lives on #growthCard below. */
 .growth-card {
@@ -480,13 +483,7 @@ body {
    viewport. The container is exactly 100vh and clips any
    overflow; the cards are sized (mostly in vh) to stay inside.
    ============================================================ */
-html, body {
-    /* Grow with content and allow vertical scroll instead of clipping a card
-       that's taller than one screen (e.g. the ratings report on narrow/short
-       viewports). */
-    min-height: 100vh;
-    overflow-x: hidden;
-}
+/* (the third was here, as `html, body` — same note) */
 
 .growth-container {
     min-height: calc(100vh - var(--topnav-h, 64px));
