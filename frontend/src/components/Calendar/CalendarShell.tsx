@@ -40,16 +40,25 @@ export function ViewSwitcher() {
 export interface CalendarShellProps {
   /** The pane's id — `weekView`, `dayView`, `monthView`. The CSS reads it. */
   paneId: string;
+  /**
+   * The view renders `<ViewSwitcher/>` itself, so the shell does not put one
+   * above it. The Week view does this: its header carries the switcher on the
+   * same line as the date and the controls, which is one row rather than two
+   * and is what puts every control for the view in one place.
+   */
+  ownSwitcher?: boolean;
   children: ReactNode;
 }
 
-export function CalendarShell({ paneId, children }: CalendarShellProps) {
+export function CalendarShell({ paneId, ownSwitcher, children }: CalendarShellProps) {
   return (
     <div className="calendar-container">
       <div className="calendar-card page-shell">
-        <div className="calendar-topbar">
-          <ViewSwitcher />
-        </div>
+        {!ownSwitcher && (
+          <div className="calendar-topbar">
+            <ViewSwitcher />
+          </div>
+        )}
         <div id={paneId} className="view-pane active">
           {children}
         </div>

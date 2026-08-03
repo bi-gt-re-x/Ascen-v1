@@ -23,7 +23,7 @@ export interface EventModalProps {
   /** True when the event being edited lands on more than one day. */
   recurring?: boolean;
   /** Pre-filled times, from the day the dialog was opened for. */
-  defaults?: { startTime: string; endTime: string };
+  defaults?: { startTime: string; endTime: string; name?: string };
   onSave: (draft: EventDraft, scope: Scope) => void;
   onClose: () => void;
   /** The week grid opens this twice as wide, so a seven-day row fits. */
@@ -40,7 +40,7 @@ export function EventModal({
 }: EventModalProps) {
   const editing = Boolean(initial);
 
-  const [name, setName] = useState(initial?.name ?? '');
+  const [name, setName] = useState(initial?.name ?? defaults?.name ?? '');
   const [startTime, setStartTime] = useState(initial?.startTime ?? defaults?.startTime ?? '');
   const [endTime, setEndTime] = useState(initial?.endTime ?? defaults?.endTime ?? '');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');

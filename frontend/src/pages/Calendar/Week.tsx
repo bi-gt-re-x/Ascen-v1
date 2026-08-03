@@ -26,6 +26,7 @@ import {
   ConflictDialog,
   DayColumn,
   TimeLabels,
+  ViewSwitcher,
   WeekSidebar,
   minutesToTime,
 } from '@/components/Calendar';
@@ -50,6 +51,7 @@ import {
   nowOffset,
   type Block,
 } from '@/utils/calendarGrid';
+import { iconUrlFor } from '@/utils/calendarIcons';
 import {
   isoOf,
   loadWeekSnapshots,
@@ -108,6 +110,10 @@ export default function Week() {
   });
   const [focusText, setFocusText] = useState('');
   const [history, setHistory] = useState<FocusHistory>({});
+  /** The day whose focus chip is currently an input, if any. */
+  const [focusEditing, setFocusEditing] = useState<string | null>(null);
+  /** What has been typed into the bar under the grid. */
+  const [compose, setCompose] = useState('');
 
   const actions = useBlockActions(username, store, tasks, reload);
   const scroller = useRef<HTMLDivElement>(null);
@@ -353,6 +359,30 @@ export default function Week() {
     [actions, store.data, tasks],
   );
 
+  /**
+   * Open an add dialog from the bar under the grid, carrying whatever has been
+   * typed into it as the name and clearing the bar. The times are the next
+   * clear hour on the day being shown, which is what the header's "+ Event"
+   * button used before this bar replaced it.
+   */
+  const openCompose = useCallback(
+    (type: 'add-task' | 'add-event') => {
+      const name = compose.trim();
+      const hour = thisWeek ? now.getHours() + 1 : 9;
+      actions.open({
+        type,
+        iso: thisWeek ? todayIso : mondayIso,
+        defaults: {
+          startTime: minutesToTime(hour * 60),
+          endTime: minutesToTime((hour + 1) * 60),
+          ...(name ? { name } : {}),
+        },
+      });
+      setCompose('');
+    },
+    [actions, compose, mondayIso, now, thisWeek, todayIso],
+  );
+
   const toggleSidebar = useCallback(() => {
     setCollapsed((was) => {
       try {
@@ -368,80 +398,77 @@ export default function Week() {
   if (error) return <ErrorState message={error} onRetry={reload} />;
 
   return (
-    <CalendarShell paneId="weekView">
+    <CalendarShell paneId="weekView" ownSwitcher>
+      {/* One row: what week it is and how to move through it on the left, how
+          to look at it and what to do with it on the right. The switcher is
+          here rather than in the shell above so the view has a single bar of
+          controls instead of two stacked ones. */}
       <div className={`wk-header${collapsed ? ' sidebar-collapsed' : ''}`}>
-        <button
-          className="wk-sidebar-toggle"
-          id="wkSidebarToggle"
-          type="button"
-          aria-expanded={!collapsed}
-          aria-controls="wkSidebar"
-          title={`${collapsed ? 'Open' : 'Collapse'} the overview sidebar`}
-          onClick={toggleSidebar}
-        >
-          <span className="wk-sidebar-toggle-icon">{collapsed ? '❯' : '❮'}</span> Overview
-        </button>
-
         <div className="wk-headmain">
-          <div className="wk-titlegroup">
-            <h2 className="wk-title">{weekTitle(monday)}</h2>
-            <div className="wk-nav">
-              <button
-                type="button"
-                className="wk-arrow"
-                aria-label="Previous week"
-                onClick={() => setMonday((current) => dates.addDays(current, -7))}
-              >
-                ❮
-              </button>
-              <button
-                type="button"
-                className="wk-arrow"
-                aria-label="Next week"
-                onClick={() => setMonday((current) => dates.addDays(current, 7))}
-              >
-                ❯
-              </button>
-            </div>
-            {/* Until dragging a slot is back, this is how a block is made:
-                the next clear hour on the day the grid is showing. */}
+          <h2 className="wk-title">{weekTitle(monday)}</h2>
+          <div className="wk-nav">
             <button
               type="button"
-              className="wk-today"
-              onClick={() =>
-                actions.open({
-                  type: 'add-event',
-                  iso: thisWeek ? todayIso : mondayIso,
-                  defaults: {
-                    startTime: minutesToTime((thisWeek ? now.getHours() + 1 : 9) * 60),
-                    endTime: minutesToTime((thisWeek ? now.getHours() + 2 : 10) * 60),
-                  },
-                })
-              }
+              className="wk-arrow"
+              aria-label="Previous week"
+              onClick={() => setMonday((current) => dates.addDays(current, -7))}
             >
-              + Event
+              ‹
+            </button>
+            {/* Not in the design, which has only a back arrow — a week view
+                that can be left but not returned from is a trap. */}
+            <button
+              type="button"
+              className="wk-arrow"
+              aria-label="Next week"
+              onClick={() => setMonday((current) => dates.addDays(current, 7))}
+            >
+              ›
             </button>
           </div>
+          <button
+            type="button"
+            className="wk-today"
+            disabled={thisWeek}
+            onClick={() => setMonday(mondayOf(new Date()))}
+          >
+            Today
+          </button>
+        </div>
+
+        <div className="wk-headtools">
+          <ViewSwitcher />
+          <button
+            className="wk-icon-btn"
+            id="wkSidebarToggle"
+            type="button"
+            aria-expanded={!collapsed}
+            aria-controls="wkSidebar"
+            title={`${collapsed ? 'Show' : 'Hide'} the overview column`}
+            onClick={toggleSidebar}
+          >
+            {/* A panel, not the design's funnel: this shows and hides the
+                column on the right, and there is nothing here to filter. */}
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M15 4v16" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="wk-icon-btn"
+            title="Settings"
+            onClick={() => navigate('/settings')}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.2" />
+              <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z" />
+            </svg>
+          </button>
         </div>
       </div>
 
       <div className={`wk-main${collapsed ? ' sidebar-collapsed' : ''}`}>
-        <WeekSidebar
-          stats={overview}
-          streak={Number(stats.current_streak) || 0}
-          focus={focus}
-          days={weekDays}
-          upcoming={upcoming}
-          priorities={priorities}
-          focusText={focusText}
-          onFocusTextChange={(text) => {
-            setFocusText(text);
-            saveWeeklyFocus(username, mondayIso, text);
-          }}
-          onViewAnalytics={() => navigate('/analytics')}
-          collapsed={collapsed}
-        />
-
         <div className="wk-gridwrap">
           <div className="wk-grid-head">
             <div className="wk-corner" />
@@ -457,23 +484,57 @@ export default function Week() {
             </div>
           </div>
 
-          {/* One note per day — the same one the Day and Month views show. */}
+          {/* One note per day — the same one the Day and Month views show, and
+              the same stored text. It reads as a chip with the icon guessed
+              from what it says, and becomes the input it always was when it is
+              clicked. A day with nothing on it offers the word instead. */}
           <div className="wk-allday-row">
             <div className="wk-allday-label">Focus</div>
             <div className="wk-allday-cells">
-              {days.map((day) => (
-                <div className="wk-allday-cell" key={day.iso}>
-                  <input
-                    className="wk-day-focus"
-                    type="text"
-                    data-date={day.iso}
-                    value={dayFocus.get(day.iso)}
-                    placeholder="Focus…"
-                    aria-label={`Focus for ${day.name} ${day.label}`}
-                    onChange={(event) => dayFocus.set(day.iso, event.target.value)}
-                  />
-                </div>
-              ))}
+              {days.map((day) => {
+                const text = dayFocus.get(day.iso);
+                const editing = focusEditing === day.iso;
+                return (
+                  <div className="wk-allday-cell" key={day.iso}>
+                    {editing ? (
+                      <input
+                        className="wk-day-focus"
+                        type="text"
+                        autoFocus
+                        data-date={day.iso}
+                        value={text}
+                        placeholder="Focus…"
+                        aria-label={`Focus for ${day.name} ${day.label}`}
+                        onChange={(event) => dayFocus.set(day.iso, event.target.value)}
+                        onBlur={() => setFocusEditing(null)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === 'Escape') {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className={`wk-focus-chip${text ? '' : ' is-empty'}`}
+                        aria-label={`Focus for ${day.name} ${day.label}`}
+                        onClick={() => setFocusEditing(day.iso)}
+                      >
+                        {text ? (
+                          <i
+                            className="cal-ico"
+                            style={{ ['--ico' as string]: `url(${iconUrlFor(text)})` }}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <span className="wk-focus-chip-plus" aria-hidden="true">+</span>
+                        )}
+                        <span className="wk-focus-chip-text">{text || 'Focus'}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -495,7 +556,75 @@ export default function Week() {
               ))}
             </div>
           </div>
+
+          {/* The bar under the grid. It replaces the "+ Event" button that used
+              to sit in the header: the same two dialogs, plus somewhere to type
+              the name first so the dialog opens already knowing it. Both open
+              on the day being shown — today when that is in this week, and
+              Monday otherwise, which is the rule the old button followed. */}
+          <div className="wk-compose">
+            <span className="wk-compose-plus" aria-hidden="true">+</span>
+            <input
+              className="wk-compose-input"
+              type="text"
+              placeholder="Add task or event…"
+              aria-label="Add a task or event"
+              value={compose}
+              onChange={(event) => setCompose(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' || !compose.trim()) return;
+                openCompose('add-task');
+              }}
+            />
+            <button
+              type="button"
+              className="wk-compose-btn"
+              title="New event"
+              onClick={() => openCompose('add-event')}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M3 10h18M8 3v4M16 3v4" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="wk-compose-btn"
+              title="New task"
+              onClick={() => openCompose('add-task')}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 21V4h9l1 2h6v9h-7l-1-2H4" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="wk-compose-go"
+              title={compose.trim() ? `Add “${compose.trim()}”` : 'New task'}
+              onClick={() => openCompose('add-task')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+          </div>
         </div>
+        <WeekSidebar
+          stats={overview}
+          streak={Number(stats.current_streak) || 0}
+          focus={focus}
+          days={weekDays}
+          upcoming={upcoming}
+          priorities={priorities}
+          focusText={focusText}
+          onFocusTextChange={(text) => {
+            setFocusText(text);
+            saveWeeklyFocus(username, mondayIso, text);
+          }}
+          onViewAnalytics={() => navigate('/analytics')}
+          collapsed={collapsed}
+        />
+
       </div>
 
       <BlockDialogs actions={actions} wide />

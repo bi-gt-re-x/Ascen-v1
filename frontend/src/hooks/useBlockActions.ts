@@ -36,6 +36,8 @@ export type BlockDialog =
 export interface TimeDefaults {
   startTime: string;
   endTime: string;
+  /** Seeded into the name field. The bar under the grid opens dialogs with it. */
+  name?: string;
 }
 
 export interface UseBlockActions {

@@ -17,50 +17,47 @@
 /* Header aligns to the grid below: the Overview toggle sits over the sidebar
    column, and the date + arrows + Add-Event sit over the day grid — with a 56px
    left pad (the time-label gutter) so the date lands on top of Mon/Tue. */
+/* One row across the card: what week it is and how to move through it on the
+   left, how to look at it on the right. It used to be a two-column grid that
+   held the date over the day grid while the overview column sat to its left;
+   the column is on the right now, so there is nothing to align around and the
+   row is simply a row. */
 .wk-header {
-    display: grid;
-    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-    gap: 22px;
-    align-items: center;
-    margin-bottom: 18px;
-}
-.wk-header .wk-sidebar-toggle { justify-self: start; }
-.wk-headmain {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; min-width: 0; padding-left: 56px;
+    gap: 22px; flex-wrap: wrap; margin-bottom: 18px;
 }
+.wk-headmain { display: flex; align-items: center; gap: 14px; min-width: 0; }
+/* The Day view still lays its header out this way and loads this file. */
 .wk-titlegroup { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.wk-headtools { display: flex; align-items: center; gap: 10px; flex: none; }
 .wk-title { margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.9rem); font-weight: 800; color: #1a1f26; white-space: nowrap; }
 .wk-nav { display: flex; gap: 6px; flex: none; }
 
-/* Collapsed sidebar: no sidebar column to align to, so the header flows normally
-   (toggle, date and Add-Event in one row). */
-.wk-header.sidebar-collapsed { display: flex; flex-wrap: wrap; }
-.wk-header.sidebar-collapsed .wk-headmain { flex: 1 1 auto; padding-left: 0; }
-.wk-arrow, .wk-today {
+.wk-arrow, .wk-today, .wk-icon-btn {
     border: 1px solid #e5e8ee; background: #fff; border-radius: 999px;
     cursor: pointer; font-family: inherit; color: #2c302e;
 }
-.wk-arrow { width: 34px; height: 34px; font-size: 15px; line-height: 1; }
+.wk-arrow { width: 34px; height: 34px; font-size: 18px; line-height: 1; }
 .wk-today { padding: 7px 18px; font-size: 14px; font-weight: 600; }
+/* On this week already: still readable, but plainly not a place to go. */
+.wk-today:disabled { opacity: .45; cursor: default; }
+.wk-icon-btn {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #6b7280;
+}
 
-.wk-arrow:hover, .wk-today:hover { background: #f6f7f9; }
+.wk-arrow:hover, .wk-today:not(:disabled):hover, .wk-icon-btn:hover { background: #f6f7f9; }
+.wk-icon-btn:hover { color: #2c302e; }
 
-/* ---- Layout: sidebar + grid ---- */
-.wk-main { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 22px; align-items: start; }
+/* ---- Layout: grid + overview column ---- */
+/* The column is on the right. It was on the left, which put a wall of figures
+   between the reader and the thing they came for. */
+.wk-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 22px; align-items: start; }
 /* Collapsed: drop the sidebar column so the day grid widens to fill the card. */
 .wk-main.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
 .wk-main.sidebar-collapsed .wk-sidebar { display: none; }
 
-/* Overview sidebar toggle (in the week header) */
-.wk-sidebar-toggle {
-    border: 1px solid #e5e8ee; background: #fff; border-radius: 999px;
-    cursor: pointer; font-family: inherit; color: #2c302e;
-    padding: 7px 14px; font-size: 13px; font-weight: 600;
-    display: inline-flex; align-items: center; gap: 7px;
-}
-.wk-sidebar-toggle:hover { background: #f6f7f9; }
-.wk-sidebar-toggle-icon { font-size: 10px; line-height: 1; }
 
 /* ---- Sidebar ---- */
 .wk-sidebar { display: flex; flex-direction: column; gap: 16px; }
@@ -510,8 +507,7 @@ html[data-theme="dark"] .wk-focustime,
 html[data-theme="dark"] .wk-priorities li,
 html[data-theme="dark"] .wk-dayname { color: #f4f4f6; }
 html[data-theme="dark"] .wk-arrow,
-html[data-theme="dark"] .wk-today,
-html[data-theme="dark"] .wk-sidebar-toggle { background: #1b212a; border-color: #2b323c; color: #e6e8f0; }
+html[data-theme="dark"] .wk-today { background: #1b212a; border-color: #2b323c; color: #e6e8f0; }
 html[data-theme="dark"] .wk-panel { background: #161b22; border-color: #262c36; box-shadow: none; }
 html[data-theme="dark"] .wk-stat { background: #0f141b; border-color: #262c36; }
 html[data-theme="dark"] .wk-stat-label,
@@ -730,3 +726,96 @@ html[data-theme="dark"] .wk-upcoming li { background: #0f141b; border-color: #26
 html[data-theme="dark"] .wk-sample { background: #21262d; color: #8b949e; }
 html[data-theme="dark"] .wk-spark-dot { fill: #161b22; }
 html[data-theme="dark"] .wk-spark-area { fill: rgba(168, 132, 92, .10); }
+
+
+/* ==========================================================================
+   THE HEADER'S SWITCHER, THE FOCUS CHIPS, AND THE BAR UNDER THE GRID
+   ========================================================================== */
+
+/* The Week/Day/Month switcher moved into the header row, so it no longer needs
+   the absolute placement the shell's own top bar gave it. */
+.wk-headtools .view-toggle { position: static; margin: 0; }
+
+/* ---- The Focus row ---- */
+/* Each day's note, as a chip. Clicking one turns it back into the input it has
+   always been — see the row in pages/Calendar/Week.tsx. */
+.wk-focus-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    max-width: 100%; padding: 7px 14px;
+    background: #fff; border: 1px solid #e5e8ee; border-radius: 999px;
+    font: inherit; font-size: 12.5px; font-weight: 600; color: #2c302e;
+    cursor: pointer; white-space: nowrap; overflow: hidden;
+}
+.wk-focus-chip:hover { background: #f6f7f9; border-color: #d8dde6; }
+.wk-focus-chip-text { overflow: hidden; text-overflow: ellipsis; }
+/* Nothing written yet: the chip is an offer, not a statement. */
+.wk-focus-chip.is-empty { color: #9aa0ad; font-weight: 500; border-style: dashed; }
+.wk-focus-chip-plus { font-size: 14px; line-height: 1; }
+.wk-focus-chip .cal-ico { width: 15px; height: 15px; flex: none; }
+
+/* ---- The bar under the grid ---- */
+/* Where a task or an event starts. It sits under the grid rather than floating
+   over it, because the design's floating position covers Monday and Tuesday
+   evening and this bar has nothing so urgent to say. */
+.wk-compose {
+    display: flex; align-items: center; gap: 8px;
+    margin: 14px auto 0; padding: 8px 8px 8px 16px; width: min(560px, 100%);
+    background: #fff; border: 1px solid #e5e8ee; border-radius: 999px;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 22px rgba(16,24,40,.06);
+}
+.wk-compose-plus { color: #9aa0ad; font-size: 17px; line-height: 1; flex: none; }
+.wk-compose-input {
+    flex: 1 1 auto; min-width: 0; border: 0; background: none; outline: none;
+    font: inherit; font-size: 14px; color: #2c302e;
+}
+.wk-compose-input::placeholder { color: #9aa0ad; }
+.wk-compose-btn {
+    width: 34px; height: 34px; flex: none; border: 0; border-radius: 50%;
+    background: none; color: #6b7280; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.wk-compose-btn:hover { background: #f2f4f7; color: #2c302e; }
+.wk-compose-go {
+    width: 36px; height: 36px; flex: none; border: 0; border-radius: 50%;
+    background: #1a1f26; color: #fff; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.wk-compose-go:hover { background: #2c333d; }
+
+/* ---- Dark ---- */
+html[data-theme="dark"] .wk-icon-btn { background: #1b212a; border-color: #2b323c; color: #9aa4b2; }
+html[data-theme="dark"] .wk-icon-btn:hover { background: #222932; color: #e6e8f0; }
+html[data-theme="dark"] .wk-focus-chip {
+    background: #0f141b; border-color: #262c36; color: #c9d1d9;
+}
+html[data-theme="dark"] .wk-focus-chip:hover { background: #161b22; border-color: #333b47; }
+html[data-theme="dark"] .wk-focus-chip.is-empty { color: #6b7280; }
+html[data-theme="dark"] .wk-compose {
+    background: #161b22; border-color: #262c36; box-shadow: none;
+}
+html[data-theme="dark"] .wk-compose-input { color: #e6edf3; }
+html[data-theme="dark"] .wk-compose-input::placeholder { color: #6b7280; }
+html[data-theme="dark"] .wk-compose-btn { color: #8b949e; }
+html[data-theme="dark"] .wk-compose-btn:hover { background: #21262d; color: #e6edf3; }
+html[data-theme="dark"] .wk-compose-go { background: #e6edf3; color: #161b22; }
+html[data-theme="dark"] .wk-compose-go:hover { background: #c9d1d9; }
+
+/* The switcher was drawn for the shell's dark top bar. In the header row it
+   sits on the card itself, so it is re-dressed for a light ground here rather
+   than changed at source — the Day and Month views still use the shell's bar
+   and still need the original. */
+.wk-headtools .view-toggle {
+    background: #f2f4f7; border: 1px solid #e5e8ee; border-radius: 12px;
+    padding: 3px; gap: 2px;
+}
+.wk-headtools .view-toggle-btn {
+    padding: 6px 16px; font-size: 13px; border-radius: 9px; color: #6b7280;
+}
+.wk-headtools .view-toggle-btn:hover:not(.active) { color: #2c302e; background: #e9ecf1; }
+.wk-headtools .view-toggle-btn.active {
+    background: #1a1f26; color: #fff; box-shadow: none;
+}
+html[data-theme="dark"] .wk-headtools .view-toggle { background: #0f141b; border-color: #262c36; }
+html[data-theme="dark"] .wk-headtools .view-toggle-btn { color: #8b949e; }
+html[data-theme="dark"] .wk-headtools .view-toggle-btn:hover:not(.active) { color: #e6edf3; background: #1b212a; }
+html[data-theme="dark"] .wk-headtools .view-toggle-btn.active { background: #e6edf3; color: #161b22; }

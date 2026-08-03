@@ -42,7 +42,7 @@ export interface TaskModalProps {
   initial?: { name: string; startTime: string; endTime: string; xp: number };
   /** True when this task repeats — the edit dialog then asks about scope. */
   recurring?: boolean;
-  defaults?: { startTime: string; endTime: string };
+  defaults?: { startTime: string; endTime: string; name?: string };
   /** The Day view acts on one task only, so it never offers a repeat. */
   allowRecurrence?: boolean;
   onSave: (draft: TaskDraft, scope: Scope) => void;
@@ -61,7 +61,7 @@ export function TaskModal({
 }: TaskModalProps) {
   const editing = Boolean(initial);
 
-  const [name, setName] = useState(initial?.name ?? '');
+  const [name, setName] = useState(initial?.name ?? defaults?.name ?? '');
   const [startTime, setStartTime] = useState(initial?.startTime ?? defaults?.startTime ?? '');
   const [endTime, setEndTime] = useState(initial?.endTime ?? defaults?.endTime ?? '');
   const [xp, setXp] = useState(initial?.xp ?? MIN_TASK_XP);
