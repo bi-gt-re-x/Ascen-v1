@@ -172,7 +172,9 @@ export function GridBlock({
       {!block.compact && (
         <div className="wk-event-foot">
           {footText && <span className={footClass}>{footText}</span>}
-          <span className="wk-event-xp">{block.xp} XP</span>
+          {/* "+ 60 XP", as the design writes it — what finishing this is worth,
+              not a quantity it already has. */}
+          <span className="wk-event-xp">+ {block.xp} XP</span>
         </div>
       )}
     </div>

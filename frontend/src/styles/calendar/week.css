@@ -22,15 +22,25 @@
    held the date over the day grid while the overview column sat to its left;
    the column is on the right now, so there is nothing to align around and the
    row is simply a row. */
+/* One row, and it stays one row. `flex-wrap: wrap` let the right-hand controls
+   drop to a second line on a narrow card, and because the pane is a height-
+   constrained column the header was then shrunk below the two lines it needed
+   and the second one printed over the day names. The date gives way instead —
+   it is the one thing here that can be read from the grid underneath it. */
 .wk-header {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 22px; flex-wrap: wrap; margin-bottom: 18px;
+    gap: 22px; flex-wrap: nowrap; margin-bottom: 18px;
+    flex: none;
 }
 .wk-headmain { display: flex; align-items: center; gap: 14px; min-width: 0; }
 /* The Day view still lays its header out this way and loads this file. */
 .wk-titlegroup { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .wk-headtools { display: flex; align-items: center; gap: 10px; flex: none; }
-.wk-title { margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.9rem); font-weight: 800; color: #1a1f26; white-space: nowrap; }
+.wk-title {
+    margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.9rem); font-weight: 800;
+    color: #1a1f26; white-space: nowrap;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
 .wk-nav { display: flex; gap: 6px; flex: none; }
 
 .wk-arrow, .wk-today, .wk-icon-btn {
@@ -263,10 +273,22 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
 }
 .wk-event-head .wk-event-title { flex: 1 1 auto; min-width: 0; margin: 0; }
 .wk-event-start { font-size: 11px; opacity: .8; flex: none; }
-/* Footer holds the due/completion time + XP, pushed to the bottom of the box. */
+/* Footer holds the due/completion time + XP, pushed to the bottom of the box.
+ *
+ * Stacked, the way the design draws a block: the time on one line and the XP
+ * under it. Side by side they were two things competing for the width of a
+ * seventh of the grid, and both lost — "8:10 – 9:00 AM" and "50 XP" each
+ * ellipsised to about one character. A block is tall and narrow; its content
+ * should be too. `is-compact` blocks are the exception, since a block under
+ * about 40 minutes has one line of room in total. */
 .wk-event-foot {
-    margin-top: auto; display: flex; align-items: baseline;
-    justify-content: space-between; gap: 6px; padding-top: 2px;
+    margin-top: auto; display: flex; flex-direction: column;
+    align-items: flex-start; gap: 1px; padding-top: 2px; min-width: 0;
+}
+.wk-event-foot > * { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-event.is-compact .wk-event-foot {
+    flex-direction: row; align-items: baseline;
+    justify-content: space-between; gap: 6px;
 }
 /* Real task blocks, colour-coded by state:
    low/easy = blue, medium = yellow, high/hard = red, completed = green. */

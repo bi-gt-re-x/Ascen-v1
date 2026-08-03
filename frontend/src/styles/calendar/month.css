@@ -1987,8 +1987,19 @@ body:has(.calendar-container) {
        gap sits between the card and the nav bar below it. */
     gap: 15px;
     /* Card top position is set by THIS padding-top (flex-start layout), not a
-       margin — .calendar-container has margin:0, so margin edits do nothing. */
-    padding: 46px 14px 14px;
+       margin — .calendar-container has margin:0, so margin edits do nothing.
+     *
+     * Written as longhands, and that is not a style preference. As the shorthand
+     * `padding: 46px 14px 14px` this set padding-left to 14px, and it loads
+     * after rail.css and matches with the same specificity as `body.has-rail` —
+     * so it beat the `padding-left: var(--rail-w)` that reserves the navigation
+     * rail's width, and the calendar was laid out from the left edge of the
+     * window with a third of it underneath the rail. A shorthand here has to
+     * say what it means about the left, so it says it. */
+    padding-top: 46px;
+    padding-right: 14px;
+    padding-bottom: 14px;
+    padding-left: calc(var(--rail-w) + 14px);
     box-sizing: border-box;
 }
 
@@ -3092,9 +3103,19 @@ body.classic .calendar-card {
 
 /* The date rows now share their line with the selector, so they reserve room
    for it on the right and stand at least as tall as it is. */
+/* The 320px of padding-right kept the header clear of the Week/Day/Month
+   selector, which the shell used to place in the top-right corner of the card.
+   The Week view puts the selector inside its own header now (CalendarShell's
+   `ownSwitcher`), so on that view the padding is reserving a gap against
+   nothing — and, worse, squeezing the header until its right-hand controls
+   wrapped onto a second line that then overlapped the day names. The Day view
+   still uses the shell's corner and still needs it. */
 #weekView .wk-header,
 #dayView .wk-header.day-header {
     min-height: 52px;
+}
+
+#dayView .wk-header.day-header {
     padding-right: 320px;
 }
 /* The week's date sits in the column beside the sidebar toggle; with the
@@ -3160,6 +3181,15 @@ body.classic .calendar-card {
     /* Still short of room: scroll the column instead of clipping it. */
     .calendar-left,
     .calendar-right { min-height: 0; overflow-y: auto; }
+}
+
+/* Below 640px the rail lies down along the bottom of the screen (rail.css), and
+   `body.has-rail` pays for it in padding-bottom — which the padding-bottom above
+   would otherwise beat, putting the strip of destinations over the calendar. */
+@media (max-width: 640px) {
+    body:has(.calendar-container) {
+        padding-bottom: calc(var(--rail-h, 0px) + 14px);
+    }
 }
 
 /* Shorter than the grid can shrink to: give the page itself back its scroll,

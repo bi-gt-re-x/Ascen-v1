@@ -19,16 +19,21 @@
  *     page is laid out, which is why they are hooks over a ref and not markup.
  *   * the toast, which belongs to no section.
  *
- * Two things the server-rendered page had are deliberately not here. It carried
- * its own header and its own Log In / Sign Up row; the React app renders one
- * top bar above every route (App.tsx) and that bar already has the theme
- * selector and the sign-in link, so a second one would be two headers on one
- * page. And it wrote the signed-in username into localStorage from the
- * template; `useAuth` asks the server, which is the same answer without the
- * copy that can go stale.
+ *   * its own header and its own Log In / Sign Up row. These were dropped for a
+ *     while, when the app rendered one bar above every route and a second
+ *     header would have been two on one page. The app's navigation is a rail
+ *     down the left now and App.tsx leaves this route without it — a rail
+ *     offering the dashboard, the calendar and the goals page to someone who
+ *     cannot open any of them is not navigation. So the page carries its own
+ *     again, the markup styles/homepage.css has always dressed.
+ *
+ * The one thing the server-rendered page had that is still deliberately not
+ * here: it wrote the signed-in username into localStorage from the template.
+ * `useAuth` asks the server, which is the same answer without the copy that can
+ * go stale.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Ambient } from '@/components';
 import {
   AuthModal,
@@ -55,6 +60,7 @@ import {
 } from '@/components/Home';
 import { useAuth, useDocumentTitle, useTheme } from '@/hooks';
 import type { AuthStep } from '@/components/Home';
+import type { Theme } from '@/types';
 import '@/styles/homepage.css';
 import '@/styles/home-motion.css';
 
@@ -67,8 +73,8 @@ export default function Homepage() {
   useDocumentTitle('Home');
 
   const [params] = useSearchParams();
-  const { status, username } = useAuth();
-  const { setTheme } = useTheme();
+  const { status, username, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const signedIn = status === 'signed-in';
 
   const page = useRef<HTMLDivElement>(null);
@@ -126,6 +132,56 @@ export default function Homepage() {
   return (
     <>
       <Ambient />
+
+      {/* The page's own bar, back where it was before the port. The mark is the
+          way home and the select is the theme — the two things the server-
+          rendered header held. */}
+      <header className="site-nav">
+        <div className="nav-inner">
+          <Link className="brand" to="/home" aria-label="Ascen home">
+            <img src="/static/images/logo.svg" alt="Ascen logo" />
+          </Link>
+          <div className="nav-right">
+            <select
+              className="theme-select"
+              aria-label="Theme"
+              value={theme}
+              onChange={(event) => setTheme(event.target.value as Theme)}
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+        </div>
+      </header>
+
+      {/* Which pair this shows is decided from the server's answer rather than
+          from localStorage, which is what the original got wrong: an account
+          signed in on the server but with no localStorage — cleared storage,
+          another browser — was being offered Log In and Sign Up. */}
+      <div className="account-row">
+        {signedIn ? (
+          <div className="user-greeting">
+            <span>Hello, {username}</span>
+            <button type="button" className="logout-btn" onClick={() => void signOut()}>
+              Log Out
+            </button>
+          </div>
+        ) : (
+          <div className="auth-buttons">
+            <button type="button" className="auth-btn" onClick={() => setStep('login')}>
+              Log In
+            </button>
+            <button
+              type="button"
+              className="auth-btn auth-btn-primary"
+              onClick={() => setStep('create')}
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="home-main" ref={page}>
         <div className="lp">

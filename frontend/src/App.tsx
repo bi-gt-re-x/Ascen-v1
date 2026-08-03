@@ -10,7 +10,7 @@
  * exception — it is where a signed-in visitor lands, and a spinner on the
  * first paint of the landing page is exactly the wrong first impression.
  */
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Loading, Rail } from '@/components';
 import { RequireAccount } from './RequireAccount';
@@ -73,12 +73,34 @@ function pinsViewport(pathname: string): boolean {
   );
 }
 
+/**
+ * The landing page is not an app page and does not get the app's chrome.
+ *
+ * It is the one route a signed-out visitor is meant to read rather than work
+ * in, and it carries its own header and its own Log In / Sign Up row — the ones
+ * it had before React, which styles/homepage.css still dresses. The rail beside
+ * that would be a second navigation for pages the reader cannot open yet.
+ */
+function isLanding(pathname: string): boolean {
+  return pathname === '/home';
+}
+
 export default function App() {
-  usePinnedViewport(pinsViewport(useLocation().pathname));
+  const { pathname } = useLocation();
+  usePinnedViewport(pinsViewport(pathname));
+
+  // `has-rail` is what reserves the rail's width; index.html sets it because
+  // every page but this one wants it. Off here, so the landing page gets the
+  // full width back.
+  const landing = isLanding(pathname);
+  useEffect(() => {
+    document.body.classList.toggle('has-rail', !landing);
+    return () => document.body.classList.add('has-rail');
+  }, [landing]);
 
   return (
     <>
-      <Rail />
+      {!landing && <Rail />}
       <main className="app-main">
         <Suspense fallback={<Loading />}>
           <Routes>
