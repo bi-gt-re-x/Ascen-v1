@@ -42,6 +42,17 @@ body:has(.dash) .app-main {
     text-align: left;
 }
 
+/* The graph-paper layer behind the page (components/Ambient.tsx). The landing
+   page keeps it at z-index 0 and lifts its four sections above it; here it goes
+   to -1 instead, so every card, dialog and celebration on the page is above it
+   without being named — including the ones that carry z-indexes of their own,
+   which a blanket `.dash > * { z-index: 1 }` would have flattened. It still
+   shows, because a body background propagates to the page canvas and is painted
+   below even a negative layer. */
+.dash .hm-ambient {
+    z-index: -1;
+}
+
 /* ==========================================================================
    GREETING
    ========================================================================== */

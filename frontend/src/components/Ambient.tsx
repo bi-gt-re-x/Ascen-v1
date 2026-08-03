@@ -1,10 +1,15 @@
 /**
- * The landing page's background — the port of frontend/js/home-ambient.js.
+ * The graph-paper background — the port of frontend/js/home-ambient.js.
  *
  * One fixed layer behind everything, holding four quiet things: a grid, a slow
  * colour gradient, a field of drifting particles, and a glow that follows the
- * cursor. The first two are pure CSS (styles/home-motion.css); this renders the
+ * cursor. The first two are pure CSS (styles/ambient.css); this renders the
  * layer, runs the particle canvas, and moves the glow.
+ *
+ * The landing page has all four. The dashboard passes `cursor={false}` and
+ * takes the first three: a light that chases the pointer suits a page being
+ * read top to bottom, but on a page being *worked* it follows every trip to a
+ * checkbox, and a working surface should hold still under the hand.
  *
  * The rules it plays by, because a background that costs anything is a
  * background that should not exist:
@@ -19,11 +24,12 @@
  *
  * Unlike the original this is a real element in the tree rather than a div
  * inserted at the top of <body>, so it comes and goes with the page instead of
- * outliving it — leaving a canvas running behind /dashboard was never the
- * intent, it just could not be expressed before.
+ * outliving it — leaving a canvas running behind a page that has moved on was
+ * never the intent, it just could not be expressed before.
  */
 import { useEffect, useRef, useState } from 'react';
 import { reduced } from '@/utils/homePlay';
+import '@/styles/ambient.css';
 
 /** Enough to read as a field and cheap enough to be free; fewer where they crowd. */
 const PARTICLES = typeof window !== 'undefined' && window.innerWidth < 720 ? 18 : 40;
@@ -37,7 +43,12 @@ interface Dot {
   a: number;
 }
 
-export function Ambient() {
+export interface AmbientProps {
+  /** Whether the glow follows the pointer. Off on pages being worked in. */
+  cursor?: boolean;
+}
+
+export function Ambient({ cursor = true }: AmbientProps) {
   const layer = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const glow = useRef<HTMLDivElement>(null);
@@ -54,10 +65,13 @@ export function Ambient() {
     return startParticles(canvas.current);
   }, []);
 
+  // `cursor` is a dependency rather than a guard inside the effect, so turning
+  // it off unbinds the pointer listeners instead of leaving them running over
+  // an element that is no longer there.
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || !cursor) return;
     return startCursorGlow(glow.current);
-  }, []);
+  }, [cursor]);
 
   return (
     <div
@@ -68,7 +82,7 @@ export function Ambient() {
       <div className="hm-gradient" />
       <div className="hm-grid" />
       <canvas className="hm-particles" ref={canvas} />
-      <div className="hm-cursor" ref={glow} />
+      {cursor && <div className="hm-cursor" ref={glow} />}
     </div>
   );
 }

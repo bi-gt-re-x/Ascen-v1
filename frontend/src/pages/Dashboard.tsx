@@ -19,7 +19,7 @@
  * moving when the + on the panel is pressed.
  */
 import { useCallback, useMemo, useState } from 'react';
-import { ErrorState, Loading } from '@/components';
+import { Ambient, ErrorState, Loading } from '@/components';
 import {
   DailyQuote,
   FocusCard,
@@ -139,6 +139,10 @@ export default function Dashboard() {
 
   return (
     <div className="dash">
+      {/* The same background the landing page has, minus the glow that follows
+          the pointer — see components/Ambient.tsx. */}
+      <Ambient cursor={false} />
+
       {/* The greeting slides away with the stat row while a focus session
           runs — see html.focus-mode in styles/dashboard-home.css. */}
       <header className="dash-greeting">

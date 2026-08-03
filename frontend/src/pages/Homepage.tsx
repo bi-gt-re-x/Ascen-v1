@@ -29,8 +29,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Ambient } from '@/components';
 import {
-  Ambient,
   AuthModal,
   CalendarDemo,
   DashboardDemo,

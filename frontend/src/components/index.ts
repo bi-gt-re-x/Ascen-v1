@@ -6,6 +6,8 @@
  * imported from their own path — `@/components/Calendar` — so this file does
  * not become a list of everything in the app.
  */
+export { Ambient } from './Ambient';
+export type { AmbientProps } from './Ambient';
 export { Button } from './Button';
 export type { ButtonProps, ButtonSize, ButtonVariant } from './Button';
 export { Card } from './Card';

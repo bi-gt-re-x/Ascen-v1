@@ -1,0 +1,139 @@
+/* ambient.css — the graph-paper background, for any page that wants it.
+ *
+ * One fixed layer holding four quiet things: a grid, a slow colour gradient, a
+ * field of drifting particles, and a glow that follows the cursor. The first
+ * two are the CSS here; the canvas and the glow are driven by
+ * components/Ambient.tsx, which is also what decides whether the glow exists at
+ * all — the dashboard takes the layer without it.
+ *
+ * This started as the top of home-motion.css and was the landing page's alone.
+ * It is its own file now because the dashboard loads it too, and loading the
+ * whole of home-motion.css there would have brought the hero's curtain, the
+ * scroll reveals and the logo animation along with it.
+ *
+ * Everything fades in from nothing when the script adds `.hm-ready`, and drifts
+ * only under `.hm-animate`. A page with JS off, or a machine asking for less
+ * motion, gets a background that is simply not there rather than one stuck
+ * half-armed.
+ */
+
+:root {
+    --hm-ease: cubic-bezier(0.22, 0.68, 0.28, 1);
+    --hm-ease-soft: cubic-bezier(0.45, 0.05, 0.25, 1);
+}
+
+.hm-ambient {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    /* No `size` containment: the canvas inside measures itself against this
+       box, and a size-contained box is measured as if it were empty. */
+    contain: layout paint style;
+}
+
+/* Everything the page actually shows sits above the ambient layer. */
+.site-nav,
+.account-row,
+.home-main,
+.footer { position: relative; z-index: 1; }
+
+/* --- the grid ---------------------------------------------------------- */
+/* Two repeating gradients crossed into squares. It materialises over a
+   second and a half and then creeps, one square every forty seconds, so the
+   movement is felt rather than watched. */
+.hm-grid {
+    position: absolute;
+    /* Oversized and offset, so the drift never exposes an edge. */
+    inset: -80px;
+    background-image:
+        repeating-linear-gradient(to right, currentColor 0 1px, transparent 1px 80px),
+        repeating-linear-gradient(to bottom, currentColor 0 1px, transparent 1px 80px);
+    color: rgba(16, 24, 40, 0.038);
+    opacity: 0;
+    transition: opacity 1500ms var(--hm-ease-soft);
+}
+.hm-ready .hm-grid { opacity: 1; }
+.hm-ambient.hm-animate .hm-grid { animation: hmGridDrift 40s linear infinite; }
+html[data-theme="dark"] .hm-grid { color: rgba(255, 255, 255, 0.045); }
+
+@keyframes hmGridDrift {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(80px, 80px, 0); }
+}
+
+/* --- the slow gradient -------------------------------------------------- */
+/* Three soft colour fields, larger than the viewport, sliding over each other
+   on a 34-second cycle. At this size and opacity it reads as the light in the
+   room changing rather than as anything moving. */
+.hm-gradient {
+    position: absolute;
+    inset: -25%;
+    opacity: 0;
+    background:
+        radial-gradient(38% 44% at 22% 28%, rgba(99, 102, 241, 0.10), transparent 70%),
+        radial-gradient(34% 40% at 78% 22%, rgba(34, 197, 94, 0.07), transparent 70%),
+        radial-gradient(42% 46% at 62% 84%, rgba(217, 164, 65, 0.06), transparent 70%);
+    transition: opacity 2000ms var(--hm-ease-soft);
+}
+.hm-ready .hm-gradient { opacity: 1; }
+.hm-ambient.hm-animate .hm-gradient { animation: hmGradientDrift 34s var(--hm-ease-soft) infinite; }
+html[data-theme="dark"] .hm-gradient {
+    background:
+        radial-gradient(38% 44% at 22% 28%, rgba(124, 131, 255, 0.20), transparent 70%),
+        radial-gradient(34% 40% at 78% 22%, rgba(74, 222, 128, 0.13), transparent 70%),
+        radial-gradient(42% 46% at 62% 84%, rgba(224, 178, 92, 0.12), transparent 70%);
+}
+
+@keyframes hmGradientDrift {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    33%  { transform: translate3d(2.5%, -2%, 0) scale(1.05); }
+    66%  { transform: translate3d(-2%, 2.5%, 0) scale(1.02); }
+    100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* --- the particles ------------------------------------------------------ */
+.hm-particles {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1800ms var(--hm-ease-soft);
+}
+.hm-ready .hm-particles { opacity: 1; }
+
+/* --- the cursor glow ---------------------------------------------------- */
+/* Parked off-screen until the pointer moves, so it never flashes at 0,0.
+   Only the landing page renders this element. */
+.hm-cursor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 460px;
+    height: 460px;
+    margin: -230px 0 0 -230px;
+    border-radius: 50%;
+    background: radial-gradient(circle closest-side,
+        rgba(99, 102, 241, 0.13), rgba(99, 102, 241, 0.05) 45%, transparent 72%);
+    opacity: 0;
+    transition: opacity 500ms var(--hm-ease-soft);
+    will-change: transform;
+}
+.hm-cursor.hm-cursor-on { opacity: 1; }
+html[data-theme="dark"] .hm-cursor {
+    background: radial-gradient(circle closest-side,
+        rgba(124, 131, 255, 0.20), rgba(124, 131, 255, 0.07) 45%, transparent 72%);
+}
+
+/* --- less motion, please ------------------------------------------------ */
+/* The component checks the same query and neither adds `.hm-animate` nor runs
+   the canvas, so this is the second lock rather than the first: it cancels
+   anything a stale class or a mid-session preference change would leave
+   drifting. The layer still shows — a still grid is not motion. */
+@media (prefers-reduced-motion: reduce) {
+    .hm-ambient.hm-animate .hm-grid,
+    .hm-ambient.hm-animate .hm-gradient { animation: none; }
+    .hm-grid, .hm-gradient, .hm-particles, .hm-cursor { transition: none; }
+}
