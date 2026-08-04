@@ -24,12 +24,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   CalendarShell,
   ConflictDialog,
+  CreateChooser,
   DayColumn,
   TimeLabels,
   ViewSwitcher,
   WeekFocusCard,
   WeekSidebar,
-  minutesToTime,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
 import { ErrorState, Loading } from '@/components';
@@ -42,6 +42,11 @@ import {
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import { useFocusSession } from '@/hooks/useFocusSession';
+import {
+  useGridDrag,
+  type DraggedSlot,
+  type DroppedBlock,
+} from '@/hooks/useGridDrag';
 import { focus as focusService } from '@/services';
 import { dates } from '@/utils';
 import {
@@ -110,12 +115,12 @@ export default function Week() {
   const [history, setHistory] = useState<FocusHistory>({});
   /** The day whose focus chip is currently an input, if any. */
   const [focusEditing, setFocusEditing] = useState<string | null>(null);
-  /** What has been typed into the bar under the grid. */
-  const [compose, setCompose] = useState('');
 
   const actions = useBlockActions(username, store, tasks, reload);
   const scroller = useRef<HTMLDivElement>(null);
   const jumpedToNow = useRef(false);
+  /** The grid's scroll offset, kept across the remount a reload causes. */
+  const held = useRef(0);
 
   const mondayIso = dates.isoDate(monday);
   const sundayIso = dates.isoDate(dates.addDays(monday, 6));
@@ -148,13 +153,29 @@ export default function Week() {
     };
   }, [mondayIso, sundayIso, username]);
 
-  // Land on the current hour rather than at 6 AM — once, when the grid is up.
+  /**
+   * Where the grid is scrolled to.
+   *
+   * Land on the current hour rather than at 6 AM, once, when the grid first
+   * comes up — and after that, hold whatever position the reader has scrolled
+   * to. The second half matters because a write to a task reloads the week,
+   * `loading` goes true, the whole grid unmounts behind the spinner, and a
+   * fresh scroller starts at the top. Dragging an 11 AM task one column across
+   * used to answer by throwing the view back to six in the morning.
+   */
   useEffect(() => {
-    if (jumpedToNow.current || loading || !thisWeek) return;
-    const top = nowOffset(new Date());
-    if (top === null || !scroller.current) return;
-    scroller.current.scrollTop = Math.max(0, top - scroller.current.clientHeight / 2);
+    const box = scroller.current;
+    if (loading || !box) return;
+    if (jumpedToNow.current) {
+      box.scrollTop = held.current;
+      return;
+    }
     jumpedToNow.current = true;
+    if (!thisWeek) return;
+    const top = nowOffset(new Date());
+    if (top === null) return;
+    box.scrollTop = Math.max(0, top - box.clientHeight / 2);
+    held.current = box.scrollTop;
   }, [loading, thisWeek]);
 
   const columns = useMemo(
@@ -338,27 +359,68 @@ export default function Week() {
   );
 
   /**
-   * Open an add dialog from the bar under the grid, carrying whatever has been
-   * typed into it as the name and clearing the bar. The times are the next
-   * clear hour on the day being shown, which is what the header's "+ Event"
-   * button used before this bar replaced it.
+   * Dragging on the grid — the only way something is added here now that the
+   * bar under it is gone, and a better one: the gesture says when the thing
+   * runs as part of saying that it exists.
+   *
+   * A drag on empty grid parks the slot and asks whether it is an event or a
+   * task; the answer opens that dialog with the times already filled in. A drag
+   * on a block commits straight away, with no dialog at all — the reader has
+   * said what they want by putting it there.
    */
-  const openCompose = useCallback(
+  const [slot, setSlot] = useState<DraggedSlot | null>(null);
+
+  const onDrop = useCallback(
+    (drop: DroppedBlock) => {
+      if (drop.kind === 'event') {
+        const section = store.data[monthKey(drop.fromIso)]?.timestamps.find(
+          (entry) =>
+            !entry.isDashboardTask &&
+            entry.task === drop.id &&
+            entry.startTime === drop.fromStartTime &&
+            entry.endTime === drop.fromEndTime,
+        );
+        if (!section) return;
+        actions.retime({
+          fromIso: drop.fromIso,
+          toIso: drop.toIso,
+          section,
+          startTime: drop.startTime,
+          endTime: drop.endTime,
+        });
+        return;
+      }
+      const task = tasks.find((entry) => String(entry.id) === drop.id);
+      if (!task) return;
+      actions.retime({
+        fromIso: drop.fromIso,
+        toIso: drop.toIso,
+        task,
+        startAt: drop.startAt,
+        endAt: drop.endAt,
+      });
+    },
+    [actions, store.data, tasks],
+  );
+
+  const daycols = useGridDrag({
+    scroller,
+    enabled: !actions.dialog && !slot,
+    onCreate: setSlot,
+    onDrop,
+  });
+
+  const openDragged = useCallback(
     (type: 'add-task' | 'add-event') => {
-      const name = compose.trim();
-      const hour = thisWeek ? now.getHours() + 1 : 9;
+      if (!slot) return;
       actions.open({
         type,
-        iso: thisWeek ? todayIso : mondayIso,
-        defaults: {
-          startTime: minutesToTime(hour * 60),
-          endTime: minutesToTime((hour + 1) * 60),
-          ...(name ? { name } : {}),
-        },
+        iso: slot.iso,
+        defaults: { startTime: slot.startTime, endTime: slot.endTime },
       });
-      setCompose('');
+      setSlot(null);
     },
-    [actions, compose, mondayIso, now, thisWeek, todayIso],
+    [actions, slot],
   );
 
   const toggleSidebar = useCallback(() => {
@@ -516,9 +578,15 @@ export default function Week() {
             </div>
           </div>
 
-          <div className="wk-scroll" ref={scroller}>
+          <div
+            className="wk-scroll"
+            ref={scroller}
+            onScroll={(event) => {
+              held.current = event.currentTarget.scrollTop;
+            }}
+          >
             <TimeLabels now={thisWeek ? nowOffset(now) : null} at={now} />
-            <div className="wk-daycols">
+            <div className="wk-daycols" ref={daycols}>
               {columns.map((column) => (
                 <DayColumn
                   key={column.iso}
@@ -541,57 +609,6 @@ export default function Week() {
               it covers is out of reach. */}
           <WeekFocusCard focus={focus} onViewAnalytics={() => navigate('/analytics')} />
 
-          {/* The bar under the grid. It replaces the "+ Event" button that used
-              to sit in the header: the same two dialogs, plus somewhere to type
-              the name first so the dialog opens already knowing it. Both open
-              on the day being shown — today when that is in this week, and
-              Monday otherwise, which is the rule the old button followed. */}
-          <div className="wk-compose">
-            <span className="wk-compose-plus" aria-hidden="true">+</span>
-            <input
-              className="wk-compose-input"
-              type="text"
-              placeholder="Add task or event…"
-              aria-label="Add a task or event"
-              value={compose}
-              onChange={(event) => setCompose(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter' || !compose.trim()) return;
-                openCompose('add-task');
-              }}
-            />
-            <button
-              type="button"
-              className="wk-compose-btn"
-              title="New event"
-              onClick={() => openCompose('add-event')}
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                <rect x="3" y="5" width="18" height="16" rx="2" />
-                <path d="M3 10h18M8 3v4M16 3v4" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="wk-compose-btn"
-              title="New task"
-              onClick={() => openCompose('add-task')}
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M4 21V4h9l1 2h6v9h-7l-1-2H4" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="wk-compose-go"
-              title={compose.trim() ? `Add “${compose.trim()}”` : 'New task'}
-              onClick={() => openCompose('add-task')}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </button>
-          </div>
         </div>
         <WeekSidebar
           stats={overview}
@@ -605,6 +622,18 @@ export default function Week() {
       </div>
 
       <BlockDialogs actions={actions} wide />
+
+      {slot && (
+        <CreateChooser
+          when={`${dates.formatDate(dates.fromIsoDate(slot.iso), {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+          })} · ${clockLabel(slot.startTime)} – ${clockLabel(slot.endTime)}`}
+          onChoose={(kind) => openDragged(kind === 'event' ? 'add-event' : 'add-task')}
+          onCancel={() => setSlot(null)}
+        />
+      )}
 
       {clash?.conflict && (
         <ConflictDialog

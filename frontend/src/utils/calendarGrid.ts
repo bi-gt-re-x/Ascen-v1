@@ -103,6 +103,62 @@ export function minutesToHm(minutes: number): string {
 }
 
 // --------------------------------------------------------------------------
+// Pixels ↔ time — what dragging on the grid is made of
+// --------------------------------------------------------------------------
+/** One five-minute step, in pixels. Everything a drag produces lands on one. */
+export const MIN_STEP_PX = HOUR_H / 12;
+
+/**
+ * The gap a block is drawn short by, so neighbours do not touch.
+ *
+ * `layOut` above takes 4px off every block's height. A drag has to work in the
+ * **true** span — the rendered height plus this — or a drop lands a minute or
+ * two inside its neighbour and the grid meets it with the overlap dialog the
+ * moment it redraws.
+ */
+export const BLOCK_GAP = 4;
+
+/** Round a pixel offset to the nearest five minutes. */
+export function snapPx(px: number): number {
+  return Math.round(px / MIN_STEP_PX) * MIN_STEP_PX;
+}
+
+/**
+ * Pixels down a column as minutes past midnight, snapped to five.
+ *
+ * The column starts at START_HOUR, so pixels past the 18-hour mark wrap into
+ * the small hours — 6 AM plus 19 hours is 1 AM, not 25 o'clock.
+ */
+export function pxToClockMinutes(px: number): number {
+  const gridMinutes = START_HOUR * 60 + (px / HOUR_H) * 60;
+  const snapped = Math.round(gridMinutes / 5) * 5;
+  return ((snapped % 1440) + 1440) % 1440;
+}
+
+/**
+ * Pixels down a column as the real moment they stand for.
+ *
+ * Unlike `pxToClockMinutes` this keeps the date, which is what an overnight
+ * task needs: 11 PM plus three hours is 2 AM *tomorrow*, and a task whose
+ * due_date says otherwise is a task on the wrong day.
+ */
+export function pxToDate(iso: string, px: number): Date {
+  const [year = 1970, month = 1, day = 1] = iso.split('-').map(Number);
+  const at = new Date(year, month - 1, day, START_HOUR, 0, 0, 0);
+  const minutes = Math.round(((px / HOUR_H) * 60) / 5) * 5;
+  return new Date(at.getTime() + minutes * 60000);
+}
+
+/** "2026-08-04T09:15:00" — the shape the task API stores times in. */
+export function isoStamp(at: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}` +
+    `T${pad(at.getHours())}:${pad(at.getMinutes())}:${pad(at.getSeconds())}`
+  );
+}
+
+// --------------------------------------------------------------------------
 // Blocks
 // --------------------------------------------------------------------------
 interface BlockBase {

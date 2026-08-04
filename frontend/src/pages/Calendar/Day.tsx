@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarShell,
   ConflictDialog,
+  CreateChooser,
   DayColumn,
   DaySidebar,
   TimeLabels,
@@ -31,6 +32,11 @@ import {
   useNow,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
+import {
+  useGridDrag,
+  type DraggedSlot,
+  type DroppedBlock,
+} from '@/hooks/useGridDrag';
 import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
 import { events as eventService } from '@/services';
 import { dates } from '@/utils';
@@ -38,6 +44,7 @@ import {
   blockLabel,
   dayEventBlocks,
   dayTaskBlocks,
+  hmLabel,
   layOut,
   nowOffset,
   type Block,
@@ -178,6 +185,66 @@ export default function Day() {
     [actions, iso, store.data, tasks],
   );
 
+  /**
+   * The same three drags the Week view offers, on the one column this view has.
+   * See pages/Calendar/Week.tsx — the wiring is the same, minus the day the
+   * pointer is over, because here there is only ever this one.
+   */
+  const [slot, setSlot] = useState<DraggedSlot | null>(null);
+
+  const onDrop = useCallback(
+    (drop: DroppedBlock) => {
+      if (drop.kind === 'event') {
+        const section = store.data[monthKey(drop.fromIso)]?.timestamps.find(
+          (entry) =>
+            !entry.isDashboardTask &&
+            entry.task === drop.id &&
+            entry.startTime === drop.fromStartTime &&
+            entry.endTime === drop.fromEndTime,
+        );
+        if (!section) return;
+        actions.retime({
+          fromIso: drop.fromIso,
+          toIso: drop.toIso,
+          section,
+          startTime: drop.startTime,
+          endTime: drop.endTime,
+        });
+        return;
+      }
+      const task = tasks.find((entry) => String(entry.id) === drop.id);
+      if (!task) return;
+      actions.retime({
+        fromIso: drop.fromIso,
+        toIso: drop.toIso,
+        task,
+        startAt: drop.startAt,
+        endAt: drop.endAt,
+      });
+    },
+    [actions, store.data, tasks],
+  );
+
+  const daycol = useGridDrag({
+    scroller,
+    enabled: !actions.dialog && !slot,
+    onCreate: setSlot,
+    onDrop,
+  });
+
+  const openDragged = useCallback(
+    (type: 'add-task' | 'add-event') => {
+      if (!slot) return;
+      actions.open({
+        type,
+        iso: slot.iso,
+        defaults: { startTime: slot.startTime, endTime: slot.endTime },
+      });
+      setSlot(null);
+    },
+    [actions, slot],
+  );
+
   /** The next clear hour on the shown day — 9 AM when it is not today. */
   const addTask = useCallback(() => {
     const startMinutes = Math.min(isToday ? (now.getHours() + 1) * 60 : 9 * 60, 22 * 60);
@@ -243,6 +310,7 @@ export default function Day() {
           <div className="wk-scroll day-scroll" ref={scroller}>
             <TimeLabels now={isToday ? nowOffset(now) : null} at={now} />
             <DayColumn
+              hostRef={daycol}
               iso={iso}
               blocks={blocks}
               today={isToday}
@@ -290,6 +358,18 @@ export default function Day() {
       {/* The Day view acts on one task at a time — its dialogs never offer a
           repeat, exactly as the original's did not. */}
       <BlockDialogs actions={actions} allowTaskRecurrence={false} />
+
+      {slot && (
+        <CreateChooser
+          when={`${dates.formatDate(dates.fromIsoDate(slot.iso), {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+          })} · ${hmLabel(slot.startTime)} – ${hmLabel(slot.endTime)}`}
+          onChoose={(kind) => openDragged(kind === 'event' ? 'add-event' : 'add-task')}
+          onCancel={() => setSlot(null)}
+        />
+      )}
 
       {conflict && (
         <ConflictDialog

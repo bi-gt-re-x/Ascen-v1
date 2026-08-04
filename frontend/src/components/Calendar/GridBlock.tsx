@@ -46,6 +46,22 @@ function LeadIcon({ name }: { name: string }) {
   );
 }
 
+/**
+ * The two strips that change one end's time.
+ *
+ * Dragging the rest of the block moves the whole thing, so these have to be
+ * distinguishable targets — hooks/useGridDrag reads which one the press landed
+ * on. They are invisible until hovered; styles/calendar/week.css draws them.
+ */
+function ResizeHandles() {
+  return (
+    <>
+      <span className="wk-resize wk-resize-top" aria-hidden="true" />
+      <span className="wk-resize wk-resize-bot" aria-hidden="true" />
+    </>
+  );
+}
+
 export function GridBlock({
   block,
   iso,
@@ -67,6 +83,10 @@ export function GridBlock({
         className={`wk-event wk-event-cal${block.compact ? ' is-compact' : ''}`}
         data-kind="event"
         data-iso={iso}
+        data-id={block.name}
+        data-start={block.startHM}
+        data-end={block.endHM}
+        data-move="1"
         style={{
           ...position,
           background: block.colors.fill,
@@ -74,6 +94,7 @@ export function GridBlock({
           borderLeftColor: block.colors.left,
         }}
       >
+        <ResizeHandles />
         <LeadIcon name={block.name} />
         <CardMenu
           height={block.height}
@@ -130,8 +151,11 @@ export function GridBlock({
       data-kind="task"
       data-iso={iso}
       data-id={block.id}
+      // A finished task is a record of what happened, so it does not move.
+      data-move={block.done ? undefined : '1'}
       style={position}
     >
+      {!block.done && <ResizeHandles />}
       <LeadIcon name={block.title} />
       <CardMenu
         height={block.height}

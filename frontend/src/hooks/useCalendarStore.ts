@@ -52,6 +52,18 @@ export interface UseCalendarStore {
   removeEvent: (dateKey: string, section: CalendarSection, scope: Scope) => void;
   /** Edit one entry in place — the day panel's inline name and time fields. */
   patchSection: (dateKey: string, index: number, patch: Partial<CalendarSection>) => void;
+  /**
+   * Give one occurrence new times, and possibly a new day. What dragging an
+   * event around the grid comes to: the entry itself is carried across, so its
+   * colour and everything else about it survives the move.
+   */
+  retimeSection: (
+    fromKey: string,
+    section: CalendarSection,
+    toKey: string,
+    startTime: string,
+    endTime: string,
+  ) => void;
   removeSection: (dateKey: string, index: number) => void;
   /** How many days this event also lands on. 0 when it is a one-off. */
   occurrenceCount: (section: CalendarSection) => number;
@@ -203,6 +215,38 @@ export function useCalendarStore(username: string | null): UseCalendarStore {
     [commit, data],
   );
 
+  const retimeSection = useCallback(
+    (fromKey: string, section: CalendarSection, toKey: string, startTime: string, endTime: string) => {
+      const from = data[fromKey];
+      const index = from?.timestamps.findIndex((entry) => entry === section) ?? -1;
+      if (!from || index < 0) return;
+
+      // Everything else about the entry travels with it — its colour, its
+      // subtasks, whatever the month view has hung on it. Only the two times
+      // change, and possibly the day it is filed under.
+      const moved: CalendarSection = { ...section, startTime, endTime };
+
+      if (fromKey === toKey) {
+        commit({
+          ...data,
+          [fromKey]: {
+            ...from,
+            timestamps: from.timestamps.map((entry, at) => (at === index ? moved : entry)),
+          },
+        });
+        return;
+      }
+
+      const to = data[toKey] ?? { timestamps: [] };
+      commit({
+        ...data,
+        [fromKey]: { ...from, timestamps: from.timestamps.filter((_, at) => at !== index) },
+        [toKey]: { ...to, timestamps: [...to.timestamps, moved] },
+      });
+    },
+    [commit, data],
+  );
+
   const occurrenceCount = useCallback(
     (section: CalendarSection) =>
       Object.values(data).reduce(
@@ -219,6 +263,7 @@ export function useCalendarStore(username: string | null): UseCalendarStore {
     editEvent,
     removeEvent,
     patchSection,
+    retimeSection,
     removeSection,
     occurrenceCount,
   };

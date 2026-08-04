@@ -21,6 +21,7 @@ import { tasks as taskService } from '@/services';
 import { xpToPriority, type TaskDraft } from '@/components/Calendar/TaskModal';
 import type { EventDraft, Scope, UseCalendarStore } from './useCalendarStore';
 import { monthKey, type CalendarSection } from '@/utils/calendarStore';
+import { isoStamp } from '@/utils/calendarGrid';
 import { dates } from '@/utils';
 import type { Task } from '@/types';
 
@@ -52,6 +53,30 @@ export interface UseBlockActions {
   eventOccurrences: (section: CalendarSection) => number;
   /** The tasks that repeat with this one, itself included. */
   taskOccurrences: (task: Task) => Task[];
+  /**
+   * Give a block new times without asking anything — what a drag commits.
+   *
+   * One occurrence only, and no dialog: the reader has already said what they
+   * want by dragging it there, and a confirmation would make moving a block a
+   * two-step operation. `fromIso` is the day it was on and `toIso` the day it
+   * landed on; they differ when a block was dragged across the week.
+   */
+  retime: (retime: Retime) => void;
+}
+
+export interface Retime {
+  fromIso: string;
+  toIso: string;
+  /** The event entry, for an event. */
+  section?: CalendarSection;
+  /** The task, for a task. */
+  task?: Task;
+  /** "HH:MM", 24-hour, for an event. */
+  startTime?: string;
+  endTime?: string;
+  /** The real moments, for a task — which can run past midnight into `toIso+1`. */
+  startAt?: Date;
+  endAt?: Date;
 }
 
 /** "18:40" for the time-of-day part of a stored timestamp. */
@@ -199,6 +224,42 @@ export function useBlockActions(
     [close, dialog, reload, taskOccurrences, username],
   );
 
+  /**
+   * Commit a drag.
+   *
+   * An event is the browser's, so it is carried across in the store. A task is
+   * the account's and its start time is its `created_at`, which the edit
+   * endpoint will not move — so, exactly as `saveTask` does, it is deleted
+   * (without XP tracking: it was not completed, it was moved) and written back
+   * on its new slot.
+   */
+  const retime = useCallback(
+    ({ fromIso, toIso, section, task, startTime, endTime, startAt, endAt }: Retime) => {
+      if (section && startTime && endTime) {
+        store.retimeSection(monthKey(fromIso), section, monthKey(toIso), startTime, endTime);
+        return;
+      }
+      if (!task || !username || !startAt || !endAt) return;
+
+      const oldId = String(task.id);
+      const xp = Number(task.xp_value) || 0;
+      void inSequence([
+        () => taskService.deleteTaskWithoutTracking(oldId),
+        () =>
+          taskService.createTask(username, {
+            id: `${Date.now()}-drag`,
+            name: task.title || '',
+            priority: task.priority || xpToPriority(xp),
+            xp_reward: xp,
+            created_at: isoStamp(startAt),
+            due_date: isoStamp(endAt),
+            show_on_calendar: true,
+          }),
+      ]).then(reload);
+    },
+    [reload, store, username],
+  );
+
   return {
     dialog,
     open,
@@ -209,5 +270,6 @@ export function useBlockActions(
     removeTask,
     eventOccurrences: store.occurrenceCount,
     taskOccurrences,
+    retime,
   };
 }

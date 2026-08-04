@@ -54,6 +54,12 @@ export interface DayColumnProps {
   now?: number | null;
   /** The Day view's single column carries a second class. */
   className?: string;
+  /**
+   * The drag hook's hit area, when the caller wants this column to be one.
+   * The Week view hands the ref to the row holding all seven; the Day view has
+   * only this, so it hands it here — see hooks/useGridDrag.
+   */
+  hostRef?: (node: HTMLDivElement | null) => void;
   onEdit: (block: Block) => void;
   onDelete: (block: Block) => void;
   onComplete: (taskId: string) => void;
@@ -66,6 +72,7 @@ export function DayColumn({
   today,
   now = null,
   className = '',
+  hostRef,
   onEdit,
   onDelete,
   onComplete,
@@ -73,6 +80,7 @@ export function DayColumn({
 }: DayColumnProps) {
   return (
     <div
+      ref={hostRef}
       className={`wk-daycol${today ? ' today' : ''}${className ? ` ${className}` : ''}`}
       data-iso={iso}
       style={{ height: GRID_HEIGHT }}

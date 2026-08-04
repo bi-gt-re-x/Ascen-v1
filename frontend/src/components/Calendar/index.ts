@@ -24,8 +24,12 @@ export { MiniMonth } from './MiniMonth';
 export type { MiniMonthProps } from './MiniMonth';
 export { MonthGrid } from './MonthGrid';
 export type { MonthGridProps } from './MonthGrid';
-export { ConflictDialog, DeleteConfirm } from './Prompts';
-export type { ConflictDialogProps, DeleteConfirmProps } from './Prompts';
+export { ConflictDialog, CreateChooser, DeleteConfirm } from './Prompts';
+export type {
+  ConflictDialogProps,
+  CreateChooserProps,
+  DeleteConfirmProps,
+} from './Prompts';
 export { RecurrencePicker } from './RecurrencePicker';
 export type { RecurrencePickerProps } from './RecurrencePicker';
 export { MAX_TASK_XP, MIN_TASK_XP, TaskModal, xpToPriority } from './TaskModal';

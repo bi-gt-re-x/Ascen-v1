@@ -88,6 +88,54 @@ export function DeleteConfirm({
   );
 }
 
+export interface CreateChooserProps {
+  /** "9:15 AM – 10:30 AM", the slot that was dragged out. */
+  when: string;
+  onChoose: (kind: 'event' | 'task') => void;
+  onCancel: () => void;
+}
+
+/**
+ * What a drag on empty grid asks: is this an event or a task?
+ *
+ * The drag has already said *when*, and that is the hard part — the two dialogs
+ * behind this open with the slot filled in. Asking here rather than picking a
+ * default is what makes one gesture serve both, which is the whole point of
+ * dragging out a slot instead of pressing a button labelled with one of them.
+ */
+export function CreateChooser({ when, onChoose, onCancel }: CreateChooserProps) {
+  return (
+    <div
+      className="wk-choose-backdrop"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
+      <div className="wk-choose-popup" role="dialog" aria-modal="true">
+        <div>
+          <div className="wk-choose-title">New on this slot</div>
+          <p className="wk-empty">{when}</p>
+        </div>
+        <div className="wk-choose-row">
+          <button type="button" className="wk-choose-btn" onClick={() => onChoose('event')}>
+            Event
+          </button>
+          <button
+            type="button"
+            className="wk-choose-btn is-task"
+            onClick={() => onChoose('task')}
+          >
+            Task
+          </button>
+        </div>
+        <button type="button" className="wk-choose-cancel" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export interface ConflictDialogProps {
   /** The two labels, in the order they were found. */
   names: [string, string];
