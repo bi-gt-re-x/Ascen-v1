@@ -2003,6 +2003,25 @@ body:has(.calendar-container) {
     box-sizing: border-box;
 }
 
+/* <main> is a flex item of a centred flex column (the body rule above), so it
+   sizes to its content rather than stretching — and the card inside it then
+   sizes to the card, which is circular and settles ~120px narrower than the
+   room available. The dashboard already answers this with the same one line in
+   styles/dashboard-home.css; the calendar never did, and the seven day columns
+   were paying for it. */
+body:has(.calendar-container) .app-main {
+    width: 100%;
+    min-width: 0;
+}
+
+/* The week view spends its width on the grid. 46px of card padding either side
+   is most of a day column, and this view has seven of them to place; the Day
+   and Month views have one board each and keep the roomier frame. */
+.calendar-card:has(#weekView) {
+    padding-left: 22px;
+    padding-right: 22px;
+}
+
 .calendar-container {
     width: 100%;
     flex: 1 1 auto;

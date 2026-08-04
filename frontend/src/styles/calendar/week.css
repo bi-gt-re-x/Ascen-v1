@@ -43,10 +43,18 @@
 }
 .wk-nav { display: flex; gap: 6px; flex: none; }
 
-.wk-arrow, .wk-today, .wk-icon-btn {
+.wk-arrow, .wk-today {
     border: 1px solid #e5e8ee; background: #fff; border-radius: 999px;
     cursor: pointer; font-family: inherit; color: #2c302e;
 }
+/* The two on the right are drawn as bare icons in the design, not as pills like
+   the controls opposite them — which is the right reading: those move the week,
+   these only change how it is shown. */
+.wk-icon-btn {
+    border: 0; background: none; border-radius: 10px;
+    cursor: pointer; font-family: inherit; color: #9297a3;
+}
+.wk-icon-btn:hover { background: #f2f4f7; color: #2c302e; }
 .wk-arrow { width: 34px; height: 34px; font-size: 18px; line-height: 1; }
 .wk-today { padding: 7px 18px; font-size: 14px; font-weight: 600; }
 /* On this week already: still readable, but plainly not a place to go. */
@@ -63,7 +71,19 @@
 /* ---- Layout: grid + overview column ---- */
 /* The column is on the right. It was on the left, which put a wall of figures
    between the reader and the thing they came for. */
-.wk-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 22px; align-items: start; }
+/* The overview column is capped rather than fixed, and the cap comes down on a
+   narrower card. At a flat 320px it took a quarter of a 1280px window and the
+   seven day columns were left at 75px each — narrow enough that the Focus chips
+   and the block titles ellipsised. The grid is what the page is for; the column
+   beside it gives way first. */
+.wk-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: 22px; align-items: start;
+}
+@media (max-width: 1400px) {
+    .wk-main { grid-template-columns: minmax(0, 1fr) minmax(0, 264px); gap: 18px; }
+}
 /* Collapsed: drop the sidebar column so the day grid widens to fill the card. */
 .wk-main.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
 .wk-main.sidebar-collapsed .wk-sidebar { display: none; }
@@ -115,7 +135,8 @@
 
 
 /* ---- Grid ---- */
-.wk-gridwrap { min-width: 0; }
+/* `position: relative` is what the floating compose bar is placed against. */
+.wk-gridwrap { min-width: 0; position: relative; }
 .wk-grid-head { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
 .wk-corner { }
 .wk-dayhead-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
@@ -761,12 +782,25 @@ html[data-theme="dark"] .wk-spark-area { fill: rgba(168, 132, 92, .10); }
 /* ---- The Focus row ---- */
 /* Each day's note, as a chip. Clicking one turns it back into the input it has
    always been — see the row in pages/Calendar/Week.tsx. */
+/* Tight, because the chip has to fit inside a seventh of the grid: at the
+   design's padding a word like "Physics" ellipsised on any card narrower than
+   the mock-up's. */
 .wk-focus-chip {
-    display: inline-flex; align-items: center; gap: 7px;
-    max-width: 100%; padding: 7px 14px;
+    display: inline-flex; align-items: center; gap: 5px;
+    max-width: 100%; padding: 6px 10px;
     background: #fff; border: 1px solid #e5e8ee; border-radius: 999px;
-    font: inherit; font-size: 12.5px; font-weight: 600; color: #2c302e;
+    font: inherit; font-size: 11.5px; font-weight: 600; color: #2c302e;
     cursor: pointer; white-space: nowrap; overflow: hidden;
+}
+.wk-focus-chip .cal-ico { flex: none; }
+
+/* On a card narrower than the design's, the icon is what goes. Seven chips
+   carrying both a picture and a word do not fit seven columns of an 80px grid,
+   and between the two the word is the one doing the work — the icon is guessed
+   from that word in the first place. */
+@media (max-width: 1400px) {
+    .wk-focus-chip .cal-ico { display: none; }
+    .wk-focus-chip { padding: 6px 9px; }
 }
 .wk-focus-chip:hover { background: #f6f7f9; border-color: #d8dde6; }
 .wk-focus-chip-text { overflow: hidden; text-overflow: ellipsis; }
@@ -779,11 +813,17 @@ html[data-theme="dark"] .wk-spark-area { fill: rgba(168, 132, 92, .10); }
 /* Where a task or an event starts. It sits under the grid rather than floating
    over it, because the design's floating position covers Monday and Tuesday
    evening and this bar has nothing so urgent to say. */
+/* Floating over the foot of the grid, where the design puts it, rather than
+   sitting under it. It covers the last of the evening on two columns, which is
+   the trade the design makes and the quietest hour on the board to spend. The
+   grid scrolls underneath it. */
 .wk-compose {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    bottom: 16px; z-index: 5;
     display: flex; align-items: center; gap: 8px;
-    margin: 14px auto 0; padding: 8px 8px 8px 16px; width: min(560px, 100%);
+    padding: 8px 8px 8px 16px; width: min(560px, calc(100% - 32px));
     background: #fff; border: 1px solid #e5e8ee; border-radius: 999px;
-    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 22px rgba(16,24,40,.06);
+    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 10px 30px rgba(16,24,40,.12);
 }
 .wk-compose-plus { color: #9aa0ad; font-size: 17px; line-height: 1; flex: none; }
 .wk-compose-input {
