@@ -17,8 +17,14 @@ import { isCalendarTask } from './summary';
 import type { TaskBuckets } from './summary';
 import type { Task } from '@/types';
 
-/** How many rows a tab shows before it defers to the tasks page. */
-const VISIBLE = 6;
+/**
+ * How many rows a tab shows before it defers to the tasks page.
+ *
+ * Today keeps its short list — it is a plate, and a plate you cannot see the
+ * end of is not a plate. The other two are histories rather than plates, so
+ * they run to ten: the next ten things coming, and the last ten finished.
+ */
+const VISIBLE: Record<TaskTab, number> = { today: 6, upcoming: 10, completed: 10 };
 
 export type TaskTab = 'today' | 'upcoming' | 'completed';
 
@@ -80,8 +86,11 @@ export function TaskPanel({
   onComplete,
   onAdd,
 }: TaskPanelProps) {
-  const all = buckets[tab];
-  const shown = all.slice(0, VISIBLE);
+  // Upcoming is the calendar's list. Everything in it is scheduled onto a day
+  // and drawn on the week grid, which is what makes "the next ten" a sentence
+  // about something — an undated todo has no place in an ordering by when.
+  const all = tab === 'upcoming' ? buckets.upcoming.filter(isCalendarTask) : buckets[tab];
+  const shown = all.slice(0, VISIBLE[tab]);
   const hidden = all.length - shown.length;
 
   return (
@@ -115,6 +124,16 @@ export function TaskPanel({
             heading="Completed Tasks"
             items={shown}
             done
+            busyId={busyId}
+            onComplete={onComplete}
+          />
+        ) : tab === 'upcoming' ? (
+          /* One list, because the filter above already made it one kind. The
+             Todo / Calendar split below is Today's, where both kinds land. */
+          <Section
+            heading="Calendar Tasks"
+            items={shown}
+            done={false}
             busyId={busyId}
             onComplete={onComplete}
           />
