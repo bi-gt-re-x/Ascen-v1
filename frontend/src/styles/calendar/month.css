@@ -2003,12 +2003,18 @@ body:has(.calendar-container) {
     box-sizing: border-box;
 }
 
-/* <main> is a flex item of a centred flex column (the body rule above), so it
-   sizes to its content rather than stretching — and the card inside it then
-   sizes to the card, which is circular and settles ~120px narrower than the
-   room available. The dashboard already answers this with the same one line in
-   styles/dashboard-home.css; the calendar never did, and the seven day columns
-   were paying for it. */
+/* The body rule above is a centred flex column, so its child sizes to its
+   content rather than stretching — and the card inside then sizes to the card,
+   which is circular and settles far narrower than the room available. At a
+   1600px window that cost the week 400px: the grid came out 558px wide, the day
+   columns under 80px each, and the Focus chips ellipsised to "+ F…".
+ *
+ * The child is `#root`, not `<main>`. That distinction is the whole rule: this
+ * said `.app-main` for a while and did nothing at all, because <main> is inside
+ * the React mount point and `width: 100%` of a shrink-to-fit parent is the
+ * shrink-to-fit width. Both are named, so the width passes down the pair rather
+ * than stopping at the first one. */
+body:has(.calendar-container) > #root,
 body:has(.calendar-container) .app-main {
     width: 100%;
     min-width: 0;
@@ -2127,6 +2133,9 @@ body:has(.calendar-container) .app-main {
     padding: 11px 30px;
     border-radius: 11px;
     cursor: pointer;
+    /* The three are links now, not buttons — a segmented control that
+       underlines two of its three segments reads as broken. */
+    text-decoration: none;
     transition: color 0.2s ease, background 0.2s ease;
 }
 .view-toggle-btn:hover:not(.active) { color: #ffffff; }

@@ -34,7 +34,7 @@ export { DayColumn, TimeLabels, nowFor } from './TimeGrid';
 export type { DayColumnProps, TimeLabelsProps } from './TimeGrid';
 export { TimePicker, minutesToTime, spanMinutes } from './TimePicker';
 export type { TimePickerProps } from './TimePicker';
-export { WeekSidebar } from './WeekSidebar';
+export { WeekFocusCard, WeekSidebar } from './WeekSidebar';
 export type { WeekSidebarProps, WeekStats } from './WeekSidebar';
 export { dayEntries, dayProgress } from './entries';
 export type { DayEntry } from './entries';

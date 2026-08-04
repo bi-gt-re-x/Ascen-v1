@@ -37,7 +37,7 @@
 .wk-titlegroup { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .wk-headtools { display: flex; align-items: center; gap: 10px; flex: none; }
 .wk-title {
-    margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.9rem); font-weight: 800;
+    margin: 0; font-size: clamp(1.25rem, 1.9vw, 1.6rem); font-weight: 800;
     color: #1a1f26; white-space: nowrap;
     min-width: 0; overflow: hidden; text-overflow: ellipsis;
 }
@@ -103,28 +103,8 @@
 .wk-stat-label { font-size: 12px; color: #6b7280; margin-top: 2px; }
 
 
-.wk-focus-input {
-    display: block; width: 100%; box-sizing: border-box; margin: 0;
-    font: inherit; font-size: 14px; line-height: 1.5; color: #4b5162;
-    background: #fafbfc; border: 1px solid #eef0f4; border-radius: 12px;
-    padding: 10px 12px; resize: vertical; min-height: 44px;
-    transition: border-color .15s ease, box-shadow .15s ease;
-}
-.wk-focus-input::placeholder { color: #9aa0ad; }
-.wk-focus-input:focus {
-    outline: none; border-color: #a8845c;
-    box-shadow: 0 0 0 3px rgba(168,132,92,.15);
-}
 .wk-progress { height: 8px; background: #eef0f4; border-radius: 999px; overflow: hidden; }
 .wk-progress-bar { height: 100%; background: #a8845c; border-radius: 999px; }
-
-
-.wk-priorities { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.wk-priorities li { display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #2c302e; }
-.wk-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
-.wk-badge.high { background: #fdecec; color: #b0413e; }
-.wk-badge.med { background: #fdf6e3; color: #9a7b2e; }
-.wk-badge.low { background: #eef2f7; color: #5a6472; }
 
 .wk-streak-num { font-size: 22px; font-weight: 800; color: #1a1f26; }
 .wk-streak-sub { font-size: 13px; color: #6b7280; margin-top: 4px; }
@@ -197,8 +177,11 @@
  * there are seven of one and a hundred and sixty of the other.
  *
  * The dark theme overrides both further down; only the light theme reads these. */
-.wk-daycol { position: relative; border-left: 1px solid #c3ccd9; }
-.wk-hourline { position: absolute; left: 0; right: 0; border-top: 1px solid #d3d9e2; }
+/* Dashed hour rules, solid day separators — the design's distinction, and a
+ * useful one: the seven verticals are the structure of the week and the hundred
+ * and sixty horizontals are only a ruler behind it. */
+.wk-daycol { position: relative; border-left: 1px solid #dfe4ec; }
+.wk-hourline { position: absolute; left: 0; right: 0; border-top: 1px dashed #dde2ea; }
 
 /* "Now" indicator: a red line across the whole week grid at the current time,
    with a matching red time badge on the left (time-label) edge. */
@@ -294,16 +277,22 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
 }
 .wk-event-head .wk-event-title { flex: 1 1 auto; min-width: 0; margin: 0; }
 .wk-event-start { font-size: 11px; opacity: .8; flex: none; }
-/* Footer holds the due/completion time + XP, pushed to the bottom of the box.
+/* Footer holds the due/completion time + XP, directly under the title.
  *
  * Stacked, the way the design draws a block: the time on one line and the XP
  * under it. Side by side they were two things competing for the width of a
  * seventh of the grid, and both lost — "8:10 – 9:00 AM" and "50 XP" each
  * ellipsised to about one character. A block is tall and narrow; its content
  * should be too. `is-compact` blocks are the exception, since a block under
- * about 40 minutes has one line of room in total. */
+ * about 40 minutes has one line of room in total.
+ *
+ * It used to be pushed to the floor of the block with `margin-top: auto`, which
+ * on a two-hour block left the name marooned at the top and the XP a hundred
+ * pixels below it, reading as two blocks rather than one. The design keeps all
+ * three lines together at the top and lets the block's height be what says how
+ * long the thing takes. */
 .wk-event-foot {
-    margin-top: auto; display: flex; flex-direction: column;
+    display: flex; flex-direction: column;
     align-items: flex-start; gap: 1px; padding-top: 2px; min-width: 0;
 }
 .wk-event-foot > * { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -547,7 +536,6 @@ html[data-theme="dark"] .wk-panel-title,
 html[data-theme="dark"] .wk-stat-num,
 html[data-theme="dark"] .wk-streak-num,
 html[data-theme="dark"] .wk-focustime,
-html[data-theme="dark"] .wk-priorities li,
 html[data-theme="dark"] .wk-dayname { color: #f4f4f6; }
 html[data-theme="dark"] .wk-arrow,
 html[data-theme="dark"] .wk-today { background: #1b212a; border-color: #2b323c; color: #e6e8f0; }
@@ -557,13 +545,6 @@ html[data-theme="dark"] .wk-stat-label,
 html[data-theme="dark"] .wk-streak-sub,
 html[data-theme="dark"] .wk-focustime-sub,
 html[data-theme="dark"] .wk-daydate { color: #9aa4b2; }
-html[data-theme="dark"] .wk-focus-input {
-    background: #0f141b; border-color: #262c36; color: #c9d1d9;
-}
-html[data-theme="dark"] .wk-focus-input::placeholder { color: #6b7280; }
-html[data-theme="dark"] .wk-focus-input:focus {
-    border-color: #a8845c; box-shadow: 0 0 0 3px rgba(168,132,92,.22);
-}
 /* Per-day "Focus…" boxes in the top row — dark fill instead of the light default. */
 html[data-theme="dark"] .wk-day-focus {
     background: #0f141b; border-color: #262c36; color: #c9d1d9;
@@ -594,22 +575,13 @@ html[data-theme="dark"] .day-task-name:hover,
 html[data-theme="dark"] .day-task-name:focus-visible { color: #86d6a5; }
 html[data-theme="dark"] .wk-task-name:focus-visible { outline-color: #86d6a5; }
 
-/* The Top Priorities count, beside its heading.
- *
- * The panel lists every unfinished task of the week rather than a top three,
- * so the number is worth showing — and the list gets its own scroll, because
- * a heavy week should not push the panels below it off the sidebar. */
+/* The count beside a panel heading — how many things are in the list under it. */
 .wk-priorities-count {
     font-weight: 600;
     color: #9297ab;
     margin-left: 4px;
 }
 html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
-
-.wk-priorities {
-    max-height: 34vh;
-    overflow-y: auto;
-}
 
 
 /* ==========================================================================
@@ -733,6 +705,46 @@ html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
    is the same line at a smaller weight rather than a line of its own. */
 .wk-focustime-of { font-size: 15px; font-weight: 600; color: #6b7280; }
 .wk-focustime + .wk-progress { margin-top: 12px; }
+
+/* The card floats over the bottom-left of the grid rather than sitting in the
+   column, which is where the design puts it. `.wk-panel` above already gives it
+   the white fill, border and radius; this only places it and lifts it, since it
+   now has grid behind it rather than page.
+   ------------------------------------------------------------------------
+   It stacks above the compose bar unless the grid is wide enough to hold both
+   on one line. The design draws them side by side, but the design's grid is
+   nearly a thousand pixels across; the compose bar is centred and 560px of it,
+   so this card only clears it once the grid passes about 1000px.
+   That is a question about the grid rather than about the window — the rail and
+   the overview column take their share first — but asking it with a container
+   query costs more than it is worth: `container-type: inline-size` on the grid
+   wrapper takes 60px off the day columns, because a size-contained grid item no
+   longer contributes to how the track around it is sized. Stacked always, then.
+   The card is over the last hour of the day either way. */
+.wk-focus-float {
+    position: absolute; left: 6px; bottom: 78px; z-index: 5;
+    width: 200px; padding: 14px 16px;
+    box-shadow: 0 2px 6px rgba(16,24,40,.06), 0 12px 32px rgba(16,24,40,.14);
+}
+.wk-focus-float .wk-panel-title { margin-bottom: 10px; font-size: 13px; }
+.wk-focus-float .wk-focustime { font-size: 19px; }
+.wk-focus-float .wk-focustime-of { font-size: 13px; }
+
+/* ---- View Full Calendar ---- */
+/* The way out of the week, under the Upcoming list. A full-width quiet button
+   rather than the text link the other panels end with: it is the last thing in
+   the column and the design draws it as a target, not as an aside. */
+.wk-fullcal {
+    display: block; width: 100%; margin-top: 14px;
+    padding: 10px 12px; border-radius: 10px;
+    background: #fafbfc; border: 1px solid #eef0f4; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 600; color: #4b5162;
+}
+.wk-fullcal:hover { background: #f2f4f7; color: #1a1f26; }
+html[data-theme="dark"] .wk-fullcal {
+    background: #0f141b; border-color: #262c36; color: #c9d1d9;
+}
+html[data-theme="dark"] .wk-fullcal:hover { background: #161b22; color: #f4f4f6; }
 
 /* The way out of a summary, matching .dash-panel-link on the dashboard: a
    button because it navigates through the router, dressed as the link it is. */

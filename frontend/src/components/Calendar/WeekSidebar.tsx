@@ -5,23 +5,22 @@
  * back a week steps all of them back. That is what makes the column readable:
  * every number on it answers a question about the same seven days.
  *
- * The shape follows the design: This Week Progress leads with a ring and the
- * week's three figures over a per-day XP sparkline, then the XP breakdown, then
- * Streaks as seven dots, then what is coming, then Weekly Focus Time.
+ * The shape follows the design, and now follows it exactly: This Week Progress
+ * leads with a ring and the week's three figures over a per-day XP sparkline,
+ * then the XP breakdown, then Streaks as seven dots, then what is coming and
+ * the way through to the month.
  *
- * **Weekly Focus Time is here rather than floating over the grid.** The design
- * had it as a card pinned in the bottom-left corner of the calendar; it is a
- * figure about the week, and the column of figures about the week is where a
- * reader looks for it. Floating it would also put it over Monday and Tuesday
- * morning, which is grid a reader needs.
+ * Weekly Focus Time is not here. It was, for a while — a figure about the week
+ * belongs with the figures about the week — but the design pins it to the
+ * bottom-left corner of the grid, and that is where it is: `WeekFocusCard`
+ * below, placed by pages/Calendar/Week.tsx.
  *
- * Two panels the design does not have are kept below the ones it does: the
- * weekly focus note, which holds text the account has written and would be
- * silently thrown away, and Top Priorities. The column scrolls.
+ * Two panels this column used to carry, the weekly focus note and Top
+ * Priorities, are gone with them. Neither is in the design, and Top Priorities
+ * is a card the dashboard already draws.
  */
 import { useMemo } from 'react';
 import { fmtHM } from '@/hooks/useFocusSession';
-import type { Task } from '@/types';
 
 export interface WeekStats {
   total: number;
@@ -62,13 +61,10 @@ export interface UpcomingEntry {
 export interface WeekSidebarProps {
   stats: WeekStats;
   streak: number;
-  focus: WeekFocus;
   days: WeekDay[];
   upcoming: UpcomingEntry[];
-  priorities: Task[];
-  focusText: string;
-  onFocusTextChange: (text: string) => void;
-  onViewAnalytics: () => void;
+  /** The way out of the week — the design's "View Full Calendar". */
+  onViewMonth: () => void;
   collapsed: boolean;
 }
 
@@ -94,13 +90,46 @@ const SAMPLE_BREAKDOWN = [
 const RING_R = 26;
 const RING_C = 2 * Math.PI * RING_R;
 
-function priorityLabel(task: Task): { className: string; label: string } {
-  const priority = String(task.priority || '').toLowerCase();
-  const className = priority === 'high' ? 'high' : priority === 'medium' ? 'med' : 'low';
-  return {
-    className,
-    label: priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : '—',
-  };
+/**
+ * Weekly Focus Time — the card the design pins over the foot of the grid.
+ *
+ * It is here rather than in Week.tsx because it is the fifth panel of the same
+ * overview, written in the same furniture as the four in the column; only its
+ * position is different, and position is the caller's business.
+ */
+export function WeekFocusCard({
+  focus,
+  onViewAnalytics,
+}: {
+  focus: WeekFocus;
+  onViewAnalytics: () => void;
+}) {
+  const percent =
+    focus.planned > 0 ? Math.min(100, Math.round((focus.focused / focus.planned) * 100)) : 0;
+
+  return (
+    <section className="wk-panel wk-focus-float">
+      <h3 className="wk-panel-title">⏱️ Weekly Focus Time</h3>
+      <p className="wk-focustime">
+        {fmtHM(focus.focused)} <span className="wk-focustime-of">/ {fmtHM(focus.planned)}</span>
+      </p>
+      <div className="wk-progress">
+        <div
+          className="wk-progress-bar"
+          style={{ width: `${percent}%` }}
+          role="progressbar"
+          aria-valuenow={percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Weekly focus goal progress"
+        />
+      </div>
+      <p className="wk-focustime-sub">{percent}% Goal Progress</p>
+      <button type="button" className="wk-panel-link" onClick={onViewAnalytics}>
+        View Analytics<span aria-hidden="true"> →</span>
+      </button>
+    </section>
+  );
 }
 
 /**
@@ -127,13 +156,9 @@ function sparkPoints(days: WeekDay[]): { x: number; y: number }[] {
 export function WeekSidebar({
   stats,
   streak,
-  focus,
   days,
   upcoming,
-  priorities,
-  focusText,
-  onFocusTextChange,
-  onViewAnalytics,
+  onViewMonth,
   collapsed,
 }: WeekSidebarProps) {
   const points = useMemo(() => sparkPoints(days), [days]);
@@ -143,10 +168,6 @@ export function WeekSidebar({
   const area = `${points[0]?.x ?? 0},34 ${line} ${points[points.length - 1]?.x ?? 100},34`;
 
   const ringFilled = (Math.max(0, Math.min(100, stats.rate)) / 100) * RING_C;
-
-  const focusPercent = focus.planned > 0
-    ? Math.min(100, Math.round((focus.focused / focus.planned) * 100))
-    : 0;
 
   const breakdownPeak = Math.max(1, ...SAMPLE_BREAKDOWN.map((row) => row.xp));
   const breakdownTotal = SAMPLE_BREAKDOWN.reduce((sum, row) => sum + row.xp, 0);
@@ -200,8 +221,10 @@ export function WeekSidebar({
             <polygon className="wk-spark-area" points={area} />
             <polyline className="wk-spark-line" points={line} />
             {points.map((point, index) => (
+              /* Keyed by position, not by the day's initial: Tuesday and
+                 Thursday are both "T", and Saturday and Sunday both "S". */
               <circle
-                key={days[index]?.initial ?? index}
+                key={index}
                 className={`wk-spark-dot${days[index]?.today ? ' is-today' : ''}`}
                 cx={point.x}
                 cy={point.y}
@@ -299,71 +322,12 @@ export function WeekSidebar({
             ))}
           </ul>
         )}
-      </section>
 
-      {/* --- Weekly Focus Time --------------------------------------------- */}
-      <section className="wk-panel">
-        <h3 className="wk-panel-title">⏱️ Weekly Focus Time</h3>
-        <p className="wk-focustime">
-          {fmtHM(focus.focused)}{' '}
-          <span className="wk-focustime-of">/ {fmtHM(focus.planned)}</span>
-        </p>
-        <div className="wk-progress">
-          <div
-            className="wk-progress-bar"
-            style={{ width: `${focusPercent}%` }}
-            role="progressbar"
-            aria-valuenow={focusPercent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Weekly focus goal progress"
-          />
-        </div>
-        <p className="wk-focustime-sub">{focusPercent}% Goal Progress</p>
-        <button type="button" className="wk-panel-link" onClick={onViewAnalytics}>
-          View Analytics<span aria-hidden="true"> →</span>
+        {/* Where the list runs out: the month, which is the only view that
+            shows what comes after the seven days beside this. */}
+        <button type="button" className="wk-fullcal" onClick={onViewMonth}>
+          View Full Calendar<span aria-hidden="true"> →</span>
         </button>
-      </section>
-
-      {/* --- Kept from before the redesign ---------------------------------- */}
-      <section className="wk-panel">
-        <h3 className="wk-panel-title">🎯 Weekly Focus</h3>
-        <textarea
-          className="wk-focus-input"
-          rows={2}
-          placeholder="What's your focus this week?"
-          aria-label="Weekly focus"
-          value={focusText}
-          onChange={(event) => onFocusTextChange(event.target.value)}
-        />
-      </section>
-
-      <section className="wk-panel">
-        <h3 className="wk-panel-title">
-          🚩 Top Priorities{' '}
-          <span className="wk-priorities-count">
-            {priorities.length ? `(${priorities.length})` : ''}
-          </span>
-        </h3>
-        <ol className="wk-priorities">
-          {priorities.length === 0 ? (
-            <li>
-              <span className="wk-empty">Nothing outstanding this week.</span>
-            </li>
-          ) : (
-            priorities.map((task, index) => {
-              const { className, label } = priorityLabel(task);
-              return (
-                <li key={task.id}>
-                  <span>
-                    {index + 1}. {task.title || 'Untitled'}
-                  </span>
-                  <span className={`wk-badge ${className}`}>{label}</span>
-                </li>
-              );
-            })
-          )}
-        </ol>
       </section>
     </aside>
   );

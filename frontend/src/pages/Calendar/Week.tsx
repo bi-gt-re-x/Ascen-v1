@@ -27,6 +27,7 @@ import {
   DayColumn,
   TimeLabels,
   ViewSwitcher,
+  WeekFocusCard,
   WeekSidebar,
   minutesToTime,
 } from '@/components/Calendar';
@@ -55,10 +56,8 @@ import { iconUrlFor } from '@/utils/calendarIcons';
 import {
   isoOf,
   loadWeekSnapshots,
-  loadWeeklyFocus,
   monthKey,
   saveWeekSnapshot,
-  saveWeeklyFocus,
 } from '@/utils/calendarStore';
 import type { FocusHistory } from '@/types';
 import '@/styles/calendar/month.css';
@@ -108,7 +107,6 @@ export default function Week() {
       return false;
     }
   });
-  const [focusText, setFocusText] = useState('');
   const [history, setHistory] = useState<FocusHistory>({});
   /** The day whose focus chip is currently an input, if any. */
   const [focusEditing, setFocusEditing] = useState<string | null>(null);
@@ -138,10 +136,6 @@ export default function Week() {
       }),
     [monday],
   );
-
-  useEffect(() => {
-    setFocusText(loadWeeklyFocus(username, mondayIso));
-  }, [mondayIso, username]);
 
   useEffect(() => {
     if (!username) return;
@@ -201,22 +195,6 @@ export default function Week() {
     if (mondayIso <= currentMondayIso) saveWeekSnapshot(username, mondayIso, live);
     return live;
   }, [currentMondayIso, mondayIso, sundayIso, tasks, username]);
-
-  const priorities = useMemo(
-    () =>
-      tasks
-        .filter((task) => {
-          if (task.status === 'done') return false;
-          const created = (task.created_at || '').slice(0, 10);
-          const due = (task.due_date || '').slice(0, 10);
-          return (
-            (created >= mondayIso && created <= sundayIso) ||
-            (Boolean(due) && due >= mondayIso && due <= sundayIso)
-          );
-        })
-        .sort((a, b) => (Number(b.xp_value) || 0) - (Number(a.xp_value) || 0)),
-    [mondayIso, sundayIso, tasks],
-  );
 
   /**
    * Focused against planned.
@@ -557,6 +535,12 @@ export default function Week() {
             </div>
           </div>
 
+          {/* Pinned to the bottom-left corner of the grid, where the design puts
+              it. It sits over the last hour of Monday and Tuesday, which is the
+              trade the design makes; the grid scrolls underneath it, so nothing
+              it covers is out of reach. */}
+          <WeekFocusCard focus={focus} onViewAnalytics={() => navigate('/analytics')} />
+
           {/* The bar under the grid. It replaces the "+ Event" button that used
               to sit in the header: the same two dialogs, plus somewhere to type
               the name first so the dialog opens already knowing it. Both open
@@ -612,16 +596,9 @@ export default function Week() {
         <WeekSidebar
           stats={overview}
           streak={Number(stats.current_streak) || 0}
-          focus={focus}
           days={weekDays}
           upcoming={upcoming}
-          priorities={priorities}
-          focusText={focusText}
-          onFocusTextChange={(text) => {
-            setFocusText(text);
-            saveWeeklyFocus(username, mondayIso, text);
-          }}
-          onViewAnalytics={() => navigate('/analytics')}
+          onViewMonth={() => navigate('/calendar/month')}
           collapsed={collapsed}
         />
 
