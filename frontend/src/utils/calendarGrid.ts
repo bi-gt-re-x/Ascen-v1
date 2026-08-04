@@ -23,12 +23,27 @@ import type { Task } from '@/types';
 export const START_HOUR = 6;
 /** 5 AM the next day. */
 export const END_HOUR = 29;
-/** Pixels per hour. The stylesheets are sized to match. */
-export const HOUR_H = 141;
+/**
+ * Pixels per hour. The stylesheets are sized to match.
+ *
+ * 48, which is the scale the design draws: seventeen labels from 6 AM to 10 PM
+ * across about 800px of grid. It was 141, nearly three times that, and the
+ * consequence was not a roomier grid but a much smaller one — four hours on
+ * screen at a time out of a day the reader is trying to see the shape of.
+ */
+export const HOUR_H = 48;
 /** The floor for a very short block, so its name is not clipped to nothing. */
-const COMPACT_MIN_H = 22;
+const COMPACT_MIN_H = 18;
 /** At or under this many minutes a block drops to its one-row layout. */
-const COMPACT_MINUTES = 15;
+const COMPACT_MINUTES = 20;
+/**
+ * Under this many minutes a block is too short for all three of its lines.
+ *
+ * At 48px an hour a 45-minute block is 36 pixels, which holds a title and one
+ * line under it. The XP is what goes: the time is what a calendar is for, and
+ * a block that cannot say when it runs is not worth drawing.
+ */
+const SNUG_MINUTES = 60;
 
 export const GRID_HEIGHT = (END_HOUR - START_HOUR) * HOUR_H;
 
@@ -169,6 +184,8 @@ interface BlockBase {
   top: number;
   height: number;
   compact: boolean;
+  /** Room for a title and one line under it, but not for all three. */
+  snug: boolean;
 }
 
 export interface TaskBlock extends BlockBase {
@@ -249,6 +266,7 @@ export function dayTaskBlocks(iso: string, tasks: Task[]): TaskBlock[] {
       top: 0,
       height: 0,
       compact: false,
+      snug: false,
       title: task.title || 'Task',
       xp: Number(task.xp_value) || 0,
       done: task.status === 'done',
@@ -304,6 +322,7 @@ export function dayEventBlocks(iso: string, data: CalendarData): EventBlock[] {
       top: 0,
       height: 0,
       compact: false,
+      snug: false,
       name: section.task || 'Event',
       startHM: section.startTime,
       endHM: section.endTime,
@@ -332,6 +351,7 @@ export function layOut(blocks: Block[]): { blocks: Block[]; conflict: [Block, Bl
       top: (block.start - START_HOUR) * HOUR_H,
       height: minutes <= COMPACT_MINUTES ? Math.max(height, COMPACT_MIN_H) : height,
       compact: minutes <= COMPACT_MINUTES,
+      snug: minutes > COMPACT_MINUTES && minutes < SNUG_MINUTES,
     };
   });
 
