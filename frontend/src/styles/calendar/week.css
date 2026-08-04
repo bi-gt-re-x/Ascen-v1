@@ -706,23 +706,17 @@ html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
 .wk-focustime-of { font-size: 15px; font-weight: 600; color: #6b7280; }
 .wk-focustime + .wk-progress { margin-top: 12px; }
 
-/* The card floats over the bottom-left of the grid rather than sitting in the
-   column, which is where the design puts it. `.wk-panel` above already gives it
-   the white fill, border and radius; this only places it and lifts it, since it
-   now has grid behind it rather than page.
+/* The card floats over the foot of the grid rather than sitting in the column.
+   `.wk-panel` above already gives it the white fill, border and radius; this
+   only places it and lifts it, since it now has grid behind it rather than page.
    ------------------------------------------------------------------------
-   It stacks above the compose bar unless the grid is wide enough to hold both
-   on one line. The design draws them side by side, but the design's grid is
-   nearly a thousand pixels across; the compose bar is centred and 560px of it,
-   so this card only clears it once the grid passes about 1000px.
-   That is a question about the grid rather than about the window — the rail and
-   the overview column take their share first — but asking it with a container
-   query costs more than it is worth: `container-type: inline-size` on the grid
-   wrapper takes 60px off the day columns, because a size-contained grid item no
-   longer contributes to how the track around it is sized. Stacked always, then.
-   The card is over the last hour of the day either way. */
+   On the right, against Sunday, rather than the design's bottom-left. It sits
+   directly under the overview column that way, so the week's figures read as
+   one edge of the page instead of two opposite corners — and Sunday evening is
+   emptier than Monday evening on most weeks. It clears the bottom cleanly now
+   that the compose bar it used to stack above is gone. */
 .wk-focus-float {
-    position: absolute; left: 6px; bottom: 78px; z-index: 5;
+    position: absolute; right: 6px; bottom: 16px; z-index: 5;
     width: 200px; padding: 14px 16px;
     box-shadow: 0 2px 6px rgba(16,24,40,.06), 0 12px 32px rgba(16,24,40,.14);
 }
@@ -821,40 +815,10 @@ html[data-theme="dark"] .wk-spark-area { fill: rgba(168, 132, 92, .10); }
 .wk-focus-chip-plus { font-size: 14px; line-height: 1; }
 .wk-focus-chip .cal-ico { width: 15px; height: 15px; flex: none; }
 
-/* ---- The bar under the grid ---- */
-/* Where a task or an event starts. It sits under the grid rather than floating
-   over it, because the design's floating position covers Monday and Tuesday
-   evening and this bar has nothing so urgent to say. */
-/* Floating over the foot of the grid, where the design puts it, rather than
-   sitting under it. It covers the last of the evening on two columns, which is
-   the trade the design makes and the quietest hour on the board to spend. The
-   grid scrolls underneath it. */
-.wk-compose {
-    position: absolute; left: 50%; transform: translateX(-50%);
-    bottom: 16px; z-index: 5;
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 8px 8px 16px; width: min(560px, calc(100% - 32px));
-    background: #fff; border: 1px solid #e5e8ee; border-radius: 999px;
-    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 10px 30px rgba(16,24,40,.12);
-}
-.wk-compose-plus { color: #9aa0ad; font-size: 17px; line-height: 1; flex: none; }
-.wk-compose-input {
-    flex: 1 1 auto; min-width: 0; border: 0; background: none; outline: none;
-    font: inherit; font-size: 14px; color: #2c302e;
-}
-.wk-compose-input::placeholder { color: #9aa0ad; }
-.wk-compose-btn {
-    width: 34px; height: 34px; flex: none; border: 0; border-radius: 50%;
-    background: none; color: #6b7280; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-}
-.wk-compose-btn:hover { background: #f2f4f7; color: #2c302e; }
-.wk-compose-go {
-    width: 36px; height: 36px; flex: none; border: 0; border-radius: 50%;
-    background: #1a1f26; color: #fff; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-}
-.wk-compose-go:hover { background: #2c333d; }
+/* The bar that used to float under the grid — a text field and three buttons
+   for starting a task or an event — is gone, and its styles with it. Dragging
+   out a slot on the grid is how something is added now: it says when the thing
+   runs as part of saying that it exists, which the bar could not do. */
 
 /* ---- Dark ---- */
 html[data-theme="dark"] .wk-icon-btn { background: #1b212a; border-color: #2b323c; color: #9aa4b2; }
@@ -864,15 +828,6 @@ html[data-theme="dark"] .wk-focus-chip {
 }
 html[data-theme="dark"] .wk-focus-chip:hover { background: #161b22; border-color: #333b47; }
 html[data-theme="dark"] .wk-focus-chip.is-empty { color: #6b7280; }
-html[data-theme="dark"] .wk-compose {
-    background: #161b22; border-color: #262c36; box-shadow: none;
-}
-html[data-theme="dark"] .wk-compose-input { color: #e6edf3; }
-html[data-theme="dark"] .wk-compose-input::placeholder { color: #6b7280; }
-html[data-theme="dark"] .wk-compose-btn { color: #8b949e; }
-html[data-theme="dark"] .wk-compose-btn:hover { background: #21262d; color: #e6edf3; }
-html[data-theme="dark"] .wk-compose-go { background: #e6edf3; color: #161b22; }
-html[data-theme="dark"] .wk-compose-go:hover { background: #c9d1d9; }
 
 /* The switcher was drawn for the shell's dark top bar. In the header row it
    sits on the card itself, so it is re-dressed for a light ground here rather

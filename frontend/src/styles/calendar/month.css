@@ -1995,8 +1995,15 @@ body:has(.calendar-container) {
      * so it beat the `padding-left: var(--rail-w)` that reserves the navigation
      * rail's width, and the calendar was laid out from the left edge of the
      * window with a third of it underneath the rail. A shorthand here has to
-     * say what it means about the left, so it says it. */
-    padding-top: 46px;
+     * say what it means about the left, so it says it.
+     *
+     * It was 46px, to clear a fixed theme button that ended around 60px down
+     * the window. That button went with the top bar — the theme switch is on
+     * the rail now — so the space above the calendar was clearing nothing. Zero
+     * lifts the whole view about 7% of the window's height, and hands the same
+     * 50px back to the grid: the card is `height: 100%` of this box, so it now
+     * ends where the window does instead of 50px below it. */
+    padding-top: 0;
     padding-right: 14px;
     padding-bottom: 14px;
     padding-left: calc(var(--rail-w) + 14px);
@@ -3092,7 +3099,9 @@ html[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    padding: 10px clamp(18px, 3vw, 52px) 16px;
+    /* No top padding: with the page's own top offset gone, this was the last
+       thing holding the view down the window. */
+    padding: 0 clamp(18px, 3vw, 52px) 16px;
 }
 html[data-theme="light"] .calendar-card,
 html[data-theme="dark"] .calendar-card,
@@ -3107,7 +3116,38 @@ body.classic .calendar-card {
    navigation is a rail now and that padding-left is what reserves its width, so
    zeroing it would put the calendar underneath it. The class is gone with the
    bar; the rule is deleted rather than renamed. */
-.calendar-container { margin-top: 4px; }
+.calendar-container { margin-top: 0; }
+
+/* The calendar's ground is white, not the app's grey.
+ *
+ * The card is transparent (see the full-bleed block above), so the body is what
+ * shows through the whole view — behind the grid, behind the overview column,
+ * behind everything. #eef0f4 is the app's page colour and it read as a tint
+ * over a view that is otherwise white cards and hairlines. Scoped with :has()
+ * so only the calendar changes; every other page keeps the grey. */
+html[data-theme="light"] body:has(.calendar-container),
+body.classic:has(.calendar-container) {
+    background: #ffffff;
+}
+
+/* No scrollbars anywhere in the calendar.
+ *
+ * Three of them were visible at once — the hour grid, the overview column, and
+ * the page — on a view whose whole job is to be looked at. Scrolling is
+ * untouched: wheel, trackpad, keys and the drag's own edge-scroll all still
+ * work, the gutter is simply not drawn. The rules are scoped to the calendar so
+ * the rest of the app keeps the themed scrollbars in styles/layout.css. */
+body:has(.calendar-container),
+body:has(.calendar-container) * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+body:has(.calendar-container)::-webkit-scrollbar,
+body:has(.calendar-container) *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
 
 /* More room between the two columns now that there is width to spend. */
 .calendar-body { gap: clamp(20px, 2.4vw, 44px); }
