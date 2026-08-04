@@ -19,13 +19,15 @@
  *     page is laid out, which is why they are hooks over a ref and not markup.
  *   * the toast, which belongs to no section.
  *
- *   * its own header and its own Log In / Sign Up row. These were dropped for a
- *     while, when the app rendered one bar above every route and a second
- *     header would have been two on one page. The app's navigation is a rail
- *     down the left now and App.tsx leaves this route without it — a rail
- *     offering the dashboard, the calendar and the goals page to someone who
- *     cannot open any of them is not navigation. So the page carries its own
- *     again, the markup styles/homepage.css has always dressed.
+ *   * its own Log In / Sign Up row, and the theme select beside it. There is no
+ *     bar above them: the page opens straight on the hero. It carried one for a
+ *     while — a brand mark and the theme select, the pair the server-rendered
+ *     header held — but the mark linked to the page it was already on, and a
+ *     strip of chrome between the reader and the first thing the page has to
+ *     say is a strip of chrome. The app's navigation is a rail down the left
+ *     and App.tsx leaves this route without that too, since a rail offering the
+ *     dashboard and the goals page to someone who cannot open either is not
+ *     navigation.
  *
  * The one thing the server-rendered page had that is still deliberately not
  * here: it wrote the signed-in username into localStorage from the template.
@@ -33,7 +35,7 @@
  * go stale.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Ambient } from '@/components';
 import {
   AuthModal,
@@ -133,33 +135,26 @@ export default function Homepage() {
     <>
       <Ambient />
 
-      {/* The page's own bar, back where it was before the port. The mark is the
-          way home and the select is the theme — the two things the server-
-          rendered header held. */}
-      <header className="site-nav">
-        <div className="nav-inner">
-          <Link className="brand" to="/home" aria-label="Ascen home">
-            <img src="/static/images/logo.svg" alt="Ascen logo" />
-          </Link>
-          <div className="nav-right">
-            <select
-              className="theme-select"
-              aria-label="Theme"
-              value={theme}
-              onChange={(event) => setTheme(event.target.value as Theme)}
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-        </div>
-      </header>
-
       {/* Which pair this shows is decided from the server's answer rather than
           from localStorage, which is what the original got wrong: an account
           signed in on the server but with no localStorage — cleared storage,
-          another browser — was being offered Log In and Sign Up. */}
+          another browser — was being offered Log In and Sign Up.
+
+          The theme select sits on this row now. It used to have a bar of its
+          own across the top of the page, with the brand mark beside it; the bar
+          is gone, so the one control it carried joins the row that was already
+          here rather than going with it — the landing page is the one place a
+          reader can pick a theme before they have an account. */}
       <div className="account-row">
+        <select
+          className="theme-select"
+          aria-label="Theme"
+          value={theme}
+          onChange={(event) => setTheme(event.target.value as Theme)}
+        >
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
         {signedIn ? (
           <div className="user-greeting">
             <span>Hello, {username}</span>

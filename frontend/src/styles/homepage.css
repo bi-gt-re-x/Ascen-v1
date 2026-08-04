@@ -16,33 +16,10 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ---------- Top navigation ---------- */
-.site-nav {
-    width: 100%;
-    background: #f9fafb;
-    border-bottom: 1px solid #e6e9ee;
-    padding: 14px 32px;
-}
-
-.nav-inner {
-    max-width: 1500px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.brand {
-    display: flex;
-    align-items: center;
-}
-
-.brand img {
-    height: 34px;
-    width: auto;
-    display: block;
-}
-
+/* ---------- Theme select ---------- */
+/* It sat in a bar across the top of the page. The bar is gone — the landing
+   page opens on the hero now — and the select moved down to the account row,
+   where it is the only thing left of it. */
 .theme-select {
     font-family: inherit;
     font-size: 0.95rem;
@@ -64,7 +41,9 @@ body {
     margin: 0 auto;
     padding: 18px 32px 0;
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: 14px;
 }
 
 .auth-buttons {
