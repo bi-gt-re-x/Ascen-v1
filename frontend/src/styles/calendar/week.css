@@ -729,16 +729,10 @@ html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
 }
 .wk-spark-days .is-today { color: #3b82f6; font-weight: 600; }
 
-/* ---- XP Breakdown ---- */
-/* The heading's "Sample" tag. It is deliberately plain rather than alarming:
-   the rows are not wrong, they are not yet this account's — see
-   SAMPLE_BREAKDOWN in WeekSidebar.tsx. */
-.wk-sample {
-    margin-left: 8px; padding: 2px 8px; border-radius: 999px;
-    background: #f2f3f7; color: #8a9099;
-    font-size: 10px; font-weight: 700; letter-spacing: .02em;
-    text-transform: uppercase; vertical-align: middle;
-}
+/* ---- The bar-row panels ---- */
+/* The "Sample" tag that used to sit beside the XP Breakdown heading is gone
+   with the invented rows it was apologising for; Tasks by Priority counts real
+   tasks and needs no disclaimer. */
 
 .wk-break-total {
     display: flex; align-items: baseline; justify-content: space-between;
@@ -764,6 +758,90 @@ html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
 .wk-break-fill.tone-gold   { background: #e0b23c; }
 .wk-break-fill.tone-purple { background: #8b5cf6; }
 .wk-break-fill.tone-grey   { background: #c3c9d4; }
+
+/* Tasks by Priority: the three colours the grid paints its blocks, so a red
+   bar in the column and a red block on the calendar are the same claim.
+   Checked against the light surface for the lightness band, the chroma floor,
+   deuteranope and tritanope separation over every pair, and contrast — the
+   dark steps below are chosen against the dark surface for the same, not
+   lightened from these. Every row is labelled and counted as well, so nothing
+   here rests on colour on its own. */
+.wk-break-fill.tone-prio-low    { background: #2c5aa0; }
+.wk-break-fill.tone-prio-medium { background: #b8892d; }
+.wk-break-fill.tone-prio-high   { background: #b0413e; }
+html[data-theme="dark"] .wk-break-fill.tone-prio-low    { background: #5089e8; }
+html[data-theme="dark"] .wk-break-fill.tone-prio-medium { background: #a89020; }
+html[data-theme="dark"] .wk-break-fill.tone-prio-high   { background: #e04d70; }
+
+/* ---- Column charts: XP a day, focused-against-planned a day ----
+ *
+ * Plain elements rather than an SVG, because the one thing these bars must get
+ * right is a rounded top on a square foot — `border-radius` says that in four
+ * values and an SVG `rect` cannot say it at all without a clip path.
+ *
+ * The columns are the full height of the plot whatever the value is: they are
+ * the hover targets, and a target the size of its own 3px bar is not one. */
+.wk-chart {
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px; margin-top: 14px;
+}
+.wk-chart-col { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+.wk-chart-value {
+    font-size: 10px; font-weight: 600; color: #6b7280;
+    text-align: center; height: 13px; line-height: 13px;
+    overflow: hidden; white-space: nowrap;
+}
+.wk-chart-track {
+    position: relative; height: 64px; display: flex; align-items: flex-end;
+    justify-content: center;
+}
+/* No `min-height`: a day with nothing on it draws nothing. A floor would put a
+   2px mark under Friday and Friday would look like a small amount rather than
+   none — the components give a *non-zero* value its floor instead. */
+.wk-chart-bar {
+    display: block; width: 100%;
+    background: #3b82f6; border-radius: 4px 4px 0 0;
+}
+/* Today is the column the reader is standing on; the rest of the week is
+   context. Weight, not a second hue — this is one series. */
+.wk-chart-bar.is-today { background: #1d4ed8; }
+.wk-chart-day {
+    margin-top: 6px; font-size: 10px; color: #9ca3af; text-align: center;
+}
+.wk-chart-day.is-today { color: #3b82f6; font-weight: 600; }
+
+/* Focused against planned. The goal is the pale full-width column behind; the
+   focused time is the narrower solid one in front, so the pair is told apart
+   by width and position before it is told apart by colour. */
+.wk-chart-focus { margin-top: 16px; }
+.wk-chart-focus .wk-chart-track { height: 56px; }
+.wk-chart-goal {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: #e6e9f0; border-radius: 4px 4px 0 0;
+}
+.wk-chart-bar.is-focus { position: relative; width: 56%; background: #a8845c; }
+.wk-chart-bar.is-focus.is-today { background: #8a6743; }
+.wk-chart-legend {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin: 12px 0 0; font-size: 11px; color: #9aa0ad;
+}
+.wk-chart-key { width: 9px; height: 9px; border-radius: 2px; }
+.wk-chart-key.is-focus { background: #a8845c; }
+.wk-chart-key.is-goal { background: #e6e9f0; }
+/* The keys after the first get room to breathe from the label before them. */
+.wk-chart-legend .wk-chart-key + * { margin-right: 4px; }
+.wk-chart-legend .wk-chart-key:not(:first-child) { margin-left: 8px; }
+
+html[data-theme="dark"] .wk-chart-value { color: #9aa4b2; }
+html[data-theme="dark"] .wk-chart-day { color: #6b7684; }
+html[data-theme="dark"] .wk-chart-day.is-today { color: #6a9bff; }
+html[data-theme="dark"] .wk-chart-bar { background: #4f8ff5; }
+html[data-theme="dark"] .wk-chart-bar.is-today { background: #8fbcff; }
+html[data-theme="dark"] .wk-chart-goal,
+html[data-theme="dark"] .wk-chart-key.is-goal { background: #262c36; }
+html[data-theme="dark"] .wk-chart-bar.is-focus { background: #c39a68; }
+html[data-theme="dark"] .wk-chart-bar.is-focus.is-today { background: #e0b98d; }
+html[data-theme="dark"] .wk-chart-legend { color: #9aa4b2; }
 
 /* ---- Streak dots ---- */
 .wk-dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 14px; }
@@ -855,7 +933,6 @@ html[data-theme="dark"] .wk-dot { background: #0f141b; }
 html[data-theme="dark"] .wk-dot.is-done { background: rgba(34, 160, 107, .18); color: #4ade80; }
 html[data-theme="dark"] .wk-dot.is-future { background: transparent; border-color: #262c36; }
 html[data-theme="dark"] .wk-upcoming li { background: #0f141b; border-color: #262c36; }
-html[data-theme="dark"] .wk-sample { background: #21262d; color: #8b949e; }
 html[data-theme="dark"] .wk-spark-dot { fill: #161b22; }
 html[data-theme="dark"] .wk-spark-area { fill: rgba(168, 132, 92, .10); }
 
@@ -911,22 +988,8 @@ html[data-theme="dark"] .wk-focus-chip {
 html[data-theme="dark"] .wk-focus-chip:hover { background: #161b22; border-color: #333b47; }
 html[data-theme="dark"] .wk-focus-chip.is-empty { color: #6b7280; }
 
-/* The switcher was drawn for the shell's dark top bar. In the header row it
-   sits on the card itself, so it is re-dressed for a light ground here rather
-   than changed at source — the Day and Month views still use the shell's bar
-   and still need the original. */
-.wk-headtools .view-toggle {
-    background: #f2f4f7; border: 1px solid #e5e8ee; border-radius: 12px;
-    padding: 3px; gap: 2px;
-}
-.wk-headtools .view-toggle-btn {
-    padding: 6px 16px; font-size: 13px; border-radius: 9px; color: #6b7280;
-}
-.wk-headtools .view-toggle-btn:hover:not(.active) { color: #2c302e; background: #e9ecf1; }
-.wk-headtools .view-toggle-btn.active {
-    background: #1a1f26; color: #fff; box-shadow: none;
-}
-html[data-theme="dark"] .wk-headtools .view-toggle { background: #0f141b; border-color: #262c36; }
-html[data-theme="dark"] .wk-headtools .view-toggle-btn { color: #8b949e; }
-html[data-theme="dark"] .wk-headtools .view-toggle-btn:hover:not(.active) { color: #e6edf3; background: #1b212a; }
-html[data-theme="dark"] .wk-headtools .view-toggle-btn.active { background: #e6edf3; color: #161b22; }
+/* The switcher's appearance was defined here, for the copy the Week view puts
+   in its header, and separately in month.css for the copy Day and Month get
+   from the shell — so one control had two looks. This set was the better of
+   the two and is now the only one, in month.css beside the base rules. Nothing
+   about how it is drawn belongs in a file about the Week view. */

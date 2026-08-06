@@ -29,28 +29,22 @@ export interface TimeLabelsProps {
 }
 
 /**
- * How near the now badge an hour label has to be to give way to it.
+ * The 6 AM – 5 AM rail down the left of the grid.
  *
- * The rail is only wide enough for one of them. Twice an hour the badge lands
- * on a label and the two print over each other — "7:59 AM" over "8 AM" is a
- * red smudge that says neither. The hour is the one that goes: it can be read
- * off the rows above and below it, and the badge cannot be read off anything.
+ * Every hour is drawn, always. Labels used to be hidden when the now badge
+ * passed over them, which meant the rail was missing an hour for a few minutes
+ * either side of every hour mark — the reader's eye ran 8, 10, 11 and had to
+ * stop and work out what happened to 9. The badge is short enough now to sit
+ * beside them instead; see `nowLabel`.
  */
-const LABEL_CLEARANCE = 11;
-
-/** The 6 AM – 5 AM rail down the left of the grid. */
 export function TimeLabels({ now, at }: TimeLabelsProps) {
   return (
     <div className="wk-timelabels" style={{ height: GRID_HEIGHT }}>
-      {gridHours().map((hour) => {
-        const y = (hour - START_HOUR) * HOUR_H;
-        const eclipsed = now !== null && Math.abs(y - now) < LABEL_CLEARANCE;
-        return (
-          <div key={hour} className="wk-timelabel" style={{ height: HOUR_H }}>
-            <span hidden={eclipsed}>{hourLabel(hour)}</span>
-          </div>
-        );
-      })}
+      {gridHours().map((hour) => (
+        <div key={hour} className="wk-timelabel" style={{ height: HOUR_H }}>
+          <span>{hourLabel(hour)}</span>
+        </div>
+      ))}
       {now !== null && (
         <div className="wk-nowlabel" style={{ top: now }}>
           {nowLabel(at)}

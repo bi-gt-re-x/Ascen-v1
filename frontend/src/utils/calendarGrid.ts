@@ -448,9 +448,19 @@ export function nowOffset(now: Date = new Date()): number | null {
   return (hour - START_HOUR) * HOUR_H;
 }
 
-/** "6:40 PM" for the label beside the now line. */
+/**
+ * "6:40" for the badge beside the now line — no meridiem.
+ *
+ * It was "6:40 PM", and those three characters were the whole problem: the
+ * badge then needed more of the hour rail than the rail has spare, so it landed
+ * on top of whichever hour label it passed and that label had to be hidden to
+ * get out of its way. Twice an hour the rail was missing an hour. Without the
+ * meridiem the badge fits in the gap the rail already leaves, and nothing has
+ * to give. Nothing is lost with it: the badge sits on a line between two
+ * labelled hours that both say AM or PM.
+ */
 export function nowLabel(now: Date = new Date()): string {
-  return timeLabel(now);
+  return `${now.getHours() % 12 || 12}:${String(now.getMinutes()).padStart(2, '0')}`;
 }
 
 /** Every hour the grid draws a label for. */

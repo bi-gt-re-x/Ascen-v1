@@ -5,10 +5,15 @@
  * back a week steps all of them back. That is what makes the column readable:
  * every number on it answers a question about the same seven days.
  *
- * The shape follows the design, and now follows it exactly: This Week Progress
- * leads with a ring and the week's three figures over a per-day XP sparkline,
- * then the XP breakdown, then Streaks as seven dots, then what is coming and
- * the way through to the month.
+ * The shape follows the design: This Week Progress leads with a ring and the
+ * week's three figures over a per-day XP sparkline, then XP Earned and Tasks
+ * by Priority, then Streaks as seven dots, then what is coming and the way
+ * through to the month.
+ *
+ * The two chart panels in the middle stand where "XP Breakdown" used to, and
+ * that is the point of them. XP Breakdown was five invented rows — Math 160,
+ * Coding 140 — because splitting XP by subject needs a subject on a task and
+ * the table has no such column. These two ask questions the data can answer.
  *
  * Weekly Focus Time is not here. It was, for a while — a figure about the week
  * belongs with the figures about the week — but the design pins it to the
@@ -36,17 +41,34 @@ export interface WeekFocus {
   planned: number;
 }
 
-/** One day of the week, for the sparkline and the streak dots. */
+/** One day of the week, for the sparkline, the charts and the streak dots. */
 export interface WeekDay {
   /** Mon…Sun, single letter. */
   initial: string;
+  /** "Mon" — the whole abbreviation, for the charts' hover text. */
+  name: string;
   /** XP earned that day. */
   xp: number;
+  /** Seconds focused that day. */
+  focused: number;
+  /** Seconds that day's goal asked for. */
+  planned: number;
   /** Whether anything was completed. Drives the streak dot. */
   active: boolean;
   /** A day that has not happened yet is drawn hollow, not missed. */
   future: boolean;
   today: boolean;
+}
+
+/** One priority band's share of the week. */
+export interface PriorityRow {
+  /** `low` | `medium` | `high` — the grid's own class suffix. */
+  key: string;
+  label: string;
+  count: number;
+  done: number;
+  /** XP actually earned in this band. */
+  xp: number;
 }
 
 export interface UpcomingEntry {
@@ -65,6 +87,8 @@ export interface WeekSidebarProps {
   /** Focused against planned across the week — the last card in the column. */
   focus: WeekFocus;
   days: WeekDay[];
+  /** The week's tasks by priority band, low first. */
+  priorities: PriorityRow[];
   upcoming: UpcomingEntry[];
   /** The way out of the week — the design's "View Full Calendar". */
   onViewMonth: () => void;
@@ -72,45 +96,168 @@ export interface WeekSidebarProps {
   collapsed: boolean;
 }
 
-/**
- * The XP breakdown's rows.
- *
- * **These are placeholders and not this account's data.** Splitting XP by
- * subject needs a subject on a task, and there is no such column: tasks carry
- * title, description, priority, status, xp_value, due_date and the timer pair
- * (data/sql/tasks.sql) and nothing else. Making this real means adding a
- * category to the table, to the API, and to the Add Task dialog, and then
- * counting `xp_value` by it here — at which point this constant and the
- * `is-sample` tag beside the heading both come out.
- */
-const SAMPLE_BREAKDOWN = [
-  { label: 'Math', xp: 160, tone: 'blue' },
-  { label: 'Coding', xp: 140, tone: 'green' },
-  { label: 'Physics', xp: 110, tone: 'gold' },
-  { label: 'Writing', xp: 80, tone: 'purple' },
-  { label: 'Other', xp: 56, tone: 'grey' },
-];
-
 const RING_R = 26;
 const RING_C = 2 * Math.PI * RING_R;
 
 /**
- * Weekly Focus Time.
+ * A value's share of the plot's height, as a percentage.
+ *
+ * Zero is zero — a day with nothing on it draws nothing at all. Anything above
+ * zero gets at least a sliver, because a real 3 XP rounded to half a pixel is
+ * a day that happened and looks like a day that did not.
+ */
+function barHeight(value: number, peak: number): string {
+  if (value <= 0 || peak <= 0) return '0%';
+  return `${Math.max(3, (value / peak) * 100)}%`;
+}
+
+/**
+ * XP earned, day by day.
+ *
+ * Not the same drawing as the sparkline in This Week Progress, and not there
+ * for the same reason. The sparkline is 44px of shape inside a panel about
+ * something else — it says which end of the week the work happened at and
+ * nothing more. This is the panel where the reader can put a finger on
+ * Wednesday and read what Wednesday was worth.
+ *
+ * One series, so there is no legend: the heading names it. The best day is
+ * labelled and the rest are not — seven numbers over seven 24px columns is a
+ * wall of digits, and the hover text carries every day's figure for anyone who
+ * wants it. The whole week's values are in the chart's `aria-label`, which is
+ * the table view for a panel too small to hold a table.
+ */
+function XpChart({ days }: { days: WeekDay[] }) {
+  const peak = Math.max(0, ...days.map((day) => day.xp));
+  const total = days.reduce((sum, day) => sum + day.xp, 0);
+  // Only the first day that reaches the peak is labelled; two days tied at the
+  // top would otherwise print the same number twice.
+  const labelAt = days.findIndex((day) => day.xp === peak && peak > 0);
+
+  return (
+    <section className="wk-panel">
+      <h3 className="wk-panel-title">XP Earned</h3>
+      {total === 0 ? (
+        <p className="wk-empty">No XP earned this week yet.</p>
+      ) : (
+        <>
+          <div className="wk-break-total">
+            <span>This week</span>
+            <strong>{total.toLocaleString()} XP</strong>
+          </div>
+          <div
+            className="wk-chart"
+            role="img"
+            aria-label={`XP earned each day: ${days
+              .map((day) => `${day.name} ${day.xp}`)
+              .join(', ')}`}
+          >
+            {days.map((day, index) => (
+              <div className="wk-chart-col" key={index}>
+                <span className="wk-chart-value" aria-hidden="true">
+                  {index === labelAt ? peak.toLocaleString() : ''}
+                </span>
+                <div className="wk-chart-track" title={`${day.name}: ${day.xp} XP`}>
+                  <i
+                    className={`wk-chart-bar${day.today ? ' is-today' : ''}`}
+                    style={{ height: barHeight(day.xp, peak) }}
+                  />
+                </div>
+                <span
+                  className={`wk-chart-day${day.today ? ' is-today' : ''}`}
+                  aria-hidden="true"
+                >
+                  {day.initial}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+/**
+ * The week's tasks by priority.
+ *
+ * This panel used to be "XP Breakdown", and every row in it was invented —
+ * Math 160, Coding 140 — because splitting XP by subject needs a subject on a
+ * task and the table has no such column. Priority it does have, on every task
+ * and on every block drawn on the grid beside this. The bars are the same
+ * three colours the grid paints those blocks, so a red bar here and a red
+ * block there are the same claim; every row is named and counted as well, so
+ * the colour is never the only thing carrying it.
+ *
+ * The bar is the count. The figure is completions over that count, and the XP
+ * under it is what was actually earned — an unfinished hard task is a count
+ * without a score, which is the honest reading of a week still in progress.
+ */
+function PriorityChart({ priorities }: { priorities: PriorityRow[] }) {
+  const peak = Math.max(1, ...priorities.map((row) => row.count));
+  const total = priorities.reduce((sum, row) => sum + row.count, 0);
+
+  return (
+    <section className="wk-panel">
+      <h3 className="wk-panel-title">Tasks by Priority</h3>
+      {total === 0 ? (
+        <p className="wk-empty">Nothing scheduled this week.</p>
+      ) : (
+        <>
+          <div className="wk-break-total">
+            <span>Tasks this week</span>
+            <strong>{total}</strong>
+          </div>
+          <ul className="wk-break">
+            {priorities.map((row) => (
+              <li key={row.key} title={`${row.label}: ${row.done} of ${row.count} done, ${row.xp} XP`}>
+                <span className="wk-break-label">{row.label}</span>
+                <span className="wk-break-track">
+                  <i
+                    className={`wk-break-fill tone-prio-${row.key}`}
+                    style={{ width: `${(row.count / peak) * 100}%` }}
+                  />
+                </span>
+                <span className="wk-break-xp">
+                  {row.done}/{row.count}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Weekly Focus Time — the week's total, and the shape of it.
  *
  * The design floats this over the foot of the grid, and it was floated for a
- * while. It is the fifth panel of the same overview, written in the same
- * furniture as the four above it, so it now simply sits with them — which also
+ * while. It is the last panel of the same overview, written in the same
+ * furniture as the ones above it, so it now simply sits with them — which also
  * gives back the corner of Sunday evening it was covering.
+ *
+ * The chart under the summary is focused against planned, a day at a time.
+ * They are a measure and its target rather than two series, so they are drawn
+ * as one: the pale column is the day's goal and the solid one in front of it is
+ * what was actually focused. Height is shared across the week and scaled to
+ * whichever is largest, so a day that overshot its goal visibly overshoots it.
+ * That is also why the two are told apart by shape and position rather than by
+ * colour alone.
  */
 function WeekFocusCard({
   focus,
+  days,
   onViewAnalytics,
 }: {
   focus: WeekFocus;
+  days: WeekDay[];
   onViewAnalytics: () => void;
 }) {
   const percent =
     focus.planned > 0 ? Math.min(100, Math.round((focus.focused / focus.planned) * 100)) : 0;
+  const peak = Math.max(...days.map((day) => Math.max(day.focused, day.planned)), 1);
+  const anyFocus = days.some((day) => day.focused > 0 || day.planned > 0);
 
   return (
     <section className="wk-panel">
@@ -130,6 +277,49 @@ function WeekFocusCard({
         />
       </div>
       <p className="wk-focustime-sub">{percent}% Goal Progress</p>
+
+      {anyFocus && (
+        <>
+          <div
+            className="wk-chart wk-chart-focus"
+            role="img"
+            aria-label={`Focused against planned each day: ${days
+              .map((day) => `${day.name} ${fmtHM(day.focused)} of ${fmtHM(day.planned)}`)
+              .join(', ')}`}
+          >
+            {days.map((day, index) => (
+              <div className="wk-chart-col" key={index}>
+                <div
+                  className="wk-chart-track"
+                  title={`${day.name}: ${fmtHM(day.focused)} focused of ${fmtHM(day.planned)}`}
+                >
+                  <i
+                    className="wk-chart-goal"
+                    style={{ height: barHeight(day.planned, peak) }}
+                  />
+                  <i
+                    className={`wk-chart-bar is-focus${day.today ? ' is-today' : ''}`}
+                    style={{ height: barHeight(day.focused, peak) }}
+                  />
+                </div>
+                <span
+                  className={`wk-chart-day${day.today ? ' is-today' : ''}`}
+                  aria-hidden="true"
+                >
+                  {day.initial}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="wk-chart-legend" aria-hidden="true">
+            <span className="wk-chart-key is-focus" />
+            Focused
+            <span className="wk-chart-key is-goal" />
+            Planned
+          </p>
+        </>
+      )}
+
       <button type="button" className="wk-panel-link" onClick={onViewAnalytics}>
         View Analytics<span aria-hidden="true"> →</span>
       </button>
@@ -163,6 +353,7 @@ export function WeekSidebar({
   streak,
   focus,
   days,
+  priorities,
   upcoming,
   onViewMonth,
   onViewAnalytics,
@@ -189,9 +380,6 @@ export function WeekSidebar({
   const area = `${points[0]?.x ?? 0},34 ${line} ${points[points.length - 1]?.x ?? 100},34`;
 
   const ringFilled = (Math.max(0, Math.min(100, rate)) / 100) * RING_C;
-
-  const breakdownPeak = Math.max(1, ...SAMPLE_BREAKDOWN.map((row) => row.xp));
-  const breakdownTotal = SAMPLE_BREAKDOWN.reduce((sum, row) => sum + row.xp, 0);
 
   return (
     <aside className="wk-sidebar" id="wkSidebar" hidden={collapsed}>
@@ -266,36 +454,11 @@ export function WeekSidebar({
         </div>
       </section>
 
-      {/* --- XP Breakdown -------------------------------------------------- */}
-      <section className="wk-panel">
-        <h3 className="wk-panel-title">
-          XP Breakdown
-          {/* Says outright that the rows below are not this account's. See
-              SAMPLE_BREAKDOWN — a panel of invented figures that looks exactly
-              like the real ones beside it is worse than no panel. */}
-          <span className="wk-sample" title="Tasks have no subject yet — these rows are sample data">
-            Sample
-          </span>
-        </h3>
-        <div className="wk-break-total">
-          <span>Total XP</span>
-          <strong>{breakdownTotal.toLocaleString()}</strong>
-        </div>
-        <ul className="wk-break">
-          {SAMPLE_BREAKDOWN.map((row) => (
-            <li key={row.label}>
-              <span className="wk-break-label">{row.label}</span>
-              <span className="wk-break-track">
-                <i
-                  className={`wk-break-fill tone-${row.tone}`}
-                  style={{ width: `${(row.xp / breakdownPeak) * 100}%` }}
-                />
-              </span>
-              <span className="wk-break-xp">{row.xp} XP</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* --- XP Earned ----------------------------------------------------- */}
+      <XpChart days={days} />
+
+      {/* --- Tasks by Priority --------------------------------------------- */}
+      <PriorityChart priorities={priorities} />
 
       {/* --- Streaks ------------------------------------------------------- */}
       <section className="wk-panel">
@@ -355,7 +518,7 @@ export function WeekSidebar({
       </section>
 
       {/* --- Weekly Focus Time -------------------------------------------- */}
-      <WeekFocusCard focus={focus} onViewAnalytics={onViewAnalytics} />
+      <WeekFocusCard focus={focus} days={days} onViewAnalytics={onViewAnalytics} />
     </aside>
   );
 }

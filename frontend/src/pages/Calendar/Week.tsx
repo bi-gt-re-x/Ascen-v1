@@ -258,16 +258,66 @@ export default function Week() {
           done += 1;
           xp += Number(task.xp_value) || 0;
         });
+
+        // Focus, day by day, on the same rule the week's total above uses:
+        // today's figure is whichever of the live session and the server's
+        // record is larger, because the session has not been written back yet
+        // but the server can be ahead if today was tracked in another browser.
+        const entry = history[day.iso];
+        const isToday = day.iso === todayIso;
+        const focused = isToday
+          ? Math.max(session.focused, Number(entry?.seconds) || 0)
+          : Number(entry?.seconds) || 0;
+        const planned = isToday
+          ? session.goalHours * 3600
+          : (Number(entry?.goal_hours) || 0) * 3600;
+
         return {
           initial: day.name.charAt(0),
+          name: day.name,
           xp,
+          focused,
+          planned,
           active: done > 0,
           future: day.iso > todayIso,
-          today: day.iso === todayIso,
+          today: isToday,
         };
       }),
-    [days, tasks, todayIso],
+    [days, history, session.focused, session.goalHours, tasks, todayIso],
   );
+
+  /**
+   * The week's tasks split by priority — how much of the week is hard.
+   *
+   * Counted on `created_at` like the overview above, so the panel and the
+   * figures beside it are answering about the same set of tasks. XP is what
+   * was *earned*, not what was on offer: an unfinished high-priority task is a
+   * count without a score, which is the honest reading of a week in progress.
+   */
+  const priorities = useMemo(() => {
+    const order = [
+      { key: 'low', label: 'Low' },
+      { key: 'medium', label: 'Medium' },
+      { key: 'high', label: 'High' },
+    ];
+    const counts = new Map(order.map((row) => [row.key, { count: 0, done: 0, xp: 0 }]));
+
+    tasks.forEach((task) => {
+      const day = (task.created_at || '').slice(0, 10);
+      if (!day || day < mondayIso || day > sundayIso) return;
+      // Anything unrecognised counts as low, which is how the grid colours it.
+      const key = String(task.priority || '').toLowerCase();
+      const bucket = counts.get(key) ?? counts.get('low');
+      if (!bucket) return;
+      bucket.count += 1;
+      if (task.status === 'done') {
+        bucket.done += 1;
+        bucket.xp += Number(task.xp_value) || 0;
+      }
+    });
+
+    return order.map((row) => ({ ...row, ...counts.get(row.key)! }));
+  }, [mondayIso, sundayIso, tasks]);
 
   /**
    * What is coming after the week on screen — tasks by due date, events by the
@@ -610,6 +660,7 @@ export default function Week() {
           streak={Number(stats.current_streak) || 0}
           focus={focus}
           days={weekDays}
+          priorities={priorities}
           upcoming={upcoming}
           onViewMonth={() => navigate('/calendar/month')}
           onViewAnalytics={() => navigate('/analytics')}

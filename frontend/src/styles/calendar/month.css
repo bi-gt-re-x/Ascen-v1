@@ -2125,35 +2125,49 @@ body:has(.calendar-container) .app-main {
     transform: none;
 }
 
-/* Month / Week / Day toggle (visual only for now) */
+/* The Week / Day / Month switcher — one control, one appearance.
+ *
+ * It was drawn twice: this, sized for the dark top bar the shell used to have,
+ * and a second, smaller set of rules in week.css for the copy the Week view
+ * puts in its own header row. The result was a control that changed size and
+ * colour depending on which of its own three segments you were standing on —
+ * a big translucent pill on Day and Month, a compact one on Week. The Week
+ * view's is the one that survives, because it is the one drawn against the
+ * card the three views actually sit on. week.css now only says where its copy
+ * goes, not what it looks like. */
 .view-toggle {
     display: inline-flex;
-    gap: 4px;
-    padding: 5px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
+    gap: 2px;
+    padding: 3px;
+    background: #f2f4f7;
+    border: 1px solid #e5e8ee;
+    border-radius: 12px;
 }
 .view-toggle-btn {
     border: none;
     background: transparent;
-    color: #9a9ba4;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    font-size: 15px;
+    color: #6b7280;
+    font-family: inherit;
+    font-size: 13px;
     font-weight: 600;
-    padding: 11px 30px;
-    border-radius: 11px;
+    padding: 6px 16px;
+    border-radius: 9px;
     cursor: pointer;
     /* The three are links now, not buttons — a segmented control that
        underlines two of its three segments reads as broken. */
     text-decoration: none;
     transition: color 0.2s ease, background 0.2s ease;
 }
-.view-toggle-btn:hover:not(.active) { color: #ffffff; }
+.view-toggle-btn:hover:not(.active) { color: #2c302e; background: #e9ecf1; }
 .view-toggle-btn.active {
-    background: #ffffff;
-    color: #141518;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    background: #1a1f26;
+    color: #ffffff;
+    box-shadow: none;
 }
+html[data-theme="dark"] .view-toggle { background: #0f141b; border-color: #262c36; }
+html[data-theme="dark"] .view-toggle-btn { color: #8b949e; }
+html[data-theme="dark"] .view-toggle-btn:hover:not(.active) { color: #e6edf3; background: #1b212a; }
+html[data-theme="dark"] .view-toggle-btn.active { background: #e6edf3; color: #161b22; }
 
 /* Two-column body: calendar on the left, the day's plan on the right */
 .calendar-body {
@@ -2768,16 +2782,9 @@ html[data-theme="light"] .nav-arrow:hover {
     color: #17181c;
 }
 
-html[data-theme="light"] .view-toggle {
-    background: rgba(16, 24, 40, 0.06);
-}
-html[data-theme="light"] .view-toggle-btn { color: #6b6c76; }
-html[data-theme="light"] .view-toggle-btn:hover:not(.active) { color: #17181c; }
-html[data-theme="light"] .view-toggle-btn.active {
-    background: #2c302e;
-    color: #ffffff;
-    box-shadow: 0 2px 10px rgba(16, 24, 40, 0.18);
-}
+/* The switcher's light-theme repaint is gone with the dark bar it corrected
+   for: the base rules above are the light ones now, and the dark theme is the
+   override. */
 
 /* Theme dropdown, if styled by the base rules, reads on the light surface */
 html[data-theme="light"] .calendar-theme-select {
@@ -3166,7 +3173,12 @@ body:has(.calendar-container) *::-webkit-scrollbar {
 .calendar-card { position: relative; }
 .calendar-topbar {
     position: absolute;
-    top: 10px;
+    /* The card's own top padding (26px) plus half the difference between the
+       52px header row and the 35px switcher — which lands it on the same line
+       as the date beside it, the way the Week view's copy sits on that line by
+       being *in* the row. It was 10px, which was the corner rather than the
+       line, and read as a floating tab above the view instead of part of it. */
+    top: 34px;
     right: clamp(18px, 3vw, 52px);
     margin: 0;
     z-index: 6;
@@ -3186,8 +3198,11 @@ body:has(.calendar-container) *::-webkit-scrollbar {
     min-height: 52px;
 }
 
+/* Room for the corner switcher, and only that: 205px of control plus a gap.
+   It was 320px, sized for the wide pill the switcher used to be, and the extra
+   hundred was coming straight out of the Day view's date row. */
 #dayView .wk-header.day-header {
-    padding-right: 320px;
+    padding-right: 232px;
 }
 /* The week's date sits in the column beside the sidebar toggle; with the
    selector opposite it, the extra left indent is no longer what centres it. */
