@@ -126,18 +126,19 @@ export function GridBlock({
   const priorityClass =
     block.priority === 'high' ? 'prio-high' : block.priority === 'medium' ? 'prio-medium' : 'prio-low';
 
-  // The line under the title says when this block runs — the same thing an
-  // event's does, and the design draws both the same way. It used to read
-  // "Due Aug 4, 12:25 PM", which is the block's own end date written out in
-  // full: a column is a seventh of the grid wide, so that ellipsised, and it
-  // pushed the start time up beside the title where the title then ellipsised
-  // too. A task placed on the calendar runs from its start to its due time, so
-  // the range says it in half the width.
+  // A task writes its two ends where they actually are: the start beside the
+  // name on the block's top edge, the end on its bottom edge. The block *is*
+  // the span, so the two labels sit on the two lines the reader is already
+  // reading the times off — and the pair no longer has to fit on one line, so
+  // neither of them ellipsises in a column a seventh of the grid wide. (This
+  // line used to be the whole range, "11 AM – 12:25 PM", and before that "Due
+  // Aug 4, 12:25 PM", which did ellipsise.) Events keep the range: an event
+  // has no start label at the top to pair with.
   //
-  // The exceptions are the two cases where the range would be a lie: a task
+  // The exceptions are the two cases where an end time would be a lie: a task
   // that overruns the column says where it goes instead, and a finished one
   // says when it was actually finished.
-  let footText = rangeLabel(block.startDT, block.dueDT ?? block.startDT);
+  let footText = timeLabelShort(block.dueDT ?? block.startDT);
   let footClass = 'wk-event-due';
   if (block.contDT) {
     footText = `Continued on ${dates.formatDate(block.contDT, { month: 'short', day: 'numeric' })}`;
@@ -148,9 +149,9 @@ export function GridBlock({
     footClass = 'wk-event-done-time';
   }
 
-  // Only the one-row layout keeps a time beside the title. Everywhere else it
-  // is the line below, where it has the block's whole width to be read in.
-  const startText = block.compact ? timeLabelShort(block.startDT) : '';
+  // Every task layout keeps the start beside the title, the one-row one
+  // included — there it is the only time there is room for.
+  const startText = timeLabelShort(block.startDT);
   const title = `${block.title}${block.cont ? ' — continued' : ''}`;
 
   return (
@@ -204,12 +205,13 @@ export function GridBlock({
       </div>
 
       {!block.compact && (
-        <div className="wk-event-foot">
-          {footText && <span className={footClass}>{footText}</span>}
+        <>
           {/* "+ 60 XP", as the design writes it — what finishing this is worth,
-              not a quantity it already has. */}
+              not a quantity it already has. It stays with the name at the top:
+              only the end time goes to the floor of the block. */}
           <span className="wk-event-xp">+ {block.xp} XP</span>
-        </div>
+          {footText && <span className={`wk-event-end ${footClass}`}>{footText}</span>}
+        </>
       )}
     </div>
   );

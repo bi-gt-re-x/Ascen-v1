@@ -305,22 +305,36 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
 .wk-event-head {
     display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
 }
-.wk-event-head .wk-event-title { flex: 1 1 auto; min-width: 0; margin: 0; }
-.wk-event-start { font-size: 11px; opacity: .75; flex: none; }
-/* Footer holds the due/completion time + XP, directly under the title.
+/* A full-size task gives the name and the start time a line each.
  *
- * Stacked, the way the design draws a block: the time on one line and the XP
- * under it. Side by side they were two things competing for the width of a
- * seventh of the grid, and both lost — "8:10 – 9:00 AM" and "50 XP" each
+ * Side by side they do not fit: the narrowest layout this app supports is
+ * seven columns across about 560px, so a block is 80px wide and the start time
+ * alone is 46 of them. The name was squeezed to a single ellipsis. Short
+ * blocks keep the row — they have the width problem too, but they have no
+ * second line to give, and a truncated name beats a clipped one. */
+.wk-event.wk-task:not(.is-compact):not(.is-snug) .wk-event-head {
+    flex-direction: column; align-items: flex-start; gap: 6px;
+    /* The gap for the ⋮ moves onto the name. Stacked, the name is the only
+       line beside the button; leaving the reserve on the whole column stole
+       16 of the 46px the start time needs and broke "11:35 AM" over two. */
+    padding-right: 0;
+}
+.wk-event.wk-task:not(.is-compact):not(.is-snug) .wk-event-head .wk-event-title {
+    padding-right: 16px; align-self: stretch;
+}
+.wk-event-head .wk-event-title { flex: 1 1 auto; min-width: 0; margin: 0; }
+.wk-event-start { font-size: 11px; opacity: .75; flex: none; white-space: nowrap; }
+/* An event's footer holds its time range, directly under the title.
+ *
+ * Stacked, the way the design draws a block: the time on one line and anything
+ * else under it. Side by side they were two things competing for the width of
+ * a seventh of the grid, and both lost — "8:10 – 9:00 AM" and "50 XP" each
  * ellipsised to about one character. A block is tall and narrow; its content
  * should be too. `is-compact` blocks are the exception, since a block under
  * about 40 minutes has one line of room in total.
  *
- * It used to be pushed to the floor of the block with `margin-top: auto`, which
- * on a two-hour block left the name marooned at the top and the XP a hundred
- * pixels below it, reading as two blocks rather than one. The design keeps all
- * three lines together at the top and lets the block's height be what says how
- * long the thing takes. */
+ * Tasks no longer use this: they split the range across the block's two edges.
+ * See `.wk-event-end` below. */
 .wk-event-foot {
     display: flex; flex-direction: column;
     align-items: flex-start; gap: 1px; padding-top: 2px; min-width: 0;
@@ -330,6 +344,38 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
     flex-direction: row; align-items: baseline;
     justify-content: space-between; gap: 6px;
 }
+
+/* A task's end time, on the floor of the block.
+ *
+ * The block *is* the span: its top edge is the start and its bottom edge is
+ * the end, so the two labels go on the two edges they name. Read down a column
+ * and the times line up with the rules they sit against, which the old single
+ * "11 AM – 12:25 PM" line — floating a third of the way down a two-hour block —
+ * never did.
+ *
+ * Only the end time travels. The whole footer was pushed down here once, and
+ * that did leave the name marooned at the top with the XP a hundred pixels
+ * below it, reading as two blocks rather than one; the XP stays with the name,
+ * so what is at the bottom is the one thing that belongs there. */
+.wk-event-end {
+    margin-top: auto; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Twice the air between a task's lines.
+ *
+ * They sat about 3–4px apart: the leading either side of an 11px line at 1.25,
+ * plus a pixel of margin. Doubling it means adding roughly that again, and a
+ * single row-gap on the column does it for every pair at once — name to start
+ * time, start time to XP, and XP to end time on a block short enough that the
+ * last two are still neighbours. The absolutely-positioned children (the ⋮,
+ * the resize strips, the Day view's icon) are not flex items, so none of them
+ * is pushed about by it.
+ *
+ * Only on blocks with the room: `is-snug` is under SNUG_MINUTES, where the
+ * lines already have to give something up, and `is-compact` is a single row
+ * with nothing to space. */
+.wk-event.wk-task:not(.is-compact):not(.is-snug) { row-gap: 6px; }
 /* Real task blocks, colour-coded by state:
    low/easy = blue, medium = yellow, high/hard = red, completed = green. */
 .wk-event.wk-task { background: #eef2fb; border-color: #d7e1f4; color: #2c3a5a; border-left-color: #6b7a99; }
@@ -419,9 +465,15 @@ html[data-theme="dark"] .wk-card-pop { background: #1b1f2a; border-color: #2b324
 html[data-theme="dark"] .wk-card-pop .wk-dd-item { color: #e7e9f2; }
 html[data-theme="dark"] .wk-card-pop .wk-dd-item:hover { background: #262c3a; }
 html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
-.wk-event-xp { font-size: 10.5px; font-weight: 500; opacity: .95; flex: none; display: flex; align-items: center; gap: 4px; }
-/* Too short for three lines: the XP goes, the time stays. See SNUG_MINUTES in
-   utils/calendarGrid.ts — a block under an hour is under 72px tall. */
+.wk-event-xp {
+    font-size: 10.5px; font-weight: 500; opacity: .95; flex: none;
+    display: flex; align-items: center; gap: 4px;
+    /* A direct child of the block now, not of the footer, so it carries the
+       footer's clipping rules itself. */
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Too short for the full layout: the XP goes, both times stay. See
+   SNUG_MINUTES in utils/calendarGrid.ts. */
 .wk-event.is-snug .wk-event-xp { display: none; }
 
 

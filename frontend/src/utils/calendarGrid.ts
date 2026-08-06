@@ -41,13 +41,18 @@ const COMPACT_MIN_H = 18;
 /** At or under this many minutes a block drops to its one-row layout. */
 const COMPACT_MINUTES = 20;
 /**
- * Under this many minutes a block is too short for all three of its lines.
+ * Under this many minutes a block is too short for its full layout.
  *
- * At 72px an hour a 45-minute block is 54 pixels, which holds a title and one
- * line under it. The XP is what goes: the time is what a calendar is for, and
- * a block that cannot say when it runs is not worth drawing.
+ * A task at full size is four lines with air between them — name, start time,
+ * XP, and the end time on the floor — which needs about 84 pixels. 80 minutes
+ * is 92, so the threshold is where the layout actually stops fitting rather
+ * than at a round hour. Under it a block gives up the XP and puts the start
+ * time back beside the name, which is two lines and fits from about 36 minutes
+ * up; under COMPACT_MINUTES it gives up the end time too. The XP is always
+ * what goes first: the time is what a calendar is for, and a block that cannot
+ * say when it runs is not worth drawing.
  */
-const SNUG_MINUTES = 60;
+const SNUG_MINUTES = 80;
 
 export const GRID_HEIGHT = (END_HOUR - START_HOUR) * HOUR_H;
 
