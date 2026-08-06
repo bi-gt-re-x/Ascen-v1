@@ -193,12 +193,24 @@
  * and sixty horizontals are only a ruler behind it. */
 .wk-daycol { position: relative; border-left: 1px solid #f1f2f4; }
 .wk-hourline { position: absolute; left: 0; right: 0; border-top: 1px dashed #eceef1; }
+/* The floor of the window, under the last hour.
+ *
+ * The grid used to simply stop: the 5 AM row had a line above it and nothing
+ * below, so the last hour bled into the page and the scroller gave no sign it
+ * had reached the end. Solid and darker than the dashed rules above it — this
+ * one is not a ruler mark, it is the edge of the day.
+ *
+ * Pulled up by its own width so it lands inside the column rather than two
+ * pixels past the bottom of the scroller, where it would be clipped away. */
+.wk-hourline.is-last { border-top-width: 2px; border-top-style: solid; border-color: #d5d9e0; margin-top: -2px; }
 
 /* "Now" indicator: a red line across the whole week grid at the current time,
-   with a matching red time badge on the left (time-label) edge. */
+   with a matching red time badge on the left (time-label) edge. Drawn by the
+   week (and by the Day view's one column) over the top of everything on the
+   grid — a block sitting on the current hour must not hide it. */
 .wk-nowline {
-    position: absolute; left: 0.35vw; right: 0; height: 0;
-    border-top: 2px solid #e5484d; z-index: 6; pointer-events: none;
+    position: absolute; left: 0; right: 0; height: 0;
+    border-top: 2px solid #e5484d; z-index: 8; pointer-events: none;
 }
 .wk-nowline::before {
     content: ''; position: absolute; left: -4px; top: -5px;
@@ -206,13 +218,18 @@
 }
 /* Time badge sits in the time-label gutter, just outside (left of) the first day
    column — its right edge a couple px short of the column border so the border
-   still shows and the badge itself isn't clipped. */
+   still shows and the badge itself isn't clipped.
+   The ring is the surface showing through around it, so the badge is separated
+   from the rail rather than crowded into it. The hour label it lands on top of
+   is hidden outright — see LABEL_CLEARANCE in components/Calendar/TimeGrid.tsx;
+   a ring is not enough to keep "7:59 AM" and "8 AM" apart in 48px of gutter. */
 .wk-nowlabel {
     position: absolute; right: 1px; left: auto;
     transform: translateY(-50%);
     background: #e5484d; color: #fff; font-size: 10px; font-weight: 700;
-    padding: 1px 5px; border-radius: 6px; white-space: nowrap; z-index: 7;
+    padding: 1px 5px; border-radius: 6px; white-space: nowrap; z-index: 9;
     pointer-events: none;
+    box-shadow: 0 0 0 3px #fff;
 }
 
 /* Drag-to-create selection preview on the time grid. */
@@ -275,7 +292,7 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
     border-left-width: 3px;
     font-size: 11px; line-height: 1.25;
     display: flex; flex-direction: column;
-    /* No shadow: at 48px an hour the blocks sit close together, and a shadow on
+    /* No shadow: at 72px an hour the blocks still sit close together, and a shadow on
        each one turns a column of them into corduroy. The left accent and the
        border do the separating. */
     box-shadow: none;
@@ -404,7 +421,7 @@ html[data-theme="dark"] .wk-card-pop .wk-dd-item:hover { background: #262c3a; }
 html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
 .wk-event-xp { font-size: 10.5px; font-weight: 500; opacity: .95; flex: none; display: flex; align-items: center; gap: 4px; }
 /* Too short for three lines: the XP goes, the time stays. See SNUG_MINUTES in
-   utils/calendarGrid.ts — a block under an hour is under 48px tall. */
+   utils/calendarGrid.ts — a block under an hour is under 72px tall. */
 .wk-event.is-snug .wk-event-xp { display: none; }
 
 
@@ -580,6 +597,10 @@ html[data-theme="dark"] .wk-progress { background: #262c36; }
 html[data-theme="dark"] .wk-allday-row { border-color: #262c36; }
 html[data-theme="dark"] .wk-daycol { border-color: #21262d; }
 html[data-theme="dark"] .wk-hourline { border-color: #1b2029; }
+html[data-theme="dark"] .wk-hourline.is-last { border-color: #303845; }
+/* The gap the badge holds around itself is the surface it sits on, whatever
+   that surface is — white in the light theme, the card in this one. */
+html[data-theme="dark"] .wk-nowlabel { box-shadow: 0 0 0 3px #0f141b; }
 html[data-theme="dark"] .wk-daydate.today { background: #f4f4f6; color: #161b22; }
 /* State-coloured task blocks, dark variants (muted fills, readable text). */
 html[data-theme="dark"] .wk-event.wk-task.prio-low    { background: #16233a; border-color: #274267; color: #9bc0ff; border-left-color: #6a9bff; }

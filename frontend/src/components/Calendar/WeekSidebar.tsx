@@ -21,6 +21,7 @@
  */
 import { useMemo } from 'react';
 import { fmtHM } from '@/hooks/useFocusSession';
+import { useCountUp } from '@/hooks/useCountUp';
 
 export interface WeekStats {
   total: number;
@@ -167,13 +168,27 @@ export function WeekSidebar({
   onViewAnalytics,
   collapsed,
 }: WeekSidebarProps) {
+  // This Week Progress counts itself up rather than arriving finished. The
+  // panel is four numbers and a ring about the same seven days, and a reader
+  // who steps to another week gets all five replaced between frames with
+  // nothing to say which of them moved. Travelling to the new figures is what
+  // makes the change legible — and on the first paint, which follows a loading
+  // state, it is what makes the column read as alive rather than as a
+  // screenshot. The ring is driven off the same tweened rate, so the arc and
+  // the percent in the middle of it stay the same number throughout.
+  // Nothing moves under prefers-reduced-motion; see useCountUp.
+  const rate = Math.round(useCountUp(stats.rate));
+  const total = Math.round(useCountUp(stats.total));
+  const done = Math.round(useCountUp(stats.done));
+  const xp = Math.round(useCountUp(stats.xp));
+
   const points = useMemo(() => sparkPoints(days), [days]);
   const line = points.map((point) => `${point.x},${point.y}`).join(' ');
   // The fill drops to the floor under the first and last points rather than at
   // the edges of the box, so it sits under the line instead of flaring past it.
   const area = `${points[0]?.x ?? 0},34 ${line} ${points[points.length - 1]?.x ?? 100},34`;
 
-  const ringFilled = (Math.max(0, Math.min(100, stats.rate)) / 100) * RING_C;
+  const ringFilled = (Math.max(0, Math.min(100, rate)) / 100) * RING_C;
 
   const breakdownPeak = Math.max(1, ...SAMPLE_BREAKDOWN.map((row) => row.xp));
   const breakdownTotal = SAMPLE_BREAKDOWN.reduce((sum, row) => sum + row.xp, 0);
@@ -186,6 +201,9 @@ export function WeekSidebar({
 
         <div className="wk-weekly">
           <div className="wk-ring">
+            {/* The label reads the settled figure, not the tweened one: a
+                screen reader should be told what the week is, not watch it
+                arrive. */}
             <svg viewBox="0 0 64 64" role="img" aria-label={`${stats.rate}% complete`}>
               <circle className="wk-ring-track" cx="32" cy="32" r={RING_R} />
               <circle
@@ -198,22 +216,22 @@ export function WeekSidebar({
               />
             </svg>
             <div className="wk-ring-centre">
-              <span className="wk-ring-pct">{stats.rate}%</span>
+              <span className="wk-ring-pct">{rate}%</span>
               <span className="wk-ring-label">On Track</span>
             </div>
           </div>
 
           <dl className="wk-weekly-figures">
             <div>
-              <dd>{stats.total}</dd>
+              <dd>{total}</dd>
               <dt>Tasks</dt>
             </div>
             <div>
-              <dd>{stats.done}</dd>
+              <dd>{done}</dd>
               <dt>Completed</dt>
             </div>
             <div>
-              <dd>{stats.xp.toLocaleString()}</dd>
+              <dd>{xp.toLocaleString()}</dd>
               <dt>XP Earned</dt>
             </div>
           </dl>

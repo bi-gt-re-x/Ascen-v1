@@ -28,15 +28,29 @@ export interface TimeLabelsProps {
   at?: Date;
 }
 
+/**
+ * How near the now badge an hour label has to be to give way to it.
+ *
+ * The rail is only wide enough for one of them. Twice an hour the badge lands
+ * on a label and the two print over each other — "7:59 AM" over "8 AM" is a
+ * red smudge that says neither. The hour is the one that goes: it can be read
+ * off the rows above and below it, and the badge cannot be read off anything.
+ */
+const LABEL_CLEARANCE = 11;
+
 /** The 6 AM – 5 AM rail down the left of the grid. */
 export function TimeLabels({ now, at }: TimeLabelsProps) {
   return (
     <div className="wk-timelabels" style={{ height: GRID_HEIGHT }}>
-      {gridHours().map((hour) => (
-        <div key={hour} className="wk-timelabel" style={{ height: HOUR_H }}>
-          <span>{hourLabel(hour)}</span>
-        </div>
-      ))}
+      {gridHours().map((hour) => {
+        const y = (hour - START_HOUR) * HOUR_H;
+        const eclipsed = now !== null && Math.abs(y - now) < LABEL_CLEARANCE;
+        return (
+          <div key={hour} className="wk-timelabel" style={{ height: HOUR_H }}>
+            <span hidden={eclipsed}>{hourLabel(hour)}</span>
+          </div>
+        );
+      })}
       {now !== null && (
         <div className="wk-nowlabel" style={{ top: now }}>
           {nowLabel(at)}
@@ -85,17 +99,18 @@ export function DayColumn({
       data-iso={iso}
       style={{ height: GRID_HEIGHT }}
     >
-      {/* One rule per hour. The last one is the window's floor, drawn by the
-          column's own edge, so the loop stops short of it. */}
-      {gridHours()
-        .filter((hour) => hour < END_HOUR)
-        .map((hour) => (
-          <div
-            key={hour}
-            className="wk-hourline"
-            style={{ top: (hour - START_HOUR) * HOUR_H }}
-          />
-        ))}
+      {/* One rule per hour, and one under the last of them.
+          The floor used to be left to the column's own edge, which draws
+          nothing: the grid simply ran out under 5 AM. It is drawn here, and
+          drawn heavier than the rules above it — those are a ruler behind the
+          day, this is where the day stops. */}
+      {gridHours().map((hour) => (
+        <div
+          key={hour}
+          className={`wk-hourline${hour === END_HOUR ? ' is-last' : ''}`}
+          style={{ top: (hour - START_HOUR) * HOUR_H }}
+        />
+      ))}
 
       {blocks.map((block) => (
         <GridBlock

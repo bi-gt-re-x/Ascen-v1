@@ -26,12 +26,16 @@ export const END_HOUR = 29;
 /**
  * Pixels per hour. The stylesheets are sized to match.
  *
- * 48, which is the scale the design draws: seventeen labels from 6 AM to 10 PM
- * across about 800px of grid. It was 141, nearly three times that, and the
- * consequence was not a roomier grid but a much smaller one — four hours on
- * screen at a time out of a day the reader is trying to see the shape of.
+ * 72: half again the 48 the design draws at. 48 put seventeen labels from 6 AM
+ * to 10 PM across about 800px of grid, which read as the right density on
+ * paper and as a cramped one on screen — an hour was barely taller than the two
+ * lines of text a block wants to carry, and the rows a reader drags between
+ * were a thumb's width apart. It was 141 before that, nearly three times 48,
+ * and the consequence was not a roomier grid but a much smaller one: four hours
+ * on screen at a time out of a day the reader is trying to see the shape of.
+ * This sits between the two.
  */
-export const HOUR_H = 48;
+export const HOUR_H = 72;
 /** The floor for a very short block, so its name is not clipped to nothing. */
 const COMPACT_MIN_H = 18;
 /** At or under this many minutes a block drops to its one-row layout. */
@@ -39,7 +43,7 @@ const COMPACT_MINUTES = 20;
 /**
  * Under this many minutes a block is too short for all three of its lines.
  *
- * At 48px an hour a 45-minute block is 36 pixels, which holds a title and one
+ * At 72px an hour a 45-minute block is 54 pixels, which holds a title and one
  * line under it. The XP is what goes: the time is what a calendar is for, and
  * a block that cannot say when it runs is not worth drawing.
  */
@@ -150,8 +154,18 @@ export function minutesToHm(minutes: number): string {
 // --------------------------------------------------------------------------
 // Pixels ↔ time — what dragging on the grid is made of
 // --------------------------------------------------------------------------
-/** One five-minute step, in pixels. Everything a drag produces lands on one. */
-export const MIN_STEP_PX = HOUR_H / 12;
+/**
+ * The step everything a drag produces lands on: a quarter of an hour.
+ *
+ * Fifteen minutes rather than five. Five was a finer grid than anyone schedules
+ * on — the times it produced were 8:35 and 9:10, and hitting a round one meant
+ * landing a three-pixel target — and it is also the shortest a block could be
+ * made. A quarter hour is the unit a day is actually planned in, and at
+ * `HOUR_H` it is a step the pointer can feel.
+ */
+export const MIN_STEP_MINUTES = 15;
+/** That step in pixels. */
+export const MIN_STEP_PX = (HOUR_H * MIN_STEP_MINUTES) / 60;
 
 /**
  * The gap a block is drawn short by, so neighbours do not touch.
@@ -163,20 +177,20 @@ export const MIN_STEP_PX = HOUR_H / 12;
  */
 export const BLOCK_GAP = 4;
 
-/** Round a pixel offset to the nearest five minutes. */
+/** Round a pixel offset to the nearest quarter hour. */
 export function snapPx(px: number): number {
   return Math.round(px / MIN_STEP_PX) * MIN_STEP_PX;
 }
 
 /**
- * Pixels down a column as minutes past midnight, snapped to five.
+ * Pixels down a column as minutes past midnight, snapped to the quarter hour.
  *
  * The column starts at START_HOUR, so pixels past the 18-hour mark wrap into
  * the small hours — 6 AM plus 19 hours is 1 AM, not 25 o'clock.
  */
 export function pxToClockMinutes(px: number): number {
   const gridMinutes = START_HOUR * 60 + (px / HOUR_H) * 60;
-  const snapped = Math.round(gridMinutes / 5) * 5;
+  const snapped = Math.round(gridMinutes / MIN_STEP_MINUTES) * MIN_STEP_MINUTES;
   return ((snapped % 1440) + 1440) % 1440;
 }
 
@@ -190,7 +204,8 @@ export function pxToClockMinutes(px: number): number {
 export function pxToDate(iso: string, px: number): Date {
   const [year = 1970, month = 1, day = 1] = iso.split('-').map(Number);
   const at = new Date(year, month - 1, day, START_HOUR, 0, 0, 0);
-  const minutes = Math.round(((px / HOUR_H) * 60) / 5) * 5;
+  const minutes =
+    Math.round(((px / HOUR_H) * 60) / MIN_STEP_MINUTES) * MIN_STEP_MINUTES;
   return new Date(at.getTime() + minutes * 60000);
 }
 

@@ -579,13 +579,22 @@ export default function Week() {
           >
             <TimeLabels now={thisWeek ? nowOffset(now) : null} at={now} />
             <div className="wk-daycols" ref={daycols}>
+              {/* The now line belongs to the week, not to Monday. Drawn on the
+                  day column it marks, it stopped dead at that column's edge —
+                  a 250px dash in the middle of a grid, easy to mistake for part
+                  of a block. One line across all seven columns is what a reader
+                  can find without looking for it, and it sits above the blocks
+                  rather than behind them so a busy morning cannot swallow it.
+                  The Day view still draws its own, inside its single column. */}
+              {thisWeek && nowOffset(now) !== null && (
+                <div className="wk-nowline" style={{ top: nowOffset(now) as number }} />
+              )}
               {columns.map((column) => (
                 <DayColumn
                   key={column.iso}
                   iso={column.iso}
                   blocks={column.blocks}
                   today={column.iso === todayIso}
-                  now={column.iso === todayIso ? nowOffset(now) : null}
                   onEdit={(block) => openFor(block, column.iso, 'edit')}
                   onDelete={(block) => openFor(block, column.iso, 'delete')}
                   onComplete={complete}

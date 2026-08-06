@@ -11,9 +11,9 @@
  *     unfinished task) its click-to-finish name, and it follows the pointer —
  *     up and down for the time, across for the day.
  *   * **Length.** Press a block's top or bottom edge and only that end moves.
- *     The other stays put, and a block always keeps at least five minutes.
+ *     The other stays put, and a block always keeps at least a quarter hour.
  *
- * Everything snaps to five minutes. A move or a resize is previewed with the
+ * Everything snaps to fifteen minutes. A move or a resize is previewed with the
  * times it would take, and a slot overlapping any other block — task or event,
  * by so much as a minute — is refused: the preview turns red and releasing
  * leaves the block exactly where it was. That is the same rule the grid already
@@ -248,7 +248,7 @@ export function useGridDrag({
         st.ok = slotIsFree(st.col, st.top, st.bottom, st.block);
       } else {
         // One edge. The day is fixed and the end being dragged cannot pass the
-        // other: a block always keeps at least one five-minute step.
+        // other: a block always keeps at least one quarter-hour step.
         const edge = snapPx(st.lastY - st.col.getBoundingClientRect().top);
         if (st.mode === 'top') {
           st.top = Math.max(0, Math.min(edge, (st.bottom0 as number) - MIN_STEP_PX));
