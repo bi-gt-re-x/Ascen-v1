@@ -29,12 +29,15 @@
 .day-gridpane { display: flex; flex-direction: column; min-height: 0; }
 
 /* All-day row: label + a full-width "add an all-day task" input with a + button. */
+/* The gutter is the week's, so the hour labels have the same room here as they
+   do there — it was a hard-coded 56px, and when the week widened its rail to 82
+   the Day view's labels wrapped to two lines and were clipped. */
 .day-allday {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: var(--wk-gutter) minmax(0, 1fr);
     align-items: center;
-    border-top: 1px solid #c3ccd9;
-    border-bottom: 1px solid #c3ccd9;
+    border-top: 1px solid #eef0f2;
+    border-bottom: 1px solid #eef0f2;
     padding: 8px 0;
     flex: none;   /* stays put while the grid below scrolls */
 }
@@ -52,8 +55,8 @@
 }
 
 
-/* Scroll area shares .wk-scroll (56px time gutter + 1 day column). */
-.day-scroll { grid-template-columns: 56px minmax(0, 1fr); }
+/* Scroll area shares .wk-scroll (the time gutter + 1 day column). */
+.day-scroll { grid-template-columns: var(--wk-gutter) minmax(0, 1fr); }
 
 /* Single wide day column. Its separator sits on the page background
  * (#eef0f4 in the light theme) and was that exact colour, so it never

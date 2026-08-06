@@ -28,7 +28,6 @@ import {
   DayColumn,
   TimeLabels,
   ViewSwitcher,
-  WeekFocusCard,
   WeekSidebar,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
@@ -118,7 +117,6 @@ export default function Week() {
 
   const actions = useBlockActions(username, store, tasks, reload);
   const scroller = useRef<HTMLDivElement>(null);
-  const jumpedToNow = useRef(false);
   /** The grid's scroll offset, kept across the remount a reload causes. */
   const held = useRef(0);
 
@@ -154,29 +152,23 @@ export default function Week() {
   }, [mondayIso, sundayIso, username]);
 
   /**
-   * Where the grid is scrolled to.
+   * Hold the grid's scroll position across the remount a reload causes.
    *
-   * Land on the current hour rather than at 6 AM, once, when the grid first
-   * comes up — and after that, hold whatever position the reader has scrolled
-   * to. The second half matters because a write to a task reloads the week,
-   * `loading` goes true, the whole grid unmounts behind the spinner, and a
-   * fresh scroller starts at the top. Dragging an 11 AM task one column across
-   * used to answer by throwing the view back to six in the morning.
+   * A write to a task reloads the week, `loading` goes true, the whole grid
+   * unmounts behind the spinner, and a fresh scroller starts at the top.
+   * Dragging an 11 AM task one column across used to answer by throwing the
+   * view back to six in the morning.
+   *
+   * It also used to open scrolled to the current hour, which was worth doing at
+   * 141px an hour: four hours fitted on screen and 6 AM was rarely one of them.
+   * At 48 the whole waking day is there, so there is nothing to jump to — and
+   * the view opens on the morning, which is where the day starts.
    */
   useEffect(() => {
     const box = scroller.current;
     if (loading || !box) return;
-    if (jumpedToNow.current) {
-      box.scrollTop = held.current;
-      return;
-    }
-    jumpedToNow.current = true;
-    if (!thisWeek) return;
-    const top = nowOffset(new Date());
-    if (top === null) return;
-    box.scrollTop = Math.max(0, top - box.clientHeight / 2);
-    held.current = box.scrollTop;
-  }, [loading, thisWeek]);
+    box.scrollTop = held.current;
+  }, [loading]);
 
   const columns = useMemo(
     () =>
@@ -603,19 +595,15 @@ export default function Week() {
             </div>
           </div>
 
-          {/* Pinned to the bottom-left corner of the grid, where the design puts
-              it. It sits over the last hour of Monday and Tuesday, which is the
-              trade the design makes; the grid scrolls underneath it, so nothing
-              it covers is out of reach. */}
-          <WeekFocusCard focus={focus} onViewAnalytics={() => navigate('/analytics')} />
-
         </div>
         <WeekSidebar
           stats={overview}
           streak={Number(stats.current_streak) || 0}
+          focus={focus}
           days={weekDays}
           upcoming={upcoming}
           onViewMonth={() => navigate('/calendar/month')}
+          onViewAnalytics={() => navigate('/analytics')}
           collapsed={collapsed}
         />
 

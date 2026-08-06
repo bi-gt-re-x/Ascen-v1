@@ -15,9 +15,9 @@ import { CardMenu } from './CardMenu';
 import { iconUrlFor } from '@/utils/calendarIcons';
 import {
   blockLabel,
-  dueLabel,
-  hmLabel,
+  hmToDate,
   hmLabelShort,
+  rangeLabel,
   shortDateTime,
   timeLabel,
   timeLabelShort,
@@ -80,7 +80,9 @@ export function GridBlock({
   if (block.kind === 'event') {
     return (
       <div
-        className={`wk-event wk-event-cal${block.compact ? ' is-compact' : ''}`}
+        className={`wk-event wk-event-cal${block.compact ? ' is-compact' : ''}${
+          block.snug ? ' is-snug' : ''
+        }`}
         data-kind="event"
         data-iso={iso}
         data-id={block.name}
@@ -112,7 +114,7 @@ export function GridBlock({
             <div className="wk-event-title">{block.name}</div>
             <div className="wk-event-foot">
               <span className="wk-event-due">
-                {`${hmLabel(block.startHM)} – ${hmLabel(block.endHM)}`}
+                {rangeLabel(hmToDate(block.startHM), hmToDate(block.endHM))}
               </span>
             </div>
           </>
@@ -124,10 +126,18 @@ export function GridBlock({
   const priorityClass =
     block.priority === 'high' ? 'prio-high' : block.priority === 'medium' ? 'prio-medium' : 'prio-low';
 
-  // The footer says the one thing worth knowing about this block's timing: a
-  // task that overruns the column says where it goes, a finished one when it
-  // was finished, and everything else when it is due.
-  let footText = '';
+  // The line under the title says when this block runs — the same thing an
+  // event's does, and the design draws both the same way. It used to read
+  // "Due Aug 4, 12:25 PM", which is the block's own end date written out in
+  // full: a column is a seventh of the grid wide, so that ellipsised, and it
+  // pushed the start time up beside the title where the title then ellipsised
+  // too. A task placed on the calendar runs from its start to its due time, so
+  // the range says it in half the width.
+  //
+  // The exceptions are the two cases where the range would be a lie: a task
+  // that overruns the column says where it goes instead, and a finished one
+  // says when it was actually finished.
+  let footText = rangeLabel(block.startDT, block.dueDT ?? block.startDT);
   let footClass = 'wk-event-due';
   if (block.contDT) {
     footText = `Continued on ${dates.formatDate(block.contDT, { month: 'short', day: 'numeric' })}`;
@@ -136,18 +146,18 @@ export function GridBlock({
     const end = block.completedDT || block.dueDT;
     footText = end ? (dates.isoDate(end) === iso ? timeLabel(end) : shortDateTime(end)) : '';
     footClass = 'wk-event-done-time';
-  } else if (block.dueDT) {
-    footText = `Due ${dueLabel(block.dueDT)}`;
   }
 
-  const startText = block.compact ? timeLabelShort(block.startDT) : timeLabel(block.startDT);
+  // Only the one-row layout keeps a time beside the title. Everywhere else it
+  // is the line below, where it has the block's whole width to be read in.
+  const startText = block.compact ? timeLabelShort(block.startDT) : '';
   const title = `${block.title}${block.cont ? ' — continued' : ''}`;
 
   return (
     <div
       className={`wk-event wk-task ${priorityClass}${block.done ? ' is-done' : ''}${
         block.compact ? ' is-compact' : ''
-      }${completing ? ' is-completing' : ''}`}
+      }${block.snug ? ' is-snug' : ''}${completing ? ' is-completing' : ''}`}
       data-kind="task"
       data-iso={iso}
       data-id={block.id}

@@ -61,10 +61,13 @@ export interface UpcomingEntry {
 export interface WeekSidebarProps {
   stats: WeekStats;
   streak: number;
+  /** Focused against planned across the week — the last card in the column. */
+  focus: WeekFocus;
   days: WeekDay[];
   upcoming: UpcomingEntry[];
   /** The way out of the week — the design's "View Full Calendar". */
   onViewMonth: () => void;
+  onViewAnalytics: () => void;
   collapsed: boolean;
 }
 
@@ -91,13 +94,14 @@ const RING_R = 26;
 const RING_C = 2 * Math.PI * RING_R;
 
 /**
- * Weekly Focus Time — the card the design pins over the foot of the grid.
+ * Weekly Focus Time.
  *
- * It is here rather than in Week.tsx because it is the fifth panel of the same
- * overview, written in the same furniture as the four in the column; only its
- * position is different, and position is the caller's business.
+ * The design floats this over the foot of the grid, and it was floated for a
+ * while. It is the fifth panel of the same overview, written in the same
+ * furniture as the four above it, so it now simply sits with them — which also
+ * gives back the corner of Sunday evening it was covering.
  */
-export function WeekFocusCard({
+function WeekFocusCard({
   focus,
   onViewAnalytics,
 }: {
@@ -108,7 +112,7 @@ export function WeekFocusCard({
     focus.planned > 0 ? Math.min(100, Math.round((focus.focused / focus.planned) * 100)) : 0;
 
   return (
-    <section className="wk-panel wk-focus-float">
+    <section className="wk-panel">
       <h3 className="wk-panel-title">⏱️ Weekly Focus Time</h3>
       <p className="wk-focustime">
         {fmtHM(focus.focused)} <span className="wk-focustime-of">/ {fmtHM(focus.planned)}</span>
@@ -156,9 +160,11 @@ function sparkPoints(days: WeekDay[]): { x: number; y: number }[] {
 export function WeekSidebar({
   stats,
   streak,
+  focus,
   days,
   upcoming,
   onViewMonth,
+  onViewAnalytics,
   collapsed,
 }: WeekSidebarProps) {
   const points = useMemo(() => sparkPoints(days), [days]);
@@ -329,6 +335,9 @@ export function WeekSidebar({
           View Full Calendar<span aria-hidden="true"> →</span>
         </button>
       </section>
+
+      {/* --- Weekly Focus Time -------------------------------------------- */}
+      <WeekFocusCard focus={focus} onViewAnalytics={onViewAnalytics} />
     </aside>
   );
 }

@@ -105,6 +105,36 @@ export function hmLabelShort(hm: string): string {
   return minutes ? `${twelve}:${String(minutes).padStart(2, '0')} ${suffix}` : `${twelve} ${suffix}`;
 }
 
+/**
+ * "7:40 – 8:40 AM" for a block's two ends.
+ *
+ * The meridiem is written once when both ends share it, which is how the design
+ * writes a range and how anyone says one out loud. It matters more here than it
+ * reads: a block is a seventh of the grid wide, and "7:40 AM – 8:40 AM" is four
+ * characters longer than the column can show.
+ */
+export function rangeLabel(from: Date, to: Date): string {
+  const half = (date: Date) => (date.getHours() < 12 ? 'AM' : 'PM');
+  // ":00" is dropped on the hour for the same reason the meridiem is shared:
+  // every character costs, and nobody reads "11:00" differently from "11".
+  const clock = (date: Date) => {
+    const minutes = date.getMinutes();
+    const hour = date.getHours() % 12 || 12;
+    return minutes ? `${hour}:${String(minutes).padStart(2, '0')}` : `${hour}`;
+  };
+  return half(from) === half(to)
+    ? `${clock(from)} – ${clock(to)} ${half(to)}`
+    : `${clock(from)} ${half(from)} – ${clock(to)} ${half(to)}`;
+}
+
+/** A stored "18:40" as a Date today, so a range can be written from two of them. */
+export function hmToDate(hm: string): Date {
+  const [hours = 0, minutes = 0] = String(hm).split(':').map(Number);
+  const at = new Date();
+  at.setHours(hours, minutes, 0, 0);
+  return at;
+}
+
 /** "18:40" as 18.667 — hours, for placing a block. */
 export function hmToHour(hm: string): number {
   const [hours = 0, minutes = 0] = String(hm).split(':').map(Number);

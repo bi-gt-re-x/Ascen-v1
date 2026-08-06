@@ -2030,9 +2030,12 @@ body:has(.calendar-container) .app-main {
 /* The week view spends its width on the grid. 46px of card padding either side
    is most of a day column, and this view has seven of them to place; the Day
    and Month views have one board each and keep the roomier frame. */
+/* The week spends its width on the grid. The right side is trimmed because the
+   overview column already carries its own card padding, so 22px there was a
+   margin outside a margin. */
 .calendar-card:has(#weekView) {
     padding-left: 22px;
-    padding-right: 22px;
+    padding-right: 12px;
 }
 
 .calendar-container {
@@ -3099,9 +3102,9 @@ html[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    /* No top padding: with the page's own top offset gone, this was the last
-       thing holding the view down the window. */
-    padding: 0 clamp(18px, 3vw, 52px) 16px;
+    /* The page's own top offset is gone (see the body rule above), so this is
+       all the air there is above the date. The design leaves about this much. */
+    padding: 26px clamp(18px, 3vw, 52px) 16px;
 }
 html[data-theme="light"] .calendar-card,
 html[data-theme="dark"] .calendar-card,
