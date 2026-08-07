@@ -72,6 +72,12 @@ export interface DayColumnProps {
   onDelete: (block: Block) => void;
   onComplete: (taskId: string) => void;
   completingId?: string | null;
+  /**
+   * The pair the overlap dialog is asking about, when they are on this column.
+   * Compared by identity: `layOut` hands back the very objects it positioned,
+   * and the pair it reports are two of them.
+   */
+  flagged?: readonly Block[] | null;
 }
 
 export function DayColumn({
@@ -85,6 +91,7 @@ export function DayColumn({
   onDelete,
   onComplete,
   completingId,
+  flagged,
 }: DayColumnProps) {
   return (
     <div
@@ -115,6 +122,7 @@ export function DayColumn({
           onDelete={onDelete}
           onComplete={onComplete}
           completing={block.kind === 'task' && completingId === block.id}
+          flagged={flagged?.includes(block)}
         />
       ))}
 

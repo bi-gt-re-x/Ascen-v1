@@ -35,6 +35,11 @@ export interface GridBlockProps {
   onComplete: (taskId: string) => void;
   /** True while its completion is in flight, so it cannot be clicked twice. */
   completing?: boolean;
+  /**
+   * One of the two blocks the overlap dialog is asking about. Rings it, so
+   * "Show me on the grid" has something to point at.
+   */
+  flagged?: boolean;
 }
 
 /** The `.cal-ico` mask, which paints the SVG in the block's own text colour. */
@@ -69,7 +74,9 @@ export function GridBlock({
   onDelete,
   onComplete,
   completing,
+  flagged,
 }: GridBlockProps) {
+  const clash = flagged ? ' is-clashing' : '';
   const position = {
     top: block.top,
     height: block.height,
@@ -82,7 +89,7 @@ export function GridBlock({
       <div
         className={`wk-event wk-event-cal${block.compact ? ' is-compact' : ''}${
           block.snug ? ' is-snug' : ''
-        }`}
+        }${clash}`}
         data-kind="event"
         data-iso={iso}
         data-id={block.name}
@@ -166,7 +173,7 @@ export function GridBlock({
     <div
       className={`wk-event wk-task ${priorityClass}${block.done ? ' is-done' : ''}${
         block.compact ? ' is-compact' : ''
-      }${block.snug ? ' is-snug' : ''}${completing ? ' is-completing' : ''}`}
+      }${block.snug ? ' is-snug' : ''}${completing ? ' is-completing' : ''}${clash}`}
       data-kind="task"
       data-iso={iso}
       data-id={block.id}

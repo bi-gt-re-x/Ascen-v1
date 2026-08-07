@@ -104,10 +104,21 @@ export function loadCalendarData(username: string | null): CalendarData {
   if (!parsed || typeof parsed !== 'object') return {};
 
   const data = parsed as CalendarData;
-  // A day whose entries are gone is a day that should not be in the store.
   Object.keys(data).forEach((key) => {
     const day = data[key];
-    if (!day || !Array.isArray(day.timestamps)) delete data[key];
+    // A day whose entries are gone is a day that should not be in the store.
+    if (!day || !Array.isArray(day.timestamps)) {
+      delete data[key];
+      return;
+    }
+    // Mirrors of database tasks, written by the vanilla calendar this was
+    // ported from: it pushed a copy of every task into the day it was showing.
+    // They are not events and they are not the task either — the task itself
+    // is a row in the database, and the calendar draws it from there. Left in
+    // the store they are a to-do that outlives its task and reappears on a
+    // calendar nobody put it on, which is exactly what these entries must
+    // never do. Dropped on the way in, so nothing downstream has to know.
+    day.timestamps = day.timestamps.filter((section) => !section?.isDashboardTask);
   });
   return data;
 }
@@ -115,10 +126,12 @@ export function loadCalendarData(username: string | null): CalendarData {
 /**
  * Write the store back.
  *
- * Two things are dropped on the way out, both because they are derived: a
- * finished to-do's card (rebuilt from the database every time its day is
- * opened — a saved copy would outlive the task being re-opened or deleted),
- * and empty subtasks.
+ * Three things are dropped on the way out, all because they are derived: a
+ * to-do's card in either of the two shapes the old calendar wrote one
+ * (`isDashboardTask`, `completedTodo`), and empty subtasks. `loadCalendarData`
+ * drops the first of those on the way in as well — a to-do has no business on
+ * the calendar in either direction, and a store this never writes is a store
+ * that cannot grow one back.
  */
 export function saveCalendarData(username: string | null, data: CalendarData): void {
   const clean: CalendarData = {};
@@ -129,7 +142,7 @@ export function saveCalendarData(username: string | null, data: CalendarData): v
     clean[dateKey] = {
       focus: day.focus,
       timestamps: day.timestamps
-        .filter((section) => !section.completedTodo)
+        .filter((section) => !section.completedTodo && !section.isDashboardTask)
         .map((section) => {
           if (!section.subtasks?.length) return section;
           const kept = section.subtasks.filter((sub) =>

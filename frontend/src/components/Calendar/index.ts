@@ -31,6 +31,7 @@ export type { MonthSummaryBarProps } from './MonthSummaryBar';
 export { ConflictDialog, CreateChooser, DeleteConfirm } from './Prompts';
 export type {
   ConflictDialogProps,
+  ConflictSide,
   CreateChooserProps,
   DeleteConfirmProps,
 } from './Prompts';

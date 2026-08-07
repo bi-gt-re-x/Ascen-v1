@@ -15,15 +15,25 @@
  * Writes are chained rather than fired together. The datastore is a file the
  * backend rewrites per call, so twelve parallel creates is twelve reads of the
  * same starting state and eleven lost tasks.
+ *
+ * **Nothing here re-reads the account.** A write used to be followed by
+ * `reload()`, which put the view back through its loading state and cost the
+ * reader their scroll position and their place on the grid every time they
+ * renamed, resized, dragged or finished something. The rows the API writes are
+ * the rows this file just described to it, so the same change is applied to
+ * the list on screen (`patch`) and the page simply shows it. `recover` is the
+ * exception and the safety net: if a write comes back a failure, what is on
+ * screen can no longer be trusted, so the account is re-read after all.
  */
 import { useCallback, useState } from 'react';
 import { tasks as taskService } from '@/services';
 import { xpToPriority, type TaskDraft } from '@/components/Calendar/TaskModal';
 import type { EventDraft, Scope, UseCalendarStore } from './useCalendarStore';
+import type { TaskPatch } from './useCalendarTasks';
 import { monthKey, type CalendarSection } from '@/utils/calendarStore';
 import { isoStamp } from '@/utils/calendarGrid';
 import { dates } from '@/utils';
-import type { Task } from '@/types';
+import type { ApiResult, Task } from '@/types';
 
 export type BlockDialog =
   | { type: 'add-event'; iso: string; defaults?: TimeDefaults }
@@ -116,19 +126,67 @@ function taskDates(baseIso: string, draft: TaskDraft): string[] {
   return out;
 }
 
-/** Run promise-returning steps one after another. */
-function inSequence(steps: Array<() => Promise<unknown>>): Promise<void> {
+/**
+ * Run promise-returning steps one after another, stopping at the first that
+ * comes back a failure.
+ *
+ * The envelope is turned into a rejection on purpose: the caller's `.catch` is
+ * then the one place a half-applied write is handled, rather than every step
+ * having to remember to check.
+ */
+function inSequence(steps: Array<() => Promise<ApiResult<unknown>>>): Promise<void> {
   return steps.reduce(
-    (chain, step) => chain.then(() => step()).then(() => undefined),
+    (chain, step) =>
+      chain
+        .then(() => step())
+        .then((result) => {
+          if (!result.success) throw new Error(result.message);
+        }),
     Promise.resolve(),
   );
+}
+
+/**
+ * A task row exactly as the backend writes one (backend/api/tasks.py `_create`),
+ * so the list on screen holds what a re-read would have returned.
+ *
+ * The one field that can differ is the subject: the backend drops an id its
+ * catalogue does not recognise. Every subject the dialogs offer comes from that
+ * catalogue, so this is a discrepancy only a hand-posted value could produce,
+ * and the next refresh settles it.
+ */
+function localTask(
+  id: string,
+  username: string,
+  fields: {
+    title: string;
+    priority: Task['priority'];
+    xp: number;
+    createdAt: string;
+    dueDate: string;
+    subject?: string | null;
+  },
+): Task {
+  return {
+    id,
+    user_id: username,
+    title: fields.title,
+    description: '',
+    priority: fields.priority,
+    status: 'todo',
+    xp_value: fields.xp,
+    due_date: fields.dueDate,
+    show_on_calendar: true,
+    created_at: fields.createdAt,
+    ...(fields.subject ? { subject: fields.subject } : {}),
+  };
 }
 
 export function useBlockActions(
   username: string | null,
   store: UseCalendarStore,
   allTasks: Task[],
-  reload: () => void,
+  { patch, recover }: TaskPatch,
 ): UseBlockActions {
   const [dialog, setDialog] = useState<BlockDialog>(null);
 
@@ -162,7 +220,7 @@ export function useBlockActions(
       if (dialog.type !== 'add-task' && dialog.type !== 'edit-task') return;
 
       const priority = xpToPriority(draft.xp);
-      const steps: Array<() => Promise<unknown>> = [];
+      const steps: Array<() => Promise<ApiResult<unknown>>> = [];
 
       // An edit replaces: the old rows go, and the new ones are written from
       // the pattern — which is what lets a weekly repeat become a monthly one.
@@ -172,6 +230,7 @@ export function useBlockActions(
             ? taskOccurrences(dialog.task)
             : [dialog.task]
           : [];
+      const dropped = new Set(replacing.map((task) => String(task.id)));
       replacing.forEach((task) => {
         steps.push(() => taskService.deleteTaskWithoutTracking(String(task.id)));
       });
@@ -181,25 +240,55 @@ export function useBlockActions(
           ? [dialog.iso]
           : taskDates(dialog.iso, draft);
 
+      // Filled in as the creates come back, then applied in one go — so a
+      // twelve-month repeat moves the list once instead of twelve times.
+      const written: Task[] = [];
+
       days.forEach((iso, index) => {
+        const id = `${Date.now()}-${index}`;
+        const createdAt = `${iso}T${draft.startTime}:00`;
+        const dueDate = `${iso}T${draft.endTime}:00`;
         steps.push(() =>
-          taskService.createTask(username, {
-            id: `${Date.now()}-${index}`,
-            name: draft.name,
-            priority,
-            xp_reward: draft.xp,
-            created_at: `${iso}T${draft.startTime}:00`,
-            due_date: `${iso}T${draft.endTime}:00`,
-            show_on_calendar: true,
-            subject: draft.subject,
-          }),
+          taskService
+            .createTask(username, {
+              id,
+              name: draft.name,
+              priority,
+              xp_reward: draft.xp,
+              created_at: createdAt,
+              due_date: dueDate,
+              show_on_calendar: true,
+              subject: draft.subject,
+            })
+            .then((result) => {
+              if (result.success) {
+                written.push(
+                  localTask(result.task_id || id, username, {
+                    title: draft.name,
+                    priority,
+                    xp: draft.xp,
+                    createdAt,
+                    dueDate,
+                    subject: draft.subject,
+                  }),
+                );
+              }
+              return result;
+            }),
         );
       });
 
-      void inSequence(steps).then(reload);
+      void inSequence(steps)
+        .then(() =>
+          patch((list) => [
+            ...list.filter((task) => !dropped.has(String(task.id))),
+            ...written,
+          ]),
+        )
+        .catch(recover);
       close();
     },
-    [close, dialog, reload, taskOccurrences, username],
+    [close, dialog, patch, recover, taskOccurrences, username],
   );
 
   const removeEvent = useCallback(
@@ -215,14 +304,17 @@ export function useBlockActions(
     (scope: Scope) => {
       if (dialog?.type !== 'delete-task' || !username) return;
       const targets = scope === 'all' ? taskOccurrences(dialog.task) : [dialog.task];
+      const gone = new Set(targets.map((task) => String(task.id)));
       void inSequence(
         targets.map(
           (task) => () => taskService.deleteTask(username, String(task.id)),
         ),
-      ).then(reload);
+      )
+        .then(() => patch((list) => list.filter((task) => !gone.has(String(task.id)))))
+        .catch(recover);
       close();
     },
-    [close, dialog, reload, taskOccurrences, username],
+    [close, dialog, patch, recover, taskOccurrences, username],
   );
 
   /**
@@ -244,25 +336,55 @@ export function useBlockActions(
 
       const oldId = String(task.id);
       const xp = Number(task.xp_value) || 0;
+      const priority = task.priority || xpToPriority(xp);
+      const newId = `${Date.now()}-drag`;
+      const createdAt = isoStamp(startAt);
+      const dueDate = isoStamp(endAt);
+      /** One entry once the create lands; empty if it never did. */
+      const moved: Task[] = [];
+
       void inSequence([
         () => taskService.deleteTaskWithoutTracking(oldId),
         () =>
-          taskService.createTask(username, {
-            id: `${Date.now()}-drag`,
-            name: task.title || '',
-            priority: task.priority || xpToPriority(xp),
-            xp_reward: xp,
-            created_at: isoStamp(startAt),
-            due_date: isoStamp(endAt),
-            show_on_calendar: true,
-            // Moving a block rewrites the task, so everything not being moved
-            // has to be carried over — a drag that quietly cleared the subject
-            // would be a drag that edited the task.
-            subject: task.subject ?? null,
-          }),
-      ]).then(reload);
+          taskService
+            .createTask(username, {
+              id: newId,
+              name: task.title || '',
+              priority,
+              xp_reward: xp,
+              created_at: createdAt,
+              due_date: dueDate,
+              show_on_calendar: true,
+              // Moving a block rewrites the task, so everything not being moved
+              // has to be carried over — a drag that quietly cleared the subject
+              // would be a drag that edited the task.
+              subject: task.subject ?? null,
+            })
+            .then((result) => {
+              if (result.success) {
+                moved.push(
+                  localTask(result.task_id || newId, username, {
+                    title: task.title || '',
+                    priority,
+                    xp,
+                    createdAt,
+                    dueDate,
+                    subject: task.subject ?? null,
+                  }),
+                );
+              }
+              return result;
+            }),
+      ])
+        .then(() =>
+          patch((list) => [
+            ...list.filter((entry) => String(entry.id) !== oldId),
+            ...moved,
+          ]),
+        )
+        .catch(recover);
     },
-    [reload, store, username],
+    [patch, recover, store, username],
   );
 
   return {

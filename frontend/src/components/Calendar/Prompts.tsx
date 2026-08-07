@@ -8,8 +8,9 @@
  *
  * `ConflictDialog` is the unusual one. Two blocks booked over each other is a
  * state the calendar refuses to hold, so there is no "keep both" — the reader
- * picks a side and the grid is honest again. It is red, it is modal, and it
- * reappears on every render until it is resolved, all deliberately.
+ * picks a side and the grid is honest again. It is red and it reappears on
+ * every render until it is resolved, both deliberately; what it is not any
+ * more is a wall over the very thing it is asking about. See its own note.
  */
 import { useState } from 'react';
 import type { Scope } from '@/hooks/useCalendarStore';
@@ -136,29 +137,86 @@ export function CreateChooser({ when, onChoose, onCancel }: CreateChooserProps) 
   );
 }
 
+/** One side of a clash, as the dialog has to describe it. */
+export interface ConflictSide {
+  name: string;
+  /** "9 – 10:30 AM" — the span it occupies. */
+  when: string;
+  kind: 'task' | 'event';
+}
+
 export interface ConflictDialogProps {
-  /** The two labels, in the order they were found. */
-  names: [string, string];
+  /** "Wednesday, Aug 12" — the day the two are booked on. */
+  where: string;
+  /** The two, in the order they were found. */
+  sides: [ConflictSide, ConflictSide];
+  /**
+   * Put the two on screen: scroll the grid to them and light them up. The
+   * dialog steps aside while this is on, because a modal over the thing it is
+   * asking about is a question the reader cannot answer.
+   */
+  onReveal: () => void;
   onDelete: (which: 0 | 1) => void;
 }
 
-export function ConflictDialog({ names, onDelete }: ConflictDialogProps) {
+/**
+ * Two blocks booked over each other.
+ *
+ * There is no "keep both": the grid refuses to hold that state, so the reader
+ * picks a side. What the dialog owes them in exchange is enough to pick with —
+ * it used to offer two bare names, which on a seven-column week is a question
+ * about two rectangles the reader cannot see and may never have looked at. It
+ * now says which day, what each one is, and when each one runs, and **Show me
+ * on the grid** scrolls the pair into view, rings them, and gets out of the
+ * way so they can be read before either is deleted.
+ */
+export function ConflictDialog({
+  where,
+  sides,
+  onReveal,
+  onDelete,
+}: ConflictDialogProps) {
+  const [peeking, setPeeking] = useState(false);
+
   return (
-    <div className="wk-overlap-backdrop">
-      <div className="wk-overlap-popup" role="alertdialog" aria-modal="true">
+    <div className={`wk-overlap-backdrop${peeking ? ' is-peeking' : ''}`}>
+      <div className="wk-overlap-popup" role="alertdialog" aria-modal={!peeking}>
         <span className="wk-overlap-msg">
-          “{names[0]}” and “{names[1]}” overlap. Delete one to continue:
+          Two things are booked over each other on <strong>{where}</strong>. Delete
+          one to continue:
         </span>
-        {names.map((name, index) => (
-          <button
-            key={name}
-            type="button"
-            className="wk-overlap-close"
-            onClick={() => onDelete(index as 0 | 1)}
-          >
-            Delete “{name}”
-          </button>
-        ))}
+
+        <ul className="wk-overlap-list">
+          {sides.map((side, index) => (
+            <li className="wk-overlap-item" key={`${side.name}-${side.when}-${index}`}>
+              <span className="wk-overlap-where">
+                <span className={`wk-overlap-kind is-${side.kind}`}>
+                  {side.kind === 'task' ? 'Task' : 'Event'}
+                </span>
+                <span className="wk-overlap-when">{side.when}</span>
+              </span>
+              <span className="wk-overlap-name">{side.name}</span>
+              <button
+                type="button"
+                className="wk-overlap-close"
+                onClick={() => onDelete(index as 0 | 1)}
+              >
+                Delete this one
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          type="button"
+          className="wk-overlap-reveal"
+          onClick={() => {
+            setPeeking(true);
+            onReveal();
+          }}
+        >
+          {peeking ? 'Show me again' : 'Show me on the grid'}
+        </button>
       </div>
     </div>
   );

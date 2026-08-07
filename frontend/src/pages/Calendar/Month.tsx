@@ -34,7 +34,7 @@ import {
   dayEntries,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
-import { ErrorState, Loading } from '@/components';
+import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
   useCalendarStore,
   useCalendarTasks,
@@ -62,8 +62,9 @@ function keyOf(date: Date): string {
 export default function Month() {
   useDocumentTitle('Calendar · Month');
 
-  const { tasks, username, loading, error, reload, completing, complete } =
-    useCalendarTasks();
+  const account = useCalendarTasks();
+  const { tasks, username, loading, hasData, refreshing, error, refresh, completing, complete } =
+    account;
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
@@ -74,7 +75,7 @@ export default function Month() {
   const [selectedKey, setSelectedKey] = useState(() => keyOf(new Date()));
   const [history, setHistory] = useState<FocusHistory>({});
 
-  const actions = useBlockActions(username, store, tasks, reload);
+  const actions = useBlockActions(username, store, tasks, account);
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
@@ -193,10 +194,12 @@ export default function Month() {
   }, []);
 
   if (loading) return <Loading label="Loading your month" />;
-  if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (!hasData) return <ErrorState message={error ?? 'No data came back.'} onRetry={refresh} />;
 
   return (
     <CalendarShell paneId="monthView" ownSwitcher>
+      {error && <ErrorState message={error} onRetry={refresh} />}
+
       <div className="mv-body">
         {/* The switcher rides in the grid's own header, on the line with the
             month and the arrows, rather than floating in the card's corner —
@@ -211,7 +214,13 @@ export default function Month() {
           onToday={goToday}
           onSelect={setSelectedKey}
           onSelectOther={selectOther}
-          tools={<ViewSwitcher />}
+          tools={
+            <>
+              <ViewSwitcher />
+              {/* The only thing on this page that re-reads the account. */}
+              <RefreshButton busy={refreshing} onRefresh={refresh} />
+            </>
+          }
         >
           <MonthSummaryBar
             settled={figures.settled}

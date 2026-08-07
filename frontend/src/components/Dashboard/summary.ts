@@ -13,6 +13,7 @@
  * Date and therefore never drifts a timezone. See utils/dates.ts for why
  * `toISOString()` is not allowed near a day key.
  */
+import { isCalendarPlaced } from '@/utils/calendarGrid';
 import type { Task, TaskPriority } from '@/types';
 
 /** The day part of a stored timestamp, or '' when there is not one. */
@@ -119,11 +120,14 @@ function dayStampValue(stamp: string | undefined): number {
 /**
  * A task belongs to the calendar half of a tab when it is scheduled.
  *
- * Same test the page has always used — `show_on_calendar` *and* a due date —
- * kept here so the two halves cannot both claim a task.
+ * The same test the page has always used — `show_on_calendar` *and* a due
+ * date — but no longer a second copy of it. It is the calendar's own predicate
+ * now, so a task filed under this page's "Calendar Tasks" heading is exactly a
+ * task the calendar will draw, and a to-do is exactly one it will not. Two
+ * spellings of one rule is how the heading ends up disagreeing with the grid.
  */
 export function isCalendarTask(task: Task): boolean {
-  return Boolean(task.show_on_calendar && task.due_date);
+  return isCalendarPlaced(task);
 }
 
 // --------------------------------------------------------------------------

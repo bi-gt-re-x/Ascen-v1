@@ -1,18 +1,50 @@
 /**
- * The tasks the calendar draws, and finishing one from it.
+ * The tasks the calendar is allowed to know about, and finishing one from it.
  *
- * All three views read the same call the dashboard does, so the streak, the
- * XP and the task list are the same numbers in both places — and completing a
+ * ## Only calendar tasks get in
+ *
+ * This is the calendar's one door onto the account's tasks, and it is shut to
+ * everything `show_on_calendar` does not mark. A dashboard to-do is a list
+ * item — nobody chose a day or a time for it — so it is not a block, not a
+ * card in a day panel, not a line in Upcoming, not a number in a day's tally,
+ * not a shade on the month grid, and not a row in the week's priority chart.
+ * Filtering here rather than in each of those places is the point: a view
+ * cannot forget the rule if it never sees the tasks the rule excludes.
+ *
+ * Three layers enforce it and they are deliberately redundant, because the
+ * failure is silent and the cost is one boolean test:
+ *
+ *   1. here, so no view holds a to-do at all;
+ *   2. `dayTaskBlocks` (utils/calendarGrid), which draws nothing unplaced;
+ *   3. `taskCalendarDay` (utils/calendarIntensity), which files a to-do under
+ *      no day, so the shading, the month counts and the day panel skip it.
+ *
+ * `stats` is not filtered and should not be: the level, the XP and the streak
+ * are facts about the account, not about the calendar.
+ *
+ * ## Nothing is re-read behind the reader
+ *
+ * All three views read the same call the dashboard does, so the streak, the XP
+ * and the task list are the same numbers in both places — and completing a
  * task from a grid block goes through the same endpoint as ticking it off on
  * the dashboard, which is what awards the XP, stamps `completed_at`, extends
  * the streak and advances any "complete N tasks" goal. The calendar does not
  * do half of that itself.
  *
+ * What it no longer does is ask for the whole account again afterwards. The
+ * completion response carries every figure that moved, so the answer is
+ * written onto the list already on screen (`patch`) and the grid keeps its
+ * scroll, its open menus and its place. `refresh` re-reads, and the Refresh
+ * button in each view's header is the only thing that calls it — apart from
+ * `recover`, for the case where a write turns out to have failed and what is
+ * on screen can no longer be trusted.
+ *
  * One in-flight guard per id, so a double click cannot award the XP twice.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useUserData } from './useUserData';
 import { tasks as taskService } from '@/services';
+import { isCalendarPlaced, isoStamp } from '@/utils/calendarGrid';
 import type { Task, UserStats } from '@/types';
 
 const NO_STATS: UserStats = {
@@ -24,21 +56,51 @@ const NO_STATS: UserStats = {
   charge: 0,
 };
 
-export interface UseCalendarTasks {
+/** Changing the task list without re-reading it. */
+export interface TaskPatch {
+  /** Replace the list with the result of this. */
+  patch: (update: (tasks: Task[]) => Task[]) => void;
+  /** A write failed: re-read, because what is on screen may now be a lie. */
+  recover: () => void;
+}
+
+export interface UseCalendarTasks extends TaskPatch {
+  /** Calendar tasks only. See the note above. */
   tasks: Task[];
   stats: UserStats;
   username: string | null;
   loading: boolean;
+  /**
+   * An answer has come back at least once. A view guards its error state on
+   * this rather than on `error`: once there is a week on screen, a refresh
+   * that fails belongs in a banner, not in place of the week.
+   */
+  hasData: boolean;
+  /** A re-read is in flight over a page that already has its data. */
+  refreshing: boolean;
   error: string | null;
-  reload: () => void;
+  /** Re-ask the server. Only the Refresh button and `recover` call this. */
+  refresh: () => void;
   /** The id being completed right now, so its block can say so. */
   completing: string | null;
   complete: (taskId: string) => void;
 }
 
 export function useCalendarTasks(): UseCalendarTasks {
-  const { data, error, loading, reload, username } = useUserData();
+  const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const [completing, setCompleting] = useState<string | null>(null);
+
+  const tasks = useMemo(
+    () => (data?.tasks ?? []).filter(isCalendarPlaced),
+    [data],
+  );
+
+  const patch = useCallback(
+    (update: (list: Task[]) => Task[]) => {
+      mutate((current) => ({ ...current, tasks: update(current.tasks) }));
+    },
+    [mutate],
+  );
 
   const complete = useCallback(
     (taskId: string) => {
@@ -47,28 +109,75 @@ export function useCalendarTasks(): UseCalendarTasks {
       void taskService
         .completeTask(username, taskId)
         .then((result) => {
-          // A failed completion leaves the task exactly as it was; re-reading
-          // is what puts the view back in step either way.
+          // A failed completion leaves the task exactly as it was, so nothing
+          // is written here — but the page can no longer vouch for what it is
+          // showing either, which is what the re-read is for.
           if (!result.success) {
             console.error(`Calendar: completing task ${taskId} failed`, result.message);
+            reload();
+            return;
           }
-          reload();
+
+          // Everything the backend moved comes back in the response, so the
+          // page can say what happened without asking again. The stamps are
+          // the ones the backend writes (backend/api/tasks.py) computed the
+          // same way, in local time, because that is the shape every date
+          // comparison in the calendar is written against.
+          const at = new Date();
+          mutate((current) => ({
+            ...current,
+            stats: {
+              ...current.stats,
+              // `new_xp` is the XP inside the new level; `stats.xp` is the
+              // lifetime total, which is what the cards read off it.
+              xp: (Number(current.stats.xp) || 0) + (Number(result.xp_earned) || 0),
+              level: result.new_level,
+              tasks_completed: result.new_tasks_completed,
+              current_streak: result.current_streak,
+              best_streak: result.best_streak,
+            },
+            tasks: current.tasks.map((task) => {
+              if (String(task.id) !== String(taskId)) return task;
+              const created = task.created_at ? new Date(task.created_at) : null;
+              const due = task.due_date ? new Date(task.due_date) : null;
+              return {
+                ...task,
+                status: 'done' as const,
+                completed_at: isoStamp(at),
+                ...(created && !Number.isNaN(created.getTime())
+                  ? {
+                      completion_seconds: Math.round(
+                        Math.max(0, (at.getTime() - created.getTime()) / 1000),
+                      ),
+                    }
+                  : {}),
+                ...(due && !Number.isNaN(due.getTime())
+                  ? { met_deadline: at <= due }
+                  : {}),
+              };
+            }),
+          }));
         })
         .catch((cause: unknown) => {
           console.error(`Calendar: completing task ${taskId} failed`, cause);
+          reload();
         })
         .finally(() => setCompleting(null));
     },
-    [completing, reload, username],
+    [completing, mutate, reload, username],
   );
 
   return {
-    tasks: data?.tasks ?? [],
+    tasks,
     stats: data?.stats ?? NO_STATS,
     username,
     loading,
+    hasData: data !== null,
+    refreshing,
     error,
-    reload,
+    refresh: reload,
+    patch,
+    recover: reload,
     completing,
     complete,
   };

@@ -58,15 +58,13 @@
 .wk-icon-btn:hover { background: #f2f4f7; color: #2c302e; }
 .wk-arrow { width: 32px; height: 32px; font-size: 17px; line-height: 1; }
 .wk-today { padding: 7px 18px; font-size: 13.5px; font-weight: 600; }
-/* On this week already: still readable, but plainly not a place to go. */
-.wk-today:disabled { opacity: .45; cursor: default; }
 .wk-icon-btn {
     width: 34px; height: 34px; border-radius: 10px;
     display: inline-flex; align-items: center; justify-content: center;
     color: #6b7280;
 }
 
-.wk-arrow:hover, .wk-today:not(:disabled):hover, .wk-icon-btn:hover { background: #f6f7f9; }
+.wk-arrow:hover, .wk-today:hover, .wk-icon-btn:hover { background: #f6f7f9; }
 .wk-icon-btn:hover { color: #2c302e; }
 
 /* ---- Layout: grid + overview column ---- */
@@ -483,21 +481,85 @@ html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
     position: fixed; inset: 0; z-index: 1000; padding: 20px;
     display: flex; align-items: center; justify-content: center;
     background: rgba(16, 24, 40, .45);
+    transition: background .18s ease;
 }
 .wk-overlap-popup {
     display: flex; flex-direction: column; gap: 12px;
-    max-width: min(92vw, 440px); text-align: center;
+    width: min(92vw, 460px); text-align: left;
     background: #b0413e; color: #fff; padding: 20px 22px;
     border-radius: 14px; font-size: 15px; font-weight: 600;
     box-shadow: 0 16px 44px rgba(16,24,40,.4);
+    transition: transform .22s ease, width .22s ease;
 }
-.wk-overlap-msg { line-height: 1.45; margin-bottom: 4px; }
+.wk-overlap-msg { line-height: 1.45; font-weight: 600; }
+.wk-overlap-msg strong { font-weight: 800; }
+
+/* One row per side: what it is and when it runs, its name, and the way out.
+   The dialog used to offer two bare names, which on a seven-column week is a
+   question about two rectangles the reader may never have looked at. */
+.wk-overlap-list {
+    display: flex; flex-direction: column; gap: 10px;
+    list-style: none; margin: 0; padding: 0;
+}
+.wk-overlap-item {
+    display: flex; flex-direction: column; gap: 6px;
+    background: rgba(255,255,255,.13); border-radius: 10px; padding: 11px 13px;
+}
+.wk-overlap-where { display: flex; align-items: center; gap: 8px; }
+.wk-overlap-kind {
+    flex: none; border-radius: 999px; padding: 2px 8px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
+    text-transform: uppercase; background: rgba(255,255,255,.24);
+}
+.wk-overlap-when { font-size: 12.5px; font-weight: 700; opacity: .9; }
+.wk-overlap-name {
+    font-size: 15.5px; font-weight: 700; line-height: 1.3;
+    overflow-wrap: anywhere;
+}
 .wk-overlap-close {
     background: rgba(255,255,255,.22); color: #fff; border: none;
-    border-radius: 8px; padding: 10px 16px; cursor: pointer;
-    font: inherit; font-weight: 700; width: 100%;
+    border-radius: 8px; padding: 8px 14px; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 700; width: 100%;
+    margin-top: 2px;
 }
-.wk-overlap-close:hover { background: rgba(255,255,255,.32); }
+.wk-overlap-close:hover { background: rgba(255,255,255,.34); }
+
+.wk-overlap-reveal {
+    background: #fff; color: #8f302e; border: none;
+    border-radius: 9px; padding: 10px 16px; cursor: pointer;
+    font: inherit; font-size: 13.5px; font-weight: 800; width: 100%;
+}
+.wk-overlap-reveal:hover { background: #ffeceb; }
+
+/* Peeking: the reader has asked to see the two blocks, so the dialog gets out
+   of their way — the backdrop stops dimming and stops catching clicks, and the
+   card tucks into the bottom-left corner, still holding both answers. A modal
+   over the very thing it is asking about is a question nobody can answer. */
+.wk-overlap-backdrop.is-peeking {
+    background: transparent; pointer-events: none;
+    align-items: flex-end; justify-content: flex-start;
+}
+.wk-overlap-backdrop.is-peeking .wk-overlap-popup {
+    pointer-events: auto; width: min(88vw, 340px);
+    font-size: 13.5px;
+}
+.wk-overlap-backdrop.is-peeking .wk-overlap-name { font-size: 14px; }
+
+/* The two blocks the dialog is asking about, ringed so the scroll it performs
+   lands on something the eye can find. */
+.wk-event.is-clashing {
+    outline: 2.5px solid #b0413e;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 6px rgba(176, 65, 62, .22);
+    z-index: 6;
+    animation: wk-clash-pulse 1.5s ease-in-out infinite;
+}
+@keyframes wk-clash-pulse {
+    50% { box-shadow: 0 0 0 11px rgba(176, 65, 62, .09); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .wk-event.is-clashing { animation: none; }
+}
 
 /* Drag-to-create chooser: after a drag, ask whether to make an event or a task.
    Neutral (not an error), centered on a light dismissable backdrop. */

@@ -278,6 +278,25 @@ export function blockLabel(block: Block): string {
   return block.kind === 'event' ? block.name : block.title;
 }
 
+/** A grid hour (6…29) as a clock time today, so a range can be written of two. */
+function gridHourDate(hour: number): Date {
+  const at = new Date();
+  at.setHours(Math.floor(hour) % 24, Math.round((hour % 1) * 60), 0, 0);
+  return at;
+}
+
+/**
+ * "9 – 10:30 AM" — the span a block actually occupies on the column.
+ *
+ * Read off the laid-out hours rather than off the underlying task or event, so
+ * it is the span the reader can see. That matters where it is used: the overlap
+ * dialog has to describe two blocks precisely enough that the reader can find
+ * them on the grid behind it.
+ */
+export function blockWhen(block: Block): string {
+  return rangeLabel(gridHourDate(block.start), gridHourDate(block.end));
+}
+
 function toDate(value: string | undefined | null): Date | null {
   if (!value) return null;
   const date = new Date(value);
@@ -345,14 +364,27 @@ export function dayTaskBlocks(iso: string, tasks: Task[]): TaskBlock[] {
 /**
  * Only a task placed on the calendar may be drawn on one.
  *
- * The flag arrives as a boolean from the API and as `1` or `"true"` from
- * older rows, so it is compared loosely on purpose — the alternative is a
+ * Two tests, and a task has to pass both.
+ *
+ * **The flag.** It arrives as a boolean from the API and as `1` or `"true"`
+ * from older rows, so it is compared loosely on purpose — the alternative is a
  * calendar that silently loses everything created before the column was
  * normalised.
+ *
+ * **A deadline.** A block is a span and a span needs two ends; without a due
+ * date there is no second end, and the grid used to invent one an hour after
+ * the task was typed. Every task the calendar's own dialogs create has both
+ * times, so this costs a real calendar entry nothing — what it catches is a
+ * to-do that carries the flag because it was made before the dashboard's
+ * dialog started saying otherwise (see components/Dashboard/TaskModal), and
+ * a to-do has no hour on a calendar at all.
  */
-export function isCalendarPlaced(task: Pick<Task, 'show_on_calendar'>): boolean {
+export function isCalendarPlaced(
+  task: Pick<Task, 'show_on_calendar' | 'due_date'>,
+): boolean {
   const value = task.show_on_calendar as unknown;
-  return value === true || value === 1 || value === '1' || value === 'true';
+  const flagged = value === true || value === 1 || value === '1' || value === 'true';
+  return flagged && Boolean(task.due_date);
 }
 
 /** The events stored on this day, sized by their times. */

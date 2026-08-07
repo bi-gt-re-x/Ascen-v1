@@ -23,13 +23,14 @@ import {
   minutesToTime,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
-import { ErrorState, Loading } from '@/components';
+import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
   useCalendarStore,
   useCalendarTasks,
   useDayFocus,
   useDocumentTitle,
   useNow,
+  useNowScroll,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import {
@@ -42,6 +43,7 @@ import { events as eventService } from '@/services';
 import { dates } from '@/utils';
 import {
   blockLabel,
+  blockWhen,
   dayEventBlocks,
   dayTaskBlocks,
   hmLabel,
@@ -68,8 +70,19 @@ function dayTitle(date: Date): string {
 export default function Day() {
   useDocumentTitle('Calendar · Day');
 
-  const { tasks, stats, username, loading, error, reload, completing, complete } =
-    useCalendarTasks();
+  const account = useCalendarTasks();
+  const {
+    tasks,
+    stats,
+    username,
+    loading,
+    hasData,
+    refreshing,
+    error,
+    refresh,
+    completing,
+    complete,
+  } = account;
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
@@ -87,13 +100,15 @@ export default function Day() {
   }));
   const [xpEarned, setXpEarned] = useState<number | null>(null);
 
-  const actions = useBlockActions(username, store, tasks, reload);
+  const actions = useBlockActions(username, store, tasks, account);
   const scroller = useRef<HTMLDivElement>(null);
-  const jumpedToNow = useRef(false);
 
   const iso = dates.isoDate(cursor);
   const todayIso = dates.isoDate(now);
   const isToday = iso === todayIso;
+
+  /** Opening the day lands on the current hour — see hooks/useNowScroll. */
+  const centerOnNow = useNowScroll(scroller, !loading && isToday);
 
   /** Moving the day re-syncs the mini-month to that day's month. */
   const goTo = useCallback((date: Date) => {
@@ -117,18 +132,32 @@ export default function Day() {
     };
   }, [completing, iso, username]);
 
-  useEffect(() => {
-    if (jumpedToNow.current || loading || !isToday) return;
-    const top = nowOffset(new Date());
-    if (top === null || !scroller.current) return;
-    scroller.current.scrollTop = Math.max(0, top - scroller.current.clientHeight / 2);
-    jumpedToNow.current = true;
-  }, [isToday, loading]);
-
   const { blocks, conflict } = useMemo(
     () => layOut([...dayTaskBlocks(iso, tasks), ...dayEventBlocks(iso, store.data)]),
     [iso, store.data, tasks],
   );
+
+  /**
+   * Scroll the clashing pair into the middle of the window.
+   *
+   * One column here rather than seven, but the same problem: the clash can be
+   * at an hour the reader has not scrolled to, and a dialog naming two blocks
+   * they cannot see is a question they cannot answer. The pair are ringed too —
+   * `flagged` on the column below.
+   */
+  const revealConflict = useCallback(() => {
+    const box = scroller.current;
+    if (!box || !conflict) return;
+    const top = Math.min(conflict[0].top, conflict[1].top);
+    const bottom = Math.max(
+      conflict[0].top + conflict[0].height,
+      conflict[1].top + conflict[1].height,
+    );
+    box.scrollTo({
+      top: Math.max(0, (top + bottom) / 2 - box.clientHeight / 2),
+      behavior: 'smooth',
+    });
+  }, [conflict]);
 
   /** Every task that belongs to this day, finished or not. */
   const tally = useMemo(() => {
@@ -259,7 +288,7 @@ export default function Day() {
   }, [actions, isToday, iso, now]);
 
   if (loading) return <Loading label="Loading your day" />;
-  if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (!hasData) return <ErrorState message={error ?? 'No data came back.'} onRetry={refresh} />;
 
   return (
     <CalendarShell paneId="dayView">
@@ -284,11 +313,25 @@ export default function Day() {
               ❯
             </button>
           </div>
-          <button type="button" className="wk-today" onClick={() => goTo(new Date())}>
+          {/* Back to today *and* to the hour it is — the same landing the view
+              makes when it is opened. */}
+          <button
+            type="button"
+            className="wk-today"
+            onClick={() => {
+              goTo(new Date());
+              centerOnNow();
+            }}
+          >
             Today
           </button>
         </div>
+
+        {/* The one control on this page that asks the server again. */}
+        <RefreshButton className="wk-icon-btn" busy={refreshing} onRefresh={refresh} />
       </div>
+
+      {error && <ErrorState message={error} onRetry={refresh} />}
 
       <div className="day-layout">
         <div className="day-gridpane">
@@ -320,6 +363,7 @@ export default function Day() {
               onDelete={(block) => openFor(block, 'delete')}
               onComplete={complete}
               completingId={completing}
+              flagged={conflict}
             />
           </div>
         </div>
@@ -373,7 +417,20 @@ export default function Day() {
 
       {conflict && (
         <ConflictDialog
-          names={[blockLabel(conflict[0]), blockLabel(conflict[1])]}
+          where={dayTitle(cursor)}
+          sides={[
+            {
+              name: blockLabel(conflict[0]),
+              when: blockWhen(conflict[0]),
+              kind: conflict[0].kind,
+            },
+            {
+              name: blockLabel(conflict[1]),
+              when: blockWhen(conflict[1]),
+              kind: conflict[1].kind,
+            },
+          ]}
+          onReveal={revealConflict}
           onDelete={(which) => openFor(conflict[which], 'delete')}
         />
       )}

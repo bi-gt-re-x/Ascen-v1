@@ -78,11 +78,21 @@ body:has(.dash) .app-main {
     color: #6C757D;
 }
 
+/* The date, and beside it the one control on this page that re-reads the
+   account. It sits here rather than over the task list because it is about the
+   whole page: nothing else on it asks the server anything. */
+.dash-datebar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+
 .dash-date {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 6px 0 0;
+    margin: 0;
     font-size: 0.9rem;
     font-weight: 500;
     color: #6C757D;

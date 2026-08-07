@@ -70,19 +70,27 @@ export function dayEntries(
   sections: CalendarSection[],
   tasks: Task[],
 ): DayEntry[] {
-  const events = markConflicts(sections).map((section, index) => ({
-    key: `event:${index}`,
-    kind: 'event' as const,
-    index,
-    name: section.task,
-    startTime: section.startTime,
-    endTime: section.endTime,
-    xp: section.xp ?? 0,
-    completed: Boolean(section.completed),
-    hasConflict: section.hasConflict,
-    subtasks: section.subtasks,
-    section,
-  }));
+  // The index has to be the entry's place in the *stored* list, because that
+  // is what the panel's rename and retime fields write back through — so the
+  // filter comes after the map, not before it. A `isDashboardTask` entry is a
+  // to-do the old calendar mirrored into the store; the store drops those on
+  // load now (utils/calendarStore), and this is the second lock on the same
+  // door: no card for a to-do, whatever is in the file.
+  const events = markConflicts(sections)
+    .map((section, index) => ({
+      key: `event:${index}`,
+      kind: 'event' as const,
+      index,
+      name: section.task,
+      startTime: section.startTime,
+      endTime: section.endTime,
+      xp: section.xp ?? 0,
+      completed: Boolean(section.completed),
+      hasConflict: section.hasConflict,
+      subtasks: section.subtasks,
+      section,
+    }))
+    .filter((entry) => !entry.section.isDashboardTask && !entry.section.completedTodo);
 
   const fromTasks: DayEntry[] = [];
 

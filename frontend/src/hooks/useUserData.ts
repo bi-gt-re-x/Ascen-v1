@@ -4,7 +4,11 @@
  * Wrapped rather than left to each page because reading it has a side effect
  * worth being deliberate about: the backend decays a streak that went stale
  * overnight while answering. So this is the call that makes every page agree
- * on the streak, and `reload()` after a completion is how the number moves.
+ * on the streak.
+ *
+ * It used to be the call every page made again after every write, too. It is
+ * not now: `mutate` puts the change the page just made onto the page, and
+ * `reload` is what the Refresh button does. See hooks/useApi.
  */
 import { useCallback } from 'react';
 import { useApi } from './useApi';

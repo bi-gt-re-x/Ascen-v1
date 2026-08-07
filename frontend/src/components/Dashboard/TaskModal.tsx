@@ -112,6 +112,15 @@ export function TaskModal({
       priority: xpToPriority(xp),
       xp_reward: xp,
       due_date: dueDate(),
+      // A to-do, and said so out loud. This dialog asks for a name, an XP
+      // reward, a subject, and *either* a timer *or* a deadline — never a
+      // start and an end, which is what a block on a calendar is. Sending
+      // nothing used to mean the backend's default, and its default is `True`
+      // (backend/api/tasks.py), so every task made here landed on the calendar
+      // as a block running from the moment it was typed to whenever it was
+      // due: a day-long bar nobody had scheduled, over a grid the reader keeps
+      // for things they had. Tasks reach the calendar by being made on it.
+      show_on_calendar: false,
     };
     // Left out entirely when nothing was chosen, rather than sent as null: the
     // field is optional and an absent key is what "not answered" looks like.

@@ -31,13 +31,14 @@ import {
   WeekSidebar,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
-import { ErrorState, Loading } from '@/components';
+import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
   useCalendarStore,
   useCalendarTasks,
   useDayFocus,
   useDocumentTitle,
   useNow,
+  useNowScroll,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import { useFocusSession } from '@/hooks/useFocusSession';
@@ -50,6 +51,7 @@ import { focus as focusService } from '@/services';
 import { dates } from '@/utils';
 import {
   blockLabel,
+  blockWhen,
   dayEventBlocks,
   dayTaskBlocks,
   layOut,
@@ -95,8 +97,19 @@ function weekTitle(monday: Date): string {
 export default function Week() {
   useDocumentTitle('Calendar · Week');
 
-  const { tasks, stats, username, loading, error, reload, completing, complete } =
-    useCalendarTasks();
+  const account = useCalendarTasks();
+  const {
+    tasks,
+    stats,
+    username,
+    loading,
+    hasData,
+    refreshing,
+    error,
+    refresh,
+    completing,
+    complete,
+  } = account;
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
@@ -115,10 +128,8 @@ export default function Week() {
   /** The day whose focus chip is currently an input, if any. */
   const [focusEditing, setFocusEditing] = useState<string | null>(null);
 
-  const actions = useBlockActions(username, store, tasks, reload);
+  const actions = useBlockActions(username, store, tasks, account);
   const scroller = useRef<HTMLDivElement>(null);
-  /** The grid's scroll offset, kept across the remount a reload causes. */
-  const held = useRef(0);
 
   const mondayIso = dates.isoDate(monday);
   const sundayIso = dates.isoDate(dates.addDays(monday, 6));
@@ -151,24 +162,8 @@ export default function Week() {
     };
   }, [mondayIso, sundayIso, username]);
 
-  /**
-   * Hold the grid's scroll position across the remount a reload causes.
-   *
-   * A write to a task reloads the week, `loading` goes true, the whole grid
-   * unmounts behind the spinner, and a fresh scroller starts at the top.
-   * Dragging an 11 AM task one column across used to answer by throwing the
-   * view back to six in the morning.
-   *
-   * It also used to open scrolled to the current hour, which was worth doing at
-   * 141px an hour: four hours fitted on screen and 6 AM was rarely one of them.
-   * At 48 the whole waking day is there, so there is nothing to jump to — and
-   * the view opens on the morning, which is where the day starts.
-   */
-  useEffect(() => {
-    const box = scroller.current;
-    if (loading || !box) return;
-    box.scrollTop = held.current;
-  }, [loading]);
+  /** Opening the week lands on the current hour — see hooks/useNowScroll. */
+  const centerOnNow = useNowScroll(scroller, !loading && thisWeek);
 
   const columns = useMemo(
     () =>
@@ -184,6 +179,27 @@ export default function Week() {
 
   /** The first clash anywhere this week; the reader has to resolve it. */
   const clash = columns.find((column) => column.conflict);
+
+  /**
+   * Put the clashing pair on screen.
+   *
+   * A week is seven columns of a 23-hour day and the clash can be on any of
+   * them, at an hour the reader has not scrolled to — so the dialog's "Show me
+   * on the grid" scrolls the earlier of the two to the middle of the window.
+   * The pair are ringed as well, by `flagged` on the column below, which is
+   * what makes the scroll land on something the eye can find.
+   */
+  const revealClash = useCallback(() => {
+    const box = scroller.current;
+    const pair = clash?.conflict;
+    if (!box || !pair) return;
+    const top = Math.min(pair[0].top, pair[1].top);
+    const bottom = Math.max(pair[0].top + pair[0].height, pair[1].top + pair[1].height);
+    box.scrollTo({
+      top: Math.max(0, (top + bottom) / 2 - box.clientHeight / 2),
+      behavior: 'smooth',
+    });
+  }, [clash]);
 
   const overview = useMemo(() => {
     const inWeek = (stamp: string | undefined) => {
@@ -477,7 +493,10 @@ export default function Week() {
   }, []);
 
   if (loading) return <Loading label="Loading your week" />;
-  if (error) return <ErrorState message={error} onRetry={reload} />;
+  // Only when there is no week to show. A refresh that fails keeps the one
+  // already on screen and says so in the banner below — throwing the grid away
+  // because the second read timed out is the reader's work for the worse.
+  if (!hasData) return <ErrorState message={error ?? 'No data came back.'} onRetry={refresh} />;
 
   return (
     <CalendarShell paneId="weekView" ownSwitcher>
@@ -508,11 +527,17 @@ export default function Week() {
               ›
             </button>
           </div>
+          {/* Not disabled on the current week, unlike the Month view's: there
+              it would step to a month you are already on and do nothing, but
+              here it also puts the now line back in the middle of the grid,
+              which is worth a press however far the reader has scrolled. */}
           <button
             type="button"
             className="wk-today"
-            disabled={thisWeek}
-            onClick={() => setMonday(mondayOf(new Date()))}
+            onClick={() => {
+              setMonday(mondayOf(new Date()));
+              centerOnNow();
+            }}
           >
             Today
           </button>
@@ -520,6 +545,14 @@ export default function Week() {
 
         <div className="wk-headtools">
           <ViewSwitcher />
+          {/* The only thing on this page that re-reads the account. Everything
+              else — renaming, resizing, dragging, completing — changes what is
+              on screen and leaves the server call to the reader. */}
+          <RefreshButton
+            className="wk-icon-btn"
+            busy={refreshing}
+            onRefresh={refresh}
+          />
           <button
             className="wk-icon-btn"
             id="wkSidebarToggle"
@@ -549,6 +582,10 @@ export default function Week() {
           </button>
         </div>
       </div>
+
+      {/* A refresh that failed, over the week it failed to change rather than
+          in place of it. */}
+      {error && <ErrorState message={error} onRetry={refresh} />}
 
       <div className={`wk-main${collapsed ? ' sidebar-collapsed' : ''}`}>
         <div className="wk-gridwrap">
@@ -620,13 +657,7 @@ export default function Week() {
             </div>
           </div>
 
-          <div
-            className="wk-scroll"
-            ref={scroller}
-            onScroll={(event) => {
-              held.current = event.currentTarget.scrollTop;
-            }}
-          >
+          <div className="wk-scroll" ref={scroller}>
             <TimeLabels now={thisWeek ? nowOffset(now) : null} at={now} />
             <div className="wk-daycols" ref={daycols}>
               {/* The now line belongs to the week, not to Monday. Drawn on the
@@ -649,6 +680,7 @@ export default function Week() {
                   onDelete={(block) => openFor(block, column.iso, 'delete')}
                   onComplete={complete}
                   completingId={completing}
+                  flagged={column.conflict}
                 />
               ))}
             </div>
@@ -685,7 +717,24 @@ export default function Week() {
 
       {clash?.conflict && (
         <ConflictDialog
-          names={[blockLabel(clash.conflict[0]), blockLabel(clash.conflict[1])]}
+          where={dates.formatDate(dates.fromIsoDate(clash.iso), {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+          })}
+          sides={[
+            {
+              name: blockLabel(clash.conflict[0]),
+              when: blockWhen(clash.conflict[0]),
+              kind: clash.conflict[0].kind,
+            },
+            {
+              name: blockLabel(clash.conflict[1]),
+              when: blockWhen(clash.conflict[1]),
+              kind: clash.conflict[1].kind,
+            },
+          ]}
+          onReveal={revealClash}
           onDelete={(which) => {
             const pair = clash.conflict;
             if (pair) openFor(pair[which], clash.iso, 'delete');

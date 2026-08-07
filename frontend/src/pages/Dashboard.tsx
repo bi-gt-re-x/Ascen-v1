@@ -9,9 +9,16 @@
  *
  * The rule the page has always followed and still does: **the backend
  * decides.** Completing a task does not compute the new XP, level or streak
- * locally — it posts, and re-reads. That same call also moves goals and the XP
- * ledger, and re-reading is the only way this page and the goals page agree
- * without a second copy of those rules.
+ * locally — it posts, and renders what the post came back with. The response
+ * carries every figure that moved (backend/api/tasks.py), so this page never
+ * has to guess at one and never has to ask for the whole account again to find
+ * out. Adding a task is the same: the row written is the row described.
+ *
+ * What that buys is a page that does not move under the reader. A re-read used
+ * to follow every write, and while it was in flight the cards were rebuilt and
+ * their counters restarted from zero — a completed task read as a page flash
+ * rather than as a number going up. The Refresh button in the header is the one
+ * thing that asks the server again.
  *
  * The focus session is owned here rather than inside the Focus panel, because
  * two things now show it: the panel and the Focus Time stat card. One
@@ -19,7 +26,7 @@
  * moving when the + on the panel is pressed.
  */
 import { useCallback, useMemo, useState } from 'react';
-import { Ambient, ErrorState, Loading, STATS_CHANGED } from '@/components';
+import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
 import {
   DailyQuote,
   FocusCard,
@@ -45,6 +52,7 @@ import { useDocumentTitle, useUserData } from '@/hooks';
 import { useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
 import { dates } from '@/utils';
+import { isoStamp } from '@/utils/calendarGrid';
 import type { TaskTab } from '@/components/Dashboard';
 import type { NewTask } from '@/services/tasks';
 import type { Task } from '@/types';
@@ -54,7 +62,7 @@ import '@/styles/dashboard-home.css';
 export default function Dashboard() {
   useDocumentTitle('Dashboard');
 
-  const { data, error, loading, reload, username } = useUserData();
+  const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const session = useFocusSession(username);
 
   const [tab, setTab] = useState<TaskTab>('today');
@@ -92,6 +100,9 @@ export default function Dashboard() {
         const result = await taskService.completeTask(username, task.id);
         if (!result.success) {
           setFailure(result.message);
+          // The page can no longer vouch for what it is showing, so this is
+          // one of the two times it asks the server again on its own.
+          reload();
           return;
         }
         // The response carries the new level, so the backend still decides what
@@ -99,7 +110,44 @@ export default function Dashboard() {
         // it went up, which is what the celebration is for.
         const was = data?.stats.level ?? 0;
         if (result.new_level > was) setLevelled(result.new_level);
-        reload();
+
+        // Everything that moved is in the response, so it is written onto the
+        // page rather than fetched back. The stamps match the ones the backend
+        // wrote — local time, `datetime.now().isoformat()`'s shape — because
+        // every "is this today?" test in the app compares them as text.
+        const at = new Date();
+        mutate((current) => ({
+          ...current,
+          stats: {
+            ...current.stats,
+            // `new_xp` is the XP inside the new level; `stats.xp` is the
+            // lifetime total, which is what the cards read off it.
+            xp: (Number(current.stats.xp) || 0) + (Number(result.xp_earned) || 0),
+            level: result.new_level,
+            tasks_completed: result.new_tasks_completed,
+            current_streak: result.current_streak,
+            best_streak: result.best_streak,
+          },
+          tasks: current.tasks.map((entry) => {
+            if (String(entry.id) !== String(task.id)) return entry;
+            const created = entry.created_at ? new Date(entry.created_at) : null;
+            const due = entry.due_date ? new Date(entry.due_date) : null;
+            return {
+              ...entry,
+              status: 'done' as const,
+              completed_at: isoStamp(at),
+              ...(created && !Number.isNaN(created.getTime())
+                ? {
+                    completion_seconds: Math.round(
+                      Math.max(0, (at.getTime() - created.getTime()) / 1000),
+                    ),
+                  }
+                : {}),
+              ...(due && !Number.isNaN(due.getTime()) ? { met_deadline: at <= due } : {}),
+            };
+          }),
+        }));
+
         // The rail shows the level and the XP total and is mounted outside the
         // router, so it never re-reads on its own. This is the one thing that
         // moves those numbers.
@@ -108,15 +156,16 @@ export default function Dashboard() {
         setFailure(
           cause instanceof Error ? cause.message : 'Could not complete that task.',
         );
+        reload();
       } finally {
         setBusyId(null);
       }
     },
-    [username, reload, data],
+    [username, mutate, reload, data],
   );
 
   const addTask = useCallback(
-    async (task: NewTask) => {
+    async (task: NewTask & { timer_duration?: number }) => {
       if (!username) return;
       setSaving(true);
       setFailure(null);
@@ -127,14 +176,38 @@ export default function Dashboard() {
           return;
         }
         setAdding(false);
-        reload();
+        // The row the backend wrote is the row that was just described to it
+        // (backend/api/tasks.py `_create`), so it is put on the list rather
+        // than fetched back. `created_at` is the one field the server fills in
+        // when the caller leaves it out, and it fills it in with now.
+        mutate((current) => ({
+          ...current,
+          tasks: [
+            ...current.tasks,
+            {
+              id: result.task_id,
+              user_id: username,
+              title: task.name,
+              description: '',
+              priority: task.priority ?? 'medium',
+              status: 'todo' as const,
+              xp_value: Number(task.xp_reward) || 0,
+              due_date: task.due_date ?? undefined,
+              show_on_calendar: task.show_on_calendar ?? false,
+              created_at: task.created_at ?? isoStamp(new Date()),
+              ...(task.subject ? { subject: task.subject } : {}),
+              ...(task.timer_duration ? { timer_duration: task.timer_duration } : {}),
+            },
+          ],
+        }));
       } catch (cause) {
         setFailure(cause instanceof Error ? cause.message : 'Could not add that task.');
+        reload();
       } finally {
         setSaving(false);
       }
     },
-    [username, reload],
+    [username, mutate, reload],
   );
 
   // Every one of these is guarded on there being nothing to show, not on there
@@ -164,18 +237,23 @@ export default function Dashboard() {
           </h1>
           <p className="dash-sub">Ready to crush your goals today?</p>
         </div>
-        <p className="dash-date">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="16" rx="2" />
-            <path d="M3 10h18M8 3v4M16 3v4" />
-          </svg>
-          {dates.formatDate(now, {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-          })}
-        </p>
+        <div className="dash-datebar">
+          <p className="dash-date">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path d="M3 10h18M8 3v4M16 3v4" />
+            </svg>
+            {dates.formatDate(now, {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric',
+            })}
+          </p>
+          {/* The only thing on this page that asks the server again. Adding a
+              task and finishing one both render what their own call answered. */}
+          <RefreshButton busy={refreshing} onRefresh={reload} />
+        </div>
       </header>
 
       <div className="dash-stats">
