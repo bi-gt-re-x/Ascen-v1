@@ -36,8 +36,18 @@ export const END_HOUR = 29;
  * This sits between the two.
  */
 export const HOUR_H = 72;
-/** The floor for a very short block, so its name is not clipped to nothing. */
-const COMPACT_MIN_H = 18;
+/**
+ * The floor for a very short block, so its one row actually fits.
+ *
+ * A quarter of an hour is 18px at 72px an hour, and the row inside it is an
+ * 11px line at 1.25 (13.75px) between 3px of padding top and bottom — 20px of
+ * content in 18px of block, so the name and the time were clipped along their
+ * middles. 22 is that content plus a pixel either side. It does mean a 15
+ * minute block draws a few pixels taller than a quarter of an hour of grid,
+ * which is the trade this floor has always made: a block that cannot be read
+ * is not worth drawing to scale.
+ */
+const COMPACT_MIN_H = 22;
 /** At or under this many minutes a block drops to its one-row layout. */
 const COMPACT_MINUTES = 20;
 /**

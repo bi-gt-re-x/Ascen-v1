@@ -21,7 +21,7 @@
     /* The dialogs put this between the name field and the XP slider, and both
        of those own their own vertical rhythm; this matches it rather than
        inventing a third. */
-    margin: 18px 0 0;
+    margin: 18px 0 20px;
     text-align: left;
     font-family: inherit;
     /* The rail is allowed to run the control's full width and no further —
@@ -143,6 +143,15 @@ html[data-theme="dark"] .subject-picker {
        takes the dialog with it, instead of scrolling inside it. */
     max-width: 100%;
     scroll-snap-type: x proximity;
+    /* The row runs off the right-hand edge, and it should look like it does.
+       Cut flush, the pill that happened to land on the boundary read as a
+       rendering fault rather than as "there is more this way"; fading the last
+       few pixels says the same thing the clip was trying to. The left end
+       fades too, but only once there is something scrolled past it — a fade
+       over the first pill at rest would be dimming the row's most important
+       entry for no reason. */
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 22px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 22px), transparent 100%);
     /* The gutter is not drawn — the row is obviously a row, and 8px of
        scrollbar under six pills is more chrome than content. Scrolling by
        wheel, trackpad and keyboard is untouched. */

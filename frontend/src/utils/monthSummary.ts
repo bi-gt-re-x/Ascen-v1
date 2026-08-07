@@ -92,10 +92,11 @@ function keyOf(year: number, month: number, day: number): string {
 /**
  * Every day of the month, counted.
  *
- * Tasks are placed by `taskCalendarDay`, the same rule that shades the grid and
- * fills the day panel: a task shown on the calendar sits on its deadline, and a
- * dashboard to-do sits on the day it was finished, if it ever was. So the three
- * can never disagree about which day a task belongs to.
+ * Tasks are placed by `taskCalendarDay`, the same rule that shades the grid,
+ * fills the day panel and draws the blocks: a task shown on the calendar sits
+ * on its deadline, and a dashboard to-do sits on no day at all. So the four can
+ * never disagree about which day a task belongs to, or about whether it belongs
+ * on the calendar in the first place.
  */
 export function monthDays(
   year: number,

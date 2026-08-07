@@ -3951,3 +3951,31 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
    because it is the one figure on the row measured against a target. */
 .mv-tile .mv-tile-value { color: var(--mv-ink); }
 .mv-tile.tone-focus .mv-tile-value { color: var(--mv-good); }
+
+/* Holding the strip to one row at the widths it is actually read at.
+ *
+ * At a 1500px window the left column is about 770px inside its padding, and
+ * the strip wanted 780 — so it wrapped, and what dropped to the second line
+ * was the Analytics button, landing under the ring with the three figures
+ * still up on the first. Ten pixels of gutter is what that cost. Taking them
+ * back out of the gaps and the title keeps it one row from roughly 1400px up,
+ * and the button now carries `margin-left: auto` so that when it genuinely
+ * cannot fit it wraps to the right-hand end rather than to the left. */
+.mv-summary { gap: clamp(9px, 1vw, 20px); }
+.mv-summary-figs { gap: clamp(9px, 1vw, 20px); }
+.mv-summary-fig { padding-left: clamp(9px, 1vw, 20px); }
+.mv-summary-title { font-size: 14px; }
+.mv-analytics { margin-left: auto; }
+
+/* Below about 1600px the strip has more in it than the column is wide, and
+   something has to give. It is the Analytics button's words: it is the one
+   thing on the row that is a way *out* of the view rather than a fact about
+   the month, the chart icon is the same one the rest of the app uses for
+   analytics, and the button keeps its title and aria-label so nothing is lost
+   to anyone reading it any other way. The alternative was shaving a point off
+   every figure on the row, which makes the numbers harder to read in order to
+   protect a link. */
+@media (max-width: 1600px) {
+    .mv-analytics { padding: 10px 12px; }
+    .mv-analytics > span { display: none; }
+}

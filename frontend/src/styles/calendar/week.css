@@ -993,3 +993,26 @@ html[data-theme="dark"] .wk-focus-chip.is-empty { color: #6b7280; }
    from the shell — so one control had two looks. This set was the better of
    the two and is now the only one, in month.css beside the base rules. Nothing
    about how it is drawn belongs in a file about the Week view. */
+
+/* A task finished after its deadline.
+ *
+ * The block is not resized — it stays the span that was booked, because that
+ * is what was planned and a block that grew would be claiming time nobody set
+ * aside. So the whole of the overrun is carried by the one label that can
+ * carry it: the real finishing time, on the block's floor, in a deep red that
+ * is the only red on a block otherwise painted as done. It is bolder and at
+ * full opacity as well, so the colour is never the only thing saying it. */
+.wk-event-end.is-late {
+    color: #8c1c1c;
+    font-weight: 700;
+    opacity: 1;
+}
+html[data-theme="dark"] .wk-event-end.is-late { color: #ff8a86; }
+
+/* The one-row block, at the height it is actually given.
+ *
+ * COMPACT_MIN_H is 22px (see utils/calendarGrid.ts) and the row inside it is
+ * an 11px line; 2px of padding either side leaves it the room, where 3px did
+ * not and clipped the descenders off both the name and the time. */
+.wk-event.is-compact { padding-top: 2px; padding-bottom: 2px; }
+.wk-event.is-compact .wk-event-head { line-height: 1.2; }

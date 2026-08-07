@@ -12,6 +12,7 @@
  * than an empty field beside a dash.
  */
 import { useEffect, useState } from 'react';
+import { xpToDifficulty } from '@/utils/priority';
 import type { DayEntry } from './entries';
 
 export interface DayPanelProps {
@@ -40,9 +41,7 @@ function difficulty(xp: number, priority?: string): 'High' | 'Medium' | 'Low' {
   if (priority === 'high') return 'High';
   if (priority === 'medium') return 'Medium';
   if (priority === 'low') return 'Low';
-  if (xp >= 66) return 'High';
-  if (xp >= 33) return 'Medium';
-  return 'Low';
+  return xpToDifficulty(xp);
 }
 
 function EventIcon() {

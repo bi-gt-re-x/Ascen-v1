@@ -2,7 +2,10 @@
  * What a day is carrying, as one list.
  *
  * The month view's day panel shows events and tasks together, in the order
- * they happen. The original built that list by *writing* the tasks into the
+ * they happen. Tasks means *calendar* tasks: a dashboard to-do was never
+ * planned onto a day and does not appear on one (see taskCalendarDay).
+ *
+ * The original built that list by *writing* the tasks into the
  * event store — pushing an entry per task into `dateContent`, then filtering
  * them out again on save so they would not outlive the task — and the seam
  * showed: a task deleted elsewhere left its card behind until the day was
@@ -14,7 +17,6 @@
  * something, so nothing can be left behind.
  */
 import { markConflicts, type CalendarSection, type Subtask } from '@/utils/calendarStore';
-import { isCalendarPlaced } from '@/utils/calendarGrid';
 import { taskCalendarDay } from '@/utils/calendarIntensity';
 import type { Task } from '@/types';
 
@@ -24,7 +26,7 @@ export interface DayEntry {
   /** Where the event sits in the day's stored list. Absent for a task. */
   index?: number;
   name: string;
-  /** "HH:MM". A finished to-do has only an end — a completion is a moment. */
+  /** "HH:MM". An entry with no time at one end leaves that field empty. */
   startTime: string;
   endTime: string;
   xp: number;
@@ -61,9 +63,7 @@ function minutesOf(value: string): number | null {
 /**
  * The day's entries, in the order they happen.
  *
- * A task spans its creation to its deadline, so it sorts by when it starts; a
- * to-do that reached the day by being finished has only the moment it was
- * finished, so it sorts by that.
+ * A task spans its creation to its deadline, so it sorts by when it starts.
  */
 export function dayEntries(
   dateKey: string,
@@ -89,15 +89,10 @@ export function dayEntries(
   tasks.forEach((task) => {
     if (taskCalendarDay(task) !== dateKey) return;
 
-    const created = toDate(task.created_at);
-    const due = toDate(task.due_date);
-    const completed = toDate(task.completed_at);
-    const placed = isCalendarPlaced(task);
-
-    // A placed task shows the span it was scheduled for. A finished to-do
-    // shows only when it was done: it was never planned onto the day.
-    const start = placed ? created || due : null;
-    const end = placed ? due : completed;
+    // Only calendar tasks reach here at all — `taskCalendarDay` places nothing
+    // else — so a card always has the span the task was scheduled for.
+    const start = toDate(task.created_at) || toDate(task.due_date);
+    const end = toDate(task.due_date);
 
     fromTasks.push({
       key: `task:${task.id}`,

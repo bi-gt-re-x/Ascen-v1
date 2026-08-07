@@ -16,6 +16,7 @@
 import { useEffect, useState } from 'react';
 import { SubjectPicker } from '@/components/SubjectPicker';
 import { useSubjects } from '@/hooks/useSubjects';
+import { MAX_TASK_XP, MIN_TASK_XP, xpToPriority } from '@/utils/priority';
 import type { NewTask } from '@/services/tasks';
 
 export interface TaskModalProps {
@@ -27,8 +28,8 @@ export interface TaskModalProps {
   onAdd: (task: NewTask & { timer_duration?: number }) => void;
 }
 
-const MIN_XP = 10;
-const MAX_XP = 100;
+const MIN_XP = MIN_TASK_XP;
+const MAX_XP = MAX_TASK_XP;
 
 type Panel = 'none' | 'timer' | 'due';
 
@@ -104,6 +105,11 @@ export function TaskModal({
     }
     const task: NewTask & { timer_duration?: number } = {
       name: name.trim(),
+      // This dialog used to send no priority at all, so the backend stored
+      // "medium" for every task made here — a 90 XP task then drew on the
+      // grid in the medium colour and read as Medium on its card. The band
+      // follows the XP, the way it does everywhere else.
+      priority: xpToPriority(xp),
       xp_reward: xp,
       due_date: dueDate(),
     };

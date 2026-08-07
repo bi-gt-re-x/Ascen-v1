@@ -146,7 +146,15 @@ export function GridBlock({
   } else if (block.done) {
     const end = block.completedDT || block.dueDT;
     footText = end ? (dates.isoDate(end) === iso ? timeLabel(end) : shortDateTime(end)) : '';
-    footClass = 'wk-event-done-time';
+    // Finished after the deadline. The block keeps the size it was scheduled
+    // at — it is a record of what was booked, and letting it grow would claim
+    // time the reader never planned — so the overrun is carried entirely by
+    // this label: the real finishing time, in deep red, on the block's floor.
+    // Without it a late finish and an on-time one looked identical.
+    const late = Boolean(
+      block.completedDT && block.dueDT && block.completedDT > block.dueDT,
+    );
+    footClass = late ? 'wk-event-done-time is-late' : 'wk-event-done-time';
   }
 
   // Every task layout keeps the start beside the title, the one-row one

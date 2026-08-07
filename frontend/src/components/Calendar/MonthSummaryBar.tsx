@@ -129,7 +129,15 @@ export function MonthSummaryBar({
         </div>
       </div>
 
-      <button type="button" className="mv-analytics" onClick={onViewAnalytics}>
+      {/* Labelled as well as written on, because on a narrower window the
+          words are dropped and the icon carries it alone — see month.css. */}
+      <button
+        type="button"
+        className="mv-analytics"
+        title="View Analytics"
+        aria-label="View Analytics"
+        onClick={onViewAnalytics}
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M5 20V10M12 20V4M19 20v-6" />
         </svg>

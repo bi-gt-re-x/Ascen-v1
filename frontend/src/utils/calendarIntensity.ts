@@ -49,13 +49,20 @@ function dayKeyOf(stamp: string | undefined): string | null {
 /**
  * Which day a task belongs to, or none.
  *
- * A task placed on the calendar sits on its deadline. A dashboard to-do is
- * never planned onto a day, so it sits on no day at all until it is finished —
- * and then on the day it was finished, which is when the work happened.
+ * A task placed on the calendar sits on its deadline. A dashboard to-do sits
+ * on no day at all, ever — it is a list item, not an appointment, and it is
+ * the one kind of task nobody chose a time for.
+ *
+ * A finished to-do used to land on the day it was completed, on the argument
+ * that this is when the work happened. It reads as noise: the day panel filled
+ * with items the reader never planned onto that day, the grid's shading
+ * counted them as load, and the month cells counted them as things scheduled.
+ * The grid has always drawn only what `show_on_calendar` marks (see
+ * dayTaskBlocks), so this brings the shading, the counts and the day list into
+ * line with the blocks beside them.
  */
 export function taskCalendarDay(task: Task): string | null {
-  if (isCalendarPlaced(task)) return dayKeyOf(task.due_date);
-  return task.status === 'done' ? dayKeyOf(task.completed_at) : null;
+  return isCalendarPlaced(task) ? dayKeyOf(task.due_date) : null;
 }
 
 /** Every task landing in this month, totalled per day. */

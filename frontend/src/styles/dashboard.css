@@ -1056,13 +1056,21 @@ body.easter-shake {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
+/* The × sits on the heading's line, not above it.
+ *
+ * At `top: 20px` it was floating in the padding while the h2 below it started
+ * at 32px, which read as a stray glyph in the corner rather than as the
+ * dialog's close button. 30px puts the two optical centres together: the
+ * heading is a 1.3rem line starting at the 32px of card padding, and this is a
+ * 24px one. */
 .close {
     color: #A0A0A0;
     position: absolute;
-    top: 20px;
+    top: 30px;
     right: 24px;
     font-size: 24px;
     font-weight: bold;
+    line-height: 1;
     cursor: pointer;
 }
 

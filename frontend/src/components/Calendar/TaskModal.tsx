@@ -10,26 +10,22 @@
  * end — the grid draws the block between them — which is why the dialog asks
  * for both and why editing one moves the block rather than nudging a deadline.
  *
- * Difficulty is not asked for. It follows from XP on the dashboard's
- * thresholds (under 33 low, under 66 medium, then high), so asking again would
- * be inviting the two to disagree.
+ * Difficulty is not asked for. It follows from XP — 10-39 easy, 40-69 medium,
+ * 70-100 hard, see utils/priority.ts — so asking again would be inviting the
+ * two to disagree.
  */
 import { useEffect, useState } from 'react';
 import { RecurrencePicker } from './RecurrencePicker';
 import { TimePicker } from './TimePicker';
 import { SubjectPicker } from '@/components/SubjectPicker';
 import { useSubjects } from '@/hooks/useSubjects';
+import { MAX_TASK_XP, MIN_TASK_XP } from '@/utils/priority';
 import type { Scope } from '@/hooks/useCalendarStore';
 import type { RecurrenceType } from '@/utils/calendarStore';
-import type { TaskPriority } from '@/types';
 
-export const MIN_TASK_XP = 10;
-export const MAX_TASK_XP = 100;
-
-/** The dashboard's thresholds, so a block's colour means what it does there. */
-export function xpToPriority(xp: number): TaskPriority {
-  return xp < 33 ? 'low' : xp < 66 ? 'medium' : 'high';
-}
+/* Re-exported rather than redefined: every dialog, card and grid block bands
+   a task the same way, and one place decides how. */
+export { MAX_TASK_XP, MIN_TASK_XP, xpToPriority } from '@/utils/priority';
 
 export interface TaskDraft {
   name: string;
