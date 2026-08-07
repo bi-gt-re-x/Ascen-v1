@@ -14,11 +14,15 @@
  * sent as one ISO-ish local string, the way `addTaskFromModal` did it.
  */
 import { useEffect, useState } from 'react';
+import { SubjectPicker } from '@/components/SubjectPicker';
+import { useSubjects } from '@/hooks/useSubjects';
 import type { NewTask } from '@/services/tasks';
 
 export interface TaskModalProps {
   open: boolean;
   busy?: boolean;
+  /** Whose subjects to offer — the list is ordered by what they use most. */
+  username?: string | null;
   onClose: () => void;
   onAdd: (task: NewTask & { timer_duration?: number }) => void;
 }
@@ -36,10 +40,13 @@ const MINUTES = Array.from({ length: 60 }, (_, i) =>
 export function TaskModal({
   open,
   busy = false,
+  username,
   onClose,
   onAdd,
 }: TaskModalProps) {
+  const subjects = useSubjects(username ?? null);
   const [name, setName] = useState('');
+  const [subject, setSubject] = useState<string | null>(null);
   const [xp, setXp] = useState(MIN_XP);
   const [panel, setPanel] = useState<Panel>('none');
   const [hours, setHours] = useState(0);
@@ -54,6 +61,7 @@ export function TaskModal({
   useEffect(() => {
     if (!open) return;
     setName('');
+    setSubject(null);
     setXp(MIN_XP);
     setPanel('none');
     setHours(0);
@@ -99,6 +107,9 @@ export function TaskModal({
       xp_reward: xp,
       due_date: dueDate(),
     };
+    // Left out entirely when nothing was chosen, rather than sent as null: the
+    // field is optional and an absent key is what "not answered" looks like.
+    if (subject) task.subject = subject;
     // Stored in minutes, entered as hours + minutes.
     if (panel === 'timer') {
       const total = hours * 60 + minutes;
@@ -131,6 +142,13 @@ export function TaskModal({
               setName(e.target.value);
               if (invalid) setInvalid(false);
             }}
+          />
+
+          <SubjectPicker
+            id="dashSubject"
+            subjects={subjects}
+            value={subject}
+            onChange={setSubject}
           />
 
           <div style={{ marginTop: '20px', textAlign: 'left' }}>

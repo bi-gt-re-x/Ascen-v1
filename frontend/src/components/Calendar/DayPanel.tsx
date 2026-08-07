@@ -27,7 +27,19 @@ export interface DayPanelProps {
   completingId?: string | null;
 }
 
-function difficulty(xp: number): 'High' | 'Medium' | 'Low' {
+/**
+ * The band a card is labelled with.
+ *
+ * A task carries its own priority and that is what the card says — the same
+ * word the task list, the grid blocks and the Week view's priority chart use
+ * for it, so one task cannot read "High" in one place and "Medium" in another.
+ * An event has no such column, so its band is read off the XP, which is the
+ * rule this card has always used.
+ */
+function difficulty(xp: number, priority?: string): 'High' | 'Medium' | 'Low' {
+  if (priority === 'high') return 'High';
+  if (priority === 'medium') return 'Medium';
+  if (priority === 'low') return 'Low';
   if (xp >= 66) return 'High';
   if (xp >= 33) return 'Medium';
   return 'Low';
@@ -132,7 +144,7 @@ export function DayPanel({
               if (isTask) taskNumber += 1;
 
               const canComplete = isTask && !entry.completed && Boolean(entry.taskId);
-              const level = difficulty(entry.xp);
+              const level = difficulty(entry.xp, entry.priority);
               const classes = [
                 'task-section',
                 isTask ? 'dashboard-task' : 'calendar-event',
@@ -154,7 +166,7 @@ export function DayPanel({
                       <div className="card-tags">
                         <span className="task-kind-badge">Task {taskNumber}</span>
                         <span className={`difficulty-badge difficulty-${level.toLowerCase()}`}>
-                          {level}
+                          {level} Priority
                         </span>
                       </div>
                     )}

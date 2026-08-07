@@ -357,7 +357,7 @@ export default function Day() {
 
       {/* The Day view acts on one task at a time — its dialogs never offer a
           repeat, exactly as the original's did not. */}
-      <BlockDialogs actions={actions} allowTaskRecurrence={false} />
+      <BlockDialogs actions={actions} username={username} allowTaskRecurrence={false} />
 
       {slot && (
         <CreateChooser

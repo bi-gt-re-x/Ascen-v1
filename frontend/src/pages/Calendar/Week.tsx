@@ -669,7 +669,7 @@ export default function Week() {
 
       </div>
 
-      <BlockDialogs actions={actions} wide />
+      <BlockDialogs actions={actions} username={username} wide />
 
       {slot && (
         <CreateChooser

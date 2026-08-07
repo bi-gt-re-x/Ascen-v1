@@ -16,3 +16,5 @@ export { Ambient } from './Ambient';
 export type { AmbientProps } from './Ambient';
 export { Rail, STATS_CHANGED } from './Rail';
 export { ErrorState, Loading, NotBuilt } from './PageState';
+export { SubjectPicker } from './SubjectPicker';
+export type { SubjectPickerProps } from './SubjectPicker';

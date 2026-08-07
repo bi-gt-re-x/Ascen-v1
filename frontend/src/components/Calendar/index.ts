@@ -24,6 +24,10 @@ export { MiniMonth } from './MiniMonth';
 export type { MiniMonthProps } from './MiniMonth';
 export { MonthGrid } from './MonthGrid';
 export type { MonthGridProps } from './MonthGrid';
+export { MonthSidebar } from './MonthSidebar';
+export type { MonthSidebarProps } from './MonthSidebar';
+export { MonthSummaryBar } from './MonthSummaryBar';
+export type { MonthSummaryBarProps } from './MonthSummaryBar';
 export { ConflictDialog, CreateChooser, DeleteConfirm } from './Prompts';
 export type {
   ConflictDialogProps,

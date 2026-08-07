@@ -215,6 +215,7 @@ export default function Dashboard() {
       <TaskModal
         open={adding}
         busy={saving}
+        username={username}
         onClose={() => setAdding(false)}
         onAdd={(task) => void addTask(task)}
       />

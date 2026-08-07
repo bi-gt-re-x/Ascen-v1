@@ -56,6 +56,8 @@ export interface Task {
   status: TaskStatus;
   /** The XP completing it awards. Named `xp_value` in the database. */
   xp_value: number;
+  /** What the task is about — an id from the subject catalogue. Optional. */
+  subject?: string;
   due_date?: string;
   show_on_calendar?: boolean;
   created_at: string;

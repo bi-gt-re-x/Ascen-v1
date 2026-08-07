@@ -3285,3 +3285,669 @@ body:has(.calendar-container) *::-webkit-scrollbar {
     .calendar-container { height: auto; }
     .calendar-card { height: auto; max-height: none; overflow: visible; }
 }
+
+/* ============================================================
+   THE MONTH VIEW, REDRAWN
+   ============================================================
+   Everything above this banner that dresses the month grid — `.calendar-day`,
+   `.calendar-grid`, `.day-name`, `.calendar-left/right`, `#taskCounter` — drew
+   the old view: thirty bare numbers floating on the page, shaded by load, with
+   a ring underneath describing whichever one had been clicked. Those rules are
+   left where they are because the Day view's mini-month still uses some of
+   them; the Month view no longer does. It is drawn entirely by the `mv-`
+   rules below, and the only piece of the old markup it keeps is the day panel
+   (`.calendar-right` / `#dailyTasks`), which is unchanged apart from being put
+   inside a card.
+
+   The palette is written as custom properties on `#monthView` so the two
+   themes are one set of values rather than two copies of the layout. Every
+   rule below reads them; nothing below hard-codes a colour that changes
+   between themes.
+   ============================================================ */
+
+#monthView {
+    --mv-ink: #12151b;
+    --mv-ink-soft: #6b7280;
+    --mv-ink-faint: #a6abb5;
+    --mv-line: #e8eaef;
+    --mv-line-soft: #f0f1f5;
+    --mv-surface: #ffffff;
+    --mv-surface-soft: #f7f8fa;
+    --mv-accent: #3d5cc0;
+    --mv-accent-soft: #eef2fc;
+    --mv-good: #16a34a;
+    --mv-good-soft: #eaf7ef;
+    --mv-bad: #d0453f;
+    --mv-warm: #fbf6ea;
+    --mv-warm-line: #ecdcbb;
+    --mv-warm-ink: #8a6d3a;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    color: var(--mv-ink);
+}
+
+html[data-theme="dark"] #monthView {
+    --mv-ink: #e9edf3;
+    --mv-ink-soft: #9aa3b1;
+    --mv-ink-faint: #5d6673;
+    --mv-line: #262c36;
+    --mv-line-soft: #1d222b;
+    --mv-surface: #14171e;
+    --mv-surface-soft: #10131a;
+    --mv-accent: #7f9cff;
+    --mv-accent-soft: #1a2133;
+    --mv-good: #3fb950;
+    --mv-good-soft: #12241a;
+    --mv-bad: #f0665f;
+    --mv-warm: #1b1913;
+    --mv-warm-line: #3a3327;
+    --mv-warm-ink: #d3b077;
+}
+
+/* The two columns. The grid takes the width it needs to stay a grid; the
+   overview column takes the rest and scrolls its own contents, so a long day
+   panel can never push the month off the bottom of the card. */
+.mv-body {
+    display: flex;
+    align-items: stretch;
+    gap: clamp(18px, 2vw, 34px);
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.mv-left {
+    flex: 1 1 63%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.mv-side {
+    flex: 1 1 33%;
+    min-width: 320px;
+    max-width: 560px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+/* ---- Header: what month it is, how to move through it, how to look at it -- */
+.mv-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    min-height: 42px;
+}
+.mv-title {
+    margin: 0;
+    font-size: clamp(24px, 2.1vw, 34px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--mv-ink);
+    white-space: nowrap;
+}
+.mv-nav { display: inline-flex; gap: 8px; }
+.mv-arrow {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--mv-line);
+    background: var(--mv-surface);
+    color: var(--mv-ink-soft);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.mv-arrow svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mv-arrow:hover { color: var(--mv-ink); border-color: var(--mv-ink-faint); }
+.mv-today {
+    border: 1px solid var(--mv-line);
+    background: var(--mv-surface);
+    color: var(--mv-ink);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
+}
+.mv-today:hover:not(:disabled) { background: var(--mv-surface-soft); }
+/* Already on this month: the button would do nothing, and says so. */
+.mv-today:disabled { opacity: 0.45; cursor: default; }
+.mv-headtools { margin-left: auto; display: inline-flex; align-items: center; }
+
+/* ---- Day names ---------------------------------------------------------- */
+.mv-daynames,
+.mv-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.mv-daynames { margin-bottom: 10px; }
+.mv-dayname {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: var(--mv-ink-soft);
+}
+
+/* ---- The grid ------------------------------------------------------------
+   Six rows always, so stepping between a five-row month and a six-row one
+   does not resize the grid under the reader's cursor — and `1fr` rows rather
+   than a fixed height, so the whole month fits whatever the card gives it
+   without a scrollbar appearing inside a view whose job is to be looked at.
+   The hairlines are drawn by each cell's top and left border with the outer
+   edges closed by the container, which is one border per line instead of two
+   overlapping ones. */
+.mv-grid {
+    grid-template-rows: repeat(6, minmax(0, 1fr));
+    flex: 1 1 auto;
+    min-height: 0;
+    border: 1px solid var(--mv-line);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.mv-cell {
+    border-top: 1px solid var(--mv-line);
+    border-left: 1px solid var(--mv-line);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    overflow: hidden;
+    cursor: pointer;
+    background: transparent;
+    transition: background 0.15s ease;
+}
+.mv-cell:nth-child(-n + 7) { border-top: none; }
+.mv-cell:nth-child(7n + 1) { border-left: none; }
+.mv-cell:hover { background: var(--mv-surface-soft); }
+
+.mv-daynum {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--mv-ink);
+}
+/* Neighbouring months are context, not content: dimmed, and carrying no
+   counts at all. Clicking one still steps there. */
+.mv-cell.is-outside { cursor: pointer; background: transparent; }
+.mv-cell.is-outside .mv-daynum { color: var(--mv-ink-faint); font-weight: 500; }
+.mv-cell.is-outside:hover { background: var(--mv-surface-soft); }
+
+.mv-cell-events {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--mv-ink-soft);
+    white-space: nowrap;
+}
+.mv-cell-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: 0 0 auto;
+}
+.mv-cell-xp {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--mv-accent);
+    white-space: nowrap;
+}
+/* A day worth nothing is not worth reading as a number in the accent colour. */
+.mv-cell-xp.is-zero { color: var(--mv-ink-faint); font-weight: 500; }
+
+/* Today is the one tinted cell, and the tint carries through to its figures. */
+.mv-cell.is-today { background: var(--mv-warm); }
+.mv-cell.is-today:hover { background: var(--mv-warm); }
+.mv-cell.is-today .mv-cell-events,
+.mv-cell.is-today .mv-cell-xp { color: var(--mv-warm-ink); }
+/* The day the panel on the right is showing. A ring rather than a fill, so it
+   can sit on top of today's tint and on top of the load shading without
+   arguing with either. */
+.mv-cell.is-selected { box-shadow: inset 0 0 0 2px var(--mv-accent); }
+
+/* ---- The summary strip under the grid ----------------------------------- */
+.mv-summary {
+    flex: 0 0 auto;
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: clamp(14px, 1.6vw, 26px);
+    padding: 16px 20px;
+    border: 1px solid var(--mv-warm-line);
+    border-radius: 16px;
+    background: var(--mv-warm);
+}
+.mv-summary-ring {
+    position: relative;
+    width: 58px;
+    height: 58px;
+    flex: 0 0 auto;
+}
+.mv-summary-ring svg { width: 100%; height: 100%; display: block; }
+.mv-ring-track { fill: none; stroke: rgba(22, 163, 74, 0.18); stroke-width: 5; }
+.mv-ring-fill {
+    fill: none;
+    stroke: var(--mv-good);
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+.mv-ring-pct {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--mv-ink);
+}
+.mv-summary-lead { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mv-summary-title { font-size: 15px; font-weight: 700; color: var(--mv-ink); }
+.mv-summary-sub { font-size: 13px; color: var(--mv-ink-soft); }
+
+/* The three figures, each in its own column with a hairline between them. */
+.mv-summary-figs {
+    display: flex;
+    align-items: stretch;
+    gap: clamp(14px, 1.6vw, 26px);
+    margin-left: auto;
+}
+.mv-summary-fig {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: clamp(14px, 1.6vw, 26px);
+    border-left: 1px solid var(--mv-warm-line);
+    min-width: 0;
+}
+.mv-fig-value {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--mv-ink);
+    line-height: 1.1;
+}
+.mv-fig-label { font-size: 12.5px; color: var(--mv-ink-soft); white-space: nowrap; }
+.mv-delta { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.mv-delta.is-up { color: var(--mv-good); }
+.mv-delta.is-down { color: var(--mv-bad); }
+.mv-delta.is-flat { color: var(--mv-ink-faint); font-weight: 500; }
+
+.mv-analytics {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 14px;
+    border: 1px solid var(--mv-line);
+    border-radius: 12px;
+    background: var(--mv-surface);
+    color: var(--mv-ink);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.mv-analytics:hover { background: var(--mv-surface-soft); }
+.mv-analytics svg {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+/* ---- The overview column's cards ---------------------------------------- */
+.mv-card {
+    flex: 0 0 auto;
+    background: var(--mv-surface);
+    border: 1px solid var(--mv-line);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+.mv-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+.mv-card-title {
+    margin: 0 0 14px 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--mv-ink);
+}
+.mv-card-head .mv-card-title { margin-bottom: 14px; }
+.mv-card-link {
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mv-accent);
+    cursor: pointer;
+}
+.mv-card-link:hover { text-decoration: underline; }
+.mv-empty { margin: 0; font-size: 13px; color: var(--mv-ink-soft); }
+
+/* The day's plan keeps its own markup; the card is all that is added to it.
+   These undo the two-column framing `.calendar-right` carries for the layout
+   this view no longer uses — the theme-scoped copies are named as well because
+   the light and dark rules that set the divider are more specific than the
+   base one. */
+.mv-card-plan { display: flex; min-height: 0; padding-bottom: 14px; }
+.mv-side .calendar-right,
+html[data-theme="light"] .mv-side .calendar-right,
+html[data-theme="dark"] .mv-side .calendar-right {
+    flex: 1 1 auto;
+    padding-left: 0;
+    border-left: none;
+    border-top: none;
+    min-width: 0;
+}
+.mv-side .calendar-bottom-box h3,
+html[data-theme="light"] .mv-side .calendar-bottom-box h3 {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--mv-ink);
+    margin-bottom: 12px;
+}
+/* The list scrolls inside the card rather than the card growing without
+   limit: four cards is a panel, forty is the whole column. */
+.mv-side #dailyTasks {
+    gap: 12px;
+    max-height: 340px;
+    padding-right: 6px;
+}
+.mv-side .daily-focus-holder { margin-bottom: 14px; }
+
+/* ---- Monthly Overview: four tiles --------------------------------------- */
+.mv-tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+.mv-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 12px;
+    border-radius: 13px;
+    background: var(--tile-bg);
+    min-width: 0;
+}
+.mv-tile-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: var(--mv-surface);
+    color: var(--tile-ink);
+    margin-bottom: 5px;
+}
+.mv-tile-ico svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mv-tile-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--mv-ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.mv-tile-value {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--tile-ink);
+    line-height: 1.15;
+}
+.mv-tile-sub {
+    font-size: 11px;
+    color: var(--mv-ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+/* One hue per tile, and the same hue on its icon and its figure, so a tile
+   reads as one thing rather than as a coloured box with text in it. */
+.mv-tile.tone-tasks { --tile-bg: var(--mv-accent-soft); --tile-ink: var(--mv-accent); }
+.mv-tile.tone-focus { --tile-bg: var(--mv-good-soft); --tile-ink: var(--mv-good); }
+.mv-tile.tone-xp { --tile-bg: var(--mv-accent-soft); --tile-ink: var(--mv-accent); }
+.mv-tile.tone-best { --tile-bg: #fdf3e7; --tile-ink: #c2792a; }
+html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0a45c; }
+/* Tasks and XP share the blue, so the value on the Tasks tile stays plain ink
+   — two identical blue figures side by side read as one measurement. */
+.mv-tile.tone-tasks .mv-tile-value { color: var(--mv-ink); }
+
+/* ---- Top Performing Days ------------------------------------------------ */
+.mv-topdays {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.mv-topdays li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.mv-topday-rank {
+    flex: 0 0 auto;
+    width: 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--mv-ink-faint);
+}
+.mv-topday-name {
+    flex: 0 0 auto;
+    width: 92px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mv-ink);
+    white-space: nowrap;
+}
+.mv-topday-track {
+    flex: 1 1 auto;
+    height: 7px;
+    border-radius: 4px;
+    background: var(--mv-line-soft);
+    overflow: hidden;
+    min-width: 40px;
+}
+.mv-topday-fill {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #5b7ae0, #3d5cc0);
+}
+.mv-topday-xp {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mv-accent);
+    white-space: nowrap;
+}
+
+/* ---- Monthly Insights --------------------------------------------------- */
+.mv-insight {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 13px;
+    background: var(--mv-good-soft);
+}
+.mv-insight-ico {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--mv-surface);
+    color: var(--mv-good);
+}
+.mv-insight-ico svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mv-insight-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.mv-insight-head {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--mv-ink);
+}
+.mv-insight-hint { font-size: 13px; line-height: 1.45; color: var(--mv-ink-soft); }
+
+/* ---- Narrow and short --------------------------------------------------- */
+/* The grid stops being a grid long before the column beside it stops being a
+   column, so the two stack rather than shrinking together, and the page gets
+   its scroll back because a stacked month cannot fit a viewport. */
+@media (max-width: 1180px) {
+    .mv-body { flex-direction: column; overflow-y: auto; }
+    .mv-side { max-width: none; min-width: 0; overflow: visible; }
+    .mv-grid { min-height: 520px; }
+    .mv-summary { flex-wrap: wrap; }
+    .mv-summary-figs { margin-left: 0; }
+}
+@media (max-width: 860px) {
+    .mv-header { flex-wrap: wrap; }
+    .mv-headtools { margin-left: 0; }
+    .mv-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mv-summary-figs { width: 100%; }
+    .mv-summary-fig:first-child { padding-left: 0; border-left: none; }
+    .mv-topday-name { width: auto; }
+}
+/* Short windows: the cells give up their counts before they give up the month.
+   A four-line cell in 60px of height is unreadable; the number alone is not. */
+@media (min-width: 1181px) and (max-height: 720px) {
+    .mv-cell { padding: 7px 9px; gap: 2px; }
+    .mv-daynum { min-width: 26px; height: 26px; font-size: 14px; }
+    .mv-cell-events, .mv-cell-xp { font-size: 11.5px; }
+    .mv-summary { padding: 12px 16px; margin-top: 12px; }
+    .mv-header { margin-bottom: 14px; }
+}
+
+/* ---- Fitting the strip and the tiles into a real column -----------------
+   The design is drawn at a width the app only has on a large monitor. These
+   are the concessions the same layout makes at 1400–1600px, which is where
+   most of it is actually read: nothing moves or disappears, the type and the
+   gutters simply come down a step, and the two lines that must not wrap are
+   told not to. */
+.mv-summary { gap: clamp(10px, 1.2vw, 24px); }
+.mv-summary-ring { width: 52px; height: 52px; }
+.mv-summary-lead { flex: 0 1 auto; }
+.mv-summary-title { white-space: nowrap; }
+.mv-summary-sub { white-space: nowrap; }
+.mv-summary-figs { gap: clamp(10px, 1.2vw, 24px); }
+.mv-summary-fig { padding-left: clamp(10px, 1.2vw, 24px); }
+.mv-fig-value { font-size: 19px; }
+.mv-fig-label { font-size: 12px; }
+
+/* The tiles are four across in a column that is not always four tiles wide.
+   Ellipsising the labels lost the word that identified the tile ("Focus Ti…"),
+   so they wrap instead: a two-line label is still a label. */
+.mv-tiles { gap: 8px; }
+.mv-tile { padding: 11px 10px; }
+.mv-tile-label,
+.mv-tile-sub {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.25;
+}
+.mv-tile-label { font-size: 11px; }
+.mv-tile-value { font-size: 16px; }
+.mv-tile-sub { font-size: 10.5px; }
+
+/* The plan cards are in a narrower column than the one they were drawn for,
+   and their bottom line carries both the day's times and the hover hint that
+   finishes the task. Reserve less for the hint and set the times a size
+   smaller, so a full start–end range still reads in full. */
+.mv-side #dailyTasks .task-section { padding: 14px 16px; }
+.mv-side #dailyTasks .task-section .timestamp-section input[type="time"] {
+    font-size: 13px;
+    min-width: 74px;
+}
+.mv-side #dailyTasks .completed-badge,
+.mv-side #dailyTasks .complete-hint { font-size: 12px; right: 14px; bottom: 13px; }
+.mv-side #dailyTasks .task-section.can-complete .timestamp-section { padding-right: 106px; }
+.mv-side #dailyTasks .task-section.task-completed .timestamp-section { padding-right: 48px; }
+.mv-side #dailyTasks .card-menu-wrap { top: 11px; right: 11px; }
+
+/* The strip is a row until it cannot be one. Without the wrap the figures ran
+   over the title when the column was narrow — an overlap is the one failure a
+   summary must not have, because it makes two true numbers unreadable. */
+.mv-summary { flex-wrap: wrap; row-gap: 12px; }
+.mv-summary-lead { min-width: 0; }
+.mv-summary-figs { flex: 0 1 auto; min-width: 0; }
+.mv-fig-label { font-size: 11.5px; }
+/* A little more of the width to the month, which is what the view is for. */
+.mv-left { flex: 1 1 67%; }
+.mv-side { flex: 1 1 31%; min-width: 300px; }
+
+/* One tile carries a coloured figure, not four. Colour on all of them made the
+   row read as four separate measurements; the hue belongs to the icon, which
+   is what tells the tiles apart at a glance. Focus Time keeps its green
+   because it is the one figure on the row measured against a target. */
+.mv-tile .mv-tile-value { color: var(--mv-ink); }
+.mv-tile.tone-focus .mv-tile-value { color: var(--mv-good); }

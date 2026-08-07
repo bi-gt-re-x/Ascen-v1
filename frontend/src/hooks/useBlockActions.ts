@@ -191,6 +191,7 @@ export function useBlockActions(
             created_at: `${iso}T${draft.startTime}:00`,
             due_date: `${iso}T${draft.endTime}:00`,
             show_on_calendar: true,
+            subject: draft.subject,
           }),
         );
       });
@@ -254,6 +255,10 @@ export function useBlockActions(
             created_at: isoStamp(startAt),
             due_date: isoStamp(endAt),
             show_on_calendar: true,
+            // Moving a block rewrites the task, so everything not being moved
+            // has to be carried over — a drag that quietly cleared the subject
+            // would be a drag that edited the task.
+            subject: task.subject ?? null,
           }),
       ]).then(reload);
     },

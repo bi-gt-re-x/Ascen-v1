@@ -44,6 +44,12 @@ export interface NewTask {
   xp_reward?: number;
   due_date?: string | null;
   show_on_calendar?: boolean;
+  /**
+   * What the task is about — an id from the catalogue the backend serves at
+   * /api/subjects. Optional, and anything the catalogue does not recognise is
+   * dropped there rather than stored.
+   */
+  subject?: string | null;
   /** The week calendar's drag-to-create uses this to place the block. */
   created_at?: string;
   id?: string;
@@ -70,6 +76,8 @@ export interface TaskEdit {
   timer_duration?: number;
   due_date?: string | null;
   completed?: boolean;
+  /** `null` clears it; leaving it out leaves whatever is stored alone. */
+  subject?: string | null;
 }
 
 export function updateTask(

@@ -13,5 +13,6 @@ export { useNow } from './useNow';
 export { usePinnedViewport } from './usePinnedViewport';
 export { fmtHM, focusedSeconds, useFocusSession } from './useFocusSession';
 export type { FocusState, UseFocusSession } from './useFocusSession';
+export { useSubjects } from './useSubjects';
 export { useTheme } from './useTheme';
 export { useUserData } from './useUserData';

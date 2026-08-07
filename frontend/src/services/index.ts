@@ -16,5 +16,6 @@ export * as focus from './focus';
 export * as goals from './goals';
 export * as growth from './growth';
 export * as quote from './quote';
+export * as subjects from './subjects';
 export * as tasks from './tasks';
 export * from './constants';

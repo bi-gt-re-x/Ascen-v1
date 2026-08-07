@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- What completing it is worth.
     xp_value            INTEGER DEFAULT 0 CHECK (xp_value >= 0),
 
+    -- What the task is about, as an id from the catalogue in
+    -- backend/config/subjects.py. Optional: a task without one is a task
+    -- nobody chose to file, not an error. Deliberately not a foreign key —
+    -- the catalogue is code, not a table, so that it can be edited in one
+    -- place without a migration.
+    subject             TEXT,
+
     due_date            TEXT,
     show_on_calendar    BOOLEAN DEFAULT TRUE,
 

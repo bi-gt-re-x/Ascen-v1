@@ -17,6 +17,8 @@
 import { useEffect, useState } from 'react';
 import { RecurrencePicker } from './RecurrencePicker';
 import { TimePicker } from './TimePicker';
+import { SubjectPicker } from '@/components/SubjectPicker';
+import { useSubjects } from '@/hooks/useSubjects';
 import type { Scope } from '@/hooks/useCalendarStore';
 import type { RecurrenceType } from '@/utils/calendarStore';
 import type { TaskPriority } from '@/types';
@@ -34,12 +36,22 @@ export interface TaskDraft {
   startTime: string;
   endTime: string;
   xp: number;
+  /** The chosen subject's id, or null. Optional on every task. */
+  subject: string | null;
   recurrence: RecurrenceType;
   recurrenceDays: number[];
 }
 
 export interface TaskModalProps {
-  initial?: { name: string; startTime: string; endTime: string; xp: number };
+  initial?: {
+    name: string;
+    startTime: string;
+    endTime: string;
+    xp: number;
+    subject?: string | null;
+  };
+  /** Whose subjects to offer — the list is ordered by what they use most. */
+  username?: string | null;
   /** True when this task repeats — the edit dialog then asks about scope. */
   recurring?: boolean;
   defaults?: { startTime: string; endTime: string; name?: string };
@@ -52,6 +64,7 @@ export interface TaskModalProps {
 
 export function TaskModal({
   initial,
+  username,
   recurring,
   defaults,
   allowRecurrence = true,
@@ -60,8 +73,10 @@ export function TaskModal({
   wide,
 }: TaskModalProps) {
   const editing = Boolean(initial);
+  const subjects = useSubjects(username ?? null);
 
   const [name, setName] = useState(initial?.name ?? defaults?.name ?? '');
+  const [subject, setSubject] = useState<string | null>(initial?.subject ?? null);
   const [startTime, setStartTime] = useState(initial?.startTime ?? defaults?.startTime ?? '');
   const [endTime, setEndTime] = useState(initial?.endTime ?? defaults?.endTime ?? '');
   const [xp, setXp] = useState(initial?.xp ?? MIN_TASK_XP);
@@ -95,6 +110,7 @@ export function TaskModal({
         startTime,
         endTime,
         xp,
+        subject,
         recurrence: allowRecurrence ? recurrence : 'none',
         recurrenceDays: allowRecurrence ? days : [],
       },
@@ -148,6 +164,13 @@ export function TaskModal({
             value={endTime}
             onChange={setEndTime}
             invalid={showErrors && !endTime}
+          />
+
+          <SubjectPicker
+            id="calSubject"
+            subjects={subjects}
+            value={subject}
+            onChange={setSubject}
           />
 
           <div className="form-group">

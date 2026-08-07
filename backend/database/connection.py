@@ -49,6 +49,22 @@ JSON_COLUMNS = {
 _build_lock = threading.Lock()
 _built = False
 
+# Columns added to a table after the database was first created.
+#
+# data/sql/*.sql is only ever executed to build a database that does not exist
+# yet, so adding a column there reaches a fresh clone and nothing else — every
+# database already in use keeps the shape it was built with, and `CREATE TABLE
+# IF NOT EXISTS` will not repair it. Each entry below is applied once, on the
+# first connection, and is a no-op from then on.
+#
+# Additive only, and that is the rule rather than the current state: an ALTER
+# that dropped or retyped a column would destroy data the moment someone ran
+# an older build against the same file. Anything of that kind is not a
+# migration this list can carry.
+ADDED_COLUMNS = (
+    ('tasks', 'subject', 'TEXT'),
+)
+
 
 # --------------------------------------------------------------------------
 # The connection
@@ -71,6 +87,24 @@ def _build(path):
         con.close()
 
 
+def _catch_up(path):
+    """Add any column in ADDED_COLUMNS the database does not have yet."""
+    con = sqlite3.connect(path)
+    try:
+        for table, column, sql_type in ADDED_COLUMNS:
+            columns = con.execute(
+                'PRAGMA table_info("{}")'.format(table)).fetchall()
+            # No such table: a database built before that part of the app
+            # existed at all. Not this list's problem.
+            if not columns or any(row[1] == column for row in columns):
+                continue
+            con.execute('ALTER TABLE "{}" ADD COLUMN "{}" {}'.format(
+                table, column, sql_type))
+        con.commit()
+    finally:
+        con.close()
+
+
 def _ensure_database():
     """Build the database the first time anything asks for it."""
     global _built
@@ -84,6 +118,11 @@ def _ensure_database():
             os.makedirs(directory)
         if not os.path.exists(DB_PATH) or os.path.getsize(DB_PATH) == 0:
             _build(DB_PATH)
+        # Run for a fresh build too. It costs one PRAGMA per entry and it
+        # means there is one code path that decides what the tables look
+        # like, rather than a build that is right and a catch-up that has to
+        # be remembered to agree with it.
+        _catch_up(DB_PATH)
         _built = True
 
 

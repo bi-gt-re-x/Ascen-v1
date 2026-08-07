@@ -29,6 +29,7 @@ API_MODULES = (
     'growth',
     'focus',
     'quote',
+    'subjects',
 )
 
 SHARED_MODULES = (

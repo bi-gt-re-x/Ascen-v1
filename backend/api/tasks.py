@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from backend.api.goals import apply_task_completion
 from backend.api.reply import fail, ok
+from backend.config import subjects as subject_catalogue
 from backend.database import connection as db
 from backend.tracking import xp as xp_tracking
 from backend.tracking.auth import load_user
@@ -40,6 +41,7 @@ class CreateTask(BaseModel):
     due_date: Optional[str] = None
     show_on_calendar: bool = True
     created_at: Optional[str] = None
+    subject: Optional[str] = None
 
 
 class UpdateTask(BaseModel):
@@ -54,6 +56,7 @@ class UpdateTask(BaseModel):
     timer_duration: Optional[Any] = None
     due_date: Optional[str] = None
     completed: Optional[bool] = None
+    subject: Optional[str] = None
 
 
 class DeleteTask(BaseModel):
@@ -116,6 +119,18 @@ def _delete(task_id, username=None):
     db.save_tasks(kept)
 
 
+def _subject(raw):
+    """A subject id the catalogue recognises, or None.
+
+    Anything else — a stale id from an older build, a typo, a value someone
+    posted by hand — is dropped rather than stored. A task with no subject is a
+    perfectly ordinary task, so there is nothing to fail here; storing a value
+    nothing can draw an icon for would be the worse outcome.
+    """
+    found = subject_catalogue.get(raw)
+    return found['id'] if found else None
+
+
 def _create(body: CreateTask):
     """Shared by POST /api/tasks and its older name, /api/add_task."""
     if not body.username:
@@ -136,6 +151,7 @@ def _create(body: CreateTask):
         # Honor a client-supplied created_at (the week calendar's drag-to-create
         # task uses it to place the block on the dragged slot); default to now.
         "created_at": body.created_at or datetime.now().isoformat(),
+        "subject": _subject(body.subject),
     })
     db.save_tasks(tasks)
     return ok(task_id=task_id)
@@ -180,6 +196,8 @@ def update_task(task_id: str, body: UpdateTask):
         task['timer_duration'] = body.timer_duration
     if 'due_date' in sent:
         task['due_date'] = body.due_date
+    if 'subject' in sent:
+        task['subject'] = _subject(body.subject)
     if 'completed' in sent:
         task['status'] = 'done' if body.completed else 'todo'
         # Record the completion time (the task's "end") when finishing; clear it

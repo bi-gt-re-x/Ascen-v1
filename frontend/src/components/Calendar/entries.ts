@@ -28,6 +28,11 @@ export interface DayEntry {
   startTime: string;
   endTime: string;
   xp: number;
+  /**
+   * The task's own priority band. Absent on an event, which has no such
+   * column — the card falls back to reading the band off the XP.
+   */
+  priority?: string;
   completed: boolean;
   taskId?: string;
   hasConflict?: boolean;
@@ -101,6 +106,7 @@ export function dayEntries(
       startTime: start ? hhmm(start) : '',
       endTime: end ? hhmm(end) : '',
       xp: Number(task.xp_value) || 0,
+      priority: String(task.priority || '').toLowerCase() || undefined,
       completed: task.status === 'done',
       taskId: String(task.id),
     });

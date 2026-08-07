@@ -12,6 +12,8 @@ import type { UseBlockActions } from '@/hooks/useBlockActions';
 
 export interface BlockDialogsProps {
   actions: UseBlockActions;
+  /** Whose subject list the task dialog offers. */
+  username?: string | null;
   /** The week grid opens its dialogs at double width. */
   wide?: boolean;
   /** The Day view acts on one task at a time and never offers a repeat. */
@@ -28,6 +30,7 @@ function hmOf(value: string | undefined): string {
 
 export function BlockDialogs({
   actions,
+  username,
   wide,
   allowTaskRecurrence = true,
 }: BlockDialogsProps) {
@@ -63,6 +66,7 @@ export function BlockDialogs({
     case 'add-task':
       return (
         <TaskModal
+          username={username}
           defaults={dialog.defaults}
           allowRecurrence={allowTaskRecurrence}
           onSave={saveTask}
@@ -74,11 +78,13 @@ export function BlockDialogs({
     case 'edit-task':
       return (
         <TaskModal
+          username={username}
           initial={{
             name: dialog.task.title || '',
             startTime: hmOf(dialog.task.created_at),
             endTime: hmOf(dialog.task.due_date),
             xp: Number(dialog.task.xp_value) || 0,
+            subject: dialog.task.subject ?? null,
           }}
           recurring={allowTaskRecurrence && actions.taskOccurrences(dialog.task).length > 1}
           allowRecurrence={allowTaskRecurrence}
