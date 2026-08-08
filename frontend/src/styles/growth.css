@@ -1242,9 +1242,6 @@ html[data-theme="light"] #growthCard.growth-card {
     display: block;
     animation: none;
     --shell-max: 1320px;
-    /* The size .gr-grid measures its row heights against — see the grid note
-       below. Inline-size only, so the card still grows down with its content. */
-    container-type: inline-size;
 }
 
 /* ---- Header: what the page is, and what it is about ---------------------- */
@@ -1331,40 +1328,52 @@ html[data-theme="light"] #growthCard.growth-card {
    Each row is a ratio against one column's width — 3:2 across the top, 19:10
    through the middle, 7:3 along the bottom, the proportions the design has —
    so the page keeps its shape at any width rather than only at the one the
-   design was drawn at. `cqw` is what makes that expressible: a row height is a
-   fraction of the grid's own width, which no other unit can name (`%` in
-   `grid-template-rows` resolves against height, and `vw` would ignore the rail
-   and the shell's cap). #growthCard is the container it measures.
+   design was drawn at. The ratio goes on the single-column panels and sets the
+   row; the two wide ones carry none and stretch to the row their neighbours
+   set, which they fit inside.
+
+   `width: 100%` on the ratioed panels is not decoration. A box with an aspect
+   ratio derives whichever axis is not definite from the other, and a stretched
+   grid item has a definite *height* — so without a width of its own the
+   insights panel sized itself off the row and spilled a column and a half
+   across the page. Nor can the ratios come from `cqw` and a container query,
+   which is the obvious way to write this: `body` is `display: flex`, so the
+   card's width is shrink-to-fit off its contents, and `container-type` — which
+   implies `contain: inline-size` — zeroes that contribution and collapses the
+   whole page to a strip.
 
    Everything inside a panel therefore has to live within a height it does not
    choose: the chart's canvas flexes, the heatmap sizes its squares off what is
    left, and the lists scroll rather than push the card open. */
 .gr-grid {
-    --gr-gap: 16px;
-    /* One column, which is what the three ratios are ratios of. */
-    --gr-col: calc((100cqw - var(--gr-gap) * 2) / 3);
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows:
-        calc(var(--gr-col) * 2 / 3)     /* chart + summary   — 3:2   */
-        calc(var(--gr-col) * 10 / 19)   /* donut, heat, tiers — 19:10 */
-        calc(var(--gr-col) * 3 / 7);    /* activity + insights — 7:3  */
-    gap: var(--gr-gap);
+    gap: 16px;
     align-items: stretch;
 }
 .gr-chart-panel { grid-column: span 2; overflow: hidden; }
 .gr-activity { grid-column: span 2; }
 
+.gr-summary,
+.gr-category,
+.gr-heat,
+.gr-milestones,
+.gr-insights { width: 100%; }
+.gr-summary { aspect-ratio: 3 / 2; }
+.gr-category,
+.gr-heat,
+.gr-milestones { aspect-ratio: 19 / 10; }
+.gr-insights { aspect-ratio: 7 / 3; }
+
 /* Below three columns the pairings change — the summary sits beside the donut,
-   the heatmap beside the milestones — so heights drawn for a third of a wide
-   page are the wrong ones. The rows go back to their contents there, and
+   the heatmap beside the milestones — so a ratio drawn for a third of a wide
+   page is the wrong shape. The rows go back to their contents there, and
    `stretch` still keeps each pair level. */
 @media (max-width: 1080px) {
-    .gr-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-rows: none;
-    }
+    .gr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gr-chart-panel, .gr-activity { grid-column: span 2; }
+    .gr-summary, .gr-category, .gr-heat,
+    .gr-milestones, .gr-insights { aspect-ratio: auto; }
 }
 @media (max-width: 760px) {
     .gr-grid { grid-template-columns: minmax(0, 1fr); }
