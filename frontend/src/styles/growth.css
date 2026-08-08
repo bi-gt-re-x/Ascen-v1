@@ -1548,37 +1548,88 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-legend-value { margin-left: auto; flex: none; color: #6b7280; font-size: 11.5px; white-space: nowrap; }
 
 /* ---- XP Heatmap ----------------------------------------------------------
-   A month is five or six week rows, and the panel is a fixed height, so the
-   squares are sized by what is left over vertically rather than by the column
-   they sit in: the week rows share the leftover height evenly, and a cell is a
-   square of that height, centred in a column that is usually wider. Sizing
-   them off the width instead — which is what `width: 100%` did — makes a
-   five-row month overflow a card it is no longer allowed to grow. */
+   A rectangle, always: 30 days as 5 rows of 6, or 90 as 6 rows of 15. The
+   column count comes in on `--heat-cols` from the component, because it is a
+   fact about the window rather than about the viewport and a media query
+   cannot see it.
+
+   The panel has a fixed height, so the squares are sized by what is left over
+   vertically rather than by the column they sit in: the rows share the
+   leftover height evenly, and a cell is a square of that height, centred in a
+   column that is usually wider. Sizing them off the width instead — which is
+   what `width: 100%` did — overflows a card that is no longer allowed to grow.
+
+   **Every square keeps its outline, including the ones with no day behind
+   them.** A grid drawn only where there is data is a grid with holes in it,
+   and the reader cannot tell a quiet Tuesday from a Tuesday before they signed
+   up. The fill says how much; the outline says the day is on the map at all. */
 .gr-heat-grid {
     display: grid;
-    grid-template-columns: auto repeat(7, minmax(0, 1fr));
-    /* Row one is the day initials and takes what the text needs; every week row
-       after it shares what is left. */
-    grid-template-rows: auto;
+    grid-template-columns: auto repeat(var(--heat-cols, 6), minmax(0, 1fr));
     grid-auto-rows: minmax(0, 1fr);
     gap: 4px;
     align-items: center;
     flex: 1 1 auto;
     min-height: 0;
 }
-.gr-heat-dow { font-size: 10.5px; color: #9aa0ad; text-align: center; }
 .gr-heat-week { font-size: 10.5px; color: #9aa0ad; padding-right: 6px; white-space: nowrap; }
 .gr-heat-cell {
     display: block; height: 100%; width: auto; aspect-ratio: 1 / 1;
     justify-self: center;
+    box-sizing: border-box;
+    border: 1px solid #e4e6ee;
     border-radius: 4px; background: #f2f3f6;
 }
-/* Four steps of the same brown the rest of the app uses for "how much". */
-.gr-heat-cell.lv-1 { background: #ecdfd0; }
-.gr-heat-cell.lv-2 { background: #d8bd9c; }
-.gr-heat-cell.lv-3 { background: #bd9668; }
-.gr-heat-cell.lv-4 { background: #8f6b41; }
-.gr-heat-cell.is-blank { background: transparent; }
+/* Four steps of the same brown the rest of the app uses for "how much". The
+   border goes with the fill so a full square reads as one block of colour
+   rather than as a swatch in a box. */
+.gr-heat-cell.lv-1 { background: #ecdfd0; border-color: #ecdfd0; }
+.gr-heat-cell.lv-2 { background: #d8bd9c; border-color: #d8bd9c; }
+.gr-heat-cell.lv-3 { background: #bd9668; border-color: #bd9668; }
+.gr-heat-cell.lv-4 { background: #8f6b41; border-color: #8f6b41; }
+/* No day behind it — the outline stays, so the rectangle stays whole. */
+.gr-heat-cell.is-blank { background: transparent; border-style: dashed; }
+
+/* The squares arriving. It plays on the first sight of the page and again
+   whenever the window changes — the component remounts the grid to replay it —
+   and never on a refresh, which would be a tic rather than an entrance. The
+   stagger runs in reading order, so the map fills the way it is read. */
+@keyframes grHeatIn {
+    from { opacity: 0; transform: scale(.7); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.gr-heat-grid .gr-heat-cell {
+    animation: grHeatIn .34s cubic-bezier(.2, .7, .3, 1) both;
+    animation-delay: calc(var(--i, 0) * 7ms);
+}
+/* Opacity only — the shared `fadeIn` also travels 20px, which on a row label
+   beside a square that is scaling in reads as two different animations. */
+@keyframes grHeatLabelIn { from { opacity: 0; } to { opacity: 1; } }
+.gr-heat-grid .gr-heat-week {
+    animation: grHeatLabelIn .34s ease-out both;
+    animation-delay: calc(var(--i, 0) * 7ms);
+}
+@media (prefers-reduced-motion: reduce) {
+    .gr-heat-grid .gr-heat-cell,
+    .gr-heat-grid .gr-heat-week { animation: none; }
+}
+
+/* ---- The heatmap's own window control ------------------------------------
+   Small, because it sits in a panel head beside a title and is not the page's
+   range picker — that one is in the header and governs everything else. */
+.gr-heat-switch {
+    flex: none; display: inline-flex; gap: 2px;
+    padding: 2px; border-radius: 999px;
+    background: #f4f5f8; border: 1px solid #ecedf2;
+}
+.gr-heat-opt {
+    border: 0; background: none; cursor: pointer;
+    padding: 4px 9px; border-radius: 999px;
+    font: inherit; font-size: 10.5px; font-weight: 700; color: #6b7280;
+    white-space: nowrap;
+}
+.gr-heat-opt:hover { color: #1a1f26; }
+.gr-heat-opt.is-active { background: #fff; color: #1a1f26; box-shadow: 0 1px 2px rgba(16, 24, 40, .08); }
 
 .gr-heat-key {
     flex: none;
@@ -1671,7 +1722,6 @@ html[data-theme="dark"] .gr-donut-centre span,
 html[data-theme="dark"] .gr-act-sub,
 html[data-theme="dark"] .gr-act-when,
 html[data-theme="dark"] .gr-mile-sub,
-html[data-theme="dark"] .gr-heat-dow,
 html[data-theme="dark"] .gr-heat-week,
 html[data-theme="dark"] .gr-heat-key,
 html[data-theme="dark"] #growthCard .gr-insight-hint { color: #8b93a3; }
@@ -1694,11 +1744,18 @@ html[data-theme="dark"] .gr-heat-cell,
 html[data-theme="dark"] .gr-mile-track,
 html[data-theme="dark"] .gr-mile-mark { background: #1c222c; }
 html[data-theme="dark"] .gr-donut-track { stroke: #1c222c; background: none; }
-html[data-theme="dark"] .gr-heat-cell.is-blank { background: transparent; }
-html[data-theme="dark"] .gr-heat-cell.lv-1 { background: #3a2f24; }
-html[data-theme="dark"] .gr-heat-cell.lv-2 { background: #5c452e; }
-html[data-theme="dark"] .gr-heat-cell.lv-3 { background: #8a6640; }
-html[data-theme="dark"] .gr-heat-cell.lv-4 { background: #c9a87c; }
+html[data-theme="dark"] .gr-heat-cell { border-color: #262c36; }
+html[data-theme="dark"] .gr-heat-cell.is-blank { background: transparent; border-color: #2b3242; }
+html[data-theme="dark"] .gr-heat-cell.lv-1 { background: #3a2f24; border-color: #3a2f24; }
+html[data-theme="dark"] .gr-heat-cell.lv-2 { background: #5c452e; border-color: #5c452e; }
+html[data-theme="dark"] .gr-heat-cell.lv-3 { background: #8a6640; border-color: #8a6640; }
+html[data-theme="dark"] .gr-heat-cell.lv-4 { background: #c9a87c; border-color: #c9a87c; }
+html[data-theme="dark"] .gr-heat-switch { background: #0f141b; border-color: #262c36; }
+html[data-theme="dark"] .gr-heat-opt { color: #8b93a3; }
+html[data-theme="dark"] .gr-heat-opt:hover { color: #e6e9f0; }
+html[data-theme="dark"] .gr-heat-opt.is-active {
+    background: #232a33; color: #f0f2f6; box-shadow: none;
+}
 html[data-theme="dark"] .gr-mile.is-done .gr-mile-mark { background: rgba(34, 160, 107, .18); color: #4ade80; }
 html[data-theme="dark"] .gr-mile-reward { background: #1c222c; color: #8b93a3; }
 html[data-theme="dark"] .gr-act-ico { background: #232a33; color: #b6a68d; }

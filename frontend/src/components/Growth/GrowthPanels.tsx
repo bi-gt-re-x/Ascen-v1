@@ -13,7 +13,15 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { iconUrl, type Subject } from '@/services/subjects';
 import { OTHER_KEY, type SubjectXp } from '@/utils/subjectXp';
-import { RANGES, type HeatWeek, type Insight, type Milestone, type RangeKey } from '@/utils/growthSummary';
+import {
+  HEAT_WINDOWS,
+  RANGES,
+  type HeatRow,
+  type HeatWindowKey,
+  type Insight,
+  type Milestone,
+  type RangeKey,
+} from '@/utils/growthSummary';
 import type { GrowthSummaryFigures, SummaryFigure } from '@/utils/growthSummary';
 
 // --------------------------------------------------------------------------
@@ -246,46 +254,75 @@ export function CategoryDonut({ breakdown }: CategoryDonutProps) {
 // --------------------------------------------------------------------------
 // XP Heatmap
 // --------------------------------------------------------------------------
-const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
 export interface XpHeatmapProps {
-  weeks: HeatWeek[];
+  rows: HeatRow[];
+  /** Which window is drawn — the panel owns this, not the page's range. */
+  windowKey: HeatWindowKey;
+  onWindowChange: (value: HeatWindowKey) => void;
 }
 
-export function XpHeatmap({ weeks }: XpHeatmapProps) {
+/**
+ * The last 30 or 90 days, as a full rectangle of squares.
+ *
+ * The grid is remounted whenever the window changes — that is what `key` on it
+ * is for — so the squares play their entrance again rather than swapping in
+ * place. It deliberately does not replay on a refresh: the same map re-read is
+ * a tic, not an entrance, which is the rule the chart follows too. The stagger
+ * is per-square and comes from `--i`; styles/growth.css turns it into a delay.
+ */
+export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
+  const shape = HEAT_WINDOWS.find((entry) => entry.key === windowKey) ?? HEAT_WINDOWS[0]!;
+
   return (
     <section className="gr-panel gr-heat">
-      <h2 className="gr-panel-title">
-        XP Heatmap
-        <span
-          className="gr-hint"
-          title="One square per day of the month the range ends in, shaded against that month's busiest day."
-          aria-hidden="true"
-        >
-          ⓘ
-        </span>
-      </h2>
+      <div className="gr-panel-head">
+        <h2 className="gr-panel-title">
+          XP Heatmap
+          <span
+            className="gr-hint"
+            title={`One square per day for the last ${shape.days} days, shaded against the busiest of them.`}
+            aria-hidden="true"
+          >
+            ⓘ
+          </span>
+        </h2>
+        <div className="gr-heat-switch" role="group" aria-label="Heatmap window">
+          {HEAT_WINDOWS.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              className={`gr-heat-opt${option.key === windowKey ? ' is-active' : ''}`}
+              aria-pressed={option.key === windowKey}
+              onClick={() => onWindowChange(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {weeks.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="gr-empty">Nothing to map yet.</p>
       ) : (
         <>
-          <div className="gr-heat-grid">
-            <span className="gr-heat-corner" />
-            {DAY_INITIALS.map((initial, index) => (
-              /* Keyed by position: two Ts and two Ss. */
-              <span className="gr-heat-dow" key={index} aria-hidden="true">
-                {initial}
-              </span>
-            ))}
-
-            {weeks.map((week, index) => (
-              <Fragment key={`${week.label}-${index}`}>
-                <span className="gr-heat-week">{week.label}</span>
-                {week.days.map((cell, at) => (
+          <div
+            className="gr-heat-grid"
+            key={windowKey}
+            style={{ ['--heat-cols' as string]: shape.columns }}
+          >
+            {rows.map((row, index) => (
+              <Fragment key={index}>
+                <span
+                  className="gr-heat-week"
+                  style={{ ['--i' as string]: index * shape.columns }}
+                >
+                  {row.label}
+                </span>
+                {row.days.map((cell, at) => (
                   <span
                     key={at}
                     className={`gr-heat-cell${cell.date ? ` lv-${cell.level}` : ' is-blank'}`}
+                    style={{ ['--i' as string]: index * shape.columns + at }}
                     title={
                       cell.date
                         ? `${new Date(`${cell.date}T00:00:00`).toLocaleDateString('en-US', {

@@ -21,11 +21,13 @@
  * quarter, so there is one. The tabs choose which series; the range chooses
  * how much of it.
  *
- * The heatmap is the one panel the range scopes by month rather than by day:
- * it draws the whole calendar month the range ends in. A grid of squares that
- * was one row long at 7 days and thirteen at 90 could not be given a height,
- * and the panels beside it were left ragged for it — see the grid note in
- * styles/growth.css, and heatmapWeeks in utils/growthSummary.
+ * The heatmap is the one panel the range does not govern, and it has a control
+ * of its own for it: 30 days or 90. The range's ends are the wrong ones for a
+ * map — 7 days is seven squares and nothing worth looking at, All time is a
+ * decade of them — and a grid whose shape changed with the choice could not be
+ * given a height, which left every panel beside it ragged. Two windows, each
+ * an exact rectangle: 5 rows of 6, or 6 rows of 15. See the grid note in
+ * styles/growth.css, and heatmapGrid in utils/growthSummary.
  *
  * The whole history is fetched once rather than a window per range: the tiles
  * compare against the period *before* the one on screen, the milestones are
@@ -60,11 +62,12 @@ import {
 } from '@/utils/growthChart';
 import {
   growthInsights,
-  heatmapWeeks,
+  heatmapGrid,
   milestones,
   rangeLabel,
   sliceRange,
   summaryFigures,
+  type HeatWindowKey,
   type RangeKey,
 } from '@/utils/growthSummary';
 import { subjectXp } from '@/utils/subjectXp';
@@ -147,6 +150,9 @@ export default function Growth() {
 
   const [tab, setTab] = useState<TabName>('cumulative');
   const [range, setRange] = useState<RangeKey>('30');
+  /** The heatmap's own window — the one thing on the page the range does not
+   *  scope. See the note above and components/Growth/GrowthPanels. */
+  const [heatWindow, setHeatWindow] = useState<HeatWindowKey>('30');
 
   /**
    * Bumped to replay the chart's entrance when a tab is chosen or the range
@@ -180,10 +186,9 @@ export default function Growth() {
   const fromIso = slice.current[0]?.date ?? '';
   const toIso = slice.current[slice.current.length - 1]?.date ?? '';
 
-  // The one panel the range scopes differently: it draws the whole month the
-  // range ends in, not the range, so its height is the same at 7 days as at 90
-  // — see utils/growthSummary. The range still chooses the month.
-  const weeks = useMemo(() => heatmapWeeks(all, toIso), [all, toIso]);
+  // The one panel the range does not scope: it has its own 30/90 control, and
+  // always draws a full rectangle of squares — see utils/growthSummary.
+  const heatRows = useMemo(() => heatmapGrid(all, heatWindow), [all, heatWindow]);
 
   const tasks = useMemo(() => account.data?.tasks ?? [], [account.data]);
 
@@ -303,7 +308,11 @@ export default function Growth() {
 
           {/* --- Three across: what it was for, when it happened, how far --- */}
           <CategoryDonut breakdown={breakdown} />
-          <XpHeatmap weeks={weeks} />
+          <XpHeatmap
+            rows={heatRows}
+            windowKey={heatWindow}
+            onWindowChange={setHeatWindow}
+          />
           <Milestones rows={tiers} />
 
           {/* --- What just happened, and what to make of it ----------------- */}
