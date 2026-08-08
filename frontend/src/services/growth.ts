@@ -17,12 +17,25 @@ import type { ApiResult, GrowthDay, Ratings } from '@/types';
 export interface GrowthSeries {
   created_date: string;
   days_since_creation: number;
-  /** The last 30 days, one row per day including days with nothing on them. */
+  /** One row per day, including days with nothing on them. */
   growth_data: GrowthDay[];
 }
 
-export function series(username: string): Promise<ApiResult<GrowthSeries>> {
-  return get<GrowthSeries>('/api/get_growth_data', { username });
+/**
+ * The day-by-day series.
+ *
+ * `days` is how many of the most recent to ask for, and **0 means all of
+ * them**. The growth page asks for all and slices client-side: it lets the
+ * reader choose 7, 30, 90 or the whole account, and every figure on it that
+ * says "vs the previous 30 days" needs the 30 before the 30 on screen. One
+ * request that answers every range beats a request per range, and the rows are
+ * small.
+ */
+export function series(
+  username: string,
+  days = 30,
+): Promise<ApiResult<GrowthSeries>> {
+  return get<GrowthSeries>('/api/get_growth_data', { username, days });
 }
 
 /** The five-metric graded report card. Files a snapshot as a side effect. */

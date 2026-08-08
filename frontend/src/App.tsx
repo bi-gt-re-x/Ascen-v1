@@ -64,8 +64,12 @@ function FrontDoor() {
  * the question that matters: taller than the window, it scrolls; shorter, no
  * scrollbar appears. Its task list still scrolls inside its own card, which is
  * what the pinning was really for — see .dash-main in styles/dashboard-home.css.
+ *
+ * Growth came off the list for the same reason. It was one chart in one card,
+ * which fits any screen; it is a chart and six panels now, which does not fit
+ * most, and pinned it simply lost the bottom three.
  */
-const PINNED = ['/goals', '/growth', '/analytics', '/calendar'];
+const PINNED = ['/goals', '/analytics', '/calendar'];
 
 function pinsViewport(pathname: string): boolean {
   return PINNED.some(

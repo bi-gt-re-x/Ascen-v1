@@ -1210,3 +1210,390 @@ html[data-theme="light"] #growthCard.growth-card {
        height of the screen, that anchor is the bottom of the screen. */
     #growthCard .see-ratings-wrap { flex: none; padding-top: 12px; }
 }
+
+/* ==========================================================================
+   THE ANALYTICS PAGE
+
+   Everything below replaces the page this stylesheet used to dress. It was one
+   card holding one chart, which is why the rules above pin `#growthCard` to the
+   viewport and stretch the canvas into whatever is left: with a single chart on
+   the page, filling the screen is the right answer.
+
+   It is a chart and six panels now, so it is a document again — it scrolls, the
+   canvas has a height of its own, and /growth came off the pinned list in
+   App.tsx. The overrides here are deliberately last in the file and specific
+   enough to win, rather than deleting rules the two viewport media queries
+   above still weave through.
+   ========================================================================== */
+
+/* The card was a 28px-radius, black-bordered, shadowed panel around the whole
+   page. The page *is* the panel now — its cards are the panels — so the outer
+   one steps back to being a plain container. */
+#growthCard.growth-card {
+    background: transparent;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 0 48px;
+    height: auto;
+    min-height: 0;
+    top: 0;
+    margin-top: 22px;
+    display: block;
+    animation: none;
+    --shell-max: 1320px;
+}
+
+/* ---- Header: what the page is, and what it is about ---------------------- */
+.gr-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+}
+#growthCard .gr-title {
+    /* Left-aligned, sentence case, its own size — the base rule centres an
+       uppercase, letter-spaced h1, which was the old card's masthead. */
+    margin: 0;
+    text-align: left;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1a1f26;
+    text-shadow: none;
+    animation: none;
+}
+#growthCard .gr-sub {
+    margin: 5px 0 0;
+    text-align: left;
+    font-size: 0.92rem;
+    color: #6b7280;
+    animation: none;
+}
+.gr-header-tools { display: flex; align-items: center; gap: 8px; }
+
+/* ---- Range picker -------------------------------------------------------- */
+.gr-range { position: relative; }
+.gr-range-btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 9px 14px; border-radius: 11px;
+    border: 1px solid #e4e6ee; background: #fff;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: #2c302e;
+    cursor: pointer; transition: border-color .15s ease, background .15s ease;
+}
+.gr-range-btn:hover { border-color: #c9ccd8; background: #fafbfc; }
+.gr-range-span { white-space: nowrap; }
+.gr-range-caret { color: #9aa0ad; font-size: 11px; }
+.gr-range-menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 40;
+    min-width: 168px; margin: 0; padding: 6px; list-style: none;
+    background: #fff; border: 1px solid #e4e6ee; border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(16, 24, 40, .14);
+}
+.gr-range-item {
+    display: block; width: 100%; text-align: left;
+    padding: 9px 11px; border: 0; border-radius: 8px; background: none;
+    font: inherit; font-size: 13.5px; color: #3a3f4a; cursor: pointer;
+}
+.gr-range-item:hover { background: #f4f5f8; }
+.gr-range-item.is-active { background: #2c302e; color: #fff; font-weight: 700; }
+
+/* ---- Tabs: left-aligned, as the design has them -------------------------- */
+#growthCard .tab-navigation {
+    justify-content: flex-start;
+    padding: 0;
+    margin: 0 0 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+#growthCard .tab-btn {
+    padding: 9px 17px; border-radius: 999px; font-size: 13.5px;
+}
+
+/* ---- The grid -----------------------------------------------------------
+   Three columns. The chart takes two and the summary one; then three panels
+   across; then the activity list takes two and the insights one. Below 1080px
+   it is two columns and below 760px it is one, and in both the chart keeps the
+   full width — a line chart in a third of a narrow screen is a smudge. */
+.gr-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+.gr-chart-panel { grid-column: span 2; }
+.gr-activity { grid-column: span 2; }
+
+@media (max-width: 1080px) {
+    .gr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gr-chart-panel, .gr-activity { grid-column: span 2; }
+}
+@media (max-width: 760px) {
+    .gr-grid { grid-template-columns: minmax(0, 1fr); }
+    .gr-chart-panel, .gr-activity { grid-column: span 1; }
+}
+
+/* ---- The panels themselves ---------------------------------------------- */
+.gr-panel {
+    background: #fff;
+    border: 1px solid #ecedf2;
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .03), 0 6px 16px rgba(16, 24, 40, .04);
+    box-sizing: border-box;
+    min-width: 0;
+}
+.gr-panel-title {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0 0 16px;
+    font-size: 15px; font-weight: 700; color: #1a1f26;
+}
+.gr-panel-ico { font-size: 14px; color: #a8845c; }
+.gr-panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px;
+}
+.gr-panel-head .gr-panel-title { margin: 0; }
+.gr-panel-link {
+    border: 0; background: none; padding: 6px 10px; border-radius: 8px;
+    font: inherit; font-size: 12.5px; font-weight: 600; color: #6b7280;
+    cursor: pointer;
+}
+.gr-panel-link:hover { background: #f4f5f8; color: #1a1f26; }
+.gr-empty { margin: 0; font-size: 13px; color: #9aa0ad; font-style: italic; text-align: left; }
+.gr-hint { margin-left: 2px; color: #b6bcc8; font-size: 12px; cursor: help; }
+
+/* The chart panel keeps the renderer but drops the card look `.chart-container`
+   carried when it was alone on the page — and, more importantly, the sizing.
+   The `min-height: 560px` block above stretches the canvas to fill a card
+   pinned to the viewport, and those rules are written against `#growthCard`,
+   so they out-specify a plain class. Every override here is id-scoped for that
+   reason rather than out of habit: the canvas has a height of its own now and
+   the page scrolls past it. */
+#growthCard .gr-chart-panel .chart-container {
+    background: transparent; border-radius: 0; box-shadow: none;
+    padding: 0; margin: 0;
+    flex: none; display: block;
+}
+#growthCard .gr-chart-panel .chart-title {
+    text-align: left; font-size: 15px; font-weight: 700;
+    color: #1a1f26; margin: 0 0 14px;
+}
+#growthCard .gr-chart-panel canvas {
+    flex: none;
+    display: block;
+    width: 100%;
+    height: 260px;
+    min-height: 0;
+    margin-top: 0;
+}
+
+/* ---- Growth Summary: four tiles, two by two ------------------------------ */
+.gr-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gr-tile {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 13px; border-radius: 13px;
+    background: #fafbfc; border: 1px solid #f0f1f5;
+    min-width: 0;
+}
+.gr-tile-ico {
+    flex: none; width: 30px; height: 30px; border-radius: 9px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px;
+}
+.gr-tile-ico.tone-xp     { background: #eef2fb; color: #2c5aa0; }
+.gr-tile-ico.tone-tasks  { background: #f4eefb; color: #7c4fa8; }
+.gr-tile-ico.tone-perday { background: #eaf5f0; color: #1f7a5a; }
+.gr-tile-ico.tone-focus  { background: #fdf3e6; color: #b8892d; }
+.gr-tile-body { display: flex; flex-direction: column; min-width: 0; }
+.gr-tile-value { font-size: 21px; font-weight: 800; color: #1a1f26; line-height: 1.15; }
+.gr-tile-label { font-size: 11.5px; color: #6b7280; margin-top: 1px; }
+.gr-tile-foot { font-size: 10.5px; font-weight: 600; margin-top: 5px; }
+.gr-tile-foot.is-up { color: #1f7a5a; }
+.gr-tile-foot.is-down { color: #b0413e; }
+.gr-tile-foot.is-quiet { color: #a8aebb; font-weight: 500; font-style: italic; }
+
+/* ---- XP by Category ------------------------------------------------------
+   Five hues and a grey for the remainder, the same ladder the week calendar's
+   breakdown uses and re-chosen against the dark surface rather than lightened.
+   Held as variables so the ring and its legend cannot drift apart. */
+.gr-category {
+    --sub-1: #2c5aa0; --sub-2: #b0413e; --sub-3: #1f7a5a;
+    --sub-4: #b8892d; --sub-5: #7c4fa8; --sub-other: #a8aebb;
+}
+.gr-donut-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.gr-donut { position: relative; flex: none; width: 132px; height: 132px; }
+.gr-donut svg { width: 100%; height: 100%; display: block; }
+.gr-donut-track { fill: none; stroke: #f0f1f5; stroke-width: 15; }
+.gr-donut-slice { fill: none; stroke-width: 15; }
+.gr-donut-slice.tone-sub-1 { stroke: var(--sub-1); }
+.gr-donut-slice.tone-sub-2 { stroke: var(--sub-2); }
+.gr-donut-slice.tone-sub-3 { stroke: var(--sub-3); }
+.gr-donut-slice.tone-sub-4 { stroke: var(--sub-4); }
+.gr-donut-slice.tone-sub-5 { stroke: var(--sub-5); }
+.gr-donut-slice.tone-sub-other { stroke: var(--sub-other); }
+.gr-donut-centre {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none;
+}
+.gr-donut-centre strong { font-size: 19px; font-weight: 800; color: #1a1f26; line-height: 1.1; }
+.gr-donut-centre span { font-size: 10.5px; color: #6b7280; }
+
+.gr-legend { list-style: none; margin: 0; padding: 0; flex: 1 1 150px; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.gr-legend li { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; }
+.gr-legend-dot { flex: none; width: 9px; height: 9px; border-radius: 3px; }
+.gr-legend-dot.tone-sub-1 { background: var(--sub-1); }
+.gr-legend-dot.tone-sub-2 { background: var(--sub-2); }
+.gr-legend-dot.tone-sub-3 { background: var(--sub-3); }
+.gr-legend-dot.tone-sub-4 { background: var(--sub-4); }
+.gr-legend-dot.tone-sub-5 { background: var(--sub-5); }
+.gr-legend-dot.tone-sub-other { background: var(--sub-other); }
+.gr-legend-name { color: #3a3f4a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.gr-legend-value { margin-left: auto; flex: none; color: #6b7280; font-size: 11.5px; white-space: nowrap; }
+
+/* ---- XP Heatmap ---------------------------------------------------------- */
+.gr-heat-grid {
+    display: grid;
+    grid-template-columns: auto repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    align-items: center;
+}
+.gr-heat-dow { font-size: 10.5px; color: #9aa0ad; text-align: center; }
+.gr-heat-week { font-size: 10.5px; color: #9aa0ad; padding-right: 6px; white-space: nowrap; }
+.gr-heat-cell {
+    display: block; width: 100%; aspect-ratio: 1 / 1;
+    border-radius: 4px; background: #f2f3f6;
+}
+/* Four steps of the same brown the rest of the app uses for "how much". */
+.gr-heat-cell.lv-1 { background: #ecdfd0; }
+.gr-heat-cell.lv-2 { background: #d8bd9c; }
+.gr-heat-cell.lv-3 { background: #bd9668; }
+.gr-heat-cell.lv-4 { background: #8f6b41; }
+.gr-heat-cell.is-blank { background: transparent; }
+
+.gr-heat-key {
+    display: flex; align-items: center; justify-content: flex-end; gap: 7px;
+    margin-top: 14px; font-size: 10.5px; color: #9aa0ad;
+}
+.gr-heat-ramp { display: inline-flex; gap: 3px; }
+.gr-heat-ramp .gr-heat-cell { width: 13px; aspect-ratio: auto; height: 13px; }
+
+/* ---- Milestones ---------------------------------------------------------- */
+.gr-miles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.gr-mile { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.gr-mile-mark {
+    flex: none; width: 26px; height: 26px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #f2f3f6; color: #9aa0ad; font-size: 12px;
+}
+.gr-mile.is-done .gr-mile-mark { background: #e3f3ea; color: #1f7a5a; font-weight: 800; }
+.gr-mile-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gr-mile-name { font-size: 13px; font-weight: 700; color: #1a1f26; }
+.gr-mile-sub { font-size: 11px; color: #9aa0ad; }
+.gr-mile-track { height: 5px; border-radius: 999px; background: #f0f1f5; overflow: hidden; margin-top: 5px; }
+.gr-mile-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #c9a87c, #a8845c); }
+.gr-mile-reward {
+    flex: none; align-self: flex-start;
+    padding: 3px 8px; border-radius: 999px;
+    background: #f4f5f8; color: #6b7280;
+    font-size: 10.5px; font-weight: 700; white-space: nowrap;
+}
+
+/* ---- Recent XP Activity: two by two -------------------------------------- */
+.gr-acts {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+}
+@media (max-width: 700px) { .gr-acts { grid-template-columns: minmax(0, 1fr); } }
+.gr-act {
+    display: flex; align-items: center; gap: 10px; min-width: 0;
+    padding: 11px 13px; border-radius: 12px;
+    background: #fafbfc; border: 1px solid #f0f1f5;
+}
+.gr-act-ico {
+    flex: none; width: 30px; height: 30px; border-radius: 9px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #f2eee8; color: #7a6a55;
+}
+.gr-act-ico .cal-ico { width: 15px; height: 15px; }
+.gr-act-dot { width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: .5; }
+.gr-act-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.gr-act-name { font-size: 12.5px; font-weight: 600; color: #1a1f26; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gr-act-sub { font-size: 11px; color: #9aa0ad; }
+.gr-act-right { flex: none; display: flex; flex-direction: column; align-items: flex-end; }
+.gr-act-xp { font-size: 12px; font-weight: 700; color: #1f7a5a; }
+.gr-act-when { font-size: 10.5px; color: #9aa0ad; white-space: nowrap; }
+
+/* ---- Insights ------------------------------------------------------------ */
+.gr-insight-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.gr-insight {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 13px; border-radius: 12px;
+    background: #f3f8f4; border: 1px solid #e3efe7;
+}
+.gr-insight:nth-child(2) { background: #f4f2fb; border-color: #e7e3f5; }
+.gr-insight-ico { flex: none; font-size: 13px; }
+.gr-insight-head { margin: 0; font-size: 12.5px; font-weight: 700; color: #1a1f26; }
+.gr-insight-hint { margin: 3px 0 0; font-size: 11.5px; color: #6b7280; }
+
+/* ---- Dark ---------------------------------------------------------------- */
+html[data-theme="dark"] #growthCard.growth-card { background: transparent; }
+html[data-theme="dark"] #growthCard .gr-title,
+html[data-theme="dark"] .gr-panel-title,
+html[data-theme="dark"] .gr-tile-value,
+html[data-theme="dark"] .gr-donut-centre strong,
+html[data-theme="dark"] .gr-mile-name,
+html[data-theme="dark"] .gr-act-name,
+html[data-theme="dark"] .gr-insight-head { color: #f0f2f6; }
+html[data-theme="dark"] #growthCard .gr-sub,
+html[data-theme="dark"] .gr-tile-label,
+html[data-theme="dark"] .gr-legend-value,
+html[data-theme="dark"] .gr-donut-centre span,
+html[data-theme="dark"] .gr-act-sub,
+html[data-theme="dark"] .gr-act-when,
+html[data-theme="dark"] .gr-mile-sub,
+html[data-theme="dark"] .gr-heat-dow,
+html[data-theme="dark"] .gr-heat-week,
+html[data-theme="dark"] .gr-heat-key,
+html[data-theme="dark"] .gr-insight-hint { color: #8b93a3; }
+html[data-theme="dark"] .gr-legend-name { color: #c9d1d9; }
+html[data-theme="dark"] .gr-panel {
+    background: #161b22; border-color: #262c36;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 6px 16px rgba(0, 0, 0, .22);
+}
+html[data-theme="dark"] .gr-tile,
+html[data-theme="dark"] .gr-act { background: #0f141b; border-color: #262c36; }
+html[data-theme="dark"] .gr-range-btn,
+html[data-theme="dark"] .gr-range-menu { background: #161b22; border-color: #2b3242; color: #e6e9f0; }
+html[data-theme="dark"] .gr-range-btn:hover { background: #1c222c; border-color: #39414f; }
+html[data-theme="dark"] .gr-range-item { color: #c9d1d9; }
+html[data-theme="dark"] .gr-range-item:hover { background: #1c222c; }
+html[data-theme="dark"] .gr-range-item.is-active { background: #a8845c; color: #12161c; }
+html[data-theme="dark"] .gr-panel-link:hover { background: #1c222c; color: #e6e9f0; }
+html[data-theme="dark"] .gr-donut-track,
+html[data-theme="dark"] .gr-heat-cell,
+html[data-theme="dark"] .gr-mile-track,
+html[data-theme="dark"] .gr-mile-mark { background: #1c222c; }
+html[data-theme="dark"] .gr-donut-track { stroke: #1c222c; background: none; }
+html[data-theme="dark"] .gr-heat-cell.is-blank { background: transparent; }
+html[data-theme="dark"] .gr-heat-cell.lv-1 { background: #3a2f24; }
+html[data-theme="dark"] .gr-heat-cell.lv-2 { background: #5c452e; }
+html[data-theme="dark"] .gr-heat-cell.lv-3 { background: #8a6640; }
+html[data-theme="dark"] .gr-heat-cell.lv-4 { background: #c9a87c; }
+html[data-theme="dark"] .gr-mile.is-done .gr-mile-mark { background: rgba(34, 160, 107, .18); color: #4ade80; }
+html[data-theme="dark"] .gr-mile-reward { background: #1c222c; color: #8b93a3; }
+html[data-theme="dark"] .gr-act-ico { background: #232a33; color: #b6a68d; }
+html[data-theme="dark"] .gr-insight { background: #10201a; border-color: #1e3a2c; }
+html[data-theme="dark"] .gr-insight:nth-child(2) { background: #191630; border-color: #2b2650; }
+html[data-theme="dark"] .gr-category {
+    --sub-1: #5089e8; --sub-2: #e04d70; --sub-3: #3fbf8f;
+    --sub-4: #c9a52f; --sub-5: #b48ce8; --sub-other: #5b6472;
+}
+html[data-theme="dark"] .gr-tile-ico.tone-xp     { background: #16233a; color: #7aa9f0; }
+html[data-theme="dark"] .gr-tile-ico.tone-tasks  { background: #241a36; color: #c0a0f0; }
+html[data-theme="dark"] .gr-tile-ico.tone-perday { background: #10261e; color: #52c79a; }
+html[data-theme="dark"] .gr-tile-ico.tone-focus  { background: #2b2312; color: #d8b45e; }

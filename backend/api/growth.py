@@ -15,12 +15,19 @@ router = APIRouter(tags=['growth'])
 
 
 @router.get('/api/get_growth_data')
-def get_growth_data(username: str = ''):
-    """Day-by-day XP, tasks and focus since the account was created."""
+def get_growth_data(username: str = '', days: int = growth_tracking.SERIES_WINDOW):
+    """Day-by-day XP, tasks and focus since the account was created.
+
+    `days` is how many of the most recent to return; **0 returns all of them**,
+    which is what the growth page asks for — it offers 7, 30, 90 and the whole
+    account, and its "vs the previous 30 days" figures need twice whatever is
+    on screen. The default is unchanged so older callers see what they always
+    did.
+    """
     if not username:
         return fail('Username required')
 
-    data = growth_tracking.series(username)
+    data = growth_tracking.series(username, days)
     if data is None:
         return fail('User not found')
     return ok(**data)
