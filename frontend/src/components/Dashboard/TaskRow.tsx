@@ -15,11 +15,20 @@
  * from showed a category there — see the note on `priorityMeta` for why it
  * cannot be one.
  *
+ * The subject is on the right, ahead of the due date: the two together are
+ * *what* and *when*, which is the pair a reader scanning the list is actually
+ * comparing rows on, and both are facts about the task rather than about the
+ * work it names. It is the same icon the calendar draws on the task's block and
+ * the same one the picker showed when it was chosen, so a row here and a block
+ * there are visibly the same task. A task with no subject simply has one fewer
+ * thing on its row.
+ *
  * A completed row is not clickable: re-opening a finished task is an edit, and
  * this list does not edit.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { priorityMeta } from './summary';
+import { iconUrl, type Subject } from '@/services/subjects';
 import type { Task } from '@/types';
 
 /** How long the ✓ shows before the row starts leaving. */
@@ -32,6 +41,8 @@ export interface TaskRowProps {
   busy?: boolean;
   /** A row in the Completed tab: shown finished, and inert. */
   done?: boolean;
+  /** What the task is about, resolved from the catalogue. Absent when it has none. */
+  subject?: Subject | null;
   onComplete: (task: Task) => void;
 }
 
@@ -42,7 +53,13 @@ function dueLabel(due: Date): string {
   return `${day}, ${time}`;
 }
 
-export function TaskRow({ task, busy = false, done = false, onComplete }: TaskRowProps) {
+export function TaskRow({
+  task,
+  busy = false,
+  done = false,
+  subject = null,
+  onComplete,
+}: TaskRowProps) {
   const [phase, setPhase] = useState<'idle' | 'checked' | 'leaving'>('idle');
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -106,6 +123,19 @@ export function TaskRow({ task, busy = false, done = false, onComplete }: TaskRo
           {priority.label}
         </span>
       </div>
+
+      {/* What it is about, then when it is due. The icon is a mask painted in
+          the pill's own colour, the same way the calendar's blocks draw it. */}
+      {subject && (
+        <span className="dash-task-subject" title={subject.name}>
+          <i
+            className="cal-ico"
+            style={{ ['--ico' as string]: `url(${iconUrl(subject)})` }}
+            aria-hidden="true"
+          />
+          <span className="dash-task-subject-name">{subject.label}</span>
+        </span>
+      )}
 
       <span className="dash-task-when">
         {done ? (

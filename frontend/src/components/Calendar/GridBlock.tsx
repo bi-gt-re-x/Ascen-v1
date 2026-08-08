@@ -42,12 +42,52 @@ export interface GridBlockProps {
   flagged?: boolean;
 }
 
-/** The `.cal-ico` mask, which paints the SVG in the block's own text colour. */
-function LeadIcon({ name }: { name: string }) {
+/**
+ * A block's title, with its icon on the same line.
+ *
+ * The icon used to be a badge floated against the block's left edge and
+ * vertically centred, and only in the Day view — the Week's columns were
+ * judged too narrow for it, so six days out of seven a block had no picture at
+ * all. It sits inline ahead of the name in both views now, which is where the
+ * design puts it: the name is the line it belongs to, and the times and the XP
+ * underneath keep the block's full width instead of being indented past a
+ * badge that has nothing to do with them.
+ *
+ * Where the drawing comes from is the other half. `iconUrlFor` guesses one
+ * from the name and is still the fallback, but a task that has been *told* what
+ * it is about should not be guessed at — so a task filed under a subject wears
+ * that subject's icon, the same one the picker showed when it was chosen and
+ * the same one the dashboard's row and the week's XP breakdown draw beside it.
+ *
+ * `.cal-ico` is a mask, so the SVG is painted in the block's own text colour
+ * and stays legible in either theme.
+ */
+function BlockTitle({
+  name,
+  icon,
+  subject,
+  children,
+}: {
+  name: string;
+  /** A subject's icon file, when the thing has a subject. */
+  icon?: string;
+  /** The subject's label, for the title attribute. */
+  subject?: string;
+  /** The ✓ or the tick placeholder a task puts before its name. */
+  children?: React.ReactNode;
+}) {
+  const url = icon ? `/static/icons/${icon}.svg` : iconUrlFor(name);
   return (
-    <span className="wk-event-lead">
-      <i className="cal-ico" style={{ ['--ico' as string]: `url(${iconUrlFor(name)})` }} />
-    </span>
+    <>
+      <i
+        className="cal-ico wk-event-ico"
+        style={{ ['--ico' as string]: `url(${url})` }}
+        title={subject}
+        aria-hidden="true"
+      />
+      {children}
+      <span className="wk-event-name">{name}</span>
+    </>
   );
 }
 
@@ -104,7 +144,6 @@ export function GridBlock({
         }}
       >
         <ResizeHandles />
-        <LeadIcon name={block.name} />
         <CardMenu
           height={block.height}
           onEdit={() => onEdit(block)}
@@ -113,12 +152,16 @@ export function GridBlock({
 
         {block.compact ? (
           <div className="wk-event-head">
-            <div className="wk-event-title">{block.name}</div>
+            <div className="wk-event-title">
+              <BlockTitle name={block.name} />
+            </div>
             <span className="wk-event-start">{hmLabelShort(block.startHM)}</span>
           </div>
         ) : (
           <>
-            <div className="wk-event-title">{block.name}</div>
+            <div className="wk-event-title">
+              <BlockTitle name={block.name} />
+            </div>
             <div className="wk-event-foot">
               <span className="wk-event-due">
                 {rangeLabel(hmToDate(block.startHM), hmToDate(block.endHM))}
@@ -182,7 +225,6 @@ export function GridBlock({
       style={position}
     >
       {!block.done && <ResizeHandles />}
-      <LeadIcon name={block.title} />
       <CardMenu
         height={block.height}
         onEdit={() => onEdit(block)}
@@ -192,7 +234,13 @@ export function GridBlock({
       <div className="wk-event-head">
         {block.done ? (
           <div className="wk-event-title">
-            <span className="wk-event-check">✓</span> {title}
+            <BlockTitle
+              name={title}
+              icon={block.subjectIcon}
+              subject={block.subjectLabel}
+            >
+              <span className="wk-event-check">✓</span>
+            </BlockTitle>
           </div>
         ) : (
           <div
@@ -210,10 +258,15 @@ export function GridBlock({
               onComplete(block.id);
             }}
           >
-            <span className="wk-task-tick" aria-hidden="true">
-              ✓
-            </span>
-            {title}
+            <BlockTitle
+              name={title}
+              icon={block.subjectIcon}
+              subject={block.subjectLabel}
+            >
+              <span className="wk-task-tick" aria-hidden="true">
+                ✓
+              </span>
+            </BlockTitle>
           </div>
         )}
         {startText && <span className="wk-event-start">{startText}</span>}

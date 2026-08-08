@@ -523,6 +523,35 @@ body:has(.dash) .app-main {
 .dash-task-tag.tone-med  { color: #B26B00; }
 .dash-task-tag.tone-low  { color: #6C757D; }
 
+/* What the task is about, ahead of when it is due.
+ *
+ * It shrinks before the due date does — a deadline half-printed is a deadline
+ * misread, whereas a clipped subject is still a subject with its icon beside
+ * it — which is why this one has `min-width: 0` and the due date is `flex:
+ * none`. Below the breakpoint at the foot of this file the row stacks and the
+ * pill keeps the icon and drops the word, since by then there is no width for
+ * both and the drawing is the faster read of the two. */
+.dash-task-subject {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #F2EEE8;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #7A6A55;
+}
+.dash-task-subject .cal-ico { width: 13px; height: 13px; flex: none; }
+.dash-task-subject-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .dash-task-when {
     flex: none;
     font-size: 0.82rem;
@@ -764,9 +793,13 @@ html.focus-mode .dash-main .dash-tasks { order: 1; min-height: 0; }
     .dash-tabs { margin: 0; order: 1; width: 100%; justify-content: center; }
     .dash-add { margin-left: auto; }
     .dash-week-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    /* The due date drops below the title rather than squeezing it out. */
+    /* The due date drops below the title rather than squeezing it out, and the
+       subject keeps its icon on the row above — the word has nowhere to go at
+       this width, and the drawing is the faster read of the two anyway. */
     .dash-task { flex-wrap: wrap; }
     .dash-task-when { width: 100%; padding-left: 32px; }
+    .dash-task-subject { padding: 4px; }
+    .dash-task-subject-name { display: none; }
 }
 
 /* ==========================================================================
@@ -812,6 +845,11 @@ html[data-theme="dark"] .dash-priority-rank {
 html[data-theme="dark"] .dash-ring-track { stroke: #30363d; }
 html[data-theme="dark"] .dash-bar { background: #21262d; }
 html[data-theme="dark"] .dash-today-figures { border-left-color: #30363d; }
+
+html[data-theme="dark"] .dash-task-subject {
+    background: #232a33;
+    color: #b6a68d;
+}
 
 html[data-theme="dark"] .dash-task,
 html[data-theme="dark"] .dash-week-cell {

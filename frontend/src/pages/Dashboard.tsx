@@ -48,7 +48,7 @@ import {
   topPriorities,
   weekSummary,
 } from '@/components/Dashboard/summary';
-import { useDocumentTitle, useUserData } from '@/hooks';
+import { useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
 import { useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
 import { dates } from '@/utils';
@@ -64,6 +64,7 @@ export default function Dashboard() {
 
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const session = useFocusSession(username);
+  const subjects = useSubjectIndex(username);
 
   const [tab, setTab] = useState<TaskTab>('today');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -274,6 +275,7 @@ export default function Dashboard() {
           tab={tab}
           onTabChange={setTab}
           busyId={busyId}
+          subjects={subjects}
           onComplete={(task) => void complete(task)}
           onAdd={() => setAdding(true)}
         />

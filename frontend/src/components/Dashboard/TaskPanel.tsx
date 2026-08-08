@@ -14,7 +14,9 @@
 import { Link } from 'react-router-dom';
 import { TaskRow } from './TaskRow';
 import { isCalendarTask } from './summary';
+import { subjectOf } from '@/hooks/useSubjects';
 import type { TaskBuckets } from './summary';
+import type { Subject } from '@/services/subjects';
 import type { Task } from '@/types';
 
 /**
@@ -39,6 +41,8 @@ export interface TaskPanelProps {
   tab: TaskTab;
   onTabChange: (tab: TaskTab) => void;
   busyId: string | null;
+  /** The subject catalogue by id, so a row can draw what it is about. */
+  subjects: Map<string, Subject>;
   onComplete: (task: Task) => void;
   onAdd: () => void;
 }
@@ -48,12 +52,14 @@ function Section({
   items,
   done,
   busyId,
+  subjects,
   onComplete,
 }: {
   heading: string;
   items: Task[];
   done: boolean;
   busyId: string | null;
+  subjects: Map<string, Subject>;
   onComplete: (task: Task) => void;
 }) {
   return (
@@ -69,6 +75,7 @@ function Section({
               task={task}
               done={done}
               busy={busyId === task.id}
+              subject={subjectOf(subjects, task.subject)}
               onComplete={onComplete}
             />
           ))}
@@ -83,6 +90,7 @@ export function TaskPanel({
   tab,
   onTabChange,
   busyId,
+  subjects,
   onComplete,
   onAdd,
 }: TaskPanelProps) {
@@ -125,6 +133,7 @@ export function TaskPanel({
             items={shown}
             done
             busyId={busyId}
+            subjects={subjects}
             onComplete={onComplete}
           />
         ) : tab === 'upcoming' ? (
@@ -135,6 +144,7 @@ export function TaskPanel({
             items={shown}
             done={false}
             busyId={busyId}
+            subjects={subjects}
             onComplete={onComplete}
           />
         ) : (
@@ -144,6 +154,7 @@ export function TaskPanel({
               items={shown.filter((task) => !isCalendarTask(task))}
               done={false}
               busyId={busyId}
+              subjects={subjects}
               onComplete={onComplete}
             />
             <Section
@@ -151,6 +162,7 @@ export function TaskPanel({
               items={shown.filter(isCalendarTask)}
               done={false}
               busyId={busyId}
+              subjects={subjects}
               onComplete={onComplete}
             />
           </>

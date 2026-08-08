@@ -152,29 +152,15 @@
 .day-task-diff.low  { background: #eef2f7; color: #5a6472; }
 .day-tasks-empty { font-size: 13px; color: #9297ab; padding: 10px 0; }
 
-/* ---- Per-event lead icon (Day view only) ---- */
-/* Hidden in the Week grid (columns are too narrow); shown in the wide Day column
-   as a small rounded badge at the block's left edge, with the text shifted over. */
-.wk-event-lead { display: none; }
-.day-col .wk-event { padding-left: 40px; }
-.day-col .wk-event.is-compact { padding-left: 34px; }
-.day-col .wk-event-lead {
-    display: inline-flex; align-items: center; justify-content: center;
-    position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
-    width: 26px; height: 26px; border-radius: 8px;
-    background: rgba(255, 255, 255, .55); color: currentColor;
-}
-.day-col .wk-event-lead svg { width: 15px; height: 15px; }
-.day-col .wk-task .wk-event-lead { background: rgba(255, 255, 255, .5); }
+/* The per-block icon is no longer this view's alone, and no longer a badge
+   floated against the block's left edge: it sits inline ahead of the name, in
+   both the Week grid and this one. See `.wk-event-ico` in week.css. The Day
+   column therefore keeps its ordinary padding — the times and the XP under the
+   name used to be indented past a badge that had nothing to do with them. */
 
-/* Icon files from /static/icons, painted with the block's text colour via a
-   CSS mask (the SVGs are stroke drawings; the mask only uses their alpha). */
-.cal-ico {
-    display: block; width: 15px; height: 15px;
-    background: currentColor;
-    -webkit-mask: var(--ico) center / contain no-repeat;
-    mask: var(--ico) center / contain no-repeat;
-}
+/* `.cal-ico` itself is in layout.css: the dashboard's task rows draw subject
+   icons with it too, and that page does not load the calendar's stylesheets.
+   Only the sizes that belong to this view are here. */
 .day-tasks-left .cal-ico {
     width: 14px; height: 14px; flex: 0 0 14px; opacity: .75;
 }
@@ -245,4 +231,3 @@ html[data-theme="dark"] .day-task-diff.high { background: #341c1c; color: #f2a3a
 html[data-theme="dark"] .day-task-diff.med  { background: #2d2718; color: #e6c979; }
 html[data-theme="dark"] .day-task-diff.low  { background: #1c222c; color: #aab2c0; }
 html[data-theme="dark"] .day-task-ring { border-color: #3a424e; }
-html[data-theme="dark"] .day-col .wk-event-lead { background: rgba(0, 0, 0, .25); }

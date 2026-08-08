@@ -13,7 +13,7 @@
  * hundred rows to reflect that in a dialog the reader has just closed is not
  * worth it; the next page load has it right.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { list as listSubjects, type Subject } from '@/services/subjects';
 
 const cache = new Map<string, Subject[]>();
@@ -63,4 +63,32 @@ export function useSubjects(username: string | null): Subject[] {
   }, [username]);
 
   return list;
+}
+
+/**
+ * The same catalogue, keyed by the id a task stores.
+ *
+ * A task carries a subject *id* and nothing else — the name and the icon live
+ * only in the catalogue — so anything that wants to draw a task's subject has
+ * to look it up. Everywhere that does (the grid blocks, the dashboard's task
+ * rows, the week's XP breakdown) wants the same map, so it is built once here
+ * rather than three times from three copies of the same `.find`.
+ *
+ * An id the catalogue does not recognise resolves to nothing, which is the
+ * same thing as a task with no subject: no icon, no pill, counted under Other.
+ */
+export function useSubjectIndex(username: string | null): Map<string, Subject> {
+  const subjects = useSubjects(username);
+  return useMemo(
+    () => new Map(subjects.map((subject) => [subject.id, subject])),
+    [subjects],
+  );
+}
+
+/** The subject a task is filed under, or null. */
+export function subjectOf(
+  index: Map<string, Subject>,
+  subjectId: string | undefined,
+): Subject | null {
+  return (subjectId && index.get(subjectId)) || null;
 }

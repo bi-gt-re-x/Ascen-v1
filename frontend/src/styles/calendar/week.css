@@ -383,7 +383,9 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
 /* Completed task: keep the priority fill & border; completion is shown only with
    a green check sign + green text, so the block's colours don't change. */
 .wk-event.wk-task.is-done { color: #2e7d52; }
-.wk-event-check { font-weight: 800; margin-right: 1px; }
+/* A flex item in the title row now, so the space that used to be a literal
+   one in the markup is a margin. */
+.wk-event-check { flex: none; font-weight: 800; margin-right: 4px; }
 
 /* Click-to-finish: the name of an unfinished task is a target. Hovering it
    slides a green tick in ahead of the title and turns the name green, so the
@@ -423,7 +425,41 @@ html[data-theme="dark"] .wk-event.wk-event-cal .wk-event-title { color: #ece9f5;
 .wk-event-done-time,
 .wk-event-cont { font-size: 10.5px; opacity: .8; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wk-event-cont { font-style: italic; font-weight: 600; }
-.wk-event-title { font-size: 12px; font-weight: 600; margin: 0 0 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The title is a row now — icon, then the ✓ a task carries, then the name —
+   so the ellipsis has to move onto the name itself. `.wk-event-title` keeping
+   `overflow: hidden` would clip the row; `min-width: 0` on it is what lets the
+   name shrink rather than pushing the icon out of the block. */
+/* No `gap`, deliberately: the click-to-finish tick below is a zero-width flex
+   item until it is hovered, and a gap would hold its 5px open permanently —
+   a permanent hole between the icon and the name. The icon carries the spacing
+   on its own margin, and the tick keeps animating its own. */
+.wk-event-title {
+    display: flex; align-items: center;
+    font-size: 12px; font-weight: 600; margin: 0 0 1px; min-width: 0;
+}
+.wk-event-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The block's icon: the subject's when it has one, otherwise the drawing
+   guessed from its name. Inline ahead of the title in both views — see the
+   note on `BlockTitle` in components/Calendar/GridBlock.tsx.
+   It never shrinks, and on a one-row block it comes down with the text. */
+.wk-event-ico { flex: none; width: 13px; height: 13px; margin-right: 5px; opacity: .85; }
+.wk-event.is-compact .wk-event-ico { width: 11px; height: 11px; margin-right: 4px; }
+
+/* Below the design's width the icon gives some of itself back.
+ *
+ * A day column is 154px at 1800 and 86 at 1280, and the name is what the
+ * difference comes out of: after the block's padding and the 16px kept clear
+ * for the ⋮, a narrow column leaves the title line about 40px, so every pixel
+ * ahead of the name is a character off it. The icon stays — it is the fastest
+ * read on the block and the reason it is there — but at 11px with 3px of air
+ * it costs seven pixels less, which at this size is two more characters of the
+ * name. The Focus chips one screen up make the same trade at the same width. */
+@media (max-width: 1400px) {
+    .wk-event-ico { width: 11px; height: 11px; margin-right: 3px; }
+    .wk-event.is-compact .wk-event-ico { width: 10px; height: 10px; margin-right: 3px; }
+    .wk-event-check { margin-right: 2px; }
+}
 
 /* Leave room at the top-right for the three-dots menu button so the title (and
    a task's start time) truncate with an ellipsis instead of running under it. */
@@ -835,6 +871,43 @@ html[data-theme="dark"] .wk-break-fill.tone-prio-low    { background: #5089e8; }
 html[data-theme="dark"] .wk-break-fill.tone-prio-medium { background: #a89020; }
 html[data-theme="dark"] .wk-break-fill.tone-prio-high   { background: #e04d70; }
 
+/* XP by Subject.
+ *
+ * A wider label column than the priority rows above: these carry an icon and a
+ * name where those carry one short word, and "Environmental Sci" clipped to
+ * 48px is not a label. The figure column is XP rather than a ratio, so it has
+ * room for four digits.
+ */
+.wk-break-subject li { grid-template-columns: 96px minmax(0, 1fr) 50px; }
+.wk-break-subject .wk-break-label {
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+}
+.wk-break-ico { flex: none; width: 14px; height: 14px; opacity: .8; }
+/* Other is not one thing and has no drawing; a dot keeps the five names and
+   this one on the same left edge. */
+.wk-break-ico.is-other {
+    display: block; width: 8px; height: 8px; margin: 0 3px;
+    border-radius: 999px; background: currentColor; opacity: .45;
+}
+.wk-break-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Five hues plus a grey for the remainder, ranked most XP first. Chosen for
+   separation on the light surface and re-chosen against the dark one rather
+   than lightened from these — the same rule the priority tones follow. None of
+   it is load-bearing: every row carries its own icon, name and figure. */
+.wk-break-fill.tone-sub-1 { background: #2c5aa0; }
+.wk-break-fill.tone-sub-2 { background: #b0413e; }
+.wk-break-fill.tone-sub-3 { background: #1f7a5a; }
+.wk-break-fill.tone-sub-4 { background: #b8892d; }
+.wk-break-fill.tone-sub-5 { background: #7c4fa8; }
+.wk-break-fill.tone-sub-other { background: #a8aebb; }
+html[data-theme="dark"] .wk-break-fill.tone-sub-1 { background: #5089e8; }
+html[data-theme="dark"] .wk-break-fill.tone-sub-2 { background: #e04d70; }
+html[data-theme="dark"] .wk-break-fill.tone-sub-3 { background: #3fbf8f; }
+html[data-theme="dark"] .wk-break-fill.tone-sub-4 { background: #c9a52f; }
+html[data-theme="dark"] .wk-break-fill.tone-sub-5 { background: #b48ce8; }
+html[data-theme="dark"] .wk-break-fill.tone-sub-other { background: #5b6472; }
+
 /* ---- Column charts: XP a day, focused-against-planned a day ----
  *
  * Plain elements rather than an SVG, because the one thing these bars must get
@@ -848,11 +921,8 @@ html[data-theme="dark"] .wk-break-fill.tone-prio-high   { background: #e04d70; }
     gap: 4px; margin-top: 14px;
 }
 .wk-chart-col { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
-.wk-chart-value {
-    font-size: 10px; font-weight: 600; color: #6b7280;
-    text-align: center; height: 13px; line-height: 13px;
-    overflow: hidden; white-space: nowrap;
-}
+/* `.wk-chart-value` — the peak label over the XP-per-day chart — went with
+   that chart; the focus chart below never carried one. */
 .wk-chart-track {
     position: relative; height: 64px; display: flex; align-items: flex-end;
     justify-content: center;
@@ -894,7 +964,6 @@ html[data-theme="dark"] .wk-break-fill.tone-prio-high   { background: #e04d70; }
 .wk-chart-legend .wk-chart-key + * { margin-right: 4px; }
 .wk-chart-legend .wk-chart-key:not(:first-child) { margin-left: 8px; }
 
-html[data-theme="dark"] .wk-chart-value { color: #9aa4b2; }
 html[data-theme="dark"] .wk-chart-day { color: #6b7684; }
 html[data-theme="dark"] .wk-chart-day.is-today { color: #6a9bff; }
 html[data-theme="dark"] .wk-chart-bar { background: #4f8ff5; }
@@ -951,8 +1020,12 @@ html[data-theme="dark"] .wk-chart-legend { color: #9aa4b2; }
 /* The way out of the week, under the Upcoming list. A full-width quiet button
    rather than the text link the other panels end with: it is the last thing in
    the column and the design draws it as a target, not as an aside. */
+/* The last thing in the column rather than the footer of the Upcoming card, so
+   it has no margin of its own: the sidebar's own 16px gap already sets it off
+   from the panel above, and the margin on top of that read as a stray gap at
+   the foot of the page. */
 .wk-fullcal {
-    display: block; width: 100%; margin-top: 16px;
+    display: block; width: 100%;
     padding: 11px 12px; border-radius: 10px;
     background: #f4f5f7; border: 0; cursor: pointer;
     font: inherit; font-size: 13px; font-weight: 600; color: #374151;

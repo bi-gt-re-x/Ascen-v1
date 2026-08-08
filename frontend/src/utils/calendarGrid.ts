@@ -15,6 +15,7 @@
  */
 import { eventBlockColors, type BlockColors } from './calendarColors';
 import { isoOf, monthKey, type CalendarData } from './calendarStore';
+import type { Subject } from '@/services/subjects';
 import type { Task } from '@/types';
 
 // --------------------------------------------------------------------------
@@ -255,6 +256,17 @@ export interface TaskBlock extends BlockBase {
   xp: number;
   done: boolean;
   priority: string;
+  /**
+   * The icon file for the subject the task is filed under, if it has one.
+   *
+   * Carried on the block rather than looked up when it is drawn, so the
+   * arithmetic in this file stays the one place that knows what a block is.
+   * Absent when the task has no subject, and the block falls back to the icon
+   * guessed from its name — see utils/calendarIcons.
+   */
+  subjectIcon?: string;
+  /** "Chem" — the subject's short label, for the block's tooltip. */
+  subjectLabel?: string;
   startDT: Date;
   dueDT: Date | null;
   completedDT: Date | null;
@@ -311,8 +323,17 @@ function toDate(value: string | undefined | null): Date | null {
  * time when it was finished late, because a block is what was scheduled, not
  * how long it overran. Only tasks placed on the calendar are here at all: a
  * dashboard to-do is a list item, not an appointment.
+ *
+ * `subjects` is optional and the block simply goes without an icon of its own
+ * when it is missing, which is what the catalogue not having arrived yet looks
+ * like — a grid that waits for it would be a grid that flashes empty.
  */
-export function dayTaskBlocks(iso: string, tasks: Task[]): TaskBlock[] {
+export function dayTaskBlocks(
+  iso: string,
+  tasks: Task[],
+  /** The subject catalogue keyed by id — see hooks/useSubjects. */
+  subjects?: Map<string, Subject>,
+): TaskBlock[] {
   const gridStart = new Date(`${iso}T00:00:00`);
   gridStart.setHours(START_HOUR, 0, 0, 0);
   const gridEnd = new Date(gridStart.getTime() + (END_HOUR - START_HOUR) * 3_600_000);
@@ -337,6 +358,8 @@ export function dayTaskBlocks(iso: string, tasks: Task[]): TaskBlock[] {
       START_HOUR + (date.getTime() - gridStart.getTime()) / 3_600_000;
     const clamp = (hour: number) => Math.max(START_HOUR, Math.min(hour, END_HOUR));
 
+    const subject = (task.subject && subjects?.get(task.subject)) || null;
+
     out.push({
       kind: 'task',
       id: String(task.id),
@@ -350,6 +373,7 @@ export function dayTaskBlocks(iso: string, tasks: Task[]): TaskBlock[] {
       xp: Number(task.xp_value) || 0,
       done: task.status === 'done',
       priority: String(task.priority || '').toLowerCase(),
+      ...(subject ? { subjectIcon: subject.icon, subjectLabel: subject.label } : {}),
       startDT,
       dueDT,
       completedDT,

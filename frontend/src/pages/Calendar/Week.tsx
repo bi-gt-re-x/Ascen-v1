@@ -39,6 +39,7 @@ import {
   useDocumentTitle,
   useNow,
   useNowScroll,
+  useSubjectIndex,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import { useFocusSession } from '@/hooks/useFocusSession';
@@ -65,6 +66,7 @@ import {
   monthKey,
   saveWeekSnapshot,
 } from '@/utils/calendarStore';
+import { subjectXp } from '@/utils/subjectXp';
 import type { FocusHistory } from '@/types';
 import '@/styles/calendar/month.css';
 import '@/styles/calendar/week.css';
@@ -113,6 +115,7 @@ export default function Week() {
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
+  const subjects = useSubjectIndex(username);
   const now = useNow();
   const navigate = useNavigate();
 
@@ -170,11 +173,11 @@ export default function Week() {
       days.map((day) => ({
         ...day,
         ...layOut([
-          ...dayTaskBlocks(day.iso, tasks),
+          ...dayTaskBlocks(day.iso, tasks, subjects),
           ...dayEventBlocks(day.iso, store.data),
         ]),
       })),
-    [days, store.data, tasks],
+    [days, store.data, subjects, tasks],
   );
 
   /** The first clash anywhere this week; the reader has to resolve it. */
@@ -300,6 +303,18 @@ export default function Week() {
         };
       }),
     [days, history, session.focused, session.goalHours, tasks, todayIso],
+  );
+
+  /**
+   * Where the week's XP went, by subject.
+   *
+   * Counted on `completed_at` like the sparkline and the streak dots above it,
+   * rather than on `created_at` like the overview: this panel is about work
+   * that happened, and the day it happened on is the day it was finished.
+   */
+  const breakdown = useMemo(
+    () => subjectXp(tasks, subjects, mondayIso, sundayIso),
+    [mondayIso, subjects, sundayIso, tasks],
   );
 
   /**
@@ -692,6 +707,7 @@ export default function Week() {
           streak={Number(stats.current_streak) || 0}
           focus={focus}
           days={weekDays}
+          breakdown={breakdown}
           priorities={priorities}
           upcoming={upcoming}
           onViewMonth={() => navigate('/calendar/month')}

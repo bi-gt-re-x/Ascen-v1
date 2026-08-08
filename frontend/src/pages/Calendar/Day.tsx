@@ -31,6 +31,7 @@ import {
   useDocumentTitle,
   useNow,
   useNowScroll,
+  useSubjectIndex,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import {
@@ -86,6 +87,7 @@ export default function Day() {
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
+  const subjects = useSubjectIndex(username);
   const now = useNow();
 
   const [cursor, setCursor] = useState(() => {
@@ -133,8 +135,12 @@ export default function Day() {
   }, [completing, iso, username]);
 
   const { blocks, conflict } = useMemo(
-    () => layOut([...dayTaskBlocks(iso, tasks), ...dayEventBlocks(iso, store.data)]),
-    [iso, store.data, tasks],
+    () =>
+      layOut([
+        ...dayTaskBlocks(iso, tasks, subjects),
+        ...dayEventBlocks(iso, store.data),
+      ]),
+    [iso, store.data, subjects, tasks],
   );
 
   /**
