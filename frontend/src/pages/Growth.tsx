@@ -15,11 +15,17 @@
  *
  * **One range governs the page.** The picker in the header — 7 days, 30, 90,
  * or the whole account — slices the series once, and the chart, the summary
- * tiles, the category donut, the heatmap, the activity list and the insights
- * are all drawn from that slice. Two controls that scope different panels to
- * different windows is how a page ends up quietly comparing a fortnight
- * against a quarter, so there is one. The tabs choose which series; the range
- * chooses how much of it.
+ * tiles, the category donut, the activity list and the insights are all drawn
+ * from that slice. Two controls that scope different panels to different
+ * windows is how a page ends up quietly comparing a fortnight against a
+ * quarter, so there is one. The tabs choose which series; the range chooses
+ * how much of it.
+ *
+ * The heatmap is the one panel the range scopes by month rather than by day:
+ * it draws the whole calendar month the range ends in. A grid of squares that
+ * was one row long at 7 days and thirteen at 90 could not be given a height,
+ * and the panels beside it were left ragged for it — see the grid note in
+ * styles/growth.css, and heatmapWeeks in utils/growthSummary.
  *
  * The whole history is fetched once rather than a window per range: the tiles
  * compare against the period *before* the one on screen, the milestones are
@@ -166,7 +172,6 @@ export default function Growth() {
   );
 
   const figures = useMemo(() => summaryFigures(slice), [slice]);
-  const weeks = useMemo(() => heatmapWeeks(slice.current), [slice]);
   const tiers = useMemo(() => milestones(all), [all]);
   const insights = useMemo(() => growthInsights(slice), [slice]);
   const span = useMemo(() => rangeLabel(slice.current), [slice]);
@@ -174,6 +179,11 @@ export default function Growth() {
   /** The first and last day on screen, for the panels counted off tasks. */
   const fromIso = slice.current[0]?.date ?? '';
   const toIso = slice.current[slice.current.length - 1]?.date ?? '';
+
+  // The one panel the range scopes differently: it draws the whole month the
+  // range ends in, not the range, so its height is the same at 7 days as at 90
+  // — see utils/growthSummary. The range still chooses the month.
+  const weeks = useMemo(() => heatmapWeeks(all, toIso), [all, toIso]);
 
   const tasks = useMemo(() => account.data?.tasks ?? [], [account.data]);
 

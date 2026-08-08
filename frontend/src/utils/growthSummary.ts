@@ -164,7 +164,8 @@ export function summaryFigures(slice: RangeSlice): GrowthSummaryFigures {
 // The heatmap
 // --------------------------------------------------------------------------
 export interface HeatCell {
-  /** ISO date, or null for a padding cell outside the range. */
+  /** ISO date, or null for a square with no day behind it — padding at either
+   *  end of the month, or a day the account has no row for. */
   date: string | null;
   xp: number;
   /** 0…4 — how dark the square is. 0 is a day with nothing on it. */
@@ -181,51 +182,82 @@ export interface HeatWeek {
 const WEEK_START = 0;
 
 /**
- * The range as a grid of weeks.
+ * A calendar month as a grid of weeks.
  *
- * Levels are quartiles of the range's own busiest day rather than a fixed XP
+ * **It is always a whole month, whichever month the range ends in.** It used
+ * to be the range itself, which meant the panel was one row of squares at 7
+ * days and thirteen at 90 — a heatmap that changed shape every time the reader
+ * changed the range, and the reason the row it sits in could not be given a
+ * height. A month is the unit the squares are actually legible at, it is five
+ * or six rows whatever the range says, and "which month" is still the range's
+ * answer: the month the last day on screen falls in.
+ *
+ * Because the month reaches past the range at both ends, the shading is read
+ * from the whole series rather than the slice — a day inside the month that
+ * the range does not cover is still a day the account had, and drawing it
+ * empty would be a lie about the reader rather than a gap in the data. Days
+ * with no row at all — before the account existed, or still ahead — carry no
+ * date and are drawn as nothing.
+ *
+ * Levels are quartiles of the month's own busiest day rather than a fixed XP
  * scale, so the map is readable whether the reader earns 20 XP a day or 2,000.
  * A day with nothing is level 0 and drawn as an empty square — the absence is
  * the information.
  *
- * Rows are padded at both ends so every week is seven cells and the columns
- * line up under their initials; the padding carries no date and is drawn as
- * nothing at all.
+ * @param all    every day the account has, for the shading.
+ * @param anchor an ISO date in the month to draw; the last day of the range.
  */
-export function heatmapWeeks(days: GrowthDay[]): HeatWeek[] {
-  if (!days.length) return [];
-
-  const peak = Math.max(...days.map((day) => Number(day.xp_earned) || 0));
+export function heatmapWeeks(all: GrowthDay[], anchor: string): HeatWeek[] {
+  if (!anchor) return [];
   const at = (iso: string) => new Date(`${iso}T00:00:00`);
+  const iso = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+      date.getDate(),
+    ).padStart(2, '0')}`;
 
-  const cellFor = (day: GrowthDay): HeatCell => {
-    const xp = Number(day.xp_earned) || 0;
-    // Four bands over what actually happened. Anything above zero gets at
-    // least the faintest one, so a 5 XP day is never indistinguishable from a
-    // day off.
-    const level = xp <= 0 || peak <= 0 ? 0 : Math.max(1, Math.ceil((xp / peak) * 4));
-    return { date: day.date, xp, level };
-  };
+  const start = at(anchor);
+  if (Number.isNaN(start.getTime())) return [];
+  const year = start.getFullYear();
+  const month = start.getMonth();
+
+  const earned = new Map<string, number>();
+  all.forEach((day) => earned.set(day.date, Number(day.xp_earned) || 0));
+
+  // The month's days, and the busiest of them to scale the four bands against.
+  const days: string[] = [];
+  for (let d = new Date(year, month, 1); d.getMonth() === month; d.setDate(d.getDate() + 1)) {
+    days.push(iso(d));
+  }
+  const peak = Math.max(0, ...days.map((date) => earned.get(date) ?? 0));
 
   const blank = (): HeatCell => ({ date: null, xp: 0, level: 0 });
+  const cellFor = (date: string): HeatCell => {
+    if (!earned.has(date)) return blank();
+    const xp = earned.get(date)!;
+    // Anything above zero gets at least the faintest band, so a 5 XP day is
+    // never indistinguishable from a day off.
+    const level = xp <= 0 || peak <= 0 ? 0 : Math.max(1, Math.ceil((xp / peak) * 4));
+    return { date, xp, level };
+  };
 
   const cells: HeatCell[] = [];
-  const lead = (at(days[0]!.date).getDay() - WEEK_START + 7) % 7;
+  const lead = (at(days[0]!).getDay() - WEEK_START + 7) % 7;
   for (let i = 0; i < lead; i++) cells.push(blank());
-  days.forEach((day) => cells.push(cellFor(day)));
+  days.forEach((date) => cells.push(cellFor(date)));
   while (cells.length % 7 !== 0) cells.push(blank());
 
   const weeks: HeatWeek[] = [];
   for (let i = 0; i < cells.length; i += 7) {
     const row = cells.slice(i, i + 7);
-    const firstReal = row.find((cell) => cell.date);
+    // The row is labelled by the day it starts on in the month, whether or not
+    // that day has a series row — a week of blanks in a month the account was
+    // not around for still belongs to a date.
+    const day = Math.max(1, i - lead + 1);
     weeks.push({
-      label: firstReal
-        ? at(firstReal.date as string).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-          })
-        : '',
+      label: at(iso(new Date(year, month, day))).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }),
       days: row,
     });
   }

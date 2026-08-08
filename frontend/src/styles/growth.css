@@ -1242,6 +1242,9 @@ html[data-theme="light"] #growthCard.growth-card {
     display: block;
     animation: none;
     --shell-max: 1320px;
+    /* The size .gr-grid measures its row heights against — see the grid note
+       below. Inline-size only, so the card still grows down with its content. */
+    container-type: inline-size;
 }
 
 /* ---- Header: what the page is, and what it is about ---------------------- */
@@ -1317,18 +1320,50 @@ html[data-theme="light"] #growthCard.growth-card {
    Three columns. The chart takes two and the summary one; then three panels
    across; then the activity list takes two and the insights one. Below 1080px
    it is two columns and below 760px it is one, and in both the chart keeps the
-   full width — a line chart in a third of a narrow screen is a smudge. */
+   full width — a line chart in a third of a narrow screen is a smudge.
+
+   **The three rows have a height, and it does not come from their contents.**
+   A panel that grew to fit whatever it had to say left every row ragged: the
+   heatmap was a different height in a 7-day range than a 90-day one, the
+   legend moved the donut panel every time a subject appeared, and the reader
+   got a page whose shape depended on the data rather than on the design.
+
+   Each row is a ratio against one column's width — 3:2 across the top, 19:10
+   through the middle, 7:3 along the bottom, the proportions the design has —
+   so the page keeps its shape at any width rather than only at the one the
+   design was drawn at. `cqw` is what makes that expressible: a row height is a
+   fraction of the grid's own width, which no other unit can name (`%` in
+   `grid-template-rows` resolves against height, and `vw` would ignore the rail
+   and the shell's cap). #growthCard is the container it measures.
+
+   Everything inside a panel therefore has to live within a height it does not
+   choose: the chart's canvas flexes, the heatmap sizes its squares off what is
+   left, and the lists scroll rather than push the card open. */
 .gr-grid {
+    --gr-gap: 16px;
+    /* One column, which is what the three ratios are ratios of. */
+    --gr-col: calc((100cqw - var(--gr-gap) * 2) / 3);
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-    align-items: start;
+    grid-template-rows:
+        calc(var(--gr-col) * 2 / 3)     /* chart + summary   — 3:2   */
+        calc(var(--gr-col) * 10 / 19)   /* donut, heat, tiers — 19:10 */
+        calc(var(--gr-col) * 3 / 7);    /* activity + insights — 7:3  */
+    gap: var(--gr-gap);
+    align-items: stretch;
 }
-.gr-chart-panel { grid-column: span 2; }
+.gr-chart-panel { grid-column: span 2; overflow: hidden; }
 .gr-activity { grid-column: span 2; }
 
+/* Below three columns the pairings change — the summary sits beside the donut,
+   the heatmap beside the milestones — so heights drawn for a third of a wide
+   page are the wrong ones. The rows go back to their contents there, and
+   `stretch` still keeps each pair level. */
 @media (max-width: 1080px) {
-    .gr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gr-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: none;
+    }
     .gr-chart-panel, .gr-activity { grid-column: span 2; }
 }
 @media (max-width: 760px) {
@@ -1345,16 +1380,38 @@ html[data-theme="light"] #growthCard.growth-card {
     box-shadow: 0 1px 2px rgba(16, 24, 40, .03), 0 6px 16px rgba(16, 24, 40, .04);
     box-sizing: border-box;
     min-width: 0;
+    /* A column, so the title keeps its height and the body takes the rest.
+       `min-height: 0` is what lets the ratio win: a grid item's automatic
+       minimum is its content, and without this a long list would quietly
+       out-vote the row. */
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
+/* The body of a panel: whatever is left under the title, and no more. Only the
+   lists that can genuinely run long get a scrollbar; the rest simply fit. */
+.gr-panel > .gr-tiles,
+.gr-panel > .gr-donut-row,
+.gr-panel > .gr-miles,
+.gr-panel > .gr-acts,
+.gr-panel > .gr-insight-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+.gr-panel > .gr-empty { flex: 1 1 auto; }
 .gr-panel-title {
+    flex: none;
     display: flex; align-items: center; gap: 8px;
-    margin: 0 0 16px;
+    margin: 0 0 13px;
     font-size: 15px; font-weight: 700; color: #1a1f26;
 }
 .gr-panel-ico { font-size: 14px; color: #a8845c; }
 .gr-panel-head {
+    flex: none;
     display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; margin-bottom: 14px;
+    gap: 12px; margin-bottom: 11px;
 }
 .gr-panel-head .gr-panel-title { margin: 0; }
 .gr-panel-link {
@@ -1363,7 +1420,11 @@ html[data-theme="light"] #growthCard.growth-card {
     cursor: pointer;
 }
 .gr-panel-link:hover { background: #f4f5f8; color: #1a1f26; }
-.gr-empty { margin: 0; font-size: 13px; color: #9aa0ad; font-style: italic; text-align: left; }
+/* Id-scoped because these are `p`, and the old card's `.growth-card p` — 1.1em,
+   centred — out-specifies a bare class. It was quietly winning: the Insights
+   panel rendered at nearly 18px, centred, which is also what stopped its card
+   from fitting the height the grid now gives it. */
+#growthCard .gr-empty { margin: 0; font-size: 13px; color: #9aa0ad; font-style: italic; text-align: left; }
 .gr-hint { margin-left: 2px; color: #b6bcc8; font-size: 12px; cursor: help; }
 
 /* The chart panel keeps the renderer but drops the card look `.chart-container`
@@ -1376,23 +1437,45 @@ html[data-theme="light"] #growthCard.growth-card {
 #growthCard .gr-chart-panel .chart-container {
     background: transparent; border-radius: 0; box-shadow: none;
     padding: 0; margin: 0;
-    flex: none; display: block;
+    flex: 1 1 auto; min-height: 0;
+    display: flex; flex-direction: column;
 }
 #growthCard .gr-chart-panel .chart-title {
+    flex: none;
     text-align: left; font-size: 15px; font-weight: 700;
     color: #1a1f26; margin: 0 0 14px;
 }
+/* The canvas takes what the row leaves rather than naming a height of its own
+   — the row is the fixed thing now. It repaints on mount and on window resize
+   (see components/Growth/GrowthChart), and both are when this box can change
+   size, so the buffer never goes stale against the box. */
 #growthCard .gr-chart-panel canvas {
-    flex: none;
+    /* Basis 0, not auto: the buffer the renderer sets gives the element an
+       intrinsic height, and taking that as the basis makes it overshoot the
+       box by however much the last paint measured. */
+    flex: 1 1 0;
     display: block;
     width: 100%;
-    height: 260px;
+    height: auto;
     min-height: 0;
     margin-top: 0;
 }
+/* Below three columns the rows are content-sized again, so a canvas that only
+   ever takes what is left would take nothing. It names a height there, as it
+   did before the rows were fixed. Written after the rule above rather than
+   beside the matching grid query, because the two selectors weigh the same and
+   the later one has to be this one. */
+@media (max-width: 1080px) {
+    #growthCard .gr-chart-panel canvas { flex: none; height: 260px; }
+}
 
 /* ---- Growth Summary: four tiles, two by two ------------------------------ */
-.gr-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gr-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(min-content, 1fr);
+    gap: 12px;
+}
 .gr-tile {
     display: flex; align-items: flex-start; gap: 10px;
     padding: 13px; border-radius: 13px;
@@ -1455,17 +1538,30 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-legend-name { color: #3a3f4a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .gr-legend-value { margin-left: auto; flex: none; color: #6b7280; font-size: 11.5px; white-space: nowrap; }
 
-/* ---- XP Heatmap ---------------------------------------------------------- */
+/* ---- XP Heatmap ----------------------------------------------------------
+   A month is five or six week rows, and the panel is a fixed height, so the
+   squares are sized by what is left over vertically rather than by the column
+   they sit in: the week rows share the leftover height evenly, and a cell is a
+   square of that height, centred in a column that is usually wider. Sizing
+   them off the width instead — which is what `width: 100%` did — makes a
+   five-row month overflow a card it is no longer allowed to grow. */
 .gr-heat-grid {
     display: grid;
     grid-template-columns: auto repeat(7, minmax(0, 1fr));
+    /* Row one is the day initials and takes what the text needs; every week row
+       after it shares what is left. */
+    grid-template-rows: auto;
+    grid-auto-rows: minmax(0, 1fr);
     gap: 4px;
     align-items: center;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 .gr-heat-dow { font-size: 10.5px; color: #9aa0ad; text-align: center; }
 .gr-heat-week { font-size: 10.5px; color: #9aa0ad; padding-right: 6px; white-space: nowrap; }
 .gr-heat-cell {
-    display: block; width: 100%; aspect-ratio: 1 / 1;
+    display: block; height: 100%; width: auto; aspect-ratio: 1 / 1;
+    justify-self: center;
     border-radius: 4px; background: #f2f3f6;
 }
 /* Four steps of the same brown the rest of the app uses for "how much". */
@@ -1476,6 +1572,7 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-heat-cell.is-blank { background: transparent; }
 
 .gr-heat-key {
+    flex: none;
     display: flex; align-items: center; justify-content: flex-end; gap: 7px;
     margin-top: 14px; font-size: 10.5px; color: #9aa0ad;
 }
@@ -1506,12 +1603,17 @@ html[data-theme="light"] #growthCard.growth-card {
 /* ---- Recent XP Activity: two by two -------------------------------------- */
 .gr-acts {
     list-style: none; margin: 0; padding: 0;
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(min-content, 1fr);
+    gap: 10px;
 }
 @media (max-width: 700px) { .gr-acts { grid-template-columns: minmax(0, 1fr); } }
 .gr-act {
     display: flex; align-items: center; gap: 10px; min-width: 0;
-    padding: 11px 13px; border-radius: 12px;
+    /* Two of these stacked have to fit the 7:3 row with the header above them,
+       which is where the 9px comes from rather than the 11px the other cards
+       use — see the grid note. */
+    padding: 8px 13px; border-radius: 12px;
     background: #fafbfc; border: 1px solid #f0f1f5;
 }
 .gr-act-ico {
@@ -1529,16 +1631,18 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-act-when { font-size: 10.5px; color: #9aa0ad; white-space: nowrap; }
 
 /* ---- Insights ------------------------------------------------------------ */
-.gr-insight-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.gr-insight-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .gr-insight {
+    flex: none;
     display: flex; align-items: flex-start; gap: 10px;
-    padding: 12px 13px; border-radius: 12px;
+    padding: 8px 12px; border-radius: 12px;
     background: #f3f8f4; border: 1px solid #e3efe7;
 }
 .gr-insight:nth-child(2) { background: #f4f2fb; border-color: #e7e3f5; }
 .gr-insight-ico { flex: none; font-size: 13px; }
-.gr-insight-head { margin: 0; font-size: 12.5px; font-weight: 700; color: #1a1f26; }
-.gr-insight-hint { margin: 3px 0 0; font-size: 11.5px; color: #6b7280; }
+/* Id-scoped for the same reason as .gr-empty above — see the note there. */
+#growthCard .gr-insight-head { margin: 0; font-size: 12.5px; font-weight: 700; color: #1a1f26; text-align: left; }
+#growthCard .gr-insight-hint { margin: 3px 0 0; font-size: 11.5px; color: #6b7280; text-align: left; }
 
 /* ---- Dark ---------------------------------------------------------------- */
 html[data-theme="dark"] #growthCard.growth-card { background: transparent; }
@@ -1548,7 +1652,9 @@ html[data-theme="dark"] .gr-tile-value,
 html[data-theme="dark"] .gr-donut-centre strong,
 html[data-theme="dark"] .gr-mile-name,
 html[data-theme="dark"] .gr-act-name,
-html[data-theme="dark"] .gr-insight-head { color: #f0f2f6; }
+/* Id-scoped like .gr-title above, to match the light rule that had to be. */
+html[data-theme="dark"] #growthCard .gr-insight-head { color: #f0f2f6; }
+
 html[data-theme="dark"] #growthCard .gr-sub,
 html[data-theme="dark"] .gr-tile-label,
 html[data-theme="dark"] .gr-legend-value,
@@ -1559,7 +1665,7 @@ html[data-theme="dark"] .gr-mile-sub,
 html[data-theme="dark"] .gr-heat-dow,
 html[data-theme="dark"] .gr-heat-week,
 html[data-theme="dark"] .gr-heat-key,
-html[data-theme="dark"] .gr-insight-hint { color: #8b93a3; }
+html[data-theme="dark"] #growthCard .gr-insight-hint { color: #8b93a3; }
 html[data-theme="dark"] .gr-legend-name { color: #c9d1d9; }
 html[data-theme="dark"] .gr-panel {
     background: #161b22; border-color: #262c36;

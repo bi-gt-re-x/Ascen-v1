@@ -259,7 +259,7 @@ export function XpHeatmap({ weeks }: XpHeatmapProps) {
         XP Heatmap
         <span
           className="gr-hint"
-          title="One square per day, shaded against the busiest day in this range."
+          title="One square per day of the month the range ends in, shaded against that month's busiest day."
           aria-hidden="true"
         >
           ⓘ
