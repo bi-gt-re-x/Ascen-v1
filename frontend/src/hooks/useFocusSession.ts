@@ -9,10 +9,25 @@
  * anyone looks at it. Stopping banks the segment into `accumulatedSeconds` and
  * clears `runningSince`.
  *
- * State lives in localStorage under `focus:<user>:<date>`, which is the same
- * key the calendar's Focus card and focus-theme.js read — so a session started
- * on the dashboard is visible on the calendar and dims the whole app, without
- * any of them talking to each other.
+ * State lives in localStorage under `focus:<user>:<date>` — so a session
+ * started on the dashboard is visible on the calendar's Focus card without
+ * either of them talking to the other.
+ *
+ * **`html.focus-mode` is set here**, and that is new. A running session is
+ * supposed to clear the page down to the work: the dashboard folds its
+ * greeting, its stat cards, its summary row and its quote away and leaves the
+ * Focus panel over the task list. Every one of those rules was written and none
+ * of them ever fired, because the class they hang off was set by
+ * focus-theme.js — a vanilla file deleted with the rest of the old front end —
+ * and what replaced it was a `focusmodechange` event dispatched to nobody.
+ * Starting a session therefore did nothing but change a button's label. The
+ * class is a fact about the session, so it is set by the thing that owns the
+ * session.
+ *
+ * It is deliberately not removed on unmount. The class describes the account's
+ * day and not this component's lifetime: navigating from the dashboard to the
+ * calendar mid-session must not undim the app, and the next page to mount the
+ * hook re-states it either way.
  *
  * The server copy is a mirror, not the truth: `syncDay` never lowers a day's
  * recorded total, so syncing too often or with a stale value is harmless.
@@ -136,6 +151,12 @@ export function useFocusSession(username: string | null): UseFocusSession {
 
   const running = state.runningSince !== null;
 
+  // What every "while focusing" rule in the stylesheets keys off. See the note
+  // at the top for why it is set here and why it is never cleaned up.
+  useEffect(() => {
+    document.documentElement.classList.toggle('focus-mode', running);
+  }, [running]);
+
   // While running: re-render every second, and mirror to the server every minute.
   useEffect(() => {
     if (!running) return;
@@ -167,11 +188,10 @@ export function useFocusSession(username: string | null): UseFocusSession {
   const start = useCallback(() => {
     const s = latest.current;
     if (s.runningSince) return;
+    // The `focusmodechange` event that used to be dispatched here is gone with
+    // the last thing that listened for it. `running` changing is the signal,
+    // and the effect above is what acts on it.
     write({ ...s, runningSince: Date.now() });
-    // focus-theme.js listens for this and dims the whole app.
-    document.dispatchEvent(
-      new CustomEvent('focusmodechange', { detail: { running: true } }),
-    );
   }, [write]);
 
   const stop = useCallback(() => {
@@ -180,9 +200,6 @@ export function useFocusSession(username: string | null): UseFocusSession {
     const banked =
       s.accumulatedSeconds + Math.max(0, (Date.now() - s.runningSince) / 1000);
     write({ ...s, accumulatedSeconds: banked, runningSince: null });
-    document.dispatchEvent(
-      new CustomEvent('focusmodechange', { detail: { running: false } }),
-    );
     sync();
   }, [write, sync]);
 

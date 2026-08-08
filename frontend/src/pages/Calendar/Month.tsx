@@ -235,10 +235,13 @@ export default function Month() {
 
         <aside className="mv-side">
           <section className="mv-card mv-card-plan">
+            {/* `focusText` is the *primary* of the day's focuses. A day can
+                carry five now — the Day view is where the rest are written —
+                and this field edits the first without disturbing them. */}
             <DayPanel
               entries={entries}
-              focusText={dayFocus.get(selectedIso)}
-              onFocusChange={(text) => dayFocus.set(selectedIso, text)}
+              focusText={dayFocus.primary(selectedIso)}
+              onFocusChange={(text) => dayFocus.setPrimary(selectedIso, text)}
               onAddEvent={() =>
                 actions.open({
                   type: 'add-event',

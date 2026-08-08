@@ -1108,6 +1108,14 @@ html[data-theme="dark"] .wk-spark-area { fill: rgba(168, 132, 92, .10); }
 .wk-focus-chip.is-empty { color: #9ca3af; font-weight: 500; border-style: dashed; }
 .wk-focus-chip-plus { font-size: 14px; line-height: 1; }
 .wk-focus-chip .cal-ico { width: 16px; height: 16px; flex: none; }
+/* A day can carry five focuses and this column can show one, so the chip shows
+   the primary and counts the rest. The hover text lists them all. */
+.wk-focus-chip-more {
+    flex: none; margin-left: auto; padding: 1px 5px;
+    border-radius: 999px; background: rgba(120, 128, 144, .16);
+    font-size: 10.5px; font-weight: 700;
+}
+html[data-theme="dark"] .wk-focus-chip-more { background: rgba(154, 164, 178, .18); }
 
 /* The bar that used to float under the grid — a text field and three buttons
    for starting a task or an event — is gone, and its styles with it. Dragging

@@ -710,24 +710,38 @@ body:has(.dash) .app-main {
 }
 
 /* ==========================================================================
-   FOCUS MODE (html.focus-mode, set by the focus session)
+   FOCUS MODE (html.focus-mode, set by hooks/useFocusSession)
 
-   While a session runs the page gets out of the way: the greeting, the four
-   stat cards and the three summary cards fold away, and the Tasks/Focus row
-   takes the space they leave. dashboard.css restacks the Focus panel itself
-   into its short two-column strip — those rules key off `.focus-panel`, which
-   is why the panel keeps that class.
+   While a session runs the page is two things and nothing else: the Focus
+   panel, and the task list under it. Everything that is *about* the day rather
+   than the work in front of you folds away — the greeting and its date, the
+   four stat cards, the three summary cards, and the quote at the foot. What is
+   left is what a session is for.
+
+   The four are folded rather than unmounted so they can travel: `max-height`
+   and `opacity` give the fold something to animate, and `visibility` is
+   delayed to the end of it so a folded row cannot be tabbed into on the way.
+
+   The error banner is deliberately not in this list. A write that failed is
+   news whatever the reader is doing, and it sits between the two panels that
+   remain rather than in place of one of them.
+
+   dashboard.css restacks the Focus panel itself into its short two-column
+   strip — those rules key off `.focus-panel`, which is why the panel keeps
+   that class.
    ========================================================================== */
 .dash-greeting,
 .dash-stats,
-.dash-insights {
+.dash-insights,
+.quote-container {
     transition: opacity 0.45s ease, transform 0.6s ease,
                 margin 0.6s ease, max-height 0.6s ease;
     max-height: 400px;
 }
 html.focus-mode .dash-greeting,
 html.focus-mode .dash-stats,
-html.focus-mode .dash-insights {
+html.focus-mode .dash-insights,
+html.focus-mode .quote-container {
     max-height: 0;
     opacity: 0;
     transform: translateY(-20px);

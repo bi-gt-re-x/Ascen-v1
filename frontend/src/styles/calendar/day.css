@@ -41,17 +41,93 @@
     padding: 8px 0;
     flex: none;   /* stays put while the grid below scrolls */
 }
-.day-allday-field { display: flex; align-items: center; gap: 8px; padding-right: 4px; }
+/* Up to five focuses across the row, and the + that opens the next one.
+ *
+ * The primary is given twice the share of the width of the ones after it —
+ * `flex-grow: 2` against 1 — because it is the day's answer and the rest are
+ * qualifications, and because with one focus on the day the field should look
+ * the way it always did rather than like a fifth of a row. They still shrink
+ * evenly, so five of them fit without the primary crowding the rest out. */
+.day-allday-field {
+    display: flex; align-items: center; gap: 8px; padding-right: 4px;
+    min-width: 0;
+}
+.day-focus-item {
+    position: relative;
+    display: flex; align-items: center;
+    flex: 1 1 0; min-width: 0;
+}
+.day-focus-item.is-primary { flex-grow: 2; }
+
 .day-allday-input {
     flex: 1 1 auto; min-width: 0; box-sizing: border-box;
     font: inherit; font-size: 14px; color: #3a3f4a;
     background: #fafbfc; border: 1px solid #eef0f4; border-radius: 12px;
-    padding: 11px 14px; transition: border-color .15s ease, box-shadow .15s ease;
+    /* Room on the left for the icon, which sits over the field rather than
+       beside it — beside it, five icons and five fields would be ten things
+       competing for one row. */
+    padding: 11px 14px 11px 36px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.day-focus-item:not(.is-primary) .day-allday-input {
+    padding-right: 28px;   /* the × */
+    font-size: 13.5px;
 }
 .day-allday-input::placeholder { color: #9aa0ad; }
 .day-allday-input:focus {
     outline: none; border-color: #a8845c;
     box-shadow: 0 0 0 3px rgba(168,132,92,.15);
+}
+
+/* Guessed from what has been typed — see utils/calendarIcons. An empty field
+   has nothing to guess from, so it shows a hollow ring: a placeholder that
+   says "this is where the picture goes" rather than the catch-all clock,
+   which would read as a real answer. */
+.day-focus-ico {
+    position: absolute; left: 13px; top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px; pointer-events: none;
+    color: #7c8494;
+}
+.day-focus-ico.is-empty {
+    box-sizing: border-box;
+    width: 13px; height: 13px; border-radius: 999px;
+    border: 1.5px dashed #c8cdd8;
+}
+
+.day-focus-drop {
+    position: absolute; right: 8px; top: 50%;
+    transform: translateY(-50%);
+    width: 20px; height: 20px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 999px; background: transparent;
+    color: #9aa0ad; font: inherit; font-size: 16px; line-height: 1;
+    cursor: pointer; opacity: 0; transition: opacity .14s ease, background .14s ease;
+}
+/* Only on the field it belongs to, and always once focused — a control that
+   can only be reached with a mouse is one a keyboard cannot reach at all. */
+.day-focus-item:hover .day-focus-drop,
+.day-focus-item:focus-within .day-focus-drop,
+.day-focus-drop:focus-visible { opacity: 1; }
+.day-focus-drop:hover { background: #eef0f4; color: #3a3f4a; }
+
+/* Dashed, because it is an empty slot rather than a filled one: it reads as
+   the next field waiting to exist, which is what pressing it makes. */
+.day-focus-add {
+    flex: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 14px; box-sizing: border-box;
+    border: 1px dashed #d5dae3; border-radius: 12px; background: transparent;
+    color: #7c8494; font: inherit; font-size: 13.5px; font-weight: 600;
+    cursor: pointer; transition: border-color .14s ease, color .14s ease, background .14s ease;
+}
+.day-focus-add:hover { border-color: #a8845c; color: #a8845c; background: #fdfbf8; }
+
+/* Below the design's width the + keeps its sign and drops its word: five
+   fields and a labelled button do not fit, and the + is the whole message. */
+@media (max-width: 1180px) {
+    .day-focus-add { padding: 10px 12px; }
+    .day-focus-add-label { display: none; }
 }
 
 
@@ -213,6 +289,11 @@ html[data-theme="dark"] .day-action-btn.is-running:hover { background: #c9453f; 
 
 html[data-theme="dark"] .day-allday-input { background: #0f141b; border-color: #262c36; color: #e6e9f0; }
 html[data-theme="dark"] .day-allday-input::placeholder { color: #6b7280; }
+html[data-theme="dark"] .day-focus-ico { color: #8b93a3; }
+html[data-theme="dark"] .day-focus-ico.is-empty { border-color: #39414f; }
+html[data-theme="dark"] .day-focus-drop:hover { background: #1c222c; color: #e6e9f0; }
+html[data-theme="dark"] .day-focus-add { border-color: #2b3242; color: #8b93a3; }
+html[data-theme="dark"] .day-focus-add:hover { border-color: #a8845c; color: #c9a87c; background: #171310; }
 
 
 html[data-theme="dark"] .day-mini-title { color: #e6e9f0; }

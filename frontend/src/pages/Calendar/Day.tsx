@@ -40,8 +40,14 @@ import {
   type DroppedBlock,
 } from '@/hooks/useGridDrag';
 import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
+import {
+  MAX_DAY_FOCUSES,
+  focusList,
+  joinFocuses,
+} from '@/hooks/useDayFocus';
 import { events as eventService } from '@/services';
 import { dates } from '@/utils';
+import { iconUrlFor } from '@/utils/calendarIcons';
 import {
   blockLabel,
   blockWhen,
@@ -111,6 +117,65 @@ export default function Day() {
 
   /** Opening the day lands on the current hour — see hooks/useNowScroll. */
   const centerOnNow = useNowScroll(scroller, !loading && isToday);
+
+  /**
+   * The day's focuses, as the row above the grid is editing them.
+   *
+   * Held here rather than read straight off the store on every render, because
+   * the two disagree about one thing on purpose: an empty field. The store
+   * keeps a *list of focuses* and drops blanks, so a row the reader has just
+   * opened with + is not in it and would vanish from under the cursor before
+   * they could type into it. This is the editor's version, which keeps it.
+   *
+   * They are re-seeded whenever the store says something the row does not
+   * already say — a different day, or the account's notes arriving from the
+   * server. Writing through does not trip that: what comes back is what was
+   * just sent, so a half-opened blank row survives its own keystroke.
+   */
+  const stored = dayFocus.get(iso);
+  const [focuses, setFocuses] = useState<string[]>(() => {
+    const list = focusList(stored);
+    return list.length ? list : [''];
+  });
+
+  useEffect(() => {
+    if (joinFocuses(focuses) === stored) return;
+    const list = focusList(stored);
+    setFocuses(list.length ? list : ['']);
+    // `focuses` is read but deliberately not a dependency: it is the thing
+    // being corrected, and depending on it would re-run this on every
+    // keystroke to conclude that nothing needs correcting.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iso, stored]);
+
+  // The next list is worked out before anything is set, rather than inside the
+  // updater: writing to the store is a side effect, and an updater React is
+  // free to call twice is not the place for one.
+  const writeFocus = useCallback(
+    (index: number, value: string) => {
+      const next = focuses.map((item, at) => (at === index ? value : item));
+      setFocuses(next);
+      dayFocus.setList(iso, next);
+    },
+    [dayFocus, focuses, iso],
+  );
+
+  /** An empty field the reader can type into. Nothing is stored until they do. */
+  const addFocus = useCallback(() => {
+    if (focuses.length >= MAX_DAY_FOCUSES) return;
+    setFocuses([...focuses, '']);
+  }, [focuses]);
+
+  const dropFocus = useCallback(
+    (index: number) => {
+      const kept = focuses.filter((_, at) => at !== index);
+      // A day always offers a first field, even with nothing written in it.
+      const next = kept.length ? kept : [''];
+      setFocuses(next);
+      dayFocus.setList(iso, next);
+    },
+    [dayFocus, focuses, iso],
+  );
 
   /** Moving the day re-syncs the mini-month to that day's month. */
   const goTo = useCallback((date: Date) => {
@@ -341,18 +406,70 @@ export default function Day() {
 
       <div className="day-layout">
         <div className="day-gridpane">
-          {/* The same per-day note as the Week row and the Month view's field. */}
+          {/* The day's focuses: a primary, then up to four more. The same note
+              the Week row and the Month view's field show — they show the
+              primary; this is where the whole list is written. */}
           <div className="day-allday">
             <div className="wk-allday-label">Focus</div>
             <div className="day-allday-field">
-              <input
-                type="text"
-                className="day-allday-input"
-                placeholder="What's your focus for this day?"
-                aria-label="Daily focus"
-                value={dayFocus.get(iso)}
-                onChange={(event) => dayFocus.set(iso, event.target.value)}
-              />
+              {focuses.map((text, index) => (
+                <div
+                  className={`day-focus-item${index === 0 ? ' is-primary' : ''}`}
+                  key={index}
+                >
+                  {/* Guessed from what has been typed, so it answers as the
+                      words appear. An empty field has nothing to guess from
+                      and shows the ring instead of the catch-all clock. */}
+                  {text.trim() ? (
+                    <i
+                      className="cal-ico day-focus-ico"
+                      style={{ ['--ico' as string]: `url(${iconUrlFor(text)})` }}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <span className="day-focus-ico is-empty" aria-hidden="true" />
+                  )}
+                  <input
+                    type="text"
+                    className="day-allday-input"
+                    placeholder={
+                      index === 0
+                        ? "What's your main focus for this day?"
+                        : 'And also…'
+                    }
+                    aria-label={
+                      index === 0 ? 'Primary focus' : `Focus ${index + 1}`
+                    }
+                    value={text}
+                    onChange={(event) => writeFocus(index, event.target.value)}
+                  />
+                  {/* The primary has no remove: a day always has a first line,
+                      and clearing the field is what empties it. */}
+                  {index > 0 && (
+                    <button
+                      type="button"
+                      className="day-focus-drop"
+                      aria-label={`Remove focus ${index + 1}`}
+                      title="Remove"
+                      onClick={() => dropFocus(index)}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {focuses.length < MAX_DAY_FOCUSES && (
+                <button
+                  type="button"
+                  className="day-focus-add"
+                  onClick={addFocus}
+                  title={`Add another focus (${focuses.length} of ${MAX_DAY_FOCUSES})`}
+                >
+                  <span aria-hidden="true">+</span>
+                  <span className="day-focus-add-label">Focus</span>
+                </button>
+              )}
             </div>
           </div>
 

@@ -618,15 +618,21 @@ export default function Week() {
             </div>
           </div>
 
-          {/* One note per day — the same one the Day and Month views show, and
-              the same stored text. It reads as a chip with the icon guessed
-              from what it says, and becomes the input it always was when it is
-              clicked. A day with nothing on it offers the word instead. */}
+          {/* One chip per day — the same note the Day and Month views show,
+              with the icon guessed from what it says, becoming the input it
+              always was when it is clicked. A day with nothing on it offers
+              the word instead.
+              A day can carry up to five focuses (see hooks/useDayFocus) and a
+              column this narrow can show one, so the chip shows the primary
+              and counts the rest. Editing here edits the primary and leaves
+              the others alone; the Day view is where the whole list lives. */}
           <div className="wk-allday-row">
             <div className="wk-allday-label">Focus</div>
             <div className="wk-allday-cells">
               {days.map((day) => {
-                const text = dayFocus.get(day.iso);
+                const all = dayFocus.list(day.iso);
+                const text = all[0] ?? '';
+                const more = Math.max(0, all.length - 1);
                 const editing = focusEditing === day.iso;
                 return (
                   <div className="wk-allday-cell" key={day.iso}>
@@ -639,7 +645,9 @@ export default function Week() {
                         value={text}
                         placeholder="Focus…"
                         aria-label={`Focus for ${day.name} ${day.label}`}
-                        onChange={(event) => dayFocus.set(day.iso, event.target.value)}
+                        onChange={(event) =>
+                          dayFocus.setPrimary(day.iso, event.target.value)
+                        }
                         onBlur={() => setFocusEditing(null)}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === 'Escape') {
@@ -651,7 +659,12 @@ export default function Week() {
                       <button
                         type="button"
                         className={`wk-focus-chip${text ? '' : ' is-empty'}`}
-                        aria-label={`Focus for ${day.name} ${day.label}`}
+                        aria-label={
+                          more
+                            ? `Focus for ${day.name} ${day.label}: ${all.join(', ')}`
+                            : `Focus for ${day.name} ${day.label}`
+                        }
+                        title={more ? all.join('\n') : undefined}
                         onClick={() => setFocusEditing(day.iso)}
                       >
                         {text ? (
@@ -664,6 +677,11 @@ export default function Week() {
                           <span className="wk-focus-chip-plus" aria-hidden="true">+</span>
                         )}
                         <span className="wk-focus-chip-text">{text || 'Focus'}</span>
+                        {more > 0 && (
+                          <span className="wk-focus-chip-more" aria-hidden="true">
+                            +{more}
+                          </span>
+                        )}
                       </button>
                     )}
                   </div>
