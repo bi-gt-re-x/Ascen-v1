@@ -3,26 +3,193 @@
  *
  * The chart was the whole page; these are what turned it into one. Each takes
  * figures already worked out by utils/growthSummary (or utils/subjectXp) and
- * draws them — none of them fetch, none hold state beyond a menu being open,
- * and none of them compute a number the page could disagree with, because the
- * page hands them all the same slice of the same series.
+ * draws them — none of them fetch, none hold state beyond a menu being open or
+ * a segmented control's choice, and none of them compute a number the page
+ * could disagree with, because the page hands them all the same slice of the
+ * same series.
  *
  * They live in one file because they are one screen's worth of small pieces
- * that are never used apart, and six files of forty lines would hide that.
+ * that are never used apart, and nine files of forty lines would hide that.
+ * The two things that are genuinely reusable have moved out: the SVG shapes
+ * are in MiniChart, and the arithmetic was never here.
+ *
+ * The icons are inline SVG rather than emoji. Emoji are a different typeface
+ * on every platform, they carry their own colour, and a row of them at 12px is
+ * a row of blobs — which is the whole of why the panels looked homemade beside
+ * the design. One stroke weight, one size, `currentColor`, and the tone class
+ * on the tile decides what colour that is.
  */
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { iconUrl, type Subject } from '@/services/subjects';
 import { OTHER_KEY, type SubjectXp } from '@/utils/subjectXp';
+import { LongTermChart, Sparkline, TrendChart } from './MiniChart';
 import {
+  HEAT_WEEKDAYS,
   HEAT_WINDOWS,
+  LONG_TERM_WINDOWS,
   RANGES,
+  type ChartStat,
+  type GrowthTrend,
   type HeatRow,
   type HeatWindowKey,
   type Insight,
+  type LongTermKey,
+  type LongTermProgress,
   type Milestone,
   type RangeKey,
+  type TileSeries,
 } from '@/utils/growthSummary';
 import type { GrowthSummaryFigures, SummaryFigure } from '@/utils/growthSummary';
+import type { GrowthDay } from '@/types';
+
+// --------------------------------------------------------------------------
+// Icons
+// --------------------------------------------------------------------------
+/** One stroke weight, one box, `currentColor`. See the note at the top. */
+const PATHS: Record<string, string> = {
+  trend: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+  spark: 'M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z',
+  check: 'M9 12l2 2 4-4M12 3a9 9 0 100 18 9 9 0 000-18z',
+  target: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 8a4 4 0 100 8 4 4 0 000-8zM12 11.5a.5.5 0 100 1 .5.5 0 000-1z',
+  clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',
+  flame: 'M12 3s5 4 5 9a5 5 0 01-10 0c0-2 1-3 1-3s1 1 2 1 2-3 2-7z',
+  trophy: 'M7 4h10v4a5 5 0 01-10 0zM7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3M9 20h6M12 13v7',
+  award: 'M12 3a5 5 0 100 10 5 5 0 000-10zM9 13l-1 8 4-2 4 2-1-8',
+  bulb: 'M9 18h6M10 21h4M12 3a6 6 0 00-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0012 3z',
+  alert: 'M12 3l9 16H3zM12 9v4M12 16.5v.5',
+  info: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v5M12 7.5v.5',
+  download: 'M12 4v11M8 11l4 4 4-4M4 19h16',
+  calendar: 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4',
+  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+};
+
+function Glyph({ name, size = 15 }: { name: keyof typeof PATHS | string; size?: number }) {
+  return (
+    <svg
+      className="gr-glyph"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={PATHS[name] ?? PATHS.info!} />
+    </svg>
+  );
+}
+
+/** The ⓘ beside a panel title, explaining what the panel is counting. */
+function Hint({ text }: { text: string }) {
+  return (
+    <span className="gr-hint" title={text} aria-hidden="true">
+      <Glyph name="info" size={13} />
+    </span>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Dropdown
+// --------------------------------------------------------------------------
+interface DropdownOption<T extends string> {
+  key: T;
+  label: string;
+}
+
+interface DropdownProps<T extends string> {
+  value: T;
+  options: Array<DropdownOption<T>>;
+  onChange: (value: T) => void;
+  /** What the button reads, when it is not simply the chosen option's label. */
+  display?: string;
+  /** A glyph inside the button, before the label. */
+  icon?: string;
+  className?: string;
+  label: string;
+}
+
+/**
+ * The one interactive shape this page repeats: a button that opens a list.
+ *
+ * The range picker, the chart's metric and the chart's window are all this,
+ * and they were three near-identical closures before. Escape and a click
+ * outside close it; the list is a `listbox` so the chosen row is announced as
+ * selected rather than merely looking it.
+ */
+function Dropdown<T extends string>({
+  value,
+  options,
+  onChange,
+  display,
+  icon,
+  className = '',
+  label,
+}: DropdownProps<T>) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (!box.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open]);
+
+  const chosen = options.find((option) => option.key === value);
+
+  return (
+    <div className={`gr-drop ${className}`.trim()} ref={box}>
+      <button
+        type="button"
+        className="gr-drop-btn"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((was) => !was)}
+      >
+        {icon && <Glyph name={icon} size={14} />}
+        <span className="gr-drop-value">{display ?? chosen?.label ?? ''}</span>
+        <span className="gr-drop-caret" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </span>
+      </button>
+
+      {open && (
+        <ul className="gr-drop-menu" role="listbox" aria-label={label}>
+          {options.map((option) => (
+            <li key={option.key}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={option.key === value}
+                className={`gr-drop-item${option.key === value ? ' is-active' : ''}`}
+                onClick={() => {
+                  onChange(option.key);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 // --------------------------------------------------------------------------
 // Range picker
@@ -43,63 +210,154 @@ export interface RangePickerProps {
  * in mind should not have to do the subtraction.
  */
 export function RangePicker({ value, span, onChange }: RangePickerProps) {
-  const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
+  return (
+    <Dropdown
+      className="gr-range"
+      label="Date range"
+      icon="calendar"
+      value={value}
+      display={span}
+      options={RANGES.map((option) => ({ key: option.key, label: option.label }))}
+      onChange={onChange}
+    />
+  );
+}
 
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: MouseEvent) => {
-      if (!box.current?.contains(event.target as Node)) setOpen(false);
+// --------------------------------------------------------------------------
+// Export
+// --------------------------------------------------------------------------
+export interface ExportReportProps {
+  /** The rows the range covers, in order — one line of CSV each. */
+  rows: GrowthDay[];
+  /** Goes in the filename, so a folder of these is readable. */
+  span: string;
+}
+
+/**
+ * The range on screen, as a file.
+ *
+ * A CSV of exactly the days the page is drawn from, built here rather than
+ * asked of the server: the page already holds every row, and an export that
+ * re-fetched could quietly hand back a different window than the one the
+ * reader is looking at. The columns are the series' own fields, unrounded —
+ * the panels round for display and a spreadsheet should not inherit that.
+ */
+export function ExportReport({ rows, span }: ExportReportProps) {
+  const save = () => {
+    if (rows.length === 0) return;
+    const columns = Object.keys(rows[0]!) as Array<keyof GrowthDay>;
+    const escape = (value: string | number) => {
+      const text = String(value);
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
     };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [open]);
+    const csv = [
+      columns.join(','),
+      ...rows.map((row) => columns.map((column) => escape(row[column] ?? '')).join(',')),
+    ].join('\n');
+
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ascen-growth ${span.replace(/[^\w\s–-]/g, '')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="gr-range" ref={box}>
-      <button
-        type="button"
-        className="gr-range-btn"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((was) => !was)}
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
-          <rect x="3" y="5" width="18" height="16" rx="2" />
-          <path d="M3 10h18M8 3v4M16 3v4" />
-        </svg>
-        <span className="gr-range-span">{span}</span>
-        <span className="gr-range-caret" aria-hidden="true">▾</span>
-      </button>
+    <button
+      type="button"
+      className="gr-export"
+      onClick={save}
+      disabled={rows.length === 0}
+      title="Download these days as a CSV"
+    >
+      <Glyph name="download" size={14} />
+      Export Report
+    </button>
+  );
+}
 
-      {open && (
-        <ul className="gr-range-menu" role="listbox" aria-label="Date range">
-          {RANGES.map((option) => (
-            <li key={option.key}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={option.key === value}
-                className={`gr-range-item${option.key === value ? ' is-active' : ''}`}
-                onClick={() => {
-                  onChange(option.key);
-                  setOpen(false);
-                }}
-              >
-                {option.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+// --------------------------------------------------------------------------
+// The chart panel's own head, and the strip under it
+// --------------------------------------------------------------------------
+export interface ChartHeadProps {
+  title: string;
+  hint: string;
+  metric: string;
+  metrics: Array<{ key: string; label: string }>;
+  onMetric: (value: string) => void;
+  range: RangeKey;
+  onRange: (value: RangeKey) => void;
+}
+
+/**
+ * A title, and the two things that decide what is under it.
+ *
+ * The window picker here is the *same state* as the header's range picker,
+ * shown a second time where the eye is. Two controls that scope the same page
+ * to different windows is how a page ends up comparing a fortnight against a
+ * quarter — see the note at the top of pages/Growth — so this is a second
+ * surface on one range, not a second range.
+ */
+export function ChartHead({
+  title,
+  hint,
+  metric,
+  metrics,
+  onMetric,
+  range,
+  onRange,
+}: ChartHeadProps) {
+  return (
+    <div className="gr-panel-head gr-chart-head">
+      <h2 className="gr-panel-title">
+        {title}
+        <Hint text={hint} />
+      </h2>
+      <div className="gr-chart-tools">
+        <Dropdown
+          className="is-compact"
+          label="Which series"
+          value={metric}
+          options={metrics}
+          onChange={onMetric}
+        />
+        <Dropdown
+          className="is-compact"
+          label="How far back"
+          value={range}
+          options={RANGES.map((option) => ({ key: option.key, label: option.label }))}
+          onChange={onRange}
+        />
+      </div>
     </div>
+  );
+}
+
+export interface ChartStripProps {
+  stats: ChartStat[];
+}
+
+/** Five facts the line above cannot answer. See `chartStats`. */
+export function ChartStrip({ stats }: ChartStripProps) {
+  return (
+    <dl className="gr-strip">
+      {stats.map((stat) => (
+        <div className="gr-strip-cell" key={stat.key}>
+          <dt>{stat.label}</dt>
+          <dd>
+            <strong>{stat.value}</strong>
+            {stat.delta !== null && (
+              <span className={`gr-chip${stat.delta >= 0 ? ' is-up' : ' is-down'}`}>
+                {stat.delta >= 0 ? '+' : '−'}
+                {Math.abs(stat.delta)}%
+              </span>
+            )}
+            {stat.note && <span className="gr-strip-note">{stat.note}</span>}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -109,7 +367,7 @@ export function RangePicker({ value, span, onChange }: RangePickerProps) {
 /** An arrow and a percentage, or nothing at all. See `SummaryFigure.delta`. */
 function Delta({ figure, days }: { figure: SummaryFigure; days: number }) {
   if (figure.delta === null || days <= 0) {
-    return <span className="gr-tile-foot is-quiet">no earlier period to compare</span>;
+    return <span className="gr-tile-foot is-quiet">no earlier period</span>;
   }
   const up = figure.delta >= 0;
   return (
@@ -122,36 +380,74 @@ function Delta({ figure, days }: { figure: SummaryFigure; days: number }) {
 
 export interface GrowthSummaryProps {
   figures: GrowthSummaryFigures;
+  series: TileSeries;
+  trend: GrowthTrend;
+  /** "vs. Last 30 Days" — what the deltas in here are measured against. */
+  against: string;
 }
 
-export function GrowthSummary({ figures }: GrowthSummaryProps) {
+/**
+ * What the range came to, and the shape of getting there.
+ *
+ * Four totals and a curve, because four totals cannot distinguish a month that
+ * climbed steadily from one that did everything in its last week — and that
+ * distinction is most of what a reader wants from a summary. Each tile carries
+ * its own days as a sparkline for the same reason at a smaller scale.
+ */
+export function GrowthSummary({ figures, series, trend, against }: GrowthSummaryProps) {
   const tiles = [
-    { key: 'xp', tone: 'xp', label: 'Total XP Earned', figure: figures.xp, icon: '↗' },
-    { key: 'tasks', tone: 'tasks', label: 'Tasks Completed', figure: figures.tasks, icon: '🏆' },
-    { key: 'perday', tone: 'perday', label: 'XP per Day (Avg)', figure: figures.xpPerDay, icon: '◎' },
-    { key: 'focus', tone: 'focus', label: 'Focus Hours', figure: figures.focusHours, icon: '◷' },
+    { key: 'xp', tone: 'xp', label: 'Total XP Earned', figure: figures.xp, icon: 'spark', spark: series.xp },
+    { key: 'tasks', tone: 'tasks', label: 'Tasks Completed', figure: figures.tasks, icon: 'check', spark: series.tasks },
+    { key: 'perday', tone: 'perday', label: 'XP per Day (Avg)', figure: figures.xpPerDay, icon: 'target', spark: series.xp },
+    { key: 'focus', tone: 'focus', label: 'Focus Hours', figure: figures.focusHours, icon: 'clock', spark: series.focusHours },
   ];
 
   return (
     <section className="gr-panel gr-summary">
-      <h2 className="gr-panel-title">
-        <span className="gr-panel-ico" aria-hidden="true">↗</span> Growth Summary
-      </h2>
+      <div className="gr-panel-head">
+        <h2 className="gr-panel-title">
+          <span className="gr-panel-ico" aria-hidden="true">
+            <Glyph name="trend" size={14} />
+          </span>
+          Growth Summary
+          <Hint text="Every figure here covers the range in the header, compared against the same length of time before it." />
+        </h2>
+        <span className="gr-panel-note">{against}</span>
+      </div>
+
       <div className="gr-tiles">
         {tiles.map((tile) => (
-          <div className="gr-tile" key={tile.key}>
-            <span className={`gr-tile-ico tone-${tile.tone}`} aria-hidden="true">
-              {tile.icon}
-            </span>
-            <div className="gr-tile-body">
+          <div className={`gr-tile tone-${tile.tone}`} key={tile.key}>
+            <div className="gr-tile-top">
+              <span className={`gr-tile-ico tone-${tile.tone}`} aria-hidden="true">
+                <Glyph name={tile.icon} size={15} />
+              </span>
               <strong className="gr-tile-value">
                 {tile.figure.value.toLocaleString()}
               </strong>
-              <span className="gr-tile-label">{tile.label}</span>
-              <Delta figure={tile.figure} days={figures.comparedDays} />
             </div>
+            <span className="gr-tile-label">{tile.label}</span>
+            <Delta figure={tile.figure} days={figures.comparedDays} />
+            <Sparkline values={tile.spark} tone={tile.tone} />
           </div>
         ))}
+      </div>
+
+      <div className="gr-trend">
+        <span className="gr-trend-title">Growth Trend</span>
+        <div className="gr-trend-row">
+          <TrendChart trend={trend} />
+          {trend.overall !== null && (
+            <div className="gr-trend-badge">
+              <strong className={trend.overall >= 0 ? 'is-up' : 'is-down'}>
+                {trend.overall >= 0 ? '+' : '−'}
+                {Math.abs(trend.overall)}%
+              </strong>
+              <span>Overall Growth</span>
+              <span className="is-quiet">{against.replace('vs. ', 'vs ')}</span>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -262,7 +558,12 @@ export interface XpHeatmapProps {
 }
 
 /**
- * The last 30 or 90 days, as a full rectangle of squares.
+ * The last 30 or 90 days as a calendar of squares.
+ *
+ * Seven columns, Sunday to Saturday, month names down the side: the shape a
+ * reader already knows how to read, and the one in which "I do nothing at
+ * weekends" is visible at a glance. The row count is fixed per window so the
+ * grid is the same rectangle whichever month it lands in — see `heatmapGrid`.
  *
  * The grid is remounted whenever the window changes — that is what `key` on it
  * is for — so the squares play their entrance again rather than swapping in
@@ -278,20 +579,16 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
       <div className="gr-panel-head">
         <h2 className="gr-panel-title">
           XP Heatmap
-          <span
-            className="gr-hint"
-            title={`One square per day for the last ${shape.days} days, shaded against the busiest of them.`}
-            aria-hidden="true"
-          >
-            ⓘ
-          </span>
+          <Hint
+            text={`One square per day for the last ${shape.days} days, shaded against the busiest of them.`}
+          />
         </h2>
-        <div className="gr-heat-switch" role="group" aria-label="Heatmap window">
+        <div className="gr-seg" role="group" aria-label="Heatmap window">
           {HEAT_WINDOWS.map((option) => (
             <button
               key={option.key}
               type="button"
-              className={`gr-heat-opt${option.key === windowKey ? ' is-active' : ''}`}
+              className={`gr-seg-opt${option.key === windowKey ? ' is-active' : ''}`}
               aria-pressed={option.key === windowKey}
               onClick={() => onWindowChange(option.key)}
             >
@@ -306,35 +603,47 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
       ) : (
         <>
           <div
-            className="gr-heat-grid"
-            key={windowKey}
-            style={{ ['--heat-cols' as string]: shape.columns }}
+            className="gr-heat-body"
+            style={{ ['--heat-max' as string]: `${shape.maxWidth}px` }}
           >
-            {rows.map((row, index) => (
-              <Fragment key={index}>
-                <span
-                  className="gr-heat-week"
-                  style={{ ['--i' as string]: index * shape.columns }}
-                >
-                  {row.label}
-                </span>
-                {row.days.map((cell, at) => (
+            {/* `display: contents` on this and on the grid below puts both
+                rows in one grid, so the letters sit over the columns they
+                name. The first cell is the month-label column's corner. */}
+            <div className="gr-heat-days" aria-hidden="true">
+              <span className="gr-heat-corner" />
+              {HEAT_WEEKDAYS.map((day, at) => (
+                <span key={at}>{day}</span>
+              ))}
+            </div>
+
+            <div className="gr-heat-grid" key={windowKey}>
+              {rows.map((row, index) => (
+                <Fragment key={index}>
                   <span
-                    key={at}
-                    className={`gr-heat-cell${cell.date ? ` lv-${cell.level}` : ' is-blank'}`}
-                    style={{ ['--i' as string]: index * shape.columns + at }}
-                    title={
-                      cell.date
-                        ? `${new Date(`${cell.date}T00:00:00`).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}: ${cell.xp} XP`
-                        : undefined
-                    }
-                  />
-                ))}
-              </Fragment>
-            ))}
+                    className="gr-heat-month"
+                    style={{ ['--i' as string]: index * 7 }}
+                  >
+                    {row.label}
+                  </span>
+                  {row.days.map((cell, at) => (
+                    <span
+                      key={at}
+                      className={`gr-heat-cell${cell.date ? ` lv-${cell.level}` : ' is-blank'}`}
+                      style={{ ['--i' as string]: index * 7 + at }}
+                      title={
+                        cell.date
+                          ? `${new Date(`${cell.date}T00:00:00`).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                            })}: ${cell.xp} XP`
+                          : undefined
+                      }
+                    />
+                  ))}
+                </Fragment>
+              ))}
+            </div>
           </div>
 
           <div className="gr-heat-key">
@@ -357,48 +666,64 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
 // --------------------------------------------------------------------------
 export interface MilestonesProps {
   rows: Milestone[];
+  onViewAll: () => void;
 }
 
+/** One icon per ladder, so the three rows are told apart before they are read. */
+const MILESTONE_ICON: Record<Milestone['kind'], string> = {
+  xp: 'trophy',
+  focus: 'clock',
+  streak: 'flame',
+};
+
 /**
- * The XP ladder, and where the account is on it.
+ * The three things the account is working towards.
  *
  * The badge on the right is a label on the tier — what reaching it is *worth*
  * — and not XP that anything awards. Nothing here writes to the account, and
- * the dates are read back out of the XP history rather than recorded at the
- * time; see utils/growthSummary.
+ * the dates are read back out of the history rather than recorded at the time;
+ * see utils/growthSummary.
  */
-export function Milestones({ rows }: MilestonesProps) {
+export function Milestones({ rows, onViewAll }: MilestonesProps) {
   return (
     <section className="gr-panel gr-milestones">
-      <h2 className="gr-panel-title">
-        <span className="gr-panel-ico" aria-hidden="true">⚑</span> Milestones
-      </h2>
+      <div className="gr-panel-head">
+        <h2 className="gr-panel-title">
+          <span className="gr-panel-ico" aria-hidden="true">
+            <Glyph name="award" size={14} />
+          </span>
+          Milestones
+        </h2>
+        <button type="button" className="gr-panel-link" onClick={onViewAll}>
+          View all
+        </button>
+      </div>
+
       <ul className="gr-miles">
         {rows.map((row) => {
-          const done = row.reachedOn !== null;
+          const done = row.progress >= row.target;
           const percent = Math.min(100, Math.round((row.progress / row.target) * 100));
           return (
-            <li className={`gr-mile${done ? ' is-done' : ''}`} key={row.target}>
-              <span className="gr-mile-mark" aria-hidden="true">
-                {done ? '✓' : '🔒'}
+            <li className={`gr-mile tone-${row.kind}${done ? ' is-done' : ''}`} key={row.kind}>
+              <span className={`gr-mile-ico tone-${row.kind}`} aria-hidden="true">
+                <Glyph name={MILESTONE_ICON[row.kind]} size={15} />
               </span>
               <div className="gr-mile-body">
-                <span className="gr-mile-name">
-                  Earn {row.target.toLocaleString()} XP
-                </span>
+                <span className="gr-mile-name">{row.name}</span>
                 <span className="gr-mile-sub">
-                  {done
-                    ? `Completed on ${new Date(`${row.reachedOn as string}T00:00:00`).toLocaleDateString(
+                  {done && row.reachedOn
+                    ? `Completed on ${new Date(`${row.reachedOn}T00:00:00`).toLocaleDateString(
                         'en-US',
                         { month: 'short', day: 'numeric', year: 'numeric' },
                       )}`
-                    : `${row.progress.toLocaleString()} / ${row.target.toLocaleString()} XP`}
+                    : row.sub}
                 </span>
-                {!done && (
-                  <span className="gr-mile-track">
-                    <i className="gr-mile-fill" style={{ width: `${percent}%` }} />
-                  </span>
-                )}
+                <span className="gr-mile-track">
+                  <i
+                    className={`gr-mile-fill tone-${row.kind}`}
+                    style={{ width: `${percent}%` }}
+                  />
+                </span>
               </div>
               <span className="gr-mile-reward">+{row.reward} XP</span>
             </li>
@@ -410,63 +735,110 @@ export function Milestones({ rows }: MilestonesProps) {
 }
 
 // --------------------------------------------------------------------------
-// Recent XP Activity
+// Long term progress
 // --------------------------------------------------------------------------
-export interface ActivityEntry {
-  id: string;
-  title: string;
-  /** The subject it was filed under, for the icon and the line under the name. */
-  subject: Subject | null;
-  xp: number;
-  /** "Today, 7:35 AM". */
-  when: string;
+export interface LongTermProps {
+  data: LongTermProgress;
+  windowKey: LongTermKey;
+  onWindowChange: (value: LongTermKey) => void;
 }
 
-export interface RecentXpActivityProps {
-  entries: ActivityEntry[];
+/**
+ * Four running totals over months, at the account's own scale.
+ *
+ * Like the heatmap, this panel is not scoped by the header's range — a panel
+ * called Long Term Progress showing the last seven days would be a joke — so
+ * it carries its own 6M / 1Y / All Time control, and the totals in the legend
+ * are what each line comes to at the end of *that* window.
+ */
+export function LongTerm({ data, windowKey, onWindowChange }: LongTermProps) {
+  return (
+    <section className="gr-panel gr-longterm">
+      <div className="gr-panel-head">
+        <h2 className="gr-panel-title">
+          Long Term Progress
+          <Hint text="Monthly running totals. The axis is XP; the other three lines are scaled to fit beside it, and carry their own totals in the legend." />
+        </h2>
+        <div className="gr-seg" role="group" aria-label="How far back">
+          {LONG_TERM_WINDOWS.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              className={`gr-seg-opt${option.key === windowKey ? ' is-active' : ''}`}
+              aria-pressed={option.key === windowKey}
+              onClick={() => onWindowChange(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {data.lines.length === 0 ? (
+        <p className="gr-empty">Not enough history to plot yet.</p>
+      ) : (
+        <>
+          <LongTermChart data={data} />
+          <ul className="gr-lt-legend">
+            {data.lines.map((line) => (
+              <li key={line.key}>
+                <i className={`gr-lt-key tone-${line.key}`} aria-hidden="true" />
+                <span className="gr-lt-name">{line.label}</span>
+                <span className="gr-lt-total">{line.total}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Skills Progress
+// --------------------------------------------------------------------------
+export interface SkillsProgressProps {
   onViewAll: () => void;
 }
 
-export function RecentXpActivity({ entries, onViewAll }: RecentXpActivityProps) {
+/**
+ * The one panel on this page with nothing behind it.
+ *
+ * The design has five named skills at a level each — Problem Solving 4.2,
+ * Algorithms 3.8 — and the account tracks no such thing. There is a growth
+ * tree in the backend (`backend/tracking/tree.py`) that is a stub, and a
+ * `/growth-tree` route that says so. Inventing levels out of subject XP would
+ * put five confident numbers on the page that mean nothing, which is worse
+ * than an empty card: a reader cannot tell a made-up 4.2 from a real one.
+ *
+ * So it says what it will be and what it is waiting on, the same bargain
+ * pages/Unbuilt strikes for a whole route. Delete this component on the day
+ * the tree returns rows.
+ */
+export function SkillsProgress({ onViewAll }: SkillsProgressProps) {
   return (
-    <section className="gr-panel gr-activity">
-      <div className="gr-panel-head">
-        <h2 className="gr-panel-title">Recent XP Activity</h2>
-        <button type="button" className="gr-panel-link" onClick={onViewAll}>
-          View all activity<span aria-hidden="true"> →</span>
-        </button>
+    <section className="gr-panel gr-skills">
+      <h2 className="gr-panel-title">
+        Skills Progress
+        <Hint text="Waiting on the growth tree — see backend/tracking/tree.py." />
+      </h2>
+
+      <div className="gr-skills-empty">
+        <span className="gr-skills-ico" aria-hidden="true">
+          <Glyph name="chart" size={20} />
+        </span>
+        <p className="gr-skills-head">No skills tracked yet</p>
+        <p className="gr-skills-hint">
+          Levels per skill come from the growth tree, which isn’t built. Until
+          it is, XP by Category beside this is the honest version of the same
+          question.
+        </p>
       </div>
 
-      {entries.length === 0 ? (
-        <p className="gr-empty">Nothing finished in this range.</p>
-      ) : (
-        <ul className="gr-acts">
-          {entries.map((entry) => (
-            <li className="gr-act" key={entry.id}>
-              <span className="gr-act-ico" aria-hidden="true">
-                {entry.subject ? (
-                  <i
-                    className="cal-ico"
-                    style={{ ['--ico' as string]: `url(${iconUrl(entry.subject)})` }}
-                  />
-                ) : (
-                  <span className="gr-act-dot" />
-                )}
-              </span>
-              <div className="gr-act-body">
-                <span className="gr-act-name">
-                  Completed &ldquo;{entry.title}&rdquo;
-                </span>
-                <span className="gr-act-sub">{entry.subject?.label ?? 'No subject'}</span>
-              </div>
-              <div className="gr-act-right">
-                <span className="gr-act-xp">+{entry.xp} XP</span>
-                <span className="gr-act-when">{entry.when}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <button type="button" className="gr-panel-cta" onClick={onViewAll}>
+        View the growth tree
+        <span aria-hidden="true"> →</span>
+      </button>
     </section>
   );
 }
@@ -476,18 +848,32 @@ export function RecentXpActivity({ entries, onViewAll }: RecentXpActivityProps) 
 // --------------------------------------------------------------------------
 export interface InsightsProps {
   insights: Insight[];
+  onViewPlan: () => void;
 }
 
-export function Insights({ insights }: InsightsProps) {
+const INSIGHT_ICON: Record<Insight['tone'], string> = {
+  good: 'check',
+  watch: 'alert',
+  note: 'bulb',
+};
+
+export function Insights({ insights, onViewPlan }: InsightsProps) {
   return (
     <section className="gr-panel gr-insights">
       <h2 className="gr-panel-title">
-        <span className="gr-panel-ico" aria-hidden="true">💡</span> Insights
+        <span className="gr-panel-ico" aria-hidden="true">
+          <Glyph name="bulb" size={14} />
+        </span>
+        Insights &amp; Recommendations
+        <Hint text="Chosen from the range's own figures — nothing here is a fixed string." />
       </h2>
+
       <ul className="gr-insight-list">
         {insights.map((insight, index) => (
-          <li className="gr-insight" key={index}>
-            <span className="gr-insight-ico" aria-hidden="true">💡</span>
+          <li className={`gr-insight tone-${insight.tone}`} key={index}>
+            <span className={`gr-insight-ico tone-${insight.tone}`} aria-hidden="true">
+              <Glyph name={INSIGHT_ICON[insight.tone]} size={15} />
+            </span>
             <div>
               <p className="gr-insight-head">{insight.headline}</p>
               <p className="gr-insight-hint">{insight.hint}</p>
@@ -495,6 +881,11 @@ export function Insights({ insights }: InsightsProps) {
           </li>
         ))}
       </ul>
+
+      <button type="button" className="gr-panel-cta" onClick={onViewPlan}>
+        View personalized plan
+        <span aria-hidden="true"> →</span>
+      </button>
     </section>
   );
 }
