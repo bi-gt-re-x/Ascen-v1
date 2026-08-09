@@ -133,6 +133,30 @@ export default function Month() {
     [focusHistory, month, store.data, tasks, year],
   );
 
+  /**
+   * How far into the month on screen the reader has actually got, and the same
+   * depth into the month before it.
+   *
+   * The strip and the insight card are all comparisons, and comparing eight
+   * days of August against the whole of July says only that July had more
+   * month in it — every delta reads as a collapse until the 31st. So the
+   * previous month is counted to the same depth: eight days in, it is July
+   * 1–8. A month already finished is compared in full, and one that has not
+   * started has nothing on either side.
+   *
+   * February is why `compared` is a `min`: thirty-one days into March, there
+   * are only twenty-eight to hold it against.
+   */
+  const { compared, previousLength } = useMemo(() => {
+    const now = new Date();
+    const length = new Date(year, month + 1, 0).getDate();
+    const prevLength = new Date(year, month, 0).getDate();
+    const sameMonth = now.getFullYear() === year && now.getMonth() === month;
+    const started = new Date(year, month, 1) <= now;
+    const elapsed = sameMonth ? now.getDate() : started ? length : 0;
+    return { compared: Math.min(elapsed, prevLength), previousLength: prevLength };
+  }, [month, year]);
+
   const previous = useMemo(
     () =>
       monthFigures(
@@ -141,17 +165,37 @@ export default function Month() {
         tasks,
         store.data,
         focusHistory,
+        new Date(),
+        compared,
       ),
-    [focusHistory, month, store.data, tasks, year],
+    [compared, focusHistory, month, store.data, tasks, year],
   );
 
-  const previousName = dates.formatDate(new Date(year, month - 1, 1), { month: 'short' });
+  const previousMonthName = dates.formatDate(new Date(year, month - 1, 1), {
+    month: 'short',
+  });
+
+  /**
+   * "Jul", or "Jul 1–8" when only part of it is on the other side.
+   *
+   * A month that has not started compares against nothing, so there is no
+   * stretch to name and it falls back to the month — every delta beside it is
+   * absent anyway, both sides being zero.
+   */
+  const previousName =
+    compared >= previousLength || compared === 0
+      ? previousMonthName
+      : `${previousMonthName} 1${compared === 1 ? '' : `–${compared}`}`;
 
   const insight = useMemo(() => {
     const first = new Date(year, month, 1);
     const future = first > new Date();
-    return monthInsight(figures, previous, future);
-  }, [figures, month, previous, year]);
+    const against =
+      compared >= previousLength || compared === 0
+        ? 'last month'
+        : `the first ${compared === 1 ? 'day' : `${compared} days`} of last month`;
+    return monthInsight(figures, previous, future, against);
+  }, [compared, figures, month, previous, previousLength, year]);
 
   const entries = useMemo(
     () => dayEntries(selectedKey, store.data[selectedKey]?.timestamps ?? [], tasks),

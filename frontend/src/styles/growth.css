@@ -1674,7 +1674,7 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-acts {
     list-style: none; margin: 0; padding: 0;
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(min-content, 1fr);
+    grid-auto-rows: min-content;
     gap: 12px;
 }
 @media (max-width: 700px) { .gr-acts { grid-template-columns: minmax(0, 1fr); } }
@@ -1700,12 +1700,9 @@ html[data-theme="light"] #growthCard.growth-card {
 /* ---- Insights ------------------------------------------------------------ */
 .gr-insight-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .gr-insight {
-    /* One share of the panel each. Insights only ever has two findings to make
-       — see growthInsights — and two small cards adrift at the top of a card
-       twice their height reads as a panel that failed to load. */
-    flex: 1 1 0;
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 14px; border-radius: 12px;
+    flex: none;
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 13px; border-radius: 12px;
     background: #f3f8f4; border: 1px solid #e3efe7;
 }
 .gr-insight:nth-child(2) { background: #f4f2fb; border-color: #e7e3f5; }

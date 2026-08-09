@@ -109,14 +109,8 @@ const TABS = [
 
 type TabName = (typeof TABS)[number]['name'];
 
-/**
- * How many finished tasks the activity panel lists.
- *
- * Eight, in two columns of four. The design had four, in a card a third the
- * height; the card is twice as tall now, and a list that stopped at four would
- * be half a panel of nothing. See the grid note in styles/growth.css.
- */
-const ACTIVITY_SHOWN = 8;
+/** How many finished tasks the activity panel lists. Four, as the design has. */
+const ACTIVITY_SHOWN = 4;
 
 /** "Today, 7:35 AM" — near days by name, the rest by date. */
 function whenLabel(stamp: string, now: Date): string {

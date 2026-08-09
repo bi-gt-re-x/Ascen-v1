@@ -165,6 +165,17 @@ export function monthDays(
  *
  * `now` is passed rather than read so the figures are a pure function of their
  * inputs — and so the completion ratio's cut-off can be tested.
+ *
+ * `throughDay` stops the totals at a day of the month, 1-based and inclusive.
+ * It exists for the comparison the Month view draws: eight days into August is
+ * eight days of work, and holding it up against the whole of July says only
+ * that July had more month in it. The previous month is counted to the same
+ * depth as the current one has been lived, so the delta is about the reader
+ * rather than about the calendar. Left out, the whole month counts, which is
+ * what a month already finished wants.
+ *
+ * `days` is always the full month regardless — the grid draws every square,
+ * and only the arithmetic is windowed.
  */
 export function monthFigures(
   year: number,
@@ -173,9 +184,12 @@ export function monthFigures(
   data: CalendarData,
   history: FocusHistory,
   now: Date = new Date(),
+  throughDay?: number,
 ): MonthFigures {
   const days = monthDays(year, month, tasks, data);
   const today = isoDate(now);
+  const counted =
+    throughDay === undefined ? days : days.filter((day) => day.day <= throughDay);
 
   let taskCount = 0;
   let doneCount = 0;
@@ -183,7 +197,7 @@ export function monthFigures(
   let settled = 0;
   let scheduled = 0;
 
-  days.forEach((day) => {
+  counted.forEach((day) => {
     taskCount += day.tasks;
     doneCount += day.done;
     xpEarned += day.earned;
@@ -200,7 +214,7 @@ export function monthFigures(
   let goalDays = 0;
   let goalSum = 0;
 
-  days.forEach((day) => {
+  counted.forEach((day) => {
     const record = history[day.iso];
     if (!record) return;
     const seconds = Number(record.seconds) || 0;
@@ -216,7 +230,7 @@ export function monthFigures(
     }
   });
 
-  const ranked = days
+  const ranked = counted
     .filter((day) => day.earned > 0)
     .sort((a, b) => b.earned - a.earned || a.day - b.day);
 
@@ -248,17 +262,24 @@ export function percentChange(current: number, previous: number): number | null 
 }
 
 /**
- * What to say about the month, given the month before it.
+ * What to say about the month, given the stretch of the month before it that
+ * the month on screen has actually lived through.
  *
  * One sentence of fact and one of what to do with it. Which pair is chosen
  * depends only on the figures, so the card cannot congratulate a month that
  * went backwards — the failure mode of every "insights" panel that ships a
  * fixed string.
+ *
+ * `against` names what `previous` covers, and the sentences use it rather than
+ * saying "last month" flat. Eight days into August, `previous` is the first
+ * eight days of July and the card has to say so — "two more days than last
+ * month" would be a claim about a whole month that nobody made.
  */
 export function monthInsight(
   current: MonthFigures,
   previous: MonthFigures,
   future: boolean,
+  against = 'last month',
 ): MonthInsight {
   if (future) {
     return {
@@ -279,7 +300,7 @@ export function monthInsight(
     return {
       headline: `Great consistency! You completed ${dayGap} more ${
         dayGap === 1 ? 'day' : 'days'
-      } than last month.`,
+      } than ${against}.`,
       hint: 'Try to maintain your momentum into next month.',
     };
   }
@@ -287,7 +308,7 @@ export function monthInsight(
   const xpGap = percentChange(current.xpEarned, previous.xpEarned);
   if (xpGap !== null && xpGap > 0) {
     return {
-      headline: `You earned ${xpGap}% more XP than last month.`,
+      headline: `You earned ${xpGap}% more XP than ${against}.`,
       hint: 'Fewer days, heavier ones — worth keeping an eye on.',
     };
   }
@@ -296,7 +317,7 @@ export function monthInsight(
     return {
       headline: `You finished ${Math.abs(dayGap)} fewer ${
         Math.abs(dayGap) === 1 ? 'day' : 'days'
-      } than last month.`,
+      } than ${against}.`,
       hint: 'Clearing one day at a time is what pulls the number back up.',
     };
   }
