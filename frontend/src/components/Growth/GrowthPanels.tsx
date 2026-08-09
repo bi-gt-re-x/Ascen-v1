@@ -560,16 +560,24 @@ export interface XpHeatmapProps {
 /**
  * The last 30 or 90 days as a calendar of squares.
  *
- * Seven columns, Sunday to Saturday, month names down the side: the shape a
- * reader already knows how to read, and the one in which "I do nothing at
- * weekends" is visible at a glance. The row count is fixed per window so the
- * grid is the same rectangle whichever month it lands in — see `heatmapGrid`.
+ * Seven rows, Sunday to Saturday, one column per week, month names along the
+ * top: the shape a reader already knows how to read, and the one in which "I
+ * do nothing at weekends" is visible at a glance as a pale row.
+ *
+ * **Weeks are the columns, not the rows.** `heatmapGrid` hands back weeks,
+ * because a week is what a calendar is made of; this transposes them on the
+ * way out. Seven rows is a constant and the week count is not, so a panel that
+ * is wide and short — which is what the row this sits in gives it — fits
+ * fourteen weeks across far more comfortably than fourteen down. Drawn the
+ * other way up, the 90-day map was a 124px ribbon in a 400px card.
  *
  * The grid is remounted whenever the window changes — that is what `key` on it
  * is for — so the squares play their entrance again rather than swapping in
  * place. It deliberately does not replay on a refresh: the same map re-read is
  * a tic, not an entrance, which is the rule the chart follows too. The stagger
- * is per-square and comes from `--i`; styles/growth.css turns it into a delay.
+ * is per-square and comes from `--i`; styles/growth.css turns it into a delay,
+ * and running it on `week * 2 + weekday` sweeps the map left to right, which
+ * is the direction the time in it runs.
  */
 export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
   const shape = HEAT_WINDOWS.find((entry) => entry.key === windowKey) ?? HEAT_WINDOWS[0]!;
@@ -604,32 +612,33 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
         <>
           <div
             className="gr-heat-body"
-            style={{ ['--heat-max' as string]: `${shape.maxWidth}px` }}
+            key={windowKey}
+            style={{
+              ['--heat-cols' as string]: rows.length,
+              ['--heat-max' as string]: `${shape.maxWidth}px`,
+            }}
           >
-            {/* `display: contents` on this and on the grid below puts both
-                rows in one grid, so the letters sit over the columns they
-                name. The first cell is the month-label column's corner. */}
-            <div className="gr-heat-days" aria-hidden="true">
-              <span className="gr-heat-corner" />
-              {HEAT_WEEKDAYS.map((day, at) => (
-                <span key={at}>{day}</span>
-              ))}
-            </div>
+            {/* The month names, each over the week its month opens in. */}
+            <span className="gr-heat-corner" aria-hidden="true" />
+            {rows.map((week, at) => (
+              <span className="gr-heat-month" key={`month-${at}`} aria-hidden="true">
+                {week.label}
+              </span>
+            ))}
 
-            <div className="gr-heat-grid" key={windowKey}>
-              {rows.map((row, index) => (
-                <Fragment key={index}>
-                  <span
-                    className="gr-heat-month"
-                    style={{ ['--i' as string]: index * 7 }}
-                  >
-                    {row.label}
-                  </span>
-                  {row.days.map((cell, at) => (
+            {/* Then a row per weekday, taking that day out of every week. */}
+            {HEAT_WEEKDAYS.map((letter, weekday) => (
+              <Fragment key={weekday}>
+                <span className="gr-heat-day" aria-hidden="true">
+                  {letter}
+                </span>
+                {rows.map((week, at) => {
+                  const cell = week.days[weekday]!;
+                  return (
                     <span
                       key={at}
                       className={`gr-heat-cell${cell.date ? ` lv-${cell.level}` : ' is-blank'}`}
-                      style={{ ['--i' as string]: index * 7 + at }}
+                      style={{ ['--i' as string]: at * 2 + weekday }}
                       title={
                         cell.date
                           ? `${new Date(`${cell.date}T00:00:00`).toLocaleDateString('en-US', {
@@ -640,10 +649,10 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
                           : undefined
                       }
                     />
-                  ))}
-                </Fragment>
-              ))}
-            </div>
+                  );
+                })}
+              </Fragment>
+            ))}
           </div>
 
           <div className="gr-heat-key">

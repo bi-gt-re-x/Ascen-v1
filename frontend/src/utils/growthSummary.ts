@@ -197,6 +197,12 @@ export interface HeatCell {
   level: number;
 }
 
+/**
+ * One week, which the panel draws as a column.
+ *
+ * The unit is a week because that is what a calendar is made of; which axis it
+ * ends up on is the panel's business. See `XpHeatmap`.
+ */
 export interface HeatRow {
   /** "May" on the week a month opens in, '' on every other week. */
   label: string;
@@ -211,18 +217,19 @@ export interface HeatWindow {
   label: string;
   /** How many days of data it covers. */
   days: number;
-  /** How many week-rows are drawn. See the note below — it is a constant. */
+  /** How many weeks are drawn, which is how many columns. A constant — see below. */
   weeks: number;
   /**
    * How wide the grid is allowed to get, in px.
    *
-   * The squares are square and the row count is fixed, so seven columns of
-   * them want a different width at six rows than at fourteen — and the panel
-   * has one height either way. Left uncapped, the six-row map spreads into a
-   * dot grid with more gap than square. This is that cap, and it is a fact
-   * about the window rather than about the viewport, which is why it travels
-   * with the window rather than living in a media query. See the grid note in
-   * styles/growth.css.
+   * The squares are sized by the seven rows, which is the one thing that does
+   * not change with the window — so six columns of them want a far narrower
+   * grid than fourteen do, and left uncapped the 30-day map spreads across a
+   * 400px panel into a dot grid with more gap than square. This is that cap,
+   * and it is a fact about the window rather than about the viewport, which is
+   * why it travels with the window rather than living in a media query. The
+   * 90-day figure is deliberately larger than any panel: at fourteen columns
+   * the width is already the binding constraint and nothing here applies.
    */
   maxWidth: number;
 }
@@ -231,24 +238,24 @@ export interface HeatWindow {
 export const HEAT_WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
- * The two windows, and how many week-rows each is drawn in.
+ * The two windows, and how many weeks each is drawn in.
  *
- * The map is a calendar: seven columns, Sunday to Saturday, one row per week,
+ * The map is a calendar: seven rows, Sunday to Saturday, one column per week,
  * which is the shape a reader already knows how to read — "I do nothing at
- * weekends" is a claim about columns, and it is invisible in a grid whose
- * columns are not weekdays.
+ * weekends" is a claim about a row, and it is invisible in a grid whose rows
+ * are not weekdays.
  *
  * The cost of a calendar is that a window does not land on a whole number of
  * weeks: 30 days spans five calendar weeks or six depending on the weekday it
  * opens on, and a panel with a fixed height cannot afford a grid that changes
- * shape with the month. So the row count is fixed at the worst case — six for
+ * shape with the month. So the week count is fixed at the worst case — six for
  * 30 days, fourteen for 90 — and the grid is drawn back from the Saturday of
  * the newest week. Any square that falls outside the window is blank: no date,
  * no fill, outline only. The rectangle is always the same rectangle.
  */
 export const HEAT_WINDOWS: HeatWindow[] = [
-  { key: '30', label: '30 days', days: 30, weeks: 6, maxWidth: 236 },
-  { key: '90', label: '90 days', days: 90, weeks: 14, maxWidth: 124 },
+  { key: '30', label: '30 days', days: 30, weeks: 6, maxWidth: 190 },
+  { key: '90', label: '90 days', days: 90, weeks: 14, maxWidth: 420 },
 ];
 
 /** ISO date `n` days after `iso`, negative to go back. Local, no timezone. */
