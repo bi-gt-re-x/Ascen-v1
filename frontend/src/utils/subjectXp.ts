@@ -19,17 +19,21 @@
  * they were finished — the same test the sparkline and the streak dots use, so
  * the three panels can never tell different stories about the same week.
  *
- * **Five, then Other.** The top five subjects by XP get a row each. Everything
+ * **A few, then Other.** The top subjects by XP get a row each. Everything
  * below them goes into one row at the bottom, and so does every task with no
  * subject at all — an unfiled task is not a subject, and a row per subject with
- * 10 XP in it would bury the five that matter. Other is always last, however
+ * 10 XP in it would bury the ones that matter. Other is always last, however
  * large it grows: it is the remainder, and a remainder that sorts itself into
  * the middle of the list stops reading as one.
+ *
+ * How many get a row is the caller's, because it is a fact about the space the
+ * caller has: the week sidebar is a tall column and takes five, the growth
+ * donut is a third of a row beside a legend and the design draws four.
  */
 import type { Subject } from '@/services/subjects';
 import type { Task } from '@/types';
 
-/** How many named subjects get a row of their own. */
+/** How many named subjects get a row of their own, unless the caller says. */
 export const TOP_SUBJECTS = 5;
 
 /** The key the catch-all row is given. Not a subject id — no subject has one. */
@@ -59,12 +63,15 @@ export interface SubjectXp {
  * @param subjects  The catalogue, keyed by id — see hooks/useSubjects.
  * @param fromIso   First day of the range, inclusive. "2026-08-03".
  * @param toIso     Last day, inclusive.
+ * @param top       How many named subjects get a row before Other takes the
+ *                  rest. Defaults to `TOP_SUBJECTS`.
  */
 export function subjectXp(
   tasks: Task[],
   subjects: Map<string, Subject>,
   fromIso: string,
   toIso: string,
+  top: number = TOP_SUBJECTS,
 ): SubjectXp {
   const named = new Map<string, SubjectXpRow>();
   const other: SubjectXpRow = { key: OTHER_KEY, label: 'Other', xp: 0, count: 0 };
@@ -106,15 +113,15 @@ export function subjectXp(
     (a, b) => b.xp - a.xp || a.label.localeCompare(b.label),
   );
 
-  // The sixth subject and below join the unfiled tasks rather than getting a
-  // row each: the panel is about where a week went, and a tail of single-task
-  // rows is what stops that being readable at a glance.
-  ranked.slice(TOP_SUBJECTS).forEach((row) => {
+  // Everything past `top` joins the unfiled tasks rather than getting a row
+  // each: the panel is about where a week went, and a tail of single-task rows
+  // is what stops that being readable at a glance.
+  ranked.slice(top).forEach((row) => {
     other.xp += row.xp;
     other.count += row.count;
   });
 
-  const rows = ranked.slice(0, TOP_SUBJECTS);
+  const rows = ranked.slice(0, top);
   if (other.count > 0) rows.push(other);
 
   return { rows, total };

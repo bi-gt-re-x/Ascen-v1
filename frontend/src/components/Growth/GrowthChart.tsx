@@ -12,6 +12,9 @@
  * data. It deliberately does not play on the 30-second refresh, on zoom, on
  * hover or on resize — a chart quietly re-growing every half minute would be a
  * tic, not an entrance.
+ *
+ * The wheel is a native listener rather than a React prop, for a reason worth
+ * reading before moving it back — see the effect that registers it.
  */
 import { useCallback, useEffect, useRef } from 'react';
 import {
@@ -181,10 +184,28 @@ export function GrowthChart({
     paint();
   }, [paint]);
 
-  const onWheel = useCallback(
-    (event: React.WheelEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas || placeholder || total === 0) return;
+  /**
+   * The wheel zooms the chart, and only the chart.
+   *
+   * This is a native listener with `passive: false` rather than React's
+   * `onWheel`, and that is the whole point of it. React attaches `wheel` at the
+   * root as a **passive** listener, and a passive listener's `preventDefault()`
+   * is ignored — so the handler ran, the window zoomed, and the page scrolled
+   * out from under the cursor at the same time. Registered here, the default is
+   * genuinely cancelled and the wheel means one thing while the pointer is over
+   * the canvas.
+   *
+   * `overscroll-behavior: contain` cannot do this job: it stops a scroll
+   * *chaining* out of a scroll container, and the canvas is not one — the wheel
+   * here was never scrolling anything, it was being read as a page scroll from
+   * the start.
+   */
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (placeholder || total === 0) return;
       event.preventDefault();
       const geo = computeGeometry(
         canvas,
@@ -204,9 +225,11 @@ export function GrowthChart({
         anchor,
       );
       paint();
-    },
-    [data, type, placeholder, total, paint],
-  );
+    };
+
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [data, type, placeholder, total, paint]);
 
   return (
     <canvas
@@ -214,7 +237,6 @@ export function GrowthChart({
       ref={canvasRef}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
-      onWheel={onWheel}
     />
   );
 }

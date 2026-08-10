@@ -20,6 +20,14 @@
  * None of them compute anything. utils/growthSummary works out the numbers and
  * these turn them into coordinates — the same split the rest of the page
  * follows, so no panel can quote a figure the page did not give it.
+ *
+ * **Every line declares `pathLength={1}`.** It is what lets styles/growth.css
+ * draw them on arrival: a dash pattern in path-length units is the same one
+ * unit long whether the path is a flat week or a mountain, so one keyframe —
+ * `stroke-dashoffset` 1 to 0 — walks any of them from empty to whole. Measured
+ * in real units the offset would have to be the path's own length, which only
+ * JavaScript can know. It costs nothing when the animation is not running:
+ * a single dash of the full length is a solid line.
  */
 import type { GrowthTrend, LongTermProgress } from '@/utils/growthSummary';
 import { compact } from '@/utils/growthSummary';
@@ -76,7 +84,12 @@ export function Sparkline({ values, tone }: SparklineProps) {
       aria-hidden="true"
     >
       <path className="gr-spark-fill" d={`${line} L${W} ${H} L0 ${H} Z`} />
-      <path className="gr-spark-line" d={line} vectorEffect="non-scaling-stroke" />
+      <path
+        className="gr-spark-line"
+        d={line}
+        pathLength={1}
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
   );
 }
@@ -132,6 +145,7 @@ export function TrendChart({ trend }: TrendChartProps) {
               key={line.key}
               className={`gr-trend-line tone-${line.key}`}
               d={pathOf(line.points, top)}
+              pathLength={1}
               vectorEffect="non-scaling-stroke"
             />
           ))}
@@ -166,6 +180,10 @@ export interface LongTermChartProps {
  * for why, and for why every line carries its own total in the legend instead.
  * The dots are per bucket and are the reason the panel reads as monthly rather
  * than as four smooth curves over an unmarked span.
+ *
+ * The dots carry `--i`, their position along the line, so styles/growth.css can
+ * land them left to right behind the stroke that is drawing itself rather than
+ * popping all of them on at once when it finishes.
  */
 export function LongTermChart({ data }: LongTermChartProps) {
   if (data.lines.length === 0 || data.labels.length === 0) return null;
@@ -211,6 +229,7 @@ export function LongTermChart({ data }: LongTermChartProps) {
               key={line.key}
               className={`gr-lt-line tone-${line.key}`}
               d={pathOf(line.points, top)}
+              pathLength={1}
               vectorEffect="non-scaling-stroke"
             />
           ))}
@@ -227,6 +246,8 @@ export function LongTermChart({ data }: LongTermChartProps) {
                 style={{
                   left: `${(count > 1 ? index * step : W / 2)}%`,
                   bottom: `${Math.min(100, Math.max(0, (value / top) * 100))}%`,
+                  ['--i' as string]: index,
+                  ['--n' as string]: Math.max(1, count - 1),
                 }}
               />
             )),

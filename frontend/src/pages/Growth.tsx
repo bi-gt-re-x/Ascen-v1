@@ -152,6 +152,16 @@ const SECTIONS = [
 type SectionName = (typeof SECTIONS)[number]['name'];
 
 /**
+ * How many named subjects the donut draws before Other takes the rest.
+ *
+ * Four, which is the design's count and not utils/subjectXp's default of five.
+ * The legend sits beside the ring in a third of a row rather than down a
+ * sidebar, and a fifth name is the one that starts wrapping its XP figure onto
+ * a second line at 1100px.
+ */
+const DONUT_SUBJECTS = 4;
+
+/**
  * The five chart series, in the order the original laid them out.
  *
  * These were the page's tabs. They are the chart panel's own picker now — a
@@ -265,9 +275,11 @@ export default function Growth() {
 
   // XP by subject, over the same days the rest of the page is about. The same
   // function the week calendar's breakdown uses, so the two cannot disagree
-  // about what a subject is worth.
+  // about what a subject is worth — four rows here rather than the week
+  // sidebar's five, because the donut sits beside its legend in a third of a
+  // row and the design draws four names there.
   const breakdown = useMemo(
-    () => subjectXp(tasks, subjects, fromIso, toIso),
+    () => subjectXp(tasks, subjects, fromIso, toIso, DONUT_SUBJECTS),
     [fromIso, subjects, tasks, toIso],
   );
 

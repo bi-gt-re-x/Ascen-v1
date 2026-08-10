@@ -20,6 +20,7 @@
  * on the tile decides what colour that is.
  */
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { useCountUp } from '@/hooks';
 import { OTHER_KEY, type SubjectXp } from '@/utils/subjectXp';
 import { LongTermChart, Sparkline, TrendChart } from './MiniChart';
 import {
@@ -363,6 +364,25 @@ export function ChartStrip({ stats }: ChartStripProps) {
 // --------------------------------------------------------------------------
 // Growth Summary
 // --------------------------------------------------------------------------
+/**
+ * A figure that arrives by counting up to itself.
+ *
+ * Its own component because `useCountUp` is a hook and the tiles are a `map` —
+ * and because the tween has to be per figure: four values counting at once
+ * from one shared clock would all land together whatever they started from.
+ *
+ * The hook counts from zero on first paint and tweens between values after
+ * that, so this animates when the page arrives *and* when the range changes,
+ * which are the two moments the number is genuinely different. It settles on
+ * `Math.round`, so what is displayed is the figure itself and not a tween
+ * artefact — see hooks/useCountUp for why the value handed in should already
+ * be at display precision.
+ */
+function CountValue({ value, className }: { value: number; className?: string }) {
+  const shown = useCountUp(value);
+  return <strong className={className}>{Math.round(shown).toLocaleString()}</strong>;
+}
+
 /** An arrow and a percentage, or nothing at all. See `SummaryFigure.delta`. */
 function Delta({ figure, days }: { figure: SummaryFigure; days: number }) {
   if (figure.delta === null || days <= 0) {
@@ -421,9 +441,7 @@ export function GrowthSummary({ figures, series, trend, against }: GrowthSummary
               <span className={`gr-tile-ico tone-${tile.tone}`} aria-hidden="true">
                 <Glyph name={tile.icon} size={15} />
               </span>
-              <strong className="gr-tile-value">
-                {tile.figure.value.toLocaleString()}
-              </strong>
+              <CountValue className="gr-tile-value" value={tile.figure.value} />
             </div>
             <span className="gr-tile-label">{tile.label}</span>
             <Delta figure={tile.figure} days={figures.comparedDays} />
@@ -456,7 +474,6 @@ export function GrowthSummary({ figures, series, trend, against }: GrowthSummary
 // XP by Category
 // --------------------------------------------------------------------------
 const DONUT_R = 54;
-const DONUT_C = 2 * Math.PI * DONUT_R;
 
 export interface CategoryDonutProps {
   breakdown: SubjectXp;
@@ -466,17 +483,31 @@ export interface CategoryDonutProps {
  * Where the XP went, by subject.
  *
  * "Category" in the design; subject in the data, which is the thing a task
- * actually carries. Five named subjects and one Other, the same split the week
- * calendar's breakdown uses — see utils/subjectXp for why Other holds both the
- * sixth-and-below and everything unfiled, and why it is always last.
+ * actually carries. Four named subjects and one Other — the count is the
+ * page's, see `DONUT_SUBJECTS` in pages/Growth — and the same split the week
+ * calendar's breakdown uses, so see utils/subjectXp for why Other holds both
+ * the also-rans and everything unfiled, and why it is always last.
  *
  * The ring is drawn with one circle per slice and a `stroke-dasharray` — a
  * length of arc and a gap for the rest — rotated into place by the lengths
  * before it. Every slice is also a labelled, numbered row in the legend, so
  * nothing here rests on colour alone.
+ *
+ * **`pathLength="100"` is what makes the arcs percentages.** Without it a dash
+ * length is a real distance around a circle of radius 54, so every figure here
+ * would be a share multiplied by a circumference — and, more to the point, the
+ * entrance keyframe in styles/growth.css could not be written, because a
+ * `from` of "no arc yet" would have to name that circumference. Declared as
+ * 100, a slice's dash *is* its percentage and the keyframe is `0 100`.
+ *
+ * The arcs are drawn twice: once blurred underneath as the glow the design
+ * gives them, once crisp on top. One filter on the group rather than one per
+ * circle, and the copy carries no title and no role — it is the same shape,
+ * and a screen reader should not meet it twice.
  */
 export function CategoryDonut({ breakdown }: CategoryDonutProps) {
   const { rows, total } = breakdown;
+  const shownTotal = useCountUp(total);
 
   let offset = 0;
   const slices = rows.map((row, index) => {
@@ -484,14 +515,35 @@ export function CategoryDonut({ breakdown }: CategoryDonutProps) {
     const slice = {
       key: row.key,
       tone: row.key === OTHER_KEY ? 'other' : String(index + 1),
-      length: share * DONUT_C,
+      /** Percent of the ring, because the circle declares its length as 100. */
+      length: share * 100,
       offset,
       percent: Math.round(share * 100),
+      index,
       row,
     };
     offset += slice.length;
     return slice;
   });
+
+  const arc = (slice: (typeof slices)[number], titled: boolean) => (
+    <circle
+      key={slice.key}
+      className={`gr-donut-slice tone-sub-${slice.tone}`}
+      cx="70"
+      cy="70"
+      r={DONUT_R}
+      pathLength={100}
+      strokeDasharray={`${slice.length} ${100 - slice.length}`}
+      strokeDashoffset={-slice.offset}
+      transform="rotate(-90 70 70)"
+      style={{ ['--i' as string]: slice.index }}
+    >
+      {titled && (
+        <title>{`${slice.row.name ?? slice.row.label}: ${slice.row.xp} XP (${slice.percent}%)`}</title>
+      )}
+    </circle>
+  );
 
   return (
     <section className="gr-panel gr-category">
@@ -505,23 +557,15 @@ export function CategoryDonut({ breakdown }: CategoryDonutProps) {
               .map((row) => `${row.label} ${row.xp}`)
               .join(', ')}`}>
               <circle className="gr-donut-track" cx="70" cy="70" r={DONUT_R} />
-              {slices.map((slice) => (
-                <circle
-                  key={slice.key}
-                  className={`gr-donut-slice tone-sub-${slice.tone}`}
-                  cx="70"
-                  cy="70"
-                  r={DONUT_R}
-                  strokeDasharray={`${slice.length} ${DONUT_C - slice.length}`}
-                  strokeDashoffset={-slice.offset}
-                  transform="rotate(-90 70 70)"
-                >
-                  <title>{`${slice.row.name ?? slice.row.label}: ${slice.row.xp} XP (${slice.percent}%)`}</title>
-                </circle>
-              ))}
+              <g className="gr-donut-glow" aria-hidden="true">
+                {slices.map((slice) => arc(slice, false))}
+              </g>
+              <g className="gr-donut-arcs">
+                {slices.map((slice) => arc(slice, true))}
+              </g>
             </svg>
             <div className="gr-donut-centre">
-              <strong>{total.toLocaleString()}</strong>
+              <strong>{Math.round(shownTotal).toLocaleString()}</strong>
               <span>Total XP</span>
             </div>
           </div>
@@ -583,7 +627,10 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
   const shape = HEAT_WINDOWS.find((entry) => entry.key === windowKey) ?? HEAT_WINDOWS[0]!;
 
   return (
-    <section className="gr-panel gr-heat">
+    // The window is on the element because it is a fact about the panel's
+    // *shape*, not just its contents: fourteen rows of squares need more height
+    // than six do, and styles/growth.css reads this to give it to them.
+    <section className="gr-panel gr-heat" data-window={windowKey}>
       <div className="gr-panel-head">
         <h2 className="gr-panel-title">
           XP Heatmap
@@ -645,13 +692,13 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
             ))}
           </div>
 
+          {/* One continuous bar rather than the five swatches that were here,
+              which is how the design draws it — and it is no less honest: the
+              gradient's stops *are* the four levels, so a reader matching a
+              square against the bar lands on the same place either way. */}
           <div className="gr-heat-key">
             <span>Less XP</span>
-            <span className="gr-heat-ramp" aria-hidden="true">
-              {[0, 1, 2, 3, 4].map((level) => (
-                <i className={`gr-heat-cell lv-${level}`} key={level} />
-              ))}
-            </span>
+            <span className="gr-heat-ramp" aria-hidden="true" />
             <span>More XP</span>
           </div>
         </>
