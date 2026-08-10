@@ -577,8 +577,22 @@ body.classic .growth-card p {
 
 
 /* --- DARK THEME --- */
-body.dark {
-    background: radial-gradient(135% 120% at 82% -10%, #161b22 0%, #0d1117 52%) fixed !important;
+/* Scoped to this page, for the reason the note at the top of this file gives:
+ * the stylesheet is fetched when /growth or /analytics mounts and then stays in
+ * the document, so a bare `body` rule dresses every other page for the rest of
+ * the session — and this one carried `!important`, so it won over the flat
+ * #0d1117 in styles/dashboard.css that the dashboard and the calendar want.
+ *
+ * The background-color is not a duplicate of the gradient's darker stop. A
+ * `background` shorthand sets the colour to transparent, and `fixed` pins the
+ * gradient to the viewport rather than to the page — so with the colour left
+ * out there was nothing solid behind it. A body background propagates to the
+ * page canvas, which is what paints the overscroll, so the moment the scroll
+ * rubber-banded past the top the gap fell through to the browser's default
+ * white. Same at the bottom, and at either side. */
+html[data-theme="dark"] body:has(.growth-container) {
+    background: radial-gradient(135% 120% at 82% -10%, #161b22 0%, #0d1117 52%) fixed;
+    background-color: #0d1117;
     color: #e6e8f0;
 }
 

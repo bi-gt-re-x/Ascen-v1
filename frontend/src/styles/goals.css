@@ -999,8 +999,12 @@ body.dark .goals-list::-webkit-scrollbar-thumb:hover {
 /* ============================================================
    DARK THEME
    ============================================================ */
-body.dark {
-    background: #0D1117 !important;
+/* Scoped for the reason the note at the top of this file gives — the light
+   rule up there already is. Bare and `!important`, this was the background of
+   every page in the app once /goals had been opened, and it painted over the
+   growth page's gradient depending only on which of the two was visited last. */
+html[data-theme="dark"] body:has(.goals-page) {
+    background: #0D1117;
     color: #e6e8f0;
 }
 
