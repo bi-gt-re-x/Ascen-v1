@@ -210,40 +210,47 @@ export interface HeatRow {
   days: HeatCell[];
 }
 
-export type HeatWindowKey = '30' | '90';
+export type HeatWindowKey = '30' | '90' | '365';
 
 export interface HeatWindow {
   key: HeatWindowKey;
   label: string;
   /** How many days of data it covers. */
   days: number;
-  /** How many weeks are drawn, which is how many rows. A constant — see below. */
+  /** How many weeks are drawn, which is how many columns. A constant — see below. */
   weeks: number;
 }
 
-/** The weekday column headings, in the order the cells of a week are built. */
+/** The weekday row headings, in the order the cells of a week are built. */
 export const HEAT_WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
- * The two windows, and how many weeks each is drawn in.
+ * The three windows, and how many weeks each is drawn in.
  *
- * The map is a calendar the way the design draws it: seven columns, Sunday to
- * Saturday, one row per week, months named down the left where each one opens.
- * A weekday is a column, so "I do nothing at weekends" is the two outer columns
- * going pale — and the grid gets its width from a count that never changes,
- * which is what lets one panel hold both windows.
+ * **A week is a column and a weekday is a row** — the shape every activity
+ * calendar on the internet has, and the only one that survives three windows in
+ * one panel. Seven rows is a constant; the column count is what changes, so a
+ * year is a wider grid rather than a taller one, and the cells stay square
+ * because their size falls out of the width divided by the week count.
+ *
+ * It was the other way round, and that is what made the long windows look
+ * broken: with weeks as rows, fifty-three of them in a panel a few hundred
+ * pixels tall gave every cell a height of four pixels and a width of forty. A
+ * map of flat rectangles with a hole beside it is not a calendar.
  *
  * The cost of a calendar is that a window does not land on a whole number of
  * weeks: 30 days spans five calendar weeks or six depending on the weekday it
- * opens on, and a panel with a fixed height cannot afford a grid that changes
- * shape with the month. So the week count is fixed at the worst case — six for
- * 30 days, fourteen for 90 — and the grid is drawn back from the Saturday of
- * the newest week. Any square that falls outside the window is blank: no date,
- * no fill, outline only. The rectangle is always the same rectangle.
+ * opens on, and a panel whose shape must not move cannot afford a grid that
+ * changes width with the month. So the week count is fixed at the worst case —
+ * six for 30 days, fourteen for 90, fifty-three for a year — and the grid is
+ * drawn back from the Saturday of the newest week. Any square that falls
+ * outside the window is blank: no date, no fill, outline only. The rectangle is
+ * always the same rectangle.
  */
 export const HEAT_WINDOWS: HeatWindow[] = [
   { key: '30', label: '30 days', days: 30, weeks: 6 },
   { key: '90', label: '90 days', days: 90, weeks: 14 },
+  { key: '365', label: '1 year', days: 365, weeks: 53 },
 ];
 
 /** ISO date `n` days after `iso`, negative to go back. Local, no timezone. */

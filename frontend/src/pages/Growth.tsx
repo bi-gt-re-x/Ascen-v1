@@ -11,14 +11,17 @@
  * which days it happened, or whether this stretch was better than the last.
  * The panels answer those, and every one of them is arithmetic over the same
  * two things: the day series the backend already builds, and the account's
- * tasks. Nothing on this page fetches for itself.
+ * tasks. No panel on this page fetches for itself — the three calls are here,
+ * and everything below is handed a slice of what they returned.
  *
  * **The tabs are sections, not series.** They were the five chart views, which
  * made the top of the page a control for one panel in the middle of it. They
- * are the page's own chapters now — Overview is this screen, and the other
- * five are routed and say so — and the five series moved into the chart
- * panel's own picker, beside the chart they redraw. Only Overview is built;
- * see `SECTIONS` for what each of the others is waiting on.
+ * are the page's own chapters now — Overview is this screen, and the other four
+ * are each a page of panels of their own (components/Growth/*Chapter) — and the
+ * five series moved into the chart panel's own picker, beside the chart they
+ * redraw. Each chapter answers one question: where this is heading, whether it
+ * can be executed reliably, what is being mastered, and how far along it is
+ * against a standard. See `SECTIONS`.
  *
  * **One range governs the page.** The picker in the header — 7 days, 30, 90,
  * or the whole account — slices the series once, and the chart, the summary
@@ -45,23 +48,27 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ErrorState, Loading, RefreshButton } from '@/components';
+import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
 import {
+  BenchmarksChapter,
   CategoryDonut,
   ChartHead,
   ChartStrip,
   ExportReport,
+  FocusChapter,
   GrowthChart,
   GrowthSummary,
   Insights,
   LongTerm,
+  LongTermChapter,
   Milestones,
   RangePicker,
+  SkillsChapter,
   SkillsProgress,
   XpHeatmap,
 } from '@/components/Growth';
 import { useApi, useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
-import { growth as growthService } from '@/services';
+import { goals as goalsService, growth as growthService } from '@/services';
 import {
   emptyChartData,
   processData,
@@ -89,64 +96,20 @@ import '@/styles/growth.css';
 /**
  * The page's chapters.
  *
- * Overview is this screen. The rest are the questions this page's data could
- * answer at length and does not yet, each named after the answer rather than
- * after the panel — and each says what it is waiting on, the same bargain
- * pages/Unbuilt strikes for a whole route. A tab that resolves to nothing
- * reads as a bug; a tab that says what it will be does not.
+ * Overview is this screen; the other four are pages of their own. They are four
+ * tenses rather than four topics, which is what keeps them from overlapping:
+ *
+ *   Long Term           trajectory — where this is heading.
+ *   Focus & Consistency discipline — can it be executed reliably.
+ *   Skills & Subjects   mastery — what is being become good at.
+ *   Benchmarks          achievement — how far along, against a standard.
  */
 const SECTIONS = [
-  { name: 'overview', label: 'Overview', blurb: '', waiting: [] as string[] },
-  {
-    name: 'longterm',
-    label: 'Long Term',
-    blurb:
-      'The whole account at year width — levels gained, seasons of activity, and what a year of this actually adds up to.',
-    waiting: [
-      'The Long Term Progress panel on Overview is the first slice of it',
-      'utils/growthSummary — longTermProgress already buckets the series by month',
-    ],
-  },
-  {
-    name: 'xp',
-    label: 'XP & Productivity',
-    blurb:
-      'Where XP comes from: task size against task count, the hours of day it lands in, and which priorities actually get finished.',
-    waiting: [
-      'backend/api/growth.py — the day series carries totals, not per-task rows',
-      'utils/subjectXp — the per-task split the donut already uses',
-    ],
-  },
-  {
-    name: 'focus',
-    label: 'Focus & Consistency',
-    blurb:
-      'Focus sessions in their own right: length, time of day, how often one is abandoned, and what a streak is really made of.',
-    waiting: [
-      'backend/api/focus.py — sync and history already exist',
-      'frontend/js/timer.js — the timer to port',
-    ],
-  },
-  {
-    name: 'skills',
-    label: 'Skills & Subjects',
-    blurb:
-      'Every subject over time rather than one range’s share of it, and the skill levels the growth tree will unlock.',
-    waiting: [
-      'backend/tracking/tree.py — a stub',
-      'backend/api/growthtree.py — a stub',
-    ],
-  },
-  {
-    name: 'benchmarks',
-    label: 'Benchmarks',
-    blurb:
-      'This account against its own best months, and against the goals it set — the graded version of it is already at /analytics.',
-    waiting: [
-      'pages/Analytics — the report card to build on',
-      'backend/api/goals.py — targets to measure against',
-    ],
-  },
+  { name: 'overview', label: 'Overview' },
+  { name: 'longterm', label: 'Long Term' },
+  { name: 'focus', label: 'Focus & Consistency' },
+  { name: 'skills', label: 'Skills & Subjects' },
+  { name: 'benchmarks', label: 'Benchmarks' },
 ] as const;
 
 type SectionName = (typeof SECTIONS)[number]['name'];
@@ -223,6 +186,19 @@ export default function Growth() {
   );
   const series = useApi(call, [username]);
 
+  // The goals, for the Benchmarks chapter and nothing else. A goal is the only
+  // place this account records a target somebody chose — every other benchmark
+  // on that tab is the reader's own record — so it is worth the third call, and
+  // the chapter waits on it rather than claiming there are none.
+  const goalsCall = useCallback(
+    () =>
+      username
+        ? goalsService.getGoals(username)
+        : Promise.resolve({ success: false as const, message: 'Sign in to see your goals.' }),
+    [username],
+  );
+  const goals = useApi(goalsCall, [username]);
+
   const [section, setSection] = useState<SectionName>('overview');
   const [metric, setMetric] = useState<string>('cumulative');
   const [range, setRange] = useState<RangeKey>('30');
@@ -296,7 +272,8 @@ export default function Growth() {
   const refresh = useCallback(() => {
     series.reload();
     account.reload();
-  }, [account, series]);
+    goals.reload();
+  }, [account, goals, series]);
 
   if (series.loading) return <Loading label="Loading your growth" />;
   if (!series.data) {
@@ -309,7 +286,6 @@ export default function Growth() {
   }
 
   const active = METRICS.find((entry) => entry.key === metric) ?? METRICS[0];
-  const chapter = SECTIONS.find((entry) => entry.name === section) ?? SECTIONS[0];
   const comparedTo =
     figures.comparedDays > 0
       ? `vs. Last ${figures.comparedDays} Days`
@@ -317,6 +293,14 @@ export default function Growth() {
 
   return (
     <div className="growth-container">
+      {/* The dashboard's background, on the dashboard's terms: the grid, the
+          slow gradient and the drifting field, without the glow that follows
+          the pointer. This is a page being read rather than worked in, but it
+          is also five tabs of dense panels, and a light chasing the cursor
+          across them is the one thing that would make them harder to read.
+          See components/Ambient.tsx, and the z-index note in styles/growth.css. */}
+      <Ambient cursor={false} />
+
       <div className="growth-card page-shell" id="growthCard">
         <header className="gr-header">
           <div className="gr-headline">
@@ -360,19 +344,20 @@ export default function Growth() {
           ))}
         </div>
 
-        {section !== 'overview' ? (
-          <section className="gr-panel gr-chapter">
-            <h2 className="gr-panel-title">{chapter.label}</h2>
-            <p className="gr-chapter-blurb">{chapter.blurb}</p>
-            <p className="gr-chapter-note">This section isn’t built yet.</p>
-            <ul className="gr-chapter-files">
-              {chapter.waiting.map((file) => (
-                <li key={file}>
-                  <code>{file}</code>
-                </li>
-              ))}
-            </ul>
-          </section>
+        {section === 'longterm' ? (
+          <LongTermChapter all={all} streak={streak} />
+        ) : section === 'focus' ? (
+          <FocusChapter all={all} tasks={tasks} subjects={subjects} streak={streak} />
+        ) : section === 'skills' ? (
+          <SkillsChapter all={all} tasks={tasks} subjects={subjects} />
+        ) : section === 'benchmarks' ? (
+          <BenchmarksChapter
+            all={all}
+            tasks={tasks}
+            goals={goals.data?.goals ?? []}
+            goalsLoading={goals.loading}
+            streak={streak}
+          />
         ) : (
           <div className="gr-grid">
             {/* --- The chart, and what the range amounts to beside it ------- */}

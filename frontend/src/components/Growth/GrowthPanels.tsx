@@ -62,7 +62,7 @@ const PATHS: Record<string, string> = {
   calendar: 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4',
 };
 
-function Glyph({ name, size = 15 }: { name: keyof typeof PATHS | string; size?: number }) {
+export function Glyph({ name, size = 15 }: { name: keyof typeof PATHS | string; size?: number }) {
   return (
     <svg
       className="gr-glyph"
@@ -82,7 +82,7 @@ function Glyph({ name, size = 15 }: { name: keyof typeof PATHS | string; size?: 
 }
 
 /** The ⓘ beside a panel title, explaining what the panel is counting. */
-function Hint({ text }: { text: string }) {
+export function Hint({ text }: { text: string }) {
   return (
     <span className="gr-hint" title={text} aria-hidden="true">
       <Glyph name="info" size={13} />
@@ -378,7 +378,7 @@ export function ChartStrip({ stats }: ChartStripProps) {
  * artefact — see hooks/useCountUp for why the value handed in should already
  * be at display precision.
  */
-function CountValue({
+export function CountValue({
   value,
   className,
   suffix = '',
@@ -614,26 +614,26 @@ export interface XpHeatmapProps {
 }
 
 /**
- * The last 30 or 90 days as a calendar of squares.
+ * The last 30 days, 90 days or year as a calendar of squares.
  *
- * Seven columns, Sunday to Saturday, one row per week, month names down the
- * left where each month opens — the shape the design draws, and the one a
- * reader already knows from every wall calendar they have ever owned.
+ * Seven rows, Sunday to Saturday, one column per week, month names along the
+ * top where each month opens — the shape of every activity calendar on the
+ * internet, and the only one that survives three windows in one panel.
  *
- * **Weeks are the rows, which is the order `heatmapGrid` already hands them
- * back in.** It used to be transposed here, and the reason was height: seven
- * rows is a constant, fourteen columns is not, and a wide short panel took
- * fourteen weeks across more comfortably than down. What paid for the flip back
- * is the cells giving up their square aspect — they fill their grid cell now,
- * so fourteen rows simply make each one shorter instead of overflowing. The
- * width is a constant either way, because seven columns always is.
+ * **A week is a column, which is a transpose of the order `heatmapGrid` hands
+ * them back in.** It was drawn the other way round and that is what made the
+ * long windows look broken: with weeks as rows, a year is fifty-three rows in a
+ * panel a few hundred pixels tall, so every cell came out four pixels high and
+ * forty wide. Seven rows is a constant and the week count is not, so the week
+ * count belongs on the axis that can grow — and with the cells square by
+ * `aspect-ratio`, the grid is seven squares tall whatever window is showing.
  *
  * The grid is remounted whenever the window changes — that is what `key` on it
  * is for — so the squares play their entrance again rather than swapping in
  * place. It deliberately does not replay on a refresh: the same map re-read is
  * a tic, not an entrance, which is the rule the chart follows too. The stagger
  * is per-square and comes from `--i`; styles/growth.css turns it into a delay,
- * and running it on `week * 3 + weekday` sweeps the map diagonally from the
+ * and running it on `week + weekday * 2` sweeps the map diagonally from the
  * oldest corner to the newest, which is the direction the time in it runs.
  */
 export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
@@ -670,39 +670,48 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
         <p className="gr-empty">Nothing to map yet.</p>
       ) : (
         <>
-          <div className="gr-heat-body" key={windowKey}>
-            {/* The weekday letters, each over its own column. */}
-            <span className="gr-heat-corner" aria-hidden="true" />
-            {HEAT_WEEKDAYS.map((letter, weekday) => (
-              <span className="gr-heat-day" key={`day-${weekday}`} aria-hidden="true">
-                {letter}
-              </span>
-            ))}
-
-            {/* Then a row per week, named on the week its month opens in. */}
-            {rows.map((week, at) => (
-              <Fragment key={at}>
-                <span className="gr-heat-month" aria-hidden="true">
+          <div className="gr-heat-map">
+            <div
+              className="gr-heat-body"
+              key={windowKey}
+              style={{ ['--weeks' as string]: rows.length }}
+            >
+              {/* The months, each over the week it opens in. */}
+              <span className="gr-heat-corner" aria-hidden="true" />
+              {rows.map((week, at) => (
+                <span className="gr-heat-month" key={`month-${at}`} aria-hidden="true">
                   {week.label}
                 </span>
-                {week.days.map((cell, weekday) => (
-                  <span
-                    key={weekday}
-                    className={`gr-heat-cell${cell.date ? ` lv-${cell.level}` : ' is-blank'}`}
-                    style={{ ['--i' as string]: at * 3 + weekday }}
-                    title={
-                      cell.date
-                        ? `${new Date(`${cell.date}T00:00:00`).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                          })}: ${cell.xp} XP`
-                        : undefined
-                    }
-                  />
-                ))}
-              </Fragment>
-            ))}
+              ))}
+
+              {/* Then a row per weekday, one cell per week across it. */}
+              {HEAT_WEEKDAYS.map((letter, weekday) => (
+                <Fragment key={`row-${weekday}`}>
+                  <span className="gr-heat-day" aria-hidden="true">
+                    {letter}
+                  </span>
+                  {rows.map((week, at) => {
+                    const cell = week.days[weekday];
+                    return (
+                      <span
+                        key={at}
+                        className={`gr-heat-cell${cell?.date ? ` lv-${cell.level}` : ' is-blank'}`}
+                        style={{ ['--i' as string]: at + weekday * 2 }}
+                        title={
+                          cell?.date
+                            ? `${new Date(`${cell.date}T00:00:00`).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                              })}: ${cell.xp} XP`
+                            : undefined
+                        }
+                      />
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </div>
           </div>
 
           {/* One continuous bar rather than the five swatches that were here,
