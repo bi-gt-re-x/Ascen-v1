@@ -41,10 +41,10 @@ export interface RangeOption {
 }
 
 export const RANGES: RangeOption[] = [
-  { key: '7', label: 'Last 7 days', days: 7 },
-  { key: '30', label: 'Last 30 days', days: 30 },
-  { key: '90', label: 'Last 90 days', days: 90 },
-  { key: 'all', label: 'All time', days: null },
+  { key: '7', label: 'Last 7 Days', days: 7 },
+  { key: '30', label: 'Last 30 Days', days: 30 },
+  { key: '90', label: 'Last 90 Days', days: 90 },
+  { key: 'all', label: 'All Time', days: null },
 ];
 
 export interface RangeSlice {
@@ -217,33 +217,21 @@ export interface HeatWindow {
   label: string;
   /** How many days of data it covers. */
   days: number;
-  /** How many weeks are drawn, which is how many columns. A constant — see below. */
+  /** How many weeks are drawn, which is how many rows. A constant — see below. */
   weeks: number;
-  /**
-   * How wide the grid is allowed to get, in px.
-   *
-   * The squares are sized by the seven rows, which is the one thing that does
-   * not change with the window — so six columns of them want a far narrower
-   * grid than fourteen do, and left uncapped the 30-day map spreads across a
-   * 400px panel into a dot grid with more gap than square. This is that cap,
-   * and it is a fact about the window rather than about the viewport, which is
-   * why it travels with the window rather than living in a media query. The
-   * 90-day figure is deliberately larger than any panel: at fourteen columns
-   * the width is already the binding constraint and nothing here applies.
-   */
-  maxWidth: number;
 }
 
-/** The weekday column headings, in the order the rows are built. */
+/** The weekday column headings, in the order the cells of a week are built. */
 export const HEAT_WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
  * The two windows, and how many weeks each is drawn in.
  *
- * The map is a calendar: seven rows, Sunday to Saturday, one column per week,
- * which is the shape a reader already knows how to read — "I do nothing at
- * weekends" is a claim about a row, and it is invisible in a grid whose rows
- * are not weekdays.
+ * The map is a calendar the way the design draws it: seven columns, Sunday to
+ * Saturday, one row per week, months named down the left where each one opens.
+ * A weekday is a column, so "I do nothing at weekends" is the two outer columns
+ * going pale — and the grid gets its width from a count that never changes,
+ * which is what lets one panel hold both windows.
  *
  * The cost of a calendar is that a window does not land on a whole number of
  * weeks: 30 days spans five calendar weeks or six depending on the weekday it
@@ -254,8 +242,8 @@ export const HEAT_WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
  * no fill, outline only. The rectangle is always the same rectangle.
  */
 export const HEAT_WINDOWS: HeatWindow[] = [
-  { key: '30', label: '30 days', days: 30, weeks: 6, maxWidth: 190 },
-  { key: '90', label: '90 days', days: 90, weeks: 14, maxWidth: 420 },
+  { key: '30', label: '30 days', days: 30, weeks: 6 },
+  { key: '90', label: '90 days', days: 90, weeks: 14 },
 ];
 
 /** ISO date `n` days after `iso`, negative to go back. Local, no timezone. */

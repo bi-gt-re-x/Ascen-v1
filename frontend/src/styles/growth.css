@@ -1252,16 +1252,25 @@ html[data-theme="light"] #growthCard.growth-card {
    the next. The dark theme re-chooses all five against the dark surface rather
    than lightening them, which is the block at the very bottom of this file.
 
-   The accent stays the app's brown. The design these panels are drawn from is
-   purple-accented, and a purple growth page beside a brown rail, a brown
-   calendar and a brown dashboard is not this app's growth page. The layout is
-   the design's; the palette is the product's. */
+   The accent is the design's purple, and it is this page's alone. The rest of
+   the app is brown — the rail, the calendar, the dashboard — and the two do not
+   meet: every rule that paints purple here is scoped to `#growthCard`, so
+   nothing leaks out of this page. `--accent` is the one name for it; the three
+   companions are the tint it sits on (`--accent-soft`), the ink that reads on
+   top of it (`--accent-ink`), and the pressed/hover step (`--accent-deep`).
+   Reach for those rather than writing the hex again, or the next theme is four
+   find-and-replaces instead of one block. */
 #growthCard {
-    --tone-blue: #2c5aa0;
-    --tone-purple: #7c4fa8;
-    --tone-green: #1f7a5a;
-    --tone-amber: #b8892d;
-    --tone-red: #b0413e;
+    --tone-blue: #4f7fe0;
+    --tone-purple: #7c5cd6;
+    --tone-green: #24a06b;
+    --tone-amber: #e08a2c;
+    --tone-red: #d94f6a;
+
+    --accent: #6d4fd0;
+    --accent-deep: #5b3fbd;
+    --accent-soft: #f1ecfd;
+    --accent-ink: #ffffff;
 
     --panel-bg: #fff;
     --panel-edge: #ecedf2;
@@ -1287,7 +1296,7 @@ html[data-theme="light"] #growthCard.growth-card {
     flex: none; margin-top: 3px;
     width: 38px; height: 38px; border-radius: 12px;
     display: inline-flex; align-items: center; justify-content: center;
-    background: #f3efe9; color: #a8845c;
+    background: var(--accent-soft); color: var(--accent);
 }
 #growthCard .gr-title {
     /* Left-aligned, sentence case, its own size — the base rule centres an
@@ -1342,7 +1351,7 @@ html[data-theme="light"] #growthCard.growth-card {
     font: inherit; font-size: 13.5px; color: var(--ink-soft); cursor: pointer;
 }
 .gr-drop-item:hover { background: #f4f5f8; }
-.gr-drop-item.is-active { background: #2c302e; color: #fff; font-weight: 700; }
+.gr-drop-item.is-active { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
 /* ---- Export -------------------------------------------------------------
    The same shape as the picker beside it, because they are the same kind of
@@ -1368,6 +1377,16 @@ html[data-theme="light"] #growthCard.growth-card {
 #growthCard .tab-btn {
     padding: 9px 17px; border-radius: 999px; font-size: 13.5px;
 }
+/* The chosen chapter is the accent, as the design draws it. Id-scoped because
+   the base rules paint it `#2C302E`, and `body.dark .tab-btn.active` paints it
+   the app's gold — both out-weigh a bare class, and neither belongs on this
+   page. */
+#growthCard .tab-btn.active {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+}
+#growthCard .tab-btn.active:hover { background-color: var(--accent-deep); border-color: var(--accent-deep); }
 
 /* ---- The grid -----------------------------------------------------------
    Three columns, the third wider than the other two, and three rows:
@@ -1427,11 +1446,17 @@ html[data-theme="light"] #growthCard.growth-card {
 
    The child selectors are not decoration: `.gr-panel` sets `min-height: 0`,
    which is what lets a ratio out-vote a long list, and it is written later in
-   this file. A bare `.gr-summary` weighs the same and loses. */
+   this file. A bare `.gr-summary` weighs the same and loses.
+
+   The three ratios are measured off the design rather than guessed: each row's
+   drawn height over the width of the column the ratio is written on. The design
+   is a single screen, and these are what keep it one — a row an inch taller
+   than drawn, three times over, is the difference between a dashboard and a
+   scroll. */
 .gr-summary, .gr-heat, .gr-skills { width: 100%; }
-.gr-grid > .gr-summary { aspect-ratio: 6 / 5; min-height: 416px; }  /* row 1, from col 3 */
-.gr-grid > .gr-heat    { aspect-ratio: 4 / 3; min-height: 232px; }  /* row 2, from col 2 */
-.gr-grid > .gr-skills  { aspect-ratio: 6 / 5; min-height: 348px; }  /* row 3, from col 2 */
+.gr-grid > .gr-summary { aspect-ratio: 11 / 8; min-height: 400px; }  /* row 1, from col 3 */
+.gr-grid > .gr-heat    { aspect-ratio: 2 / 1;  min-height: 200px; }  /* row 2, from col 2 */
+.gr-grid > .gr-skills  { aspect-ratio: 5 / 4;  min-height: 331px; }  /* row 3, from col 2 */
 
 /* Below three columns the pairings change — the summary sits beside the donut,
    the heatmap beside the milestones — so a ratio drawn for a third of a wide
@@ -1486,7 +1511,7 @@ html[data-theme="light"] #growthCard.growth-card {
 }
 .gr-panel-ico {
     flex: none; display: inline-flex; align-items: center; justify-content: center;
-    color: #a8845c;
+    color: var(--accent);
 }
 .gr-panel-head {
     flex: none;
@@ -1508,11 +1533,12 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-panel-note { flex: none; font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
 .gr-panel-link {
     flex: none;
-    border: 0; background: none; padding: 5px 9px; border-radius: 8px;
-    font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-quiet);
-    cursor: pointer;
+    border: 1px solid var(--inset-edge); background: var(--inset-bg);
+    padding: 5px 11px; border-radius: 999px;
+    font: inherit; font-size: 11.5px; font-weight: 600; color: var(--ink-quiet);
+    cursor: pointer; transition: border-color .15s ease, color .15s ease;
 }
-.gr-panel-link:hover { background: #f4f5f8; color: var(--ink); }
+.gr-panel-link:hover { border-color: #d8dae2; color: var(--ink); }
 /* The footer button two panels end on — full width, so it reads as the panel's
    own way out rather than as a link that happens to be last. */
 .gr-panel-cta {
@@ -1547,7 +1573,7 @@ html[data-theme="light"] #growthCard.growth-card {
 }
 #growthCard .gr-chapter-note {
     margin: 16px 0 10px; text-align: left;
-    font-size: 12.5px; font-weight: 700; color: #a8845c;
+    font-size: 12.5px; font-weight: 700; color: var(--accent);
 }
 .gr-chapter-files { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .gr-chapter-files code {
@@ -1727,9 +1753,13 @@ html[data-theme="light"] #growthCard.growth-card {
    Five hues and a grey for the remainder, the same ladder the week calendar's
    breakdown uses and re-chosen against the dark surface rather than lightened.
    Held as variables so the ring and its legend cannot drift apart. */
+/* The ladder is the design's, in the design's order: blue, purple, orange,
+   green, pink, then grey for the remainder. Order matters — the legend is
+   sorted by size, so slice 1 is the biggest subject and gets the hue the mock
+   gives the biggest subject. */
 .gr-category {
-    --sub-1: #2c5aa0; --sub-2: #b0413e; --sub-3: #1f7a5a;
-    --sub-4: #b8892d; --sub-5: #7c4fa8; --sub-other: #a8aebb;
+    --sub-1: #4f7fe0; --sub-2: #7c5cd6; --sub-3: #e08a2c;
+    --sub-4: #24a06b; --sub-5: #d94f6a; --sub-other: #a8aebb;
 }
 .gr-donut-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .gr-donut { position: relative; flex: none; width: 132px; height: 132px; }
@@ -1763,72 +1793,75 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-legend-value { margin-left: auto; flex: none; color: var(--ink-quiet); font-size: 11.5px; white-space: nowrap; }
 
 /* ---- XP Heatmap ----------------------------------------------------------
-   A calendar: seven rows Sunday to Saturday, one column per week, the month
-   named along the top where it opens. Weekdays as rows is the whole point —
-   "I do nothing at weekends" is a claim about a row, and it is invisible in a
-   grid whose rows are not weekdays.
+   A calendar the way the design draws it: seven columns Sunday to Saturday,
+   one row per week, the month named down the left where it opens.
 
    It is one grid, not a header and a body that have to be kept in step: the
-   month names are the first row's cells and the weekday letters the first
+   weekday letters are the first row's cells and the month names the first
    column's, so a label cannot drift off the thing it names.
 
-   **The squares are sized by the seven rows.** That count is the one thing
-   that does not change with the window, and the panel's height is fixed by the
-   grid row it sits in — so a cell is a square of whatever a seventh of what is
-   left comes to, centred in a column that may be wider. Sizing them off the
-   width instead would make the 30-day map, at six columns, six enormous
-   squares that run off the bottom of a card no longer allowed to grow.
+   **The cells fill their grid cell rather than holding a square aspect.** That
+   is the whole reason the map can be drawn this way round in a panel whose
+   height it does not choose: seven columns is a constant, but the week count is
+   six or fourteen depending on the window, and fourteen rows of squares in a
+   short wide card overflow it. Filling instead means fourteen rows are simply
+   shorter rows — the rectangle stays the same rectangle, which is the property
+   this panel is built on, and the design's own cells are wider than they are
+   tall too.
 
-   Which leaves the opposite problem: six columns of 22px squares in a 400px
-   panel is a dot grid with more gap than square. So the grid is capped, and
-   the cap is a fact about the window rather than about the viewport — it comes
-   in from the component on `--heat-max`, because a media query cannot see
-   which window is open. At fourteen columns the width is already the binding
-   constraint and the cap is deliberately set past any panel it will meet.
-
-   **Every square keeps its outline, including the ones with no day behind
+   **Every cell keeps its outline, including the ones with no day behind
    them.** A grid drawn only where there is data is a grid with holes in it, and
    the reader cannot tell a quiet Tuesday from a Tuesday before they signed up.
    The fill says how much; the outline says the day is on the map at all. */
 .gr-heat-body {
     flex: 1 1 auto; min-height: 0; width: 100%;
     display: grid;
-    grid-template-columns: auto repeat(var(--heat-cols, 6), minmax(0, 1fr));
     /* The month names take what they need; the seven weekdays share the rest. */
+    grid-template-columns: auto repeat(7, minmax(0, 1fr));
     grid-template-rows: auto;
     grid-auto-rows: minmax(0, 1fr);
-    gap: 3px;
-    align-items: center; justify-items: center;
-    max-width: min(100%, var(--heat-max, 190px));
+    gap: 3px 4px;
+    align-items: stretch; justify-items: stretch;
+    /* Inset and centred, as the design draws it. */
+    max-width: min(100%, 330px);
     margin-inline: auto;
 }
+/* Centred over its own column, because a weekday letter is one character and
+   the column is the width of a cell. */
 .gr-heat-day {
-    justify-self: end;
+    justify-self: center; align-self: center;
     font-size: 9.5px; font-weight: 600; color: var(--ink-faint);
-    padding-right: 4px; line-height: 1;
+    line-height: 1; padding-bottom: 2px;
 }
-/* Left-aligned over its own column and allowed to run past it: a month name is
-   three characters and a column is about twenty pixels, and centring one would
-   put "Jun" over the middle of the week rather than over the week it starts. */
+/* Right-aligned against the grid it labels, so three-letter month names sit in
+   a straight edge rather than each starting somewhere different. */
 .gr-heat-month {
-    justify-self: start;
+    justify-self: end; align-self: center;
     font-size: 9.5px; color: var(--ink-faint);
-    white-space: nowrap; line-height: 1.4; overflow: visible;
+    white-space: nowrap; line-height: 1; padding-right: 5px;
 }
+/* Width is capped and the cell centres in its column; height simply fills.
+   The cap is what keeps this a calendar: seven columns across a 400px panel
+   are ~50px each, and a cell that took all of one would be five times wider
+   than it is tall — a bar chart lying down rather than a map. Capped, the
+   spare width becomes the gap between columns, which is how the design draws
+   it. Height is left to fill so that fourteen weeks make short rows instead of
+   overflowing a panel whose height they do not choose. */
 .gr-heat-cell {
-    display: block; height: 100%; width: auto; aspect-ratio: 1 / 1;
-    max-width: 100%;
+    display: block; width: 100%; max-width: 24px; height: 100%;
+    justify-self: center;
+    min-height: 6px;
     box-sizing: border-box;
     border: 1px solid #e4e6ee;
     border-radius: 3px; background: #f2f3f6;
 }
-/* Four steps of the same brown the rest of the app uses for "how much". The
-   border goes with the fill so a full square reads as one block of colour
-   rather than as a swatch in a box. */
-.gr-heat-cell.lv-1 { background: #ecdfd0; border-color: #ecdfd0; }
-.gr-heat-cell.lv-2 { background: #d8bd9c; border-color: #d8bd9c; }
-.gr-heat-cell.lv-3 { background: #bd9668; border-color: #bd9668; }
-.gr-heat-cell.lv-4 { background: #8f6b41; border-color: #8f6b41; }
+/* Four steps towards the accent — the design's blue-violet, lightest to full
+   strength. The border goes with the fill so a full square reads as one block
+   of colour rather than as a swatch in a box. */
+.gr-heat-cell.lv-1 { background: #ddd5f7; border-color: #ddd5f7; }
+.gr-heat-cell.lv-2 { background: #b8a8ee; border-color: #b8a8ee; }
+.gr-heat-cell.lv-3 { background: #8e75e0; border-color: #8e75e0; }
+.gr-heat-cell.lv-4 { background: #6d4fd0; border-color: #6d4fd0; }
 /* No day behind it — the outline stays, so the rectangle stays whole. */
 .gr-heat-cell.is-blank { background: transparent; border-style: dashed; }
 
@@ -1851,10 +1884,10 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-heat-key {
     flex: none;
     display: flex; align-items: center; justify-content: flex-end; gap: 7px;
-    margin-top: 12px; font-size: 10.5px; color: var(--ink-faint);
+    margin-top: 9px; font-size: 10.5px; color: var(--ink-faint);
 }
 .gr-heat-ramp { display: inline-flex; gap: 3px; }
-.gr-heat-ramp .gr-heat-cell { width: 12px; aspect-ratio: auto; height: 12px; }
+.gr-heat-ramp .gr-heat-cell { width: 12px; max-width: none; height: 12px; min-height: 0; }
 
 /* ---- Segmented control ---------------------------------------------------
    Small, because it sits in a panel head beside a title and is not the page's
@@ -1894,12 +1927,17 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-mile-fill { display: block; height: 100%; border-radius: 999px; background: var(--tone-purple); }
 .gr-mile-fill.tone-focus { background: var(--tone-green); }
 .gr-mile-fill.tone-streak { background: var(--tone-amber); }
+/* The badge carries its row's colour rather than one flat gold, so the three
+   ladders read as three at a glance — the same tone as the icon and the bar
+   beside it, which is the rule the whole page follows. */
 .gr-mile-reward {
     flex: none; align-self: flex-start;
     padding: 4px 9px; border-radius: 999px;
-    background: #fdf3e6; color: #a8845c;
+    background: #f4eefb; color: var(--tone-purple);
     font-size: 10.5px; font-weight: 700; white-space: nowrap;
 }
+.gr-mile-reward.tone-focus  { background: #eaf5f0; color: var(--tone-green); }
+.gr-mile-reward.tone-streak { background: #fdf3e6; color: var(--tone-amber); }
 
 /* ---- Long Term Progress --------------------------------------------------
    Four running totals over months. The axis is XP; the other three are scaled
@@ -1951,28 +1989,51 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-lt-key.tone-focus { background: var(--tone-blue); }
 .gr-lt-key.tone-active { background: var(--tone-amber); }
 .gr-lt-name { color: var(--ink-quiet); }
-.gr-lt-total { font-weight: 700; color: var(--ink); }
 
 /* ---- Skills Progress -----------------------------------------------------
-   The one panel with nothing behind it. It is styled to fill the card rather
-   than to look broken: an empty card in a row of full ones reads as a failure,
-   and this is a promise. See the note on the component. */
-.gr-skills-empty {
-    flex: 1 1 auto; min-height: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px; text-align: center; padding: 6px 4px;
-    border-radius: 12px; background: var(--inset-bg);
-    border: 1px dashed var(--inset-edge);
+   Five named skills at a level each, laid out as one row apiece: the name, the
+   level, the bar, the percentage. The four are a grid rather than a flex row so
+   the bars all start and end at the same x whatever the names are — ragged bar
+   ends is the thing that makes a list like this look hand-assembled.
+
+   **Every figure in here is fixed placeholder copy.** Nothing behind this panel
+   measures anything; see the note on the component for what it is waiting on
+   and why the head carries a "Sample" mark. */
+.gr-skill-list {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin;
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
 }
-.gr-skills-ico {
-    width: 40px; height: 40px; border-radius: 12px; margin-bottom: 4px;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: #eef2fb; color: var(--tone-blue);
+.gr-skill {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(52px, 0.85fr) auto;
+    align-items: center; gap: 10px;
 }
-#growthCard .gr-skills-head { margin: 0; text-align: center; font-size: 13px; font-weight: 700; color: var(--ink); }
-#growthCard .gr-skills-hint {
-    margin: 0; max-width: 34ch; text-align: center;
-    font-size: 11.5px; line-height: 1.5; color: var(--ink-faint);
+.gr-skill-name {
+    font-size: 12px; color: var(--ink-soft);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.gr-skill-level { font-size: 11px; color: var(--ink-quiet); white-space: nowrap; }
+.gr-skill-track {
+    height: 6px; border-radius: 999px;
+    background: var(--inset-edge); overflow: hidden;
+}
+.gr-skill-fill { display: block; height: 100%; border-radius: 999px; background: var(--tone-purple); }
+.gr-skill-fill.tone-green { background: var(--tone-green); }
+.gr-skill-fill.tone-blue  { background: var(--tone-blue); }
+.gr-skill-fill.tone-amber { background: var(--tone-amber); }
+.gr-skill-pct {
+    font-size: 11px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; min-width: 30px; text-align: right;
+}
+/* The mark that says the numbers beside it are not measured. Quiet, because it
+   is a caveat and not a feature — but present, because the alternative is five
+   invented figures passing as real ones. */
+.gr-panel-tag {
+    flex: none; padding: 2px 8px; border-radius: 999px;
+    background: var(--inset-bg); border: 1px solid var(--inset-edge);
+    font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--ink-faint); white-space: nowrap;
 }
 
 /* ---- Insights ------------------------------------------------------------ */
@@ -2004,11 +2065,16 @@ html[data-theme="light"] #growthCard.growth-card {
    whole reason they are variables.
    ========================================================================== */
 html[data-theme="dark"] #growthCard {
-    --tone-blue: #5089e8;
-    --tone-purple: #b48ce8;
-    --tone-green: #3fbf8f;
-    --tone-amber: #d8b45e;
-    --tone-red: #e04d70;
+    --tone-blue: #4a8ff5;
+    --tone-purple: #a78bfa;
+    --tone-green: #34d399;
+    --tone-amber: #f0932b;
+    --tone-red: #f0637e;
+
+    --accent: #7c5cf5;
+    --accent-deep: #6b48e8;
+    --accent-soft: #241d4a;
+    --accent-ink: #ffffff;
 
     --panel-bg: #151b24;
     --panel-edge: #242c3a;
@@ -2023,8 +2089,6 @@ html[data-theme="dark"] #growthCard.growth-card { background: transparent; }
 html[data-theme="dark"] .gr-panel {
     box-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 6px 16px rgba(0, 0, 0, .22);
 }
-html[data-theme="dark"] .gr-headline-ico { background: #241f18; color: #c9a87c; }
-html[data-theme="dark"] .gr-panel-ico { color: #c9a87c; }
 html[data-theme="dark"] .gr-hint { color: #5b6472; }
 
 html[data-theme="dark"] .gr-drop-btn,
@@ -2036,10 +2100,8 @@ html[data-theme="dark"] .gr-drop-btn:hover,
 html[data-theme="dark"] .gr-export:hover:not(:disabled) { background: #1c222c; border-color: #39414f; }
 html[data-theme="dark"] .gr-drop-item { color: var(--ink-soft); }
 html[data-theme="dark"] .gr-drop-item:hover { background: #1c222c; }
-html[data-theme="dark"] .gr-drop-item.is-active { background: #a8845c; color: #12161c; }
-html[data-theme="dark"] .gr-panel-link:hover { background: #1c222c; color: var(--ink); }
+html[data-theme="dark"] .gr-panel-link:hover { border-color: #39414f; color: var(--ink); }
 html[data-theme="dark"] .gr-panel-cta:hover { border-color: #39414f; }
-html[data-theme="dark"] .gr-chapter-note { color: #c9a87c; }
 
 html[data-theme="dark"] .gr-chip.is-up { background: rgba(34, 160, 107, .16); color: var(--tone-green); }
 html[data-theme="dark"] .gr-chip.is-down { background: rgba(224, 77, 112, .16); color: var(--tone-red); }
@@ -2056,24 +2118,25 @@ html[data-theme="dark"] .gr-spark.tone-focus  .gr-spark-fill { fill: rgba(216, 1
 html[data-theme="dark"] .gr-mile-ico.tone-xp     { background: #241a36; }
 html[data-theme="dark"] .gr-mile-ico.tone-focus  { background: #10261e; }
 html[data-theme="dark"] .gr-mile-ico.tone-streak { background: #2b2312; }
-html[data-theme="dark"] .gr-mile-reward { background: #241f18; color: #c9a87c; }
+html[data-theme="dark"] .gr-mile-reward { background: #241a36; }
+html[data-theme="dark"] .gr-mile-reward.tone-focus  { background: #10261e; }
+html[data-theme="dark"] .gr-mile-reward.tone-streak { background: #2b2312; }
 html[data-theme="dark"] .gr-insight-ico.tone-good  { background: #10261e; }
 html[data-theme="dark"] .gr-insight-ico.tone-watch { background: #241a36; }
 html[data-theme="dark"] .gr-insight-ico.tone-note  { background: #2b2312; }
-html[data-theme="dark"] .gr-skills-ico { background: #16233a; }
 
 html[data-theme="dark"] .gr-category {
-    --sub-1: #5089e8; --sub-2: #e04d70; --sub-3: #3fbf8f;
-    --sub-4: #c9a52f; --sub-5: #b48ce8; --sub-other: #5b6472;
+    --sub-1: #4a8ff5; --sub-2: #a78bfa; --sub-3: #f0932b;
+    --sub-4: #34d399; --sub-5: #f0637e; --sub-other: #5b6472;
 }
 html[data-theme="dark"] .gr-donut-track { stroke: #1c222c; background: none; }
 
 html[data-theme="dark"] .gr-heat-cell { background: #1c222c; border-color: #262c36; }
 html[data-theme="dark"] .gr-heat-cell.is-blank { background: transparent; border-color: #2b3242; }
-html[data-theme="dark"] .gr-heat-cell.lv-1 { background: #3a2f24; border-color: #3a2f24; }
-html[data-theme="dark"] .gr-heat-cell.lv-2 { background: #5c452e; border-color: #5c452e; }
-html[data-theme="dark"] .gr-heat-cell.lv-3 { background: #8a6640; border-color: #8a6640; }
-html[data-theme="dark"] .gr-heat-cell.lv-4 { background: #c9a87c; border-color: #c9a87c; }
+html[data-theme="dark"] .gr-heat-cell.lv-1 { background: #2f3577; border-color: #2f3577; }
+html[data-theme="dark"] .gr-heat-cell.lv-2 { background: #4442ab; border-color: #4442ab; }
+html[data-theme="dark"] .gr-heat-cell.lv-3 { background: #5f57d8; border-color: #5f57d8; }
+html[data-theme="dark"] .gr-heat-cell.lv-4 { background: #8b7df0; border-color: #8b7df0; }
 
 html[data-theme="dark"] .gr-seg { background: #0f141b; border-color: #242c3a; }
 html[data-theme="dark"] .gr-seg-opt { color: var(--ink-faint); }

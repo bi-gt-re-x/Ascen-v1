@@ -256,6 +256,13 @@ export interface ChartColors {
  * legacy pages' way of saying dark. The React app sets `html[data-theme]` and
  * carries the body class too, so this asks the attribute first and falls back
  * to the class — both frontends get the same colours either way.
+ *
+ * The line and its fill are the accent, matching `--accent` in styles/growth.css
+ * — the design draws one purple curve, not a neutral one under a purple page.
+ * They are literals rather than a `getComputedStyle` read of the variable
+ * because this runs inside the draw loop, on every frame of the entrance
+ * animation and on every mousemove, and a style resolution per frame is a
+ * layout read per frame. If the accent moves, move both.
  */
 export function chartColors(): ChartColors {
   const dark =
@@ -264,15 +271,15 @@ export function chartColors(): ChartColors {
 
   return dark
     ? {
-        grid: 'rgba(255, 255, 255, 0.12)',
-        axis: '#c9d1d9',
-        line: '#e6e8f0',
-        areaTop: 'rgba(163, 138, 112, 0.55)',
-        areaBottom: 'rgba(163, 138, 112, 0.05)',
-        marker: '#e6e8f0',
-        markerRing: '#161B22',
-        crosshair: 'rgba(255, 255, 255, 0.35)',
-        tooltipBg: '#161B22',
+        grid: 'rgba(255, 255, 255, 0.10)',
+        axis: '#98a1b2',
+        line: '#a78bfa',
+        areaTop: 'rgba(124, 92, 245, 0.42)',
+        areaBottom: 'rgba(124, 92, 245, 0.02)',
+        marker: '#a78bfa',
+        markerRing: '#151b24',
+        crosshair: 'rgba(167, 139, 250, 0.45)',
+        tooltipBg: '#1b2230',
         tooltipBorder: 'rgba(255, 255, 255, 0.18)',
         tooltipShadow: 'rgba(0, 0, 0, 0.5)',
         tooltipDate: '#e6e8f0',
@@ -282,12 +289,12 @@ export function chartColors(): ChartColors {
     : {
         grid: 'rgba(44, 48, 46, 0.08)',
         axis: '#9297ab',
-        line: '#2C302E',
-        areaTop: 'rgba(163, 138, 112, 0.45)',
-        areaBottom: 'rgba(163, 138, 112, 0.03)',
-        marker: '#2C302E',
+        line: '#6d4fd0',
+        areaTop: 'rgba(109, 79, 208, 0.30)',
+        areaBottom: 'rgba(109, 79, 208, 0.02)',
+        marker: '#6d4fd0',
         markerRing: '#ffffff',
-        crosshair: 'rgba(44, 48, 46, 0.35)',
+        crosshair: 'rgba(109, 79, 208, 0.35)',
         tooltipBg: '#ffffff',
         tooltipBorder: 'rgba(44, 48, 46, 0.18)',
         tooltipShadow: 'rgba(44, 48, 46, 0.2)',

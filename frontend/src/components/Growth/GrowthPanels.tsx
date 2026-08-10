@@ -59,7 +59,6 @@ const PATHS: Record<string, string> = {
   info: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v5M12 7.5v.5',
   download: 'M12 4v11M8 11l4 4 4-4M4 19h16',
   calendar: 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4',
-  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
 };
 
 function Glyph({ name, size = 15 }: { name: keyof typeof PATHS | string; size?: number }) {
@@ -560,24 +559,25 @@ export interface XpHeatmapProps {
 /**
  * The last 30 or 90 days as a calendar of squares.
  *
- * Seven rows, Sunday to Saturday, one column per week, month names along the
- * top: the shape a reader already knows how to read, and the one in which "I
- * do nothing at weekends" is visible at a glance as a pale row.
+ * Seven columns, Sunday to Saturday, one row per week, month names down the
+ * left where each month opens — the shape the design draws, and the one a
+ * reader already knows from every wall calendar they have ever owned.
  *
- * **Weeks are the columns, not the rows.** `heatmapGrid` hands back weeks,
- * because a week is what a calendar is made of; this transposes them on the
- * way out. Seven rows is a constant and the week count is not, so a panel that
- * is wide and short — which is what the row this sits in gives it — fits
- * fourteen weeks across far more comfortably than fourteen down. Drawn the
- * other way up, the 90-day map was a 124px ribbon in a 400px card.
+ * **Weeks are the rows, which is the order `heatmapGrid` already hands them
+ * back in.** It used to be transposed here, and the reason was height: seven
+ * rows is a constant, fourteen columns is not, and a wide short panel took
+ * fourteen weeks across more comfortably than down. What paid for the flip back
+ * is the cells giving up their square aspect — they fill their grid cell now,
+ * so fourteen rows simply make each one shorter instead of overflowing. The
+ * width is a constant either way, because seven columns always is.
  *
  * The grid is remounted whenever the window changes — that is what `key` on it
  * is for — so the squares play their entrance again rather than swapping in
  * place. It deliberately does not replay on a refresh: the same map re-read is
  * a tic, not an entrance, which is the rule the chart follows too. The stagger
  * is per-square and comes from `--i`; styles/growth.css turns it into a delay,
- * and running it on `week * 2 + weekday` sweeps the map left to right, which
- * is the direction the time in it runs.
+ * and running it on `week * 3 + weekday` sweeps the map diagonally from the
+ * oldest corner to the newest, which is the direction the time in it runs.
  */
 export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
   const shape = HEAT_WINDOWS.find((entry) => entry.key === windowKey) ?? HEAT_WINDOWS[0]!;
@@ -610,47 +610,37 @@ export function XpHeatmap({ rows, windowKey, onWindowChange }: XpHeatmapProps) {
         <p className="gr-empty">Nothing to map yet.</p>
       ) : (
         <>
-          <div
-            className="gr-heat-body"
-            key={windowKey}
-            style={{
-              ['--heat-cols' as string]: rows.length,
-              ['--heat-max' as string]: `${shape.maxWidth}px`,
-            }}
-          >
-            {/* The month names, each over the week its month opens in. */}
+          <div className="gr-heat-body" key={windowKey}>
+            {/* The weekday letters, each over its own column. */}
             <span className="gr-heat-corner" aria-hidden="true" />
-            {rows.map((week, at) => (
-              <span className="gr-heat-month" key={`month-${at}`} aria-hidden="true">
-                {week.label}
+            {HEAT_WEEKDAYS.map((letter, weekday) => (
+              <span className="gr-heat-day" key={`day-${weekday}`} aria-hidden="true">
+                {letter}
               </span>
             ))}
 
-            {/* Then a row per weekday, taking that day out of every week. */}
-            {HEAT_WEEKDAYS.map((letter, weekday) => (
-              <Fragment key={weekday}>
-                <span className="gr-heat-day" aria-hidden="true">
-                  {letter}
+            {/* Then a row per week, named on the week its month opens in. */}
+            {rows.map((week, at) => (
+              <Fragment key={at}>
+                <span className="gr-heat-month" aria-hidden="true">
+                  {week.label}
                 </span>
-                {rows.map((week, at) => {
-                  const cell = week.days[weekday]!;
-                  return (
-                    <span
-                      key={at}
-                      className={`gr-heat-cell${cell.date ? ` lv-${cell.level}` : ' is-blank'}`}
-                      style={{ ['--i' as string]: at * 2 + weekday }}
-                      title={
-                        cell.date
-                          ? `${new Date(`${cell.date}T00:00:00`).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                            })}: ${cell.xp} XP`
-                          : undefined
-                      }
-                    />
-                  );
-                })}
+                {week.days.map((cell, weekday) => (
+                  <span
+                    key={weekday}
+                    className={`gr-heat-cell${cell.date ? ` lv-${cell.level}` : ' is-blank'}`}
+                    style={{ ['--i' as string]: at * 3 + weekday }}
+                    title={
+                      cell.date
+                        ? `${new Date(`${cell.date}T00:00:00`).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                          })}: ${cell.xp} XP`
+                        : undefined
+                    }
+                  />
+                ))}
               </Fragment>
             ))}
           </div>
@@ -734,7 +724,7 @@ export function Milestones({ rows, onViewAll }: MilestonesProps) {
                   />
                 </span>
               </div>
-              <span className="gr-mile-reward">+{row.reward} XP</span>
+              <span className={`gr-mile-reward tone-${row.kind}`}>+{row.reward} XP</span>
             </li>
           );
         })}
@@ -788,12 +778,18 @@ export function LongTerm({ data, windowKey, onWindowChange }: LongTermProps) {
       ) : (
         <>
           <LongTermChart data={data} />
+          {/* Four names and their colours, as the design draws it. Three of the
+              four lines are scaled to fit beside the XP axis and so have no
+              readable magnitude on the plot; the total is what supplies it, and
+              it rides on the row's tooltip rather than sitting beside the name.
+              Hidden information is a poor second to printed information — but
+              the alternative here is not printing it, and a legend that matches
+              the design is what was asked for. */}
           <ul className="gr-lt-legend">
             {data.lines.map((line) => (
-              <li key={line.key}>
+              <li key={line.key} title={`${line.label}: ${line.total}`}>
                 <i className={`gr-lt-key tone-${line.key}`} aria-hidden="true" />
                 <span className="gr-lt-name">{line.label}</span>
-                <span className="gr-lt-total">{line.total}</span>
               </li>
             ))}
           </ul>
@@ -813,39 +809,58 @@ export interface SkillsProgressProps {
 /**
  * The one panel on this page with nothing behind it.
  *
- * The design has five named skills at a level each — Problem Solving 4.2,
- * Algorithms 3.8 — and the account tracks no such thing. There is a growth
- * tree in the backend (`backend/tracking/tree.py`) that is a stub, and a
- * `/growth-tree` route that says so. Inventing levels out of subject XP would
- * put five confident numbers on the page that mean nothing, which is worse
- * than an empty card: a reader cannot tell a made-up 4.2 from a real one.
+ * ⚠ **These five rows are fixed placeholder copy, not data.** The account
+ * tracks no skill levels: the growth tree that would produce them is a stub in
+ * `backend/tracking/tree.py`, and `/growth-tree` is a route that says so. The
+ * numbers below are the design's own, hard-coded, and they will read the same
+ * for every account on every day — nothing here moves when the user does.
  *
- * So it says what it will be and what it is waiting on, the same bargain
- * pages/Unbuilt strikes for a whole route. Delete this component on the day
- * the tree returns rows.
+ * That is a deliberate choice to match the design rather than an oversight, and
+ * it is the reason for the "Sample" mark in the panel head and for the hint
+ * spelling it out: a reader who is not told cannot tell a fixed 4.2 from a
+ * measured one, and five confident invented numbers on a page of real ones is
+ * the worst thing this panel could be.
+ *
+ * Replace `SAMPLE_SKILLS` with the tree's rows on the day it returns any, and
+ * take the mark and the hint out with it.
  */
+const SAMPLE_SKILLS = [
+  { name: 'Problem Solving', level: '4.2', percent: 78, tone: 'purple' },
+  { name: 'Algorithms', level: '3.8', percent: 65, tone: 'green' },
+  { name: 'Calculus', level: '4.0', percent: 72, tone: 'green' },
+  { name: 'Data Structures', level: '3.6', percent: 58, tone: 'blue' },
+  { name: 'Writing', level: '3.2', percent: 45, tone: 'amber' },
+] as const;
+
 export function SkillsProgress({ onViewAll }: SkillsProgressProps) {
   return (
     <section className="gr-panel gr-skills">
-      <h2 className="gr-panel-title">
-        Skills Progress
-        <Hint text="Waiting on the growth tree — see backend/tracking/tree.py." />
-      </h2>
-
-      <div className="gr-skills-empty">
-        <span className="gr-skills-ico" aria-hidden="true">
-          <Glyph name="chart" size={20} />
-        </span>
-        <p className="gr-skills-head">No skills tracked yet</p>
-        <p className="gr-skills-hint">
-          Levels per skill come from the growth tree, which isn’t built. Until
-          it is, XP by Category beside this is the honest version of the same
-          question.
-        </p>
+      <div className="gr-panel-head">
+        <h2 className="gr-panel-title">
+          Skills Progress
+          <Hint text="Sample figures. Skill levels come from the growth tree, which isn’t built yet — see backend/tracking/tree.py. Nothing in this panel is measured from your account." />
+        </h2>
+        <span className="gr-panel-tag">Sample</span>
       </div>
 
+      <ul className="gr-skill-list">
+        {SAMPLE_SKILLS.map((skill) => (
+          <li className="gr-skill" key={skill.name}>
+            <span className="gr-skill-name">{skill.name}</span>
+            <span className="gr-skill-level">Level {skill.level}</span>
+            <span className="gr-skill-track">
+              <i
+                className={`gr-skill-fill tone-${skill.tone}`}
+                style={{ width: `${skill.percent}%` }}
+              />
+            </span>
+            <span className="gr-skill-pct">{skill.percent}%</span>
+          </li>
+        ))}
+      </ul>
+
       <button type="button" className="gr-panel-cta" onClick={onViewAll}>
-        View the growth tree
+        View all skills
         <span aria-hidden="true"> →</span>
       </button>
     </section>
