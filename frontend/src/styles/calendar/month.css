@@ -1452,16 +1452,38 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
+/* The dialog itself: a column of head, body and foot that takes the height it
+   needs up to what the viewport has.
+
+   It used to be a plain block whose body was capped at a flat 500px, and the
+   Day and Month views — which open the narrow dialog — paid for it twice. The
+   Add Task form is a name, two time pickers, a subject, an XP slider and a
+   recurrence block; at 500px that is a scrollbar over a form that would have
+   fitted the screen twice over, and at `min(600px, 90%)` the seven weekday
+   checkboxes had 540px to share four across. So: wider, and a height that is a
+   fraction of the window rather than a number. The body still scrolls, but only
+   once the window genuinely cannot hold the form.
+
+   The top and bottom margins are the same fraction, so the cap and the gap
+   agree and the dialog sits with even air around it instead of the old
+   `calc(8% - 42px)`, which was a number tuned for one form's height. */
 .modal-content {
 
-
-    margin: calc(8% - 42px) auto;
+    margin: min(5vh, 44px) auto;
 
     padding: 0;
 
     border-radius: 20px;
 
-    width: min(600px, 90%);
+    width: min(680px, 94%);
+
+    box-sizing: border-box;
+
+    display: flex;
+
+    flex-direction: column;
+
+    max-height: calc(100vh - min(10vh, 88px));
 
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 
@@ -1490,13 +1512,15 @@ body.classic .timestamp-section input[type="time"] {
 
 .modal-header {
 
+    flex: none;
+
     display: flex;
 
     justify-content: space-between;
 
     align-items: center;
 
-    padding: 25px 30px;
+    padding: 21px 30px;
 
     border-bottom: 1px solid #e0e0e0;
 
@@ -1542,20 +1566,31 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
+/* Whatever is left between the head and the foot. `min-height: 0` is the half
+   that matters: a flex item's automatic minimum is its content, so without it
+   the body would refuse to shrink, push the footer off the bottom of the
+   dialog, and scroll nothing. */
 .modal-body {
 
-    padding: 30px;
+    flex: 1 1 auto;
 
-    max-height: 500px;
+    min-height: 0;
+
+    padding: 28px 30px;
 
     overflow-y: auto;
 
 }
 
 
+/* Six of these stack up in the Add Task dialog — name, two times, subject, XP,
+   recurrence — so the gutter between them is six times whatever it is. At 28px
+   the form was a hundred and fifty pixels of air taller than the window it
+   opens in, which is what put a scrollbar on a form that has no business
+   needing one. */
 .form-group {
 
-    margin-bottom: 28px;
+    margin-bottom: 22px;
 
 }
 
@@ -1564,7 +1599,7 @@ body.classic .timestamp-section input[type="time"] {
 
     display: block;
 
-    margin-bottom: 12px;
+    margin-bottom: 9px;
 
     color: #333;
 
@@ -1725,15 +1760,33 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
+/* The days a repeat lands on — seven weekday names, or thirty-one numbers.
+
+   A fixed four columns is the wrong shape for both. In the narrow dialog it
+   gave "Wednesday" about a hundred and twenty pixels to fit a checkbox, a gap
+   and a nine-letter word into, so the labels wrapped and the row of days came
+   out as a ragged block; in the week view's 1200px dialog it left half the
+   width empty. `auto-fit` down to a name's own width fits as many as the
+   dialog can hold and no fewer, at either. */
 .checkbox-group {
 
     display: grid;
 
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
 
     gap: 12px;
 
     margin-top: 10px;
+
+}
+
+/* Days of the month: thirty-one two-character labels, which need nothing like
+   a weekday's width. */
+.checkbox-group.is-numeric {
+
+    grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+
+    gap: 8px;
 
 }
 
@@ -1804,13 +1857,15 @@ html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297;
 
 .modal-footer {
 
+    flex: none;
+
     display: flex;
 
     justify-content: flex-end;
 
     gap: 15px;
 
-    padding: 25px 30px;
+    padding: 21px 30px;
 
     border-top: 1px solid #e0e0e0;
 

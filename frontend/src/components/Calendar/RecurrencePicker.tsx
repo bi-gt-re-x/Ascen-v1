@@ -85,7 +85,10 @@ export function RecurrencePicker({
       {type === 'monthly' && (
         <div className={`form-group${invalid ? ' invalid-input' : ''}`}>
           <label>Select Days of Month:</label>
-          <div className="checkbox-group">
+          {/* A number is not a weekday name. `is-numeric` packs the columns to
+              the width of "31" instead of the width of "Wednesday", so
+              thirty-one of them are four rows rather than eight. */}
+          <div className="checkbox-group is-numeric">
             {MONTH_DAYS.map((day) => (
               <label key={day}>
                 <input

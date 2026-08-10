@@ -23,6 +23,7 @@ import type { GrowthDay, Task } from '@/types';
 import {
   COMPARE_BACK_DAYS,
   FOCUS_REFERENCE_MINUTES,
+  HABIT_ROWS,
   consistencyTrail,
   dayName,
   focusMix,
@@ -58,6 +59,14 @@ type WindowKey = (typeof WINDOWS)[number]['key'];
 /** How many weeks the follow-through chart draws. Eight is two months. */
 const WEEKS = 8;
 
+/**
+ * A colour per habit row, in the order they are ranked.
+ *
+ * Six, so six rows are six colours. It cycles past that, but the panel draws
+ * `HABIT_ROWS` of them and that is six.
+ */
+const HABIT_TONES = ['purple', 'green', 'blue', 'amber', 'teal', 'rose'];
+
 export interface FocusChapterProps {
   all: GrowthDay[];
   tasks: Task[];
@@ -80,7 +89,13 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
   );
   const weeks = useMemo(() => weeklyPlan(all, tasks, WEEKS), [all, tasks]);
   const mix = useMemo(() => focusMix(all), [all]);
-  const habits = useMemo(() => habitRows(tasks, subjects, today), [subjects, tasks, today]);
+  // `all` is one row per day from the account's first to today — see the
+  // backend's `series` — so its length is the account's age, and that is the
+  // window the habit rows are measured over.
+  const habits = useMemo(
+    () => habitRows(tasks, subjects, today, all.length),
+    [all.length, subjects, tasks, today],
+  );
   const recovery = useMemo(() => recoveryProfile(all, tasks), [all, tasks]);
   const trail = useMemo(() => consistencyTrail(all), [all]);
   const onTime = useMemo(() => onTimeShare(tasks), [tasks]);
@@ -310,8 +325,8 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
       <section className="gr-panel gr-span-2">
         <PanelHead
           title="Habit stability"
-          hint="One row per subject you have finished work in. The account has no notion of a planned session, so the denominator is your own best week rather than a target nobody set."
-          note={habits.length ? 'last 30 days' : undefined}
+          hint={`Up to ${HABIT_ROWS} subjects, ranked by how many days you have worked in them. Everything but the trend is counted from the day the account was created rather than over a recent window — a habit is a claim about months, and a thirty-day one would call a subject you kept up for half a year and left alone in July a dead habit. The account has no notion of a planned session, so the denominator is your own best week rather than a target nobody set.`}
+          note={habits.length ? `since day one · ${habits[0]!.spanDays} days` : undefined}
         />
         {habits.length === 0 ? (
           <p className="gr-empty">
@@ -319,7 +334,7 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
           </p>
         ) : (
           <ul className="gr-habits">
-            {habits.slice(0, 6).map((habit, index) => (
+            {habits.slice(0, HABIT_ROWS).map((habit, index) => (
               <li className="gr-habit" key={habit.key}>
                 <div className="gr-habit-head">
                   <span className="gr-habit-name">{habit.label}</span>
@@ -329,12 +344,14 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
                 </div>
                 <span className="gr-habit-track">
                   <i
-                    className={`gr-habit-fill tone-${['purple', 'green', 'blue', 'amber'][index % 4]}`}
+                    className={`gr-habit-fill tone-${HABIT_TONES[index % HABIT_TONES.length]}`}
                     style={{ width: `${habit.consistency}%` }}
                   />
                 </span>
                 <div className="gr-habit-foot">
-                  <span>{habit.consistency}% of the last 30 days</span>
+                  <span>
+                    {habit.consistency}% of your {habit.spanDays} days
+                  </span>
                   <span>
                     <Glyph name="flame" size={11} /> {habit.streak} wk · best {habit.bestStreak}
                   </span>

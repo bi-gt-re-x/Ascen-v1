@@ -1297,6 +1297,10 @@ html[data-theme="light"] #growthCard.growth-card {
     --tone-green: #24a06b;
     --tone-amber: #e08a2c;
     --tone-red: #d94f6a;
+    /* Two more, so the six habit rows are six colours rather than four and a
+       repeat. They are not used anywhere else on the page. */
+    --tone-teal: #1f9aa8;
+    --tone-rose: #c4569b;
 
     --accent: #6d4fd0;
     --accent-deep: #5b3fbd;
@@ -2391,15 +2395,35 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     transition: transform .12s ease, box-shadow .12s ease;
 }
 .gr-plan .gr-heat-cell:hover { transform: scale(1.16); }
-.gr-plan .gr-heat-cell.is-picked {
-    box-shadow: 0 0 0 2px var(--panel-bg), 0 0 0 3.5px var(--accent);
-}
+/* The opened day deliberately carries no ring. It used to wear a purple outline
+   — and because the panel opens on the most recent day, that outline sat on
+   today every time the tab was reached, which read as a marker on the calendar
+   rather than as a selection. The day panel beside the map prints the date it
+   is showing, so the map does not have to say it twice. The class is still on
+   the cell for anything that wants to style it later. */
 .gr-plan .gr-heat-cell.is-blank { cursor: default; }
 
-/* ---- The day a square opens ---------------------------------------------- */
+/* ---- The day a square opens ----------------------------------------------
+   This panel sits beside the calendar and is stretched to its height, which is
+   five hundred pixels at the thirty-day window. Five label/value rows do not
+   fill that, and the card came out as a quarter of content over three quarters
+   of nothing.
+
+   So the two parts take the height between them: the headline figure grows
+   into its share of whatever is spare, and the list spreads its rows down the
+   rest with `space-between`. Nothing here stretches a *row* — a 34px row blown
+   up to 80 is a different kind of wrong — it is the gaps that take the space,
+   so the card reads as a list laid out down the card rather than one bunched at
+   the top of it. When the content does fill the panel, `space-between` has
+   nothing to distribute and the list is exactly as it was. */
 .gr-day-figure {
-    flex: none; display: flex; flex-direction: column; gap: 2px;
-    padding: 14px 15px; margin-bottom: 12px;
+    flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 3px;
+    padding: 16px 15px; margin-bottom: 12px;
+    /* It grows with the panel up to a point, and past that the list gets the
+       rest. Without the ceiling a tall panel would be one enormous percentage
+       over five hairlines. `border-box`, so the ceiling is the box the reader
+       sees rather than that plus thirty-four pixels of padding and rule. */
+    box-sizing: border-box; min-height: 84px; max-height: 132px;
     border-radius: 14px;
     background: var(--inset-bg); border: 1px solid var(--inset-edge);
 }
@@ -2409,11 +2433,12 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-day-list {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin;
     overscroll-behavior: contain;
-    margin: 0; display: flex; flex-direction: column; gap: 1px;
+    margin: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 1px;
 }
 .gr-day-list > div {
+    flex: 0 0 auto;
     display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-    padding: 8px 0; border-bottom: 1px solid var(--inset-edge);
+    padding: 10px 0; border-bottom: 1px solid var(--inset-edge);
 }
 .gr-day-list > div:last-child { border-bottom: 0; }
 .gr-day-list dt { font-size: 11.5px; color: var(--ink-quiet); }
@@ -2550,6 +2575,8 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-habit-fill.tone-green { background: var(--tone-green); }
 .gr-habit-fill.tone-blue  { background: var(--tone-blue); }
 .gr-habit-fill.tone-amber { background: var(--tone-amber); }
+.gr-habit-fill.tone-teal  { background: var(--tone-teal); }
+.gr-habit-fill.tone-rose  { background: var(--tone-rose); }
 .gr-habit-foot {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     flex-wrap: wrap; font-size: 10.5px; color: var(--ink-faint);
@@ -2817,21 +2844,31 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     overscroll-behavior: contain;
     display: flex; flex-direction: column; gap: 16px;
 }
-.gr-cat-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 9px; }
+.gr-cat-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .gr-cat-name { margin: 0; font-size: 12px; font-weight: 800; color: var(--ink); }
 .gr-cat-note { font-size: 10.5px; color: var(--ink-faint); }
-.gr-cat-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.gr-cat-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+/* Four things across a row: what it is, what it came to, the bar, the share.
+   They were on a 12px gutter with the name column able to shrink to 90px, and
+   at two-thirds of a 1200px page that put "Focus minutes" hard against
+   "1,240 was 980 best 1,510" with the three figures wrapping onto two lines
+   under a bar that had not moved. The columns are wider and the gutter is
+   bigger, the figures no longer wrap, and each row carries its own padding and
+   rule so the block reads as rows rather than as a paragraph of numbers. */
 .gr-cat-row {
     display: grid;
-    grid-template-columns: minmax(90px, 0.9fr) minmax(0, 1.5fr) minmax(60px, 1fr) auto;
-    align-items: center; gap: 12px;
+    grid-template-columns: minmax(108px, 0.95fr) minmax(0, 1.55fr) minmax(78px, 1fr) auto;
+    align-items: center; gap: 18px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--inset-edge);
 }
+.gr-cat-row:last-child { border-bottom: 0; padding-bottom: 0; }
 @media (max-width: 900px) {
-    .gr-cat-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .gr-cat-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
     .gr-cat-track { display: none; }
 }
 .gr-cat-label { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
-.gr-cat-figures { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.gr-cat-figures { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .gr-cat-figures strong { font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; }
 .gr-cat-figures span { font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; }
 .gr-cat-track { height: 6px; border-radius: 999px; background: var(--inset-edge); overflow: hidden; }
@@ -2874,6 +2911,16 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     overscroll-behavior: contain;
     list-style: none; margin: 0; padding: 0;
     display: flex; flex-direction: column; gap: 12px;
+}
+/* The placeholder rows, held back from the page's own figures. Not so faint
+   that they cannot be read — the point of them is to show the shape — just
+   enough that they do not sit at the same weight as measured work. The
+   "Sample" tag in the head and the caption above are what actually say so;
+   this only keeps the eye honest. */
+.gr-goals.is-sample { opacity: .72; }
+#growthCard .gr-goals-note {
+    flex: none; margin: 0 0 12px;
+    font-size: 10.5px; line-height: 1.45; color: var(--ink-faint);
 }
 .gr-goal {
     display: flex; flex-direction: column; gap: 7px;
@@ -2932,6 +2979,8 @@ html[data-theme="dark"] #growthCard {
     --tone-green: #34d399;
     --tone-amber: #f0932b;
     --tone-red: #f0637e;
+    --tone-teal: #2dd4bf;
+    --tone-rose: #f472b6;
 
     --accent: #7c5cf5;
     --accent-deep: #6b48e8;

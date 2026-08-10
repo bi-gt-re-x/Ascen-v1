@@ -440,14 +440,16 @@ export function focusMix(all: GrowthDay[], days = 90): FocusMix {
 export interface HabitRow {
   key: string;
   label: string;
-  /** Sessions a week over the last 30 days, to one decimal. */
+  /** Sessions a week over the whole account, to one decimal. */
   perWeek: number;
   /** The best week this subject has ever had, which is the row's denominator. */
   bestWeek: number;
-  /** Days in the last 30 with a finished task in this subject. */
+  /** Days since the account was created with a finished task in this subject. */
   activeDays: number;
-  /** `activeDays / 30`, 0-100 — what the bar draws. */
+  /** `activeDays / spanDays`, 0-100 — what the bar draws. */
   consistency: number;
+  /** How many days the two figures above are counted over. */
+  spanDays: number;
   /** Consecutive weeks, counting back from this one, with at least one session. */
   streak: number;
   bestStreak: number;
@@ -455,8 +457,11 @@ export interface HabitRow {
   delta: number | null;
 }
 
-/** How far back a habit is measured, and the window its trend compares against. */
-const HABIT_DAYS = 30;
+/** How many rows the panel draws. Six subjects is a page's worth of habit. */
+export const HABIT_ROWS = 6;
+
+/** The window the *trend* on a row compares, whatever the row itself covers. */
+const HABIT_TREND_DAYS = 30;
 
 /**
  * The recurring work, one row per subject.
@@ -467,6 +472,20 @@ const HABIT_DAYS = 30;
  * denominator is the reader's own best week rather than a target nobody set:
  * "you are running at 5.2 a week, and your best is 6".
  *
+ * **The rate and the bar cover the whole account, not the last thirty days.**
+ * A habit is a claim about months, and a thirty-day window makes it a claim
+ * about the last one: a subject worked steadily for half a year and left alone
+ * in July read as a dead habit, and a subject picked up a fortnight ago read as
+ * the reader's strongest. Counted from the account's first day, the bar is the
+ * share of this account's whole life that has had this subject in it, which is
+ * the thing the panel is called after. `spanDays` is how many days that is, and
+ * the panel prints it so the percentage is not a share of an unnamed number.
+ *
+ * The trend is the exception and stays on thirty days against the thirty
+ * before. A lifetime figure has no earlier lifetime to compare against, and
+ * "what has this month been like" is a different question the row can still
+ * answer.
+ *
  * Only named subjects appear. Unfiled tasks are real work, but "Other" is not a
  * habit and a row for it would be the largest one on most accounts.
  */
@@ -474,6 +493,9 @@ export function habitRows(
   tasks: Task[],
   subjects: Map<string, Subject>,
   todayIso: string,
+  /** Days on record — the account's whole life. Floored at a week, because a
+   *  three-day-old account divided into a percentage is noise. */
+  accountDays: number,
 ): HabitRow[] {
   const bySubject = new Map<string, { label: string; days: Set<string> }>();
 
@@ -489,8 +511,11 @@ export function habitRows(
     bySubject.set(subject.id, row);
   });
 
-  const from = shiftDay(todayIso, -(HABIT_DAYS - 1));
-  const earlierFrom = shiftDay(todayIso, -(HABIT_DAYS * 2 - 1));
+  const spanDays = Math.max(7, Math.round(accountDays));
+  const from = shiftDay(todayIso, -(spanDays - 1));
+  // The trend's two windows, which are thirty days each whatever the span is.
+  const trendFrom = shiftDay(todayIso, -(HABIT_TREND_DAYS - 1));
+  const earlierFrom = shiftDay(todayIso, -(HABIT_TREND_DAYS * 2 - 1));
 
   /** Which week a day belongs to, counted back from today in sevens. */
   const weekOf = (day: string) => {
@@ -504,7 +529,8 @@ export function habitRows(
     .map(([key, row]) => {
       const days = [...row.days].sort();
       const recent = days.filter((day) => day >= from && day <= todayIso);
-      const earlier = days.filter((day) => day >= earlierFrom && day < from);
+      const thisMonth = days.filter((day) => day >= trendFrom && day <= todayIso);
+      const earlier = days.filter((day) => day >= earlierFrom && day < trendFrom);
 
       const perWeekCounts = new Map<number, number>();
       days.forEach((day) => {
@@ -538,15 +564,16 @@ export function habitRows(
       return {
         key,
         label: row.label,
-        perWeek: Math.round((recent.length / HABIT_DAYS) * 7 * 10) / 10,
+        perWeek: Math.round((recent.length / spanDays) * 7 * 10) / 10,
         bestWeek: Math.max(1, ...perWeekCounts.values()),
         activeDays: recent.length,
-        consistency: Math.round((recent.length / HABIT_DAYS) * 100),
+        consistency: Math.round((recent.length / spanDays) * 100),
+        spanDays,
         streak,
         bestStreak,
         delta:
           earlier.length > 0
-            ? Math.round(((recent.length - earlier.length) / earlier.length) * 100)
+            ? Math.round(((thisMonth.length - earlier.length) / earlier.length) * 100)
             : null,
       };
     })
