@@ -21,13 +21,12 @@
  * these turn them into coordinates — the same split the rest of the page
  * follows, so no panel can quote a figure the page did not give it.
  *
- * **Every line declares `pathLength={1}`.** It is what lets styles/growth.css
- * draw them on arrival: a dash pattern in path-length units is the same one
- * unit long whether the path is a flat week or a mountain, so one keyframe —
- * `stroke-dashoffset` 1 to 0 — walks any of them from empty to whole. Measured
- * in real units the offset would have to be the path's own length, which only
- * JavaScript can know. It costs nothing when the animation is not running:
- * a single dash of the full length is a solid line.
+ * **Nothing here carries a `stroke-dasharray`, and nothing should.** These
+ * lines are `non-scaling-stroke` inside `preserveAspectRatio="none"`, and
+ * Chrome measures a dash pattern on such a path in device space rather than
+ * along the path — a pattern meant to cover the whole line renders as a dash
+ * and a gap instead. The arrival animation reveals them with a clip-path wipe
+ * for that reason; see the note in styles/growth.css.
  */
 import type { GrowthTrend, LongTermProgress } from '@/utils/growthSummary';
 import { compact } from '@/utils/growthSummary';
@@ -87,7 +86,6 @@ export function Sparkline({ values, tone }: SparklineProps) {
       <path
         className="gr-spark-line"
         d={line}
-        pathLength={1}
         vectorEffect="non-scaling-stroke"
       />
     </svg>
@@ -145,7 +143,6 @@ export function TrendChart({ trend }: TrendChartProps) {
               key={line.key}
               className={`gr-trend-line tone-${line.key}`}
               d={pathOf(line.points, top)}
-              pathLength={1}
               vectorEffect="non-scaling-stroke"
             />
           ))}
@@ -174,12 +171,12 @@ export interface LongTermChartProps {
 }
 
 /**
- * Four running totals over months.
+ * Four running totals over the account's life.
  *
  * The four share one box and only XP owns the axis — see `longTermProgress`
  * for why, and for why every line carries its own total in the legend instead.
- * The dots are per bucket and are the reason the panel reads as monthly rather
- * than as four smooth curves over an unmarked span.
+ * The dots are one per bucket and are what stop the panel reading as four
+ * smooth curves over an unmarked span: they are where the readings were taken.
  *
  * The dots carry `--i`, their position along the line, so styles/growth.css can
  * land them left to right behind the stroke that is drawing itself rather than
@@ -191,9 +188,27 @@ export function LongTermChart({ data }: LongTermChartProps) {
   const count = data.labels.length;
   const step = count > 1 ? W / (count - 1) : 0;
 
-  // A label every nth bucket, so a five-year account does not stack sixty of
-  // them into a grey bar. Six across is about what the panel has room for.
+  /**
+   * Which buckets get their month printed under them.
+   *
+   * Two rules, and the first is the one that matters: **never print the same
+   * month twice.** A bucket is a fortnight or less, so two or three of them in
+   * a row are all "Jul '26" — printed every nth bucket that came out as
+   * `Jun '26 Jun '26 Jul '26 Jul '26 Aug '26 Aug '26`, the last pair overlapping
+   * each other at the right edge. A label is only worth printing where it
+   * changes, which is where a month opens.
+   *
+   * The second thins what is left, because a two-year account opens twenty-four
+   * months and this panel is a third of a row wide. Six or so across is what it
+   * has room for.
+   */
   const every = Math.max(1, Math.ceil(count / 6));
+  const marks: Array<{ label: string; index: number }> = [];
+  data.labels.forEach((label, index) => {
+    const last = marks[marks.length - 1];
+    if (last && (label === last.label || index - last.index < every)) return;
+    marks.push({ label, index });
+  });
 
   return (
     <div className="gr-lt-plot">
@@ -229,7 +244,6 @@ export function LongTermChart({ data }: LongTermChartProps) {
               key={line.key}
               className={`gr-lt-line tone-${line.key}`}
               d={pathOf(line.points, top)}
-              pathLength={1}
               vectorEffect="non-scaling-stroke"
             />
           ))}
@@ -255,16 +269,19 @@ export function LongTermChart({ data }: LongTermChartProps) {
         </div>
 
         <div className="gr-lt-marks" aria-hidden="true">
-          {data.labels.map((label, index) =>
-            index % every === 0 || index === count - 1 ? (
-              <span
-                key={`${label}-${index}`}
-                style={{ left: `${count > 1 ? index * step : 50}%` }}
-              >
-                {label}
-              </span>
-            ) : null,
-          )}
+          {marks.map((mark) => (
+            <span
+              key={`${mark.label}-${mark.index}`}
+              // Only a mark that really is at the right edge tucks in under it.
+              // It used to be `:last-child`, which was the same thing while the
+              // final bucket was always labelled; it is not now, and a label
+              // two thirds along was being pulled a full width to the left.
+              className={mark.index === count - 1 ? 'is-end' : undefined}
+              style={{ left: `${count > 1 ? mark.index * step : 50}%` }}
+            >
+              {mark.label}
+            </span>
+          ))}
         </div>
       </div>
     </div>

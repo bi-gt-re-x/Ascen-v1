@@ -346,7 +346,7 @@ export function ChartStrip({ stats }: ChartStripProps) {
         <div className="gr-strip-cell" key={stat.key}>
           <dt>{stat.label}</dt>
           <dd>
-            <strong>{stat.value}</strong>
+            <CountValue value={stat.value} suffix={` ${stat.unit}`} />
             {stat.delta !== null && (
               <span className={`gr-chip${stat.delta >= 0 ? ' is-up' : ' is-down'}`}>
                 {stat.delta >= 0 ? '+' : '−'}
@@ -378,9 +378,22 @@ export function ChartStrip({ stats }: ChartStripProps) {
  * artefact — see hooks/useCountUp for why the value handed in should already
  * be at display precision.
  */
-function CountValue({ value, className }: { value: number; className?: string }) {
+function CountValue({
+  value,
+  className,
+  suffix = '',
+}: {
+  value: number;
+  className?: string;
+  suffix?: string;
+}) {
   const shown = useCountUp(value);
-  return <strong className={className}>{Math.round(shown).toLocaleString()}</strong>;
+  return (
+    <strong className={className}>
+      {Math.round(shown).toLocaleString()}
+      {suffix}
+    </strong>
+  );
 }
 
 /** An arrow and a percentage, or nothing at all. See `SummaryFigure.delta`. */

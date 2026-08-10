@@ -1470,13 +1470,11 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-summary, .gr-heat, .gr-skills { width: 100%; }
 .gr-grid > .gr-summary { aspect-ratio: 11 / 8; min-height: 400px; }  /* row 1, from col 3 */
 .gr-grid > .gr-heat    { aspect-ratio: 2 / 1;  min-height: 200px; }  /* row 2, from col 2 */
-/* Ninety days is fourteen rows of squares where thirty is six, and a shape
-   drawn for six turns the other into a stack of 6px ribbons — the calendar is
-   seven columns wide whatever the window, so the only thing that can give is
-   the height. The floor beats the ratio (`min-height` always does), so asking
-   for three times the data is what makes the row taller, and the panels beside
-   it stretch to match rather than the map spilling out of this one. */
-.gr-grid > .gr-heat[data-window="90"] { min-height: 360px; }
+/* The window does not change the panel's shape. Ninety days is fourteen rows
+   of squares where thirty is six, and the obvious answer — let the panel grow
+   — moves the whole row and everything under it the moment the reader touches
+   a toggle, which is worse than any map. The height is fixed and the *cells*
+   give instead: see `.gr-heat[data-window="90"] .gr-heat-body`. */
 .gr-grid > .gr-skills  { aspect-ratio: 5 / 4;  min-height: 331px; }  /* row 3, from col 2 */
 
 /* Below three columns the pairings change — the summary sits beside the donut,
@@ -1605,17 +1603,19 @@ html[data-theme="light"] #growthCard.growth-card {
    value on a refresh, because that number genuinely changed and the movement
    is what says so. See hooks/useCountUp.
 
-   The line draw needs `pathLength={1}` on the path, which every line in
-   components/Growth/MiniChart declares — a dash pattern in path-length units
-   is one unit long whatever the path's real length, so one keyframe walks any
-   of them from empty to whole. Nothing shows the dash once it has run: a
-   single dash the length of the path is a solid line. */
-@keyframes grDraw {
-    from { stroke-dashoffset: 1; }
-    to   { stroke-dashoffset: 0; }
-}
-@keyframes grFade {
-    from { opacity: 0; }
+   **The lines are revealed by a wipe, not by a dash.** Drawing an SVG stroke
+   with `stroke-dasharray` is the usual trick and it broke these: every line
+   here carries `vector-effect: non-scaling-stroke` inside a box with
+   `preserveAspectRatio="none"`, and Chrome then measures the dash in device
+   space rather than along the path — so a pattern meant to be one dash the
+   length of the line came out as a dash, a gap, and another dash. Long Term
+   Progress rendered with holes in all four of its lines, and how big the holes
+   were depended on how far the box happened to be stretched. Clipping the
+   whole plot from the left has no such interaction, reads the same, and leaves
+   nothing behind on the element when it is done. */
+@keyframes grWipe {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
 }
 /* From nothing to whatever width the element was given inline — same trick as
    the donut's sweep: no `to`, so the `to` is the element's own value. */
@@ -1626,25 +1626,22 @@ html[data-theme="light"] #growthCard.growth-card {
     from { opacity: 0; transform: translate(-50%, 50%) scale(.4); }
 }
 
-.gr-spark-line,
-.gr-trend-line,
-.gr-lt-line {
-    stroke-dasharray: 1;
-    animation: grDraw 1.15s cubic-bezier(.33, 1, .68, 1) both;
-}
-.gr-spark-fill,
-.gr-trend-grid,
-.gr-lt-grid { animation: grFade .7s ease-out .25s both; }
-/* Behind the stroke that is drawing them, not after it: the line reaches the
-   far end at 1.15s, and a dot two thirds along lands at .75s. */
+/* The plot, uncovered left to right. `backwards` rather than `both`: the clip
+   is wanted before and during the run and never after it, and an `inset(0 0 0
+   0)` left on the element makes it a containing block for nothing and a
+   stacking context for no reason. */
+.gr-spark,
+.gr-trend-svg,
+.gr-lt-svg { animation: grWipe 1.15s cubic-bezier(.33, 1, .68, 1) backwards; }
+/* Behind the wipe that is uncovering them, not after it: the wipe reaches the
+   far edge at 1.15s, and a dot two thirds along lands at about .8s. */
 .gr-lt-dot { animation: grPop .32s cubic-bezier(.2, .7, .3, 1) both;
-    animation-delay: calc(.12s + (var(--i, 0) / var(--n, 1)) * 1.0s); }
+    animation-delay: calc(.1s + (var(--i, 0) / var(--n, 1)) * 1.05s); }
 .gr-mile-fill,
 .gr-skill-fill { animation: grGrow .95s cubic-bezier(.22, 1, .36, 1) .1s both; }
 
 @media (prefers-reduced-motion: reduce) {
-    .gr-spark-line, .gr-trend-line, .gr-lt-line,
-    .gr-spark-fill, .gr-trend-grid, .gr-lt-grid,
+    .gr-spark, .gr-trend-svg, .gr-lt-svg,
     .gr-lt-dot, .gr-mile-fill, .gr-skill-fill,
     .gr-donut-slice { animation: none; }
 }
@@ -1951,10 +1948,18 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     max-width: min(100%, 264px);
     margin-inline: auto;
 }
-/* Ninety days gets taller rows from the panel (see the `min-height` beside the
-   grid ratios) but they are still shorter than thirty days', so the grid comes
-   in to match and the cells stay near-square rather than stretching wide. */
-.gr-heat[data-window="90"] .gr-heat-body { max-width: min(100%, 200px); }
+/* Ninety days, in the same box thirty gets.
+   Fourteen rows in the height six had makes each one about a third as tall, so
+   the grid comes in to match — a narrower grid is a narrower column is a
+   shorter cell's worth of width, and the squares stay squares. It is a smaller
+   map than the 30-day one, which is honest: it is the same panel holding three
+   times as many days. The gap tightens with it, because 4px between 7px cells
+   is a grid made mostly of gap. */
+.gr-heat[data-window="90"] .gr-heat-body {
+    max-width: min(100%, 132px);
+    gap: 2px;
+}
+.gr-heat[data-window="90"] .gr-heat-cell { border-radius: 2px; min-height: 4px; }
 /* Centred over its own column, because a weekday letter is one character and
    the column is the width of a cell. */
 .gr-heat-day {
@@ -2117,7 +2122,7 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
    colour of its own, so a dot sitting on the line it belongs to still reads as
    a dot and not as a thickening — which at 5px and no ring it did not. */
 .gr-lt-dot {
-    position: absolute; width: 7px; height: 7px; border-radius: 999px;
+    position: absolute; width: 5.5px; height: 5.5px; border-radius: 999px;
     transform: translate(-50%, 50%);
     box-shadow: 0 0 0 1.5px var(--panel-bg);
 }
@@ -2134,7 +2139,11 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
    centred on 0% or 100% hangs half its width outside the panel, which at a
    narrow width is a horizontal scrollbar on the whole page. */
 .gr-lt-marks span:first-child, .gr-trend-marks span:first-child { transform: none; }
-.gr-lt-marks span:last-child, .gr-trend-marks span:last-child { transform: translateX(-100%); }
+.gr-trend-marks span:last-child { transform: translateX(-100%); }
+/* `.is-end` rather than `:last-child`: the long term chart only labels a bucket
+   where a month opens, so its final label is often not at the right edge and
+   tucking it in would drag it a full width off its own tick. */
+.gr-lt-marks span.is-end { transform: translateX(-100%); }
 .gr-lt-legend {
     flex: none; list-style: none; margin: 12px 0 0; padding: 0;
     display: flex; flex-wrap: wrap; gap: 6px 16px;

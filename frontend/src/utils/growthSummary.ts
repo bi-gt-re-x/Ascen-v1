@@ -330,8 +330,16 @@ export function heatmapGrid(all: GrowthDay[], window: HeatWindowKey): HeatRow[] 
 export interface ChartStat {
   key: string;
   label: string;
-  /** Already formatted — "15,842 XP", "18 Days". */
-  value: string;
+  /**
+   * The figure itself, at the precision it is shown.
+   *
+   * A number rather than the formatted "15,842 XP" it used to be, because the
+   * panel counts these up on arrival and a tween needs something to count. The
+   * comma and the unit are the view's — see `ChartStrip`.
+   */
+  value: number;
+  /** "XP", "Days" — what `value` is measured in. */
+  unit: string;
   /** A percentage chip beside the value, or null for the ones that get none. */
   delta: number | null;
   /** A quiet second line — the date of the best day. */
@@ -389,21 +397,21 @@ export function chartStats(slice: RangeSlice): ChartStat[] {
   const weekBefore = current.length >= 14 ? current.slice(-14, -7) : [];
   const weekXp = total(week, (day) => day.xp_earned);
 
-  const xpUnit = (n: number) => `${Math.round(n).toLocaleString()} XP`;
-
   return [
-    { key: 'total', label: 'Total XP Earned', value: xpUnit(xp), delta: null, note: null },
+    { key: 'total', label: 'Total XP Earned', value: Math.round(xp), unit: 'XP', delta: null, note: null },
     {
       key: 'average',
       label: 'Daily Average',
-      value: xpUnit(perDay),
+      value: Math.round(perDay),
+      unit: 'XP',
       delta: change(perDay, perDayWas),
       note: null,
     },
     {
       key: 'best',
       label: 'Best Day',
-      value: xpUnit(Number(peak?.xp_earned) || 0),
+      value: Math.round(Number(peak?.xp_earned) || 0),
+      unit: 'XP',
       delta: null,
       note: peak
         ? new Date(`${peak.date}T00:00:00`).toLocaleDateString('en-US', {
@@ -415,14 +423,16 @@ export function chartStats(slice: RangeSlice): ChartStat[] {
     {
       key: 'streak',
       label: 'Longest Streak',
-      value: `${longestStreak(current)} Days`,
+      value: longestStreak(current),
+      unit: 'Days',
       delta: null,
       note: null,
     },
     {
       key: 'week',
       label: 'XP This Week',
-      value: xpUnit(weekXp),
+      value: Math.round(weekXp),
+      unit: 'XP',
       delta: change(weekXp, total(weekBefore, (day) => day.xp_earned)),
       note: null,
     },
@@ -554,7 +564,20 @@ export function compact(value: number): string {
 }
 
 /**
- * Four running totals over months rather than days.
+ * How many points the panel draws, at most.
+ *
+ * It used to be one per calendar month, which on a young account is three
+ * points and two straight lines — a chart with nothing in it to read. Buckets
+ * are a fixed number of days instead, chosen so any window lands near this
+ * figure: about a fortnight each over a year, about four days each over six
+ * months of a new account. Twenty-six is what the panel has room for at a
+ * third of a row — enough that the shape of a climb is visible, few enough
+ * that the dots do not run into each other.
+ */
+const LONG_TERM_POINTS = 26;
+
+/**
+ * Four running totals over the account's life, a bucket of days at a time.
  *
  * The chart above is about a range; this is about the account, and at a year's
  * width one point per day is a smear. Every series is cumulative and therefore
@@ -576,7 +599,12 @@ export function longTermProgress(
   const days = option.days === null ? all : all.slice(Math.max(0, all.length - option.days));
   if (days.length === 0) return { labels: [], lines: [], ticks: [0] };
 
-  // One bucket per calendar month, closed at the last day of it that exists.
+  // An even number of days per bucket, closed on its last day. Even rather
+  // than per calendar month because a month is between 28 and 31 days and the
+  // account's first and last are part months — with one point each those three
+  // uneven steps are most of a young account's chart. The running totals are
+  // read off the closing day, so a bucket is a snapshot and not a sum, and the
+  // line between two of them is the climb between two dates.
   interface Bucket {
     label: string;
     xp: number;
@@ -584,18 +612,21 @@ export function longTermProgress(
     focusHours: number;
     activeDays: number;
   }
+  const size = Math.max(1, Math.ceil(days.length / LONG_TERM_POINTS));
   const buckets: Bucket[] = [];
-  let month = '';
   let tasks = 0;
   let activeDays = 0;
 
-  days.forEach((day) => {
+  days.forEach((day, index) => {
     const at = new Date(`${day.date}T00:00:00`);
-    const key = `${at.getFullYear()}-${at.getMonth()}`;
     tasks += Number(day.tasks_completed) || 0;
     if ((Number(day.xp_earned) || 0) > 0) activeDays += 1;
 
-    const point: Bucket = {
+    // The last day of a bucket, and always the last day there is — a window
+    // that does not divide evenly ends on a short bucket rather than losing it.
+    if (index % size !== size - 1 && index !== days.length - 1) return;
+
+    buckets.push({
       label: `${at.toLocaleDateString('en-US', { month: 'short' })} '${String(
         at.getFullYear(),
       ).slice(2)}`,
@@ -603,13 +634,7 @@ export function longTermProgress(
       tasks,
       focusHours: (Number(day.cumulative_focus_minutes) || 0) / 60,
       activeDays,
-    };
-
-    if (key === month) buckets[buckets.length - 1] = point;
-    else {
-      buckets.push(point);
-      month = key;
-    }
+    });
   });
 
   const peakXp = Math.max(1, ...buckets.map((bucket) => bucket.xp));
