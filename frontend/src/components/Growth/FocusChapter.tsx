@@ -144,7 +144,7 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
       <section className="gr-panel gr-span-2 gr-heat gr-plan" data-window={window}>
         <PanelHead
           title="Consistency"
-          hint={`One square per day. The shade is how much of that day's planned work got done — a task with a due date is a plan, and a day with no plan is shaded by XP instead, against the busiest of the last ${shape.days} days.`}
+          hint={`One square per day, shaded by the XP earned on it against the busiest of the last ${shape.days} days — darkest is the most, faintest is the least, empty is a day with nothing. Tap one to read what was planned for it and how much of that got done.`}
         >
           <Seg
             value={window}
@@ -189,10 +189,10 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
                       }`}
                       style={{ ['--i' as string]: at + weekday * 2 }}
                       onClick={() => setPicked(date)}
-                      aria-label={`${dayName(date)}: ${
+                      aria-label={`${dayName(date)}: ${Math.round(cell.xp)} XP${
                         cell.completion === null
-                          ? `${Math.round(cell.xp)} XP, nothing planned`
-                          : `${Math.round(cell.completion)}% of planned work done`
+                          ? ', nothing planned'
+                          : `, ${Math.round(cell.completion)}% of planned work done`
                       }`}
                     />
                   );
@@ -202,10 +202,13 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
           </div>
         </div>
 
+        {/* The same key the Overview map carries, because it is now the same
+            scale: the ramp's stops are the four levels, and a square's shade
+            lands in the same place on both. */}
         <div className="gr-heat-key">
-          <span>0%</span>
+          <span>Less XP</span>
           <span className="gr-heat-ramp" aria-hidden="true" />
-          <span>100% of the plan</span>
+          <span>More XP</span>
         </div>
       </section>
 

@@ -244,9 +244,17 @@ export function GridBlock({
     footText = rangeLabel(block.startDT, endDT);
   }
 
-  // Every task layout keeps the start beside the title, the one-row one
-  // included — there it is the only time there is room for.
-  const startText = timeLabelShort(block.startDT);
+  // The start time beside the title, on the blocks that have nothing else to
+  // say it with.
+  //
+  // A short block's floor already carries the whole span — "12:15 – 1 PM" — so
+  // repeating the start beside the name printed the same fact twice inside two
+  // centimetres, and on the narrowest blocks it was the thing squeezing the
+  // name into an ellipsis. The one-row layout keeps it, because there the head
+  // is the only line there is; a task continuing onto another day keeps it too,
+  // because its floor is spent naming that day rather than a time.
+  const showStart = !block.snug || block.compact || Boolean(block.contDT);
+  const startText = showStart ? timeLabelShort(block.startDT) : '';
   const title = `${block.title}${block.cont ? ' — continued' : ''}`;
 
   return (

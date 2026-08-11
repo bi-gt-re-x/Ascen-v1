@@ -138,17 +138,18 @@ export interface PlanDay {
   xp: number;
   focusMinutes: number;
   /**
-   * 0…4 — how dark the square is.
+   * 0…4 — how dark the square is: the day's XP against the busiest day in the
+   * window. The darkest square is the most XP, the faintest is the least, and
+   * a day with none is empty.
    *
-   * The completion of the day's planned workload where there was one, in the
-   * five steps the design names: empty, 25, 50, 75, 100%+. Where nothing was
-   * planned it falls back to XP against the window's busiest day, because a
-   * blank square would say "you did nothing" about a day that may have been the
-   * best in the month.
+   * **It used to be the day's plan completion**, falling back to XP only where
+   * nothing had been planned — so a square's darkness meant one thing on some
+   * days and another on others, and the same calendar on Overview shaded the
+   * same day differently. One meaning: how much was done. What the reader
+   * *planned* is not lost, it is read off the day panel beside the map, which
+   * is where the reader looks for it anyway.
    */
   level: number;
-  /** True when the level came from XP rather than from a plan. */
-  fromXp: boolean;
 }
 
 export interface PlanWeek {
@@ -158,12 +159,20 @@ export interface PlanWeek {
 }
 
 /**
- * The last `days` days as a calendar of squares, shaded by follow-through.
+ * The last `days` days as a calendar of squares, shaded by XP.
  *
  * The same shape `heatmapGrid` builds for Overview — seven columns Sunday to
  * Saturday, drawn back from the Saturday of the newest week so the rectangle is
- * always the same rectangle — with the intensity asking a different question.
- * Overview's map is "how much"; this one is "how much of what you meant to do".
+ * always the same rectangle — and, now, the same question: how much was done.
+ * Darkest is the busiest day of the window, faintest is the quietest that still
+ * had something in it, empty is a day with nothing.
+ *
+ * It used to shade by follow-through, which read well in a sentence and badly
+ * on a grid: a day with one easy task planned and done was as dark as the
+ * hardest day of the month, and a day nothing was planned for fell back to XP —
+ * so two squares of the same shade could mean two different things. Every cell
+ * still carries its plan (`planned`, `met`, `completion`); the day panel beside
+ * the map prints them, which is where a percentage belongs.
  */
 export function plannedGrid(
   all: GrowthDay[],
@@ -202,7 +211,6 @@ export function plannedGrid(
           xp: 0,
           focusMinutes: 0,
           level: 0,
-          fromXp: false,
         });
         continue;
       }
@@ -211,14 +219,11 @@ export function plannedGrid(
       const xp = num(day.xp_earned);
       const completion = plan.planned > 0 ? (plan.met / plan.planned) * 100 : null;
 
-      let level: number;
-      let fromXp = false;
-      if (completion !== null) {
-        level = completion <= 0 ? 0 : Math.min(4, Math.max(1, Math.ceil(completion / 25)));
-      } else {
-        fromXp = true;
-        level = xp <= 0 || peak <= 0 ? 0 : Math.max(1, Math.ceil((xp / peak) * 4));
-      }
+      // Quartiles of the window's own busiest day, the same rule
+      // `heatmapGrid` follows — so the two calendars on this page cannot shade
+      // one day two ways. Anything above zero gets at least the faintest band,
+      // so a 5 XP day is never indistinguishable from a day off.
+      const level = xp <= 0 || peak <= 0 ? 0 : Math.max(1, Math.ceil((xp / peak) * 4));
 
       cells.push({
         date,
@@ -229,7 +234,6 @@ export function plannedGrid(
         xp,
         focusMinutes: num(day.focus_minutes),
         level,
-        fromXp,
       });
 
       const month = new Date(`${date}T00:00:00`).getMonth();

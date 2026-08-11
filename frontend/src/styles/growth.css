@@ -1498,18 +1498,17 @@ html[data-theme="light"] #growthCard.growth-card {
    scroll. */
 .gr-summary, .gr-heat, .gr-skills { width: 100%; }
 .gr-grid > .gr-summary { aspect-ratio: 11 / 8; min-height: 400px; }  /* row 1, from col 3 */
-/* The heatmap has no ratio, only a floor, and the floor moves with the window.
-   It carried `aspect-ratio: 2 / 1` while weeks were rows and the cells stretched
-   to fill whatever height the row gave them. They are squares now — seven of
-   them tall, sized off the width — so the map has a height of its own, and a
-   ratio fighting that height is what produced a wall of flat rectangles with a
-   gutter beside it. The floor is per window because thirty days of 54px squares
-   is genuinely taller than a year of 16px ones; the row does move when the
-   reader touches the toggle, and that is the honest cost of a map that fills
-   its panel at all three. */
-.gr-grid > .gr-heat                       { min-height: 330px; }     /* row 2, from col 2 */
-.gr-grid > .gr-heat[data-window="30"]     { min-height: 460px; }
-.gr-grid > .gr-heat[data-window="365"]    { min-height: 300px; }
+/* The heatmap has no ratio, only a floor, and the floor is the same at every
+   window. It carried `aspect-ratio: 2 / 1` while weeks were rows and the cells
+   stretched to fill whatever height the row gave them. They are squares now —
+   seven of them tall, sized off the width — so the map has a height of its own,
+   and a ratio fighting that height is what produced a wall of flat rectangles
+   with a gutter beside it.
+
+   The floor used to move with the window, which meant the card grew and shrank
+   as the reader touched the toggle and took the rest of the page with it. One
+   floor now, tall enough to hold seven rows at the cell ceiling above. */
+.gr-grid > .gr-heat { min-height: 420px; }                           /* row 2, from col 2 */
 .gr-grid > .gr-skills  { aspect-ratio: 5 / 4;  min-height: 331px; }  /* row 3, from col 2 */
 
 /* Below three columns the pairings change — the summary sits beside the donut,
@@ -1520,9 +1519,12 @@ html[data-theme="light"] #growthCard.growth-card {
     .gr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gr-chart-panel { grid-column: span 2; }
     .gr-grid > .gr-summary,
-    .gr-grid > .gr-heat,
-    .gr-grid > .gr-heat[data-window],
     .gr-grid > .gr-skills { aspect-ratio: auto; min-height: 0; }
+    /* The heatmap keeps its floor here. The others drop theirs because their
+       contents reflow at two columns; seven rows of squares do not, and a map
+       that is 420px tall on a wide screen and 200px on a narrower one is the
+       same jump the window toggle used to make. */
+    .gr-grid > .gr-heat { aspect-ratio: auto; }
 }
 @media (max-width: 760px) {
     .gr-grid { grid-template-columns: minmax(0, 1fr); }
@@ -1977,17 +1979,25 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     max-width: min(100%, calc(22px + var(--weeks, 6) * (var(--heat-cell, 30px) + var(--heat-gap, 4px))));
     margin-inline: auto;
 }
-/* One cell size per window, and it is a *ceiling* rather than a size: below it
-   the grid fills the panel and the cells take what the columns give them.
+/* One cell size for all three windows, and it is a *ceiling* rather than a
+   size: below it the grid fills the panel and the cells take what the columns
+   give them.
 
-   The three are not one number because the shape of the map is not one shape.
-   Seven rows is a constant, so a grid's height is seven cells however wide it
-   is — which means a year's cells have to be small (fifty-three columns of a
-   60px square would be a metre of calendar) and thirty days can afford big
-   ones, because six columns of them is still only four hundred pixels. */
-.gr-heat[data-window="30"]  { --heat-cell: 54px; --heat-gap: 6px; }
-.gr-heat[data-window="90"]  { --heat-cell: 32px; --heat-gap: 5px; }
-.gr-heat[data-window="365"] { --heat-cell: 16px; --heat-gap: 3px; }
+   It used to be three numbers — 54px at thirty days, 32 at ninety, 16 at a year
+   — which sized each map to its own week count and made the panel a different
+   shape at every window. Touching the toggle moved the card, and with it every
+   panel below it on the page; two of the three maps were also a different size
+   from the same map on the other tab. One ceiling, and the columns do the rest:
+   thirty days is height-limited and draws at the ceiling, ninety and a year are
+   width-limited and shrink to fit. Whatever the window, the panel is the same
+   rectangle and nothing on the page moves. */
+.gr-heat { --heat-cell: 38px; --heat-gap: 5px; }
+/* The gutter, and only the gutter, is still per window. Fifty-three columns on
+   a 5px gap spend a third of the panel's width on the spaces between squares,
+   which is what made a year's cells six pixels across. It changes nothing about
+   the panel's own size — that is the cell ceiling and the floor below — so the
+   card stays the same rectangle while the year's squares get their width back. */
+.gr-heat[data-window="365"] { --heat-gap: 3px; }
 
 /* The map, centred in whatever height the panel has. A grid that is seven
    squares tall does not stretch, so the spare height is margin rather than
@@ -2387,9 +2397,7 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
    `.gr-heat-*` rule and changes two things — the row is not the fixed 2:1
    shape (this panel spans two columns and would be enormous at that ratio),
    and the cells are buttons, because they open a day. */
-.gr-grid > .gr-heat.gr-plan                    { aspect-ratio: auto; min-height: 360px; }
-.gr-grid > .gr-heat.gr-plan[data-window="30"]  { min-height: 500px; }
-.gr-grid > .gr-heat.gr-plan[data-window="365"] { min-height: 260px; }
+.gr-grid > .gr-heat.gr-plan { aspect-ratio: auto; min-height: 420px; }
 .gr-plan .gr-heat-cell {
     padding: 0; font: inherit; cursor: pointer;
     transition: transform .12s ease, box-shadow .12s ease;
