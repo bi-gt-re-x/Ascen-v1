@@ -304,17 +304,32 @@ export function trendVerdict(list: Direction[]): string {
   if (list.length === 0) {
     return 'There are not enough days in this window to fit a line through anything yet. Two weeks is the floor, and a month is where these start being worth reading.';
   }
-  const rising = list.filter((entry) => entry.heading === 'rising').length;
-  const falling = list.filter((entry) => entry.heading === 'falling').length;
+  const up = list.filter((entry) => entry.heading === 'rising');
+  const down = list.filter((entry) => entry.heading === 'falling');
+  // Labels verbatim, not lowercased: these sentences open with one, and "XP
+  // earned" is an acronym that does not survive being downcased for grammar.
+  const names = (rows: Direction[]) =>
+    rows.length === 1
+      ? rows[0]!.label
+      : `${rows.slice(0, -1).map((row) => row.label).join(', ')} and ${rows[rows.length - 1]!.label}`;
 
-  if (rising >= 3) {
+  if (up.length >= 3) {
     return 'Three or more measures are climbing together, which is the signal worth trusting. A single line rising can be a good fortnight; XP, tasks and focus moving the same way is a change in how much you are doing.';
   }
-  if (falling >= 3) {
+  if (down.length >= 3) {
     return 'Most of these are falling together. That is worth taking at face value rather than explaining away — and the fix is almost always about how often you work rather than how hard.';
   }
-  if (rising > 0 && falling > 0) {
+  if (up.length > 0 && down.length > 0) {
     return 'These are pulling in different directions, which usually means the shape of the work changed rather than the amount — fewer, larger sessions, or more, smaller ones.';
+  }
+  // One or two moving and the rest flat. Naming them matters: the sentence used
+  // to fall through to "nothing has a slope worth reporting" here, which
+  // directly contradicted the row above it saying XP was climbing at 82% fit.
+  if (up.length > 0) {
+    return `${names(up)} ${up.length === 1 ? 'is' : 'are'} climbing while the rest hold level — a change in one measure rather than across the board, which usually means the work got bigger rather than more frequent.`;
+  }
+  if (down.length > 0) {
+    return `${names(down)} ${down.length === 1 ? 'is' : 'are'} falling while the rest hold level. One measure sliding on its own is worth catching early, because it is the stage at which it is still about one habit rather than the whole routine.`;
   }
   return 'Nothing here has a slope worth reporting. That is a steady window rather than an empty one: your totals are being held up by a routine that is running, not by a push.';
 }

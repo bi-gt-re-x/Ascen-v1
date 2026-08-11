@@ -159,9 +159,8 @@ export function DayPanel({
               return (
                 // The colour family rides on the card; the tint, the edge and
                 // the left accent come from styles/calendar/palette.css. The
-                // difficulty pill above is unchanged — this panel says
-                // difficulty in words, so its left edge is free to be the
-                // category, which is the design's own arrangement.
+                // `priority-*` class no longer paints anything — difficulty is
+                // the word in the pill above the title and nowhere a colour.
                 <li className={classes} data-family={entry.family} key={entry.key}>
                   {!isTask && <EventIcon />}
 

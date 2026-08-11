@@ -48,11 +48,9 @@ interface Tab {
   /**
    * Other paths this entry should light up for.
    *
-   * The analytics page is five tabs on five URLs, and two of them — Habits and
-   * Trends — have no rail entry of their own, so without this the rail would
-   * show nothing selected while the reader is plainly on the analytics page.
-   * Insights and Recommendations keep their own entries and match exactly,
-   * because they are worth arriving at directly.
+   * The analytics page is five tabs on five URLs and one rail entry, so without
+   * this the rail would show nothing selected on four of them while the reader
+   * is plainly on the analytics page.
    */
   also?: string[];
 }
@@ -103,7 +101,7 @@ const TABS: Tab[] = [
     // rail is a column of one-word destinations and the odd two-word one
     // wraps — the heading is where the full name belongs.
     label: 'Analytics',
-    also: ['/trends', '/habits'],
+    also: ['/trends', '/habits', '/insights', '/recommendations'],
     icon: (
       <svg {...stroke}>
         <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
@@ -120,32 +118,11 @@ const TABS: Tab[] = [
       </svg>
     ),
   },
-  // The three analysis pages sit together and in the order they are meant to be
-  // read: how much (Analytics), how (Insights), what to change next
-  // (Recommendations). Insights looks backwards at behaviour already recorded;
-  // Recommendations looks forward at what to do about it.
-  {
-    to: '/insights',
-    label: 'Insights',
-    icon: (
-      <svg {...stroke}>
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-3.5-3.5" />
-        <path d="M11 8v6M8 11h6" />
-      </svg>
-    ),
-  },
-  {
-    to: '/recommendations',
-    label: 'Recommendations',
-    icon: (
-      <svg {...stroke}>
-        <path d="M9 18h6" />
-        <path d="M10 22h4" />
-        <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z" />
-      </svg>
-    ),
-  },
+  // Insights and Recommendations had entries of their own here while they were
+  // separate pages. They are two tabs of the analytics page now, so the rail
+  // points at that page once and the tab bar does the rest — a rail entry per
+  // tab would have been the same destination listed three times. Their URLs
+  // still work and still open the right tab; see `Tab.also` above.
   {
     to: '/tasks',
     label: 'Tasks',

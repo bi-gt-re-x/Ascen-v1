@@ -179,13 +179,28 @@ function currentRun(sorted: string[], endIso: string, step: number, next: (key: 
   return run;
 }
 
-const CADENCE = (perWeek: number): string => {
-  if (perWeek >= 6) return 'Daily';
-  if (perWeek >= 3.5) return 'Most days';
-  if (perWeek >= 1.5) return 'A few times a week';
-  if (perWeek >= 0.7) return 'Weekly';
-  return 'Occasional';
-};
+/**
+ * How often a habit happens, as the word and the unit its streak is counted in.
+ *
+ * One table for both, because they were two constants and they disagreed: a
+ * habit at 3.2 a week was labelled "A few times a week" and given a *day*
+ * streak, which is 0 almost every time it is read — three sessions spread over
+ * seven days rarely land on consecutive days, so a perfectly healthy habit
+ * reported no run at all. A streak is only meaningful in the unit the habit
+ * actually recurs in, and the cut is the same cut as the label: near-daily
+ * things get days, everything else gets weeks.
+ */
+const CADENCES: Array<{ from: number; label: string; unit: 'day' | 'week' }> = [
+  { from: 6, label: 'Daily', unit: 'day' },
+  { from: 3.5, label: 'Most days', unit: 'day' },
+  { from: 1.5, label: 'A few times a week', unit: 'week' },
+  { from: 0.7, label: 'Weekly', unit: 'week' },
+  { from: 0, label: 'Occasional', unit: 'week' },
+];
+
+function cadenceFor(perWeek: number) {
+  return CADENCES.find((entry) => perWeek >= entry.from) ?? CADENCES[CADENCES.length - 1]!;
+}
 
 /**
  * Every recurring thing this account does in the range, strongest first.
@@ -294,7 +309,8 @@ export function buildHabits(
     const weekly = weekStarts.map((start) => weekCounts.get(start) ?? 0);
     const activeWeeks = weekly.filter((count) => count > 0).length;
     const frequency = days.length / weeks;
-    const unit: Habit['unit'] = frequency >= 3 ? 'day' : 'week';
+    const cadence = cadenceFor(frequency);
+    const unit = cadence.unit;
 
     const half = Math.floor(weekly.length / 2);
     const early = weekly.slice(0, half);
@@ -342,7 +358,7 @@ export function buildHabits(
       bestStreak,
       unit,
       frequency: Math.round(frequency * 10) / 10,
-      cadence: CADENCE(frequency),
+      cadence: cadence.label,
       completionRate: bucket.filed ? Math.round((bucket.finished / bucket.filed) * 100) : 100,
       trend,
       lastCompleted: days[days.length - 1] ?? null,
@@ -571,7 +587,7 @@ export function habitPatterns(tasks: Task[], habits: Habit[], fromIso: string, t
       if (ratio <= 0.65) {
         out.push({
           id: 'weekend-light',
-          text: 'Weekends carry much less than weekdays',
+          text: 'weekends carry much less than weekdays',
           support: `${Math.round(weekendRate * 10) / 10} finished on an average weekend day against ${
             Math.round(weekdayRate * 10) / 10
           } on a weekday`,
@@ -581,7 +597,7 @@ export function habitPatterns(tasks: Task[], habits: Habit[], fromIso: string, t
       } else if (ratio >= 1.35) {
         out.push({
           id: 'weekend-heavy',
-          text: 'Weekends carry more than weekdays',
+          text: 'weekends carry more than weekdays',
           support: `${Math.round(weekendRate * 10) / 10} finished on an average weekend day against ${
             Math.round(weekdayRate * 10) / 10
           } on a weekday`,
@@ -601,7 +617,7 @@ export function habitPatterns(tasks: Task[], habits: Habit[], fromIso: string, t
     if (Math.abs(gap) >= 1.5) {
       out.push({
         id: 'hard-timing',
-        text: `High-priority work lands ${Math.abs(Math.round(gap))}h ${
+        text: `high-priority work lands ${Math.abs(Math.round(gap))}h ${
           gap > 0 ? 'earlier' : 'later'
         } in the day than everything else`,
         support: `${hard.length} high-priority tasks against ${rest.length} others`,
@@ -630,7 +646,7 @@ export function habitPatterns(tasks: Task[], habits: Habit[], fromIso: string, t
     if (share >= 30) {
       out.push({
         id: 'second-session',
-        text: 'A second sitting comes after the evening break',
+        text: 'a second sitting comes after the evening break',
         support: `${split} of ${workedDays.length} working days had work both before 5 PM and after 7 PM`,
         frequency: wordFor(share),
         tone: 'green',
@@ -958,21 +974,21 @@ export const SAMPLE_PATTERNS: HabitPattern[] = [
   },
   {
     id: 'sample-hard',
-    text: 'High-priority work lands 3h earlier in the day than everything else',
+    text: 'high-priority work lands 3h earlier in the day than everything else',
     support: '24 high-priority tasks against 61 others',
     frequency: 'Frequently',
     tone: 'violet',
   },
   {
     id: 'sample-weekend',
-    text: 'Weekends carry much less than weekdays',
+    text: 'weekends carry much less than weekdays',
     support: '0.8 finished on an average weekend day against 2.4 on a weekday',
     frequency: 'Usually',
     tone: 'amber',
   },
   {
     id: 'sample-second',
-    text: 'A second sitting comes after the evening break',
+    text: 'a second sitting comes after the evening break',
     support: '17 of 46 working days had work both before 5 PM and after 7 PM',
     frequency: 'Sometimes',
     tone: 'green',

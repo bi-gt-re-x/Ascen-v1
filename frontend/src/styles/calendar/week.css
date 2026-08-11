@@ -853,19 +853,21 @@ html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
 .wk-break-fill.tone-purple { background: #8b5cf6; }
 .wk-break-fill.tone-grey   { background: #c3c9d4; }
 
-/* Tasks by Priority: the three colours the grid paints its blocks, so a red
-   bar in the column and a red block on the calendar are the same claim.
-   Checked against the light surface for the lightness band, the chroma floor,
-   deuteranope and tritanope separation over every pair, and contrast — the
-   dark steps below are chosen against the dark surface for the same, not
-   lightened from these. Every row is labelled and counted as well, so nothing
-   here rests on colour on its own. */
-.wk-break-fill.tone-prio-low    { background: #2c5aa0; }
-.wk-break-fill.tone-prio-medium { background: #b8892d; }
-.wk-break-fill.tone-prio-high   { background: #b0413e; }
-html[data-theme="dark"] .wk-break-fill.tone-prio-low    { background: #5089e8; }
-html[data-theme="dark"] .wk-break-fill.tone-prio-medium { background: #a89020; }
-html[data-theme="dark"] .wk-break-fill.tone-prio-high   { background: #e04d70; }
+/* Tasks by Priority: one bar colour for all three rows.
+
+   These were blue / amber / red to match the three colours the grid painted
+   its task blocks — a red bar here and a red block there being the same claim.
+   The grid does not colour tasks by difficulty any more (see the note in
+   styles/calendar/palette.css), so that reason is gone, and three hues left
+   here would be the last place in the calendar mapping difficulty to colour.
+   Nothing is lost: every row was already labelled and counted, and the bar's
+   length was always the thing being read. */
+.wk-break-fill.tone-prio-low,
+.wk-break-fill.tone-prio-medium,
+.wk-break-fill.tone-prio-high { background: #6b7280; }
+html[data-theme="dark"] .wk-break-fill.tone-prio-low,
+html[data-theme="dark"] .wk-break-fill.tone-prio-medium,
+html[data-theme="dark"] .wk-break-fill.tone-prio-high { background: #8b949e; }
 
 /* XP by Subject.
  *

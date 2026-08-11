@@ -204,13 +204,18 @@ export function GridBlock({
     );
   }
 
-  // Difficulty is the left edge and nothing else.
+  // Difficulty is not a colour on the calendar.
   //
-  // It used to be the whole block: a task was painted blue, amber or red from
-  // end to end, so twenty tasks on a week were three colours and the only thing
-  // a reader could tell at a glance was how hard their week was — not which of
-  // the twenty they were looking at. The class still rides on the element, and
-  // styles/calendar/palette.css spends it on `border-left-color` alone.
+  // It was the whole block once — a task painted blue, amber or red end to end,
+  // so twenty tasks on a week were three colours and the only thing a reader
+  // could tell at a glance was how hard their week was, not which of the twenty
+  // they were looking at. Then it was the left edge alone, which was quieter
+  // and still a second colour system competing with the subject family for the
+  // one thing colour on a grid is good at: telling blocks apart.
+  //
+  // The class is kept because it is a true fact about the element and cheap to
+  // carry — anything that wants to select on difficulty still can. Nothing in
+  // styles/calendar/palette.css paints with it.
   const priorityClass =
     block.priority === 'high' ? 'prio-high' : block.priority === 'medium' ? 'prio-medium' : 'prio-low';
 
@@ -269,8 +274,8 @@ export function GridBlock({
       data-id={block.id}
       // A finished task is a record of what happened, so it does not move.
       data-move={block.done ? undefined : '1'}
-      // The family paints the tint, the edge and the ink; `priorityClass` owns
-      // the left edge alone. See styles/calendar/palette.css.
+      // The family paints the tint, the edge and the ink, the left edge
+      // included. See styles/calendar/palette.css.
       data-family={block.family}
       style={position}
     >

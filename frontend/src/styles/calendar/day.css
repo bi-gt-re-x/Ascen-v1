@@ -222,10 +222,15 @@
 }
 .day-task-ring.is-done { border-color: #2e9e6b; background: #2e9e6b; }
 .day-task-name { flex: 1 1 auto; min-width: 0; font-size: 14px; color: #2c302e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.day-task-diff { flex: none; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
-.day-task-diff.high { background: #fdecec; color: #b0413e; }
-.day-task-diff.med  { background: #fdf6e3; color: #9a7b2e; }
-.day-task-diff.low  { background: #eef2f7; color: #5a6472; }
+/* The difficulty pill. One neutral chip for all three bands: the word in it is
+   already the whole message, and red / amber / grey made the sidebar's loudest
+   colour a property of every hard task. Difficulty is not a colour anywhere on
+   the calendar. The `.high` / `.med` / `.low` classes still ride on the
+   element and nothing paints with them. */
+.day-task-diff {
+    flex: none; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+    background: #eef2f7; color: #5a6472;
+}
 .day-tasks-empty { font-size: 13px; color: #9297ab; padding: 10px 0; }
 
 /* The per-block icon is no longer this view's alone, and no longer a badge
@@ -308,7 +313,5 @@ html[data-theme="dark"] .wk-stat-sub { color: #7d8492; }
 html[data-theme="dark"] .day-focus-sub, html[data-theme="dark"] .day-focus-barrow { color: #7d8492; }
 html[data-theme="dark"] .day-task-name { color: #e6e9f0; }
 html[data-theme="dark"] .day-task-item { border-color: #21262d; }
-html[data-theme="dark"] .day-task-diff.high { background: #341c1c; color: #f2a3a3; }
-html[data-theme="dark"] .day-task-diff.med  { background: #2d2718; color: #e6c979; }
-html[data-theme="dark"] .day-task-diff.low  { background: #1c222c; color: #aab2c0; }
+html[data-theme="dark"] .day-task-diff { background: #1c222c; color: #aab2c0; }
 html[data-theme="dark"] .day-task-ring { border-color: #3a424e; }

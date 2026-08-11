@@ -497,48 +497,15 @@ html[data-theme="dark"] .no-events-message { color: rgba(255, 255, 255, 0.55); }
 }
 
 
-/* Priority color coding - only show if no subtasks */
+/* Difficulty is not a colour on the calendar.
 
-.task-section.priority-low:not(.has-subtasks) {
-
-    border-left: 5px solid #2196F3 !important;
-
-}
-
-
-.task-section.priority-medium:not(.has-subtasks) {
-
-    border-left: 5px solid #FFEB3B !important;
-
-}
-
-
-.task-section.priority-high:not(.has-subtasks) {
-
-    border-left: 5px solid #f44336 !important;
-
-}
-
-
-.subtask-item.priority-low {
-
-    border-left-color: #2196F3 !important;
-
-}
-
-
-.subtask-item.priority-medium {
-
-    border-left-color: #FFEB3B !important;
-
-}
-
-
-.subtask-item.priority-high {
-
-    border-left-color: #f44336 !important;
-
-}
+   These three rules painted a card's left edge blue, yellow or red by
+   priority, with `!important` so they beat the subject family's accent in
+   styles/calendar/palette.css. That put a second colour system on top of the
+   one a reader actually navigates by, and spent red — the loudest signal on
+   the page — on a fact nobody scans a day panel for. The card says its
+   difficulty in words, in the pill above the title. The `priority-*` classes
+   still ride on the element; nothing paints with them. */
 
 /* Dashboard task indicator */
 
@@ -555,31 +522,8 @@ html[data-theme="dark"] .no-events-message { color: rgba(255, 255, 255, 0.55); }
 }
 
 
-.task-section.dashboard-task.priority-low {
-
-    border-left: 5px solid #2196F3 !important;
-
-    border-bottom: 2px solid #4CAF50 !important;
-
-}
-
-
-.task-section.dashboard-task.priority-medium {
-
-    border-left: 5px solid #FFEB3B !important;
-
-    border-bottom: 2px solid #FF9800 !important;
-
-}
-
-
-.task-section.dashboard-task.priority-high {
-
-    border-left: 5px solid #f44336 !important;
-
-    border-bottom: 2px solid #f44336 !important;
-
-}
+/* The same three rules again, for a task card in the day panel, and gone for
+   the same reason. See the note above. */
 
 
 .task-section.dashboard-task .task-input {
@@ -646,25 +590,9 @@ html[data-theme="dark"] .no-events-message { color: rgba(255, 255, 255, 0.55); }
 }
 
 
-.subtask-item.priority-high {
-
-    border-left-color: #ff4444 !important;
-
-}
-
-
-.subtask-item.priority-medium {
-
-    border-left-color: #FFEB3B !important;
-
-}
-
-
-.subtask-item.priority-low {
-
-    border-left-color: #2196F3 !important;
-
-}
+/* Difficulty-coloured subtask rules lived here and were dead twice over: a
+   subtask is rendered without a priority class (see DayPanel), so they could
+   never match, and difficulty is not a colour on the calendar any more. */
 
 /* Task completed - green styling */
 
@@ -989,25 +917,7 @@ html[data-theme="dark"] .no-events-message { color: rgba(255, 255, 255, 0.55); }
 }
 
 
-.subtask-item.priority-low .bullet {
-
-    color: #2196F3 !important;
-
-}
-
-
-.subtask-item.priority-medium .bullet {
-
-    color: #FFEB3B !important;
-
-}
-
-
-.subtask-item.priority-high .bullet {
-
-    color: #f44336 !important;
-
-}
+/* The same for the bullet, dead for the same two reasons. */
 
 
 .subtask-input {

@@ -570,7 +570,12 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
       id: 'rel-weekday',
       pair: 'Day of week → output',
       r: 0,
-      n: weekPairs.length,
+      // The days behind the seven averages, not the seven. Reporting 7 put
+      // "Observations: 7" beside a Strong evidence chip, which reads as the
+      // page contradicting its own rule about sample size — and understates
+      // it badly, because each of those points is an average over dozens of
+      // occurrences rather than a single reading.
+      n: week.stats.reduce((sum, stat) => sum + stat.days, 0),
       strength: top > 0 && bottom / top <= 0.5 ? 'strong' : 'likely',
       reading:
         top > 0 && bottom / top <= 0.5

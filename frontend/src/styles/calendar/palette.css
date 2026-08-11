@@ -143,9 +143,11 @@ html[data-theme="dark"] [data-family] {
     border-color: var(--ev-edge);
     color: var(--ev-ink);
 }
-/* The left edge. An event's is its category; a task's is set below, because a
-   task's left edge is its difficulty. */
-.wk-event[data-family].wk-event-cal { border-left-color: var(--ev-accent); }
+/* The left edge is the category, on a task exactly as on an event. It was the
+   category only on events, because a task's edge used to carry its difficulty
+   — see the note further down. */
+.wk-event[data-family].wk-event-cal,
+.wk-event[data-family].wk-task { border-left-color: var(--ev-accent); }
 .wk-event[data-family] .wk-event-title { color: var(--ev-ink); }
 /* The times and the XP: the same hue, stepped back so the name leads. */
 .wk-event[data-family] .wk-event-start,
@@ -164,9 +166,11 @@ html[data-theme="dark"] [data-family] {
     border-color: var(--ev-accent);
 }
 
-/* The category dot: a small solid mark in the family's own colour, so a task
-   whose left edge is spent on difficulty still says which family it is in. It
-   rides in the title row ahead of the icon. */
+/* The category dot: a small solid mark in the family's own colour, riding in
+   the title row ahead of the icon. It was load-bearing when a task's left edge
+   was spent on difficulty and the dot was the only thing naming the family;
+   the edge says it too now, and the dot stays because a 5px rule at the far
+   left of a block is a poor thing to have to find. */
 .cal-dot {
     flex: none; width: 7px; height: 7px; border-radius: 999px;
     background: var(--ev-accent);
@@ -184,18 +188,19 @@ html[data-theme="dark"] [data-family] {
     color: var(--ev-accent); font-size: 11px; font-weight: 800; line-height: 1;
 }
 
-/* ---- Difficulty, down a task's left side ---------------------------------
-   The one thing on a block that is not the family's colour. Three fixed
-   colours, drawn from the red / yellow / blue families so they belong to the
-   same system as everything else, and wider than an event's accent because
-   this edge is the only place a task's difficulty is written. */
+/* ---- A task's left side --------------------------------------------------
+   Wider than an event's accent, and the family's colour like everything else
+   on the block.
+
+   It used to be difficulty: blue, yellow or red down the edge of every task.
+   That put a second colour system on the grid competing with the one that
+   actually helps a reader find a block — the subject family — and it spent the
+   loudest signal available, red, on a fact nobody scans a week for. Difficulty
+   is a word on the card and a column in the sidebar; it is not a colour
+   anywhere on the calendar now. The `prio-*` classes still ride on the element
+   for anything that wants to select on them, and nothing here paints with
+   them. */
 .wk-event.wk-task { border-left-width: 5px; }
-.wk-event.wk-task.prio-low    { border-left-color: var(--event-blue-500); }
-.wk-event.wk-task.prio-medium { border-left-color: var(--event-yellow-500); }
-.wk-event.wk-task.prio-high   { border-left-color: var(--event-red-500); }
-html[data-theme="dark"] .wk-event.wk-task.prio-low    { border-left-color: var(--event-blue-300); }
-html[data-theme="dark"] .wk-event.wk-task.prio-medium { border-left-color: var(--event-yellow-300); }
-html[data-theme="dark"] .wk-event.wk-task.prio-high   { border-left-color: var(--event-red-300); }
 
 /* ---- States --------------------------------------------------------------
    Completed work keeps its hue and loses its insistence: the tint drops back

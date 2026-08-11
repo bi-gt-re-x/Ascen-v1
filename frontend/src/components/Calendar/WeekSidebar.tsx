@@ -199,10 +199,11 @@ function SubjectBreakdown({ breakdown }: { breakdown: SubjectXp }) {
  * This panel used to be "XP Breakdown", and every row in it was invented —
  * Math 160, Coding 140 — because splitting XP by subject needs a subject on a
  * task and the table has no such column. Priority it does have, on every task
- * and on every block drawn on the grid beside this. The bars are the same
- * three colours the grid paints those blocks, so a red bar here and a red
- * block there are the same claim; every row is named and counted as well, so
- * the colour is never the only thing carrying it.
+ * and on every block drawn on the grid beside this. The bars share one colour:
+ * they were three, matching the three the grid painted its blocks, and the
+ * grid stopped colouring tasks by difficulty. Every row is named and counted,
+ * and the bar's length was always what was being read, so the hue was carrying
+ * nothing on its own.
  *
  * The bar is the count. The figure is completions over that count, and the XP
  * under it is what was actually earned — an unfinished hard task is a count
