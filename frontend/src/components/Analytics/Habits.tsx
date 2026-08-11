@@ -14,6 +14,7 @@
  * drifting apart when one of them is edited.
  */
 import { useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Panel, Sparkline, asTone, toneVar } from './charts';
 import {
   CALENDAR_WINDOWS,
@@ -266,7 +267,16 @@ export function HabitCalendarPanel({ byDate, lastIso, accountDays, sample }: Hab
         </div>
       }
     >
-      <div className="ax-heat">
+      {/* Two shapes, one set of cells. Under about a month the map turns on its
+          side and becomes the month calendar in `.is-calendar` — see the note
+          in analytics.css. The column count goes to CSS as a number because a
+          square here has a maximum size, and the width that follows from it is
+          arithmetic no intrinsic sizing can do: the grid clips its overflow, so
+          it will not state a width of its own. */}
+      <div
+        className={`ax-heat ax-heat-wide${window === '7' || window === '30' ? ' is-calendar' : ''}`}
+        style={{ '--ax-heat-weeks': rows.length } as CSSProperties}
+      >
         <div className="ax-heat-days" aria-hidden="true">
           {WEEKDAY_NAMES.map((day, index) => (
             <span key={index}>{day || WEEKDAY_INITIALS[index]}</span>

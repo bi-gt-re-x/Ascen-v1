@@ -740,6 +740,66 @@ html[data-theme="dark"] .ax-page {
 .ax-heat-cell[data-level="3"] { background: color-mix(in srgb, var(--ax-violet) 74%, transparent); }
 .ax-heat-cell[data-level="4"] { background: var(--ax-violet); }
 
+/* ---------- The wide calendar (Habits) ------------------------------------ */
+/* The consistency heatmap above is a third of a row and always draws a year, so
+   its columns are thin whatever happens. The habit calendar is the full width
+   of the page and its window is a chip the reader can move: at 90 days that is
+   fourteen columns sharing 1200px, which drew squares the size of playing
+   cards, and at seven days it drew two columns and nothing else. A square that
+   grows without limit stops reading as a square.
+
+   So the cell has a ceiling here and the block centres under it. The ceiling is
+   the size a year already lands on — 53 columns across this panel — which is
+   why moving the window now changes how much you see rather than how big it
+   is. */
+.ax-heat-wide {
+    --ax-heat-cell: 22px;
+    /* n squares and the gaps between them. `--ax-heat-weeks` is set on the
+       element by the panel. */
+    --ax-heat-span: calc(var(--ax-heat-weeks) * (var(--ax-heat-cell) + 2px) - 2px);
+    justify-content: center;
+}
+.ax-heat-wide .ax-heat-main {
+    flex: 0 1 var(--ax-heat-span);
+    max-width: var(--ax-heat-span);
+}
+.ax-heat-wide .ax-heat-week,
+.ax-heat-wide .ax-heat-months span { max-width: var(--ax-heat-cell); }
+
+/* A week and a month are weeks-across-the-page; seven days and thirty are not.
+   Under about a month there are one to six columns, which is a strip rather
+   than a map and reads as a rendering fault however well it is sized. Turned on
+   its side it is the calendar everyone already knows — weekdays across, weeks
+   down — and it is the same cells in the same order, so nothing below has to
+   know which way round it is. The month initials go: one per week is a column
+   heading, and there are no columns to head. */
+.ax-heat-wide.is-calendar {
+    --ax-heat-cell: 44px;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+.ax-heat-wide.is-calendar .ax-heat-days,
+.ax-heat-wide.is-calendar .ax-heat-main {
+    width: 100%;
+    max-width: calc(7 * var(--ax-heat-cell) + 6 * 2px);
+}
+.ax-heat-wide.is-calendar .ax-heat-days {
+    grid-template-rows: none;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px;
+    padding-top: 0;
+    text-align: center;
+}
+.ax-heat-wide.is-calendar .ax-heat-months { display: none; }
+.ax-heat-wide.is-calendar .ax-heat-grid { flex-direction: column; }
+.ax-heat-wide.is-calendar .ax-heat-week {
+    grid-template-rows: none;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    max-width: none;
+}
+
 .ax-heat-key {
     display: flex;
     align-items: center;
@@ -1976,11 +2036,23 @@ html[data-theme="dark"] .ax-page {
 /* ==========================================================================
    Trends — direction, and how much of it survives the noise.
    ========================================================================== */
+/* Five rows against a panel of five paragraphs: the direction panel beside this
+   one is the taller of the two by a long way, and a row of panels is stretched
+   to the tallest (see the note by `.ax-grid`). The convention there is that the
+   slack goes to the footer, and this panel has no footer — so it went to the
+   bottom of the card and read as a rendering fault rather than as a panel.
+
+   The rows take it instead, a fifth each, with the content centred in what it
+   gets. What that buys over letting the card end early is that the two panels
+   still finish on the same line, and the dividers stay evenly spaced whatever
+   the neighbour does. When there is no slack — a narrow screen, one column —
+   every row is its own height again and none of this applies. */
 .ax-compare-rows {
     list-style: none;
     margin: 8px 0 0;
     padding: 0;
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: 11px;
 }
@@ -1989,6 +2061,8 @@ html[data-theme="dark"] .ax-page {
     grid-template-columns: auto minmax(0, 1fr) 66px auto auto;
     grid-template-areas: 'dot label spark now delta' '. label spark was was';
     align-items: center;
+    align-content: center;
+    flex: 1 0 auto;
     gap: 1px 11px;
     padding-bottom: 11px;
     border-bottom: 1px solid var(--ax-line-soft);
