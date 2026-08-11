@@ -905,6 +905,42 @@ export const SAMPLE_HABITS: Habit[] = [
   },
 ];
 
+/**
+ * A year of plausible completions for the calendar, keyed by date.
+ *
+ * Generated rather than listed, because 365 hand-written entries is not a
+ * thing anybody will maintain — but generated *deterministically*, so the
+ * placeholder map is identical on every render and the squares do not shuffle
+ * themselves when the panel re-draws. The shape is a five-day week with a
+ * couple of quiet stretches in it, which is what most accounts actually look
+ * like and is deliberately not an impressive one.
+ */
+export function sampleCalendar(lastIso: string): Map<string, HabitDay> {
+  const out = new Map<string, HabitDay>();
+  if (!lastIso) return out;
+  const names = ['Math Practice', 'Coding', 'Morning Study', 'Violin Practice', 'Planning Tomorrow'];
+
+  for (let back = 364; back >= 0; back--) {
+    const iso = shiftDay(lastIso, -back);
+    const weekday = new Date(`${iso}T00:00:00`).getDay();
+    // A fixed wobble rather than Math.random: the same day always draws the
+    // same square, which a random walk would not.
+    const wobble = Math.abs(Math.sin(back * 12.9898) * 43758.5453) % 1;
+    const weekendish = weekday === 0 || weekday === 6;
+    const quiet = back > 120 && back < 133;
+    if (quiet || wobble > (weekendish ? 0.35 : 0.86)) continue;
+
+    const count = 1 + Math.floor(wobble * (weekendish ? 2 : 4));
+    out.set(iso, {
+      date: iso,
+      count,
+      xp: count * (60 + Math.floor(wobble * 90)),
+      names: names.slice(0, count),
+    });
+  }
+  return out;
+}
+
 export const SAMPLE_PATTERNS: HabitPattern[] = [
   {
     id: 'sample-evening',

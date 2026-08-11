@@ -78,13 +78,33 @@ function useTrying(): [Set<string>, (id: string) => void] {
 // --------------------------------------------------------------------------
 // The opening
 // --------------------------------------------------------------------------
-export function Opening({ advice, outlook }: { advice: Advice[]; outlook: Outlook }) {
+export function Opening({
+  advice,
+  outlook,
+  sample,
+}: {
+  advice: Advice[];
+  outlook: Outlook;
+  sample?: boolean;
+}) {
   const scored = advice.filter((item) => item.impact > 0);
   const gain = outlook.improved - outlook.current;
 
   return (
-    <Panel title="Where the room actually is">
-      {advice.length === 0 ? (
+    <Panel title="Where the room actually is" sample={sample}>
+      {sample ? (
+        <>
+          <p className="ax-prose ax-prose-lead">
+            Your record cannot generate suggestions yet — that needs a fortnight of days and a
+            working average to project from. What is below is an example account, so you can see
+            what this tab does before it has anything of yours to say.
+          </p>
+          <p className="ax-prose">
+            When it fills in, every figure here will be your own averages multiplied out, not a
+            model, with the workings printed on each card so you can disagree with them.
+          </p>
+        </>
+      ) : advice.length === 0 ? (
         <p className="ax-prose ax-prose-lead">
           There is not enough history here yet to say anything useful about how to change it. Come
           back after a few weeks of work — this page is generated from your own record, and it would
@@ -257,7 +277,7 @@ export function CategoryFilter({
 // --------------------------------------------------------------------------
 // The projection
 // --------------------------------------------------------------------------
-export function OutlookPanel({ outlook }: { outlook: Outlook }) {
+export function OutlookPanel({ outlook, sample }: { outlook: Outlook; sample?: boolean }) {
   const peak = Math.max(...outlook.improvedLine, 1);
   const ticks: string[] = [];
   for (let step = 4; step >= 0; step--) ticks.push(compact((peak / 4) * step));
@@ -266,6 +286,7 @@ export function OutlookPanel({ outlook }: { outlook: Outlook }) {
     <Panel
       title="The same five years, both ways"
       note="Your current pace against the pace with every scored suggestion taken"
+      sample={sample}
     >
       <div className="ax-figures">
         <div className="ax-figure">
@@ -320,9 +341,9 @@ export function OutlookPanel({ outlook }: { outlook: Outlook }) {
 // --------------------------------------------------------------------------
 // The rest
 // --------------------------------------------------------------------------
-export function AlsoPanel({ items }: { items: Advice[] }) {
+export function AlsoPanel({ items, sample }: { items: Advice[]; sample?: boolean }) {
   return (
-    <Panel title="Also worth doing" note="Smaller, or about shape rather than size">
+    <Panel title="Also worth doing" note="Smaller, or about shape rather than size" sample={sample}>
       {items.length === 0 ? (
         <p className="ax-prose">
           Nothing else in your record crosses the threshold for a suggestion. That is a real result,

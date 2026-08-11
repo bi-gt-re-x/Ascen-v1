@@ -148,6 +148,7 @@ import {
   habitPatterns,
   habitShifts,
   habitSummary,
+  sampleCalendar,
 } from '@/utils/habits';
 import {
   SAMPLE_FINDINGS,
@@ -328,7 +329,14 @@ export default function Analytics() {
   const habitsAreSample = realHabits.length === 0;
   const habits = habitsAreSample ? SAMPLE_HABITS : realHabits;
 
-  const byDate = useMemo(() => habitDays(bySubject, fromIso, toIso), [bySubject, fromIso, toIso]);
+  /** The calendar carries its own zoom, so it is fed the whole account rather
+   *  than the page's window — a year of squares scoped to a 7-day window would
+   *  be 358 blanks and one live week. */
+  const realDates = useMemo(
+    () => habitDays(bySubject, all[0]?.date ?? '', toIso),
+    [all, bySubject, toIso],
+  );
+  const byDate = realDates.size > 0 ? realDates : sampleCalendar(toIso);
   const realPatterns = useMemo(
     () => habitPatterns(bySubject, realHabits, fromIso, toIso),
     [bySubject, fromIso, realHabits, toIso],
@@ -530,7 +538,7 @@ export default function Analytics() {
                 byDate={byDate}
                 lastIso={toIso}
                 accountDays={all.length}
-                sample={byDate.size === 0}
+                sample={realDates.size === 0}
               />
             </section>
             <section className="ax-section ax-grid ax-grid-halves-even">
@@ -592,8 +600,8 @@ export default function Analytics() {
         {view.key === 'recommendations' && (
           <>
             <section className="ax-section ax-grid ax-grid-halves-even">
-              <Opening advice={advice} outlook={projection} />
-              <OutlookPanel outlook={projection} />
+              <Opening advice={advice} outlook={projection} sample={adviceIsSample} />
+              <OutlookPanel outlook={projection} sample={adviceIsSample} />
             </section>
             <section className="ax-section">
               <CategoryFilter items={advice} chosen={category} onChoose={setCategory} />
@@ -606,7 +614,7 @@ export default function Analytics() {
               )}
             </section>
             <section className="ax-section ax-grid ax-grid-halves-even">
-              <AlsoPanel items={shown.slice(HEADLINE_ADVICE)} />
+              <AlsoPanel items={shown.slice(HEADLINE_ADVICE)} sample={adviceIsSample} />
               <Caveat />
             </section>
             <section className="ax-foot">
