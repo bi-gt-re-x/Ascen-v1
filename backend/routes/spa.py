@@ -44,6 +44,15 @@ SPA_ROUTES = (
     '/goals',
     '/growth',
     '/analytics',
+    # The analysis is one page with five tabs, and a tab is a URL so that the
+    # rail, the back button and a pasted link agree about what is showing.
+    # /analytics says how much, /trends says which way, /habits says what you
+    # do, /insights says why, /recommendations says what to change. All five
+    # render src/pages/Analytics.tsx — see VIEWS in components/Analytics.
+    '/trends',
+    '/habits',
+    '/insights',
+    '/recommendations',
     # The calendar is one page in three views. It was one URL and a script
     # that swapped panes; it is three routes now, and /calendar keeps working
     # by redirecting to the week — see src/App.tsx.

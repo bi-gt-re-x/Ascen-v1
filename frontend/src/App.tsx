@@ -126,7 +126,16 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/goals" element={<Goals />} />
               <Route path="/growth" element={<Growth />} />
+              {/* One page, five tabs, five URLs. The analytics page reads the
+                  pathname to decide which tab opens (VIEWS in
+                  components/Analytics/Header), so the rail, the back button and
+                  a pasted link all agree about what is showing — none of which
+                  a local useState could have managed. */}
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/trends" element={<Analytics />} />
+              <Route path="/habits" element={<Analytics />} />
+              <Route path="/insights" element={<Analytics />} />
+              <Route path="/recommendations" element={<Analytics />} />
               <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
               <Route path="/calendar/day" element={<CalendarDay />} />
               <Route path="/calendar/week" element={<CalendarWeek />} />

@@ -24,6 +24,18 @@ export function toneVar(tone: string): string {
   return `var(--ax-${tone})`;
 }
 
+/**
+ * A tone name from somewhere that does not know about `Tone`, made safe.
+ *
+ * The behavioural modules under utils/ carry a tone on every finding, and they
+ * deliberately do not import from a component file to get the type — the
+ * arithmetic has no business knowing what draws it. This is the one boundary
+ * where the loose string becomes the narrow one.
+ */
+export function asTone(name: string): Tone {
+  return (TONES as string[]).includes(name) ? (name as Tone) : 'violet';
+}
+
 /** Turns values into an SVG path, scaled into the box. `null` when too few. */
 function linePath(
   values: number[],
@@ -320,6 +332,50 @@ export function GroupedBars({ pairs }: { pairs: BarPair[] }) {
 }
 
 // --------------------------------------------------------------------------
+// Columns — one series of labelled bars
+// --------------------------------------------------------------------------
+export interface Column {
+  label: string;
+  value: number;
+  /** Printed above the bar. The unit is the caller's business. */
+  text: string;
+  /** Drawn in the accent rather than the base — the best day, the peak hour. */
+  peak?: boolean;
+}
+
+/**
+ * A distribution, as bars sharing one scale.
+ *
+ * Unlike `GroupedBars` these are all the same measurement, so they share a
+ * scale and the comparison between any two of them is real — that is the whole
+ * point of the panel, and scaling each to itself would flatten exactly the
+ * difference the reader is looking for. The tallest is marked so the answer to
+ * "when" is visible before any of the numbers are read.
+ */
+export function Columns({ columns, tone = 'violet' }: { columns: Column[]; tone?: Tone }) {
+  const peak = Math.max(...columns.map((column) => column.value), 1);
+  return (
+    <div className="ax-columns">
+      {columns.map((column) => (
+        <div className="ax-column" key={column.label}>
+          <span className="ax-column-value">{column.text}</span>
+          <div className="ax-column-track">
+            <div
+              className={`ax-column-bar${column.peak ? ' is-peak' : ''}`}
+              style={{
+                height: `${(column.value / peak) * 100}%`,
+                background: column.peak ? toneVar(tone) : undefined,
+              }}
+            />
+          </div>
+          <span className="ax-column-label">{column.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------
 // Panel furniture
 // --------------------------------------------------------------------------
 export interface PanelProps {
@@ -336,24 +392,135 @@ export interface PanelProps {
   footer?: ReactNode;
 }
 
+/**
+ * A panel, and the one place the Sample chip is drawn.
+ *
+ * **The chip sits in the top right, opposite the title.** It used to sit beside
+ * the heading, which read as part of the heading — "Where You Stand Sample" —
+ * and put the least important word on a panel in the position the eye lands on
+ * first. Top right is where a provenance mark belongs and where every panel on
+ * the page has one in the same place, so a reader scanning a tab can tell at a
+ * glance which figures are theirs without reading a single heading.
+ *
+ * When a panel has both a chip and an `aside` control, the chip goes first: a
+ * picker acts on the panel and the chip describes it, and the description is
+ * the thing that must not be missed.
+ */
 export function Panel({ title, note, aside, sample, className, children, footer }: PanelProps) {
   return (
     <section className={`ax-panel${className ? ` ${className}` : ''}`}>
       <header className="ax-panel-head">
         <div className="ax-panel-title">
           <h2>{title}</h2>
-          {sample && (
-            <span className="ax-sample" title="Placeholder figures — this needs data Ascen does not collect yet">
-              Sample
-            </span>
-          )}
         </div>
-        {aside}
+        {(sample || aside) && (
+          <div className="ax-panel-aside">
+            {sample && (
+              <span
+                className="ax-sample"
+                title="Placeholder figures — your own record cannot fill this panel yet"
+              >
+                Sample
+              </span>
+            )}
+            {aside}
+          </div>
+        )}
       </header>
       {note && <p className="ax-panel-note">{note}</p>}
       {children}
       {footer && <div className="ax-panel-foot">{footer}</div>}
     </section>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Scatter — a relationship, drawn as the observations and nothing else
+// --------------------------------------------------------------------------
+export interface ScatterProps {
+  /** Already normalised to 0-1 on both axes by the caller. */
+  points: Array<[number, number]>;
+  tone: Tone;
+  xLabel: string;
+  yLabel: string;
+  /** Drawn only when the caller says the correlation is worth a line. */
+  trend?: boolean;
+}
+
+/**
+ * A cloud of dots, with a line of fit only when one is earned.
+ *
+ * The default is no line, and that is the point. A line of best fit asserts a
+ * model; a cloud asserts nothing beyond the observations it is made of. On a
+ * relationship the page has already labelled "possible, not established", a
+ * confident diagonal through the middle of the smear would contradict the
+ * label right next to it — so the caller passes `trend` only where the evidence
+ * carries it, and everywhere else the reader gets to see the scatter for what
+ * it is.
+ */
+export function Scatter({ points, tone, xLabel, yLabel, trend }: ScatterProps) {
+  const width = 300;
+  const height = 150;
+  const pad = 6;
+
+  const at = (point: [number, number]): [number, number] => [
+    pad + point[0] * (width - pad * 2),
+    height - pad - point[1] * (height - pad * 2),
+  ];
+
+  // Least squares in the normalised space — the same fit the coefficient came
+  // from, so the line and the number beside it cannot disagree.
+  let line: string | null = null;
+  if (trend && points.length >= 3) {
+    const n = points.length;
+    const meanX = points.reduce((sum, [x]) => sum + x, 0) / n;
+    const meanY = points.reduce((sum, [, y]) => sum + y, 0) / n;
+    let top = 0;
+    let bottom = 0;
+    points.forEach(([x, y]) => {
+      top += (x - meanX) * (y - meanY);
+      bottom += (x - meanX) ** 2;
+    });
+    if (bottom > 0) {
+      const slope = top / bottom;
+      const from = at([0, Math.max(0, Math.min(1, meanY + slope * (0 - meanX)))]);
+      const to = at([1, Math.max(0, Math.min(1, meanY + slope * (1 - meanX)))]);
+      line = `M${from[0].toFixed(1)},${from[1].toFixed(1)} L${to[0].toFixed(1)},${to[1].toFixed(1)}`;
+    }
+  }
+
+  return (
+    <div className="ax-scatter">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${xLabel} against ${yLabel}`}>
+        {[0.25, 0.5, 0.75].map((ratio) => (
+          <line
+            key={ratio}
+            x1="0"
+            x2={width}
+            y1={height * ratio}
+            y2={height * ratio}
+            className="ax-gridline"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        {line && (
+          <path
+            d={line}
+            className="ax-scatter-fit"
+            stroke={toneVar(tone)}
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+        {points.map((point, index) => {
+          const [x, y] = at(point);
+          return <circle key={index} cx={x} cy={y} r="2.6" fill={toneVar(tone)} fillOpacity="0.55" />;
+        })}
+      </svg>
+      <div className="ax-scatter-axes">
+        <span>{xLabel} →</span>
+        <span>↑ {yLabel}</span>
+      </div>
+    </div>
   );
 }
 

@@ -22,7 +22,7 @@ import type { GrowthDay } from '@/types';
 // --------------------------------------------------------------------------
 // Windows
 // --------------------------------------------------------------------------
-export type WindowKey = '3m' | '6m' | '1y' | '2y' | 'all';
+export type WindowKey = '7d' | '30d' | '90d' | '1y' | '2y' | 'all';
 
 export interface WindowOption {
   key: WindowKey;
@@ -33,9 +33,21 @@ export interface WindowOption {
   compare: string;
 }
 
+/**
+ * The one window set, shared by every tab on the page.
+ *
+ * It was four long windows — a quarter to two years — back when this page was
+ * only about trajectory. Habits and Insights ask questions at a much shorter
+ * range ("what have I been doing this week") and a picker that started at three
+ * months could not express them, while a second picker on those tabs would mean
+ * two tabs quietly describing different periods, which is the exact failure the
+ * single window exists to prevent. So the set spans both: a week for the
+ * behavioural tabs, two years and all time for the long view.
+ */
 export const WINDOWS: WindowOption[] = [
-  { key: '3m', label: '3M', days: 91, compare: 'Previous 3 Months' },
-  { key: '6m', label: '6M', days: 183, compare: 'Previous 6 Months' },
+  { key: '7d', label: '7D', days: 7, compare: 'Previous 7 Days' },
+  { key: '30d', label: '30D', days: 30, compare: 'Previous 30 Days' },
+  { key: '90d', label: '90D', days: 90, compare: 'Previous 90 Days' },
   { key: '1y', label: '1Y', days: 365, compare: 'Previous Year' },
   { key: '2y', label: '2Y', days: 730, compare: 'Previous 2 Years' },
   { key: 'all', label: 'All Time', days: null, compare: 'No earlier period' },

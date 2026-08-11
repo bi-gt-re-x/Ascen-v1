@@ -343,10 +343,17 @@ html[data-theme="dark"] .ax-page {
 /* ---------- Sections and the grid ---------------------------------------- */
 .ax-section { scroll-margin-top: 18px; }
 
+/* Panels in a row are all the height of the tallest, not each its own height.
+   `align-items: start` left every row with a ragged underside — three cards
+   ending at three different points with the next row's tops below the deepest
+   of them, which reads as a mistake rather than as a layout. Stretching costs
+   nothing: `.ax-panel` is a column with `.ax-panel-foot` on `margin-top: auto`,
+   so the extra height goes between the content and the footer, and every
+   footer in a row lands on one line. */
 .ax-grid {
     display: grid;
     gap: var(--ax-gap);
-    align-items: start;
+    align-items: stretch;
 }
 .ax-grid-trajectory { grid-template-columns: 1.85fr 1fr; }
 .ax-grid-three { grid-template-columns: repeat(3, 1fr); }
@@ -1009,6 +1016,295 @@ html[data-theme="dark"] .ax-page {
 }
 .ax-standing-rank { font-weight: 600; white-space: nowrap; }
 
+/* ==========================================================================
+   Insights and Recommendations
+
+   Two more pages on this stylesheet rather than two more stylesheets, because
+   they are deliberately the same place: same `.ax-page`, same panels, same
+   grid, same tiles. What they add is prose — those pages state a finding in
+   words and then show the chart it came from, which is the whole difference
+   between them and the dashboard next door.
+   ========================================================================== */
+
+/* Body text, which the analytics page has almost none of and these two are
+   mostly made of. Measure is capped in the panel rather than here: a panel is
+   already a third or a half of a row, and a paragraph that fills it is at a
+   readable measure by construction. */
+.ax-prose {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--ax-muted);
+}
+.ax-prose strong { color: var(--ax-text); font-weight: 600; }
+.ax-prose-lead {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ax-text);
+    margin-top: 4px;
+}
+
+.ax-grid-halves-even { grid-template-columns: 1fr 1fr; }
+.ax-tiles-four { grid-template-columns: repeat(4, 1fr); }
+
+/* The insights tiles state a word, not a number, so they need a smaller face
+   than the analytics ones — "Wednesday" at 27px wraps in a quarter row. */
+.ax-tile-value-sm { font-size: 20px; }
+.ax-tile-dot {
+    width: 9px; height: 9px;
+    border-radius: 3px;
+    background: currentColor;
+    flex: none;
+}
+
+/* ---------- Column charts ------------------------------------------------- */
+.ax-columns {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 4px;
+    align-items: end;
+    height: 160px;
+    margin-top: 8px;
+}
+
+.ax-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    height: 100%;
+    min-width: 0;
+}
+
+.ax-column-value {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--ax-muted);
+    white-space: nowrap;
+}
+
+.ax-column-track {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    min-height: 0;
+}
+
+.ax-column-bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    background: color-mix(in srgb, var(--ax-violet) 28%, transparent);
+    transition: height .3s ease;
+}
+.ax-column-bar.is-peak { box-shadow: 0 0 0 1px color-mix(in srgb, var(--ax-text) 12%, transparent); }
+
+.ax-column-label {
+    font-size: 9px;
+    color: var(--ax-faint);
+    white-space: nowrap;
+}
+
+/* ---------- Momentum ------------------------------------------------------ */
+.ax-momentum {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.ax-momentum li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: 'label now delta' 'label was was';
+    align-items: center;
+    gap: 1px 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.ax-momentum li:last-child { border-bottom: 0; padding-bottom: 0; }
+.ax-momentum-label { grid-area: label; font-size: 12.5px; font-weight: 500; }
+.ax-momentum-now {
+    grid-area: now;
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.ax-momentum li .ax-delta { grid-area: delta; }
+.ax-momentum-was {
+    grid-area: was;
+    font-size: 10.5px;
+    color: var(--ax-faint);
+    text-align: right;
+}
+
+/* ---------- Balance ------------------------------------------------------- */
+.ax-balance {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+/* A conic ring rather than an SVG: it is one number, and a whole chart
+   component for one number is a component nobody will maintain. */
+.ax-balance-ring {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    gap: 1px;
+    flex: none;
+    background:
+        radial-gradient(closest-side, var(--ax-card) 72%, transparent 73%),
+        conic-gradient(var(--ax-violet) var(--share), var(--ax-line-soft) 0);
+}
+.ax-balance-ring strong { font-size: 19px; font-weight: 700; }
+
+/* ---------- Advice cards -------------------------------------------------- */
+.ax-advice { gap: 0; }
+
+.ax-advice-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 11px;
+    align-items: start;
+    margin-bottom: 2px;
+}
+
+.ax-advice-rank {
+    width: 26px; height: 26px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    flex: none;
+}
+
+.ax-advice-kind {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.ax-advice h2 { margin: 0; font-size: 14.5px; font-weight: 600; line-height: 1.35; }
+
+.ax-advice-impact {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+    white-space: nowrap;
+}
+.ax-advice-impact strong { font-size: 15px; font-weight: 700; color: var(--ax-good); }
+
+/* The Why / Do label sits on the first line of its own paragraph. */
+.ax-advice-tag {
+    display: inline-block;
+    margin-right: 7px;
+    padding: 1px 7px;
+    border-radius: 5px;
+    background: var(--ax-card-2);
+    border: 1px solid var(--ax-line);
+    color: var(--ax-faint);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    vertical-align: 1px;
+}
+
+.ax-advice-foot {
+    margin-top: auto;
+    padding-top: 12px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+}
+.ax-advice-foot .ax-muted { line-height: 1.5; }
+
+.ax-effort { display: inline-flex; gap: 3px; flex: none; padding-bottom: 2px; }
+.ax-effort i {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--ax-line);
+}
+.ax-effort i.is-on { background: var(--ax-faint); }
+
+/* ---------- Also worth doing ---------------------------------------------- */
+.ax-also {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ax-also li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+}
+.ax-also li > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ax-also strong { font-size: 12.5px; font-weight: 600; }
+.ax-also .ax-muted { font-size: 11.5px; line-height: 1.5; }
+.ax-also li .ax-dot { margin-top: 5px; }
+.ax-also-impact {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ax-good);
+    white-space: nowrap;
+}
+
+/* Each tab's own header mark. `.ax-head-icon` supplies the box and the colour;
+   these swap the drawing inside it, so a reader can tell which tab they are on
+   from the shape before they read the heading. */
+.ax-head-icon-trends {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17l5-6 4 3 4-6 5 4'/%3E%3Cpath d='M3 21h18'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17l5-6 4 3 4-6 5 4'/%3E%3Cpath d='M3 21h18'/%3E%3C/svg%3E");
+}
+.ax-head-icon-habits {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='2'/%3E%3Cpath d='M3 9h18M8 2v4M16 2v4'/%3E%3Cpath d='m8.5 14.5 2 2 4.5-4.5'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='2'/%3E%3Cpath d='M3 9h18M8 2v4M16 2v4'/%3E%3Cpath d='m8.5 14.5 2 2 4.5-4.5'/%3E%3C/svg%3E");
+}
+.ax-head-icon-recommendations {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4'/%3E%3Cpath d='M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4'/%3E%3Cpath d='M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z'/%3E%3C/svg%3E");
+}
+.ax-head-icon-insights {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5M11 8v6M8 11h6'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5M11 8v6M8 11h6'/%3E%3C/svg%3E");
+}
+.ax-head-icon-advice {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4'/%3E%3Cpath d='M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4'/%3E%3Cpath d='M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z'/%3E%3C/svg%3E");
+}
+
+@media (max-width: 1280px) {
+    .ax-tiles-four { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 1024px) {
+    .ax-grid-halves-even { grid-template-columns: 1fr; }
+    .ax-balance { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+}
+@media (max-width: 480px) {
+    .ax-tiles-four { grid-template-columns: 1fr; }
+    .ax-advice-head { grid-template-columns: auto minmax(0, 1fr); }
+    .ax-advice-impact { grid-column: 2; align-items: flex-start; text-align: left; }
+}
+
 /* ---------- Foot ---------------------------------------------------------- */
 .ax-foot {
     display: flex;
@@ -1067,4 +1363,804 @@ html[data-theme="dark"] .ax-page {
     .ax-standing-track i,
     .ax-tab,
     .ax-chip { transition: none; }
+}
+
+/* ==========================================================================
+   The five tabs.
+
+   Everything below dresses the four tabs added when the analysis moved into
+   this page — Trends, Habits, Insights, Recommendations — plus the bar that
+   switches between them. Not one colour is named here: every rule paints with
+   the tokens declared at the top of the file, which is what makes dark mode a
+   single block of variable overrides rather than a second copy of this section.
+
+   The tabs are meant to feel different from each other. Habits is cards and a
+   calendar, Insights is prose and evidence chips, Recommendations is ranked
+   instructions with a button. Three tabs that looked alike would be one tab
+   with a broken picker, which is the whole thing this page is arranged against.
+   ========================================================================== */
+
+/* ---------- The major tab bar --------------------------------------------- */
+.ax-views {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Bigger than the Overview sub-navigation below it, because pressing one of
+   these changes the page rather than scrolling it, and a control that swaps the
+   contents should not look like a control that moves them. */
+.ax-tabs-major {
+    padding: 6px;
+    gap: 5px;
+}
+
+.ax-tabs-major .ax-tab {
+    padding: 9px 18px;
+    font-size: 13.5px;
+}
+
+/* The open tab is filled rather than outlined — at five tabs the inset ring the
+   sub-navigation uses is not enough to find at a glance. */
+.ax-tabs-major .ax-tab.is-on {
+    background: var(--ax-violet);
+    color: #fff;
+    box-shadow: none;
+}
+.ax-tabs-major .ax-tab.is-on:hover { color: #fff; }
+
+/* What the open tab is for. Load-bearing prose: it is the thing that stops
+   Habits, Insights and Recommendations reading as three piles of cards. */
+.ax-views-purpose {
+    margin: 0 0 2px 4px;
+    font-size: 12.5px;
+    color: var(--ax-muted);
+}
+
+/* ---------- Panel furniture ----------------------------------------------- */
+/* The top-right container: the Sample chip first, then whatever control the
+   panel owns. One position for one meaning across every panel on the page. */
+.ax-panel-aside {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.ax-sample-page { align-self: center; }
+
+/* A chip row small enough to sit in a panel header without setting the height
+   of the row it is in. */
+.ax-chips-sm { padding: 3px; }
+.ax-chips-sm .ax-chip {
+    padding: 4px 10px;
+    font-size: 11.5px;
+}
+
+/* A heading between sections, for the one place a tab breaks into named parts
+   without a panel around them. */
+.ax-band {
+    margin: 0 0 12px 2px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
+.ax-prose-tight { margin: 4px 0 0; font-size: 12px; line-height: 1.55; }
+.ax-figures-tight { margin-bottom: 10px; }
+.ax-tiles-five { grid-template-columns: repeat(5, 1fr); }
+
+/* ==========================================================================
+   Habits — visual, behavioural, historical.
+   ========================================================================== */
+.ax-habit-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--ax-gap);
+}
+
+.ax-habit {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    box-shadow: var(--ax-shadow);
+    padding: 15px 16px 13px;
+    min-width: 0;
+}
+
+.ax-habit-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ax-habit-name { min-width: 0; }
+.ax-habit-name h3 {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ax-habit-source {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--ax-faint);
+}
+
+/* The strength word, tinted from the same token the bar under it is painted
+   with — `.ax-tone-*` sets `color`, and both properties read it. */
+.ax-habit-badge {
+    flex: none;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.ax-habit-figure {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    margin-top: 2px;
+}
+.ax-habit-figure strong {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -.025em;
+    line-height: 1;
+}
+
+.ax-habit-track {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.ax-habit-track i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    transition: width .35s ease;
+}
+
+.ax-habit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ax-habit-streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ax-flame {
+    width: 12px; height: 12px;
+    flex: none;
+    background: var(--ax-amber);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2s5 4.5 5 9a5 5 0 0 1-10 0c0-1.5.5-2.8 1.2-3.8C8.5 8.5 9 10 10 10c0-3 2-5.5 2-8Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2s5 4.5 5 9a5 5 0 0 1-10 0c0-1.5.5-2.8 1.2-3.8C8.5 8.5 9 10 10 10c0-3 2-5.5 2-8Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* The footnotes. A card that gave nine numbers equal weight would be a table
+   with rounded corners, so these are set small and in two columns. */
+.ax-habit-facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px 12px;
+    margin: 2px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-habit-facts div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ax-habit-facts dt { font-size: 10.5px; color: var(--ax-faint); }
+.ax-habit-facts dd {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- The calendar -------------------------------------------------- */
+/* A square that can be pressed. Reset rather than restyled: the cell's whole
+   look comes from `.ax-heat-cell`, and a <button> arrives with a border, a
+   background and a font that would all have to be undone anyway. */
+.ax-heat-hit {
+    border: 0;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    transition: outline-color .12s;
+    outline: 2px solid transparent;
+    outline-offset: 1px;
+}
+.ax-heat-hit:hover { outline-color: color-mix(in srgb, var(--ax-violet) 55%, transparent); }
+.ax-heat-hit:focus-visible { outline-color: var(--ax-violet); }
+.ax-heat-cell.is-picked { outline-color: var(--ax-text); }
+
+.ax-heat-key { justify-content: space-between; }
+.ax-heat-key-scale { display: inline-flex; align-items: center; gap: 4px; }
+
+/* What the clicked square held. Fixed height so picking a day does not shove
+   the rest of the tab down the page. */
+.ax-daycard {
+    margin-top: 12px;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card-2);
+    min-height: 74px;
+}
+.ax-daycard p { margin: 0; }
+.ax-daycard-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 7px;
+}
+.ax-daycard-head strong { font-size: 13px; }
+.ax-daycard-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.ax-daycard-list li {
+    padding: 3px 9px;
+    border-radius: 7px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    font-size: 11.5px;
+}
+
+/* ---------- Patterns ------------------------------------------------------ */
+.ax-patterns {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+}
+.ax-patterns li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+.ax-patterns li .ax-dot { margin-top: 5px; }
+.ax-patterns li > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ax-patterns strong { font-size: 12.5px; font-weight: 500; line-height: 1.45; }
+
+/* The frequency word carries the confidence, so it is the part that is set
+   apart — "Usually" is 75% of occurrences, "Sometimes" is under half. */
+.ax-pattern-word {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ax-text);
+}
+
+/* ---------- Consistency buckets ------------------------------------------- */
+.ax-buckets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 8px;
+}
+
+.ax-bucket {
+    padding: 11px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card-2);
+    min-width: 0;
+}
+.ax-bucket header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+}
+.ax-bucket header strong { font-size: 12.5px; }
+.ax-bucket-count {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ax-muted);
+}
+.ax-bucket p { margin: 0; line-height: 1.5; }
+.ax-bucket ul {
+    list-style: none;
+    margin: 9px 0 0;
+    padding: 9px 0 0;
+    border-top: 1px solid var(--ax-line);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.ax-bucket li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12px;
+}
+.ax-bucket li span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- The timeline -------------------------------------------------- */
+.ax-phases {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+.ax-phases li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+}
+.ax-phase-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Four bars rising left to right, each a little more opaque than the last, so
+   the direction is legible before either number is read. */
+.ax-phase-steps {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 26px;
+    width: 62px;
+    flex: none;
+}
+.ax-phase-steps i {
+    flex: 1;
+    border-radius: 2px 2px 0 0;
+    min-height: 3px;
+}
+
+.ax-phase-text {
+    font-size: 12px;
+    color: var(--ax-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.ax-phase-text strong { color: var(--ax-text); font-size: 13px; }
+
+.ax-shifts {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+.ax-shifts li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+.ax-shifts li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-shifts strong { font-size: 12.5px; }
+
+.ax-shift-tag {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.ax-phase-badge {
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* ==========================================================================
+   Insights — analytical, explanatory, evidence-first.
+   ========================================================================== */
+.ax-findings {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ax-finding { border-bottom: 1px solid var(--ax-line-soft); }
+.ax-finding:last-child { border-bottom: 0; }
+
+/* The claim is a button because the detail underneath it opens — the headline
+   stands alone, and a reader who never opens one has still read the finding. */
+.ax-finding-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 2px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.ax-finding-head strong { font-size: 12.5px; font-weight: 600; line-height: 1.5; }
+.ax-finding-head .ax-dot { margin-top: 5px; }
+.ax-finding-head:hover strong { color: var(--ax-violet); }
+
+.ax-finding-mark {
+    width: 13px; height: 13px;
+    margin-top: 4px;
+    flex: none;
+    background: var(--ax-faint);
+    transition: transform .18s ease;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.ax-finding.is-open .ax-finding-mark { transform: rotate(180deg); }
+
+/* Collapsed by grid rows rather than by height, so the transition works without
+   anybody having to measure the text. The single inner wrapper is required, not
+   stylistic: a grid with two children places the second in an implicit auto row
+   that `0fr` on the first does not collapse, and the panel would sit half open. */
+.ax-finding-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .22s ease;
+}
+.ax-finding.is-open .ax-finding-body { grid-template-rows: 1fr; }
+.ax-finding-body > div { overflow: hidden; min-height: 0; }
+.ax-finding-body .ax-prose { margin: 0 0 9px 19px; }
+.ax-finding-body .ax-evidence { margin: 0 0 13px 19px; }
+
+/* How much weight a finding carries. Outlined rather than filled: it is a
+   qualifier on the sentence above it, not a second claim. */
+.ax-evidence {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+/* Waiting for data. Deliberately not an error: the panel is not broken, it is
+   early, and telling somebody how many more days it needs is the useful thing. */
+.ax-waiting {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 11px;
+    align-items: start;
+    margin: 10px 0 4px;
+    padding: 13px 15px;
+    border-radius: 10px;
+    border: 1px dashed var(--ax-line);
+    background: var(--ax-card-2);
+}
+.ax-waiting p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ax-muted); }
+.ax-waiting-mark {
+    width: 16px; height: 16px;
+    margin-top: 2px;
+    flex: none;
+    background: var(--ax-faint);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.ax-wins {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ax-wins li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 11px;
+    align-items: start;
+}
+.ax-wins li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-wins strong { font-size: 12.5px; font-weight: 500; line-height: 1.45; }
+
+/* A tick rather than a dot: this panel is the one that says things are going
+   right, and it should be readable as that without the heading. */
+.ax-win-mark {
+    width: 15px; height: 15px;
+    margin-top: 3px;
+    border-radius: 5px;
+    flex: none;
+    position: relative;
+}
+.ax-win-mark::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    background: var(--ax-card);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 13 9 18 20 6'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 13 9 18 20 6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ---------- Relationships ------------------------------------------------- */
+.ax-relationship {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+    margin-top: 4px;
+}
+.ax-relationship-read { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ax-relationship-read .ax-prose { margin: 0; }
+.ax-relationship-read .ax-evidence { align-self: flex-start; }
+
+.ax-scatter { min-width: 0; }
+.ax-scatter svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 9px;
+    background: var(--ax-card-2);
+    border: 1px solid var(--ax-line-soft);
+}
+.ax-scatter-fit {
+    fill: none;
+    stroke-width: 1.6;
+    stroke-dasharray: 5 4;
+    opacity: .75;
+}
+.ax-scatter-axes {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--ax-faint);
+}
+
+/* ==========================================================================
+   Trends — direction, and how much of it survives the noise.
+   ========================================================================== */
+.ax-compare-rows {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+.ax-compare-rows li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 66px auto auto;
+    grid-template-areas: 'dot label spark now delta' '. label spark was was';
+    align-items: center;
+    gap: 1px 11px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.ax-compare-rows li:last-child { border-bottom: 0; padding-bottom: 0; }
+.ax-compare-rows li .ax-dot { grid-area: dot; }
+.ax-compare-label { grid-area: label; font-size: 12.5px; font-weight: 500; }
+.ax-compare-spark { grid-area: spark; min-width: 0; }
+.ax-compare-spark .ax-spark { height: 20px; margin: 0; }
+.ax-compare-now {
+    grid-area: now;
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+.ax-compare-rows li .ax-delta { grid-area: delta; justify-self: end; }
+.ax-compare-was {
+    grid-area: was;
+    font-size: 10.5px;
+    color: var(--ax-faint);
+    text-align: right;
+}
+
+.ax-directions {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.ax-directions li {
+    padding-bottom: 13px;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.ax-directions li:last-child { border-bottom: 0; padding-bottom: 0; }
+.ax-directions header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.ax-directions header strong { font-size: 12.5px; }
+.ax-directions header .ax-delta { margin-left: auto; }
+
+/* How much of the variation the fitted line accounts for. The part of a trend
+   chart everyone leaves out, and the part that tells a reader whether the slope
+   above it is a direction or a fortnight. */
+.ax-fit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 5px;
+    margin-bottom: 7px;
+}
+.ax-fit i {
+    display: block;
+    height: 5px;
+    min-width: 3px;
+    border-radius: 999px;
+    opacity: .55;
+    transition: width .35s ease;
+}
+.ax-fit .ax-small { white-space: nowrap; }
+
+/* ==========================================================================
+   Recommendations — actionable, prioritised, improvement-focused.
+   ========================================================================== */
+.ax-advice-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0 4px;
+}
+
+.ax-advice-priority {
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, currentColor 11%, transparent);
+}
+
+.ax-advice-chip {
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card-2);
+    color: var(--ax-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+}
+
+.ax-advice-chips .ax-effort { margin-left: auto; padding-bottom: 0; }
+
+.ax-advice-benefit { color: var(--ax-muted); }
+
+.ax-advice-foot { align-items: center; }
+.ax-advice-evidence {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.ax-advice-evidence b { color: var(--ax-muted); font-weight: 700; }
+
+/* The commitment. Local to the browser and honest about it — see `useTrying`
+   in components/Recommendations/Panels. */
+.ax-try {
+    flex: none;
+    height: 32px;
+    padding: 0 15px;
+    border-radius: 9px;
+    border: 1px solid var(--ax-violet);
+    background: transparent;
+    color: var(--ax-violet);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .16s, color .16s;
+}
+.ax-try:hover { background: color-mix(in srgb, var(--ax-violet) 12%, transparent); }
+.ax-try.is-on { background: var(--ax-violet); color: #fff; }
+
+.ax-advice.is-trying { border-color: var(--ax-violet); }
+
+/* ==========================================================================
+   Responsive — the standard breakpoints, in the order these stop being
+   comparable side by side.
+   ========================================================================== */
+@media (max-width: 1400px) {
+    .ax-habit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1280px) {
+    .ax-tiles-five { grid-template-columns: repeat(3, 1fr); }
+    .ax-habit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ax-relationship { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1024px) {
+    .ax-buckets { grid-template-columns: 1fr; }
+    .ax-tabs-major .ax-tab { flex: 0 0 auto; }
+    .ax-compare-rows li { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+    .ax-compare-spark { display: none; }
+}
+
+@media (max-width: 768px) {
+    .ax-tiles-five { grid-template-columns: repeat(2, 1fr); }
+    .ax-habit-grid { grid-template-columns: 1fr; }
+    .ax-panel-aside { justify-content: flex-start; }
+    .ax-phases li { grid-template-columns: minmax(0, 1fr) auto; }
+    .ax-phase-steps { display: none; }
+}
+
+@media (max-width: 480px) {
+    .ax-tiles-five { grid-template-columns: 1fr; }
+    .ax-advice-foot { flex-direction: column; align-items: stretch; }
+    .ax-try { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-habit-track i,
+    .ax-fit i,
+    .ax-finding-body,
+    .ax-finding-mark,
+    .ax-try { transition: none; }
 }

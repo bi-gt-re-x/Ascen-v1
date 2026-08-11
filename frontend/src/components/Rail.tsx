@@ -28,7 +28,7 @@
  * whole of the dependency: one number, one direction, no reply.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth, useTheme, useUserData } from '@/hooks';
 import { AVATARS, avatarPath } from '@/services/avatars';
 import { auth } from '@/services';
@@ -45,6 +45,16 @@ interface Tab {
   to: string;
   label: string;
   icon: React.ReactNode;
+  /**
+   * Other paths this entry should light up for.
+   *
+   * The analytics page is five tabs on five URLs, and two of them — Habits and
+   * Trends — have no rail entry of their own, so without this the rail would
+   * show nothing selected while the reader is plainly on the analytics page.
+   * Insights and Recommendations keep their own entries and match exactly,
+   * because they are worth arriving at directly.
+   */
+  also?: string[];
 }
 
 const stroke = {
@@ -93,6 +103,7 @@ const TABS: Tab[] = [
     // rail is a column of one-word destinations and the odd two-word one
     // wraps — the heading is where the full name belongs.
     label: 'Analytics',
+    also: ['/trends', '/habits'],
     icon: (
       <svg {...stroke}>
         <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
@@ -106,6 +117,32 @@ const TABS: Tab[] = [
       <svg {...stroke}>
         <path d="M3 17L9 11l4 4 8-8" />
         <path d="M16 7h5v5" />
+      </svg>
+    ),
+  },
+  // The three analysis pages sit together and in the order they are meant to be
+  // read: how much (Analytics), how (Insights), what to change next
+  // (Recommendations). Insights looks backwards at behaviour already recorded;
+  // Recommendations looks forward at what to do about it.
+  {
+    to: '/insights',
+    label: 'Insights',
+    icon: (
+      <svg {...stroke}>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+        <path d="M11 8v6M8 11h6" />
+      </svg>
+    ),
+  },
+  {
+    to: '/recommendations',
+    label: 'Recommendations',
+    icon: (
+      <svg {...stroke}>
+        <path d="M9 18h6" />
+        <path d="M10 22h4" />
+        <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z" />
       </svg>
     ),
   },
@@ -155,6 +192,8 @@ export function Rail() {
   const { status, username, avatar, signOut, refresh } = useAuth();
   const { theme, setTheme } = useTheme();
   const { data, reload } = useUserData();
+  // Only for `Tab.also` — NavLink handles its own path on every other entry.
+  const { pathname } = useLocation();
 
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -244,7 +283,9 @@ export function Rail() {
           <NavLink
             key={tab.to}
             to={tab.to}
-            className={({ isActive }) => `rail-link${isActive ? ' active' : ''}`}
+            className={({ isActive }) =>
+              `rail-link${isActive || tab.also?.includes(pathname) ? ' active' : ''}`
+            }
             title={tab.label}
           >
             {tab.icon}

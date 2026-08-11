@@ -14,8 +14,38 @@
  * the only thing that explains how a score is arrived at, and the new page
  * links to that explanation in more than one place without owning it yet.
  */
-export { Header, Tabs, Controls, SECTIONS, useActiveSection } from './Header';
-export type { HeaderProps, TabsProps, ControlsProps, Section } from './Header';
+export {
+  Header,
+  Tabs,
+  ViewTabs,
+  Controls,
+  SECTIONS,
+  VIEWS,
+  viewFor,
+  useActiveSection,
+} from './Header';
+export type {
+  HeaderProps,
+  TabsProps,
+  ViewTabsProps,
+  ControlsProps,
+  Section,
+  View,
+  ViewKey,
+} from './Header';
+
+export {
+  HabitTiles,
+  HabitCard,
+  HabitCards,
+  HabitCalendarPanel,
+  PatternsPanel,
+  ConsistencyPanel as HabitConsistencyPanel,
+  TimelinePanel,
+  HabitOpening,
+} from './Habits';
+
+export { ComparePanel, DirectionPanel, TrendChart, TrendTiles } from './Trends';
 
 export { Tiles } from './Tiles';
 export type { TilesProps } from './Tiles';
@@ -35,8 +65,20 @@ export {
 } from './Longterm';
 export type { StreaksPanelProps, StandingPanelProps } from './Longterm';
 
-export { AreaChart, GroupedBars, Panel, Radar, Sparkline, Delta, TONES, toneVar } from './charts';
-export type { Tone, PanelProps, AreaSeries, BarPair, RadarAxis } from './charts';
+export {
+  AreaChart,
+  Columns,
+  GroupedBars,
+  Panel,
+  Radar,
+  Scatter,
+  Sparkline,
+  Delta,
+  TONES,
+  asTone,
+  toneVar,
+} from './charts';
+export type { Tone, PanelProps, AreaSeries, BarPair, Column, RadarAxis, ScatterProps } from './charts';
 
 /**
  * The report card is scored out of 100 and this page states it out of ten.

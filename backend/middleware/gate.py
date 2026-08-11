@@ -20,6 +20,9 @@ from starlette.responses import RedirectResponse
 from backend.tracking.auth import profile_complete, signed_in_user
 
 GATED_PATHS = ('/dashboard', '/calendar', '/goals', '/growth', '/analytics',
+               # The analytics page's other four tabs, each on its own URL and
+               # each read entirely off the account's own history.
+               '/trends', '/habits', '/insights', '/recommendations',
                # The calendar's three views are three URLs now, and each of
                # them shows the account's own week as plainly as /calendar did.
                '/calendar/day', '/calendar/week', '/calendar/month')
