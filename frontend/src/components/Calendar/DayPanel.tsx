@@ -157,7 +157,12 @@ export function DayPanel({
                 .join(' ');
 
               return (
-                <li className={classes} key={entry.key}>
+                // The colour family rides on the card; the tint, the edge and
+                // the left accent come from styles/calendar/palette.css. The
+                // difficulty pill above is unchanged — this panel says
+                // difficulty in words, so its left edge is free to be the
+                // category, which is the design's own arrangement.
+                <li className={classes} data-family={entry.family} key={entry.key}>
                   {!isTask && <EventIcon />}
 
                   <div className="card-body">

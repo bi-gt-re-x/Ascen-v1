@@ -17,6 +17,8 @@
  * something, so nothing can be left behind.
  */
 import { markConflicts, type CalendarSection, type Subtask } from '@/utils/calendarStore';
+import { familyForSection } from '@/utils/calendarColors';
+import { familyForSubject, type Family } from '@/utils/eventPalette';
 import { taskCalendarDay } from '@/utils/calendarIntensity';
 import type { Task } from '@/types';
 
@@ -36,6 +38,12 @@ export interface DayEntry {
    */
   priority?: string;
   completed: boolean;
+  /**
+   * The colour family — a task's from its subject, an event's from what it was
+   * given when it was made. One of the twelve in utils/eventPalette; the card
+   * wears it as `data-family` and styles/calendar/palette.css does the rest.
+   */
+  family: Family;
   taskId?: string;
   hasConflict?: boolean;
   subtasks?: Subtask[];
@@ -86,6 +94,7 @@ export function dayEntries(
       endTime: section.endTime,
       xp: section.xp ?? 0,
       completed: Boolean(section.completed),
+      family: familyForSection(section),
       hasConflict: section.hasConflict,
       subtasks: section.subtasks,
       section,
@@ -111,6 +120,7 @@ export function dayEntries(
       xp: Number(task.xp_value) || 0,
       priority: String(task.priority || '').toLowerCase() || undefined,
       completed: task.status === 'done',
+      family: familyForSubject(task.subject),
       taskId: String(task.id),
     });
   });

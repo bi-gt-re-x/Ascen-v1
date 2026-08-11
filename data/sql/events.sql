@@ -46,7 +46,14 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 );
 
 CREATE TABLE IF NOT EXISTS event_colors (
-    color  TEXT PRIMARY KEY
+    color         TEXT PRIMARY KEY,
+
+    -- The ISO week the colour was handed out in, "2026-W33". A colour is
+    -- reserved for its own week and released after it, so a calendar does not
+    -- run out of room as blocks are created and deleted over a year. Things
+    -- still on the calendar keep their colour reserved by being there — the
+    -- client tracks that half. See backend/tracking/event.py.
+    claimed_week  TEXT
 );
 
 CREATE INDEX IF NOT EXISTS calendar_entries_user_date_idx ON calendar_entries (user_id, date);

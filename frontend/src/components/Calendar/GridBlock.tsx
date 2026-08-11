@@ -1,11 +1,17 @@
 /**
  * One block on the time grid — an event, or a task.
  *
- * The two share a shape and differ in what they can tell you. An event is
- * painted in its own colour and says when it runs; a task is coloured by
- * difficulty, carries its XP, and says whether it is due, was finished, or
- * runs on into tomorrow. Both carry the icon guessed from their name and the
- * three-dots menu.
+ * The two share a shape and differ in what they can tell you. An event says
+ * when it runs; a task carries its XP, its difficulty and whether it is
+ * overdue, finished, or running on into tomorrow. Both carry the icon guessed
+ * from their name and the three-dots menu.
+ *
+ * **No colour is written here.** Every block carries `data-family` — one of the
+ * twelve in utils/eventPalette — and styles/calendar/palette.css turns that into
+ * a tint, an edge and an ink for whichever theme and state it is in. The one
+ * thing that is not the family's is a task's left edge, which is its
+ * difficulty; the category is then carried by the tint and by the dot beside
+ * the name, so it is never invisible.
  *
  * A task's *name* is the button, not the block: clicking it finishes the task.
  * That is deliberate and is why the title has a role of its own — the rest of
@@ -18,8 +24,6 @@ import {
   hmToDate,
   hmLabelShort,
   rangeLabel,
-  shortDateTime,
-  timeLabel,
   timeLabelShort,
   type Block,
 } from '@/utils/calendarGrid';
@@ -66,6 +70,7 @@ function BlockTitle({
   name,
   icon,
   subject,
+  dot,
   children,
 }: {
   name: string;
@@ -73,12 +78,23 @@ function BlockTitle({
   icon?: string;
   /** The subject's label, for the title attribute. */
   subject?: string;
+  /**
+   * Draw the small category mark ahead of the icon.
+   *
+   * Tasks only. An event says which family it is in with the accent down its
+   * left edge; on a task that edge is spent on difficulty, so the family needs
+   * somewhere else to be said out loud. The tint alone is not enough — at the
+   * lightest rung two families can look similar across a whole grid — and this
+   * is a solid 7px of the accent itself.
+   */
+  dot?: boolean;
   /** The ✓ or the tick placeholder a task puts before its name. */
   children?: React.ReactNode;
 }) {
   const url = icon ? `/static/icons/${icon}.svg` : iconUrlFor(name);
   return (
     <>
+      {dot && <i className="cal-dot" aria-hidden="true" />}
       <i
         className="cal-ico wk-event-ico"
         style={{ ['--ico' as string]: `url(${url})` }}
@@ -136,12 +152,10 @@ export function GridBlock({
         data-start={block.startHM}
         data-end={block.endHM}
         data-move="1"
-        style={{
-          ...position,
-          background: block.colors.fill,
-          borderColor: block.colors.border,
-          borderLeftColor: block.colors.left,
-        }}
+        // Every colour on this element comes from the family — see
+        // styles/calendar/palette.css. Nothing is painted inline any more.
+        data-family={block.family}
+        style={position}
       >
         <ResizeHandles />
         <CardMenu
@@ -173,8 +187,16 @@ export function GridBlock({
     );
   }
 
+  // Difficulty is the left edge and nothing else.
+  //
+  // It used to be the whole block: a task was painted blue, amber or red from
+  // end to end, so twenty tasks on a week were three colours and the only thing
+  // a reader could tell at a glance was how hard their week was — not which of
+  // the twenty they were looking at. The class still rides on the element, and
+  // styles/calendar/palette.css spends it on `border-left-color` alone.
   const priorityClass =
     block.priority === 'high' ? 'prio-high' : block.priority === 'medium' ? 'prio-medium' : 'prio-low';
+
 
   // A task writes its two ends where they actually are: the start beside the
   // name on the block's top edge, the end on its bottom edge. The block *is*
@@ -185,26 +207,24 @@ export function GridBlock({
   // Aug 4, 12:25 PM", which did ellipsise.) Events keep the range: an event
   // has no start label at the top to pair with.
   //
-  // The exceptions are the two cases where an end time would be a lie: a task
-  // that overruns the column says where it goes instead, and a finished one
-  // says when it was actually finished.
-  let footText = timeLabelShort(block.dueDT ?? block.startDT);
+  // The one exception is a task that overruns the column: it says where it
+  // goes instead, because that is a different day and a time alone would not
+  // say so.
+  const endDT = block.dueDT ?? block.startDT;
+  let footText = timeLabelShort(endDT);
   let footClass = 'wk-event-due';
   if (block.contDT) {
+    // The one case that still names a day, because it is a different one.
     footText = `Continued on ${dates.formatDate(block.contDT, { month: 'short', day: 'numeric' })}`;
     footClass = 'wk-event-cont';
-  } else if (block.done) {
-    const end = block.completedDT || block.dueDT;
-    footText = end ? (dates.isoDate(end) === iso ? timeLabel(end) : shortDateTime(end)) : '';
-    // Finished after the deadline. The block keeps the size it was scheduled
-    // at — it is a record of what was booked, and letting it grow would claim
-    // time the reader never planned — so the overrun is carried entirely by
-    // this label: the real finishing time, in deep red, on the block's floor.
-    // Without it a late finish and an on-time one looked identical.
-    const late = Boolean(
-      block.completedDT && block.dueDT && block.completedDT > block.dueDT,
-    );
-    footClass = late ? 'wk-event-done-time is-late' : 'wk-event-done-time';
+  } else if (block.snug) {
+    // A short block gets one line under its name, and that line is the whole
+    // span: "8:30 – 9 AM". It used to be a single time, and on a finished task
+    // it was the moment it was ticked off *with its date on it* — so a block
+    // drawn from 8:30 to 9:00 read "Aug 10 7:13 PM", which is neither of the
+    // two times the reader dragged out. A block says when it runs. When it was
+    // actually finished is what the tick and the green name are for.
+    footText = rangeLabel(block.startDT, endDT);
   }
 
   // Every task layout keeps the start beside the title, the one-row one
@@ -215,6 +235,8 @@ export function GridBlock({
   return (
     <div
       className={`wk-event wk-task ${priorityClass}${block.done ? ' is-done' : ''}${
+        block.overdue ? ' is-overdue' : ''
+      }${
         block.compact ? ' is-compact' : ''
       }${block.snug ? ' is-snug' : ''}${completing ? ' is-completing' : ''}${clash}`}
       data-kind="task"
@@ -222,6 +244,9 @@ export function GridBlock({
       data-id={block.id}
       // A finished task is a record of what happened, so it does not move.
       data-move={block.done ? undefined : '1'}
+      // The family paints the tint, the edge and the ink; `priorityClass` owns
+      // the left edge alone. See styles/calendar/palette.css.
+      data-family={block.family}
       style={position}
     >
       {!block.done && <ResizeHandles />}
@@ -238,6 +263,7 @@ export function GridBlock({
               name={title}
               icon={block.subjectIcon}
               subject={block.subjectLabel}
+              dot
             >
               <span className="wk-event-check">✓</span>
             </BlockTitle>
@@ -262,6 +288,7 @@ export function GridBlock({
               name={title}
               icon={block.subjectIcon}
               subject={block.subjectLabel}
+              dot
             >
               <span className="wk-task-tick" aria-hidden="true">
                 ✓

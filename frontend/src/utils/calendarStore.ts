@@ -33,9 +33,16 @@ export interface CalendarSection {
   recurrence?: RecurrenceType;
   recurrenceDays?: number[];
   xp?: number;
-  /** `#rrggbb`, assigned once per event and copied to all its recurrences. */
+  /**
+   * The colour family, assigned once per event and copied to all its
+   * recurrences — one of the twelve in utils/eventPalette. Absent on every
+   * event made before the palette existed; `familyForSection` reads those
+   * back off `color` or `colorIndex` instead, and both are kept for it.
+   */
+  family?: string;
+  /** `#rrggbb`, from when every event was given a hex of its own. Legacy. */
   color?: string;
-  /** The pre-hex palette index. Legacy events still carry it. */
+  /** The pre-hex palette index. Older still. */
   colorIndex?: number;
   subtasks?: Subtask[];
   hasSubtasks?: boolean;

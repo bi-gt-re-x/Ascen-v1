@@ -71,6 +71,9 @@ import type { FocusHistory } from '@/types';
 import '@/styles/calendar/month.css';
 import '@/styles/calendar/week.css';
 import '@/styles/calendar/day.css';
+// Last, so the colour system has the final word on every block. See the
+// note at the top of it.
+import '@/styles/calendar/palette.css';
 
 /** Monday of the week a date falls in. */
 function mondayOf(date: Date): Date {

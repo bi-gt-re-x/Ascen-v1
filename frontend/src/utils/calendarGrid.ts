@@ -13,7 +13,8 @@
  *
  * Ported from the rendering half of calendar-week.js.
  */
-import { eventBlockColors, type BlockColors } from './calendarColors';
+import { familyForSection } from './calendarColors';
+import { familyForSubject, type Family } from './eventPalette';
 import { isoOf, monthKey, type CalendarData } from './calendarStore';
 import type { Subject } from '@/services/subjects';
 import type { Task } from '@/types';
@@ -267,6 +268,18 @@ export interface TaskBlock extends BlockBase {
   subjectIcon?: string;
   /** "Chem" — the subject's short label, for the block's tooltip. */
   subjectLabel?: string;
+  /**
+   * The colour family, from the subject the task is filed under.
+   *
+   * Looked up rather than assigned, so every Chemistry task on the account is
+   * the same teal and a task keeps its colour through a drag — which rewrites
+   * the row under a new id and would lose anything held per task. Work filed
+   * under nothing is gray, which is the family that means exactly that. See
+   * utils/eventPalette.
+   */
+  family: Family;
+  /** Past its due time and not done. The block says so; see palette.css. */
+  overdue: boolean;
   startDT: Date;
   dueDT: Date | null;
   completedDT: Date | null;
@@ -281,7 +294,8 @@ export interface EventBlock extends BlockBase {
   name: string;
   startHM: string;
   endHM: string;
-  colors: BlockColors;
+  /** The family the event was given when it was made. See `familyForSection`. */
+  family: Family;
 }
 
 export type Block = TaskBlock | EventBlock;
@@ -349,8 +363,16 @@ export function dayTaskBlocks(
     const dueDT = toDate(task.due_date);
     const completedDT = task.status === 'done' ? toDate(task.completed_at) : null;
 
-    let endDT = completedDT || dueDT || new Date(startDT.getTime() + 3_600_000);
-    if (dueDT && endDT > dueDT) endDT = dueDT;
+    // **A block is the span that was booked, and nothing moves it.**
+    //
+    // It used to shrink to the completion time when a task was finished early
+    // and grow to nothing when it was finished late, so a block drawn at 8:30
+    // to 9:00 became 8:30 to 8:41 the moment it was ticked off — the times on
+    // it changed under the reader after they had put it there. The end is the
+    // due time, period: what was dragged out is what stays on the grid. When it
+    // was actually finished is a different fact, and the tick and the green
+    // name are where that is said.
+    let endDT = dueDT || new Date(startDT.getTime() + 3_600_000);
     if (endDT <= startDT) endDT = new Date(startDT.getTime() + 3_600_000);
     if (endDT <= gridStart || startDT >= gridEnd) return;
 
@@ -359,10 +381,11 @@ export function dayTaskBlocks(
     const clamp = (hour: number) => Math.max(START_HOUR, Math.min(hour, END_HOUR));
 
     const subject = (task.subject && subjects?.get(task.subject)) || null;
+    const id = String(task.id);
 
     out.push({
       kind: 'task',
-      id: String(task.id),
+      id,
       start: clamp(startDT < gridStart ? START_HOUR : hourInColumn(startDT)),
       end: clamp(endDT > gridEnd ? END_HOUR : hourInColumn(endDT)),
       top: 0,
@@ -374,6 +397,8 @@ export function dayTaskBlocks(
       done: task.status === 'done',
       priority: String(task.priority || '').toLowerCase(),
       ...(subject ? { subjectIcon: subject.icon, subjectLabel: subject.label } : {}),
+      family: familyForSubject(task.subject),
+      overdue: task.status !== 'done' && !!dueDT && dueDT.getTime() < Date.now(),
       startDT,
       dueDT,
       completedDT,
@@ -442,7 +467,7 @@ export function dayEventBlocks(iso: string, data: CalendarData): EventBlock[] {
       name: section.task || 'Event',
       startHM: section.startTime,
       endHM: section.endTime,
-      colors: eventBlockColors(section),
+      family: familyForSection(section),
     });
   });
 

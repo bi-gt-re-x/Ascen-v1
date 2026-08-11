@@ -374,12 +374,14 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
  * lines already have to give something up, and `is-compact` is a single row
  * with nothing to space. */
 .wk-event.wk-task:not(.is-compact):not(.is-snug) { row-gap: 6px; }
-/* Real task blocks, colour-coded by state:
-   low/easy = blue, medium = yellow, high/hard = red, completed = green. */
-.wk-event.wk-task { background: #eef2fb; border-color: #d7e1f4; color: #2c3a5a; border-left-color: #6b7a99; }
-.wk-event.wk-task.prio-low    { background: #eaf1fe; border-color: #cfe0fb; color: #2c5aa0; border-left-color: #2c5aa0; }
-.wk-event.wk-task.prio-medium { background: #fdf6e3; border-color: #f0e2c8; color: #8a6d3b; border-left-color: #b8892d; }
-.wk-event.wk-task.prio-high   { background: #fdecec; border-color: #f7d5d5; color: #b0413e; border-left-color: #b0413e; }
+/* Task and event block colours are NOT here.
+ *
+ * Every one of them — the tint, the edge, the ink, the left accent, and what
+ * each becomes on hover, on selection, when completed and when overdue — is in
+ * styles/calendar/palette.css, driven off the `data-family` the block carries.
+ * This file keeps the geometry and the type; that one keeps the colour. Do not
+ * add a hex to a `.wk-event` rule here: it will be a thirteenth colour outside
+ * the system, and the next person will not find it. */
 /* Completed task: keep the priority fill & border; completion is shown only with
    a green check sign + green text, so the block's colours don't change. */
 .wk-event.wk-task.is-done { color: #2e7d52; }
@@ -413,16 +415,13 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
 .day-task-name:hover ~ .day-task-diff { opacity: .55; }
 .day-task-item:has(.day-task-name:hover) .day-task-ring { background: #2e9e6b; border-color: #2e9e6b; }
 
-/* Calendar events: light 40%-transparent fills (set inline, from a palette that
-   avoids the task colours); dark text for contrast over the translucent fill. */
-.wk-event.wk-event-cal { color: #33323a; }
-.wk-event.wk-event-cal .wk-event-title { color: #2b2a33; }
-html[data-theme="dark"] .wk-event.wk-event-cal,
-html[data-theme="dark"] .wk-event.wk-event-cal .wk-event-title { color: #ece9f5; }
+/* Colour: styles/calendar/palette.css. */
 
-
+/* The line on a block's floor. `.wk-event-done-time` used to be a third state
+   here — the moment a finished task was actually ticked off, with its date on
+   it — and it is gone with the label: a block is the span that was booked, so
+   its floor says when that span ends. See components/Calendar/GridBlock. */
 .wk-event-due,
-.wk-event-done-time,
 .wk-event-cont { font-size: 10.5px; opacity: .8; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wk-event-cont { font-style: italic; font-weight: 600; }
 /* The title is a row now — icon, then the ✓ a task carries, then the name —
@@ -752,10 +751,7 @@ html[data-theme="dark"] .wk-hourline.is-last { border-color: #303845; }
    that surface is — white in the light theme, the card in this one. */
 html[data-theme="dark"] .wk-nowlabel { box-shadow: 0 0 0 3px #0f141b; }
 html[data-theme="dark"] .wk-daydate.today { background: #f4f4f6; color: #161b22; }
-/* State-coloured task blocks, dark variants (muted fills, readable text). */
-html[data-theme="dark"] .wk-event.wk-task.prio-low    { background: #16233a; border-color: #274267; color: #9bc0ff; border-left-color: #6a9bff; }
-html[data-theme="dark"] .wk-event.wk-task.prio-medium { background: #2d2718; border-color: #4d4327; color: #e6c979; border-left-color: #e6c979; }
-html[data-theme="dark"] .wk-event.wk-task.prio-high   { background: #341c1c; border-color: #5a2f2f; color: #f2a3a3; border-left-color: #f2a3a3; }
+/* Dark-theme block colours are in styles/calendar/palette.css too. See above. */
 html[data-theme="dark"] .wk-event.wk-task.is-done { color: #86d6a5; }
 /* Click-to-finish, dark: the same green, lightened to stay readable on the
    muted block fills. */
@@ -1137,20 +1133,13 @@ html[data-theme="dark"] .wk-focus-chip.is-empty { color: #6b7280; }
    the two and is now the only one, in month.css beside the base rules. Nothing
    about how it is drawn belongs in a file about the Week view. */
 
-/* A task finished after its deadline.
- *
- * The block is not resized — it stays the span that was booked, because that
- * is what was planned and a block that grew would be claiming time nobody set
- * aside. So the whole of the overrun is carried by the one label that can
- * carry it: the real finishing time, on the block's floor, in a deep red that
- * is the only red on a block otherwise painted as done. It is bolder and at
- * full opacity as well, so the colour is never the only thing saying it. */
-.wk-event-end.is-late {
-    color: #8c1c1c;
-    font-weight: 700;
-    opacity: 1;
-}
-html[data-theme="dark"] .wk-event-end.is-late { color: #ff8a86; }
+/* A task finished after its deadline used to say so here, in deep red on the
+ * block's floor. Both the label and this rule are gone: the floor of a block
+ * is the span it was booked for, full stop, and a red time on it was a third
+ * meaning for a line that already had two. Lateness is not lost — an unfinished
+ * task past its due time wears `is-overdue` (see styles/calendar/palette.css),
+ * which is the state a reader can still act on. */
+
 
 /* The one-row block, at the height it is actually given.
  *

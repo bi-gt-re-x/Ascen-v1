@@ -8,13 +8,21 @@
  * every function reached into and then re-rendered by hand, which is exactly
  * the arrangement where they do.
  *
- * Colours are the one part that talks to the backend: `/api/get_event_colors`
- * is the list of hexes already handed out, and a new event's colour is posted
- * back so the next one can avoid it.
+ * Colours are the one part that talks to the backend, and they are not this
+ * file's arithmetic: `utils/colorRegistry` holds what is spoken for and hands
+ * out the next one. What happens here is the two ends of that — every event in
+ * the store declares its colour as taken, so a colour is held for exactly as
+ * long as the event using it is on the calendar, and a new event claims one.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { events as eventService } from '@/services';
-import { generateDistinctColor } from '@/utils/calendarColors';
+import { useCallback, useEffect, useState } from 'react';
+import type { Family } from '@/utils/eventPalette';
+import {
+  claimFamily,
+  primeColorRegistry,
+  reserveFamilies,
+  resetLiveColors,
+} from '@/utils/colorRegistry';
+import { familyForSection } from '@/utils/calendarColors';
 import {
   isSameEvent,
   loadCalendarData,
@@ -71,22 +79,31 @@ export interface UseCalendarStore {
 
 export function useCalendarStore(username: string | null): UseCalendarStore {
   const [data, setData] = useState<CalendarData>(() => loadCalendarData(username));
-  const colorsInUse = useRef<string[]>([]);
 
-  // A change of account is a different calendar, not the same one edited.
+  // A change of account is a different calendar, not the same one edited — and
+  // a different set of colours held, so the live reservations start again.
   useEffect(() => {
+    resetLiveColors();
     setData(loadCalendarData(username));
   }, [username]);
 
   useEffect(() => {
-    let live = true;
-    void eventService.eventColors().then((result) => {
-      if (live && result.success) colorsInUse.current = result.colors.slice();
-    });
-    return () => {
-      live = false;
-    };
+    void primeColorRegistry();
   }, []);
+
+  // Every family on the calendar is one a new event should keep away from, for
+  // as long as the event wearing it is there. Declared from the store itself
+  // rather than tracked through the mutations, so a family cannot be held by an
+  // event that was deleted, or missed on one that arrived in another tab.
+  useEffect(() => {
+    const seen = new Set<Family>();
+    Object.values(data).forEach((day) => {
+      day.timestamps.forEach((section) => {
+        if (!section.isDashboardTask) seen.add(familyForSection(section));
+      });
+    });
+    reserveFamilies(seen);
+  }, [data]);
 
   /** Every write goes through here, so nothing is saved without being shown. */
   const commit = useCallback(
@@ -97,15 +114,6 @@ export function useCalendarStore(username: string | null): UseCalendarStore {
     [username],
   );
 
-  const claimColor = useCallback(() => {
-    const color = generateDistinctColor(colorsInUse.current);
-    colorsInUse.current.push(color);
-    void eventService.addEventColor(color).catch(() => {
-      /* best effort: the next event may pick a nearer colour, nothing worse */
-    });
-    return color;
-  }, []);
-
   const addEvent = useCallback(
     (dateKey: string, draft: EventDraft) => {
       const section: CalendarSection = {
@@ -115,7 +123,7 @@ export function useCalendarStore(username: string | null): UseCalendarStore {
         recurrence: draft.recurrence,
         recurrenceDays: draft.recurrenceDays,
         xp: 10,
-        color: claimColor(),
+        family: claimFamily(),
       };
 
       const next: CalendarData = { ...data };
@@ -137,7 +145,7 @@ export function useCalendarStore(username: string | null): UseCalendarStore {
 
       commit(next);
     },
-    [claimColor, commit, data],
+    [commit, data],
   );
 
   const editEvent = useCallback(

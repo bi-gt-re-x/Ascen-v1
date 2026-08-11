@@ -63,6 +63,10 @@ _built = False
 # migration this list can carry.
 ADDED_COLUMNS = (
     ('tasks', 'subject', 'TEXT'),
+    # The ISO week a colour was claimed in, so the reservation can expire —
+    # see backend/tracking/event.py. Existing rows get NULL, which reads as
+    # "claimed before anyone was counting" and therefore as long expired.
+    ('event_colors', 'claimed_week', 'TEXT'),
 )
 
 
@@ -365,9 +369,19 @@ def save_metric_snapshots(rows):
 
 
 def event_colors():
-    """The hex colours already handed out, in the order they were assigned."""
-    return [r['color'] for r in read_table('event_colors') if r.get('color')]
+    """Every colour handed out, as `{color, claimed_week}` in assignment order.
+
+    `claimed_week` is an ISO week — "2026-W33" — and is absent on rows written
+    before colours were dated. The caller decides what to do with an undated
+    row; see backend/tracking/event.py, which treats it as expired.
+    """
+    return [r for r in read_table('event_colors') if r.get('color')]
 
 
-def save_event_colors(colors):
-    write_table('event_colors', [{'color': c} for c in colors], columns=['color'])
+def save_event_colors(rows):
+    """Replace the colour table. Rows are `{color, claimed_week}` dicts."""
+    write_table(
+        'event_colors',
+        [{'color': r['color'], 'claimed_week': r.get('claimed_week')} for r in rows],
+        columns=['color', 'claimed_week'],
+    )
