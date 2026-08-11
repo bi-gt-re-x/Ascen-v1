@@ -42,6 +42,7 @@ import {
   useSubjectIndex,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
+import { planFamilies } from '@/utils/calendarFamilies';
 import { useFocusSession } from '@/hooks/useFocusSession';
 import {
   useGridDrag,
@@ -171,16 +172,25 @@ export default function Week() {
   /** Opening the week lands on the current hour — see hooks/useNowScroll. */
   const centerOnNow = useNowScroll(scroller, !loading && thisWeek);
 
+  // One colour plan for the whole week, so nothing on it shares a family until
+  // the week has more than twelve distinct things on it — and so the Day view
+  // and the Week view agree, both planning the same seven days. See
+  // utils/calendarFamilies.
+  const plan = useMemo(
+    () => planFamilies(days.map((day) => day.iso), tasks, store.data),
+    [days, store.data, tasks],
+  );
+
   const columns = useMemo(
     () =>
       days.map((day) => ({
         ...day,
         ...layOut([
-          ...dayTaskBlocks(day.iso, tasks, subjects),
-          ...dayEventBlocks(day.iso, store.data),
+          ...dayTaskBlocks(day.iso, tasks, subjects, plan),
+          ...dayEventBlocks(day.iso, store.data, plan),
         ]),
       })),
-    [days, store.data, subjects, tasks],
+    [days, plan, store.data, subjects, tasks],
   );
 
   /** The first clash anywhere this week; the reader has to resolve it. */

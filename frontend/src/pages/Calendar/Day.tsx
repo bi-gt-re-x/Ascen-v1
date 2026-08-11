@@ -34,6 +34,7 @@ import {
   useSubjectIndex,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
+import { planFamilies, weekOf } from '@/utils/calendarFamilies';
 import {
   useGridDrag,
   type DraggedSlot,
@@ -202,13 +203,22 @@ export default function Day() {
     };
   }, [completing, iso, username]);
 
+  // One colour plan for the whole week, so nothing on it shares a family until
+  // the week has more than twelve distinct things on it — and so the Day view
+  // and the Week view agree, both planning the same seven days. See
+  // utils/calendarFamilies.
+  const plan = useMemo(
+    () => planFamilies(weekOf(iso), tasks, store.data),
+    [iso, store.data, tasks],
+  );
+
   const { blocks, conflict } = useMemo(
     () =>
       layOut([
-        ...dayTaskBlocks(iso, tasks, subjects),
-        ...dayEventBlocks(iso, store.data),
+        ...dayTaskBlocks(iso, tasks, subjects, plan),
+        ...dayEventBlocks(iso, store.data, plan),
       ]),
-    [iso, store.data, subjects, tasks],
+    [iso, plan, store.data, subjects, tasks],
   );
 
   /**

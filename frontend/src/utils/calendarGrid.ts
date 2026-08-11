@@ -15,6 +15,7 @@
  */
 import { familyForSection } from './calendarColors';
 import { familyForSubject, type Family } from './eventPalette';
+import { eventFamilyKey, taskFamilyKey } from './calendarFamilies';
 import { isoOf, monthKey, type CalendarData } from './calendarStore';
 import type { Subject } from '@/services/subjects';
 import type { Task } from '@/types';
@@ -347,6 +348,13 @@ export function dayTaskBlocks(
   tasks: Task[],
   /** The subject catalogue keyed by id — see hooks/useSubjects. */
   subjects?: Map<string, Subject>,
+  /**
+   * The week's colour plan — see utils/calendarFamilies. Optional, and the
+   * block falls back to its subject's own family without it, which is what an
+   * unplanned view (or one drawn before the plan is built) looks like rather
+   * than a view that waits.
+   */
+  plan?: Map<string, Family>,
 ): TaskBlock[] {
   const gridStart = new Date(`${iso}T00:00:00`);
   gridStart.setHours(START_HOUR, 0, 0, 0);
@@ -397,7 +405,7 @@ export function dayTaskBlocks(
       done: task.status === 'done',
       priority: String(task.priority || '').toLowerCase(),
       ...(subject ? { subjectIcon: subject.icon, subjectLabel: subject.label } : {}),
-      family: familyForSubject(task.subject),
+      family: plan?.get(taskFamilyKey(task)) ?? familyForSubject(task.subject),
       overdue: task.status !== 'done' && !!dueDT && dueDT.getTime() < Date.now(),
       startDT,
       dueDT,
@@ -437,7 +445,12 @@ export function isCalendarPlaced(
 }
 
 /** The events stored on this day, sized by their times. */
-export function dayEventBlocks(iso: string, data: CalendarData): EventBlock[] {
+export function dayEventBlocks(
+  iso: string,
+  data: CalendarData,
+  /** The week's colour plan — see `dayTaskBlocks` above. */
+  plan?: Map<string, Family>,
+): EventBlock[] {
   const day = data[monthKey(iso)];
   if (!day?.timestamps) return [];
 
@@ -467,7 +480,10 @@ export function dayEventBlocks(iso: string, data: CalendarData): EventBlock[] {
       name: section.task || 'Event',
       startHM: section.startTime,
       endHM: section.endTime,
-      family: familyForSection(section),
+      family:
+        plan?.get(
+          eventFamilyKey(section.task || 'Event', section.startTime, section.endTime),
+        ) ?? familyForSection(section),
     });
   });
 

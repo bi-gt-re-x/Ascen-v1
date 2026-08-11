@@ -71,6 +71,7 @@ function BlockTitle({
   icon,
   subject,
   dot,
+  done,
   children,
 }: {
   name: string;
@@ -88,13 +89,29 @@ function BlockTitle({
    * is a solid 7px of the accent itself.
    */
   dot?: boolean;
+  /**
+   * The task is finished, so the mark is a tick rather than a dot.
+   *
+   * The same slot, the same colour, one glyph instead of a disc — a finished
+   * task used to carry both, which is two marks saying two things in the space
+   * the eye reads as one. The tick is the more useful of the two and the family
+   * is still on the block in its tint, so this is the one that wins.
+   */
+  done?: boolean;
   /** The ✓ or the tick placeholder a task puts before its name. */
   children?: React.ReactNode;
 }) {
   const url = icon ? `/static/icons/${icon}.svg` : iconUrlFor(name);
   return (
     <>
-      {dot && <i className="cal-dot" aria-hidden="true" />}
+      {dot &&
+        (done ? (
+          <span className="cal-dot is-done" aria-hidden="true">
+            ✓
+          </span>
+        ) : (
+          <i className="cal-dot" aria-hidden="true" />
+        ))}
       <i
         className="cal-ico wk-event-ico"
         style={{ ['--ico' as string]: `url(${url})` }}
@@ -264,9 +281,8 @@ export function GridBlock({
               icon={block.subjectIcon}
               subject={block.subjectLabel}
               dot
-            >
-              <span className="wk-event-check">✓</span>
-            </BlockTitle>
+              done
+            />
           </div>
         ) : (
           <div

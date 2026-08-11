@@ -385,9 +385,10 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
 /* Completed task: keep the priority fill & border; completion is shown only with
    a green check sign + green text, so the block's colours don't change. */
 .wk-event.wk-task.is-done { color: #2e7d52; }
-/* A flex item in the title row now, so the space that used to be a literal
-   one in the markup is a margin. */
-.wk-event-check { flex: none; font-weight: 800; margin-right: 4px; }
+/* `.wk-event-check` was the ✓ a finished task carried between its icon and its
+   name. It is gone: the category dot ahead of the icon becomes the tick
+   instead, so a finished block has one mark rather than two. See `.cal-dot`
+   in styles/calendar/palette.css. */
 
 /* Click-to-finish: the name of an unfinished task is a target. Hovering it
    slides a green tick in ahead of the title and turns the name green, so the
@@ -457,7 +458,6 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
 @media (max-width: 1400px) {
     .wk-event-ico { width: 11px; height: 11px; margin-right: 3px; }
     .wk-event.is-compact .wk-event-ico { width: 10px; height: 10px; margin-right: 3px; }
-    .wk-event-check { margin-right: 2px; }
 }
 
 /* Leave room at the top-right for the three-dots menu button so the title (and
