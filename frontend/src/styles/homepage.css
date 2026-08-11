@@ -19,13 +19,23 @@ body {
 /* ---------- Theme select ---------- */
 /* It sat in a bar across the top of the page. The bar is gone — the landing
    page opens on the hero now — and the select moved down to the account row,
-   where it is the only thing left of it. */
+   where it is the only thing left of it.
+
+   styles/dashboard.css is always loaded and dresses this same class as a
+   bordered pill with a chevron drawn in as a background-image. Here it is
+   plain text, so the image has to go too — and it has to go in every theme.
+   `background: transparent` alone is a trap: the shorthand resets repeat to
+   `repeat` and position to `0% 0%`, so the moment a more specific rule puts
+   an image back (dashboard.css does exactly that under data-theme="dark"),
+   the chevron tiles across the whole control as a row of little spikes.
+   Say `background-image: none` outright, in both themes. */
 .theme-select {
     font-family: inherit;
     font-size: 0.95rem;
     font-weight: 500;
     color: #1f2733;
     background: transparent;
+    background-image: none;
     border: none;
     cursor: pointer;
     padding: 6px 4px;
@@ -322,8 +332,14 @@ html[data-theme="dark"] .brand img {
     filter: invert(1) hue-rotate(180deg) brightness(1.1);
 }
 
+/* dashboard.css re-dresses the pill under this same selector — same
+   specificity, earlier file — so the plain-text look has to be restated here
+   or the dark page gets a chevron and a #161b22 box the light page does not. */
 html[data-theme="dark"] .theme-select {
     color: #e6edf3;
+    background: transparent;
+    background-image: none;
+    border-color: transparent;
 }
 
 html[data-theme="dark"] .theme-select option {
