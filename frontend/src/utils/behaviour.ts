@@ -346,11 +346,18 @@ export function balanceShape(
   fromIso: string,
   toIso: string,
 ): BalanceShape {
-  const mid = new Date(
-    (new Date(`${fromIso}T00:00:00`).getTime() + new Date(`${toIso}T00:00:00`).getTime()) / 2,
-  )
-    .toISOString()
-    .slice(0, 10);
+  const nothing: BalanceShape = { concentration: 0, leader: null, carrying: 0, fading: [] };
+
+  // The range can have no ends: the first render, before the day series has
+  // arrived, asks for the balance of an empty window, and so does an account
+  // with no days in it at all. There is no midpoint between two dates that are
+  // not there — and asking for one throws rather than answering badly, which
+  // took the whole page down with it. Answer the empty shape instead.
+  const from = new Date(`${fromIso}T00:00:00`).getTime();
+  const to = new Date(`${toIso}T00:00:00`).getTime();
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return nothing;
+
+  const mid = new Date((from + to) / 2).toISOString().slice(0, 10);
 
   const early = new Map<string, number>();
   const late = new Map<string, number>();
@@ -370,9 +377,7 @@ export function balanceShape(
     side.set(subject, (side.get(subject) ?? 0) + xp);
   });
 
-  if (total === 0) {
-    return { concentration: 0, leader: null, carrying: 0, fading: [] };
-  }
+  if (total === 0) return nothing;
 
   const ranked = [...all.entries()].sort((a, b) => b[1] - a[1]);
   const [leaderId, leaderXp] = ranked[0]!;
