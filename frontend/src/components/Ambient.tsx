@@ -6,10 +6,13 @@
  * cursor. The first two are pure CSS (styles/ambient.css); this renders the
  * layer, runs the particle canvas, and moves the glow.
  *
- * The landing page has all four. The dashboard passes `cursor={false}` and
- * takes the first three: a light that chases the pointer suits a page being
- * read top to bottom, but on a page being *worked* it follows every trip to a
- * checkbox, and a working surface should hold still under the hand.
+ * **The cursor glow is opt-in, and only the landing page opts in.** A light
+ * that chases the pointer suits a page being read top to bottom; on a page
+ * being *worked* it follows every trip to a checkbox, and a working surface
+ * should hold still under the hand. It was the other way round — on by default,
+ * switched off per page — which meant every new app page inherited a drifting
+ * purple blob until somebody remembered to turn it off. Defaulting to off makes
+ * the rule hold for pages nobody has written yet.
  *
  * The rules it plays by, because a background that costs anything is a
  * background that should not exist:
@@ -44,11 +47,11 @@ interface Dot {
 }
 
 export interface AmbientProps {
-  /** Whether the glow follows the pointer. Off on pages being worked in. */
+  /** Whether the glow follows the pointer. The landing page, and nothing else. */
   cursor?: boolean;
 }
 
-export function Ambient({ cursor = true }: AmbientProps) {
+export function Ambient({ cursor = false }: AmbientProps) {
   const layer = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const glow = useRef<HTMLDivElement>(null);

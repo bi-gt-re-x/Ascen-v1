@@ -1,24 +1,1044 @@
-/* analytics — the graded report card.
- *
- * This was the second half of the growth page, revealed by a script, so all of
- * its styling still lives in growth.css alongside the charts it shared a card
- * with — every `grade-*`, `rt-card` and `ratings-*` rule is there.
- * src/pages/Analytics.tsx imports growth.css first and then this file, which
- * holds only what differs now that it is a page of its own.
- */
+/* ==========================================================================
+   analytics.css — the long view of an account.
 
-/* On the combined page this view was hidden until the button was pressed, and
-   was revealed with `display: flex` set inline by the script. There is no
-   script and no inline style now, so the layout has to come from here. */
-.analytics-container .ratings-view {
-    display: flex;
+   Every class here is prefixed `ax-`, and that is load-bearing rather than
+   tidy: styles/dashboard.css is loaded on every page and dresses a pile of
+   generic names (.card, .stat-row, .theme-select), so a page that reaches for
+   one of those inherits a look it did not ask for and has to override it in
+   both themes. A private prefix means this file starts from the browser's
+   defaults and nothing else. See the note in styles/homepage.css for what the
+   alternative costs.
+
+   Colour is a set of custom properties on `.ax-page`, redeclared once for
+   dark. Nothing below the token block names a colour, so the two themes are
+   one layout — and an SVG that paints with var(--ax-violet) re-paints itself
+   when the cascade changes, with no listener and no repaint on the JS side.
+   ========================================================================== */
+
+.ax-page {
+    /* Surfaces */
+    --ax-bg: #f4f6f8;
+    --ax-card: #ffffff;
+    --ax-card-2: #f7f8fb;
+    --ax-line: #e6e9ef;
+    --ax-line-soft: #eef0f5;
+
+    /* Type */
+    --ax-text: #1f2733;
+    --ax-muted: #6b7684;
+    --ax-faint: #98a1ae;
+
+    /* Series. The same five everywhere, in this order, so a colour means one
+       thing across the page: violet is XP, blue is focus, green is tasks. */
+    --ax-violet: #6c5ce7;
+    --ax-blue: #2f80ed;
+    --ax-green: #27ae60;
+    --ax-amber: #e69500;
+    --ax-pink: #d6336c;
+
+    --ax-good: #1a7f4b;
+    --ax-bad: #c0392b;
+
+    --ax-radius: 14px;
+    --ax-gap: 16px;
+    --ax-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+
+    background: var(--ax-bg);
+    color: var(--ax-text);
+    min-height: 100vh;
+    padding: 26px 0 40px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
-/* The charts card is pinned to the height of the screen; the report card is
-   content-sized, so it scrolls when it is taller than the screen rather than
-   being clipped. */
-.analytics-container {
+html[data-theme="dark"] .ax-page {
+    --ax-bg: #0d1117;
+    --ax-card: #151b24;
+    --ax-card-2: #1b222c;
+    --ax-line: #232b36;
+    --ax-line-soft: #1e2530;
+
+    --ax-text: #e6edf3;
+    --ax-muted: #8b949e;
+    --ax-faint: #6e7781;
+
+    --ax-violet: #8b7cf8;
+    --ax-blue: #4da3ff;
+    --ax-green: #3fb950;
+    --ax-amber: #e3a008;
+    --ax-pink: #f778ba;
+
+    --ax-good: #3fb950;
+    --ax-bad: #f85149;
+
+    --ax-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+}
+
+.ax-shell {
+    --shell-max: 1500px;
+    --shell-fluid: 96%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* ---------- Shared atoms -------------------------------------------------- */
+.ax-muted { color: var(--ax-muted); }
+.ax-small { font-size: 11.5px; }
+.ax-big { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+
+.ax-sr {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.ax-empty {
+    margin: 18px 0;
+    color: var(--ax-muted);
+    font-size: 13px;
+    text-align: center;
+}
+
+.ax-link {
+    color: var(--ax-muted);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: default;
+}
+
+/* The change against the period before. Three states and one of them is
+   "there is no earlier period", which has to look different from a flat 0%. */
+.ax-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+.ax-delta-up { color: var(--ax-good); }
+.ax-delta-down { color: var(--ax-bad); }
+.ax-delta-flat,
+.ax-delta-none { color: var(--ax-faint); font-weight: 500; }
+
+.ax-dot {
+    width: 9px; height: 9px;
+    border-radius: 3px;
+    flex: none;
+}
+
+.ax-info {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--ax-line);
+    color: var(--ax-faint);
+    font-size: 9px;
+    font-weight: 700;
+    display: inline-grid;
+    place-items: center;
+    cursor: help;
+    flex: none;
+}
+
+/* The chip on a panel whose numbers are invented. Deliberately not styled as a
+   warning — it is a note about provenance, not an error. */
+.ax-sample {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    color: var(--ax-amber);
+    background: color-mix(in srgb, var(--ax-amber) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ax-amber) 30%, transparent);
+    cursor: help;
+}
+
+/* ---------- Header -------------------------------------------------------- */
+.ax-head {
+    display: flex;
     align-items: flex-start;
-    padding-top: 10px;
-    padding-bottom: 16px;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.ax-head h1 {
+    margin: 0 0 4px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.ax-head p { margin: 0; font-size: 13px; }
+
+.ax-head-icon {
+    width: 20px; height: 20px;
+    flex: none;
+    background: var(--ax-violet);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17L9 11l4 4 8-8'/%3E%3Cpath d='M16 7h5v5'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17L9 11l4 4 8-8'/%3E%3Cpath d='M16 7h5v5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.ax-head-actions { display: flex; align-items: center; gap: 10px; }
+
+.ax-pill,
+.ax-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    color: var(--ax-text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.ax-btn { cursor: pointer; font-weight: 600; }
+.ax-btn:hover:not(:disabled) { background: var(--ax-card-2); border-color: var(--ax-violet); }
+.ax-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.ax-pill-icon {
+    width: 14px; height: 14px;
+    background: var(--ax-muted);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M3 10h18M8 2v4M16 2v4'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M3 10h18M8 2v4M16 2v4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ---------- Chapters ------------------------------------------------------ */
+.ax-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 5px;
+    border-radius: 12px;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.ax-tabs::-webkit-scrollbar { display: none; }
+
+.ax-tab {
+    flex: 1 0 auto;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ax-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .16s, color .16s;
+}
+.ax-tab:hover { color: var(--ax-text); }
+.ax-tab.is-on {
+    background: var(--ax-card-2);
+    color: var(--ax-text);
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px var(--ax-line);
+}
+
+/* ---------- Controls ------------------------------------------------------ */
+.ax-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.ax-chips {
+    display: inline-flex;
+    gap: 3px;
+    padding: 4px;
+    border-radius: 10px;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+}
+
+.ax-chips-inline {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 2px 0 14px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ax-chip {
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ax-muted);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .16s, color .16s;
+}
+.ax-chip:hover { color: var(--ax-text); }
+.ax-chip.is-on { background: var(--ax-violet); color: #fff; font-weight: 600; }
+
+.ax-chips-inline .ax-chip {
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+}
+.ax-chips-inline .ax-chip.is-on { background: var(--ax-violet); border-color: var(--ax-violet); }
+
+/* A select of this page's own, rather than dashboard.css's `.theme-select`
+   pill — same reason as the prefix at the top of the file. */
+.ax-select {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 36px;
+    padding: 0 32px 0 13px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background-color: var(--ax-card);
+    color: var(--ax-text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+}
+.ax-select:focus { outline: 2px solid var(--ax-violet); outline-offset: 1px; }
+.ax-select option { background: var(--ax-card); color: var(--ax-text); }
+
+.ax-compare {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+}
+.ax-compare-value {
+    padding: 7px 13px;
+    border-radius: 9px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    font-weight: 600;
+}
+
+/* ---------- Sections and the grid ---------------------------------------- */
+.ax-section { scroll-margin-top: 18px; }
+
+.ax-grid {
+    display: grid;
+    gap: var(--ax-gap);
+    align-items: start;
+}
+.ax-grid-trajectory { grid-template-columns: 1.85fr 1fr; }
+.ax-grid-three { grid-template-columns: repeat(3, 1fr); }
+.ax-grid-halves { grid-template-columns: 1fr 1.25fr; }
+
+/* ---------- Panels -------------------------------------------------------- */
+.ax-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    box-shadow: var(--ax-shadow);
+    padding: 16px 18px 14px;
+    min-width: 0;
+}
+
+.ax-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.ax-panel-title { display: flex; align-items: center; gap: 8px; }
+
+.ax-panel h2 {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+.ax-panel-note {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--ax-muted);
+}
+.ax-panel-note-foot { margin: 12px 0 0; line-height: 1.5; }
+
+.ax-panel-foot {
+    margin-top: auto;
+    padding-top: 12px;
+}
+.ax-panel-foot > * {
+    display: block;
+    text-align: center;
+    padding: 8px;
+    border: 1px solid var(--ax-line);
+    border-radius: 9px;
+}
+
+/* ---------- KPI tiles ----------------------------------------------------- */
+.ax-tiles {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--ax-gap);
+}
+
+.ax-tile {
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    box-shadow: var(--ax-shadow);
+    padding: 14px 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.ax-tile header { display: flex; align-items: center; gap: 7px; }
+
+.ax-tile-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ax-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* A tinted rounded square with the drawing masked out of it in the same hue.
+   `--ico` is set per element from components/Analytics/glyphs.ts — the same
+   mask-not-image trick `.cal-ico` uses in styles/layout.css, which is what lets
+   one drawing sit in five different colours without five copies of it. */
+.ax-tile-icon {
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    flex: none;
+    background: color-mix(in srgb, currentColor 15%, transparent);
+    position: relative;
+}
+.ax-tile-icon::after {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+}
+.ax-tone-violet { color: var(--ax-violet); }
+.ax-tone-blue { color: var(--ax-blue); }
+.ax-tone-green { color: var(--ax-green); }
+.ax-tone-amber { color: var(--ax-amber); }
+.ax-tone-pink { color: var(--ax-pink); }
+
+.ax-tile-value {
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.025em;
+    line-height: 1.15;
+}
+.ax-tile-unit {
+    font-size: 14px;
+    font-weight: 500;
+    font-style: normal;
+    color: var(--ax-muted);
+    margin-left: 2px;
+}
+
+.ax-spark {
+    width: 100%;
+    height: 26px;
+    margin-top: 4px;
+    display: block;
+    overflow: visible;
+}
+
+/* ---------- Charts -------------------------------------------------------- */
+.ax-chart {
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+}
+
+.ax-chart-y {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: var(--ax-faint);
+    text-align: right;
+    flex: none;
+    /* The x-axis strip lives inside the box beside it, so the labels have to
+       stop short of it or they slide half a row out of true. */
+    padding-bottom: 22px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-chart-box { flex: 1; min-width: 0; }
+
+.ax-chart-svg {
+    display: block;
+    width: 100%;
+    /* Set per chart by AreaChart. The SVG's own viewBox height is its drawing
+       space, not its rendered one — `preserveAspectRatio: none` means the two
+       are independent, and this is the one that decides how tall the panel is. */
+    height: var(--ax-chart-h, 200px);
+    overflow: visible;
+}
+
+/* Not `.ax-grid` — that is the page's layout class, and an SVG <line> given
+   `display: grid` disappears. */
+.ax-gridline { stroke: var(--ax-line-soft); stroke-width: 1; }
+
+.ax-chart-x {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 10.5px;
+    color: var(--ax-faint);
+}
+.ax-chart-x span {
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.ax-legend {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    font-size: 11.5px;
+    color: var(--ax-muted);
+}
+.ax-legend-tight { margin-top: 0; gap: 12px; }
+.ax-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+
+.ax-legend-line { width: 18px; height: 2px; border-radius: 2px; }
+.ax-legend-dashed {
+    background: repeating-linear-gradient(
+        90deg, var(--ax-faint) 0 4px, transparent 4px 8px
+    );
+}
+
+.ax-swatch { width: 10px; height: 10px; border-radius: 3px; }
+.ax-swatch-was { background: var(--ax-line); border: 1px solid var(--ax-faint); }
+
+/* ---------- Growth score -------------------------------------------------- */
+.ax-score-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.ax-score-head p { margin: 2px 0 4px; font-size: 12px; }
+
+.ax-score-value {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.025em;
+}
+
+.ax-percentile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 10px 14px;
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--ax-violet) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ax-violet) 26%, transparent);
+    font-size: 11px;
+    color: var(--ax-muted);
+    text-align: center;
+}
+.ax-percentile strong { font-size: 14px; color: var(--ax-text); }
+.ax-percentile-icon {
+    width: 16px; height: 16px;
+    background: var(--ax-violet);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M12 2l2.4 6.9L21 9.7l-5 4.6 1.4 6.7L12 17.6 6.6 21l1.4-6.7-5-4.6 6.6-.8z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M12 2l2.4 6.9L21 9.7l-5 4.6 1.4 6.7L12 17.6 6.6 21l1.4-6.7-5-4.6 6.6-.8z'/%3E%3C/svg%3E") center / contain no-repeat;
+    margin-bottom: 2px;
+}
+
+/* ---------- Subjects ------------------------------------------------------ */
+.ax-subject {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.ax-radar { width: 100%; height: auto; display: block; overflow: visible; }
+.ax-radar-ring { fill: none; stroke: var(--ax-line); stroke-width: 1; }
+.ax-radar-label {
+    fill: var(--ax-muted);
+    font-size: 9px;
+    font-family: inherit;
+}
+.ax-radar-empty {
+    display: grid;
+    place-items: center;
+    min-height: 160px;
+    color: var(--ax-muted);
+    font-size: 12.5px;
+}
+
+.ax-subject-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 11.5px;
+}
+.ax-subject-legend li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'dot name xp' '. delta delta';
+    align-items: center;
+    gap: 2px 7px;
+}
+.ax-subject-legend .ax-dot { grid-area: dot; }
+.ax-subject-name {
+    grid-area: name;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ax-subject-xp { grid-area: xp; color: var(--ax-muted); font-variant-numeric: tabular-nums; }
+.ax-subject-legend .ax-delta { grid-area: delta; justify-self: end; }
+
+/* ---------- Consistency heatmap ------------------------------------------ */
+.ax-consistency-head {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin: 2px 0 2px;
+}
+.ax-consistency-head .ax-muted { font-size: 12px; }
+
+.ax-heat {
+    display: flex;
+    gap: 5px;
+    margin: 14px 0 10px;
+    min-width: 0;
+}
+
+.ax-heat-days {
+    display: grid;
+    grid-template-rows: repeat(7, 1fr);
+    gap: 2px;
+    font-size: 8px;
+    color: var(--ax-faint);
+    flex: none;
+    align-items: center;
+}
+
+.ax-heat-main { flex: 1; min-width: 0; }
+
+/* The month initials, one slot per week column so they line up with the grid
+   below without any measuring — same flex basis, same gap. */
+.ax-heat-months {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 4px;
+    font-size: 8px;
+    color: var(--ax-faint);
+    overflow: hidden;
+}
+.ax-heat-months span {
+    flex: 1 0 auto;
+    min-width: 5px;
+    text-align: center;
+}
+
+/* A week is a column and a weekday is a row — the shape `heatmapGrid` builds
+   for. Columns share the width rather than scrolling: the panel is a third of
+   a row and a heatmap that needs its own scrollbar to be read has stopped
+   being a glance. */
+.ax-heat-grid {
+    display: flex;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.ax-heat-week {
+    display: grid;
+    grid-template-rows: repeat(7, 1fr);
+    gap: 2px;
+    flex: 1 0 auto;
+    min-width: 0;
+}
+
+.ax-heat-cell {
+    width: 100%;
+    min-width: 5px;
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--ax-line-soft);
+    display: block;
+}
+.ax-heat-cell.is-blank { background: transparent; box-shadow: inset 0 0 0 1px var(--ax-line-soft); }
+.ax-heat-cell[data-level="1"] { background: color-mix(in srgb, var(--ax-violet) 28%, transparent); }
+.ax-heat-cell[data-level="2"] { background: color-mix(in srgb, var(--ax-violet) 50%, transparent); }
+.ax-heat-cell[data-level="3"] { background: color-mix(in srgb, var(--ax-violet) 74%, transparent); }
+.ax-heat-cell[data-level="4"] { background: var(--ax-violet); }
+
+.ax-heat-key {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--ax-faint);
+    justify-content: flex-end;
+}
+.ax-heat-key .ax-heat-cell { width: 9px; min-width: 9px; height: 9px; }
+
+/* ---------- Milestone timeline -------------------------------------------- */
+.ax-timeline {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    position: relative;
+}
+.ax-timeline li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+/* The rail behind the dots. Drawn per row rather than as one absolute line so
+   it stops at the last dot instead of running into the footer. */
+.ax-timeline li:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 13px;
+    top: 28px;
+    bottom: -13px;
+    width: 1px;
+    background: var(--ax-line);
+}
+
+.ax-timeline-dot {
+    width: 27px; height: 27px;
+    border-radius: 9px;
+    flex: none;
+    background: color-mix(in srgb, currentColor 16%, transparent);
+    position: relative;
+}
+.ax-timeline-dot::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+}
+
+.ax-timeline-body { display: flex; flex-direction: column; min-width: 0; }
+.ax-timeline-body strong {
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ax-timeline-body .ax-muted { font-size: 11px; }
+
+.ax-timeline-reward {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ax-violet);
+    white-space: nowrap;
+}
+
+/* ---------- Grouped bars -------------------------------------------------- */
+.ax-bars {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 10px;
+    align-items: end;
+    height: 210px;
+    margin-top: 6px;
+}
+
+.ax-bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    min-width: 0;
+}
+
+.ax-bar-pair {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 5px;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+}
+
+.ax-bar-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+    flex: 1;
+    max-width: 34px;
+    gap: 4px;
+}
+
+.ax-bar-value {
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--ax-text);
+    white-space: nowrap;
+}
+.ax-bar-value-was { color: var(--ax-faint); font-weight: 500; }
+
+.ax-bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+    transition: height .3s ease;
+}
+.ax-bar-now { background: var(--ax-violet); }
+.ax-bar-was { background: var(--ax-line); border: 1px solid var(--ax-line); }
+
+.ax-bar-label {
+    font-size: 10px;
+    color: var(--ax-muted);
+    text-align: center;
+    line-height: 1.25;
+}
+
+/* ---------- Compounding --------------------------------------------------- */
+.ax-figures {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ax-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+    padding: 11px 8px;
+    border-radius: 11px;
+    background: var(--ax-card-2);
+    border: 1px solid var(--ax-line);
+}
+.ax-figure .ax-muted { font-size: 11px; }
+.ax-figure strong { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+
+.ax-compound { position: relative; }
+
+.ax-callout {
+    position: absolute;
+    right: 4px;
+    top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 9px 13px;
+    border-radius: 11px;
+    background: var(--ax-card);
+    border: 1px solid color-mix(in srgb, var(--ax-violet) 34%, transparent);
+    box-shadow: var(--ax-shadow);
+    text-align: center;
+}
+.ax-callout strong { font-size: 16px; font-weight: 700; color: var(--ax-violet); }
+
+/* ---------- Streaks ------------------------------------------------------- */
+.ax-streaks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.ax-streak,
+.ax-best-month {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+    padding: 14px 10px;
+    border-radius: 11px;
+    background: var(--ax-card-2);
+    border: 1px solid var(--ax-line);
+}
+.ax-best-month { margin-top: 10px; }
+.ax-streak .ax-muted,
+.ax-best-month .ax-muted { font-size: 11px; }
+.ax-streak strong { font-size: 17px; font-weight: 700; }
+.ax-best-month strong { font-size: 15px; font-weight: 700; }
+.ax-streak-icon { font-size: 20px; line-height: 1.2; }
+
+/* ---------- Insights ------------------------------------------------------ */
+.ax-insights {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ax-insight {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+.ax-insight div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-insight strong { font-size: 12.5px; font-weight: 600; line-height: 1.4; }
+.ax-insight .ax-muted { font-size: 11.5px; line-height: 1.4; }
+
+.ax-insight-icon {
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    flex: none;
+    background: color-mix(in srgb, currentColor 16%, transparent);
+    position: relative;
+    color: var(--ax-violet);
+}
+.ax-insight-icon::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+}
+.ax-insight-good .ax-insight-icon { color: var(--ax-green); }
+.ax-insight-watch .ax-insight-icon { color: var(--ax-amber); }
+.ax-insight-note .ax-insight-icon { color: var(--ax-blue); }
+
+/* ---------- Where you stand ----------------------------------------------- */
+.ax-standing {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+.ax-standing li {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+}
+.ax-standing-label { color: var(--ax-muted); }
+.ax-standing-track {
+    height: 7px;
+    border-radius: 4px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.ax-standing-track i {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    transition: width .35s ease;
+}
+.ax-standing-rank { font-weight: 600; white-space: nowrap; }
+
+/* ---------- Foot ---------------------------------------------------------- */
+.ax-foot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 6px 0 0;
+    color: var(--ax-faint);
+    font-size: 12px;
+    scroll-margin-top: 18px;
+}
+.ax-foot p { margin: 0; }
+
+/* ==========================================================================
+   Responsive — the standard breakpoints from styles/layout.css.
+
+   The order the panels collapse in is the order they stop being comparable:
+   the three-up rows go to two and then one, and the trajectory drops its score
+   panel underneath rather than squeezing a chart into a third of a phone.
+   ========================================================================== */
+@media (max-width: 1280px) {
+    .ax-tiles { grid-template-columns: repeat(3, 1fr); }
+    .ax-grid-halves { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1024px) {
+    .ax-grid-trajectory,
+    .ax-grid-three { grid-template-columns: 1fr; }
+    .ax-tiles { grid-template-columns: repeat(2, 1fr); }
+    .ax-subject { grid-template-columns: 1fr; }
+    .ax-radar { max-width: 280px; margin-inline: auto; }
+    .ax-compare { margin-left: 0; }
+}
+
+@media (max-width: 768px) {
+    .ax-page { padding: 18px 0 30px; }
+    .ax-head h1 { font-size: 20px; }
+    .ax-figures { grid-template-columns: 1fr; }
+    .ax-callout { position: static; margin-top: 10px; }
+    .ax-bars { height: 180px; }
+}
+
+@media (max-width: 480px) {
+    .ax-tiles { grid-template-columns: 1fr; }
+    .ax-head-actions { width: 100%; }
+    .ax-btn { flex: 1; justify-content: center; }
+    .ax-standing li { grid-template-columns: 78px minmax(0, 1fr) auto; }
+    .ax-bar-label { font-size: 9px; }
+}
+
+/* Motion is decoration here — the bars and the standing bars grow because a
+   figure that arrives is easier to read than one that was always there. Off
+   entirely when the reader has asked for that. */
+@media (prefers-reduced-motion: reduce) {
+    .ax-bar,
+    .ax-standing-track i,
+    .ax-tab,
+    .ax-chip { transition: none; }
 }

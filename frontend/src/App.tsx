@@ -68,8 +68,13 @@ function FrontDoor() {
  * Growth came off the list for the same reason. It was one chart in one card,
  * which fits any screen; it is a chart and six panels now, which does not fit
  * most, and pinned it simply lost the bottom three.
+ *
+ * Analytics came off with the redesign, and it is the clearest case of the
+ * three. It was a report card and a scoring panel side by side — one screen by
+ * construction. It is fourteen panels down a scroll now, and the pinning was
+ * hiding everything below the summary tiles.
  */
-const PINNED = ['/goals', '/analytics', '/calendar'];
+const PINNED = ['/goals', '/calendar'];
 
 function pinsViewport(pathname: string): boolean {
   return PINNED.some(

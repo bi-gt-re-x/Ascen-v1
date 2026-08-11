@@ -810,6 +810,63 @@ export function milestones(all: GrowthDay[], currentStreak = 0): Milestone[] {
   ];
 }
 
+export interface ReachedMilestone {
+  kind: MilestoneKind;
+  /** "Reached 10,000 Total XP". */
+  name: string;
+  /** The day it was crossed, ISO. */
+  on: string;
+  reward: number;
+}
+
+/**
+ * The tiers already behind the account, oldest first.
+ *
+ * `milestones` above answers "what is next", which is the row a reader acts on.
+ * This answers "what has happened", which is the one they look back at — a
+ * timeline rather than a to-do list. Both read the same three ladders, so the
+ * two panels can never disagree about where a tier sits.
+ *
+ * Every date is read out of the running total rather than recorded at the time:
+ * the first day `cumulative_xp` reached the target *is* the day it was reached.
+ * That needs the whole history, so `all` must be every day since the account was
+ * created — the page asks the endpoint for all of them for this reason.
+ *
+ * The streak ladder is deliberately absent. The only streak figure available is
+ * the live one, which is a fact about today with no history behind it, and a
+ * timeline entry needs a date.
+ */
+export function milestoneHistory(all: GrowthDay[]): ReachedMilestone[] {
+  const out: ReachedMilestone[] = [];
+
+  const walk = (
+    tiers: Array<[number, number]>,
+    read: (day: GrowthDay) => number,
+    name: (target: number) => string,
+    kind: MilestoneKind,
+  ) => {
+    tiers.forEach(([target, reward]) => {
+      const day = all.find((entry) => (Number(read(entry)) || 0) >= target);
+      if (day) out.push({ kind, name: name(target), on: day.date, reward });
+    });
+  };
+
+  walk(
+    XP_TIERS,
+    (day) => day.cumulative_xp,
+    (target) => `Reached ${target.toLocaleString()} Total XP`,
+    'xp',
+  );
+  walk(
+    FOCUS_TIERS,
+    (day) => day.cumulative_focus_minutes / 60,
+    (target) => `${target} Hours Focused`,
+    'focus',
+  );
+
+  return out.sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
+}
+
 // --------------------------------------------------------------------------
 // Insights
 // --------------------------------------------------------------------------

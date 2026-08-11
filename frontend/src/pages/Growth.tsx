@@ -96,20 +96,27 @@ import '@/styles/growth.css';
 /**
  * The page's chapters.
  *
- * Overview is this screen; the other four are pages of their own. They are four
- * tenses rather than four topics, which is what keeps them from overlapping:
+ * Growth Overview is this screen; the other four are pages of their own. They
+ * are four tenses rather than four topics, which is what keeps them from
+ * overlapping:
  *
- *   Long Term           trajectory — where this is heading.
- *   Focus & Consistency discipline — can it be executed reliably.
- *   Skills & Subjects   mastery — what is being become good at.
- *   Benchmarks          achievement — how far along, against a standard.
+ *   Long Term Growth   trajectory — where this is heading.
+ *   Subject Growth     mastery — what is being become good at.
+ *   Focus Growth       discipline — can it be executed reliably.
+ *   Personal Records   achievement — how far along, against a standard.
+ *
+ * The `name` of each is the state key and the CSS handle, so the labels are
+ * free to be renamed without touching anything below. They have been once:
+ * Overview / Long Term / Focus & Consistency / Skills & Subjects / Benchmarks.
+ * Subject Growth also moved ahead of Focus Growth in the same pass — what the
+ * work was about reads better before how reliably it was done.
  */
 const SECTIONS = [
-  { name: 'overview', label: 'Overview' },
-  { name: 'longterm', label: 'Long Term' },
-  { name: 'focus', label: 'Focus & Consistency' },
-  { name: 'skills', label: 'Skills & Subjects' },
-  { name: 'benchmarks', label: 'Benchmarks' },
+  { name: 'overview', label: 'Growth Overview' },
+  { name: 'longterm', label: 'Long Term Growth' },
+  { name: 'skills', label: 'Subject Growth' },
+  { name: 'focus', label: 'Focus Growth' },
+  { name: 'benchmarks', label: 'Personal Records' },
 ] as const;
 
 type SectionName = (typeof SECTIONS)[number]['name'];
@@ -299,7 +306,7 @@ export default function Growth() {
           is also five tabs of dense panels, and a light chasing the cursor
           across them is the one thing that would make them harder to read.
           See components/Ambient.tsx, and the z-index note in styles/growth.css. */}
-      <Ambient cursor={false} />
+      <Ambient />
 
       <div className="growth-card page-shell" id="growthCard">
         <header className="gr-header">

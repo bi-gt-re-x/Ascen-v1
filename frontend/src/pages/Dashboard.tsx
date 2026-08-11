@@ -227,7 +227,7 @@ export default function Dashboard() {
     <div className="dash">
       {/* The same background the landing page has, minus the glow that follows
           the pointer — see components/Ambient.tsx. */}
-      <Ambient cursor={false} />
+      <Ambient />
 
       {/* The greeting slides away with the stat row while a focus session
           runs — see html.focus-mode in styles/dashboard-home.css. */}

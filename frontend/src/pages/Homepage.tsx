@@ -133,7 +133,7 @@ export default function Homepage() {
 
   return (
     <>
-      <Ambient />
+      <Ambient cursor />
 
       {/* Which pair this shows is decided from the server's answer rather than
           from localStorage, which is what the original got wrong: an account
