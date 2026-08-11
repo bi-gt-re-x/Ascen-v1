@@ -31,7 +31,7 @@ import { xpToPriority, type TaskDraft } from '@/components/Calendar/TaskModal';
 import type { EventDraft, Scope, UseCalendarStore } from './useCalendarStore';
 import type { TaskPatch } from './useCalendarTasks';
 import { monthKey, type CalendarSection } from '@/utils/calendarStore';
-import { isoStamp } from '@/utils/calendarGrid';
+import { columnStamp, isoStamp } from '@/utils/calendarGrid';
 import { dates } from '@/utils';
 import type { ApiResult, Task } from '@/types';
 
@@ -266,8 +266,13 @@ export function useBlockActions(
 
       days.forEach((iso, index) => {
         const id = `${Date.now()}-${index}`;
-        const createdAt = `${iso}T${draft.startTime}:00`;
-        const dueDate = `${iso}T${draft.endTime}:00`;
+        // Not `${iso}T${time}` — the small hours belong to the column that
+        // opened the evening before, so a block drawn 23:00 to 05:00 on the 4th
+        // is due at 05:00 on the *5th*. Stamped the flat way, its due date came
+        // out eighteen hours before its start, and a task starting at 2 AM was
+        // written onto the previous day's column. See `columnStamp`.
+        const createdAt = columnStamp(iso, draft.startTime);
+        const dueDate = columnStamp(iso, draft.endTime);
         steps.push(() =>
           taskService
             .createTask(username, {

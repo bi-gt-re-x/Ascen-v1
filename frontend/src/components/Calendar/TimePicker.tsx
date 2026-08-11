@@ -10,6 +10,8 @@
  * is a legitimate state — the dialog opens with "--" until a time is picked —
  * and is reported as ''.
  */
+import { columnSpanMinutes } from '@/utils/calendarGrid';
+
 export interface TimePickerProps {
   /** "HH:MM", or '' for nothing chosen yet. */
   value: string;
@@ -104,9 +106,17 @@ export function minutesToTime(minutes: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
-/** How long a span is, in minutes. Negative when the end is before the start. */
+/**
+ * How long a span is, in minutes, read down the calendar's column.
+ *
+ * Delegates to `columnSpanMinutes`, which is where the rule lives — a day on
+ * this grid runs 6 AM to 5 AM, so 23:00 to 05:00 is a six-hour block on one
+ * day and not a negative one. This used to subtract minutes past midnight
+ * directly, which made every overnight span negative and got it refused.
+ *
+ * Still zero or negative for a span that genuinely does not fit on the day, so
+ * the callers that use it as a validity test do not need to change.
+ */
 export function spanMinutes(start: string, end: string): number {
-  const [startHours = 0, startMinutes = 0] = start.split(':').map(Number);
-  const [endHours = 0, endMinutes = 0] = end.split(':').map(Number);
-  return endHours * 60 + endMinutes - (startHours * 60 + startMinutes);
+  return columnSpanMinutes(start, end);
 }

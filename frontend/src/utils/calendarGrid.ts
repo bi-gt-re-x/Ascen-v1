@@ -170,6 +170,72 @@ export function minutesToHm(minutes: number): string {
 }
 
 // --------------------------------------------------------------------------
+// A day on this grid is not a day on the clock
+// --------------------------------------------------------------------------
+/**
+ * A time as minutes down the column, rather than minutes past midnight.
+ *
+ * A column here runs 6 AM to 5 AM — `START_HOUR` to `END_HOUR` — so the small
+ * hours belong to the day that *began* the evening before, and they sort after
+ * 11 PM rather than before 7 AM. That is the whole of the difference: 05:00 is
+ * 1740 minutes down the column, not 300.
+ *
+ * Everything that has to decide whether one time is "after" another on this
+ * calendar goes through here. Comparing "HH:MM" strings, or raw minutes past
+ * midnight, says 05:00 comes before 23:00 — which is true of the clock and
+ * false of the grid, and is what used to make an 11 PM to 5 AM block look like
+ * a negative span and be refused.
+ */
+export function columnMinutes(hm: string): number {
+  const [hours = 0, minutes = 0] = String(hm).split(':').map(Number);
+  const total = hours * 60 + minutes;
+  return total < START_HOUR * 60 ? total + 1440 : total;
+}
+
+/**
+ * How long a span is in minutes, read down the column.
+ *
+ * Positive for any span that fits inside one column, **including one that
+ * crosses midnight**: 23:00 to 05:00 is six hours. Zero or negative means the
+ * end does not follow the start on this day — 23:00 to 06:00 would have to run
+ * past the bottom of the column into tomorrow, and there is no such block.
+ */
+export function columnSpanMinutes(start: string, end: string): number {
+  return columnMinutes(end) - columnMinutes(start);
+}
+
+/**
+ * Whether a time sits on the calendar day after the one the column is named
+ * for — 1 for the small hours, 0 for the rest.
+ *
+ * A block drawn at the bottom of Tuesday's column ends at 2 AM on *Wednesday*,
+ * and a task written with Tuesday's date and 02:00 is a task on the wrong day:
+ * it falls before Tuesday's column even starts, so it draws on Monday.
+ */
+export function dayOffsetOf(hm: string): number {
+  return columnMinutes(hm) >= 1440 ? 1 : 0;
+}
+
+/** `iso` moved on by `days`, as an ISO date. */
+export function shiftIso(iso: string, days: number): string {
+  const [year = 1970, month = 1, day = 1] = iso.split('-').map(Number);
+  const at = new Date(year, month - 1, day + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+}
+
+/**
+ * The timestamp a time on `iso`'s column really stands for.
+ *
+ * "2026-08-04" + "02:00" is 2 AM on the *5th*, because 2 AM is the tail of the
+ * 4th's column. Used for both ends of a task, so an overnight one is stored
+ * with a due date after its start rather than eighteen hours before it.
+ */
+export function columnStamp(iso: string, hm: string): string {
+  return `${shiftIso(iso, dayOffsetOf(hm))}T${hm}:00`;
+}
+
+// --------------------------------------------------------------------------
 // Pixels ↔ time — what dragging on the grid is made of
 // --------------------------------------------------------------------------
 /**
