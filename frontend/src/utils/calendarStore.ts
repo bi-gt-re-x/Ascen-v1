@@ -181,12 +181,37 @@ export function saveCalendarData(username: string | null, data: CalendarData): v
 const RECURRENCE_MONTHS = 12;
 
 /**
- * Every date key a recurrence lands on, over the next twelve months.
+ * Every date key a recurrence lands on, over the twelve months after the day it
+ * was asked for.
  *
  * Weekly repeats on the chosen days of the week, monthly on the chosen days of
  * the month — skipping the months too short to have one, so a 31st does not
  * silently become a 1st. The base date is excluded: the caller writes that one
  * itself, and only if it matches the pattern.
+ *
+ * **A repeat starts the day after it is asked for, and it used to start weeks
+ * before.** Both branches began at the *first of the base month* rather than at
+ * the base date, so "every Monday", set up on Thursday 20 August, wrote the
+ * Mondays of the 3rd, the 10th and the 17th — three blocks into a fortnight the
+ * reader had already lived through — and "the 5th of every month" put one on
+ * the 5th of August. Nothing on a calendar should appear in the past because of
+ * something set up today, and the two were also inconsistent with the task
+ * side: `taskDates` in hooks/useBlockActions has always started from the day
+ * after the base, so the same pattern meant two different things depending on
+ * whether it was attached to an event or a task. It means one thing now, and
+ * this is that one.
+ *
+ * The horizon moved with it. It was the end of the eleventh month after the
+ * base month — so a repeat set up on the 20th ran out around the 26th of the
+ * following July, eleven months and change rather than the twelve the dialog
+ * promises. It is now twelve months from the base date exactly, which is what
+ * `taskDates` uses.
+ *
+ * Both branches return their keys in date order, which the monthly one did not:
+ * it walked the chosen days inside each month in the order they were *picked*,
+ * so asking for the 20th and the 5th produced every 20th before its own 5th.
+ * Nothing downstream depended on the order, which is precisely why it was worth
+ * fixing before something did.
  */
 export function recurringDateKeys(
   baseKey: string,
@@ -195,32 +220,43 @@ export function recurringDateKeys(
 ): string[] {
   if (type === 'none' || !days.length) return [];
 
-  const [startYear, startMonth] = baseKey.split('-').map(Number);
-  if (!startYear || !startMonth) return [];
+  const [startYear, startMonth, startDay] = baseKey.split('-').map(Number);
+  if (!startYear || !startMonth || !startDay) return [];
+
+  const base = new Date(startYear, startMonth - 1, startDay);
+  if (Number.isNaN(base.getTime())) return [];
+  /** Twelve months from the base date, as `taskDates` counts it. */
+  const end = new Date(startYear, startMonth - 1 + RECURRENCE_MONTHS, startDay);
+
+  const keyOf = (date: Date) =>
+    `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
   const out: string[] = [];
 
   if (type === 'weekly') {
-    const end = new Date(startYear, startMonth - 1 + RECURRENCE_MONTHS, 0);
-    const cursor = new Date(startYear, startMonth - 1, 1);
+    // From the day after the base, so a repeat never reaches backwards.
+    const cursor = new Date(base);
+    cursor.setDate(cursor.getDate() + 1);
     while (cursor <= end) {
-      if (days.includes(cursor.getDay())) {
-        const key = `${cursor.getFullYear()}-${cursor.getMonth() + 1}-${cursor.getDate()}`;
-        if (key !== baseKey) out.push(key);
-      }
+      if (days.includes(cursor.getDay())) out.push(keyOf(cursor));
       cursor.setDate(cursor.getDate() + 1);
     }
     return out;
   }
 
-  for (let offset = 0; offset < RECURRENCE_MONTHS; offset++) {
+  // Monthly: the chosen days of each month, in date order, starting from the
+  // first one strictly after the base date.
+  const wanted = [...new Set(days)].sort((a, b) => a - b);
+  for (let offset = 0; offset <= RECURRENCE_MONTHS; offset++) {
     const month = new Date(startYear, startMonth - 1 + offset, 1);
     const year = month.getFullYear();
     const monthNumber = month.getMonth() + 1;
     const daysInMonth = new Date(year, monthNumber, 0).getDate();
-    days.forEach((day) => {
+    wanted.forEach((day) => {
       if (day > daysInMonth) return;
-      const key = `${year}-${monthNumber}-${day}`;
-      if (key !== baseKey) out.push(key);
+      const at = new Date(year, monthNumber - 1, day);
+      if (at <= base || at > end) return;
+      out.push(keyOf(at));
     });
   }
   return out;

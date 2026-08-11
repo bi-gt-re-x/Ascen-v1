@@ -105,12 +105,32 @@ function identityOf(task: Task): string {
   return `${task.title || ''}|${hmOf(task.created_at)}|${hmOf(task.due_date)}`;
 }
 
-/** Every date a repeat lands on, the base day included, over twelve months. */
+/**
+ * Every date a repeat lands on, over the twelve months after the base day.
+ *
+ * **The base day is included only when the pattern would have chosen it**, which
+ * is the rule `addEvent` has always followed and this did not: asking for
+ * "Mondays" from a Thursday means Mondays, not Mondays and this one Thursday.
+ * A task and an event set up from the same slot with the same pattern now
+ * produce the same set of days, which they did not before — the task got an
+ * extra one on the day the dialog happened to be opened.
+ *
+ * The rest matches `recurringDateKeys` in utils/calendarStore: from the day
+ * after the base, twelve months from the base date, and a day of the month that
+ * a short month does not have is skipped rather than rolled into the next one.
+ */
 function taskDates(baseIso: string, draft: TaskDraft): string[] {
-  const out = [baseIso];
+  const base = dates.fromIsoDate(baseIso);
+  const onPattern =
+    draft.recurrence === 'none' || !draft.recurrenceDays.length
+      ? true
+      : draft.recurrence === 'weekly'
+        ? draft.recurrenceDays.includes(base.getDay())
+        : draft.recurrenceDays.includes(base.getDate());
+
+  const out = onPattern ? [baseIso] : [];
   if (draft.recurrence === 'none' || !draft.recurrenceDays.length) return out;
 
-  const base = dates.fromIsoDate(baseIso);
   const end = new Date(base.getFullYear(), base.getMonth() + 12, base.getDate());
   const cursor = new Date(base);
   cursor.setDate(cursor.getDate() + 1);
