@@ -12,6 +12,12 @@ import { GLYPHS, type GlyphName } from './glyphs';
 import { HEAT_WEEKDAYS, type HeatRow, type ReachedMilestone } from '@/utils/growthSummary';
 import type { SubjectXpRow } from '@/utils/subjectXp';
 
+/** `HEAT_WEEKDAYS` spelled out. Same order — Sunday first — or the rows lie. */
+const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+if (WEEKDAY_NAMES.length !== HEAT_WEEKDAYS.length) {
+  throw new Error('weekday labels are out of step with the heatmap grid');
+}
+
 // --------------------------------------------------------------------------
 // Subject growth
 // --------------------------------------------------------------------------
@@ -115,9 +121,13 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
       )}
 
       <div className="ax-heat">
+        {/* Three-letter names rather than `HEAT_WEEKDAYS`' initials, which are
+            S M T W T F S — two pairs that read identically. The order is that
+            array's, not the calendar's: `heatmapGrid` builds a week starting
+            on Sunday, so these have to start there too. */}
         <div className="ax-heat-days" aria-hidden="true">
-          {HEAT_WEEKDAYS.map((day, index) => (
-            <span key={index}>{index % 2 === 1 ? day : ''}</span>
+          {WEEKDAY_NAMES.map((day, index) => (
+            <span key={index}>{day}</span>
           ))}
         </div>
         <div className="ax-heat-main">
@@ -144,6 +154,16 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
                 ))}
               </div>
             ))}
+          </div>
+          {/* The year, printed once under the week it turns over in. A year of
+              columns crosses two of them and sometimes three, and without this
+              the months read as one endless run of initials. */}
+          <div className="ax-heat-years" aria-hidden="true">
+            {rows.map((row, index) => {
+              const year = row.days.find((cell) => cell.date)?.date?.slice(0, 4);
+              const before = rows[index - 1]?.days.find((cell) => cell.date)?.date?.slice(0, 4);
+              return <span key={index}>{year && year !== before ? year : ''}</span>;
+            })}
           </div>
         </div>
       </div>

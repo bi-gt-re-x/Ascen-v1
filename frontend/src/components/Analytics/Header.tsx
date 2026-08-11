@@ -19,20 +19,42 @@ export interface Section {
 }
 
 /**
- * In the order the page lays them out, which is not decoration.
+ * The page's blocks, **in the order they are laid out**.
  *
  * `useActiveSection` picks the first id in this list that has anything on
- * screen, so the list being in document order is what makes the highlight land
- * on the section the reader is actually in front of. Reorder the page and this
- * has to move with it.
+ * screen, so document order here is what makes the highlight land on the
+ * section the reader is actually in front of. Reorder the page and this has to
+ * move with it. It is deliberately separate from `TABS` below, which is in the
+ * order the design draws the tab bar — the two are not the same order, and
+ * conflating them is what put the highlight on the wrong tab before.
  */
 export const SECTIONS: Section[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'trajectory', label: 'Trajectory' },
-  { id: 'subjects', label: 'Subjects' },
+  { id: 'breakdown', label: 'Milestones' },
   { id: 'longterm', label: 'Long Term' },
-  { id: 'milestones', label: 'Milestones' },
-  { id: 'benchmarks', label: 'Benchmarks' },
+  { id: 'standing', label: 'Benchmarks' },
+];
+
+/**
+ * The tab bar, matching the design's labels and their order.
+ *
+ * A tab is a label and the block it scrolls to, and the two are separate
+ * because the design's tab order is not the page's block order — it was drawn
+ * as a set of view switchers, and this page is one scroll.
+ *
+ * **Goals Progress has no block of its own.** There is no goals panel on this
+ * page, so it lands on Long Term, which is the closest thing to it — progress
+ * against the period before. It is in the list because the design has it;
+ * point it at a real panel the day one exists.
+ */
+export const TABS: Array<{ label: string; target: string }> = [
+  { label: 'Overview', target: 'overview' },
+  { label: 'Long Term', target: 'longterm' },
+  { label: 'Milestones', target: 'breakdown' },
+  { label: 'Goals Progress', target: 'longterm' },
+  { label: 'Trajectory', target: 'trajectory' },
+  { label: 'Benchmarks', target: 'standing' },
 ];
 
 export interface HeaderProps {
@@ -93,6 +115,7 @@ export function Header({ span, rows }: HeaderProps) {
           disabled={rows.length === 0}
           title="Download these days as a CSV"
         >
+          <span className="ax-btn-icon" aria-hidden="true" />
           Export Report
         </button>
       </div>
@@ -109,17 +132,21 @@ export interface TabsProps {
 }
 
 export function Tabs({ active, onJump }: TabsProps) {
+  // Two tabs can point at one block (see TABS), so the highlight goes to the
+  // first tab that names the visible block rather than to every tab that does.
+  const lit = TABS.findIndex((tab) => tab.target === active);
+
   return (
     <nav className="ax-tabs" aria-label="Sections">
-      {SECTIONS.map((section) => (
+      {TABS.map((tab, index) => (
         <button
-          key={section.id}
+          key={tab.label}
           type="button"
-          className={`ax-tab${section.id === active ? ' is-on' : ''}`}
-          aria-current={section.id === active ? 'true' : undefined}
-          onClick={() => onJump(section.id)}
+          className={`ax-tab${index === lit ? ' is-on' : ''}`}
+          aria-current={index === lit ? 'true' : undefined}
+          onClick={() => onJump(tab.target)}
         >
-          {section.label}
+          {tab.label}
         </button>
       ))}
     </nav>

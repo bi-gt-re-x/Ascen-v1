@@ -243,7 +243,7 @@ export default function Analytics() {
           />
         </section>
 
-        <section id="subjects" className="ax-section ax-grid ax-grid-three">
+        <section id="breakdown" className="ax-section ax-grid ax-grid-three">
           <SubjectPanel rows={breakdown.rows} previous={previousBySubject} />
           <ConsistencyPanel
             rate={rhythm.rate}
@@ -259,7 +259,7 @@ export default function Analytics() {
           <CompoundingPanel data={curve} />
         </section>
 
-        <section id="milestones" className="ax-section ax-grid ax-grid-three">
+        <section id="standing" className="ax-section ax-grid ax-grid-three">
           <StreaksPanel
             current={account.data?.stats?.current_streak ?? 0}
             best={account.data?.stats?.best_streak ?? 0}
@@ -269,7 +269,7 @@ export default function Analytics() {
           <StandingPanel rows={[...SAMPLE.standing]} />
         </section>
 
-        <section id="benchmarks" className="ax-foot">
+        <section className="ax-foot">
           <p>Long-term growth is the result of consistent daily actions. Keep compounding. 🚀</p>
           <RefreshButton onRefresh={refresh} busy={series.loading} />
         </section>

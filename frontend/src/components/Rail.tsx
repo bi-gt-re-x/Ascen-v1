@@ -89,7 +89,10 @@ const TABS: Tab[] = [
   },
   {
     to: '/analytics',
-    label: 'Advanced Analytics',
+    // The page calls itself Advanced Analytics; the rail says Analytics. The
+    // rail is a column of one-word destinations and the odd two-word one
+    // wraps — the heading is where the full name belongs.
+    label: 'Analytics',
     icon: (
       <svg {...stroke}>
         <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />

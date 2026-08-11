@@ -206,6 +206,14 @@ html[data-theme="dark"] .ax-page {
 .ax-btn:hover:not(:disabled) { background: var(--ax-card-2); border-color: var(--ax-violet); }
 .ax-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+.ax-btn-icon {
+    width: 14px; height: 14px;
+    flex: none;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12'/%3E%3Cpath d='m7 11 5 5 5-5'/%3E%3Cpath d='M4 20h16'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12'/%3E%3Cpath d='m7 11 5 5 5-5'/%3E%3Cpath d='M4 20h16'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 .ax-pill-icon {
     width: 14px; height: 14px;
     background: var(--ax-muted);
@@ -651,9 +659,27 @@ html[data-theme="dark"] .ax-page {
     grid-template-rows: repeat(7, 1fr);
     gap: 2px;
     font-size: 8px;
+    line-height: 1;
     color: var(--ax-faint);
     flex: none;
     align-items: center;
+    text-align: right;
+    /* The months row above the grid; these labels sit beside the grid itself. */
+    padding-top: 14px;
+}
+
+.ax-heat-years {
+    display: flex;
+    gap: 2px;
+    margin-top: 4px;
+    font-size: 8.5px;
+    color: var(--ax-faint);
+    overflow: hidden;
+}
+.ax-heat-years span {
+    flex: 1 0 auto;
+    min-width: 5px;
+    white-space: nowrap;
 }
 
 .ax-heat-main { flex: 1; min-width: 0; }
