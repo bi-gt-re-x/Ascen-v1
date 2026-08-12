@@ -2080,41 +2080,32 @@ html[data-theme="dark"] .gx-page {
     flex-wrap: wrap;
 }
 .gx-head h1 {
+    display: flex;
+    align-items: center;
+    gap: 11px;
     margin: 0 0 4px;
     font-size: clamp(1.6rem, 3vw, 2.1rem);
     font-weight: 800;
     letter-spacing: -.025em;
     color: var(--gx-text);
 }
+/* The target beside the title. An inline SVG with no width takes the whole
+   line box, which is how this arrived on screen as a 325px bullseye. */
+.gx-head-ico {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    color: var(--gx-violet);
+    background: color-mix(in srgb, var(--gx-violet) 15%, transparent);
+}
+.gx-head-ico svg { width: 20px; height: 20px; }
 .gx-head p { margin: 0; font-size: 13.5px; }
 .gx-head-tools { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 
-/* ---------- Section 1: the strip ------------------------------------------ */
-.gx-strip {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-}
-.gx-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 16px 18px;
-    background: var(--gx-card);
-    border: 1px solid var(--gx-line);
-    border-radius: var(--gx-radius);
-    box-shadow: var(--gx-shadow);
-    /* The one place the tone shows on a stat: a rule down its left edge, so
-       four cards in a row are told apart without four coloured backgrounds. */
-    border-left: 3px solid var(--tone, var(--gx-line));
-    min-width: 0;
-}
-.gx-stat-label { font-size: 11.5px; font-weight: 600; color: var(--gx-muted); }
-.gx-stat-value { font-size: 28px; font-weight: 700; letter-spacing: -.02em; color: var(--gx-text); }
-.gx-stat-foot { font-size: 11.5px; color: var(--gx-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
 /* ---------- Bands --------------------------------------------------------- */
-.gx-band { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gx-band { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
 .gx-band-head {
     display: flex;
     align-items: flex-end;
@@ -2123,45 +2114,163 @@ html[data-theme="dark"] .gx-page {
 }
 .gx-band-head h2 {
     margin: 0 0 2px;
-    font-size: 16.5px;
+    font-size: 16px;
     font-weight: 700;
-    letter-spacing: -.01em;
+    letter-spacing: -.015em;
     color: var(--gx-text);
 }
 .gx-band-head p { margin: 0; font-size: 12.5px; line-height: 1.5; max-width: 62ch; }
 
+/* Two bands abreast. `minmax(0, 1fr)` on both, so a long milestone title
+   inside one cannot push the column wider than its half. */
 .gx-two {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 22px;
+    gap: 20px;
     align-items: start;
+}
+
+/* ---------- Section 1: the strip ------------------------------------------ */
+/* Five figures across. Each card is a label with its mark opposite, the figure
+   under them, and one more real fact under that. No delta arrows: this app
+   keeps no history of a goal's percentage, so a "vs last 30 days" would have to
+   be invented, and one invented arrow teaches the reader to distrust the other
+   four numbers. */
+.gx-strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+}
+.gx-stat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 15px 17px 14px;
+    background: var(--gx-card);
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    box-shadow: var(--gx-shadow);
+    overflow: hidden;
+    min-width: 0;
+}
+.gx-stat header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 20px;
+}
+.gx-stat-label { font-size: 11.5px; font-weight: 600; color: var(--gx-muted); }
+.gx-stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1.05;
+    color: var(--gx-text);
+}
+.gx-stat-foot {
+    font-size: 11px;
+    color: var(--gx-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-stat-ico {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    color: var(--tone, var(--gx-muted));
+    background: color-mix(in srgb, var(--tone, var(--gx-muted)) 13%, transparent);
+}
+/* The sparkline is the card's floor, not a chart in it — it sits in the
+   padding, bled to both edges, and says nothing a reader has to read. */
+.gx-stat .gx-spark {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    width: 100%; height: 30px;
+    opacity: .8;
+}
+
+.gx-ring { flex: none; transform: rotate(-90deg); }
+.gx-ring circle { fill: none; stroke-width: 4; }
+.gx-ring-track { stroke: var(--gx-line); }
+.gx-ring-fill { stroke: var(--tone, var(--gx-violet)); stroke-linecap: round; }
+
+.gx-spark { display: block; overflow: visible; }
+.gx-spark-area { fill: color-mix(in srgb, var(--tone, var(--gx-violet)) 16%, transparent); stroke: none; }
+.gx-spark-line {
+    fill: none;
+    stroke: var(--tone, var(--gx-violet));
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    stroke-dasharray: 1;
+    animation: gx-draw .8s ease-out both;
+}
+@keyframes gx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* ---------- Vision -------------------------------------------------------- */
+.gx-vision {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--gx-muted);
+}
+.gx-vision > span {
+    flex: none;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gx-violet);
+}
+
+/* ---------- Tiles --------------------------------------------------------- */
+.gx-tile {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    color: var(--tone, var(--gx-violet));
+    background: color-mix(in srgb, var(--tone, var(--gx-violet)) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--tone, var(--gx-violet)) 26%, transparent);
 }
 
 /* ---------- Health chip --------------------------------------------------- */
 .gx-page .gx-health {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     flex: none;
-    padding: 4px 11px 4px 8px;
-    border-radius: 999px;
+    padding: 4px 11px;
+    border-radius: 8px;
     font-size: 11.5px;
     font-weight: 700;
     white-space: nowrap;
     border: 1px solid transparent;
 }
-.gx-page .gx-health.is-sm { font-size: 10.5px; padding: 3px 9px 3px 7px; }
-.gx-page .gx-health.is-on-track    { color: var(--gx-good);  background: color-mix(in srgb, var(--gx-good) 12%, transparent); }
-.gx-page .gx-health.is-at-risk     { color: var(--gx-watch); background: color-mix(in srgb, var(--gx-watch) 14%, transparent); }
-.gx-page .gx-health.is-off-track   { color: var(--gx-bad);   background: color-mix(in srgb, var(--gx-bad) 12%, transparent); }
+.gx-page .gx-health i {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.gx-page .gx-health.is-on-track    { color: var(--gx-good);  background: color-mix(in srgb, var(--gx-good) 13%, transparent); }
+.gx-page .gx-health.is-at-risk     { color: var(--gx-watch); background: color-mix(in srgb, var(--gx-watch) 15%, transparent); }
+.gx-page .gx-health.is-off-track   { color: var(--gx-bad);   background: color-mix(in srgb, var(--gx-bad) 13%, transparent); }
 .gx-page .gx-health.is-not-started { color: var(--gx-faint); background: var(--gx-card-2); border-color: var(--gx-line); }
 
 /* ---------- Progress ------------------------------------------------------ */
 .gx-track {
     display: block;
-    height: 8px;
+    height: 6px;
     border-radius: 999px;
-    background: var(--gx-line-soft);
+    background: var(--gx-line);
     overflow: hidden;
 }
 .gx-fill {
@@ -2170,81 +2279,80 @@ html[data-theme="dark"] .gx-page {
     border-radius: 999px;
     background: var(--tone, var(--gx-violet));
     transform-origin: left;
-    animation: gx-fill .5s cubic-bezier(.22, .68, .3, 1) both;
+    animation: gx-fill .55s cubic-bezier(.22, .68, .3, 1) both;
 }
 @keyframes gx-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
-/* The checkpoints as segments — which ones, not how many. */
 .gx-steps { display: flex; gap: 3px; }
-.gx-step {
-    flex: 1 1 0;
-    height: 5px;
-    min-width: 4px;
-    border-radius: 3px;
-    background: var(--gx-line);
-}
+.gx-step { flex: 1 1 0; height: 5px; min-width: 4px; border-radius: 3px; background: var(--gx-line); }
 .gx-step.is-done { background: var(--tone, var(--gx-violet)); }
 .gx-step.is-next { background: color-mix(in srgb, var(--tone, var(--gx-violet)) 45%, transparent); }
 
-/* ---------- Section 2: the cards ------------------------------------------ */
+/* ---------- Section 2: the priority cards -------------------------------- */
 .gx-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
 }
 .gx-card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 11px;
-    padding: 18px 20px 16px;
+    gap: 12px;
+    padding: 17px 18px 34px;
     background: var(--gx-card);
     border: 1px solid var(--gx-line);
     border-radius: var(--gx-radius);
     box-shadow: var(--gx-shadow);
     cursor: pointer;
+    overflow: hidden;
     min-width: 0;
     transition: transform .16s ease, border-color .16s ease;
 }
-.gx-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tone) 45%, var(--gx-line)); }
+.gx-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tone) 48%, var(--gx-line)); }
 .gx-card:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+/* Same treatment as the strip: the line is the floor of the card. */
+.gx-card .gx-spark { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 40px; opacity: .75; }
 
-.gx-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.gx-card-title { min-width: 0; }
+.gx-card-head { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.gx-card-title { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .gx-card-title h3 {
-    margin: 3px 0 0;
-    font-size: 16px;
+    margin: 0;
+    font-size: 15px;
     font-weight: 700;
     line-height: 1.3;
     color: var(--gx-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.gx-card-bar { display: flex; align-items: center; gap: 10px; }
+.gx-card-bar { display: flex; align-items: center; gap: 11px; }
+.gx-card-pct {
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1;
+    color: var(--gx-text);
+    font-variant-numeric: tabular-nums;
+}
 .gx-card-bar .gx-track { flex: 1; }
-.gx-card-pct { font-size: 13px; font-weight: 700; color: var(--gx-text); font-variant-numeric: tabular-nums; }
 
-.gx-card-figures { margin: 0; font-size: 13px; color: var(--gx-text); }
-.gx-card-figures strong { font-weight: 700; }
+.gx-card-figures { margin: -4px 0 0; font-size: 12.5px; color: var(--gx-muted); }
 
-.gx-card-foot {
+.gx-card-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.gx-card-facts li {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     font-size: 11.5px;
     color: var(--gx-muted);
-    flex-wrap: wrap;
+    min-width: 0;
 }
+.gx-card-facts svg { flex: none; color: var(--gx-faint); }
 
-.gx-card-reason {
-    margin: 0;
-    padding-top: 10px;
-    border-top: 1px solid var(--gx-line-soft);
-    font-size: 11.5px;
-    line-height: 1.55;
-    color: var(--gx-faint);
-}
+.gx-card-foot { display: flex; align-items: center; gap: 8px; }
 
-/* The goals past the first few — a list, because a fifth large card is a
-   scroll and not a priority. */
 .gx-rest { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .gx-rest button {
     width: 100%;
@@ -2264,38 +2372,58 @@ html[data-theme="dark"] .gx-page {
 .gx-rest button:hover { background: var(--gx-card-2); }
 .gx-rest-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---------- Section 3: the timeline --------------------------------------- */
+/* ---------- Panels the bands sit in -------------------------------------- */
+/* A band's content is one surface, so the page reads as a handful of slabs
+   rather than as thirty small boxes.
+   The two exceptions are the ones that are already cards: the priority grid
+   and the overflow list under it would otherwise be cards inside a card. */
+.gx-band > :not(.gx-band-head):not(.gx-cards):not(.gx-rest) {
+    padding: 16px 18px;
+    background: var(--gx-card);
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    box-shadow: var(--gx-shadow);
+}
+/* `.gx-empty` brings its own dashed frame and does not want a second one. */
+.gx-band > .gx-empty { background: var(--gx-card-2); box-shadow: none; }
+
+/* ---------- The timeline rail -------------------------------------------- */
 .gx-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .gx-tl-row {
     display: grid;
-    grid-template-columns: 26px minmax(0, 1fr) auto;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
-    padding: 9px 0;
+    gap: 11px;
+    padding: 8px 0;
     position: relative;
 }
-/* The spine. Drawn on the mark rather than the row so it stops at the last
-   one instead of running off the bottom of the list. */
+/* The spine, on the mark rather than the row, so it stops at the last one. */
 .gx-tl-row:not(:last-child) .gx-tl-mark::after {
     content: '';
     position: absolute;
     left: 50%;
     top: 100%;
     width: 1px;
-    height: 20px;
+    height: 17px;
     background: var(--gx-line);
 }
 .gx-tl-mark {
     position: relative;
     display: grid;
     place-items: center;
-    width: 22px; height: 22px;
+    width: 21px; height: 21px;
     border-radius: 50%;
     background: var(--gx-card-2);
     border: 1px solid var(--gx-line);
-    color: var(--tone, var(--gx-muted));
-    font-size: 11px;
+    color: var(--gx-faint);
+    font-size: 10px;
     font-weight: 700;
+}
+.gx-tl-row.is-done .gx-tl-mark { background: var(--gx-good); border-color: var(--gx-good); color: #fff; }
+.gx-tl-row.is-now .gx-tl-mark {
+    border-color: var(--tone, var(--gx-violet));
+    color: var(--tone, var(--gx-violet));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone, var(--gx-violet)) 18%, transparent);
 }
 .gx-tl-body {
     display: flex;
@@ -2307,47 +2435,183 @@ html[data-theme="dark"] .gx-page {
     min-width: 0;
     font: inherit;
 }
-.gx-tl-title { font-size: 13px; font-weight: 600; color: var(--gx-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gx-tl-goal { font-size: 11.5px; color: var(--gx-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gx-tl-body:hover .gx-tl-title { color: var(--tone, var(--gx-violet)); }
-.gx-tl-when { font-size: 11.5px; font-weight: 600; color: var(--gx-muted); white-space: nowrap; }
-
-/* ---------- Section 5: the insight rows ----------------------------------- */
-.gx-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-.gx-note {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 13px 15px;
-    border-radius: 12px;
-    background: var(--gx-card);
-    border: 1px solid var(--gx-line);
-    border-left: 3px solid var(--gx-line);
+.gx-tl-goal {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    color: var(--tone, var(--gx-muted));
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.gx-note.tone-good  { border-left-color: var(--gx-good); }
-.gx-note.tone-watch { border-left-color: var(--gx-watch); }
-.gx-note.tone-note  { border-left-color: var(--gx-blue); }
-.gx-note > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gx-tl-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gx-text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gx-tl-row.is-done .gx-tl-title { color: var(--gx-muted); }
+.gx-tl-body:hover .gx-tl-title { color: var(--tone, var(--gx-violet)); }
+.gx-tl-when { font-size: 11px; font-weight: 600; color: var(--gx-faint); white-space: nowrap; }
+
+/* Where the reader is standing. A rule across the rail rather than a row, so
+   it reads as a position in time and not as another checkpoint. */
+.gx-tl-today {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gx-violet);
+}
+.gx-tl-today::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, color-mix(in srgb, var(--gx-violet) 55%, transparent), transparent);
+}
+
+/* ---------- Next milestones ---------------------------------------------- */
+.gx-next { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.gx-next-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    border-radius: 12px;
+}
+.gx-next-row:hover { background: var(--gx-card-2); }
+.gx-next-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border: 0; background: none; padding: 0;
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+    font: inherit;
+}
+.gx-next-title { font-size: 13.5px; font-weight: 650; color: var(--gx-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-next-goal { font-size: 11px; color: var(--gx-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-next-bar { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.gx-next-bar .gx-track { flex: 1; max-width: 190px; }
+.gx-next-count { font-size: 10.5px; font-weight: 600; color: var(--gx-muted); font-variant-numeric: tabular-nums; }
+.gx-next-when { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }
+.gx-next-when strong { font-size: 12px; font-weight: 650; color: var(--gx-text); }
+.gx-next-when span { font-size: 10.5px; color: var(--gx-faint); }
+
+/* ---------- Health distribution ------------------------------------------ */
+.gx-dist { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.gx-dist-ring { position: relative; width: 132px; height: 132px; flex: none; }
+.gx-dist-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gx-dist-ring circle { fill: none; stroke-width: 5; }
+.gx-dist-arc { stroke-linecap: butt; transition: stroke-dasharray .4s ease; }
+.gx-dist-arc.is-on-track    { stroke: var(--gx-good); }
+.gx-dist-arc.is-at-risk     { stroke: var(--gx-watch); }
+.gx-dist-arc.is-off-track   { stroke: var(--gx-bad); }
+.gx-dist-arc.is-not-started { stroke: var(--gx-faint); }
+.gx-dist-centre {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+}
+.gx-dist-centre strong { font-size: 29px; font-weight: 700; letter-spacing: -.03em; color: var(--gx-text); }
+.gx-dist-centre span { font-size: 10.5px; color: var(--gx-faint); }
+
+.gx-dist-key { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 10px; }
+.gx-dist-key li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 12.5px; }
+.gx-dist-key i { width: 9px; height: 9px; border-radius: 3px; }
+.gx-dist-key i.is-on-track    { background: var(--gx-good); }
+.gx-dist-key i.is-at-risk     { background: var(--gx-watch); }
+.gx-dist-key i.is-off-track   { background: var(--gx-bad); }
+.gx-dist-key i.is-not-started { background: var(--gx-faint); }
+.gx-dist-key span { color: var(--gx-muted); }
+.gx-dist-key strong { font-weight: 650; color: var(--gx-text); font-variant-numeric: tabular-nums; }
+.gx-dist-key strong .gx-quiet { font-weight: 400; font-size: 11.5px; }
+
+/* ---------- Insight rows -------------------------------------------------- */
+.gx-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.gx-note {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+}
+.gx-note:hover { background: var(--gx-card-2); }
+.gx-note-ico {
+    flex: none;
+    display: grid; place-items: center;
+    width: 30px; height: 30px;
+    border-radius: 9px;
+}
+.gx-note.tone-good  .gx-note-ico { color: var(--gx-good);  background: color-mix(in srgb, var(--gx-good) 13%, transparent); }
+.gx-note.tone-watch .gx-note-ico { color: var(--gx-watch); background: color-mix(in srgb, var(--gx-watch) 15%, transparent); }
+.gx-note.tone-note  .gx-note-ico { color: var(--gx-blue);  background: color-mix(in srgb, var(--gx-blue) 15%, transparent); }
+.gx-note > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gx-note strong { font-size: 13px; font-weight: 650; color: var(--gx-text); line-height: 1.4; }
 .gx-note .gx-quiet { font-size: 11.5px; line-height: 1.5; }
 
-/* ---------- Section 6: what is behind you --------------------------------- */
-.gx-done { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+/* ---------- What is behind you -------------------------------------------- */
+.gx-done { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .gx-done-row {
     display: grid;
-    grid-template-columns: 20px minmax(0, 1fr) auto;
-    align-items: baseline;
-    gap: 10px;
-    padding: 9px 12px;
-    border-radius: 10px;
-    font-size: 13px;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    border-radius: 11px;
 }
 .gx-done-row:hover { background: var(--gx-card-2); }
-.gx-done-mark { color: var(--gx-good); font-weight: 700; }
-.gx-done-row.is-goal .gx-done-mark { color: var(--gx-amber); }
-.gx-done-title { color: var(--gx-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gx-done-row .gx-quiet { font-size: 11.5px; white-space: nowrap; }
+.gx-done-mark {
+    display: grid; place-items: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--gx-good);
+}
+.gx-done-row.is-goal .gx-done-mark { background: var(--gx-violet); }
+.gx-done-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gx-done-title { font-size: 13px; font-weight: 600; color: var(--gx-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-done-body .gx-quiet { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-tag {
+    flex: none;
+    padding: 3px 9px;
+    border-radius: 7px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--gx-muted);
+    background: var(--gx-card-2);
+    border: 1px solid var(--gx-line);
+}
+.gx-done-row.is-goal .gx-tag { color: var(--gx-violet); border-color: color-mix(in srgb, var(--gx-violet) 34%, transparent); }
+
+/* ---------- The closing line --------------------------------------------- */
+.gx-cta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: var(--gx-radius);
+    background: linear-gradient(
+        100deg,
+        color-mix(in srgb, var(--gx-violet) 11%, var(--gx-card)),
+        var(--gx-card) 65%
+    );
+    border: 1px solid color-mix(in srgb, var(--gx-violet) 24%, var(--gx-line));
+}
+.gx-cta > div { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gx-cta strong { font-size: 13.5px; font-weight: 700; color: var(--gx-violet); }
+.gx-cta .gx-quiet { font-size: 12px; }
 
 /* ---------- The legacy counters ------------------------------------------- */
 /* The original cards, on the surface they were drawn for. Without this they
@@ -2712,19 +2976,28 @@ html[data-theme="dark"] .gx-page {
 .gx-page .gx-draft-list li button:hover { color: var(--gx-bad); }
 
 /* ---------- Narrower ------------------------------------------------------ */
+@media (max-width: 1360px) {
+    .gx-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 1080px) {
-    .gx-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gx-two { grid-template-columns: minmax(0, 1fr); }
     .gx-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gx-dist { justify-content: center; }
 }
-@media (max-width: 620px) {
-    .gx-strip { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 720px) {
+    .gx-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gx-choices, .gx-number-row { grid-template-columns: 1fr; }
     .gx-head-tools { width: 100%; }
     .gx-drawer { padding: 20px 18px 34px; }
+    .gx-cta { flex-wrap: wrap; }
+    .gx-cta .gx-btn { width: 100%; }
+}
+@media (max-width: 460px) {
+    .gx-strip { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .gx-fill, .gx-drawer, .gx-wizard, .gx-drawer-backdrop { animation: none; }
+    .gx-fill, .gx-drawer, .gx-wizard, .gx-drawer-backdrop, .gx-spark-line { animation: none; }
+    .gx-spark-line { stroke-dasharray: none; }
     .gx-card { transition: none; }
 }

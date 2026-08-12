@@ -48,10 +48,14 @@ import {
   GoalInsights,
   GoalModal,
   GoalTimeline,
+  GoalsCta,
+  HealthRing,
   NewGoalWizard,
+  NextMilestones,
   OutcomeCard,
   OverviewStrip,
   RecentlyCompleted,
+  VisionLine,
   goalNumbers,
   isOverdue,
   measureOf,
@@ -278,7 +282,16 @@ export default function Goals() {
       <div className="gx-shell page-shell">
         <header className="gx-head">
           <div>
-            <h1>Goals</h1>
+            <h1>
+              <span className="gx-head-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <circle cx="12" cy="12" r="4.5" />
+                  <circle cx="12" cy="12" r="1" />
+                </svg>
+              </span>
+              Goals
+            </h1>
             <p className="gx-quiet">Turn long-term ambitions into measurable progress.</p>
           </div>
           <div className="gx-head-tools">
@@ -298,13 +311,15 @@ export default function Goals() {
 
         {error && <ErrorState message={error} onRetry={() => void load()} />}
 
+        <VisionLine goals={list} />
+
         {/* ---- 1. Where everything stands ------------------------------- */}
         <OverviewStrip goals={list} tasks={tasks} />
 
         {/* ---- 2. The goals themselves ---------------------------------- */}
         <Band
-          title="Your goals"
-          hint="The ones that matter most first. Open one to see its checkpoints and why it is moving at the rate it is."
+          title="Priority Goals"
+          hint="The ones that matter most, first. Open one for its milestones and why it is moving at the rate it is."
         >
           {outcomes.length === 0 ? (
             <p className="gx-empty">
@@ -342,18 +357,32 @@ export default function Goals() {
           )}
         </Band>
 
-        {/* ---- 3. What is coming ---------------------------------------- */}
+        {/* ---- 3. When ---------------------------------------------------
+            The rail and the checkpoints being worked on, side by side: one
+            says when things land, the other says how far into each one you
+            are. Together they are the page's answer to "what comes next". */}
         <div className="gx-two">
-          <Band title="What comes next" hint="Every unreached checkpoint, in date order.">
+          <Band title="Goal Timeline" hint="What you have reached, and what is queued.">
             <GoalTimeline goals={list} onOpen={(goal) => setOpenId(goal.id)} />
           </Band>
 
-          <Band title="Goal insights" hint="Read off the work linked to each goal — never estimated.">
-            <GoalInsights goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
+          <Band title="Next Milestones" hint="The checkpoint each goal is on now.">
+            <NextMilestones goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
           </Band>
         </div>
 
-        {/* ---- 4. The counters, kept ------------------------------------- */}
+        {/* ---- 4. Why ---------------------------------------------------- */}
+        <div className="gx-two">
+          <Band title="Goal Insights" hint="Counted off the work linked to each goal — never estimated.">
+            <GoalInsights goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
+          </Band>
+
+          <Band title="Goal Health" hint="How much of what you are carrying is going to happen.">
+            <HealthRing goals={list} tasks={tasks} />
+          </Band>
+        </div>
+
+        {/* ---- 5. The counters, kept ------------------------------------- */}
         {counters.length > 0 && (
           <Band
             title="Tracked counters"
@@ -386,12 +415,14 @@ export default function Goals() {
           </Band>
         )}
 
-        {/* ---- 5. What has been reached ---------------------------------- */}
+        {/* ---- 6. What has been reached ---------------------------------- */}
         {showCompleted && (
-          <Band title="Recently completed" hint="Goals and checkpoints already behind you.">
+          <Band title="Recently Completed" hint="Goals and milestones already behind you.">
             <RecentlyCompleted goals={list} />
           </Band>
         )}
+
+        <GoalsCta onNew={() => setWizardOpen(true)} />
       </div>
 
       {open && (
