@@ -14,14 +14,33 @@ export type { GoalsSummaryProps } from './GoalsSummary';
 export { MilestonesPanel } from './MilestonesPanel';
 export type { MilestonesPanelProps } from './MilestonesPanel';
 export {
+  Band,
+  CATEGORIES,
+  GoalInsights,
+  GoalTimeline,
+  HealthChip,
+  MilestoneTrack,
+  OutcomeCard,
+  OverviewStrip,
+  ProgressBar,
+  RecentlyCompleted,
+  categoryOf,
+} from './Outcome';
+export { GoalDetail } from './GoalDetail';
+export type { GoalDetailProps } from './GoalDetail';
+export { NewGoalWizard } from './NewGoalWizard';
+export type { NewGoalWizardProps } from './NewGoalWizard';
+export {
   DEFAULT_GOAL_WEIGHT,
   MAX_TIMEOUT,
+  fmtGoalNumber,
   fmtGoalValue,
   formatGoalDate,
   goalNumbers,
   goalProgressPct,
   goalWeight,
   isOverdue,
+  measureOf,
   msUntilNextDeadline,
   overallProgress,
 } from './numbers';
