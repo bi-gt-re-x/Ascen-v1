@@ -78,6 +78,55 @@ function useTrying(): [Set<string>, (id: string) => void] {
 // --------------------------------------------------------------------------
 // The opening
 // --------------------------------------------------------------------------
+/**
+ * Where the gain is, suggestion by suggestion.
+ *
+ * The panel's title is a question about distribution and the paragraph above it
+ * only answers the total, which is what left most of this card blank: "4.9K XP
+ * a year" says how much room there is and nothing about where. These rows say
+ * where. They are the same `impact` figures the cards below carry, so nothing
+ * here is a second calculation that could disagree with them — it is the same
+ * list, ranked, drawn to a common scale so the first one's size against the
+ * last one's is visible before any of the numbers are read.
+ *
+ * Scaled against the largest rather than against the total: the question a
+ * reader has at this point is which of these is worth starting with, and a
+ * share-of-total bar answers a question about the pie instead.
+ */
+function RoomBreakdown({ scored, unscored }: { scored: Advice[]; unscored: number }) {
+  const top = Math.max(...scored.map((item) => item.impact), 1);
+
+  return (
+    <>
+      <ol className="ax-room">
+        {scored.map((item) => (
+          <li className="ax-room-row" key={item.id}>
+            <span className="ax-room-name" title={item.title}>
+              {item.title}
+            </span>
+            <span className="ax-room-track">
+              <i
+                style={{
+                  width: `${Math.max(4, (item.impact / top) * 100)}%`,
+                  background: toneVar(KIND_TONE[item.kind]),
+                }}
+              />
+            </span>
+            <span className="ax-room-xp">+{compact(item.impact)}</span>
+          </li>
+        ))}
+      </ol>
+      {unscored > 0 && (
+        <p className="ax-room-rest">
+          {unscored === 1 ? 'One more suggestion carries' : `${unscored} more suggestions carry`} no
+          figure — {unscored === 1 ? 'it changes' : 'they change'} what the total is made of rather
+          than what it comes to.
+        </p>
+      )}
+    </>
+  );
+}
+
 export function Opening({
   advice,
   outlook,
@@ -88,10 +137,11 @@ export function Opening({
   sample?: boolean;
 }) {
   const scored = advice.filter((item) => item.impact > 0);
+  const unscored = advice.length - scored.length;
   const gain = outlook.improved - outlook.current;
 
   return (
-    <Panel title="Where the room actually is" sample={sample}>
+    <Panel title="Where the room actually is" sample={sample} className="ax-opening">
       {sample ? (
         <>
           <p className="ax-prose ax-prose-lead">
@@ -99,6 +149,7 @@ export function Opening({
             working average to project from. What is below is an example account, so you can see
             what this tab does before it has anything of yours to say.
           </p>
+          {scored.length > 0 && <RoomBreakdown scored={scored} unscored={unscored} />}
           <p className="ax-prose">
             When it fills in, every figure here will be your own averages multiplied out, not a
             model, with the workings printed on each card so you can disagree with them.
@@ -124,6 +175,7 @@ export function Opening({
               'Nothing in your record points at a change that would move the totals. What is left below is about the shape of the work rather than the amount of it.'
             )}
           </p>
+          {scored.length > 0 && <RoomBreakdown scored={scored} unscored={unscored} />}
           <p className="ax-prose">
             Every figure here is your own averages multiplied out, not a model — the workings are
             printed on each card so you can disagree with them. Nothing assumes the change compounds

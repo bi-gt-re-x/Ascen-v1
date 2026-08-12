@@ -894,10 +894,39 @@ function listOf(names: string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
+/** "Mar 14" — a day named in a headline, in the format the range label uses. */
+function dayName(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 /**
- * Three things worth saying about the range, chosen from what the figures show.
+ * The fewest rows the panel is allowed to open with.
  *
- * Which three come out depends only on the numbers, so the panel cannot
+ * There is no ceiling to match it. There used to be — the function ended in
+ * `slice(0, 3)` — and the two problems with that were opposite and both real.
+ * At the top it threw away findings that were true: an account whose weekday
+ * pattern, weekend gap, pace change and consistency were all worth a row got
+ * three of the four, chosen by the order the rules happen to be written in
+ * rather than by which mattered. At the bottom it did nothing at all, because a
+ * cap cannot make rules fire: a quiet window matched one rule and the panel
+ * showed a single line in a card sized for a list.
+ *
+ * So the cap is gone and this is a floor. The rules below are ordered
+ * strongest-first and every one of them is still guarded by the figures — what
+ * changed is that there are now enough of them that any window with work in it
+ * clears three honestly, rather than three being manufactured. When a window
+ * genuinely has nothing in it, `quietRows` says so in three ways that are each
+ * a fact about the account rather than an encouragement.
+ */
+const MIN_INSIGHTS = 3;
+
+/**
+ * What is worth saying about the range, chosen from what the figures show.
+ *
+ * Which rows come out depends only on the numbers, so the panel cannot
  * congratulate a month that went backwards — the failure mode of every
  * "insights" box that ships a fixed string. When there is genuinely nothing to
  * say, it says that instead of reaching for the next rule down.
@@ -995,7 +1024,8 @@ export function growthInsights(slice: RangeSlice): Insight[] {
 
   // Always sayable, and the one every other rule can fall back on: how much of
   // the range had anything on it at all.
-  const active = current.filter((day) => (Number(day.xp_earned) || 0) > 0).length;
+  const worked = current.filter((day) => (Number(day.xp_earned) || 0) > 0);
+  const active = worked.length;
   if (active > 0) {
     const share = Math.round((active / current.length) * 100);
     out.push(
@@ -1013,13 +1043,132 @@ export function growthInsights(slice: RangeSlice): Insight[] {
     );
   }
 
-  if (!out.length) {
+  // The best single day in the window. Not a pattern, which is why it comes
+  // after the four rules above — but it is the one figure a reader can go and
+  // look at, and it is sayable whenever anything at all happened.
+  const peak = worked.reduce<GrowthDay | null>(
+    (best, day) =>
+      !best || (Number(day.xp_earned) || 0) > (Number(best.xp_earned) || 0) ? day : best,
+    null,
+  );
+  if (peak && active > 1) {
+    const peakXp = Math.round(Number(peak.xp_earned) || 0);
+    const average = total(worked, (day) => day.xp_earned) / active;
+    const times = average > 0 ? peakXp / average : 0;
+    // Only when it stands out. On a range where every working day is worth the
+    // same, one of them is still arithmetically the largest, and naming that
+    // date would be pointing at a tie — the reader would go and look at a day
+    // that was no different from the one beside it.
+    if (times >= 1.2) {
+      out.push({
+        tone: 'good',
+        headline: `Your best day was ${peakXp.toLocaleString()} XP, on ${dayName(peak.date)}.`,
+        hint: `That is ${times.toFixed(1)}× your average working day — worth knowing what was different about it.`,
+      });
+    }
+  }
+
+  // The longest unbroken run inside the window. Deliberately not the account's
+  // streak: that figure is on the tiles and counts up to today, where this one
+  // is about the stretch on screen and can sit anywhere in it.
+  let run = 0;
+  let longest = 0;
+  current.forEach((day) => {
+    run = (Number(day.xp_earned) || 0) > 0 ? run + 1 : 0;
+    if (run > longest) longest = run;
+  });
+  if (longest >= 2) {
     out.push({
-      tone: 'note',
-      headline: 'Nothing has happened here yet.',
-      hint: 'Finish a task and this panel will have something to say.',
+      tone: longest >= 7 ? 'good' : 'note',
+      headline: `Your longest unbroken run here was ${longest} days.`,
+      hint:
+        longest >= 7
+          ? 'A week without a gap is the hardest part of any streak to rebuild.'
+          : 'Runs are worth more than single days — the line moves on the days either side of a good one.',
     });
   }
 
-  return out.slice(0, 3);
+  // What the work was made of. Two figures the XP total cannot show on its own:
+  // how many things were finished, and how long was actually spent.
+  const tasksDone = Math.round(total(current, (day) => day.tasks_completed));
+  if (tasksDone > 0 && active > 0) {
+    const perDay = tasksDone / active;
+    out.push({
+      tone: 'note',
+      headline: `${tasksDone.toLocaleString()} task${tasksDone === 1 ? '' : 's'} finished across this range.`,
+      hint: `About ${perDay.toFixed(1)} on each day you worked.`,
+    });
+  }
+
+  const focusMinutes = Math.round(total(current, (day) => day.focus_minutes));
+  if (focusMinutes > 0 && active > 0) {
+    const hours = focusMinutes / 60;
+    const perDay = Math.round(focusMinutes / active);
+    out.push({
+      tone: 'note',
+      headline: `${hours >= 10 ? Math.round(hours).toLocaleString() : hours.toFixed(1)} hours of focus in this range.`,
+      hint: `Around ${perDay} minutes on a day you worked.`,
+    });
+  }
+
+  // Nothing in the window, or so little that the rules above could not fill the
+  // panel. Every row here is still a fact about this account — what it is not
+  // doing is inventing a finding to reach the floor. See `MIN_INSIGHTS`.
+  if (out.length < MIN_INSIGHTS) out.push(...quietRows(current, active, out.length));
+
+  return out;
+}
+
+/**
+ * What to say about a range that has not given the rules enough to work with.
+ *
+ * Three honest observations rather than three encouragements: how much of the
+ * window is empty, when the last thing happened, and what the panel is waiting
+ * for. `have` is how many real findings are already on the list, so a window
+ * that produced two gets one of these rather than all three.
+ */
+function quietRows(days: GrowthDay[], active: number, have: number): Insight[] {
+  const last = [...days].reverse().find((day) => (Number(day.xp_earned) || 0) > 0);
+  const banked = Math.round(total(days, (day) => day.xp_earned));
+
+  const rows: Insight[] = [
+    // A window with no days in it at all is not the same as a window of empty
+    // ones, and "no XP on any of these 0 days" is what saying so badly sounds
+    // like. It happens on an account whose history has not arrived yet.
+    days.length === 0
+      ? {
+          tone: 'note',
+          headline: 'There are no days in this range yet.',
+          hint: 'Your record starts on the day you signed up — this panel fills in from there.',
+        }
+      : active === 0
+      ? {
+          tone: 'note',
+          headline: `No XP recorded on any of these ${days.length} days.`,
+          hint: 'This panel reads the range in the header — a longer one may well have something in it.',
+        }
+      : {
+          tone: 'note',
+          headline: `${banked.toLocaleString()} XP over ${active} working day${active === 1 ? '' : 's'}.`,
+          hint: 'Too few days here for a pattern; the readings below sharpen as the range fills.',
+        },
+    last
+      ? {
+          tone: 'note',
+          headline: `The last day with anything on it was ${dayName(last.date)}.`,
+          hint: `It was worth ${Math.round(Number(last.xp_earned) || 0).toLocaleString()} XP.`,
+        }
+      : {
+          tone: 'note',
+          headline: 'Nothing has happened here yet.',
+          hint: 'Finish a task and this panel will have something to say.',
+        },
+    {
+      tone: 'note',
+      headline: 'Every row here is counted, never estimated.',
+      hint: 'A finding appears when the figures support it and stays away when they do not, which is why this range is quiet.',
+    },
+  ];
+
+  return rows.slice(0, Math.max(0, MIN_INSIGHTS - have));
 }

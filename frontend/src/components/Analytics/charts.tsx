@@ -88,8 +88,25 @@ export function Sparkline({ values, tone }: SparklineProps) {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      <path d={`${path} L${width},${height} L0,${height} Z`} fill={toneVar(tone)} opacity="0.12" />
-      <path d={path} fill="none" stroke={toneVar(tone)} strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+      <path
+        className="ax-spark-area"
+        d={`${path} L${width},${height} L0,${height} Z`}
+        fill={toneVar(tone)}
+        opacity="0.12"
+      />
+      {/* `pathLength={1}` normalises the line's length to 1 whatever its shape,
+          which is what lets one CSS rule draw every line on the page with
+          `stroke-dasharray: 1` and no measuring in JS. See `ax-draw` in
+          styles/analytics.css. */}
+      <path
+        className="ax-spark-line"
+        d={path}
+        pathLength={1}
+        fill="none"
+        stroke={toneVar(tone)}
+        strokeWidth="1.4"
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
   );
 }
@@ -178,12 +195,19 @@ export function AreaChart({ series, ticks, marks, id, height = 200 }: AreaChartP
                 <g key={index}>
                   {!entry.dashed && (
                     <path
+                      className="ax-chart-area"
                       d={`${path} L${width},${height} L0,${height} Z`}
                       fill={`url(#${id}-fill-${index})`}
                     />
                   )}
+                  {/* The comparison series carries `is-dashed` so the entrance
+                      leaves it alone: drawing a line with `stroke-dasharray`
+                      means owning that property, and this one is already using
+                      it to say "this is the period before". It fades instead. */}
                   <path
+                    className={`ax-chart-line${entry.dashed ? ' is-dashed' : ''}`}
                     d={path}
+                    pathLength={1}
                     fill="none"
                     stroke={toneVar(entry.tone)}
                     strokeWidth="2"
@@ -254,6 +278,7 @@ export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Ton
         return <line key={index} x1={centre} y1={centre} x2={x} y2={y} className="ax-radar-ring" />;
       })}
       <polygon
+        className="ax-radar-shape"
         points={polygon((index) => Math.max(0.04, axes[index]!.value))}
         fill={toneVar(tone)}
         fillOpacity="0.28"

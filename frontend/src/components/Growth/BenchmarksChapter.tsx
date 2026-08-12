@@ -105,6 +105,25 @@ const SAMPLE_GOALS: GoalBench[] = [
   },
 ];
 
+/**
+ * How many goals the panel draws.
+ *
+ * Three, and the reason is the panel beside it. Goal benchmarks and "Reading
+ * these" share a row of the chapter grid, the row stretches both to the height
+ * of the taller, and an account with ten goals made that row four times the
+ * height of its neighbour — a column of near-identical bars that pushed the end
+ * of the chapter off the screen and left the panel next to it as a strip of
+ * white. Three rows is about what the notes opposite come to, so the two cards
+ * end together.
+ *
+ * The three are the least-complete ones — `goalBenchmarks` sorts by percent
+ * ascending — which is the right three to show: a goal already at 100% is a
+ * result, and the ones with the most left to do are the ones a pace figure
+ * means anything for. The head keeps the true count so the cap is never a
+ * silent one.
+ */
+const GOAL_ROWS = 3;
+
 export interface BenchmarksChapterProps {
   all: GrowthDay[];
   tasks: Task[];
@@ -149,7 +168,9 @@ export function BenchmarksChapter({
    * panel is entirely sample or entirely measured; see `SAMPLE_GOALS`.
    */
   const sample = !goalsLoading && goalRows.length === 0;
-  const rows = sample ? SAMPLE_GOALS : goalRows;
+  const allGoals = sample ? SAMPLE_GOALS : goalRows;
+  const rows = allGoals.slice(0, GOAL_ROWS);
+  const hidden = allGoals.length - rows.length;
 
   return (
     <div className="gr-grid">
@@ -306,10 +327,16 @@ export function BenchmarksChapter({
           icon="target"
           hint={
             sample
-              ? 'Placeholder rows. You have no goals set, so these four are an illustration of what this panel becomes — nothing in them is read from your account.'
-              : 'Your own goals, with the pace each needs against the pace you are going. The pace comes from your last 30 days, because a goal set yesterday has no history of its own.'
+              ? 'Placeholder rows. You have no goals set, so these are an illustration of what this panel becomes — nothing in them is read from your account.'
+              : 'Your own goals, with the pace each needs against the pace you are going. The pace comes from your last 30 days, because a goal set yesterday has no history of its own. The panel shows the three with the most left to do.'
           }
-          note={goalRows.length ? `${goalRows.length} set` : undefined}
+          note={
+            goalRows.length > GOAL_ROWS
+              ? `${GOAL_ROWS} of ${goalRows.length}`
+              : goalRows.length
+                ? `${goalRows.length} set`
+                : undefined
+          }
         >
           {sample && <span className="gr-panel-tag">Sample</span>}
         </PanelHead>
@@ -319,7 +346,7 @@ export function BenchmarksChapter({
           <>
             {sample && (
               <p className="gr-goals-note">
-                No goals set — these four are placeholders. A goal is the one place a target
+                No goals set — these are placeholders. A goal is the one place a target
                 this app does not track — a Codeforces rating, an RCM grade, a book count —
                 becomes a number with a deadline on it, and your own rows replace these the
                 moment one exists.
@@ -360,6 +387,15 @@ export function BenchmarksChapter({
                 </li>
               ))}
             </ul>
+            {/* Pinned to the floor of the panel, which is both where a footnote
+                belongs and what takes up the room left over when the notes
+                opposite run longer than three goals. */}
+            {hidden > 0 && (
+              <p className="gr-goals-foot">
+                {hidden} further goal{hidden === 1 ? '' : 's'} not shown — these are the three with
+                the most left to do. The rest are on your Goals page.
+              </p>
+            )}
           </>
         )}
       </section>

@@ -79,11 +79,9 @@ import {
   PatternsPanel,
   SCORE_SCALE,
   ScorePanel,
-  SECTIONS,
   StandingPanel,
   StreaksPanel,
   SubjectPanel,
-  Tabs,
   Tiles,
   TimelinePanel,
   Trajectory,
@@ -91,7 +89,6 @@ import {
   TrendTiles,
   ViewTabs,
   viewFor,
-  useActiveSection,
   type View,
 } from '@/components/Analytics';
 import {
@@ -196,8 +193,6 @@ const MOMENTUM_DAYS = 90;
  * against each other and raised together.
  */
 const NEED_DAYS = { habits: 21, insights: 28, trends: 21 };
-
-const SECTION_IDS = SECTIONS.map((section) => section.id);
 
 export default function Analytics() {
   const location = useLocation();
@@ -658,24 +653,16 @@ interface OverviewProps {
 /**
  * The long view of the account — the page as it was, unchanged.
  *
- * A component of its own rather than another branch in the render above, and
- * the reason is `useActiveSection`: it subscribes an IntersectionObserver to
- * five section elements on mount, and those elements only exist while this tab
- * is open. Mounting the hook with the sections is what makes the sub-navigation
- * light up correctly after a tab switch — at the page level the effect would
- * have run once, against nothing, and never again.
+ * A component of its own rather than another branch in the render above. It
+ * once had a harder reason — an IntersectionObserver lighting up the
+ * sub-navigation bar that used to sit at the top of this tab, which only worked
+ * if the hook mounted alongside the sections it watched. The bar is gone (see
+ * components/Analytics/Header) and the ids below are anchors now, kept because
+ * they name the blocks and cost nothing.
  */
 function OverviewView(props: OverviewProps) {
-  const active = useActiveSection(SECTION_IDS);
-
-  const jump = useCallback((id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
   return (
     <>
-      <Tabs active={active} onJump={jump} />
-
       <section id="overview" className="ax-section">
         <Tiles
           figures={props.figures}

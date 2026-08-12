@@ -2930,6 +2930,15 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     flex: none; margin: 0 0 12px;
     font-size: 10.5px; line-height: 1.45; color: var(--ink-faint);
 }
+/* The count of what the panel is not showing.
+   It needs no `margin-top: auto`: the list above it is `flex: 1 1 auto`, so the
+   slack in a card stretched to its neighbour's height is already taken there
+   and this line sits on the floor — level with the end of "Reading these"
+   beside it, which is the point of capping the list in the first place. */
+#growthCard .gr-goals-foot {
+    flex: none; margin: 12px 0 0;
+    font-size: 10.5px; line-height: 1.45; color: var(--ink-faint);
+}
 .gr-goal {
     display: flex; flex-direction: column; gap: 7px;
     padding: 12px 14px; border-radius: 13px;

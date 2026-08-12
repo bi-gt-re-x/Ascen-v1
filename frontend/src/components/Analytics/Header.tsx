@@ -1,64 +1,19 @@
 /**
- * The page's own chrome: its title row, its chapters, and its controls.
+ * The page's own chrome: its title row, its major tabs, and its controls.
  *
- * **The chapters scroll rather than swap.** They look like tabs and behave like
- * a table of contents, because the page is one continuous argument — the tiles
- * state the figures, the trajectory shows the path, the breakdown says what it
- * was made of — and hiding four fifths of that behind a tab would make a reader
- * click through five screens to read one. Pressing one moves the page to that
- * section and the section under the reader lights up as they scroll past it,
- * so the control is honest in both directions.
+ * Overview used to carry a second bar under this one — Overview / Long Term /
+ * Milestones / Goals Progress / Trajectory / Benchmarks — that scrolled to a
+ * block rather than opening one. It is gone. Two tab bars stacked on one screen
+ * read as one broken control: the top row swapped the page and the row directly
+ * under it did not, and nothing about the two told a reader which was which.
+ * The bar was also lying in two places — Goals Progress pointed at Long Term
+ * because this page has no goals panel, and its labels were in a different
+ * order than the sections they named. Overview is one continuous argument and
+ * scrolls like one.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { WINDOWS, type WindowKey } from './data';
 import type { GrowthDay } from '@/types';
-
-export interface Section {
-  id: string;
-  label: string;
-}
-
-/**
- * The page's blocks, **in the order they are laid out**.
- *
- * `useActiveSection` picks the first id in this list that has anything on
- * screen, so document order here is what makes the highlight land on the
- * section the reader is actually in front of. Reorder the page and this has to
- * move with it. It is deliberately separate from `TABS` below, which is in the
- * order the design draws the tab bar — the two are not the same order, and
- * conflating them is what put the highlight on the wrong tab before.
- */
-export const SECTIONS: Section[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'trajectory', label: 'Trajectory' },
-  { id: 'breakdown', label: 'Milestones' },
-  { id: 'longterm', label: 'Long Term' },
-  { id: 'standing', label: 'Benchmarks' },
-];
-
-/**
- * The sub-navigation inside Overview, matching the design's labels and order.
- *
- * These are anchors rather than views: Overview is one continuous argument —
- * the tiles state the figures, the trajectory shows the path, the breakdown
- * says what it was made of — and hiding four fifths of that behind a tab would
- * make a reader click through five screens to read one. Pressing one moves the
- * page to that block and the block under the reader lights up as they scroll
- * past it, so the control is honest in both directions.
- *
- * **Goals Progress has no block of its own.** There is no goals panel on this
- * page, so it lands on Long Term, which is the closest thing to it — progress
- * against the period before. It is in the list because the design has it;
- * point it at a real panel the day one exists.
- */
-export const TABS: Array<{ label: string; target: string }> = [
-  { label: 'Overview', target: 'overview' },
-  { label: 'Long Term', target: 'longterm' },
-  { label: 'Milestones', target: 'breakdown' },
-  { label: 'Goals Progress', target: 'longterm' },
-  { label: 'Trajectory', target: 'trajectory' },
-  { label: 'Benchmarks', target: 'standing' },
-];
 
 // --------------------------------------------------------------------------
 // The major tabs
@@ -149,14 +104,13 @@ export interface ViewTabsProps {
 }
 
 /**
- * The five major tabs — a switcher, not a table of contents.
+ * The five major tabs — the page's only tab bar.
  *
- * Unlike `Tabs` below, pressing one of these changes what is on the page rather
- * than scrolling to it, because the five answer different questions and nobody
- * reading "what should I change" wants to scroll past two years of totals to
- * reach it. The purpose line under the bar is not decoration: it is what keeps
- * a reader from treating Habits, Insights and Recommendations as three
- * interchangeable piles of cards.
+ * Pressing one changes what is on the page, because the five answer different
+ * questions and nobody reading "what should I change" wants to scroll past two
+ * years of totals to reach it. The purpose line under the bar is not
+ * decoration: it is what keeps a reader from treating Habits, Insights and
+ * Recommendations as three interchangeable piles of cards.
  */
 export function ViewTabs({ active, onView }: ViewTabsProps) {
   const current = VIEWS.find((view) => view.key === active) ?? VIEWS[0]!;
@@ -268,74 +222,6 @@ export function Header({ span, rows, view, sample, actions }: HeaderProps) {
       </div>
     </header>
   );
-}
-
-// --------------------------------------------------------------------------
-// Chapters
-// --------------------------------------------------------------------------
-export interface TabsProps {
-  active: string;
-  onJump: (id: string) => void;
-}
-
-export function Tabs({ active, onJump }: TabsProps) {
-  // Two tabs can point at one block (see TABS), so the highlight goes to the
-  // first tab that names the visible block rather than to every tab that does.
-  const lit = TABS.findIndex((tab) => tab.target === active);
-
-  return (
-    <nav className="ax-tabs" aria-label="Sections">
-      {TABS.map((tab, index) => (
-        <button
-          key={tab.label}
-          type="button"
-          className={`ax-tab${index === lit ? ' is-on' : ''}`}
-          aria-current={index === lit ? 'true' : undefined}
-          onClick={() => onJump(tab.target)}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-/**
- * Which section the reader is currently in front of.
- *
- * An IntersectionObserver against the top third of the viewport rather than a
- * scroll handler doing arithmetic on every frame: the browser already knows
- * where these six elements are, and asking it is both cheaper and correct when
- * a panel changes height because a chart re-bucketed.
- */
-export function useActiveSection(ids: string[]): string {
-  const [active, setActive] = useState(ids[0] ?? '');
-  // The list is a module constant, but taking it through a ref means the effect
-  // does not re-subscribe if a caller ever passes a fresh array each render.
-  const list = useRef(ids);
-  list.current = ids;
-
-  useEffect(() => {
-    const seen = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => seen.set(entry.target.id, entry.intersectionRatio));
-        // The topmost section with anything on screen wins, so a tall panel
-        // scrolling past does not hand the highlight to the one below it.
-        const next = list.current.find((id) => (seen.get(id) ?? 0) > 0);
-        if (next) setActive(next);
-      },
-      { rootMargin: '-80px 0px -60% 0px', threshold: [0, 0.01] },
-    );
-
-    list.current.forEach((id) => {
-      const element = document.getElementById(id);
-      if (element) observer.observe(element);
-    });
-    return () => observer.disconnect();
-  }, []);
-
-  return active;
 }
 
 // --------------------------------------------------------------------------

@@ -221,7 +221,11 @@ html[data-theme="dark"] .ax-page {
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M3 10h18M8 2v4M16 2v4'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-/* ---------- Chapters ------------------------------------------------------ */
+/* ---------- The tab bar ---------------------------------------------------
+   The pill strip itself. Only `.ax-tabs-major` wears it now — Overview's own
+   sub-navigation was removed — but the two halves are kept apart because the
+   strip and the buttons in it are the shape, and `.ax-tabs-major` further down
+   is only the sizing and the fill that make the open tab findable. */
 .ax-tabs {
     display: flex;
     gap: 4px;
@@ -250,10 +254,8 @@ html[data-theme="dark"] .ax-page {
 }
 .ax-tab:hover { color: var(--ax-text); }
 .ax-tab.is-on {
-    background: var(--ax-card-2);
     color: var(--ax-text);
     font-weight: 600;
-    box-shadow: inset 0 0 0 1px var(--ax-line);
 }
 
 /* ---------- Controls ------------------------------------------------------ */
@@ -1226,6 +1228,76 @@ html[data-theme="dark"] .ax-page {
 }
 .ax-balance-ring strong { font-size: 19px; font-weight: 700; }
 
+/* ---------- Where the room is --------------------------------------------- */
+/* The opening panel shares a row with the five-year projection beside it, and
+   the row stretches both to the height of the taller — which for a card holding
+   two paragraphs meant most of it was blank. It carries the per-suggestion
+   breakdown now, and the closing caveat is pushed to the floor so the card is
+   read top to bottom rather than clustering at the top of a tall box. */
+.ax-opening > .ax-prose:last-child { margin-top: auto; padding-top: 6px; }
+
+.ax-room {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.ax-room-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 92px auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+}
+
+.ax-room-name {
+    color: var(--ax-text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ax-room-track {
+    height: 7px;
+    border-radius: 4px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.ax-room-track i {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    /* Same entrance as every other bar on the page — see the `ax-grow` block. */
+    transform-origin: left;
+    animation: ax-room-fill .55s cubic-bezier(.22, .68, .3, 1) .2s both;
+}
+@keyframes ax-room-fill {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+}
+
+.ax-room-xp {
+    font-weight: 600;
+    color: var(--ax-text);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-room-rest {
+    margin: 11px 0 0;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--ax-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-room-track i { animation: none; }
+}
+
 /* ---------- Advice cards -------------------------------------------------- */
 .ax-advice { gap: 0; }
 
@@ -1415,14 +1487,126 @@ html[data-theme="dark"] .ax-page {
     .ax-bar-label { font-size: 9px; }
 }
 
+/* ==========================================================================
+   The entrance — what happens when a tab is opened
+   ==========================================================================
+   Pressing one of the five major tabs swaps the whole body of the page, and
+   the swap used to be instantaneous: a complete second screen of charts
+   appeared between two frames, which is the one thing that makes a reader
+   distrust a figure — there is no moment in which it is possible to see that
+   anything changed, so nothing draws the eye to what did.
+
+   All of it is CSS on mount and none of it is state. A tab is its own branch in
+   pages/Analytics, so opening one builds new elements and the browser runs
+   these keyframes on them for free; going back to a tab builds them again and
+   plays it again. Nothing here fires on a re-render — changing the window or
+   the metric keeps the same DOM, and a chart that re-animated every time a
+   picker moved would be a tic rather than an entrance.
+
+   The panels arrive in document order and the marks inside them draw after,
+   which is the order the page is meant to be read in.
+   ========================================================================== */
+@keyframes ax-enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* A line drawing itself on. Every stroked path on the page carries
+   `pathLength="1"` (see charts.tsx), so one dash length fits all of them. */
+@keyframes ax-draw {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+}
+
+@keyframes ax-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* A bar rising out of its own baseline. `scaleY` rather than `height` so the
+   figure printed above it does not travel with it. */
+@keyframes ax-grow {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+}
+
+@keyframes ax-bloom {
+    from { opacity: 0; transform: scale(.72); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* `.ax-advice` is itself an `.ax-panel`, so the cards on Recommendations are
+   already covered; the tiles are their own row of articles. */
+.ax-panel,
+.ax-tiles > * {
+    animation: ax-enter .42s cubic-bezier(.22, .68, .3, 1) both;
+}
+
+/* Down the page, a section at a time. The delay is set on what actually
+   animates rather than on the `<section>`, which has no entrance of its own to
+   postpone. Five steps covers the deepest tab; anything past that opens on the
+   last delay rather than a longer one, because a reader who has scrolled that
+   far has already waited out the whole sequence. */
+.ax-shell > section:nth-of-type(2) :is(.ax-panel, .ax-tiles > *) { animation-delay: 60ms; }
+.ax-shell > section:nth-of-type(3) :is(.ax-panel, .ax-tiles > *) { animation-delay: 120ms; }
+.ax-shell > section:nth-of-type(4) :is(.ax-panel, .ax-tiles > *) { animation-delay: 180ms; }
+.ax-shell > section:nth-of-type(5) :is(.ax-panel, .ax-tiles > *) { animation-delay: 240ms; }
+.ax-shell > section:nth-of-type(n + 6) :is(.ax-panel, .ax-tiles > *) { animation-delay: 300ms; }
+
+/* ---- The marks themselves ------------------------------------------------ */
+/* Held back by the panel's own arrival so the line is drawn on a card that has
+   already landed, rather than on one still moving under it. */
+.ax-chart-line:not(.is-dashed),
+.ax-spark-line {
+    stroke-dasharray: 1;
+    animation: ax-draw .85s ease-out .16s both;
+}
+
+.ax-chart-area,
+.ax-spark-area,
+.ax-chart-line.is-dashed {
+    animation: ax-fade .6s ease-out .34s both;
+}
+
+.ax-bar,
+.ax-column-bar {
+    transform-origin: bottom;
+    animation: ax-grow .55s cubic-bezier(.22, .68, .3, 1) .18s both;
+}
+
+.ax-radar-shape {
+    /* Without `fill-box` the origin is the SVG viewport's, and the polygon
+       would grow from the corner of the box rather than from the centre of the
+       web it sits on. */
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ax-bloom .6s cubic-bezier(.22, .68, .3, 1) .2s both;
+}
+
 /* Motion is decoration here — the bars and the standing bars grow because a
    figure that arrives is easier to read than one that was always there. Off
-   entirely when the reader has asked for that. */
+   entirely when the reader has asked for that: everything lands in its final
+   state on the first frame, which is what `animation: none` on a `both`-filled
+   keyframe leaves behind. */
 @media (prefers-reduced-motion: reduce) {
     .ax-bar,
     .ax-standing-track i,
     .ax-tab,
     .ax-chip { transition: none; }
+
+    .ax-panel,
+    .ax-tiles > *,
+    .ax-chart-line,
+    .ax-spark-line,
+    .ax-chart-area,
+    .ax-spark-area,
+    .ax-bar,
+    .ax-column-bar,
+    .ax-radar-shape {
+        animation: none;
+    }
+    .ax-chart-line:not(.is-dashed),
+    .ax-spark-line { stroke-dasharray: none; }
 }
 
 /* ==========================================================================
@@ -1447,9 +1631,8 @@ html[data-theme="dark"] .ax-page {
     gap: 8px;
 }
 
-/* Bigger than the Overview sub-navigation below it, because pressing one of
-   these changes the page rather than scrolling it, and a control that swaps the
-   contents should not look like a control that moves them. */
+/* Roomier than the bare `.ax-tabs` strip: pressing one of these swaps the page,
+   which is the biggest thing any control on it does. */
 .ax-tabs-major {
     padding: 6px;
     gap: 5px;
@@ -1460,12 +1643,11 @@ html[data-theme="dark"] .ax-page {
     font-size: 13.5px;
 }
 
-/* The open tab is filled rather than outlined — at five tabs the inset ring the
-   sub-navigation uses is not enough to find at a glance. */
+/* The open tab is filled rather than outlined — at five tabs an inset ring is
+   not enough to find at a glance. */
 .ax-tabs-major .ax-tab.is-on {
     background: var(--ax-violet);
     color: #fff;
-    box-shadow: none;
 }
 .ax-tabs-major .ax-tab.is-on:hover { color: #fff; }
 

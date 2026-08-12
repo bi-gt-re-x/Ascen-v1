@@ -14,25 +14,8 @@
  * the only thing that explains how a score is arrived at, and the new page
  * links to that explanation in more than one place without owning it yet.
  */
-export {
-  Header,
-  Tabs,
-  ViewTabs,
-  Controls,
-  SECTIONS,
-  VIEWS,
-  viewFor,
-  useActiveSection,
-} from './Header';
-export type {
-  HeaderProps,
-  TabsProps,
-  ViewTabsProps,
-  ControlsProps,
-  Section,
-  View,
-  ViewKey,
-} from './Header';
+export { Header, ViewTabs, Controls, VIEWS, viewFor } from './Header';
+export type { HeaderProps, ViewTabsProps, ControlsProps, View, ViewKey } from './Header';
 
 export {
   HabitTiles,
