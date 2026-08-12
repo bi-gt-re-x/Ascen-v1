@@ -29,24 +29,30 @@ export const END_HOUR = 29;
 /**
  * Pixels per hour. The stylesheets are sized to match.
  *
- * 72: half again the 48 the design draws at. 48 put seventeen labels from 6 AM
- * to 10 PM across about 800px of grid, which read as the right density on
+ * 72 was half again the 48 the design draws at. 48 put seventeen labels from
+ * 6 AM to 10 PM across about 800px of grid, which read as the right density on
  * paper and as a cramped one on screen — an hour was barely taller than the two
  * lines of text a block wants to carry, and the rows a reader drags between
  * were a thumb's width apart. It was 141 before that, nearly three times 48,
  * and the consequence was not a roomier grid but a much smaller one: four hours
  * on screen at a time out of a day the reader is trying to see the shape of.
- * This sits between the two.
+ *
+ * 86 is 72 stretched by the fifth asked for — 86.4, taken to a whole pixel so
+ * the twenty-four hour rules and the seven day columns they cross land on
+ * device pixels rather than being drawn a fifth of one either side of them.
+ * Every measurement on the grid comes off this number, so the day separators
+ * grow with the rows and the blocks stay where the clock puts them.
  */
-export const HOUR_H = 72;
+export const HOUR_H = 86;
 /**
  * The floor for a very short block, so its one row actually fits.
  *
- * A quarter of an hour is 18px at 72px an hour, and the row inside it is an
- * 11px line at 1.25 (13.75px) between 3px of padding top and bottom — 20px of
- * content in 18px of block, so the name and the time were clipped along their
- * middles. 22 is that content plus a pixel either side. It does mean a 15
- * minute block draws a few pixels taller than a quarter of an hour of grid,
+ * A quarter of an hour is 21.5px at 86px an hour — 17.5 after the 4px a block
+ * gives back to its neighbours — and the row inside it is an 11px line at 1.25
+ * (13.75px) between 3px of padding top and bottom, so 20px of content in 17.5px
+ * of block clipped the name and the time along their middles. 22 is that
+ * content plus a pixel either side. It does mean a 15 minute block draws a few
+ * pixels taller than a quarter of an hour of grid,
  * which is the trade this floor has always made: a block that cannot be read
  * is not worth drawing to scale.
  */
@@ -57,9 +63,14 @@ const COMPACT_MINUTES = 20;
  * Under this many minutes a block is too short for its full layout.
  *
  * A task at full size is four lines with air between them — name, start time,
- * XP, and the end time on the floor — which needs about 84 pixels. 80 minutes
- * is 92, so the threshold is where the layout actually stops fitting rather
- * than at a round hour. Under it a block gives up the XP and puts the start
+ * XP, and the end time on the floor — which needs about 84 pixels. This was
+ * where the layout actually stopped fitting: at 72px an hour, 80 minutes was 92
+ * pixels. At 86 it is 119, so the number is now the conservative side of the
+ * fit rather than the edge of it — a block of about an hour has the room for
+ * four lines and is still drawn with three. Left where it is deliberately: the
+ * taller row was asked for to give the grid air, and spending all of it on
+ * putting XP back onto shorter blocks would hand it straight back.
+ * Under the threshold a block gives up the XP and puts the start
  * time back beside the name, which is two lines and fits from about 36 minutes
  * up; under COMPACT_MINUTES it gives up the end time too. The XP is always
  * what goes first: the time is what a calendar is for, and a block that cannot
