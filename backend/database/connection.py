@@ -67,7 +67,60 @@ ADDED_COLUMNS = (
     # see backend/tracking/event.py. Existing rows get NULL, which reads as
     # "claimed before anyone was counting" and therefore as long expired.
     ('event_colors', 'claimed_week', 'TEXT'),
+
+    # The outcome layer on goals. Everything a goal needed to stop being a
+    # counter and start being something worth aiming at — see data/sql/goals.sql
+    # and backend/api/goals.py. Every one is additive with a default, so a row
+    # written before they existed reads as a goal with no category, no reason
+    # and no numeric measure, which is exactly what it was.
+    ('goals', 'category', 'TEXT'),
+    ('goals', 'why', 'TEXT'),
+    ('goals', 'start_date', 'TEXT'),
+    ('goals', 'measure', 'TEXT'),
+    ('goals', 'unit', 'TEXT'),
+    ('goals', 'current_value', 'NUMERIC'),
+    ('goals', 'target_number', 'NUMERIC'),
+    ('goals', 'subject_ids', 'TEXT'),
+
+    # Which goal and which checkpoint a task is execution for. Both nullable
+    # and both meaningless to every task that already exists, which is the
+    # honest reading: they were done for their own sake.
+    ('tasks', 'goal_id', 'TEXT'),
+    ('tasks', 'milestone_id', 'TEXT'),
 )
+
+# Tables added to the app after the database was first created.
+#
+# `_build` runs the seed files once, when there is no database at all, so a new
+# `CREATE TABLE IF NOT EXISTS` in data/sql reaches a fresh clone and nothing
+# else — the same hole ADDED_COLUMNS exists to patch, one level up.
+#
+# Every statement here is `IF NOT EXISTS` and is run on each start, which is
+# what makes it safe: creating a table that is already there is a no-op, so
+# there is no "have I run this yet" flag to get wrong. Additive only, for the
+# same reason ADDED_COLUMNS is.
+#
+# The DDL is a copy of the one in data/sql. The duplication is deliberate: the
+# seed file is what a fresh database is built from and has to read as a whole
+# schema, and this is what an existing one is caught up with.
+ADDED_TABLES = ('''
+    CREATE TABLE IF NOT EXISTS goal_milestones (
+        id           TEXT PRIMARY KEY,
+        goal_id      TEXT NOT NULL REFERENCES goals (id) ON DELETE CASCADE,
+        user_id      TEXT NOT NULL,
+        title        TEXT NOT NULL,
+        note         TEXT DEFAULT '',
+        position     INTEGER DEFAULT 0,
+        status       TEXT DEFAULT 'pending'
+                     CHECK (status IN ('pending', 'active', 'done')),
+        target_date  TEXT,
+        completed_at TEXT,
+        created_at   TEXT
+    )
+''', '''
+    CREATE INDEX IF NOT EXISTS goal_milestones_goal_idx
+        ON goal_milestones (goal_id, position)
+''')
 
 
 # --------------------------------------------------------------------------
@@ -92,9 +145,15 @@ def _build(path):
 
 
 def _catch_up(path):
-    """Add any column in ADDED_COLUMNS the database does not have yet."""
+    """Bring an existing database up to the shape the app expects.
+
+    Tables first, then columns: a column cannot be added to a table that is not
+    there, and the tables here are new ones rather than new shapes of old ones.
+    """
     con = sqlite3.connect(path)
     try:
+        for statement in ADDED_TABLES:
+            con.execute(statement)
         for table, column, sql_type in ADDED_COLUMNS:
             columns = con.execute(
                 'PRAGMA table_info("{}")'.format(table)).fetchall()
@@ -318,6 +377,14 @@ def goals():
 
 def save_goals(rows):
     write_table('goals', rows)
+
+
+def goal_milestones():
+    return read_table('goal_milestones')
+
+
+def save_goal_milestones(rows):
+    write_table('goal_milestones', rows)
 
 
 def xp_events():

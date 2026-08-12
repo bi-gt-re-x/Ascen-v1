@@ -12,7 +12,14 @@
  * Backend: backend/api/goals.py.
  */
 import { get, post } from './api';
-import type { ApiResult, Goal, GoalType } from '@/types';
+import type {
+  ApiResult,
+  Goal,
+  GoalCategory,
+  GoalMeasure,
+  GoalType,
+  MilestoneStatus,
+} from '@/types';
 
 export interface GoalsResult {
   goals: Goal[];
@@ -37,23 +44,45 @@ export interface NewGoal {
   priority?: number;
   deadline?: string;
   id?: string;
+
+  /**
+   * How success is measured. Left out, the backend falls back to `goal_type`
+   * — which is what the old modal, which does not know this field exists,
+   * relies on.
+   */
+  measure?: GoalMeasure;
+  category?: GoalCategory;
+  why?: string;
+  start_date?: string;
+  unit?: string;
+  current_value?: number;
+  target_number?: number;
+  subject_ids?: string;
+  /** Checkpoint titles to create with the goal, in execution order. */
+  milestones?: string[];
 }
 
 export function addGoal(
   username: string,
   goal: NewGoal,
-): Promise<ApiResult<{ message: string }>> {
+): Promise<ApiResult<{ message: string; id: string }>> {
   return post('/api/add_goal', { username, ...goal });
 }
 
-/** Edit a goal. Only the fields present are written. */
+/**
+ * Edit a goal. Only the fields present are written.
+ *
+ * `progress` is not on the list and cannot be: it is what the goal's own
+ * numbers come to, recomputed on the server after every write. Sending one
+ * would be a client asserting a percentage its own milestone list disagrees
+ * with. Set `current_value`, tick a milestone, or move a target instead.
+ */
 export type GoalEdit = Partial<
   Pick<
     Goal,
     | 'title'
     | 'description'
     | 'status'
-    | 'progress'
     | 'goal_type'
     | 'deadline'
     | 'priority'
@@ -65,6 +94,14 @@ export type GoalEdit = Partial<
     | 'target_streak'
     | 'target_tasks'
     | 'target_focus'
+    | 'measure'
+    | 'category'
+    | 'why'
+    | 'start_date'
+    | 'unit'
+    | 'current_value'
+    | 'target_number'
+    | 'subject_ids'
   >
 >;
 
@@ -81,6 +118,53 @@ export function deleteGoal(
   goalId: string,
 ): Promise<ApiResult<Record<string, never>>> {
   return post('/api/delete_goal', { goal_id: goalId, username });
+}
+
+// --------------------------------------------------------------------------
+// Milestones
+// --------------------------------------------------------------------------
+/**
+ * The checkpoints come down with their goal on every `getGoals`, so there is
+ * no read call here — only the four writes. Each one is followed by a re-read
+ * on the page, for the same reason every other write on it is: the server
+ * re-derives the goal's percentage and status from the checkpoint that just
+ * moved, and patching that in the client would be a second opinion.
+ */
+export function addMilestone(
+  username: string,
+  goalId: string,
+  milestone: { title: string; note?: string; target_date?: string },
+): Promise<ApiResult<Record<string, never>>> {
+  return post('/api/add_milestone', { username, goal_id: goalId, ...milestone });
+}
+
+export function updateMilestone(
+  username: string,
+  milestoneId: string,
+  edit: {
+    title?: string;
+    note?: string;
+    status?: MilestoneStatus;
+    target_date?: string;
+  },
+): Promise<ApiResult<Record<string, never>>> {
+  return post('/api/update_milestone', { username, id: milestoneId, ...edit });
+}
+
+export function deleteMilestone(
+  username: string,
+  milestoneId: string,
+): Promise<ApiResult<Record<string, never>>> {
+  return post('/api/delete_milestone', { username, id: milestoneId });
+}
+
+/** The new execution order, as milestone ids. */
+export function reorderMilestones(
+  username: string,
+  goalId: string,
+  order: string[],
+): Promise<ApiResult<Record<string, never>>> {
+  return post('/api/reorder_milestones', { username, goal_id: goalId, order });
 }
 
 export interface ProgressResult {

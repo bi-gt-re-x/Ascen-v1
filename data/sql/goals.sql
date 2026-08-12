@@ -40,11 +40,73 @@ CREATE TABLE IF NOT EXISTS goals (
     priority                INTEGER DEFAULT 5 CHECK (priority BETWEEN 1 AND 10),
     deadline                TEXT,
     status                  TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed')),
-    created_at              TEXT
+    created_at              TEXT,
+
+    -- ---- The outcome layer -------------------------------------------------
+    -- The four columns pairs above make a goal a counter. These make it an
+    -- outcome: what it is about, why it is worth doing, when it started, and
+    -- how success is measured when the answer is not one of the four.
+    --
+    -- `measure` is the one that decides how progress is read:
+    --   'xp' | 'streak' | 'tasks' | 'focus'  the counter above, as before
+    --   'number'      a figure of the user's own — a rating, a score, a count
+    --                 of users — in `current_value` against `target_number`,
+    --                 labelled `unit`
+    --   'milestones'  no number at all; progress is checkpoints completed
+    -- An empty `measure` is a row written before this existed and reads as its
+    -- `goal_type`, which is what it always was. Nothing back-fills it: the
+    -- normalisation is one line in the API and a migration would be a write
+    -- over data to say something already true.
+    --
+    -- `goal_type` keeps its CHECK and its four values. A fifth would mean
+    -- rebuilding the table, and there is nothing a fifth would say that
+    -- `measure` does not.
+    category                TEXT DEFAULT 'other',
+    why                     TEXT DEFAULT '',
+    start_date              TEXT,
+    measure                 TEXT DEFAULT '',
+    unit                    TEXT DEFAULT '',
+    current_value           NUMERIC DEFAULT 0,
+    target_number           NUMERIC DEFAULT 0,
+    -- Comma-separated subject ids. A list rather than JSON because it is only
+    -- ever read whole and split, and a TEXT column that a human can read in a
+    -- database browser is worth more here than a structure nothing nests.
+    subject_ids             TEXT DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS goals_user_status_idx ON goals (user_id, status);
 CREATE INDEX IF NOT EXISTS goals_user_type_idx ON goals (user_id, goal_type);
+
+
+-- goal_milestones — the checkpoints between where a goal starts and where it ends.
+--
+-- A milestone is not a task and this table is not `tasks` with a goal column.
+-- A task is one action; a milestone is a state the goal reaches — "Reach
+-- Silver", "Finish the React migration" — which is why it has an order and a
+-- status of its own and no XP, no priority and no timer. Tasks point at a
+-- milestone (see tasks.goal_id / tasks.milestone_id); the milestone does not
+-- own them, because the checkpoint is still the checkpoint whether four tasks
+-- or forty went into it.
+--
+-- `position` is the execution order and is what the timeline draws. It is
+-- rewritten as a dense 0..n-1 run on every reorder rather than being sparse:
+-- the list is short and a gap in it is a bug waiting to be read as an order.
+CREATE TABLE IF NOT EXISTS goal_milestones (
+    id           TEXT PRIMARY KEY,
+    goal_id      TEXT NOT NULL REFERENCES goals (id) ON DELETE CASCADE,
+    user_id      TEXT NOT NULL,
+    title        TEXT NOT NULL,
+    note         TEXT DEFAULT '',
+    position     INTEGER DEFAULT 0,
+    status       TEXT DEFAULT 'pending'
+                 CHECK (status IN ('pending', 'active', 'done')),
+    target_date  TEXT,
+    completed_at TEXT,
+    created_at   TEXT
+);
+
+CREATE INDEX IF NOT EXISTS goal_milestones_goal_idx
+    ON goal_milestones (goal_id, position);
 
 -- ---- rows: goals ----
 INSERT INTO goals (id, user_id, title, description, goal_type, target_xp, current_xp, target_streak, current_streak, target_tasks, current_tasks, target_focus, current_focus, focus_baseline_seconds, target_value, progress, priority, deadline, status, created_at) VALUES ('1783024779328', 'gayguy', '1', '1', 'xp', 1111, 1111, 0, 0, 0, 0, NULL, NULL, NULL, 1111, 100, NULL, '', 'completed', '2026-07-02T15:39:39.328509');

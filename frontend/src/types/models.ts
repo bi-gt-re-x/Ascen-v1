@@ -58,6 +58,13 @@ export interface Task {
   xp_value: number;
   /** What the task is about — an id from the subject catalogue. Optional. */
   subject?: string;
+  /**
+   * What this task is execution for. Both optional and most tasks have
+   * neither — work done for its own sake is not a lesser kind of work.
+   * A link pointing at a deleted goal reads as no link.
+   */
+  goal_id?: string;
+  milestone_id?: string;
   due_date?: string;
   show_on_calendar?: boolean;
   created_at: string;
@@ -75,6 +82,55 @@ export interface Task {
 // --------------------------------------------------------------------------
 export type GoalType = 'xp' | 'streak' | 'tasks' | 'focus';
 export type GoalStatus = 'active' | 'completed';
+
+/**
+ * How a goal's progress is read.
+ *
+ * The first four are the counters the app feeds itself. The last two are the
+ * outcome measures: `number` is a figure the app has no way to count — a
+ * rating, a contest score, a user count — and `milestones` is a goal with no
+ * number at all, measured by the checkpoints on the way to it.
+ *
+ * The backend guarantees this is always one of the six on the way out, even
+ * for rows written before the column existed. See `_measure_of` in
+ * backend/api/goals.py.
+ */
+export type GoalMeasure = GoalType | 'number' | 'milestones';
+
+export type GoalCategory =
+  | 'math'
+  | 'coding'
+  | 'ai'
+  | 'school'
+  | 'music'
+  | 'fitness'
+  | 'projects'
+  | 'personal'
+  | 'other';
+
+export type MilestoneStatus = 'pending' | 'active' | 'done';
+
+/**
+ * A checkpoint inside a goal.
+ *
+ * Not a task, and the difference is the whole reason the table exists: a task
+ * is one action and a milestone is a state the goal reaches. "Solve ten DP
+ * problems" is a task; "Master Silver DP" is the checkpoint those ten
+ * problems are evidence for. A milestone has an order and no XP.
+ */
+export interface Milestone {
+  id: string;
+  goal_id: string;
+  user_id: string;
+  title: string;
+  note: string;
+  /** Execution order, dense from 0. Rewritten on every reorder. */
+  position: number;
+  status: MilestoneStatus;
+  target_date?: string;
+  completed_at?: string;
+  created_at: string;
+}
 
 export interface Goal {
   id: string;
@@ -107,6 +163,23 @@ export interface Goal {
   priority: number;
   deadline: string;
   created_at: string;
+
+  // ---- The outcome layer -------------------------------------------------
+  /** How progress is read. Always present on a goal from the API. */
+  measure: GoalMeasure;
+  category: GoalCategory;
+  /** Why it matters — the second question the creation flow asks. */
+  why: string;
+  /** When the run at it began. Pace is measured from here, not from today. */
+  start_date: string;
+  /** What `current_value` counts, for the label: "rating", "problems", "users". */
+  unit: string;
+  current_value: number;
+  target_number: number;
+  /** Comma-separated subject ids. See `subjectIdsOf` in utils/goalModel. */
+  subject_ids: string;
+  /** In execution order. The API sends them with every goal. */
+  milestones: Milestone[];
 }
 
 // --------------------------------------------------------------------------

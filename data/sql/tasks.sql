@@ -25,6 +25,15 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- place without a migration.
     subject             TEXT,
 
+    -- What this task is execution *for*: a goal, and the checkpoint inside it.
+    -- Both optional, and most tasks have neither — work done for its own sake
+    -- is not a lesser kind of work. Not foreign keys, for the same reason the
+    -- calendar's references are not: a goal deleted from under a task should
+    -- orphan the link, not take the task with it. The API treats a link that
+    -- points at nothing as no link, which is what it is.
+    goal_id             TEXT,
+    milestone_id        TEXT,
+
     due_date            TEXT,
     show_on_calendar    BOOLEAN DEFAULT TRUE,
 

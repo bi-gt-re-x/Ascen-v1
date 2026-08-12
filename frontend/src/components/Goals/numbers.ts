@@ -8,18 +8,22 @@
  * disagreeing.
  */
 import { GOAL_FIELDS } from '@/services/constants';
-import type { Goal, GoalType } from '@/types';
+import type { Goal, GoalMeasure, GoalType } from '@/types';
 
 /** A goal with no priority set weighs the same as a middling one. */
 export const DEFAULT_GOAL_WEIGHT = 5;
 
 export interface GoalNumbers {
+  measure: GoalMeasure;
+  /** The counter this goal is, for the four that are one. `xp` otherwise. */
   goalType: GoalType;
   current: number;
   target: number;
-  /** "XP", "Days", "Tasks", "Focus" — the word shown beside the figures. */
+  /** The word beside the figures: "XP", "Days", "rating", "milestones". */
   label: string;
   progress: number;
+  /** False for a milestone goal — there is no figure, only a count of ticks. */
+  numeric: boolean;
 }
 
 /** The label the goals page shows, which is not the short unit in GOAL_FIELDS. */
@@ -30,8 +34,76 @@ const LABELS: Record<GoalType, string> = {
   focus: 'Focus',
 };
 
+/**
+ * A goal's measure, defensively.
+ *
+ * The API fills this in for every goal it hands over, including rows written
+ * before the column existed. The fallback is here for the one case the API
+ * cannot cover: a goal object assembled in the client — a draft in the
+ * creation wizard, a fixture in a test — that has not been near the server.
+ */
+export function measureOf(goal: Goal): GoalMeasure {
+  const measure = goal.measure;
+  if (measure === 'number' || measure === 'milestones') return measure;
+  if (measure && measure in GOAL_FIELDS) return measure;
+  return goal.goal_type in GOAL_FIELDS ? goal.goal_type : 'xp';
+}
+
+/**
+ * The two figures under a goal's bar, whatever kind of goal it is.
+ *
+ * Three shapes behind one answer: a counter reads its own pair of columns, a
+ * number goal reads the figure the user maintains, and a milestone goal counts
+ * its ticks. Every caller wants "current, target, and what to call them", and
+ * having them each work it out from `measure` is how a card and a detail page
+ * start disagreeing about the same goal.
+ */
 export function goalNumbers(goal: Goal): GoalNumbers {
-  const goalType = goal.goal_type;
+  const measure = measureOf(goal);
+
+  if (measure === 'milestones') {
+    const rows = goal.milestones ?? [];
+    const done = rows.filter((row) => row.status === 'done').length;
+    const progress =
+      goal.status === 'completed'
+        ? 100
+        : rows.length
+          ? (done / rows.length) * 100
+          : 0;
+    return {
+      measure,
+      goalType: 'xp',
+      current: done,
+      target: rows.length,
+      label: rows.length === 1 ? 'milestone' : 'milestones',
+      progress,
+      numeric: false,
+    };
+  }
+
+  if (measure === 'number') {
+    const current = Number(goal.current_value ?? 0);
+    const target = Number(goal.target_number ?? 0);
+    const progress =
+      goal.status === 'completed'
+        ? 100
+        : target > 0
+          ? Math.min((current / target) * 100, 100)
+          : 0;
+    return {
+      measure,
+      goalType: 'xp',
+      // An unlabelled number is still a number; the bar reads fine without a
+      // unit and inventing one ("points") would be the app guessing.
+      current,
+      target,
+      label: goal.unit || '',
+      progress,
+      numeric: true,
+    };
+  }
+
+  const goalType = measure;
   const fields = GOAL_FIELDS[goalType];
   const current = Number(goal[fields.current as keyof Goal] ?? 0);
   const target = Number(goal[fields.target as keyof Goal] ?? 0);
@@ -39,7 +111,15 @@ export function goalNumbers(goal: Goal): GoalNumbers {
   let progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   if (goal.status === 'completed') progress = 100;
 
-  return { goalType, current, target, label: LABELS[goalType], progress };
+  return {
+    measure,
+    goalType,
+    current,
+    target,
+    label: LABELS[goalType],
+    progress,
+    numeric: true,
+  };
 }
 
 /** Focus values are stored in minutes — shown as "1h 30m". */
@@ -51,6 +131,13 @@ export function fmtGoalValue(value: number, goalType: GoalType): string {
   if (h && m) return `${h}h ${m}m`;
   if (h) return `${h}h`;
   return `${m}m`;
+}
+
+/** The figure on a goal card, formatted for whichever kind of goal it is. */
+export function fmtGoalNumber(value: number, numbers: GoalNumbers): string {
+  if (numbers.measure === 'focus') return fmtGoalValue(value, 'focus');
+  const rounded = Math.round(value * 10) / 10;
+  return rounded.toLocaleString();
 }
 
 export function goalWeight(goal: Goal): number {
