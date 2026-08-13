@@ -313,11 +313,27 @@ export interface RadarAxis {
  * single value rather than each against its own maximum, so a subject that
  * dwarfs the others looks like it dwarfs the others.
  */
+/** Longest axis name drawn before it is cut. "Computer Science" is 16. */
+const RADAR_LABEL = 13;
+
 export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Tone }) {
   const size = 220;
   const centre = size / 2;
   const radius = size / 2 - 34;
   const rings = [0.25, 0.5, 0.75, 1];
+
+  /**
+   * Room either side of the square the web is drawn in, for the axis names.
+   *
+   * The names sit outside the outer ring, so on a square box they were drawn
+   * outside the viewBox and — with `overflow: visible` on the SVG — landed on
+   * whatever was next to the chart. In the subject panel that is the legend,
+   * so "Computer Science" was printed straight through it. Padding the box
+   * horizontally is what makes a label part of the chart rather than something
+   * escaping from it; the names run left and right, which is why there is no
+   * vertical equivalent.
+   */
+  const padX = 48;
 
   if (axes.length < 3) return <div className="ax-radar-empty">Not enough subjects yet</div>;
 
@@ -334,7 +350,12 @@ export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Ton
     axes.map((_, index) => at(index, scale(index)).map((n) => n.toFixed(1)).join(',')).join(' ');
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="ax-radar" role="img" aria-label="XP earned by subject">
+    <svg
+      viewBox={`${-padX} 0 ${size + padX * 2} ${size}`}
+      className="ax-radar"
+      role="img"
+      aria-label="XP earned by subject"
+    >
       {rings.map((ring) => (
         <polygon key={ring} points={polygon(() => ring)} className="ax-radar-ring" />
       ))}
@@ -353,6 +374,11 @@ export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Ton
       />
       {axes.map((axis, index) => {
         const [x, y] = at(index, 1.2);
+        // Cut rather than wrapped: a two-line axis name on a web this size
+        // collides with the name of the axis next to it, and the panel's
+        // legend beside the chart prints every name in full anyway.
+        const short =
+          axis.label.length > RADAR_LABEL ? `${axis.label.slice(0, RADAR_LABEL - 1)}…` : axis.label;
         return (
           <text
             key={axis.label}
@@ -362,7 +388,8 @@ export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Ton
             textAnchor={x > centre + 4 ? 'start' : x < centre - 4 ? 'end' : 'middle'}
             dominantBaseline="middle"
           >
-            {axis.label}
+            <title>{axis.label}</title>
+            {short}
           </text>
         );
       })}

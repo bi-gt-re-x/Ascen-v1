@@ -59,6 +59,20 @@ export function ComparisonPanel({ bars }: { bars: ComparisonBar[] }) {
 // --------------------------------------------------------------------------
 // Compounding
 // --------------------------------------------------------------------------
+/**
+ * How far ahead the chart draws, in months. The figures still state five years.
+ *
+ * The projection runs sixty months and the three figures above the chart say
+ * so, but drawing all sixty is what made this panel look broken: a window of
+ * history against five years of forecast puts the real data in the bottom-left
+ * sixth of the box and gives the rest to one straight diagonal, because a flat
+ * XP-a-day multiplication *is* a straight diagonal. Twelve months is the
+ * horizon where the two halves are comparable — the history keeps its shape,
+ * the climb is still the point, and the five-year figure is a number to read
+ * rather than a line to squint at.
+ */
+const CHART_MONTHS = 12;
+
 export function CompoundingPanel({ data }: { data: Compounding }) {
   // One x axis, two series, each covering half of it — history to today, then
   // the forecast on from today. They meet at a single shared point: the last
@@ -72,8 +86,13 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
   // which drew a line sitting at the bottom of the chart for the whole of the
   // history and then leaping vertically at the join. That leap was the bug in
   // this panel, not a feature of the forecast.
+  // `projected` is a point a quarter for sixty months; the chart draws the
+  // first CHART_MONTHS of it. Sliced here rather than in `compounding` because
+  // the three figures above still state the whole projection — the horizon is
+  // a fact about this chart, not about the forecast.
+  const ahead = data.projected.slice(0, Math.floor(CHART_MONTHS / 3) + 1);
   const actualValues = data.actual.map((point) => point.value);
-  const forecast = data.projected.map((point) => point.value);
+  const forecast = ahead.map((point) => point.value);
   const gapBefore = Math.max(0, actualValues.length - 1);
 
   const actualSeries: Array<number | null> = [
@@ -92,7 +111,7 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
   // XP-a-day multiplication — never produced.
   const dates = [
     ...data.actual.map((point) => point.date),
-    ...data.projected.slice(1).map((point) => point.date),
+    ...ahead.slice(1).map((point) => point.date),
   ];
   const at = datePositions(dates);
   const marks = axisSpan(dates[0] ?? '', dates[dates.length - 1] ?? '', 6);
@@ -137,10 +156,15 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
           marks={marks}
           at={at}
         />
+        {/* The callout annotates the line, so it states where the line
+            actually ends. It used to carry the five-year figure over a chart
+            that stopped somewhere else entirely — and that figure is already
+            the third of the three above, where it can be read against the
+            other two rather than floating over the drawing. */}
         <aside className="ax-callout">
           <span className="ax-muted ax-small">You&rsquo;re on track to earn</span>
-          <strong>{compact(data.projectedFiveYear)} XP</strong>
-          <span className="ax-muted ax-small">in 5 years</span>
+          <strong>{compact(data.projectedYear)} XP</strong>
+          <span className="ax-muted ax-small">in the next year</span>
         </aside>
       </div>
 
@@ -151,7 +175,7 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
         </span>
         <span className="ax-legend-item">
           <i className="ax-legend-line ax-legend-dashed" />
-          Projected XP (at current pace)
+          Projected XP — next {CHART_MONTHS} months at this pace
         </span>
       </div>
     </Panel>

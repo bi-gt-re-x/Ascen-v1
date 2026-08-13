@@ -345,6 +345,28 @@ html[data-theme="dark"] .ax-page {
 /* ---------- Sections and the grid ---------------------------------------- */
 .ax-section { scroll-margin-top: 18px; }
 
+/* The list panels take their share of a stretched panel's spare height too.
+   A chart grows into it (see `.ax-chart`); a list of rows cannot grow without
+   distorting its rows, so it spreads them instead. Without this, a row of
+   three panels ends up with one whose content reaches the footer and two with
+   a band of nothing above theirs — the same figures, three different amounts
+   of air, which is what makes a row look unfinished rather than composed.
+
+   The heatmap takes the room but does not spread into it: its cells are
+   squares, and a square stretched to fill a panel is no longer a square. It
+   claims the height and centres inside it instead. */
+.ax-panel > .ax-standing,
+.ax-panel > .ax-insights,
+.ax-panel > .ax-timeline,
+.ax-panel > .ax-streaks {
+    flex: 1 1 auto;
+    justify-content: space-evenly;
+}
+.ax-panel > .ax-heat {
+    flex: 1 1 auto;
+    align-items: center;
+}
+
 /* Panels in a row are all the height of the tallest, not each its own height.
    `align-items: start` left every row with a ragged underside — three cards
    ending at three different points with the next row's tops below the deepest
@@ -487,10 +509,24 @@ html[data-theme="dark"] .ax-page {
 }
 
 /* ---------- Charts -------------------------------------------------------- */
+/* A chart takes whatever height its panel has spare.
+   Panels in a row are all as tall as the tallest (see `.ax-grid`), and the
+   difference has to go somewhere. It used to pool between the content and the
+   footer: the trajectory panel sat beside a taller neighbour with a fifth of
+   itself empty under the legend, which reads as a panel that failed to load
+   rather than as a layout. Growing the chart into the gap keeps every panel's
+   content edge-to-edge, and makes two charts in one row the same height —
+   which is what lets them be read against each other. `--ax-chart-h` stops
+   being the height and becomes the floor. */
 .ax-chart {
     display: flex;
     gap: 10px;
     min-width: 0;
+    /* `1 1 auto`, never `1`: a basis of zero would make the chart's height the
+       free space alone, so a panel with none — one sitting on its own in a
+       full-width section — would draw a chart of nothing. Growing from its own
+       height is what makes the rule additive rather than a replacement. */
+    flex: 1 1 auto;
 }
 
 .ax-chart-y {
@@ -507,15 +543,33 @@ html[data-theme="dark"] .ax-page {
     font-variant-numeric: tabular-nums;
 }
 
-.ax-chart-box { flex: 1; min-width: 0; }
+.ax-chart-box {
+    flex: 1;
+    min-width: 0;
+    /* A column so the drawing can grow and the x-axis strip stays pinned under
+       it. The y-axis labels are a sibling of this box and stretch with it, and
+       the gridlines are drawn in viewBox space under `preserveAspectRatio:
+       none`, so both follow the new height without being told. */
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
 
 .ax-chart-svg {
     display: block;
     width: 100%;
-    /* Set per chart by AreaChart. The SVG's own viewBox height is its drawing
-       space, not its rendered one — `preserveAspectRatio: none` means the two
-       are independent, and this is the one that decides how tall the panel is. */
+    /* Set per chart by AreaChart — the height it wants when there is no spare
+       room to grow into. The SVG's own viewBox height is its drawing space,
+       not its rendered one: `preserveAspectRatio: none` means the two are
+       independent, and this is the one the reader sees.
+
+       `height` has to stay declared. An SVG with a viewBox and no height sizes
+       itself from its intrinsic ratio, so dropping it made a chart's height a
+       function of the panel's *width* — the same 220px chart drew 502px tall
+       across a full-width section. */
     height: var(--ax-chart-h, 200px);
+    min-height: var(--ax-chart-h, 200px);
+    flex: 1 1 auto;
     overflow: visible;
 }
 
@@ -662,6 +716,10 @@ html[data-theme="dark"] .ax-page {
     gap: 10px;
     align-items: center;
     margin-top: 6px;
+    /* Takes the panel's spare height like every other content block, and
+       centres the web and its legend in it rather than leaving a band above
+       the footer. */
+    flex: 1 1 auto;
 }
 
 .ax-radar { width: 100%; height: auto; display: block; overflow: visible; }
@@ -745,8 +803,8 @@ html[data-theme="dark"] .ax-page {
     overflow: hidden;
 }
 .ax-heat-years span {
-    flex: 1 0 auto;
-    min-width: 5px;
+    flex: 1 1 0;
+    min-width: 3px;
     white-space: nowrap;
 }
 
@@ -763,8 +821,8 @@ html[data-theme="dark"] .ax-page {
     overflow: hidden;
 }
 .ax-heat-months span {
-    flex: 1 0 auto;
-    min-width: 5px;
+    flex: 1 1 0;
+    min-width: 3px;
     text-align: center;
 }
 
@@ -783,13 +841,21 @@ html[data-theme="dark"] .ax-page {
     display: grid;
     grid-template-rows: repeat(7, 1fr);
     gap: 2px;
-    flex: 1 0 auto;
+    /* `1 1 0`, not `1 0 auto`: with shrink off, fifty-three columns that no
+       longer fit did not narrow — they ran past the panel and were cut by the
+       `overflow: hidden` above, silently losing the most recent weeks off the
+       right-hand end, which are the ones a reader is looking for. Sharing the
+       width is what the comment on `.ax-heat-grid` always claimed happened. */
+    flex: 1 1 0;
     min-width: 0;
 }
 
 .ax-heat-cell {
     width: 100%;
-    min-width: 5px;
+    /* The floor a year of columns can be squeezed to before it stops reading
+       as a grid. Low enough that fifty-three of them fit a third of a row at
+       the width the three-up grid collapses at. */
+    min-width: 3px;
     aspect-ratio: 1;
     border-radius: 2px;
     background: var(--ax-line-soft);
@@ -939,7 +1005,7 @@ html[data-theme="dark"] .ax-page {
    chart, which read as a chart that had slipped off the top of its panel. This
    takes the slack and puts the bars in the middle of it. */
 .ax-bars-fill {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     align-items: center;
     min-height: 0;
@@ -1032,7 +1098,15 @@ html[data-theme="dark"] .ax-page {
 .ax-figure .ax-muted { font-size: 11px; }
 .ax-figure strong { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
 
-.ax-compound { position: relative; }
+/* The callout is positioned against this, so it cannot be the chart itself —
+   but it still has to pass the panel's spare height down to it. */
+.ax-compound {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
 
 .ax-callout {
     position: absolute;
