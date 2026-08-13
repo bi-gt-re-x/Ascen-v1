@@ -158,6 +158,51 @@ export function deleteMilestone(
   return post('/api/delete_milestone', { username, id: milestoneId });
 }
 
+/**
+ * Five checkpoint titles for a goal, from the model. Writes nothing.
+ *
+ * A draft the page puts into five editable fields — `setMilestones` below is
+ * what saves them. Identify an existing goal with `goalId`, or pass a `title`
+ * for one that does not exist yet, which is what the creation wizard has.
+ *
+ * Failure here is ordinary: no API key configured, the model unreachable, an
+ * answer that could not be read. All of them come back as `success: false`
+ * with a message written to be shown, so the caller reports it on the goal
+ * rather than treating it as the page breaking.
+ */
+export function suggestMilestones(
+  username: string,
+  goal: { goalId?: string; title?: string; why?: string; description?: string; category?: string },
+): Promise<ApiResult<{ milestones: string[] }>> {
+  return post<{ milestones: string[] }>('/api/suggest_milestones', {
+    username,
+    goal_id: goal.goalId,
+    title: goal.title,
+    why: goal.why,
+    description: goal.description,
+    category: goal.category,
+  });
+}
+
+/**
+ * Write a goal's whole checkpoint list at once, in order.
+ *
+ * The other half of the suggestion flow, and the reason it is one call: five
+ * drafts saved through `addMilestone` would be five writes and five re-reads
+ * for something the user did once. The server reuses existing rows by
+ * position, so a checkpoint that keeps its place keeps its id, its status and
+ * the tasks pointed at it — renaming the third does not reopen it.
+ *
+ * At most five, which is what the ladder on the page draws.
+ */
+export function setMilestones(
+  username: string,
+  goalId: string,
+  titles: string[],
+): Promise<ApiResult<Record<string, never>>> {
+  return post('/api/set_milestones', { username, goal_id: goalId, titles });
+}
+
 /** The new execution order, as milestone ids. */
 export function reorderMilestones(
   username: string,

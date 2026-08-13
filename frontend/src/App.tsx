@@ -73,8 +73,15 @@ function FrontDoor() {
  * three. It was a report card and a scoring panel side by side — one screen by
  * construction. It is fourteen panels down a scroll now, and the pinning was
  * hiding everything below the summary tiles.
+ *
+ * Goals came off for the fourth time in the same story. It was a shell with a
+ * list scrolling inside it; it is a ladder of goals, a stats row and a timeline
+ * per goal now, which is taller than any screen on purpose. Pinned, the page
+ * ended at whatever the first viewport could hold and the timelines could not
+ * be reached at all — `body.pins-viewport` sets `overflow: hidden` on the
+ * document, so there was no scrollbar to find them with.
  */
-const PINNED = ['/goals', '/calendar'];
+const PINNED = ['/calendar'];
 
 function pinsViewport(pathname: string): boolean {
   return PINNED.some(

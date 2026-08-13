@@ -11,6 +11,10 @@ export { ConfirmModal, GoalModal } from './GoalModal';
 export type { ConfirmModalProps, GoalModalProps } from './GoalModal';
 export { GoalsHeader, GoalsSummaryRow } from './GoalsSummary';
 export type { GoalsSummaryProps } from './GoalsSummary';
+export { GoalLadder, RUNGS } from './GoalLadder';
+export type { GoalLadderProps } from './GoalLadder';
+export { GoalStats } from './GoalStats';
+export type { GoalStatsProps } from './GoalStats';
 export { MilestonesPanel } from './MilestonesPanel';
 export type { MilestonesPanelProps } from './MilestonesPanel';
 export {

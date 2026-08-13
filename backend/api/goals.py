@@ -45,6 +45,7 @@ from pydantic import BaseModel
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking import focus as focus_tracking
+from backend.tracking import planner
 from backend.tracking import xp as xp_tracking
 from backend.tracking.auth import load_user
 
@@ -172,6 +173,28 @@ class ReorderMilestones(BaseModel):
     goal_id: Optional[str] = None
     # Milestone ids in the order they should be executed.
     order: List[str] = []
+
+
+class SuggestMilestones(BaseModel):
+    """Ask the model for a goal's checkpoints. Writes nothing.
+
+    Either identify an existing goal by `goal_id` — everything the account has
+    said about it is read from the row — or pass a `title` for a goal that does
+    not exist yet, which is what the creation wizard has.
+    """
+    username: Optional[str] = None
+    goal_id: Optional[str] = None
+    title: Optional[str] = None
+    why: str = ''
+    description: str = ''
+    category: str = ''
+
+
+class SetMilestones(BaseModel):
+    username: Optional[str] = None
+    goal_id: Optional[str] = None
+    # The checkpoint titles the goal should have, in execution order.
+    titles: List[str] = []
 
 
 class UpdateGoalProgress(BaseModel):
@@ -783,6 +806,117 @@ def reorder_milestones(body: ReorderMilestones):
         row['position'] = position
 
     db.save_goal_milestones(rows)
+    return ok()
+
+
+@router.post('/api/suggest_milestones')
+def suggest_milestones(body: SuggestMilestones):
+    """Five checkpoint titles for a goal, from the model. Writes nothing.
+
+    A draft, not a plan: the page puts these in five editable fields and only
+    /api/set_milestones below saves them. Every failure comes back as a
+    readable message rather than an error status, because the page shows it on
+    the goal — a suggestion that cannot be made is not a broken request.
+    """
+    if not body.username:
+        return fail('Username required')
+
+    title = (body.title or '').strip()
+    why, description, category = body.why, body.description, body.category
+    unit = target = ''
+
+    if body.goal_id:
+        goal = next((g for g in db.goals()
+                     if g.get('id') == body.goal_id
+                     and g.get('user_id') == body.username), None)
+        if not goal:
+            return fail('Goal not found')
+        # The row is the better source: it has what the wizard collected, and
+        # the caller only has what is on screen.
+        title = title or (goal.get('title') or '')
+        why = why or (goal.get('why') or '')
+        description = description or (goal.get('description') or '')
+        category = category or (goal.get('category') or '')
+        unit = goal.get('unit') or ''
+        if _measure_of(goal) == 'number' and goal.get('target_number'):
+            target = str(goal.get('target_number'))
+
+    if not title:
+        return fail('A goal title is required')
+
+    try:
+        titles = planner.suggest_milestones(
+            title, why=why, description=description, category=category,
+            unit=unit, target=target)
+    except planner.PlannerUnavailable as exc:
+        return fail(str(exc))
+    return ok(milestones=titles)
+
+
+@router.post('/api/set_milestones')
+def set_milestones(body: SetMilestones):
+    """Write a goal's whole checkpoint list at once.
+
+    The suggestion flow's other half, and the one write that had no endpoint:
+    accepting five drafts one `add_milestone` at a time would be five writes,
+    five recomputes and five re-reads for a single action the user thinks of as
+    one.
+
+    Existing rows are reused by position rather than deleted and recreated, so
+    a checkpoint that keeps its place keeps its id, its status and its date —
+    renaming the third checkpoint does not reopen it or cut the tasks pointed
+    at it loose. Rows past the end of the list are deleted, and their tasks are
+    unlinked exactly as `delete_milestone` does it.
+    """
+    if not body.username or not body.goal_id:
+        return fail('Username and goal ID required')
+
+    titles = [str(title).strip() for title in body.titles if str(title).strip()]
+    if not titles:
+        return fail('At least one checkpoint is required')
+    if len(titles) > planner.COUNT:
+        return fail('A goal takes at most {} checkpoints'.format(planner.COUNT))
+
+    goals = db.goals()
+    if not any(g.get('id') == body.goal_id and g.get('user_id') == body.username
+               for g in goals):
+        return fail('Goal not found')
+
+    rows = db.goal_milestones()
+    mine = _milestones_of(rows, body.goal_id)
+    now = datetime.now().isoformat()
+
+    for position, title in enumerate(titles):
+        if position < len(mine):
+            mine[position]['title'] = title
+            mine[position]['position'] = position
+            continue
+        rows.append({
+            "id": _fresh_milestone_id(rows),
+            "goal_id": body.goal_id,
+            "user_id": body.username,
+            "title": title,
+            "note": '',
+            "position": position,
+            "status": 'pending',
+            "target_date": '',
+            "created_at": now,
+        })
+
+    dropped = {row.get('id') for row in mine[len(titles):]}
+    if dropped:
+        rows = [row for row in rows if row.get('id') not in dropped]
+        tasks = db.tasks()
+        touched = False
+        for task in tasks:
+            if task.get('milestone_id') in dropped:
+                task['milestone_id'] = None
+                touched = True
+        if touched:
+            db.save_tasks(tasks)
+
+    db.save_goal_milestones(rows)
+    _recompute_goal(body.goal_id, body.username)
     return ok()
 
 

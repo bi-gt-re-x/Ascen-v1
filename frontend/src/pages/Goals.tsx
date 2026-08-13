@@ -46,13 +46,14 @@ import {
   GoalCard,
   GoalDetail,
   GoalInsights,
+  GoalLadder,
   GoalModal,
+  GoalStats,
   GoalTimeline,
   GoalsCta,
   HealthRing,
   NewGoalWizard,
   NextMilestones,
-  OutcomeCard,
   OverviewStrip,
   RecentlyCompleted,
   VisionLine,
@@ -71,8 +72,19 @@ import '@/styles/goals.css';
 /** How often to re-read while a focus goal is running. */
 const FOCUS_POLL_MS = 30_000;
 
-/** How many goals get a large card before the rest go in the quiet list. */
-const PRIORITY_GOALS = 4;
+/**
+ * How many goals the ladder and the timelines draw.
+ *
+ * Not a rendering budget — a statement about how many things can actually be
+ * pursued at once. Past ten, a goals page stops being a plan and becomes a
+ * list of things you feel bad about, and the eleventh goal is never the one
+ * being worked on. Anything beyond it is still there, still counted in the
+ * stats, and reachable from the quiet list below the ladder.
+ */
+const LIST_GOALS = 10;
+
+/** Rows on one goal's rail. Same reasoning as above, applied to checkpoints. */
+const TIMELINE_ROWS = 10;
 
 export default function Goals() {
   useDocumentTitle('Goals');
@@ -243,6 +255,41 @@ export default function Goals() {
     [username, write],
   );
 
+  /**
+   * Ask the model to break a goal into its five checkpoints.
+   *
+   * Deliberately not routed through `write`: nothing is saved, so there is
+   * nothing to re-read, and holding the page's busy flag for the length of a
+   * model call would disable every other goal's buttons while one goal thinks.
+   * The ladder owns its own spinner for exactly that reason.
+   *
+   * A failure here is a sentence on the page — no key configured, model
+   * unreachable, an answer that could not be read — so it lands in `error`
+   * beside every other message rather than throwing.
+   */
+  const suggestMilestones = useCallback(
+    async (goal: Goal): Promise<string[] | null> => {
+      if (!username) return null;
+      const result = await goalService.suggestMilestones(username, { goalId: goal.id });
+      if (!result.success) {
+        setError(result.message);
+        return null;
+      }
+      setError(null);
+      return result.milestones ?? null;
+    },
+    [username],
+  );
+
+  /** Write a goal's whole checkpoint list. One call, then the usual re-read. */
+  const saveMilestones = useCallback(
+    (goal: Goal, titles: string[]) => {
+      if (!username) return Promise.resolve(false);
+      return write(() => goalService.setMilestones(username, goal.id, titles));
+    },
+    [username, write],
+  );
+
   // ---- What goes where ----------------------------------------------------
   const active = useMemo(
     () =>
@@ -265,6 +312,9 @@ export default function Goals() {
     () => active.filter((goal) => ['number', 'milestones'].includes(measureOf(goal))),
     [active],
   );
+  /** The ones drawn as ladders and given their own rail. See LIST_GOALS. */
+  const shown = useMemo(() => outcomes.slice(0, LIST_GOALS), [outcomes]);
+
   /** The four counters the app feeds itself. Kept, not extended. */
   const counters = useMemo(
     () => active.filter((goal) => !['number', 'milestones'].includes(measureOf(goal))),
@@ -313,36 +363,41 @@ export default function Goals() {
 
         <VisionLine goals={list} />
 
-        {/* ---- 1. Where everything stands ------------------------------- */}
-        <OverviewStrip goals={list} tasks={tasks} />
-
-        {/* ---- 2. The goals themselves ---------------------------------- */}
+        {/* ---- 1. The goals themselves, and the route through each one ----
+            The top of the page is the plan: every goal you are working on,
+            how far into it you are, and the five checkpoints between here and
+            done. Everything below this is commentary on it. */}
         <Band
-          title="Priority Goals"
-          hint="The ones that matter most, first. Open one for its milestones and why it is moving at the rate it is."
+          title="Your Goals"
+          hint="Each one broken into five checkpoints. Tick one off as you reach it, rewrite any that stop being true, or have them suggested."
         >
-          {outcomes.length === 0 ? (
+          {shown.length === 0 ? (
             <p className="gx-empty">
               No outcome goals yet. An outcome is something you either got to or did not — reach
               USACO Gold, ship Ascen v2, read 24 books — as opposed to a counter, which is what the
               older goals below are.
             </p>
           ) : (
-            <div className="gx-cards">
-              {outcomes.slice(0, PRIORITY_GOALS).map((goal) => (
-                <OutcomeCard
+            <ol className="gx-ladders">
+              {shown.map((goal) => (
+                <GoalLadder
                   key={goal.id}
                   goal={goal}
-                  tasks={tasks}
+                  busy={busy}
                   onOpen={(entry) => setOpenId(entry.id)}
+                  onStatus={setMilestoneStatus}
+                  onSave={saveMilestones}
+                  onSuggest={suggestMilestones}
                 />
               ))}
-            </div>
+            </ol>
           )}
 
-          {outcomes.length > PRIORITY_GOALS && (
+          {/* The eleventh goal onward. Still reachable, still counted — just
+              not drawn as something being actively pursued. */}
+          {outcomes.length > LIST_GOALS && (
             <ul className="gx-rest">
-              {outcomes.slice(PRIORITY_GOALS).map((goal) => {
+              {outcomes.slice(LIST_GOALS).map((goal) => {
                 const numbers = goalNumbers(goal);
                 return (
                   <li key={goal.id}>
@@ -357,19 +412,19 @@ export default function Goals() {
           )}
         </Band>
 
-        {/* ---- 3. When ---------------------------------------------------
-            The rail and the checkpoints being worked on, side by side: one
-            says when things land, the other says how far into each one you
-            are. Together they are the page's answer to "what comes next". */}
-        <div className="gx-two">
-          <Band title="Goal Timeline" hint="What you have reached, and what is queued.">
-            <GoalTimeline goals={list} onOpen={(goal) => setOpenId(goal.id)} />
-          </Band>
+        {/* ---- 2. Where everything stands -------------------------------- */}
+        <Band
+          title="Where you stand"
+          hint="Counted off the goals above — a goal is complete when its own checkpoints say so."
+        >
+          <GoalStats goals={list} />
+          <OverviewStrip goals={list} tasks={tasks} />
+        </Band>
 
-          <Band title="Next Milestones" hint="The checkpoint each goal is on now.">
-            <NextMilestones goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
-          </Band>
-        </div>
+        {/* ---- 3. What comes next --------------------------------------- */}
+        <Band title="Next Milestones" hint="The checkpoint each goal is on now.">
+          <NextMilestones goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
+        </Band>
 
         {/* ---- 4. Why ---------------------------------------------------- */}
         <div className="gx-two">
@@ -415,7 +470,42 @@ export default function Goals() {
           </Band>
         )}
 
-        {/* ---- 6. What has been reached ---------------------------------- */}
+        {/* ---- 6. When, goal by goal -------------------------------------
+            One rail each, rather than the single merged rail this page used
+            to draw. A combined timeline answers "what happens next to me",
+            which is what Next Milestones above already says; a rail per goal
+            answers "how does this one actually land", and that is a question
+            about one goal at a time. Ten rows each, for the same reason the
+            ladder holds five: a rail long enough to scroll past is a rail
+            nobody reads to the end of. */}
+        {shown.length > 0 && (
+          <Band
+            title="Goal Timelines"
+            hint="Each goal on its own rail — what you have reached, and what is queued."
+          >
+            <div className="gx-rails">
+              {shown.map((goal) => (
+                <section className="gx-rail" key={goal.id}>
+                  <button
+                    type="button"
+                    className="gx-rail-head"
+                    onClick={() => setOpenId(goal.id)}
+                  >
+                    <span className="gx-rail-title">{goal.title}</span>
+                    <span className="gx-quiet">{Math.round(goalNumbers(goal).progress)}%</span>
+                  </button>
+                  <GoalTimeline
+                    goals={[goal]}
+                    onOpen={(entry) => setOpenId(entry.id)}
+                    limit={TIMELINE_ROWS}
+                  />
+                </section>
+              ))}
+            </div>
+          </Band>
+        )}
+
+        {/* ---- 7. What has been reached ---------------------------------- */}
         {showCompleted && (
           <Band title="Recently Completed" hint="Goals and milestones already behind you.">
             <RecentlyCompleted goals={list} />

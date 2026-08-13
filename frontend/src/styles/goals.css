@@ -2279,9 +2279,11 @@ html[data-theme="dark"] .gx-page {
     border-radius: 999px;
     background: var(--tone, var(--gx-violet));
     transform-origin: left;
-    animation: gx-fill .55s cubic-bezier(.22, .68, .3, 1) both;
 }
-@keyframes gx-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* No keyframe and no width transition here on purpose: the fill is driven from
+   the same animated number as the percentage printed beside it (useCountUp in
+   ProgressBar), and a second easing on top of that would put the bar somewhere
+   its own reading is not. */
 
 .gx-steps { display: flex; gap: 3px; }
 .gx-step { flex: 1 1 0; height: 5px; min-width: 4px; border-radius: 3px; background: var(--gx-line); }
@@ -2372,12 +2374,246 @@ html[data-theme="dark"] .gx-page {
 .gx-rest button:hover { background: var(--gx-card-2); }
 .gx-rest-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ---------- The ladder: a goal and its five checkpoints -------------------- */
+/* One card per goal, stacked rather than gridded. A grid would put two plans
+   side by side at half width each, and a checkpoint is a sentence — the column
+   that reads well is the wide one. */
+.gx-ladders {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.gx-ladder {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 17px 19px 16px;
+    background: var(--gx-card);
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    box-shadow: var(--gx-shadow);
+    min-width: 0;
+}
+/* The one state worth colouring the frame for: a date that has passed is the
+   only thing on this card the reader cannot work out from the numbers. */
+.gx-ladder.is-overdue { border-color: color-mix(in srgb, var(--gx-bad) 45%, var(--gx-line)); }
+
+/* The plan assembles itself as it arrives: each goal rises a beat after the one
+   above it, and the rails at the foot of the page do the same. Plays once, on
+   mount — a goal keyed by its id is not remounted when the page re-reads after
+   a write, so ticking a checkpoint moves the numbers without replaying this.
+   The stagger stops at the sixth row: past that the delay is longer than the
+   animation, and the last goal would be waiting on the queue rather than
+   arriving with it. */
+.gx-ladders > .gx-ladder,
+.gx-rails > .gx-rail {
+    animation: gx-arrive .42s cubic-bezier(.22, .68, .3, 1) both;
+}
+.gx-ladders > :nth-child(2), .gx-rails > :nth-child(2) { animation-delay: .06s; }
+.gx-ladders > :nth-child(3), .gx-rails > :nth-child(3) { animation-delay: .12s; }
+.gx-ladders > :nth-child(4), .gx-rails > :nth-child(4) { animation-delay: .18s; }
+.gx-ladders > :nth-child(5), .gx-rails > :nth-child(5) { animation-delay: .24s; }
+.gx-ladders > :nth-child(n+6), .gx-rails > :nth-child(n+6) { animation-delay: .3s; }
+@keyframes gx-arrive {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+}
+
+.gx-ladder-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.gx-ladder-name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.gx-ladder-name:hover .gx-ladder-title { color: var(--tone); }
+.gx-ladder-title {
+    font-size: 15.5px;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-ladder-name .gx-quiet { font-size: 11.5px; }
+
+.gx-ladder-pct {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    text-align: right;
+}
+.gx-ladder-pct strong {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.gx-ladder-pct .gx-quiet { font-size: 11px; }
+
+/* ---- The rungs ----------------------------------------------------------- */
+.gx-rungs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    counter-reset: rung;
+}
+.gx-rung {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    padding: 5px 0;
+    font-size: 13px;
+    min-width: 0;
+}
+.gx-rung.is-empty { grid-template-columns: 1fr; padding: 8px 0 4px; }
+.gx-rung-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-rung-when { font-size: 11px; white-space: nowrap; }
+
+/* Reached checkpoints stay legible rather than being greyed to the floor:
+   what you have done is the part of the plan worth being able to read. */
+.gx-rung.is-done .gx-rung-title { color: var(--gx-muted); text-decoration: line-through; }
+.gx-rung.is-next .gx-rung-title { font-weight: 600; }
+
+.gx-rung-tick {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1.5px solid var(--gx-line);
+    border-radius: 50%;
+    background: var(--gx-card-2);
+    color: var(--gx-faint);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+.gx-rung-tick:hover:not(:disabled) { border-color: var(--tone); color: var(--tone); }
+.gx-rung-tick:disabled { cursor: default; opacity: .55; }
+.gx-rung.is-done .gx-rung-tick {
+    background: var(--tone);
+    border-color: var(--tone);
+    color: #fff;
+}
+.gx-rung.is-next .gx-rung-tick { border-color: var(--tone); color: var(--tone); }
+
+/* The editing form. Same grid as the read view, so a checkpoint does not move
+   sideways when you start typing in it. */
+.gx-rung-no {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gx-faint);
+}
+.gx-rung-input {
+    grid-column: 2 / -1;
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--gx-line);
+    border-radius: 9px;
+    background: var(--gx-card-2);
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 13px;
+}
+.gx-rung-input:focus { outline: 2px solid var(--tone); outline-offset: 1px; border-color: transparent; }
+.gx-rung-input::placeholder { color: var(--gx-faint); }
+
+.gx-ladder-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.gx-ladder-tools .gx-quiet { font-size: 12px; }
+.gx-ladder-note { margin: 0; font-size: 12px; color: var(--gx-bad); }
+
+/* ---------- The three counts above the strip ------------------------------ */
+.gx-counts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.gx-count {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    background: var(--gx-card);
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    box-shadow: var(--gx-shadow);
+    min-width: 0;
+}
+.gx-count .gx-quiet { font-size: 12px; }
+.gx-count-of { font-size: 20px; font-weight: 600; color: var(--gx-faint); }
+
+/* ---------- One rail per goal --------------------------------------------- */
+.gx-rails {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+.gx-rail {
+    padding: 15px 18px 12px;
+    background: var(--gx-card);
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    box-shadow: var(--gx-shadow);
+    min-width: 0;
+}
+.gx-rail-head {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.gx-rail-title {
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-rail-head .gx-quiet { flex: none; font-size: 12px; font-variant-numeric: tabular-nums; }
+
 /* ---------- Panels the bands sit in -------------------------------------- */
 /* A band's content is one surface, so the page reads as a handful of slabs
    rather than as thirty small boxes.
-   The two exceptions are the ones that are already cards: the priority grid
-   and the overflow list under it would otherwise be cards inside a card. */
-.gx-band > :not(.gx-band-head):not(.gx-cards):not(.gx-rest) {
+   The exceptions are the ones that are already cards: the ladder stack, the
+   rails, the counts, the priority grid and the overflow list under it would
+   otherwise be cards inside a card. */
+.gx-band > :not(.gx-band-head):not(.gx-cards):not(.gx-rest):not(.gx-ladders):not(.gx-rails):not(.gx-counts):not(.gx-strip) {
     padding: 16px 18px;
     background: var(--gx-card);
     border: 1px solid var(--gx-line);
@@ -2507,7 +2743,7 @@ html[data-theme="dark"] .gx-page {
 .gx-dist-ring { position: relative; width: 132px; height: 132px; flex: none; }
 .gx-dist-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .gx-dist-ring circle { fill: none; stroke-width: 5; }
-.gx-dist-arc { stroke-linecap: butt; transition: stroke-dasharray .4s ease; }
+.gx-dist-arc { stroke-linecap: butt; }
 .gx-dist-arc.is-on-track    { stroke: var(--gx-good); }
 .gx-dist-arc.is-at-risk     { stroke: var(--gx-watch); }
 .gx-dist-arc.is-off-track   { stroke: var(--gx-bad); }
@@ -2991,13 +3227,23 @@ html[data-theme="dark"] .gx-page {
     .gx-drawer { padding: 20px 18px 34px; }
     .gx-cta { flex-wrap: wrap; }
     .gx-cta .gx-btn { width: 100%; }
+    /* The percentage moves under the title rather than shrinking to fit
+       beside it — a goal's name is the part that has to stay readable. */
+    .gx-ladder-head { flex-wrap: wrap; }
+    .gx-ladder-pct { flex-direction: row; align-items: baseline; gap: 8px; }
+    .gx-counts { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 460px) {
     .gx-strip { grid-template-columns: minmax(0, 1fr); }
+    .gx-ladder { padding: 15px 14px 14px; }
+    .gx-rail { padding: 14px 14px 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .gx-fill, .gx-drawer, .gx-wizard, .gx-drawer-backdrop, .gx-spark-line { animation: none; }
+    .gx-drawer, .gx-wizard, .gx-drawer-backdrop, .gx-spark-line { animation: none; }
+    /* The figures already stand still under this query — useCountUp reads it
+       itself — so the arrival is the only thing left to switch off. */
+    .gx-ladders > .gx-ladder, .gx-rails > .gx-rail { animation: none; }
     .gx-spark-line { stroke-dasharray: none; }
     .gx-card { transition: none; }
 }

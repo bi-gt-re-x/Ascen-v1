@@ -12,6 +12,13 @@
  * file draws what those three decided, which is what keeps a card and the
  * detail view behind it from ever disagreeing about the same goal.
  *
+ * What it does decide is *how a figure arrives*: every number and every mark
+ * here travels to its value through `useCountUp` rather than being replaced by
+ * it, because the page re-reads everything from the server after each write and
+ * a checkpoint ticked off would otherwise move four figures between one frame
+ * and the next. A mark and the reading beside it always run the same number
+ * through the same hook, so they cannot end up in different places mid-flight.
+ *
  * ## What it does not draw
  *
  * There is no time-invested panel, no focus-per-goal breakdown and no daily
@@ -23,6 +30,7 @@
  * the page next door.
  */
 import type { ReactNode } from 'react';
+import { useCountUp } from '@/hooks';
 import { fmtGoalNumber, formatGoalDate, goalNumbers } from './numbers';
 import { goalHealth, type GoalHealth, type HealthState } from '@/utils/goalHealth';
 import { goalNotes, goalsOverview, type GoalNote } from '@/utils/goalAnalytics';
@@ -120,9 +128,13 @@ export function HealthChip({ health }: { health: GoalHealth }) {
 // Small marks
 // --------------------------------------------------------------------------
 export function ProgressBar({ pct, tone }: { pct: number; tone?: string }) {
-  const width = Math.max(0, Math.min(100, pct));
+  const target = Math.max(0, Math.min(100, pct));
+  // Grown by the hook rather than by a CSS keyframe, so a bar that moves
+  // because a checkpoint was ticked travels the same way as one arriving for
+  // the first time — and always in step with the figure printed beside it.
+  const width = useCountUp(target);
   return (
-    <span className="gx-track" role="img" aria-label={`${Math.round(width)} percent`}>
+    <span className="gx-track" role="img" aria-label={`${Math.round(target)} percent`}>
       <i className={`gx-fill${tone ? ` tone-${tone}` : ''}`} style={{ width: `${width}%` }} />
     </span>
   );
@@ -135,7 +147,7 @@ export function ProgressBar({ pct, tone }: { pct: number; tone?: string }) {
  * percentage with no arithmetic and no radius to keep in step with the CSS.
  */
 export function Ring({ pct, tone = 'violet', size = 46 }: { pct: number; tone?: string; size?: number }) {
-  const value = Math.max(0, Math.min(100, pct));
+  const value = useCountUp(Math.max(0, Math.min(100, pct)));
   return (
     <svg className={`gx-ring tone-${tone}`} width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
       <circle className="gx-ring-track" cx="20" cy="20" r="16" pathLength={100} />
@@ -221,6 +233,18 @@ export function OverviewStrip({
   const view = goalsOverview(goals, tasks, today);
   const share = view.active ? Math.round((view.onTrack / view.active) * 100) : 0;
 
+  // Counted to rather than replaced — see hooks/useCountUp.ts. The footers are
+  // left to change at once: they are sentences about the figure above them, and
+  // a sentence counting through its own numbers is noise, not motion.
+  const active = Math.round(useCountUp(view.active));
+  const onTrack = Math.round(useCountUp(view.onTrack));
+  const atRisk = Math.round(useCountUp(view.atRisk));
+  const dueSoon = Math.round(useCountUp(view.dueSoon.length));
+  // The ring beside this reading runs its own tween off the same figure — same
+  // input, same duration, same first frame — so the two cannot drift apart.
+  const overallTarget = Math.round(view.overall);
+  const overall = Math.round(useCountUp(overallTarget));
+
   // How the active count got to where it is: goals opened per week. Counted
   // from `start_date`, which is the day the run at it began.
   const opened = new Array(12).fill(0) as number[];
@@ -241,7 +265,7 @@ export function OverviewStrip({
         <header>
           <span className="gx-stat-label">Active Goals</span>
         </header>
-        <strong className="gx-stat-value">{view.active}</strong>
+        <strong className="gx-stat-value">{active}</strong>
         <span className="gx-stat-foot">
           {view.completed ? `${view.completed} reached so far` : 'none reached yet'}
         </span>
@@ -251,9 +275,9 @@ export function OverviewStrip({
       <article className="gx-stat tone-violet">
         <header>
           <span className="gx-stat-label">Overall Progress</span>
-          <Ring pct={view.overall} tone="violet" />
+          <Ring pct={overallTarget} tone="violet" />
         </header>
-        <strong className="gx-stat-value">{Math.round(view.overall)}%</strong>
+        <strong className="gx-stat-value">{overall}%</strong>
         <span className="gx-stat-foot">weighted by how much each matters</span>
       </article>
 
@@ -264,7 +288,7 @@ export function OverviewStrip({
             <Icon path={STAT_ICONS.check} />
           </span>
         </header>
-        <strong className="gx-stat-value">{view.onTrack}</strong>
+        <strong className="gx-stat-value">{onTrack}</strong>
         <span className="gx-stat-foot">{share}% of active goals</span>
       </article>
 
@@ -275,7 +299,7 @@ export function OverviewStrip({
             <Icon path={STAT_ICONS.warn} />
           </span>
         </header>
-        <strong className="gx-stat-value">{view.atRisk}</strong>
+        <strong className="gx-stat-value">{atRisk}</strong>
         <span className="gx-stat-foot">
           {view.offTrack ? `${view.offTrack} already off track` : 'none off track'}
         </span>
@@ -288,7 +312,7 @@ export function OverviewStrip({
             <Icon path={STAT_ICONS.calendar} />
           </span>
         </header>
-        <strong className="gx-stat-value">{view.dueSoon.length}</strong>
+        <strong className="gx-stat-value">{dueSoon}</strong>
         <span className="gx-stat-foot">
           {next ? `Next: ${formatGoalDate(next.deadline)}` : 'nothing in the next fortnight'}
         </span>
@@ -325,6 +349,7 @@ export function OutcomeCard({
   const category = categoryOf(goal);
   const rows = goal.milestones ?? [];
   const left = rows.filter((row) => row.status !== 'done').length;
+  const pct = Math.round(useCountUp(Math.round(numbers.progress)));
 
   return (
     <article
@@ -348,7 +373,7 @@ export function OutcomeCard({
       </header>
 
       <div className="gx-card-bar">
-        <strong className="gx-card-pct">{Math.round(numbers.progress)}%</strong>
+        <strong className="gx-card-pct">{pct}%</strong>
         <ProgressBar pct={numbers.progress} tone={category.tone} />
       </div>
 
@@ -591,13 +616,19 @@ export function HealthRing({
   today?: Date;
 }) {
   const view = goalsOverview(goals, tasks, today);
-  const slices = [
-    { key: 'on-track', label: 'On Track', value: view.onTrack },
-    { key: 'at-risk', label: 'At Risk', value: view.atRisk },
-    { key: 'off-track', label: 'Off Track', value: view.offTrack },
-    { key: 'not-started', label: 'Not Started', value: view.notStarted },
-  ];
   const total = view.active || 1;
+
+  // Four fixed states, so four calls rather than a loop. Each arc is drawn from
+  // its own animated count and the offsets are accumulated from those same
+  // numbers, so the ring stays a closed circle at every frame of the sweep
+  // instead of opening gaps between slices that are still catching up.
+  const slices = [
+    { key: 'on-track', label: 'On Track', shown: useCountUp(view.onTrack) },
+    { key: 'at-risk', label: 'At Risk', shown: useCountUp(view.atRisk) },
+    { key: 'off-track', label: 'Off Track', shown: useCountUp(view.offTrack) },
+    { key: 'not-started', label: 'Not Started', shown: useCountUp(view.notStarted) },
+  ];
+  const active = Math.round(useCountUp(view.active));
 
   let offset = 0;
   return (
@@ -606,7 +637,7 @@ export function HealthRing({
         <svg viewBox="0 0 40 40" aria-hidden="true">
           <circle className="gx-ring-track" cx="20" cy="20" r="15.5" pathLength={100} />
           {slices.map((slice) => {
-            const share = (slice.value / total) * 100;
+            const share = (slice.shown / total) * 100;
             const dash = (
               <circle
                 key={slice.key}
@@ -624,7 +655,7 @@ export function HealthRing({
           })}
         </svg>
         <span className="gx-dist-centre">
-          <strong>{view.active}</strong>
+          <strong>{active}</strong>
           <span>Active Goals</span>
         </span>
       </div>
@@ -634,8 +665,8 @@ export function HealthRing({
             <i className={`is-${slice.key}`} aria-hidden="true" />
             <span>{slice.label}</span>
             <strong>
-              {slice.value}{' '}
-              <span className="gx-quiet">({view.active ? Math.round((slice.value / total) * 100) : 0}%)</span>
+              {Math.round(slice.shown)}{' '}
+              <span className="gx-quiet">({view.active ? Math.round((slice.shown / total) * 100) : 0}%)</span>
             </strong>
           </li>
         ))}

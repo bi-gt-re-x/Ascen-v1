@@ -21,3 +21,8 @@ werkzeug>=3.0
 
 # Form parsing on the OAuth callback.
 python-multipart>=0.0.9
+
+# Breaking a goal into its five checkpoints — backend/tracking/planner.py.
+# Needs ANTHROPIC_API_KEY in the environment; without one the goals page shows
+# the suggestion button as unavailable and everything else works as before.
+anthropic>=0.121
