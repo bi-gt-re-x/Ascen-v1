@@ -363,7 +363,7 @@ export function OutlookPanel({ outlook, sample }: { outlook: Outlook; sample?: b
         height={180}
         series={[
           { values: outlook.improvedLine, tone: 'green' },
-          { values: outlook.currentLine, tone: 'violet', dashed: true },
+          { values: outlook.currentLine, tone: 'violet', muted: true },
         ]}
         ticks={ticks}
         marks={['Now', '1 yr', '2 yr', '3 yr', '4 yr', '5 yr']}
@@ -375,7 +375,7 @@ export function OutlookPanel({ outlook, sample }: { outlook: Outlook; sample?: b
           With the changes
         </span>
         <span className="ax-legend-item">
-          <i className="ax-legend-line ax-legend-dashed" />
+          <i className="ax-legend-line ax-legend-muted" />
           Current pace
         </span>
       </div>

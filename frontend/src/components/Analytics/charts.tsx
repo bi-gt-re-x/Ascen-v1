@@ -170,8 +170,18 @@ export interface AreaSeries {
   /** `null` anywhere this series does not reach. See `AreaValue`. */
   values: AreaValue[];
   tone: Tone;
-  /** Dashed and unfilled — the period being compared against, or the forecast. */
-  dashed?: boolean;
+  /**
+   * The second line — the period being compared against, or the forecast.
+   *
+   * Drawn solid like the first, in the same colour, at a lighter weight. It
+   * used to be dashed, and a dash is the wrong tool at these sizes: sixty
+   * points across six hundred units makes a five-unit dash about the length of
+   * one segment, so a line that changes direction often came out as a scatter
+   * of ticks rather than a line, and one that climbs steeply came out solid
+   * anyway. Weight separates the two everywhere; the pattern only did so on
+   * the flat parts.
+   */
+  muted?: boolean;
 }
 
 export interface AreaChartProps {
@@ -197,8 +207,8 @@ export interface AreaChartProps {
  *
  * Both series are scaled to the same extent — that is the entire point of
  * drawing them together, and scaling each to its own peak would make every
- * period look identical to the one before it. The dashed series is drawn first
- * so the solid one wins where they cross.
+ * period look identical to the one before it. The second series is drawn first
+ * so the headline one wins where they cross.
  */
 export function AreaChart({ series, ticks, marks, id, at, height = 200 }: AreaChartProps) {
   const width = 600;
@@ -248,7 +258,7 @@ export function AreaChart({ series, ticks, marks, id, at, height = 200 }: AreaCh
           })}
 
           {[...series]
-            .sort((a, b) => Number(Boolean(b.dashed)) - Number(Boolean(a.dashed)))
+            .sort((a, b) => Number(Boolean(b.muted)) - Number(Boolean(a.muted)))
             .map((entry, index) => {
               const drawn = linePath(entry.values, width, height, min, max, 4, at);
               if (!drawn) return null;
@@ -258,25 +268,24 @@ export function AreaChart({ series, ticks, marks, id, at, height = 200 }: AreaCh
                       not on the box: a series that stops halfway across — the
                       history under a forecast — would otherwise be filled with
                       a diagonal running off to the far corner. */}
-                  {!entry.dashed && (
+                  {!entry.muted && (
                     <path
                       className="ax-chart-area"
                       d={`${drawn.d} L${drawn.toX.toFixed(2)},${height} L${drawn.fromX.toFixed(2)},${height} Z`}
                       fill={`url(#${id}-fill-${index})`}
                     />
                   )}
-                  {/* The comparison series carries `is-dashed` so the entrance
-                      leaves it alone: drawing a line with `stroke-dasharray`
-                      means owning that property, and this one is already using
-                      it to say "this is the period before". It fades instead. */}
+                  {/* Both lines draw the same way — `stroke-dasharray` is the
+                      entrance animation's property now that no series is drawn
+                      as a pattern, so every line on the page sweeps in solid
+                      and stays solid. */}
                   <path
-                    className={`ax-chart-line${entry.dashed ? ' is-dashed' : ''}`}
+                    className={`ax-chart-line${entry.muted ? ' is-muted' : ''}`}
                     d={drawn.d}
                     pathLength={1}
                     fill="none"
                     stroke={toneVar(entry.tone)}
-                    strokeWidth="2"
-                    strokeDasharray={entry.dashed ? '5 5' : undefined}
+                    strokeWidth={entry.muted ? 1.5 : 2}
                     strokeLinejoin="round"
                     strokeLinecap="round"
                     vectorEffect="non-scaling-stroke"
@@ -503,15 +512,6 @@ export interface PanelProps {
   aside?: ReactNode;
   /** Marks a panel drawn from invented figures. See SAMPLE in ./data. */
   sample?: boolean;
-  /**
-   * What exactly is invented, when "this panel is a placeholder" is too broad.
-   *
-   * A panel is rarely all one or all the other. The score panel states a real
-   * score, its five real factors and a band computed from them, and draws one
-   * generated line; a chip claiming the whole thing is a placeholder would be
-   * as wrong as no chip at all.
-   */
-  sampleNote?: string;
   className?: string;
   children: ReactNode;
   /** The link row along the bottom. */
@@ -532,16 +532,7 @@ export interface PanelProps {
  * picker acts on the panel and the chip describes it, and the description is
  * the thing that must not be missed.
  */
-export function Panel({
-  title,
-  note,
-  aside,
-  sample,
-  sampleNote,
-  className,
-  children,
-  footer,
-}: PanelProps) {
+export function Panel({ title, note, aside, sample, className, children, footer }: PanelProps) {
   return (
     <section className={`ax-panel${className ? ` ${className}` : ''}`}>
       <header className="ax-panel-head">
@@ -553,10 +544,7 @@ export function Panel({
             {sample && (
               <span
                 className="ax-sample"
-                title={
-                  sampleNote ??
-                  'Placeholder figures — your own record cannot fill this panel yet'
-                }
+                title="Placeholder figures — your own record cannot fill this panel yet"
               >
                 Sample
               </span>

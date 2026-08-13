@@ -603,10 +603,12 @@ html[data-theme="dark"] .ax-page {
 .ax-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 
 .ax-legend-line { width: 18px; height: 2px; border-radius: 2px; }
-.ax-legend-dashed {
-    background: repeating-linear-gradient(
-        90deg, var(--ax-faint) 0 4px, transparent 4px 8px
-    );
+/* The second series' swatch. It matches how the line is now drawn — same
+   colour, thinner, faded — rather than the dash pattern it used to carry. */
+.ax-legend-muted {
+    height: 1.5px;
+    background: var(--ax-violet);
+    opacity: .42;
 }
 
 .ax-swatch { width: 10px; height: 10px; border-radius: 3px; }
@@ -1373,6 +1375,90 @@ html[data-theme="dark"] .ax-page {
 }
 .ax-balance-ring strong { font-size: 19px; font-weight: 700; }
 
+/* The subject split under the ring: one row each, largest first. Five columns
+   on one grid so the bars, the shares and the XP all line up down the panel —
+   the comparison a reader makes here is between rows, and a ragged column is
+   the fastest way to stop them making it. */
+.ax-split {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    flex: 1 1 auto;
+    justify-content: space-evenly;
+}
+
+.ax-split-row {
+    display: grid;
+    grid-template-columns: minmax(64px, 1.1fr) minmax(0, 2fr) 34px 66px 78px;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+}
+
+.ax-split-name {
+    font-weight: 600;
+    color: var(--ax-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ax-split-track {
+    height: 7px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.ax-split-track i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--ax-violet);
+    transform-origin: left;
+    animation: ax-grow-x .55s cubic-bezier(.22, .68, .3, 1) .18s both;
+}
+
+.ax-split-share {
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.ax-split-xp {
+    color: var(--ax-muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The direction, in the same words the rows are graded by. Colour carries the
+   two that need acting on and stays quiet for the two that do not. */
+.ax-split-move {
+    font-size: 10.5px;
+    color: var(--ax-faint);
+    white-space: nowrap;
+    text-align: right;
+}
+.ax-split-row.is-up .ax-split-move { color: var(--ax-good); }
+.ax-split-row.is-down .ax-split-move { color: var(--ax-amber); }
+.ax-split-row.is-stopped .ax-split-move { color: var(--ax-bad); }
+
+/* A subject that has stopped is the one row worth finding without reading:
+   its bar goes hollow, so the panel shows a gap where work used to be. */
+.ax-split-row.is-stopped .ax-split-track i {
+    background: repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--ax-violet) 34%, transparent) 0 5px,
+        transparent 5px 9px
+    );
+}
+
+/* The tail, summed. Quieter than a named subject, because it is not one. */
+.ax-split-row.is-rest .ax-split-name,
+.ax-split-row.is-rest .ax-split-share { color: var(--ax-muted); font-weight: 500; }
+.ax-split-row.is-rest .ax-split-track i { background: var(--ax-line); }
+
 /* ---------- Where the room is --------------------------------------------- */
 /* The opening panel shares a row with the five-year projection beside it, and
    the row stretches both to the height of the taller — which for a card holding
@@ -1624,6 +1710,13 @@ html[data-theme="dark"] .ax-page {
     .ax-bars { height: 180px; }
 }
 
+@media (max-width: 620px) {
+    /* The XP column is the one to lose first: the share beside it says the
+       same thing as a proportion, which is what this panel is about. */
+    .ax-split-row { grid-template-columns: minmax(56px, 1fr) minmax(0, 1.6fr) 32px 70px; }
+    .ax-split-xp { display: none; }
+}
+
 @media (max-width: 480px) {
     .ax-tiles { grid-template-columns: 1fr; }
     .ax-head-actions { width: 100%; }
@@ -1701,17 +1794,20 @@ html[data-theme="dark"] .ax-page {
 /* ---- The marks themselves ------------------------------------------------ */
 /* Held back by the panel's own arrival so the line is drawn on a card that has
    already landed, rather than on one still moving under it. */
-.ax-chart-line:not(.is-dashed),
+.ax-chart-line,
 .ax-spark-line {
     stroke-dasharray: 1;
     animation: ax-draw .85s ease-out .16s both;
 }
 
 .ax-chart-area,
-.ax-spark-area,
-.ax-chart-line.is-dashed {
+.ax-spark-area {
     animation: ax-fade .6s ease-out .34s both;
 }
+
+/* The comparison line: same colour, same solid stroke, less of it. Weight and
+   opacity carry the difference now that no line on this page is patterned. */
+.ax-chart-line.is-muted { opacity: .42; }
 
 .ax-bar,
 .ax-column-bar {
@@ -1748,10 +1844,11 @@ html[data-theme="dark"] .ax-page {
     .ax-bar,
     .ax-column-bar,
     .ax-factor-track i,
+    .ax-split-track i,
     .ax-radar-shape {
         animation: none;
     }
-    .ax-chart-line:not(.is-dashed),
+    .ax-chart-line,
     .ax-spark-line { stroke-dasharray: none; }
 }
 

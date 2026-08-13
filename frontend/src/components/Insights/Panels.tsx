@@ -14,6 +14,7 @@
 import { Columns, Panel, Sparkline, toneVar, type Column } from '@/components/Analytics';
 import { hourLabel, WEEKDAYS_SHORT } from '@/utils/behaviour';
 import type {
+  BalanceRow,
   BalanceShape,
   ClockShape,
   Momentum,
@@ -368,7 +369,42 @@ export function MomentumPanel({ rows, window }: { rows: Momentum[]; window: numb
 // --------------------------------------------------------------------------
 // Balance
 // --------------------------------------------------------------------------
+/** How many subjects get a row before the rest are summed into one. */
+const BALANCE_ROWS = 6;
+
+const DIRECTION_WORD: Record<BalanceRow['direction'], string> = {
+  up: 'rising',
+  down: 'easing off',
+  steady: 'steady',
+  stopped: 'stopped',
+};
+
+const DIRECTION_MARK: Record<BalanceRow['direction'], string> = {
+  up: '↑',
+  down: '↓',
+  steady: '→',
+  stopped: '·',
+};
+
+/**
+ * Where the XP goes, subject by subject.
+ *
+ * The panel was one ring and a paragraph, which left two thirds of a tall card
+ * empty and — worse — asserted a spread without showing it: "your effort is
+ * spread across 7 subjects" is a claim the reader cannot check, and the seven
+ * subjects were already counted to make it. The breakdown is that arithmetic,
+ * printed. Every row is a real subject with real finished tasks behind it.
+ *
+ * Each row carries where it is going as well as how big it is, from the two
+ * halves of the window (see `balanceShape`). That is the part a total can never
+ * show: a subject can be second-largest on the year and have had nothing in it
+ * for a month, and the size alone would read as health.
+ */
 export function BalancePanel({ balance }: { balance: BalanceShape }) {
+  const shown = balance.rows.slice(0, BALANCE_ROWS);
+  const rest = balance.rows.slice(BALANCE_ROWS);
+  const restXp = rest.reduce((sum, row) => sum + row.xp, 0);
+
   return (
     <Panel title="What you spend yourself on" note="Where the XP actually goes">
       <div className="ax-balance">
@@ -399,6 +435,46 @@ export function BalancePanel({ balance }: { balance: BalanceShape }) {
           )}
         </div>
       </div>
+
+      {shown.length > 0 && (
+        <ul className="ax-split">
+          {shown.map((row) => (
+            <li className={`ax-split-row is-${row.direction}`} key={row.name}>
+              <span className="ax-split-name" title={row.name}>
+                {row.name}
+              </span>
+              <span className="ax-split-track">
+                {/* A floor of 1.5%, so a subject with a sliver of the window is
+                    still a mark on the page rather than an empty row. */}
+                <i style={{ width: `${Math.max(1.5, row.share)}%` }} />
+              </span>
+              <span className="ax-split-share">{Math.round(row.share)}%</span>
+              <span className="ax-split-xp">{Math.round(row.xp).toLocaleString()} XP</span>
+              <span
+                className="ax-split-move"
+                title={`${Math.round(row.early).toLocaleString()} XP in the first half of this range, ${Math.round(row.late).toLocaleString()} in the second`}
+              >
+                {DIRECTION_MARK[row.direction]} {DIRECTION_WORD[row.direction]}
+              </span>
+            </li>
+          ))}
+          {rest.length > 0 && (
+            <li className="ax-split-row is-rest">
+              <span className="ax-split-name">
+                {rest.length} more subject{rest.length === 1 ? '' : 's'}
+              </span>
+              <span className="ax-split-track">
+                <i style={{ width: `${(restXp / (balance.total || 1)) * 100}%` }} />
+              </span>
+              <span className="ax-split-share">
+                {Math.round((restXp / (balance.total || 1)) * 100)}%
+              </span>
+              <span className="ax-split-xp">{Math.round(restXp).toLocaleString()} XP</span>
+              <span className="ax-split-move" />
+            </li>
+          )}
+        </ul>
+      )}
     </Panel>
   );
 }

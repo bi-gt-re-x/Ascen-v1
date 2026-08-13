@@ -1,11 +1,11 @@
 /**
  * The big chart, and the score panel beside it.
  *
- * Two panels rather than one because they answer different questions with
- * different confidence: the trajectory is the account's own arithmetic and can
- * be trusted to the point, while the score panel's *shape* is generated (see
- * SAMPLE in ./data) and only its final figure is real. Keeping them apart is
- * what lets one carry a Sample chip and the other not.
+ * Two panels rather than one because they answer different questions: the
+ * trajectory is the account's history and the score is where that history has
+ * got it to. Both are the account's own arithmetic — the one thing on either
+ * that is not is the score line's *shape*, which is generated because no
+ * endpoint reads the score's history back yet, and the note under it says so.
  */
 import { AreaChart, Delta, Panel, toneVar } from './charts';
 import {
@@ -99,7 +99,7 @@ export function Trajectory({
         series={[
           { values: now.map((point) => point.value), tone: 'violet' },
           ...(before.length > 1
-            ? [{ values: before.map((point) => point.value), tone: 'violet' as const, dashed: true }]
+            ? [{ values: before.map((point) => point.value), tone: 'violet' as const, muted: true }]
             : []),
         ]}
         ticks={axisTicks(peak, (value) =>
@@ -115,7 +115,7 @@ export function Trajectory({
         </span>
         {before.length > 1 && (
           <span className="ax-legend-item">
-            <i className="ax-legend-line ax-legend-dashed" />
+            <i className="ax-legend-line ax-legend-muted" />
             Previous Period ({previousSpanLabel})
           </span>
         )}
@@ -157,8 +157,6 @@ export function ScorePanel({ score, factors, series, marks }: ScorePanelProps) {
   return (
     <Panel
       title="Growth Score Over Time"
-      sample
-      sampleNote="Only the line's shape is a placeholder — no endpoint reads the score's history back yet. The score, its five factors and the band are your own."
       footer={<span className="ax-link">How it&rsquo;s calculated →</span>}
     >
       <div className="ax-score-head">
@@ -207,9 +205,15 @@ export function ScorePanel({ score, factors, series, marks }: ScorePanelProps) {
         marks={marks}
       />
 
+      {/* The Sample chip that used to sit in this panel's corner is gone. The
+          figures never needed it — the score, the five factors and the band are
+          all this account's — but the line still does, because no endpoint
+          reads the score's history back yet. So the caveat moved into the
+          sentence that was already here, where it is read rather than worn. */}
       <p className="ax-panel-note ax-panel-note-foot">
         The mean of the five report-card metrics — productivity, quality, consistency, efficiency
-        and focus — each worth up to 2.0 of the ten.
+        and focus — each worth up to 2.0 of the ten. The line is an illustration of the climb to
+        today&rsquo;s figure; a day-by-day history is not recorded yet.
       </p>
     </Panel>
   );

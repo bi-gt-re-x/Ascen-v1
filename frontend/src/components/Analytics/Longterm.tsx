@@ -77,7 +77,7 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
   // One x axis, two series, each covering half of it — history to today, then
   // the forecast on from today. They meet at a single shared point: the last
   // actual bucket and the projection's first entry are both the account's
-  // banked total, at the same index, so the dashed line leaves the solid one
+  // banked total, at the same index, so the forecast leaves the history
   // exactly where it ends.
   //
   // Where a series does not reach, it is `null` rather than a number. Both
@@ -149,7 +149,7 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
           id="ax-compound"
           height={170}
           series={[
-            { values: projectedSeries, tone: 'violet', dashed: true },
+            { values: projectedSeries, tone: 'violet', muted: true },
             { values: actualSeries, tone: 'violet' },
           ]}
           ticks={ticks}
@@ -174,7 +174,7 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
           Actual XP
         </span>
         <span className="ax-legend-item">
-          <i className="ax-legend-line ax-legend-dashed" />
+          <i className="ax-legend-line ax-legend-muted" />
           Projected XP — next {CHART_MONTHS} months at this pace
         </span>
       </div>

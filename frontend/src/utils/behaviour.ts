@@ -323,6 +323,22 @@ export function momentum(days: GrowthDay[], window = 90): Momentum[] {
 // --------------------------------------------------------------------------
 // Balance
 // --------------------------------------------------------------------------
+export interface BalanceRow {
+  name: string;
+  xp: number;
+  /** Its share of the window's subject XP, 0-100. */
+  share: number;
+  /** XP in the earlier half of the range, and in the later one. */
+  early: number;
+  late: number;
+  /**
+   * Which way it is going: `up` and `down` are a third's worth of movement
+   * between the two halves, `steady` is anything smaller, and `stopped` is
+   * real work in the first half and none at all in the second.
+   */
+  direction: 'up' | 'down' | 'steady' | 'stopped';
+}
+
 export interface BalanceShape {
   /** Share of XP held by the largest subject, 0-100. */
   concentration: number;
@@ -331,6 +347,10 @@ export interface BalanceShape {
   carrying: number;
   /** Subjects touched in the earlier half but not the later one. */
   fading: string[];
+  /** Every subject with XP in the window, largest first. */
+  rows: BalanceRow[];
+  /** The window's total subject XP — what every share is a share of. */
+  total: number;
 }
 
 /**
@@ -346,7 +366,14 @@ export function balanceShape(
   fromIso: string,
   toIso: string,
 ): BalanceShape {
-  const nothing: BalanceShape = { concentration: 0, leader: null, carrying: 0, fading: [] };
+  const nothing: BalanceShape = {
+    concentration: 0,
+    leader: null,
+    carrying: 0,
+    fading: [],
+    rows: [],
+    total: 0,
+  };
 
   // The range can have no ends: the first render, before the day series has
   // arrived, asks for the balance of an empty window, and so does an account
@@ -382,6 +409,24 @@ export function balanceShape(
   const ranked = [...all.entries()].sort((a, b) => b[1] - a[1]);
   const [leaderId, leaderXp] = ranked[0]!;
 
+  // The two halves per subject, which the panel draws as a direction. The
+  // threshold is a third rather than anything smaller: these are halves of one
+  // window, so a subject worked on twice in one half and three times in the
+  // other has not changed direction — it has been worked on five times.
+  const rows: BalanceRow[] = ranked.map(([id, xp]) => {
+    const before = early.get(id) ?? 0;
+    const after = late.get(id) ?? 0;
+    const direction: BalanceRow['direction'] =
+      before > 0 && after === 0
+        ? 'stopped'
+        : after >= before * 1.33
+          ? 'up'
+          : after <= before * 0.67
+            ? 'down'
+            : 'steady';
+    return { name: nameOf(id), xp, share: (xp / total) * 100, early: before, late: after, direction };
+  });
+
   return {
     concentration: Math.round((leaderXp / total) * 100),
     leader: nameOf(leaderId),
@@ -389,5 +434,7 @@ export function balanceShape(
     fading: [...early.entries()]
       .filter(([id, xp]) => xp / total >= 0.02 && !late.has(id))
       .map(([id]) => nameOf(id)),
+    rows,
+    total,
   };
 }
