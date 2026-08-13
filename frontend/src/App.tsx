@@ -24,6 +24,7 @@ import Unbuilt, { PATHS as UNBUILT_PATHS } from '@/pages/Unbuilt';
 
 const Homepage = lazy(() => import('@/pages/Homepage'));
 const Goals = lazy(() => import('@/pages/Goals'));
+const Tasks = lazy(() => import('@/pages/Tasks'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
 const Growth = lazy(() => import('@/pages/Growth'));
 const AboutUs = lazy(() => import('@/pages/AboutUs'));
@@ -131,6 +132,7 @@ export default function App() {
                 See backend/middleware/gate.py GATED_PATHS. */}
             <Route element={<RequireAccount />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/tasks" element={<Tasks />} />
               <Route path="/goals" element={<Goals />} />
               <Route path="/growth" element={<Growth />} />
               {/* One page, five tabs, five URLs. The analytics page reads the

@@ -1,9 +1,13 @@
 /**
- * The eight pages that are routed but not built.
+ * The pages that are routed but not built.
  *
- * They were eight files, and eight files of twenty lines each that differed
- * only in three strings is a table pretending to be a module tree. Here it is
- * the table, and one component that reads the path it was rendered at.
+ * They were a file each, and files of twenty lines that differed only in three
+ * strings are a table pretending to be a module tree. Here it is the table, and
+ * one component that reads the path it was rendered at.
+ *
+ * There were eight. Tasks was the first to leave — it is pages/Tasks.tsx now,
+ * with its own route in App.tsx, which is exactly the exit this file's own
+ * instructions below describe.
  *
  * The point of these is honesty. Each route in the top bar and in the app's
  * structure resolves to something that says what it will be, rather than to a
@@ -15,7 +19,7 @@
  * for real is the reverse: give it its own module, drop its entry, and the
  * route in App.tsx stops being generated and becomes its own line.
  *
- * The eight stylesheets that used to sit beside these — achievements.css,
+ * The stylesheets that used to sit beside these — achievements.css,
  * notes.css and the rest — were five-line comments reserving a filename. A
  * page that does not exist does not need a stylesheet to not have rules in;
  * the real one can create it on the day it has something to style.
@@ -32,15 +36,6 @@ interface Unbuilt {
 }
 
 const PAGES: Record<string, Unbuilt> = {
-  '/tasks': {
-    name: 'Tasks',
-    description:
-      'A page of its own for the task list — filtering, sorting and bulk edits that the dashboard panel has no room for.',
-    files: [
-      'backend/api/tasks.py — the endpoints already exist',
-      'src/services/tasks.ts — already wired',
-    ],
-  },
   '/growth-tree': {
     name: 'Growth Tree',
     description:
