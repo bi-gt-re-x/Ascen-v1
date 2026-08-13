@@ -36,25 +36,76 @@ export function asTone(name: string): Tone {
   return (TONES as string[]).includes(name) ? (name as Tone) : 'violet';
 }
 
-/** Turns values into an SVG path, scaled into the box. `null` when too few. */
+/**
+ * One point of a series, or `null` for "this series is not drawn here".
+ *
+ * A gap is not a zero. The compounding chart is two series over one x axis
+ * where each covers half of it — history to today, forecast from today — and
+ * filling the other half with a number puts a line on the chart claiming
+ * something was measured, or projected, when it was not. Nulls hold the
+ * position without drawing it, which is what lets the forecast begin exactly
+ * where the history ends instead of running flat beneath it and then leaping.
+ */
+export type AreaValue = number | null;
+
+interface Drawn {
+  /** The path, `M`-restarted across every gap. */
+  d: string;
+  /** Where the drawn part begins and ends, for closing an area under it. */
+  fromX: number;
+  toX: number;
+}
+
+/**
+ * Turns values into an SVG path, scaled into the box. `null` when too few.
+ *
+ * `at` is where each point sits across the width, 0 to 1. Without it the
+ * points are spaced evenly, which is right when the x axis is *positions* —
+ * the trajectory chart draws two equal-length periods over each other so that
+ * the same distance into each lands at the same x, and dates would pull them
+ * apart. It is wrong when the x axis is time: the compounding chart carries a
+ * year of weekly history and five years of quarterly forecast, and spacing
+ * those evenly gives sixty per cent of the width to the first sixth of the
+ * span and bends the forecast upward for no reason but the spacing.
+ */
 function linePath(
-  values: number[],
+  values: AreaValue[],
   width: number,
   height: number,
   min: number,
   max: number,
   pad = 0,
-): string | null {
+  at?: number[],
+): Drawn | null {
   if (values.length < 2) return null;
   const span = max - min || 1;
   const inner = height - pad * 2;
-  return values
-    .map((value, index) => {
-      const x = (index / (values.length - 1)) * width;
-      const y = pad + inner - ((value - min) / span) * inner;
-      return `${index === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(' ');
+  const steps = values.length - 1;
+
+  const parts: string[] = [];
+  let fromX: number | null = null;
+  let toX = 0;
+  let drawn = 0;
+  // `open` tracks whether the previous point was drawn: the first point after a
+  // gap has to start a new subpath rather than draw a line across it.
+  let open = false;
+
+  values.forEach((value, index) => {
+    if (value === null || Number.isNaN(value)) {
+      open = false;
+      return;
+    }
+    const x = (at?.[index] ?? index / steps) * width;
+    const y = pad + inner - ((value - min) / span) * inner;
+    parts.push(`${open ? 'L' : 'M'}${x.toFixed(2)},${y.toFixed(2)}`);
+    if (fromX === null) fromX = x;
+    toX = x;
+    drawn += 1;
+    open = true;
+  });
+
+  if (drawn < 2 || fromX === null) return null;
+  return { d: parts.join(' '), fromX, toX };
 }
 
 // --------------------------------------------------------------------------
@@ -78,8 +129,9 @@ export function Sparkline({ values, tone }: SparklineProps) {
   const height = 26;
   const min = Math.min(...values, 0);
   const max = Math.max(...values, 1);
-  const path = linePath(values, width, height, min, max, 2);
-  if (!path) return <svg className="ax-spark" viewBox={`0 0 ${width} ${height}`} />;
+  const drawn = linePath(values, width, height, min, max, 2);
+  if (!drawn) return <svg className="ax-spark" viewBox={`0 0 ${width} ${height}`} />;
+  const path = drawn.d;
 
   return (
     <svg
@@ -115,14 +167,21 @@ export function Sparkline({ values, tone }: SparklineProps) {
 // AreaChart — the trajectory, and the compounding curve
 // --------------------------------------------------------------------------
 export interface AreaSeries {
-  values: number[];
+  /** `null` anywhere this series does not reach. See `AreaValue`. */
+  values: AreaValue[];
   tone: Tone;
-  /** Dashed and unfilled — the period being compared against. */
+  /** Dashed and unfilled — the period being compared against, or the forecast. */
   dashed?: boolean;
 }
 
 export interface AreaChartProps {
   series: AreaSeries[];
+  /**
+   * Where each index sits across the width, 0 to 1, when even spacing would
+   * misplace it. One array for every series — they share an x axis, which is
+   * the only reason they can be read against each other at all.
+   */
+  at?: number[];
   /** Printed up the left edge, top value first. */
   ticks: string[];
   /** Printed along the bottom, evenly spaced. */
@@ -141,9 +200,11 @@ export interface AreaChartProps {
  * period look identical to the one before it. The dashed series is drawn first
  * so the solid one wins where they cross.
  */
-export function AreaChart({ series, ticks, marks, id, height = 200 }: AreaChartProps) {
+export function AreaChart({ series, ticks, marks, id, at, height = 200 }: AreaChartProps) {
   const width = 600;
-  const all = series.flatMap((entry) => entry.values);
+  const all = series
+    .flatMap((entry) => entry.values)
+    .filter((value): value is number => value !== null && !Number.isNaN(value));
   const min = 0;
   const max = Math.max(...all, 1);
 
@@ -189,14 +250,18 @@ export function AreaChart({ series, ticks, marks, id, height = 200 }: AreaChartP
           {[...series]
             .sort((a, b) => Number(Boolean(b.dashed)) - Number(Boolean(a.dashed)))
             .map((entry, index) => {
-              const path = linePath(entry.values, width, height, min, max, 4);
-              if (!path) return null;
+              const drawn = linePath(entry.values, width, height, min, max, 4, at);
+              if (!drawn) return null;
               return (
                 <g key={index}>
+                  {/* The area closes on the extent the line actually covers,
+                      not on the box: a series that stops halfway across — the
+                      history under a forecast — would otherwise be filled with
+                      a diagonal running off to the far corner. */}
                   {!entry.dashed && (
                     <path
                       className="ax-chart-area"
-                      d={`${path} L${width},${height} L0,${height} Z`}
+                      d={`${drawn.d} L${drawn.toX.toFixed(2)},${height} L${drawn.fromX.toFixed(2)},${height} Z`}
                       fill={`url(#${id}-fill-${index})`}
                     />
                   )}
@@ -206,7 +271,7 @@ export function AreaChart({ series, ticks, marks, id, height = 200 }: AreaChartP
                       it to say "this is the period before". It fades instead. */}
                   <path
                     className={`ax-chart-line${entry.dashed ? ' is-dashed' : ''}`}
-                    d={path}
+                    d={drawn.d}
                     pathLength={1}
                     fill="none"
                     stroke={toneVar(entry.tone)}
@@ -411,6 +476,15 @@ export interface PanelProps {
   aside?: ReactNode;
   /** Marks a panel drawn from invented figures. See SAMPLE in ./data. */
   sample?: boolean;
+  /**
+   * What exactly is invented, when "this panel is a placeholder" is too broad.
+   *
+   * A panel is rarely all one or all the other. The score panel states a real
+   * score, its five real factors and a band computed from them, and draws one
+   * generated line; a chip claiming the whole thing is a placeholder would be
+   * as wrong as no chip at all.
+   */
+  sampleNote?: string;
   className?: string;
   children: ReactNode;
   /** The link row along the bottom. */
@@ -431,7 +505,16 @@ export interface PanelProps {
  * picker acts on the panel and the chip describes it, and the description is
  * the thing that must not be missed.
  */
-export function Panel({ title, note, aside, sample, className, children, footer }: PanelProps) {
+export function Panel({
+  title,
+  note,
+  aside,
+  sample,
+  sampleNote,
+  className,
+  children,
+  footer,
+}: PanelProps) {
   return (
     <section className={`ax-panel${className ? ` ${className}` : ''}`}>
       <header className="ax-panel-head">
@@ -443,7 +526,10 @@ export function Panel({ title, note, aside, sample, className, children, footer 
             {sample && (
               <span
                 className="ax-sample"
-                title="Placeholder figures — your own record cannot fill this panel yet"
+                title={
+                  sampleNote ??
+                  'Placeholder figures — your own record cannot fill this panel yet'
+                }
               >
                 Sample
               </span>

@@ -77,7 +77,6 @@ import {
   InsightsPanel,
   MilestonePanel,
   PatternsPanel,
-  SCORE_SCALE,
   ScorePanel,
   StandingPanel,
   StreaksPanel,
@@ -114,18 +113,19 @@ import {
   OutlookPanel,
 } from '@/components/Recommendations';
 import {
-  SAMPLE,
   comparisonBars,
   compounding,
   consistency,
   scoreHistory,
   sliceWindow,
   spanLabel,
+  standingRows,
   windowOption,
   type Grain,
   type MetricKey,
   type WindowKey,
 } from '@/components/Analytics/data';
+import { growthScore, type ScoreFactor } from '@/components/Analytics/score';
 import { useApi, useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
 import { growth as growthService } from '@/services';
 import {
@@ -179,6 +179,16 @@ const RADAR_SUBJECTS = 6;
 
 /** How many recommendations get a card of their own before the rest go in a list. */
 const HEADLINE_ADVICE = 3;
+
+/**
+ * How many findings the Overview's insight panel shows.
+ *
+ * Four, because the panel is one of three in a row rather than the page, and
+ * because `growthInsights` emits in priority order: the top of its list is the
+ * patterns and the movement, and everything past the fourth row is a true fact
+ * that is not a finding. The Insights tab renders the same panel unlimited.
+ */
+const OVERVIEW_INSIGHTS = 4;
 
 /** The window the momentum panel compares, in days. See `momentum`. */
 const MOMENTUM_DAYS = 90;
@@ -287,9 +297,13 @@ export default function Analytics() {
   // Always a year, whatever the window says — see the note at the top.
   const heatRows = useMemo(() => heatmapGrid(all, '365'), [all]);
 
-  const score = ratings.data ? ratings.data.overall.score / SCORE_SCALE : null;
+  // The score and the five metrics it is the mean of, assembled from the report
+  // card rather than read off `overall` — see components/Analytics/score.
+  const card = useMemo(() => growthScore(ratings.data ?? null), [ratings.data]);
+  const score = card.value;
   const scoreLine = useMemo(() => scoreHistory(score ?? 0), [score]);
   const bars = useMemo(() => comparisonBars(slice, score), [score, slice]);
+  const standing = useMemo(() => standingRows(score), [score]);
 
   const breakdown = useMemo(
     () => subjectXp(bySubject, subjects, fromIso, toIso, RADAR_SUBJECTS),
@@ -456,6 +470,8 @@ export default function Analytics() {
             figures={figures}
             sparks={sparks}
             score={score}
+            scoreFactors={card.factors}
+            standing={standing}
             scoreLine={scoreLine}
             compareLabel={compareLabel}
             slice={slice}
@@ -629,6 +645,8 @@ interface OverviewProps {
   figures: ReturnType<typeof summaryFigures>;
   sparks: ReturnType<typeof tileSeries>;
   score: number | null;
+  scoreFactors: ScoreFactor[];
+  standing: ReturnType<typeof standingRows>;
   scoreLine: number[];
   compareLabel: string;
   slice: ReturnType<typeof sliceWindow>;
@@ -686,9 +704,9 @@ function OverviewView(props: OverviewProps) {
         />
         <ScorePanel
           score={props.score}
+          factors={props.scoreFactors}
           series={props.scoreLine}
           marks={['Start', '', '', 'Now']}
-          percentile={SAMPLE.overallPercentile}
         />
       </section>
 
@@ -714,8 +732,12 @@ function OverviewView(props: OverviewProps) {
           best={props.bestStreak}
           bestMonth={props.rhythmRate.bestMonth}
         />
-        <InsightsPanel insights={props.insights} />
-        <StandingPanel rows={[...SAMPLE.standing]} />
+        {/* Four, not everything the window can say. This panel shares a row
+            with two others and sits under a page that has already stated the
+            totals — the fifth finding down is where the list stops being
+            findings and starts being facts. The Insights tab shows the rest. */}
+        <InsightsPanel insights={props.insights} limit={OVERVIEW_INSIGHTS} />
+        <StandingPanel rows={props.standing} />
       </section>
 
       <section className="ax-foot">

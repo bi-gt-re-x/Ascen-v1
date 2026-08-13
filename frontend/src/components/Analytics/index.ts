@@ -64,13 +64,23 @@ export {
 export type { Tone, PanelProps, AreaSeries, BarPair, Column, RadarAxis, ScatterProps } from './charts';
 
 /**
- * The report card is scored out of 100 and this page states it out of ten.
+ * The Growth Score — its five factors, and where a score places.
  *
- * Here rather than in data.ts because it is a fact about the *backend's* units
- * (`grade_for_score` in backend/tracking/analytics.py maps 0-100), and the one
- * place a reader will look for it is next to where the score is used.
+ * `SCORE_SCALE` used to be declared here on its own, back when the score was
+ * one division of the backend's `overall`. It moved into ./score with the
+ * arithmetic that uses it: the score is now assembled from the five metrics it
+ * is the mean of, so the scale, the weighting and the parts belong together.
  */
-export const SCORE_SCALE = 10;
+export {
+  SCORE_SCALE,
+  WEIGHT as SCORE_WEIGHT,
+  agreesWithOverall,
+  formatPercentile,
+  growthScore,
+  percentileFor,
+  percentileLabel,
+} from './score';
+export type { GrowthScore, ScoreFactor } from './score';
 
 // The report card, no longer rendered. See the note at the top.
 export { GradeCard } from './GradeCard';

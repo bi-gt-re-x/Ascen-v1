@@ -88,7 +88,7 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       delta: null,
       series: scoreSeries,
       tone: 'violet',
-      hint: 'Consistency, productivity, focus and long-term progress.',
+      hint: 'The mean of productivity, quality, consistency, efficiency and focus.',
     },
   ];
 

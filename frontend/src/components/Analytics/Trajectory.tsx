@@ -11,12 +11,13 @@ import { AreaChart, Delta, Panel, toneVar } from './charts';
 import {
   METRICS,
   GRAINS,
+  axisMarks,
   bucketed,
   metricOption,
   type Grain,
   type MetricKey,
-  type SeriesPoint,
 } from './data';
+import { percentileLabel, type ScoreFactor } from './score';
 import { compact } from '@/utils/growthSummary';
 import type { GrowthDay } from '@/types';
 
@@ -40,20 +41,6 @@ function axisTicks(max: number, format: (value: number) => string): string[] {
   const out: string[] = [];
   for (let step = 5; step >= 0; step--) out.push(format((max / 5) * step));
   return out;
-}
-
-/** Month names along the bottom, thinned to what fits. */
-function axisMarks(points: SeriesPoint[], want = 8): string[] {
-  if (points.length === 0) return [];
-  const stride = Math.max(1, Math.round(points.length / want));
-  return points
-    .filter((_, index) => index % stride === 0)
-    .map((point) =>
-      new Date(`${point.date}T00:00:00`).toLocaleDateString('en-US', {
-        month: 'short',
-        year: '2-digit',
-      }),
-    );
 }
 
 export function Trajectory({
@@ -118,7 +105,7 @@ export function Trajectory({
         ticks={axisTicks(peak, (value) =>
           option.key === 'quality' ? value.toFixed(1) : compact(value),
         )}
-        marks={axisMarks(now)}
+        marks={axisMarks(now.map((point) => point.date), 8)}
       />
 
       <div className="ax-legend">
@@ -142,16 +129,36 @@ export function Trajectory({
 // --------------------------------------------------------------------------
 export interface ScorePanelProps {
   score: number | null;
+  /** The five metrics the score is the mean of. See ./score. */
+  factors: ScoreFactor[];
   series: number[];
   marks: string[];
-  percentile: number;
 }
 
-export function ScorePanel({ score, series, marks, percentile }: ScorePanelProps) {
+/**
+ * The score, the five parts it is made of, and where it places.
+ *
+ * The parts are on the panel rather than behind the "how it's calculated" link
+ * because a single figure out of ten is not actionable: 6.5 says nothing about
+ * *which* of the five is holding it there, and the reader's next question is
+ * always which one to go and work on. Printed with the measured quantity beside
+ * each — "22/30 days active", not "Consistency 73" — since the score is the
+ * abstraction and the measurement is the thing they can change.
+ *
+ * The band under the score is computed from the score itself (`percentileFor`),
+ * so it moves when the score does. It is a placement against a stated
+ * distribution rather than a count of other people's accounts, and the panel
+ * says exactly that under the badge rather than leaving "Top 8%" to be read as
+ * a headcount.
+ */
+export function ScorePanel({ score, factors, series, marks }: ScorePanelProps) {
+  const band = percentileLabel(score);
+
   return (
     <Panel
       title="Growth Score Over Time"
       sample
+      sampleNote="Only the line's shape is a placeholder — no endpoint reads the score's history back yet. The score, its five factors and the band are your own."
       footer={<span className="ax-link">How it&rsquo;s calculated →</span>}
     >
       <div className="ax-score-head">
@@ -163,23 +170,46 @@ export function ScorePanel({ score, series, marks, percentile }: ScorePanelProps
           <p className="ax-muted">Your current growth score</p>
           <Delta value={null} suffix="" />
         </div>
-        <div className="ax-percentile">
-          <span className="ax-percentile-icon" aria-hidden="true" />
-          <strong>Top {percentile}%</strong>
-          <span>of Ascen users</span>
-        </div>
+        {band && (
+          <div
+            className="ax-percentile"
+            title="Where this score sits in the modelled distribution of Ascen growth scores — 5.0 is the middle, and the scale runs from top 99.9% to top 0.1%."
+          >
+            <span className="ax-percentile-icon" aria-hidden="true" />
+            <strong>{band}</strong>
+            <span>of Ascen users</span>
+          </div>
+        )}
       </div>
+
+      {factors.length > 0 && (
+        <ul className="ax-factors">
+          {factors.map((factor) => (
+            <li className="ax-factor" key={factor.name}>
+              <span className="ax-factor-label">{factor.label}</span>
+              <span className="ax-factor-track">
+                <i style={{ width: `${Math.max(0, Math.min(100, factor.score))}%` }} />
+              </span>
+              <span className="ax-factor-raw">{factor.raw}</span>
+              <span className="ax-factor-score">
+                +{factor.contribution.toFixed(1)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <AreaChart
         id="ax-score"
-        height={150}
+        height={130}
         series={[{ values: series, tone: 'violet' }]}
         ticks={['10', '8', '6', '4', '2', '0']}
         marks={marks}
       />
 
       <p className="ax-panel-note ax-panel-note-foot">
-        Growth Score is based on consistency, productivity, focus, and long-term progress.
+        The mean of the five report-card metrics — productivity, quality, consistency, efficiency
+        and focus — each worth up to 2.0 of the ten.
       </p>
     </Panel>
   );

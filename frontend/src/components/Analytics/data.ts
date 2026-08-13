@@ -17,6 +17,7 @@ import {
   compact,
   type RangeSlice,
 } from '@/utils/growthSummary';
+import { percentileFor } from './score';
 import type { GrowthDay } from '@/types';
 
 // --------------------------------------------------------------------------
@@ -89,6 +90,75 @@ export function spanLabel(days: GrowthDay[]): string {
       year: 'numeric',
     });
   return first === last ? at(first) : `${at(first)} – ${at(last)}`;
+}
+
+/**
+ * "Aug '26" — a month on a chart's x axis.
+ *
+ * The apostrophe is doing real work. These labels used to read "Aug 26", which
+ * on an axis running left to right in time is indistinguishable from the 26th
+ * of August — and on the compounding chart, where six labels span five years,
+ * a reader saw "Aug 26 · Aug 27 · Aug 28" and read a week. The year is the
+ * thing that changes between those labels, so it has to look like one.
+ */
+export function monthLabel(iso: string): string {
+  const at = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(at.getTime())) return '';
+  const month = at.toLocaleDateString('en-US', { month: 'short' });
+  return `${month} '${String(at.getFullYear()).slice(2)}`;
+}
+
+/**
+ * `want` labels for a run of dates, sampled where the labels are drawn.
+ *
+ * The x-axis strip is a flex row of equal slots with the label centred in each
+ * (`.ax-chart-x` in styles/analytics.css), so the k-th of n labels sits at
+ * (k + ½)/n of the width — not at k/(n-1), which is where a naive stride would
+ * take its sample from and why the old labels sat about half a slot ahead of
+ * the point they named. Sampling at the slot's own centre makes the label and
+ * the position agree.
+ */
+export function axisMarks(dates: string[], want = 6): string[] {
+  if (dates.length === 0) return [];
+  const count = Math.min(want, dates.length);
+  return Array.from({ length: count }, (_, index) => {
+    const at = Math.round(((index + 0.5) / count) * (dates.length - 1));
+    return monthLabel(dates[Math.min(dates.length - 1, at)] ?? '');
+  });
+}
+
+/**
+ * The same labels for a chart whose x axis is time rather than position.
+ *
+ * `axisMarks` names the point that sits under each label, which is right when
+ * the points are evenly spaced. When they are placed by date — see `at` on
+ * AreaChart — the label has to name the *date* under it instead, and there may
+ * be no point there at all: the compounding chart has a point every week for a
+ * year and then one a quarter for five, so four of its six labels fall in
+ * stretches with nothing plotted nearby.
+ */
+export function axisSpan(fromIso: string, toIso: string, want = 6): string[] {
+  const from = new Date(`${fromIso}T00:00:00`).getTime();
+  const to = new Date(`${toIso}T00:00:00`).getTime();
+  if (Number.isNaN(from) || Number.isNaN(to) || to <= from) return [];
+  return Array.from({ length: want }, (_, index) => {
+    const at = new Date(from + ((index + 0.5) / want) * (to - from));
+    return monthLabel(at.toISOString().slice(0, 10));
+  });
+}
+
+/**
+ * Where each date sits across the width, 0 to 1 — AreaChart's `at`.
+ *
+ * Linear in time, which is the whole point: a gap of three months has to be
+ * three times the gap of one whatever the spacing of the points either side.
+ */
+export function datePositions(dates: string[]): number[] {
+  const times = dates.map((iso) => new Date(`${iso}T00:00:00`).getTime());
+  const from = times[0] ?? 0;
+  const to = times[times.length - 1] ?? from;
+  const span = to - from || 1;
+  return times.map((time) => (Number.isNaN(time) ? 0 : (time - from) / span));
 }
 
 // --------------------------------------------------------------------------
@@ -404,10 +474,13 @@ export function comparisonBars(slice: RangeSlice, score: number | null): Compari
 /**
  * The two panels nothing in this account can answer, kept together.
  *
- * **Percentiles need other people's accounts.** Nothing on the backend
- * aggregates across users — `benchCategories` in utils/growthBench deliberately
- * benchmarks the reader against their own record for exactly this reason — so
- * "Top 12% of Ascen users" cannot be computed here and is a placeholder.
+ * **Four of the five percentile bars need other people's accounts.** Nothing on
+ * the backend aggregates across users — `benchCategories` in utils/growthBench
+ * deliberately benchmarks the reader against their own record for exactly this
+ * reason — so "top 14% on XP earned" cannot be computed and is a placeholder.
+ * The fifth is not: the Growth Score row is placed against the stated
+ * distribution in ./score, from this account's own score, which is why
+ * `standingRows` takes the score rather than the table carrying a fifth number.
  *
  * **The growth score has no history.** `get_growth_ratings` files a dated
  * snapshot per metric every time it is read (backend/tracking/analytics.py),
@@ -425,11 +498,28 @@ export const SAMPLE = {
     { label: 'Focus Time', percentile: 18, tone: 'blue' },
     { label: 'Consistency', percentile: 11, tone: 'green' },
     { label: 'Task Completion', percentile: 21, tone: 'amber' },
-    { label: 'Growth Score', percentile: 12, tone: 'violet' },
   ] as Array<{ label: string; percentile: number; tone: string }>,
-  /** Where the reader sits overall, for the badge on the score panel. */
-  overallPercentile: 12,
 } as const;
+
+/**
+ * The "Where You Stand" rows: four placeholders and one real placement.
+ *
+ * The Growth Score row runs through the same `percentileFor` the badge on the
+ * score panel uses, so the two figures on one page are one figure. They were
+ * two constants before, and they disagreed the moment either was touched.
+ */
+export function standingRows(
+  score: number | null,
+): Array<{ label: string; percentile: number; tone: string }> {
+  return [
+    ...SAMPLE.standing,
+    {
+      label: 'Growth Score',
+      percentile: score === null ? 50 : percentileFor(score),
+      tone: 'violet',
+    },
+  ];
+}
 
 /**
  * A plausible run-up to the score the account actually has.

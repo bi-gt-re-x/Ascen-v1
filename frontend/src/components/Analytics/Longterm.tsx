@@ -9,6 +9,8 @@
 import type { CSSProperties } from 'react';
 import { AreaChart, GroupedBars, Panel, toneVar, type BarPair } from './charts';
 import { GLYPHS, type GlyphName } from './glyphs';
+import { axisSpan, datePositions } from './data';
+import { formatPercentile } from './score';
 import type { Compounding, ComparisonBar } from './data';
 import { compact } from '@/utils/growthSummary';
 import type { Insight } from '@/utils/growthSummary';
@@ -42,7 +44,14 @@ export function ComparisonPanel({ bars }: { bars: ComparisonBar[] }) {
         </div>
       }
     >
-      <GroupedBars pairs={pairs} />
+      {/* The bars are a fixed height in a panel that is as tall as whatever
+          sits beside it in the row, so on a wide screen the leftover space all
+          fell below them and the chart hung off the top edge with a third of
+          the panel empty underneath. The wrapper takes the slack and centres
+          the bars in it. */}
+      <div className="ax-bars-fill">
+        <GroupedBars pairs={pairs} />
+      </div>
     </Panel>
   );
 }
@@ -51,32 +60,44 @@ export function ComparisonPanel({ bars }: { bars: ComparisonBar[] }) {
 // Compounding
 // --------------------------------------------------------------------------
 export function CompoundingPanel({ data }: { data: Compounding }) {
-  const marks = data.projected
-    .filter((_, index) => index % 4 === 0)
-    .map((point) =>
-      new Date(`${point.date}T00:00:00`).toLocaleDateString('en-US', {
-        month: 'short',
-        year: '2-digit',
-      }),
-    );
-
-  // The two lines share one box and one scale: the projection continues the
-  // actual rather than sitting beside it, so the join has to be seamless. The
-  // actual series is padded out to the projection's length with the value it
-  // ended on, which draws as a flat tail under the climbing forecast.
+  // One x axis, two series, each covering half of it — history to today, then
+  // the forecast on from today. They meet at a single shared point: the last
+  // actual bucket and the projection's first entry are both the account's
+  // banked total, at the same index, so the dashed line leaves the solid one
+  // exactly where it ends.
+  //
+  // Where a series does not reach, it is `null` rather than a number. Both
+  // halves used to be filled instead — the actual with a flat tail of its final
+  // value, the projection with a flat *head* of the account's earliest one —
+  // which drew a line sitting at the bottom of the chart for the whole of the
+  // history and then leaping vertically at the join. That leap was the bug in
+  // this panel, not a feature of the forecast.
   const actualValues = data.actual.map((point) => point.value);
-  const padded = [
-    ...actualValues,
-    ...Array(Math.max(0, data.projected.length - 1)).fill(
-      actualValues[actualValues.length - 1] ?? 0,
-    ),
-  ];
-  const projectedValues = [
-    ...Array(Math.max(0, actualValues.length - 1)).fill(NaN),
-    ...data.projected.map((point) => point.value),
-  ].map((value) => (Number.isNaN(value) ? (actualValues[0] ?? 0) : value));
+  const forecast = data.projected.map((point) => point.value);
+  const gapBefore = Math.max(0, actualValues.length - 1);
 
-  const peak = Math.max(...projectedValues, ...padded, 1);
+  const actualSeries: Array<number | null> = [
+    ...actualValues,
+    ...Array<null>(Math.max(0, forecast.length - 1)).fill(null),
+  ];
+  const projectedSeries: Array<number | null> = [
+    ...Array<null>(gapBefore).fill(null),
+    ...forecast,
+  ];
+
+  // Points are placed by date rather than by index. The history is a point a
+  // week and the forecast a point a quarter, so spacing them evenly handed
+  // two thirds of the width to the first year of a six-year chart and made the
+  // projection look like a hockey stick that the arithmetic behind it — a flat
+  // XP-a-day multiplication — never produced.
+  const dates = [
+    ...data.actual.map((point) => point.date),
+    ...data.projected.slice(1).map((point) => point.date),
+  ];
+  const at = datePositions(dates);
+  const marks = axisSpan(dates[0] ?? '', dates[dates.length - 1] ?? '', 6);
+
+  const peak = Math.max(...forecast, ...actualValues, 1);
   const ticks: string[] = [];
   for (let step = 4; step >= 0; step--) ticks.push(compact((peak / 4) * step));
 
@@ -109,11 +130,12 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
           id="ax-compound"
           height={170}
           series={[
-            { values: projectedValues, tone: 'violet', dashed: true },
-            { values: padded, tone: 'violet' },
+            { values: projectedSeries, tone: 'violet', dashed: true },
+            { values: actualSeries, tone: 'violet' },
           ]}
           ticks={ticks}
           marks={marks}
+          at={at}
         />
         <aside className="ax-callout">
           <span className="ax-muted ax-small">You&rsquo;re on track to earn</span>
@@ -185,14 +207,26 @@ const INSIGHT_GLYPH: Record<Insight['tone'], GlyphName> = {
   note: 'clock',
 };
 
-export function InsightsPanel({ insights }: { insights: Insight[] }) {
+/**
+ * The findings, most important first.
+ *
+ * `limit` is how many of them a panel has room to mean. `growthInsights` emits
+ * in priority order — the patterns and the movement first, then the single
+ * facts (best day, longest run, task and focus totals) that are true but are
+ * not findings — so the top of the list is the important end of it and taking
+ * the first four is taking the four that matter. The overview does exactly
+ * that; the Insights tab, whose whole job is the long read, takes them all.
+ */
+export function InsightsPanel({ insights, limit }: { insights: Insight[]; limit?: number }) {
+  const shown = limit ? insights.slice(0, limit) : insights;
+
   return (
     <Panel title="Key Growth Insights" footer={<span className="ax-link">View all insights →</span>}>
-      {insights.length === 0 ? (
+      {shown.length === 0 ? (
         <p className="ax-empty">Not enough history in this window to find a pattern yet.</p>
       ) : (
         <ul className="ax-insights">
-          {insights.map((insight) => (
+          {shown.map((insight) => (
             <li key={insight.headline} className={`ax-insight ax-insight-${insight.tone}`}>
               <span
                 className="ax-insight-icon"
@@ -245,7 +279,10 @@ export function StandingPanel({ rows }: StandingPanelProps) {
                 }}
               />
             </span>
-            <span className="ax-standing-rank">Top {row.percentile}%</span>
+            {/* Through the same formatter as the badge on the score panel, so
+                the two places this page states a percentile state it the same
+                way — one said "Top 17.7%" beside the other's "Top 18%". */}
+            <span className="ax-standing-rank">Top {formatPercentile(row.percentile)}%</span>
           </li>
         ))}
       </ul>

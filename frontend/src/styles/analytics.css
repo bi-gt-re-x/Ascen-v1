@@ -596,6 +596,65 @@ html[data-theme="dark"] .ax-page {
     margin-bottom: 2px;
 }
 
+/* ---------- The score's five factors -------------------------------------- */
+/* One row per report-card metric: what it is, how far along it is, what it was
+   measured at, and what it puts into the ten. The contribution is on the right
+   because that is the column that adds up to the figure above the list. */
+.ax-factors {
+    list-style: none;
+    margin: 12px 0 4px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.ax-factor {
+    display: grid;
+    grid-template-columns: 66px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+}
+
+.ax-factor-label { color: var(--ax-text); font-weight: 600; }
+
+.ax-factor-track {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.ax-factor-track i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--ax-violet);
+    transform-origin: left;
+    animation: ax-grow-x .55s cubic-bezier(.22, .68, .3, 1) .18s both;
+}
+
+.ax-factor-raw {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 10px;
+    color: var(--ax-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ax-factor-score {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ax-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes ax-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
 /* ---------- Subjects ------------------------------------------------------ */
 .ax-subject {
     display: grid;
@@ -875,6 +934,18 @@ html[data-theme="dark"] .ax-page {
 }
 
 /* ---------- Grouped bars -------------------------------------------------- */
+/* The panel is as tall as the tallest in its row and the bars are a fixed
+   height, so the difference has to go somewhere. It used to all fall below the
+   chart, which read as a chart that had slipped off the top of its panel. This
+   takes the slack and puts the bars in the middle of it. */
+.ax-bars-fill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-height: 0;
+}
+.ax-bars-fill .ax-bars { width: 100%; max-height: 100%; }
+
 .ax-bars {
     display: grid;
     grid-auto-flow: column;
@@ -1602,6 +1673,7 @@ html[data-theme="dark"] .ax-page {
     .ax-spark-area,
     .ax-bar,
     .ax-column-bar,
+    .ax-factor-track i,
     .ax-radar-shape {
         animation: none;
     }
