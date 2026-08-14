@@ -15,62 +15,46 @@ import { timeLabel } from './board';
 // --------------------------------------------------------------------------
 // Focus timer
 // --------------------------------------------------------------------------
-/** The length of one sitting, in seconds. */
-const POMODORO = 25 * 60;
-
 /**
- * A twenty-five minute countdown that banks its time like everything else.
+ * A stopwatch on the focus time the account actually records.
  *
- * **It is not a second clock.** Starting it starts the account's real focus
- * session — the same `useFocusSession` the dashboard and the calendar read, the
- * same localStorage day, the same minute totals that end up on the growth
- * chart and in the report card's focus metric. What this adds is a *shape* for
- * the sitting: the day total answers "how much have I done", which is not the
- * question somebody sitting down to work has.
+ * **It counts up, and it is not its own clock.** The figure is
+ * `useFocusSession`'s — the same day total the dashboard and the calendar read,
+ * the same localStorage day, the same minutes that reach the growth chart and
+ * the report card's focus metric. Starting here starts *that* session; there is
+ * no second timer to disagree with it and nothing to reconcile.
  *
- * The countdown is derived from the clock rather than counted in ticks, for the
- * same reason the session underneath it is: a tab in the background stops
- * getting timers and a counted clock would silently lose the minutes.
+ * It was a twenty-five minute countdown, and a countdown is the wrong
+ * instrument for this panel. A pomodoro measures a promise — how long you said
+ * you would sit — and the account has no use for that number. What everything
+ * downstream wants is how long you actually sat, which is the thing a stopwatch
+ * reads and a countdown throws away the moment somebody works past the bell.
+ *
+ * The elapsed figure is derived from the session's own timestamps rather than
+ * counted in ticks, so a backgrounded tab, a shut laptop or a closed browser
+ * lose nothing: the display catches up the instant anyone looks at it. The
+ * interval below re-renders, it does not measure.
  */
 function FocusTimer({ username }: { username: string | null }) {
   const session = useFocusSession(username);
-  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [, tick] = useState(0);
 
-  // Only while running, and only once a second — a countdown that re-rendered
-  // the page on an animation frame would cost more than the panel is worth.
+  // Only while running, and only once a second. Nothing here counts — see above.
   useEffect(() => {
-    if (startedAt === null) return;
+    if (!session.running) return;
     const id = window.setInterval(() => tick((n) => n + 1), 1000);
     return () => window.clearInterval(id);
-  }, [startedAt]);
+  }, [session.running]);
 
-  const elapsed = startedAt === null ? 0 : Math.floor((Date.now() - startedAt) / 1000);
-  const left = Math.max(0, POMODORO - elapsed);
-  const done = startedAt !== null && left === 0;
+  const seconds = Math.max(0, Math.floor(session.focused));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const rest = seconds % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
 
-  // Stop the underlying session the moment the sitting is up, so the banked
-  // total is the sitting rather than however long the tab stayed open after it.
-  useEffect(() => {
-    if (done && session.running) session.stop();
-  }, [done, session]);
-
-  const start = () => {
-    setStartedAt(Date.now());
-    if (!session.running) session.start();
-  };
-  const reset = () => {
-    setStartedAt(null);
-    if (session.running) session.stop();
-  };
-
-  const minutes = Math.floor(left / 60);
-  const seconds = left % 60;
-  const share = 1 - left / POMODORO;
-
-  // A ring drawn as one stroked circle with a dash pattern. `pathLength` is
-  // safe here and nowhere near the charts' problem: the box is square, scaled
-  // uniformly, and the stroke is not exempted from that scaling.
+  // The ring is the day's goal, which is the only thing a stopwatch has to fill
+  // — an open-ended count has no arc of its own to draw.
+  const share = Math.max(0, Math.min(1, session.percent / 100));
   const radius = 52;
 
   return (
@@ -98,10 +82,10 @@ function FocusTimer({ username }: { username: string | null }) {
           />
         </svg>
         <div className="tk-dial-face">
-          <strong>
-            {minutes}:{String(seconds).padStart(2, '0')}
+          <strong className={hours > 0 ? 'is-long' : undefined}>
+            {hours > 0 ? `${hours}:${pad(minutes)}:${pad(rest)}` : `${minutes}:${pad(rest)}`}
           </strong>
-          <span>{done ? 'Done' : startedAt === null ? 'Focus' : 'Working'}</span>
+          <span>{session.running ? 'Running' : seconds > 0 ? 'Paused' : 'Focus'}</span>
         </div>
       </div>
 
@@ -109,26 +93,21 @@ function FocusTimer({ username }: { username: string | null }) {
         <button
           type="button"
           className="tk-play"
-          aria-label={startedAt === null ? 'Start a focus sitting' : 'Stop the sitting'}
-          onClick={startedAt === null ? start : reset}
+          aria-label={session.running ? 'Pause the session' : 'Start focusing'}
+          onClick={() => (session.running ? session.stop() : session.start())}
         >
-          {startedAt === null ? (
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l12 7-12 7z" /></svg>
-          ) : (
+          {session.running ? (
             <svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="6" width="4" height="12" rx="1" /><rect x="13" y="6" width="4" height="12" rx="1" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l12 7-12 7z" /></svg>
           )}
-        </button>
-        <button type="button" className="tk-reset" aria-label="Reset the timer" onClick={reset}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M20 12a8 8 0 1 1-2.3-5.6" />
-            <path d="M20 4v4h-4" />
-          </svg>
         </button>
       </div>
       <p className="tk-dial-note">
-        {session.focused > 0
-          ? `${Math.round(session.focused / 60)}m focused today`
-          : 'Nothing banked today yet'}
+        {/* No reset button, and that is deliberate: the number is the account's
+            record of today, not this panel's scratch value, and a control that
+            appeared to zero it would either lie or destroy real data. */}
+        {Math.round(share * 100)}% of today&rsquo;s {session.goalHours}h goal
       </p>
     </section>
   );

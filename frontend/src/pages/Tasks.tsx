@@ -60,6 +60,7 @@ import {
   Toolbar,
   plannedSeconds,
   groupTasks,
+  beyondHorizon,
   statSeries,
   streaks,
   taskCounts,
@@ -155,6 +156,7 @@ export default function Tasks() {
   const counts = useMemo(() => taskCounts(list), [list]);
   const series = useMemo(() => statSeries(list), [list]);
   const nextUp = useMemo(() => upcoming(list, 3), [list]);
+  const beyond = useMemo(() => beyondHorizon(list), [list]);
   const runs = useMemo(() => streaks(list, 3), [list]);
   // Grouping is the reader's to switch off, and the sort takes it away on its
   // own when the ordering is no longer by date — see `groupTasks`.
@@ -605,6 +607,18 @@ export default function Tasks() {
                   </section>
                 );
               })
+            )}
+
+            {/* The horizon, stated where the list stops rather than only in
+                the menu that set it — a list that quietly ends seven days out
+                is a list a reader assumes is all of it. */}
+            {query.horizon === 'week' && beyond > 0 && (
+              <p className="tk-horizon">
+                {beyond.toLocaleString()} more dated past this week.{' '}
+                <button type="button" onClick={() => setQuery({ ...query, horizon: 'all' })}>
+                  Show everything
+                </button>
+              </p>
             )}
           </div>
 

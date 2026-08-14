@@ -203,6 +203,21 @@ export function Toolbar({
             onOpen={setOpen}
             on={isFiltered(query)}
           >
+            <p className="tk-menu-head">Reach</p>
+            <button
+              type="button"
+              className={`tk-menu-item${query.horizon === 'week' ? ' is-on' : ''}`}
+              onClick={() => set({ horizon: 'week' })}
+            >
+              The next 7 days
+            </button>
+            <button
+              type="button"
+              className={`tk-menu-item${query.horizon === 'all' ? ' is-on' : ''}`}
+              onClick={() => set({ horizon: 'all' })}
+            >
+              Everything dated
+            </button>
             <p className="tk-menu-head">Show</p>
             {STATUSES.map((entry) => (
               <button
@@ -219,7 +234,7 @@ export function Toolbar({
                 type="button"
                 className="tk-menu-clear"
                 onClick={() =>
-                  set({ status: 'open', search: '', subjects: [], priorities: [] })
+                  set({ status: 'open', search: '', subjects: [], priorities: [], horizon: 'week' })
                 }
               >
                 Clear every filter

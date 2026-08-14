@@ -1029,8 +1029,28 @@ body.easter-shake {
 
 /* ==========================================================================
    MODAL WINDOW COMPONENTS
+
+   **Every selector below is scoped to `.dash`, and it has to be.** These class
+   names — `.modal`, `.modal-content`, `.close` — are the shared vocabulary of
+   four different dialogs in four different stylesheets: this one, goals.css,
+   homepage.css and calendar/month.css. None of the other three is scoped
+   either, and all four define the same names differently.
+
+   That is a load-order bug rather than a specificity one, and it only bit in
+   one direction. This file is loaded on every page, so it is always first;
+   goals.css and month.css arrive when the reader visits those pages and, at
+   equal specificity, win from then on. The symptom was oddly specific and hard
+   to place: the dashboard's Add Task dialog was fine on a fresh load and wrong
+   after visiting Goals or the month calendar — wearing the other page's width,
+   padding and colours, since `.modal { display: none }` there is overridden by
+   the inline `display: block` the component sets but nothing else is.
+
+   Scoping this block makes the dashboard's dialog immune to whatever else is
+   in the document. The other three files still share the namespace with each
+   other; scoping them is the same edit, and worth doing before a second pair
+   of pages starts fighting.
    ========================================================================== */
-.modal {
+.dash .modal {
     display: none;
     position: fixed;
     z-index: 2000;
@@ -1042,7 +1062,7 @@ body.easter-shake {
     background-color: rgba(0, 0, 0, 0.4);
 }
 
-.modal-content {
+.dash .modal-content {
     background-color: #FFFFFF;
     margin: 10% auto;
     padding: 32px;
@@ -1063,7 +1083,7 @@ body.easter-shake {
  * dialog's close button. 30px puts the two optical centres together: the
  * heading is a 1.3rem line starting at the 32px of card padding, and this is a
  * 24px one. */
-.close {
+.dash .close {
     color: #A0A0A0;
     position: absolute;
     top: 30px;
@@ -1074,18 +1094,18 @@ body.easter-shake {
     cursor: pointer;
 }
 
-.close:hover {
+.dash .close:hover {
     color: #2C302E;
 }
 
-.modal-content h2 {
+.dash .modal-content h2 {
     margin-top: 0;
     font-size: 1.3rem;
     font-weight: 700;
     margin-bottom: 24px;
 }
 
-.modal-content input[type="text"] {
+.dash .modal-content input[type="text"] {
     width: 100%;
     padding: 12px;
     border-radius: 8px;
@@ -1094,11 +1114,11 @@ body.easter-shake {
     outline: none;
 }
 
-.modal-content input[type="text"]:focus {
+.dash .modal-content input[type="text"]:focus {
     border-color: #2C302E;
 }
 
-.modal-separator {
+.dash .modal-separator {
     width: 100%;
     height: 1px;
     background: #EAEAEA;
@@ -1106,27 +1126,27 @@ body.easter-shake {
 }
 
 /* Dropdown Grid Rules */
-.dropdown-buttons {
+.dash .dropdown-buttons {
     display: flex;
     flex-direction: column;
     gap: 16px;
     width: 100%;
 }
 
-.dropdown-row {
+.dash .dropdown-row {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
 }
 
-.or-text {
+.dash .or-text {
     font-size: 12px;
     font-weight: 700;
     color: #A0A0A0;
 }
 
-.dropdown-btn {
+.dash .dropdown-btn {
     flex: 1;
     padding: 12px 16px;
     background-color: #F8F9FA;
@@ -1141,7 +1161,7 @@ body.easter-shake {
     align-items: center;
 }
 
-.dropdown-content {
+.dash .dropdown-content {
     background-color: #F8F9FA;
     border: 1px solid #EAEAEA;
     border-radius: 8px;
@@ -1150,33 +1170,33 @@ body.easter-shake {
     animation: slideDown 0.2s ease;
 }
 
-.timer-inputs {
+.dash .timer-inputs {
     display: flex;
     gap: 12px;
 }
 
-.timer-input-group {
+.dash .timer-input-group {
     display: flex;
     flex-direction: column;
     align-items: center;
     flex: 1;
 }
 
-.timer-input-group span[id$="Val"] {
+.dash .timer-input-group span[id$="Val"] {
     display: none;
 }
 
-.timer-input-group label {
+.dash .timer-input-group label {
     font-size: 0px;
     color: #6C757D;
     margin-bottom: 4px;
 }
 
-.timer-input-group input[type="range"] {
+.dash .timer-input-group input[type="range"] {
     width: 100%;
 }
 
-.timer-input-group input[type="number"] {
+.dash .timer-input-group input[type="number"] {
     width: 100%;
     padding: 6px;
     border: 1px solid #CCCCCC;
@@ -1185,14 +1205,14 @@ body.easter-shake {
     margin-top: 6px;
 }
 
-.due-date-input {
+.dash .due-date-input {
     width: 100%;
     padding: 10px;
     border-radius: 6px;
     border: 1px solid #CCCCCC;
 }
 
-.confirm-add-btn {
+.dash .confirm-add-btn {
     width: 100%;
     padding: 14px;
     background-color: #2C302E;
@@ -1205,7 +1225,7 @@ body.easter-shake {
     margin-top: 24px;
 }
 
-.confirm-add-btn:hover {
+.dash .confirm-add-btn:hover {
     background-color: #454B48;
 }
 

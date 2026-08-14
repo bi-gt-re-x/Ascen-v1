@@ -513,6 +513,8 @@ html[data-theme='dark'] .tk-page {
     font-size: 33px; font-weight: 700; letter-spacing: -.02em;
     font-variant-numeric: tabular-nums;
 }
+/* h:mm:ss needs to fit the same ring m:ss does. */
+.tk-dial-face strong.is-long { font-size: 26px; }
 .tk-dial-face span { font-size: 12px; color: var(--tk-faint); }
 .tk-dial-tools { display: flex; align-items: center; gap: 12px; }
 .tk-play {
@@ -644,3 +646,90 @@ html[data-theme='dark'] .tk-page {
 }
 .tk-more.is-page:hover { background: var(--tk-card-2); }
 .tk-head-tools .tk-menu-panel { top: calc(100% + 8px); }
+
+/* The line where the week runs out. */
+.tk-horizon {
+    margin: 2px 0 0;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--tk-faint);
+}
+.tk-horizon button {
+    border: 0; background: none; padding: 0;
+    color: var(--tk-violet); font-size: inherit; font-weight: 600;
+    cursor: pointer;
+}
+.tk-horizon button:hover { text-decoration: underline; }
+
+/* ---------- The composer -------------------------------------------------
+   The New Task form, which opens under the header rather than over the page.
+   These rules went missing when this stylesheet was rewritten for the new
+   layout and the form spent a commit as unstyled browser defaults; they are
+   here rather than beside the toolbar's because the form is a panel in its own
+   right, not a control. */
+.tk-composer {
+    display: flex; flex-direction: column; gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--tk-line);
+    border-radius: var(--tk-radius);
+    background: var(--tk-card);
+    box-shadow: var(--tk-shadow);
+}
+.tk-composer-main { display: flex; align-items: center; gap: 10px; }
+.tk-composer-name {
+    flex: 1 1 auto; min-width: 0;
+    height: 42px;
+    padding: 0 13px;
+    border: 1px solid var(--tk-line); border-radius: 10px;
+    background: var(--tk-card-2); color: var(--tk-text);
+    font-size: 14px;
+    outline: 0;
+}
+.tk-composer-name::placeholder { color: var(--tk-faint); }
+.tk-composer-name:focus { border-color: color-mix(in srgb, var(--tk-violet) 55%, transparent); }
+
+.tk-btn {
+    flex: none;
+    height: 42px;
+    padding: 0 17px;
+    border: 1px solid var(--tk-line); border-radius: 10px;
+    background: var(--tk-card); color: var(--tk-text);
+    font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+    transition: filter .15s ease, border-color .15s ease;
+}
+.tk-btn.is-primary { border-color: transparent; background: var(--tk-violet); color: #fff; }
+.tk-btn.is-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.tk-btn.is-quiet { background: none; color: var(--tk-muted); }
+.tk-btn.is-quiet:hover { color: var(--tk-text); border-color: var(--tk-faint); }
+.tk-btn:disabled { opacity: .5; cursor: default; }
+
+/* Four fields on one line at full width, two up when the rail takes the room,
+   and the subject picker last because it is the widest of them. */
+.tk-composer-more {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--tk-line-soft);
+}
+.tk-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.tk-field > span {
+    font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--tk-faint);
+}
+.tk-input, .tk-select {
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid var(--tk-line); border-radius: 9px;
+    background: var(--tk-card-2); color: var(--tk-text);
+    font-size: 13px;
+    outline: 0;
+}
+.tk-input:focus, .tk-select:focus { border-color: color-mix(in srgb, var(--tk-violet) 55%, transparent); }
+.tk-select { appearance: none; cursor: pointer; padding-right: 26px; }
+.tk-field-subject { grid-column: span 2; }
+@media (max-width: 620px) {
+    .tk-field-subject { grid-column: auto; }
+    .tk-composer-main { flex-wrap: wrap; }
+}

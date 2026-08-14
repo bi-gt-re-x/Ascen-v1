@@ -14,6 +14,7 @@
  * opinion the number does not hold.
  */
 import type { CSSProperties } from 'react';
+import { useCountUp } from '@/hooks';
 import type { StatSeries, TaskCounts } from './board';
 import { trendPct } from './board';
 
@@ -57,6 +58,24 @@ function Spark({ values, tone }: { values: number[]; tone: Tone }) {
   );
 }
 
+/**
+ * A figure that travels to its value rather than appearing at it.
+ *
+ * Its own component because `useCountUp` is a hook and the cards are built in a
+ * loop — five calls in a map is the one thing the rules of hooks will not have.
+ * Fed the number at the precision it is shown at, which is what keeps a
+ * completion rate from animating on a decimal nobody can see.
+ */
+function Value({ value, suffix }: { value: number; suffix?: string }) {
+  const shown = useCountUp(value);
+  return (
+    <strong className="tk-stat-value">
+      {Math.round(shown).toLocaleString()}
+      {suffix}
+    </strong>
+  );
+}
+
 export interface StatCardsProps {
   counts: TaskCounts;
   series: StatSeries;
@@ -67,7 +86,8 @@ export function StatCards({ counts, series }: StatCardsProps) {
 
   const cards: Array<{
     key: string;
-    value: string;
+    value: number;
+    suffix?: string;
     label: string;
     hint: string;
     tone: Tone;
@@ -76,7 +96,7 @@ export function StatCards({ counts, series }: StatCardsProps) {
   }> = [
     {
       key: 'open',
-      value: counts.open.toLocaleString(),
+      value: counts.open,
       label: 'Open',
       hint:
         move === null
@@ -87,7 +107,7 @@ export function StatCards({ counts, series }: StatCardsProps) {
     },
     {
       key: 'today',
-      value: counts.today.toLocaleString(),
+      value: counts.today,
       label: 'Due Today',
       hint:
         counts.todayHigh > 0
@@ -100,7 +120,7 @@ export function StatCards({ counts, series }: StatCardsProps) {
     },
     {
       key: 'overdue',
-      value: counts.overdue.toLocaleString(),
+      value: counts.overdue,
       label: 'Overdue',
       hint: counts.overdue > 0 ? 'Get back on track' : 'Nothing past its date',
       tone: 'red',
@@ -108,7 +128,8 @@ export function StatCards({ counts, series }: StatCardsProps) {
     },
     {
       key: 'rate',
-      value: `${counts.completionRate}%`,
+      value: counts.completionRate,
+      suffix: '%',
       label: 'Completion Rate',
       hint: 'This week',
       tone: 'green',
@@ -116,7 +137,7 @@ export function StatCards({ counts, series }: StatCardsProps) {
     },
     {
       key: 'xp',
-      value: counts.openXp.toLocaleString(),
+      value: counts.openXp,
       label: 'XP on the Table',
       hint: 'Finish tasks to earn',
       tone: 'violet',
@@ -129,7 +150,7 @@ export function StatCards({ counts, series }: StatCardsProps) {
     <div className="tk-stats">
       {cards.map((card) => (
         <article className={`tk-stat is-${card.tone}`} key={card.key}>
-          <strong className="tk-stat-value">{card.value}</strong>
+          <Value value={card.value} suffix={card.suffix} />
           <span className="tk-stat-label">{card.label}</span>
           <span className="tk-stat-hint">{card.hint}</span>
           {card.badge && (

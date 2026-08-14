@@ -39,6 +39,20 @@ export interface TaskQuery {
   sort: SortKey;
   /** Sorts run ascending unless this says otherwise. */
   descending: boolean;
+  /**
+   * How far ahead the list reaches.
+   *
+   * `week` is the default and the page is built around it: a list of everything
+   * an account has ever agreed to is a list nobody reads to the bottom of, and
+   * on a real account it is four hundred rows deep. What a reader can act on is
+   * what is late, what is today, and what is coming — so that is what the page
+   * shows, and the rest is one menu item away rather than gone.
+   *
+   * Undated tasks are inside the horizon. A task with no date is not far away;
+   * it is not on the axis at all, and hiding it behind a *time* filter would be
+   * the one way to lose a task in this app completely.
+   */
+  horizon: 'week' | 'all';
 }
 
 export const EMPTY_QUERY: TaskQuery = {
@@ -48,6 +62,7 @@ export const EMPTY_QUERY: TaskQuery = {
   priorities: [],
   sort: 'due',
   descending: false,
+  horizon: 'week',
 };
 
 /**
@@ -173,6 +188,15 @@ export function filterTasks(tasks: Task[], query: TaskQuery): Task[] {
     }
     if (query.priorities.length > 0 && !query.priorities.includes(task.priority)) {
       return false;
+    }
+
+    if (query.horizon === 'week') {
+      const bucket = bucketOf(task);
+      // Everything a reader can act on this week, plus the undated — see the
+      // note on `horizon`. `done` is let through because the status filter is
+      // what decides whether completed work is on the page at all, and a
+      // horizon that also hid it would make "Completed" show nothing.
+      if (bucket === 'later') return false;
     }
     return true;
   });
@@ -345,6 +369,7 @@ export function taskCounts(tasks: Task[], today = new Date()): TaskCounts {
 export function isFiltered(query: TaskQuery): boolean {
   return (
     query.status !== EMPTY_QUERY.status ||
+    query.horizon !== EMPTY_QUERY.horizon ||
     query.search.trim() !== '' ||
     query.subjects.length > 0 ||
     query.priorities.length > 0
@@ -369,6 +394,17 @@ export function isFiltered(query: TaskQuery): boolean {
  * shows in one place: a task deleted last week was never open on any of these
  * days, because it is not in the list to be asked about. The line is the shape
  * of the work that still exists, which is the only past the data supports.
+ *
+ * **`created_at` is clamped, because it is not always a creation time.** A task
+ * with `show_on_calendar` uses the field as the start of its block — see
+ * `plannedSeconds` — so a session scheduled for next Tuesday carries a
+ * `created_at` of next Tuesday. Read literally, every one of those counts as
+ * "not made yet" on every day of the window, and the first cut of this drew an
+ * Open line that fell to zero at today's edge while the card above it read 56.
+ * A task is therefore treated as existing from the earliest of its stated
+ * creation, its completion, and today: whatever the field says, a task that has
+ * been finished existed by the day it was finished, and one sitting open on the
+ * list exists now.
  */
 export interface StatSeries {
   open: number[];
@@ -377,6 +413,9 @@ export interface StatSeries {
   completion: number[];
   openXp: number[];
 }
+
+/** How far ahead `horizon: 'week'` reaches, in days. */
+export const HORIZON_DAYS = 7;
 
 /** How many days of history each sparkline draws. */
 export const TREND_DAYS = 14;
@@ -394,12 +433,15 @@ export function statSeries(tasks: Task[], today = new Date(), days = TREND_DAYS)
 
   // Parsed once rather than per day — this runs over every task in the account
   // for every day drawn, and the date parsing is the whole cost.
-  const parsed = tasks.map((task) => ({
-    made: dayOf(task.created_at),
-    due: dayOf(task.due_date),
-    done: task.status === 'done' ? dayOf(task.completed_at) ?? -Infinity : null,
-    xp: Number(task.xp_value) || 0,
-  }));
+  const parsed = tasks.map((task) => {
+    const done = task.status === 'done' ? dayOf(task.completed_at) ?? -Infinity : null;
+    const stated = dayOf(task.created_at);
+    // See the clamp note above. `end` is today, so an open task always exists by
+    // the last day drawn and the line cannot disagree with the card over it.
+    const made =
+      stated === null ? null : Math.min(stated, done === null ? end : Math.min(done, end));
+    return { made, due: dayOf(task.due_date), done, xp: Number(task.xp_value) || 0 };
+  });
 
   for (let step = days - 1; step >= 0; step--) {
     const day = end - step * DAY;
@@ -580,4 +622,9 @@ export function streaks(tasks: Task[], limit = 3, today = new Date()): Streak[] 
   });
 
   return out.sort((a, b) => b.days - a.days || a.title.localeCompare(b.title)).slice(0, limit);
+}
+
+/** Open tasks dated past the week — what the "show everything" line counts. */
+export function beyondHorizon(tasks: Task[], today = new Date()): number {
+  return tasks.filter((task) => bucketOf(task, today) === 'later').length;
 }

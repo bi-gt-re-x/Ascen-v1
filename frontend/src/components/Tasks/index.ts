@@ -19,10 +19,12 @@ export { BulkBar, Toolbar } from './Toolbar';
 export type { BulkBarProps, ToolbarProps } from './Toolbar';
 export {
   BUCKETS,
+  HORIZON_DAYS,
   EMPTY_QUERY,
   PRIORITIES,
   SORTS,
   TREND_DAYS,
+  beyondHorizon,
   bucketOf,
   plannedSeconds,
   dueLabel,
