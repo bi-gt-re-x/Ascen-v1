@@ -109,7 +109,6 @@ import {
   AlsoPanel,
   CategoryFilter,
   Caveat,
-  Opening,
   OutlookPanel,
 } from '@/components/Recommendations';
 import {
@@ -610,8 +609,11 @@ export default function Analytics() {
 
         {view.key === 'recommendations' && (
           <>
-            <section className="ax-section ax-grid ax-grid-halves-even">
-              <Opening advice={advice} outlook={projection} sample={adviceIsSample} />
+            {/* The projection alone, across the width. It used to share the row
+                with an opening panel restating the same figures in prose, which
+                left the chart — the thing the tab opens on — squeezed into half
+                a screen beside a column of text saying what it already showed. */}
+            <section className="ax-section">
               <OutlookPanel outlook={projection} sample={adviceIsSample} />
             </section>
             <section className="ax-section">

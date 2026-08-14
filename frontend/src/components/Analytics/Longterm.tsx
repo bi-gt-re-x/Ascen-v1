@@ -103,6 +103,14 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
     ...Array<null>(gapBefore).fill(null),
     ...forecast,
   ];
+  // The same curve again, whole, with nothing left out — this is what the wash
+  // under the chart is closed on. The two halves above are two lines because
+  // they are drawn at different weights, and filling under each of them
+  // separately is what put a vertical edge down the middle of the panel at
+  // today: either a cliff to the axis, or once both halves were filled, a
+  // hairline where the two areas met. One series, one path, no join. See `fill`
+  // on AreaSeries.
+  const wholeCurve: Array<number | null> = [...actualValues, ...forecast.slice(1)];
 
   // Points are placed by date rather than by index. The history is a point a
   // week and the forecast a point a quarter, so spacing them evenly handed
@@ -148,9 +156,12 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
         <AreaChart
           id="ax-compound"
           height={170}
+          // One wash across the whole span, then the two lines over it — the
+          // lighter one marking which half is measured and which is arithmetic.
           series={[
-            { values: projectedSeries, tone: 'violet', muted: true },
-            { values: actualSeries, tone: 'violet' },
+            { values: wholeCurve, tone: 'violet', line: false, fill: true },
+            { values: projectedSeries, tone: 'violet', muted: true, fill: false },
+            { values: actualSeries, tone: 'violet', fill: false },
           ]}
           ticks={ticks}
           marks={marks}

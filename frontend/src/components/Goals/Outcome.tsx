@@ -181,7 +181,7 @@ function Spark({ values, tone }: { values: number[]; tone: string }) {
   return (
     <svg className={`gx-spark tone-${tone}`} viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true">
       <path className="gx-spark-area" d={`${line} L100,26 L0,26 Z`} />
-      <path className="gx-spark-line" d={line} pathLength={1} />
+      <path className="gx-spark-line" d={line} />
     </svg>
   );
 }

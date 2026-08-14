@@ -2207,10 +2207,22 @@ html[data-theme="dark"] .gx-page {
     stroke-width: 1.6;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
-    stroke-dasharray: 1;
-    animation: gx-draw .8s ease-out both;
 }
-@keyframes gx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* The line wipes on rather than drawing itself on with `stroke-dasharray`.
+
+   The dash version left every one of these sparklines stopping partway across
+   and staying there: `pathLength` normalises the dash against the path's length
+   in *user* units, `vector-effect: non-scaling-stroke` makes the browser lay
+   the pattern out in *rendered* pixels, and `preserveAspectRatio="none"` sets
+   the two a whole scale factor apart — so the dash ran out before the line did
+   and the remainder fell in the gap. The analytics charts had the same fault
+   from the same three attributes; see the `ax-wipe` note in analytics.css. */
+.gx-spark { animation: gx-wipe .8s ease-out both; }
+@keyframes gx-wipe {
+    from { clip-path: inset(-8px 100% -8px -8px); }
+    to   { clip-path: inset(-8px -8px -8px -8px); }
+}
 
 /* ---------- Vision -------------------------------------------------------- */
 .gx-vision {
@@ -3240,10 +3252,9 @@ html[data-theme="dark"] .gx-page {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .gx-drawer, .gx-wizard, .gx-drawer-backdrop, .gx-spark-line { animation: none; }
+    .gx-drawer, .gx-wizard, .gx-drawer-backdrop, .gx-spark { animation: none; }
     /* The figures already stand still under this query — useCountUp reads it
        itself — so the arrival is the only thing left to switch off. */
     .gx-ladders > .gx-ladder, .gx-rails > .gx-rail { animation: none; }
-    .gx-spark-line { stroke-dasharray: none; }
     .gx-card { transition: none; }
 }

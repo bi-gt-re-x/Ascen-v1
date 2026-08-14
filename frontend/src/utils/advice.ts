@@ -323,7 +323,222 @@ export function recommendations(input: AdviceInput): Advice[] {
     }
   }
 
+  // ---- the floor ----------------------------------------------------------
+  // Topped up to FLOOR from the same measurements, read at a lower threshold.
+  // Nothing invented — see `fallbacks`.
+  if (out.length < FLOOR) {
+    const have = new Set(out.map((rule) => rule.id));
+    for (const rule of fallbacks(input, perDay, yearScale)) {
+      if (out.length >= FLOOR) break;
+      if (have.has(rule.id)) continue;
+      out.push(rule);
+      have.add(rule.id);
+    }
+  }
+
   return rank(out, perDay * 365);
+}
+
+/**
+ * The fewest suggestions the tab will show an account that has any at all.
+ *
+ * Three is what the layout is built for — `HEADLINE_ADVICE` in the page, and a
+ * row of three cards — and a tab that came back with one card had the rest of
+ * the row as empty space, which reads as something that failed to load rather
+ * than as an account with little to fix.
+ */
+const FLOOR = 3;
+
+/**
+ * What is drawn on to reach the floor, in the order it is drawn on.
+ *
+ * **These are not filler, and the distinction is the whole reason this is a
+ * separate pass.** Every one is the same measurement a rule above already gates
+ * on, read at a threshold low enough to nearly always have something to say:
+ * the strict gates answer "what is clearly wrong here", these answer "what is
+ * the most improvable thing here" — which has an answer for every account, and
+ * is a weaker claim, so they carry smaller numbers and sort below the real
+ * findings on their own merits rather than by being pinned there.
+ *
+ * They are only ever reached for when the strict pass came back short, and each
+ * is skipped if the strict pass already emitted the same id, so an account with
+ * three real findings never sees any of this.
+ */
+function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[] {
+  const { days, week, rhythm, balance, ratings } = input;
+  const out: Rule[] = [];
+
+  // ---- one more day in the week ------------------------------------------
+  // Any account that has ever skipped a day. One that has not is genuinely not
+  // being told to add a day it does not have.
+  if (rhythm.activeRate < 100) {
+    out.push({
+      id: 'one-more-day',
+      kind: 'frequency',
+      category: 'Consistency',
+      title: 'Add one more working day to the week',
+      because: `You carry work on ${Math.round(rhythm.activeRate)}% of the days in this range, so the
+        week already has room in it without any day you keep getting longer.`,
+      action: `Pick the day you most often skip — it is usually the same one — and give it the
+        smallest session you will still count as a day. The target is the day being on the board at
+        all, not what it is worth: this is the only change here that costs nothing on any of the days
+        you already work.`,
+      benefit: 'More days on the board, without a longer day on any of them.',
+      evidence: `${Math.round(rhythm.activeRate)}% of the ${rhythm.span.toLocaleString()} days in
+        this range carried work.`,
+      impact: Math.round(52 * perDay),
+      workings: `52 added days a year — one a week — at ${Math.round(perDay).toLocaleString()} XP on
+        a working day.`,
+      effort: 2,
+    });
+  }
+
+  // ---- the sitting, at a threshold that is not "too short" ----------------
+  // Two hours is where adding ten minutes stops being the cheap option and
+  // the session length stops being the thing worth changing.
+  if (rhythm.typicalSession > 0 && rhythm.typicalSession < 120) {
+    const extra = 10;
+    out.push({
+      id: 'longer-sittings',
+      kind: 'depth',
+      category: 'Focus',
+      title: 'Add ten minutes to the sitting you already have',
+      because: `Your typical sitting is ${Math.round(rhythm.typicalSession)} minutes. That is not
+        short, but the beginning of a session is its expensive part and you have already paid it.`,
+      action: `Extending a session you have started is cheaper than starting another one — the
+        finding of the place and the remembering of the problem are already done. Add the ten minutes
+        to the end of a sitting you were having anyway, rather than to the plan for tomorrow.`,
+      benefit: 'More work out of the sessions you are already sitting down for.',
+      evidence: `Typical sitting ${Math.round(rhythm.typicalSession)} minutes${
+        rhythm.longestSession ? `, against a best of ${Math.round(rhythm.longestSession.minutes)}` : ''
+      }, across the ${Math.round(rhythm.activeRate)}% of days you work.`,
+      impact: Math.round((extra / rhythm.typicalSession) * perDay * (rhythm.activeRate / 100) * 365),
+      workings: `A ${Math.round((extra / rhythm.typicalSession) * 100)}% longer sitting, on the
+        ${Math.round(rhythm.activeRate)}% of days you work, at your current rate per day.`,
+      effort: 1,
+    });
+  }
+
+  // ---- the two weakest graded metrics -------------------------------------
+  // The strict rule takes the weakest and only below 60. This takes the two
+  // lowest that are not already perfect — "the lowest of the five is where a
+  // point is cheapest" holds at any score, which is what makes it a fair thing
+  // to say to a strong account and the reason there is no band here.
+  if (ratings) {
+    const metrics = Object.entries(ratings.metrics) as Array<[string, { score: number }]>;
+    [...metrics]
+      .sort((a, b) => a[1].score - b[1].score)
+      .slice(0, 2)
+      .forEach(([name, metric]) => {
+        if (metric.score >= 100) return;
+        out.push({
+          id: `metric-${name}`,
+          kind: 'quality',
+          category: METRIC_CATEGORY[name] ?? 'Productivity',
+          title: `${name[0]!.toUpperCase()}${name.slice(1)} is the cheapest point on your report card`,
+          because: `It sits at ${metric.score}/100 — among the lowest of your five graded metrics, so
+            it is where a point of improvement costs you the least effort.`,
+          action: METRIC_ADVICE[name] ?? 'Work on this metric directly — it is among the lowest of the five.',
+          benefit: 'A better grade for less work than any of the other four would take.',
+          evidence: `${name} scores ${metric.score}/100 against a best of ${Math.max(
+            ...metrics.map(([, entry]) => entry.score),
+          )}/100 elsewhere on the card.`,
+          impact: 0,
+          workings: 'No XP claim: the report card grades how you work, not how much.',
+          effort: 2,
+        });
+      });
+  }
+
+  // ---- the shape of the week, at a threshold below "lopsided" -------------
+  // Any account carrying more than one subject: "should it be this share" is a
+  // fair question at 30% and still a fair one at 12%.
+  if (balance.leader && balance.carrying > 1) {
+    out.push({
+      id: 'rebalance',
+      kind: 'balance',
+      category: 'Subject Balance',
+      title: `Decide whether ${balance.leader} should be ${balance.concentration}% of your week`,
+      because: `${balance.leader} takes ${balance.concentration}% of your XP across
+        ${balance.carrying} subjects with real weight behind them.`,
+      action: `Depth is how anything gets mastered and an account spread evenly over nine subjects is
+        an account getting good at none of them — so this is not a fault. It is worth being a
+        decision rather than a habit: if it is deliberate, protect it; if it is drift, one recurring
+        session on the subject you would rather be building is the whole fix.`,
+      benefit: 'The shape of your week becomes a decision instead of an accident.',
+      evidence: `${balance.leader} holds ${balance.concentration}% of your XP across ${balance.carrying} subjects with real weight behind them.`,
+      impact: 0,
+      workings: 'No XP claim: the total does not change, only what it is made of.',
+      effort: 1,
+    });
+  }
+
+  // ---- the quietest day of the week ---------------------------------------
+  // Seven averages always exist, and unless they are all identical one of them
+  // is the lowest. Distinct from the weekend rule above, which fires only on a
+  // whole weekend running light — this is about a single named day.
+  const byDay = [...week.stats].sort((a, b) => a.avgXp - b.avgXp);
+  const quietest = byDay[0];
+  const busiest = byDay[byDay.length - 1];
+  if (quietest && busiest && busiest.avgXp > quietest.avgXp && quietest.days > 0) {
+    const lift = (busiest.avgXp - quietest.avgXp) * 0.5;
+    out.push({
+      id: 'quietest-weekday',
+      kind: 'timing',
+      category: 'Scheduling',
+      title: `${quietest.label} is the day that goes missing`,
+      because: `${quietest.label}s average ${Math.round(quietest.avgXp).toLocaleString()} XP against
+        ${Math.round(busiest.avgXp).toLocaleString()} on a ${busiest.label}, and it is the same day
+        every week rather than a run of bad luck.`,
+      action: `A weekday that is reliably quieter than the rest is usually a scheduling fact rather
+        than a motivation one — something else has that slot. Find what it is before deciding it is a
+        discipline problem, then give the day one fixed session at an hour that is actually free.`,
+      benefit: 'A week without a hole in the same place in it.',
+      evidence: `${quietest.label} averages ${Math.round(quietest.avgXp).toLocaleString()} XP across
+        ${quietest.days} of them, ${Math.round(quietest.activeRate)}% of which carried any work.`,
+      impact: Math.round(lift * 52),
+      workings: `Half the gap to your best weekday, ${Math.round(lift).toLocaleString()} XP, on the
+        52 ${quietest.label}s in a year.`,
+      effort: 2,
+    });
+  }
+
+  // ---- the quiet working days ---------------------------------------------
+  // The last resort, and the one with no threshold at all: every account that
+  // has worked at all has a weakest quarter of its working days.
+  const worked = days
+    .map((day) => Number(day.xp_earned) || 0)
+    .filter((xp) => xp > 0)
+    .sort((a, b) => a - b);
+  if (worked.length >= 4) {
+    const median = worked[Math.floor(worked.length / 2)]!;
+    const quiet = worked.slice(0, Math.max(1, Math.floor(worked.length / 4)));
+    const quietAvg = quiet.reduce((sum, xp) => sum + xp, 0) / quiet.length;
+    if (median > quietAvg) {
+      out.push({
+        id: 'raise-the-floor',
+        kind: 'depth',
+        category: 'Consistency',
+        title: 'Raise the floor rather than the ceiling',
+        because: `Your quietest working days average ${Math.round(quietAvg).toLocaleString()} XP
+          against a typical day's ${Math.round(median).toLocaleString()} — the spread between your
+          days is wider than the spread between your weeks.`,
+        action: `A best day is not repeatable on demand and a quiet day usually is: the quiet ones
+          are where the recoverable work is. Set the minimum you will do on a day you have already
+          decided to work, and hold that rather than trying to beat your record.`,
+        benefit: 'A steadier week, from the days you were going to work anyway.',
+        evidence: `The quietest ${quiet.length} of ${worked.length} working days average
+          ${Math.round(quietAvg).toLocaleString()} XP, against a median of
+          ${Math.round(median).toLocaleString()}.`,
+        impact: Math.round((median - quietAvg) * quiet.length * yearScale),
+        workings: `${quiet.length} quiet days lifted to the median, a gain of
+          ${Math.round(median - quietAvg).toLocaleString()} XP each, scaled to a year.`,
+        effort: 2,
+      });
+    }
+  }
+
+  return out;
 }
 
 /**

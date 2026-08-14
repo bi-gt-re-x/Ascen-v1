@@ -140,20 +140,19 @@ export function Sparkline({ values, tone }: SparklineProps) {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
+      {/* Closed on the extent the line covers rather than on the box. A tile's
+          series is normally gapless and the two are then the same thing, but a
+          metric that cannot be read for a day arrives as a hole, and closing on
+          the box would have run the wash out to an edge the line never got to. */}
       <path
         className="ax-spark-area"
-        d={`${path} L${width},${height} L0,${height} Z`}
+        d={`${path} L${drawn.toX.toFixed(2)},${height} L${drawn.fromX.toFixed(2)},${height} Z`}
         fill={toneVar(tone)}
         opacity="0.12"
       />
-      {/* `pathLength={1}` normalises the line's length to 1 whatever its shape,
-          which is what lets one CSS rule draw every line on the page with
-          `stroke-dasharray: 1` and no measuring in JS. See `ax-draw` in
-          styles/analytics.css. */}
       <path
         className="ax-spark-line"
         d={path}
-        pathLength={1}
         fill="none"
         stroke={toneVar(tone)}
         strokeWidth="1.4"
@@ -182,6 +181,42 @@ export interface AreaSeries {
    * the flat parts.
    */
   muted?: boolean;
+  /**
+   * Whether the area under this line is filled. Defaults to `!muted`.
+   *
+   * The default is right for an *overlay* — the trajectory panel draws the
+   * previous period over the current one, and two stacked translucent washes
+   * there would leave a middle band that belongs to neither line. It is wrong
+   * for a *continuation*: the compounding chart's line is one curve cut in half
+   * at today, and filling only the history ended the wash in a vertical cliff
+   * down to the axis in the middle of the panel with the line carrying on above
+   * it. That chart passes a third series — the whole curve, `line: false` — to
+   * fill under both halves at once.
+   *
+   * **A continuation is filled by one series covering all of it, never by two
+   * filled halves.** Two filled paths meeting on an exact edge are antialiased
+   * independently either side of it and the join comes out as a hairline: dark
+   * where they abut, because neither side lays down full coverage, and bright
+   * where they are overlapped to avoid that, because both do. A single path has
+   * no interior edge to seam.
+   */
+  fill?: boolean;
+  /**
+   * Whether this series draws its line. Defaults to true.
+   *
+   * `false` is for a series that exists to be the fill under other series' lines
+   * — see `fill` above. It keeps the two halves of the compounding curve as the
+   * separate lines they need to be, drawn at different weights, over one
+   * unbroken wash.
+   */
+  line?: boolean;
+}
+
+/** How far back a series is painted: the wash, then the second line, then the
+ *  headline one. Lower goes down first. */
+function depth(entry: AreaSeries): number {
+  if (entry.line === false) return 0;
+  return entry.muted ? 1 : 2;
 }
 
 export interface AreaChartProps {
@@ -236,6 +271,12 @@ export function AreaChart({ series, ticks, marks, id, at, height = 200 }: AreaCh
           <defs>
             {series.map((entry, index) => (
               <linearGradient key={index} id={`${id}-fill-${index}`} x1="0" y1="0" x2="0" y2="1">
+                {/* Every filled series gets the same wash, including a forecast
+                    half. Giving that one a lighter stop looked reasonable and
+                    drew a hard vertical edge down the middle of the compounding
+                    panel — the same edge the unfilled version had, in a paler
+                    colour. The line above it already carries the distinction at
+                    `is-muted`, which is the mark a reader is looking at. */}
                 <stop offset="0%" stopColor={toneVar(entry.tone)} stopOpacity="0.32" />
                 <stop offset="100%" stopColor={toneVar(entry.tone)} stopOpacity="0" />
               </linearGradient>
@@ -257,39 +298,54 @@ export function AreaChart({ series, ticks, marks, id, at, height = 200 }: AreaCh
             );
           })}
 
-          {[...series]
-            .sort((a, b) => Number(Boolean(b.muted)) - Number(Boolean(a.muted)))
-            .map((entry, index) => {
+          {/* Painted back to front: a bare wash, then the second line, then the
+              headline one, so the series a reader came for wins wherever they
+              cross and no fill lands on top of a line.
+
+              Sorted for that order, but each entry keeps the index it had in
+              `series` — that index names its gradient in `defs` above, and
+              reading it off the sorted position instead handed every filled
+              series the gradient belonging to whichever series happened to sort
+              into its slot. Invisible while one chart's series shared a tone,
+              and a silently wrong colour the moment one did not. */}
+          {series
+            .map((entry, index) => ({ entry, index }))
+            .sort((a, b) => depth(a.entry) - depth(b.entry))
+            .map(({ entry, index }) => {
               const drawn = linePath(entry.values, width, height, min, max, 4, at);
               if (!drawn) return null;
+              const filled = entry.fill ?? !entry.muted;
               return (
                 <g key={index}>
                   {/* The area closes on the extent the line actually covers,
                       not on the box: a series that stops halfway across — the
                       history under a forecast — would otherwise be filled with
                       a diagonal running off to the far corner. */}
-                  {!entry.muted && (
+                  {filled && (
                     <path
                       className="ax-chart-area"
                       d={`${drawn.d} L${drawn.toX.toFixed(2)},${height} L${drawn.fromX.toFixed(2)},${height} Z`}
                       fill={`url(#${id}-fill-${index})`}
                     />
                   )}
-                  {/* Both lines draw the same way — `stroke-dasharray` is the
-                      entrance animation's property now that no series is drawn
-                      as a pattern, so every line on the page sweeps in solid
-                      and stays solid. */}
-                  <path
-                    className={`ax-chart-line${entry.muted ? ' is-muted' : ''}`}
-                    d={drawn.d}
-                    pathLength={1}
-                    fill="none"
-                    stroke={toneVar(entry.tone)}
-                    strokeWidth={entry.muted ? 1.5 : 2}
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                    vectorEffect="non-scaling-stroke"
-                  />
+                  {/* No `pathLength` here, and that is deliberate — see the
+                      `ax-wipe` note in styles/analytics.css. It existed only to
+                      normalise the old `stroke-dasharray` entrance, which it
+                      could not do on a line that also carries
+                      `non-scaling-stroke`, and the cost was every line on the
+                      page stopping partway across and staying there. */}
+                  {(entry.line ?? true) && (
+                    <path
+                      className={`ax-chart-line${entry.muted ? ' is-muted' : ''}`}
+                      d={drawn.d}
+                      fill="none"
+                      stroke={toneVar(entry.tone)}
+                      strokeWidth={entry.muted ? 1.5 : 2}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )}
                 </g>
               );
             })}

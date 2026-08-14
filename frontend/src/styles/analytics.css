@@ -1459,76 +1459,6 @@ html[data-theme="dark"] .ax-page {
 .ax-split-row.is-rest .ax-split-share { color: var(--ax-muted); font-weight: 500; }
 .ax-split-row.is-rest .ax-split-track i { background: var(--ax-line); }
 
-/* ---------- Where the room is --------------------------------------------- */
-/* The opening panel shares a row with the five-year projection beside it, and
-   the row stretches both to the height of the taller — which for a card holding
-   two paragraphs meant most of it was blank. It carries the per-suggestion
-   breakdown now, and the closing caveat is pushed to the floor so the card is
-   read top to bottom rather than clustering at the top of a tall box. */
-.ax-opening > .ax-prose:last-child { margin-top: auto; padding-top: 6px; }
-
-.ax-room {
-    list-style: none;
-    margin: 14px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-}
-
-.ax-room-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 92px auto;
-    align-items: center;
-    gap: 10px;
-    font-size: 11.5px;
-}
-
-.ax-room-name {
-    color: var(--ax-text);
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.ax-room-track {
-    height: 7px;
-    border-radius: 4px;
-    background: var(--ax-line-soft);
-    overflow: hidden;
-}
-.ax-room-track i {
-    display: block;
-    height: 100%;
-    border-radius: 4px;
-    /* Same entrance as every other bar on the page — see the `ax-grow` block. */
-    transform-origin: left;
-    animation: ax-room-fill .55s cubic-bezier(.22, .68, .3, 1) .2s both;
-}
-@keyframes ax-room-fill {
-    from { transform: scaleX(0); }
-    to   { transform: scaleX(1); }
-}
-
-.ax-room-xp {
-    font-weight: 600;
-    color: var(--ax-text);
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-}
-
-.ax-room-rest {
-    margin: 11px 0 0;
-    font-size: 11.5px;
-    line-height: 1.55;
-    color: var(--ax-faint);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .ax-room-track i { animation: none; }
-}
-
 /* ---------- Advice cards -------------------------------------------------- */
 .ax-advice { gap: 0; }
 
@@ -1749,16 +1679,33 @@ html[data-theme="dark"] .ax-page {
     to   { opacity: 1; transform: none; }
 }
 
-/* A line drawing itself on. Every stroked path on the page carries
-   `pathLength="1"` (see charts.tsx), so one dash length fits all of them. */
-@keyframes ax-draw {
-    from { stroke-dashoffset: 1; }
-    to   { stroke-dashoffset: 0; }
-}
+/* A chart drawing itself on, left to right.
 
-@keyframes ax-fade {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+   This was a `stroke-dasharray` reveal on paths carrying `pathLength="1"`, and
+   the way that failed is worth recording, because it did not present as an
+   animation bug at all: the lines stopped *permanently*, partway across, at a
+   point that moved whenever the panel changed width — so it read as bad data,
+   or a broken scale, or a clipped viewBox, and none of those were it.
+
+   `pathLength` restates a path's length in *user* units and dash values are
+   scaled to match. `vector-effect: non-scaling-stroke` — which every line here
+   needs, because `preserveAspectRatio="none"` stretches the box horizontally
+   and would otherwise draw a 2px stroke at 3.5px across and 2px down — makes
+   the browser lay the dash pattern out in *rendered* pixels instead. The two
+   measurements disagree by exactly the chart's horizontal scale factor, so
+   `stroke-dasharray: 1` covered around six tenths of the drawn line and the
+   remainder fell in the gap that follows it. `stroke-dashoffset` sat at its
+   finished 0 the whole time, which is why every attempt to fix this by
+   adjusting the animation changed nothing: the animation was already over.
+
+   A wipe has no such coupling — it is a box, it knows nothing about path
+   length, and it reveals the area and its line together instead of fading one
+   in under the other. The insets are negative on the three edges not doing the
+   wiping so that a stroke sitting on the top or bottom of the box is not
+   shaved off by its own entrance. */
+@keyframes ax-wipe {
+    from { clip-path: inset(-12px 100% -12px -12px); }
+    to   { clip-path: inset(-12px -12px -12px -12px); }
 }
 
 /* A bar rising out of its own baseline. `scaleY` rather than `height` so the
@@ -1794,15 +1741,12 @@ html[data-theme="dark"] .ax-page {
 /* ---- The marks themselves ------------------------------------------------ */
 /* Held back by the panel's own arrival so the line is drawn on a card that has
    already landed, rather than on one still moving under it. */
-.ax-chart-line,
-.ax-spark-line {
-    stroke-dasharray: 1;
-    animation: ax-draw .85s ease-out .16s both;
-}
-
-.ax-chart-area,
-.ax-spark-area {
-    animation: ax-fade .6s ease-out .34s both;
+/* One entrance for the whole drawing rather than one per path: the line and
+   the wash under it are the same mark, and revealing them on separate timings
+   was what put a filled area on screen ahead of the line that bounds it. */
+.ax-chart-svg,
+.ax-spark {
+    animation: ax-wipe .85s ease-out .16s both;
 }
 
 /* The comparison line: same colour, same solid stroke, less of it. Weight and
@@ -1837,10 +1781,8 @@ html[data-theme="dark"] .ax-page {
 
     .ax-panel,
     .ax-tiles > *,
-    .ax-chart-line,
-    .ax-spark-line,
-    .ax-chart-area,
-    .ax-spark-area,
+    .ax-chart-svg,
+    .ax-spark,
     .ax-bar,
     .ax-column-bar,
     .ax-factor-track i,
@@ -1848,8 +1790,6 @@ html[data-theme="dark"] .ax-page {
     .ax-radar-shape {
         animation: none;
     }
-    .ax-chart-line,
-    .ax-spark-line { stroke-dasharray: none; }
 }
 
 /* ==========================================================================
