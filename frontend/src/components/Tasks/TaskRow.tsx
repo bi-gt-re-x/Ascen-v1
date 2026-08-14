@@ -1,150 +1,214 @@
 /**
  * One task, as a row.
  *
- * The row is the whole of the page's interaction surface: tick it off, rename
- * it in place, select it for a bulk action, or throw it away. There is no
- * detail drawer and there should not be one — a task is a title, a date, a
- * priority and an XP value, and every one of those fits on the row it is
- * already on. A drawer would be a second place to change the same four fields.
+ * The row answers, left to right, the questions asked of it in order: is it
+ * done, what is it, how urgent, what is it about, when is it owed, how long
+ * will it take, what is it worth. The colour down the left edge repeats the
+ * priority rather than replacing the badge — it is what makes a screenful of
+ * rows scannable at a glance, and a colour alone would be the only carrier of
+ * the information for a reader who cannot see it.
  *
- * Renaming is inline and commits on blur or Enter, cancels on Escape. That is
- * the one edit worth making frictionless: a task's name is the thing most
- * often written in a hurry and most often wrong.
+ * Renaming happens in place: double-click the title, or press Enter on it. The
+ * alternative is a dialog for the single most common edit there is.
  */
 import { useEffect, useRef, useState } from 'react';
-import { dueLabel } from './board';
 import type { Task } from '@/types';
+import { dueLine, spellDuration } from './board';
 
 export interface TaskRowProps {
   task: Task;
-  /** The subject's display name, already looked up. Null when it has none. */
+  /** The subject's printable name, already looked up. */
   subject: string | null;
+  /** Seconds set aside for it on the calendar, or null when it has no block. */
+  estimate: number | null;
   selected: boolean;
-  /** True while this row's own write is in flight. */
+  starred: boolean;
   busy: boolean;
-  onSelect: (task: Task, selected: boolean) => void;
+  onSelect: (task: Task, on: boolean) => void;
   onComplete: (task: Task) => void;
   onReopen: (task: Task) => void;
   onRename: (task: Task, title: string) => void;
   onDelete: (task: Task) => void;
-  today?: Date;
+  onStar: (task: Task) => void;
 }
+
+const CAL = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <path d="M3 10h18M8 3v4M16 3v4" />
+  </svg>
+);
+
+const CLOCK = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+);
 
 export function TaskRow({
   task,
   subject,
+  estimate,
   selected,
+  starred,
   busy,
   onSelect,
   onComplete,
   onReopen,
   onRename,
   onDelete,
-  today,
+  onStar,
 }: TaskRowProps) {
   const done = task.status === 'done';
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
-  const input = useRef<HTMLInputElement>(null);
-
-  // The page re-reads after a refresh and the task arrives as a new object.
-  // Re-seed while the editor is closed; while it is open the draft is the
-  // reader's and nothing may touch it.
-  useEffect(() => {
-    if (!editing) setDraft(task.title);
-  }, [task.title, editing]);
+  const [menu, setMenu] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (editing) input.current?.select();
+    if (editing) field.current?.select();
   }, [editing]);
 
+  useEffect(() => {
+    if (!menu) return;
+    const away = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setMenu(false);
+    };
+    document.addEventListener('mousedown', away);
+    return () => document.removeEventListener('mousedown', away);
+  }, [menu]);
+
   const commit = () => {
-    const title = draft.trim();
+    const next = draft.trim();
     setEditing(false);
-    if (!title || title === task.title) {
-      setDraft(task.title);
-      return;
-    }
-    onRename(task, title);
+    if (next && next !== task.title) onRename(task, next);
+    else setDraft(task.title);
   };
 
-  const when = dueLabel(task, today);
-  const late = !done && when !== null && when.endsWith('late');
+  const when = dueLine(task);
 
   return (
-    <li className={`tk-row pri-${task.priority}${done ? ' is-done' : ''}${selected ? ' is-picked' : ''}`}>
-      <label className="tk-pick">
+    <li className={`tk-row is-${task.priority}${done ? ' is-done' : ''}${busy ? ' is-busy' : ''}`}>
+      <label className="tk-check">
         <input
           type="checkbox"
-          checked={selected}
-          onChange={(event) => onSelect(task, event.target.checked)}
-          aria-label={`Select ${task.title}`}
+          checked={done}
+          disabled={busy}
+          aria-label={done ? `Re-open ${task.title}` : `Complete ${task.title}`}
+          onChange={() => (done ? onReopen(task) : onComplete(task))}
         />
+        <span aria-hidden="true" />
       </label>
 
-      {/* The tick is a button rather than a checkbox: completing is a write
-          with XP, a streak and a level behind it, not a field being set. */}
-      <button
-        type="button"
-        className="tk-tick"
-        disabled={busy}
-        aria-pressed={done}
-        aria-label={`${done ? 'Reopen' : 'Complete'} ${task.title}`}
-        onClick={() => (done ? onReopen(task) : onComplete(task))}
-      >
-        {done ? '✓' : ''}
-      </button>
+      <div className="tk-row-body">
+        <div className="tk-row-line">
+          {editing ? (
+            <input
+              ref={field}
+              className="tk-rename"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onBlur={commit}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') commit();
+                if (event.key === 'Escape') {
+                  setDraft(task.title);
+                  setEditing(false);
+                }
+              }}
+            />
+          ) : (
+            <span
+              className="tk-title"
+              role="button"
+              tabIndex={0}
+              title="Double-click to rename"
+              onDoubleClick={() => setEditing(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') setEditing(true);
+              }}
+            >
+              {task.title}
+            </span>
+          )}
+          <span className={`tk-tag is-${task.priority}`}>
+            {task.priority[0]!.toUpperCase() + task.priority.slice(1)}
+          </span>
+          {subject && <span className="tk-tag is-subject">{subject}</span>}
+        </div>
 
-      <div className="tk-body">
-        {editing ? (
-          <input
-            ref={input}
-            className="tk-rename"
-            value={draft}
-            aria-label={`Rename ${task.title}`}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={commit}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') commit();
-              if (event.key === 'Escape') {
-                setDraft(task.title);
-                setEditing(false);
-              }
-            }}
-          />
-        ) : (
-          <button
-            type="button"
-            className="tk-title"
-            onClick={() => setEditing(true)}
-            title="Click to rename"
-          >
-            {task.title}
-          </button>
-        )}
-
-        <div className="tk-meta">
-          <span className={`tk-pri is-${task.priority}`}>{task.priority}</span>
-          {subject && <span className="tk-subject">{subject}</span>}
-          {when && <span className={`tk-due${late ? ' is-late' : ''}`}>{when}</span>}
-          {task.goal_id && <span className="tk-linked">goal</span>}
+        <div className="tk-row-meta">
+          {when && (
+            <span className={task.status !== 'done' && when.includes('late') ? 'is-late' : undefined}>
+              <i aria-hidden="true">{CAL}</i>
+              {when}
+            </span>
+          )}
+          {estimate !== null && (
+            <span title="The block you set aside for this on the calendar">
+              <i aria-hidden="true">{CLOCK}</i>
+              Est. {spellDuration(estimate)}
+            </span>
+          )}
         </div>
       </div>
 
-      <span className="tk-xp">{Number(task.xp_value) || 0} XP</span>
+      <span className="tk-xp">+{(Number(task.xp_value) || 0).toLocaleString()} XP</span>
 
       <button
         type="button"
-        className="tk-drop"
-        disabled={busy}
-        aria-label={`Delete ${task.title}`}
-        title="Delete"
-        onClick={() => onDelete(task)}
+        className={`tk-star${starred ? ' is-on' : ''}`}
+        aria-pressed={starred}
+        aria-label={starred ? `Unstar ${task.title}` : `Star ${task.title}`}
+        onClick={() => onStar(task)}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+        <svg viewBox="0 0 24 24" fill={starred ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+          <path d="M12 3.5l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.9l6-.8z" />
         </svg>
       </button>
+
+      <div className="tk-row-menu" ref={menuRef}>
+        <button
+          type="button"
+          className="tk-more"
+          aria-label={`More for ${task.title}`}
+          aria-expanded={menu}
+          onClick={() => setMenu(!menu)}
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="1.7" />
+            <circle cx="12" cy="12" r="1.7" />
+            <circle cx="19" cy="12" r="1.7" />
+          </svg>
+        </button>
+        {menu && (
+          <div className="tk-menu-panel is-row">
+            <button type="button" className="tk-menu-item" onClick={() => { setMenu(false); setEditing(true); }}>
+              Rename
+            </button>
+            <label className="tk-menu-item is-pick">
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={(event) => onSelect(task, event.target.checked)}
+              />
+              Select
+            </label>
+            <button type="button" className="tk-menu-item" onClick={() => { setMenu(false); onStar(task); }}>
+              {starred ? 'Remove star' : 'Star'}
+            </button>
+            <button
+              type="button"
+              className="tk-menu-item is-bad"
+              onClick={() => { setMenu(false); onDelete(task); }}
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
     </li>
   );
 }

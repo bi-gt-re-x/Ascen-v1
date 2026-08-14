@@ -1,177 +1,349 @@
 /**
- * The controls above the list, and the figures above those.
+ * The controls: a search, three menus, and two rows of chips.
  *
- * Every control writes one field of the `TaskQuery` the page holds. None of
- * them holds state of its own, so there is exactly one description of what the
- * reader is looking at and the page can put it in a URL, keep it across a
- * refresh, or reset it in one assignment when that day comes.
+ * The split between the menus and the chips is the split between *rare* and
+ * *constant*. Priority and subject are the two cuts a reader makes over and
+ * over while working through a list, so they are chips — always visible, one
+ * click, and the current state readable without opening anything. Status,
+ * grouping and ordering are set once and left, so they are menus, where they
+ * cost a click to reach and nothing to ignore.
  *
- * The counts are counted off the whole list, never the filtered one — see
- * `taskCounts`. A summary that moved when a filter was typed into would be
- * measuring the filter rather than the account.
+ * Every menu closes on Escape and on a click outside it, which is the whole of
+ * `useDismiss`. Only one may be open at a time — they sit side by side and two
+ * open panels would overlap each other.
  */
-import { useCountUp } from '@/hooks';
-import { PRIORITIES, SORTS, isFiltered, type TaskCounts, type TaskQuery } from './board';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Subject } from '@/services/subjects';
+import type { SortKey, StatusFilter, TaskQuery } from './board';
+import { PRIORITIES, SORTS, isFiltered } from './board';
 
-export interface SummaryProps {
-  counts: TaskCounts;
+/** Subject chips shown before the rest go behind "+ More". */
+const CHIPS = 7;
+
+const STATUSES: Array<{ key: StatusFilter; label: string }> = [
+  { key: 'open', label: 'Open tasks' },
+  { key: 'done', label: 'Completed' },
+  { key: 'all', label: 'Everything' },
+];
+
+function useDismiss(onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const away = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) onClose();
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [onClose]);
+
+  return ref;
 }
 
-export function TaskSummary({ counts }: SummaryProps) {
-  // Counted to rather than replaced, the same way every other figure in the
-  // app moves — see hooks/useCountUp.
-  const open = Math.round(useCountUp(counts.open));
-  const overdue = Math.round(useCountUp(counts.overdue));
-  const today = Math.round(useCountUp(counts.today));
-  const openXp = Math.round(useCountUp(counts.openXp));
-
-  const tiles = [
-    { key: 'open', value: open, label: 'Open', foot: `${counts.done} finished so far` },
-    {
-      key: 'today',
-      value: today,
-      label: 'Due today',
-      foot: counts.todayXp > 0 ? `${counts.todayXp} XP earned today` : 'nothing banked yet today',
-    },
-    {
-      key: 'overdue',
-      value: overdue,
-      label: 'Overdue',
-      foot: overdue === 0 ? 'nothing is late' : 'oldest first below',
-    },
-    { key: 'xp', value: openXp, label: 'XP on the table', foot: 'if you finished all of it' },
-  ];
+function Menu({
+  name,
+  label,
+  icon,
+  open,
+  onOpen,
+  children,
+  on,
+}: {
+  name: string;
+  label: string;
+  icon: React.ReactNode;
+  open: boolean;
+  onOpen: (name: string | null) => void;
+  children: React.ReactNode;
+  /** Whether this menu is holding a non-default setting. */
+  on?: boolean;
+}) {
+  const close = useCallback(() => onOpen(null), [onOpen]);
+  const ref = useDismiss(close);
 
   return (
-    <div className="tk-summary">
-      {tiles.map((tile) => (
-        <article className={`tk-stat is-${tile.key}`} key={tile.key}>
-          <strong>{tile.value.toLocaleString()}</strong>
-          <span className="tk-stat-label">{tile.label}</span>
-          <span className="tk-quiet">{tile.foot}</span>
-        </article>
-      ))}
+    <div className="tk-menu" ref={ref}>
+      <button
+        type="button"
+        className={`tk-tool${open ? ' is-open' : ''}${on ? ' is-on' : ''}`}
+        aria-expanded={open}
+        onClick={() => onOpen(open ? null : name)}
+      >
+        {icon}
+        {label}
+      </button>
+      {open && <div className="tk-menu-panel">{children}</div>}
     </div>
   );
 }
+
+const ICON = {
+  search: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </svg>
+  ),
+  filter: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M3 6h18M7 12h10M10 18h4" />
+    </svg>
+  ),
+  group: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M4 6h16M4 12h16M4 18h16" />
+      <circle cx="2.5" cy="6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="2.5" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="2.5" cy="18" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  sort: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 4v16M7 20l-3-3M7 20l3-3" />
+      <path d="M17 20V4M17 4l-3 3M17 4l3 3" />
+    </svg>
+  ),
+};
+
+const PRIORITY_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+    <path d="M12 4l9 16H3z" />
+  </svg>
+);
 
 export interface ToolbarProps {
   query: TaskQuery;
   onQuery: (next: TaskQuery) => void;
-  /** The subjects actually used by this account's tasks, for the facet. */
+  /** Only the subjects this account actually files things under. */
   subjects: Subject[];
-  /** How many rows survive the current query, for the "showing N" line. */
   showing: number;
   total: number;
+  /** Whether the reader has asked for headings by due date. */
+  grouped: boolean;
+  onGrouped: (on: boolean) => void;
 }
 
-export function Toolbar({ query, onQuery, subjects, showing, total }: ToolbarProps) {
-  const set = <K extends keyof TaskQuery>(key: K, value: TaskQuery[K]) =>
-    onQuery({ ...query, [key]: value });
+export function Toolbar({
+  query,
+  onQuery,
+  subjects,
+  showing,
+  total,
+  grouped,
+  onGrouped,
+}: ToolbarProps) {
+  const [open, setOpen] = useState<string | null>(null);
+  const [more, setMore] = useState(false);
+  const box = useRef<HTMLInputElement>(null);
 
-  /** Facets toggle: in the list means "keep only these", out means "all". */
-  const toggle = <T,>(list: T[], value: T): T[] =>
-    list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
+  // ⌘K / Ctrl-K puts the cursor in the search, which is the shortcut the
+  // placeholder advertises. Advertising one and not binding it is worse than
+  // not advertising it.
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        box.current?.focus();
+        box.current?.select();
+      }
+    };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
+  }, []);
+
+  const set = useCallback(
+    (patch: Partial<TaskQuery>) => onQuery({ ...query, ...patch }),
+    [onQuery, query],
+  );
+
+  const togglePriority = (priority: (typeof PRIORITIES)[number] | null) => {
+    if (priority === null) return set({ priorities: [] });
+    return set({ priorities: query.priorities.includes(priority) ? [] : [priority] });
+  };
+
+  const toggleSubject = (id: string) => {
+    const on = query.subjects.includes(id);
+    set({ subjects: on ? query.subjects.filter((entry) => entry !== id) : [...query.subjects, id] });
+  };
+
+  const shown = more ? subjects : subjects.slice(0, CHIPS);
+  const sort = SORTS.find((entry) => entry.key === query.sort);
 
   return (
-    <div className="tk-tools">
-      <div className="tk-tools-row">
+    <div className="tk-toolbar">
+      <div className="tk-toolbar-top">
         <label className="tk-search">
-          <span className="tk-sr">Search tasks</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.5-3.5" />
-          </svg>
+          <span className="tk-search-ico" aria-hidden="true">
+            {ICON.search}
+          </span>
           <input
+            ref={box}
             type="search"
-            placeholder="Search by name"
             value={query.search}
-            onChange={(event) => set('search', event.target.value)}
+            placeholder="Search tasks…"
+            aria-label="Search tasks"
+            onChange={(event) => set({ search: event.target.value })}
           />
+          <kbd aria-hidden="true">⌘K</kbd>
         </label>
 
-        <div className="tk-segment" role="group" aria-label="Which tasks">
-          {(['open', 'done', 'all'] as const).map((status) => (
+        <div className="tk-tools">
+          <Menu
+            name="filter"
+            label="Filter"
+            icon={ICON.filter}
+            open={open === 'filter'}
+            onOpen={setOpen}
+            on={isFiltered(query)}
+          >
+            <p className="tk-menu-head">Show</p>
+            {STATUSES.map((entry) => (
+              <button
+                key={entry.key}
+                type="button"
+                className={`tk-menu-item${query.status === entry.key ? ' is-on' : ''}`}
+                onClick={() => set({ status: entry.key })}
+              >
+                {entry.label}
+              </button>
+            ))}
+            {isFiltered(query) && (
+              <button
+                type="button"
+                className="tk-menu-clear"
+                onClick={() =>
+                  set({ status: 'open', search: '', subjects: [], priorities: [] })
+                }
+              >
+                Clear every filter
+              </button>
+            )}
+          </Menu>
+
+          <Menu
+            name="group"
+            label="Group"
+            icon={ICON.group}
+            open={open === 'group'}
+            onOpen={setOpen}
+            on={!grouped}
+          >
+            <p className="tk-menu-head">Headings</p>
             <button
-              key={status}
               type="button"
-              className={`tk-seg${query.status === status ? ' is-on' : ''}`}
-              aria-pressed={query.status === status}
-              onClick={() => set('status', status)}
+              className={`tk-menu-item${grouped ? ' is-on' : ''}`}
+              onClick={() => onGrouped(true)}
             >
-              {status === 'open' ? 'Open' : status === 'done' ? 'Completed' : 'All'}
+              By due date
+            </button>
+            <button
+              type="button"
+              className={`tk-menu-item${grouped ? '' : ' is-on'}`}
+              onClick={() => onGrouped(false)}
+            >
+              One flat list
+            </button>
+          </Menu>
+
+          <Menu
+            name="sort"
+            label="Sort"
+            icon={ICON.sort}
+            open={open === 'sort'}
+            onOpen={setOpen}
+            on={query.sort !== 'due' || query.descending}
+          >
+            <p className="tk-menu-head">Order by</p>
+            {SORTS.map((entry) => (
+              <button
+                key={entry.key}
+                type="button"
+                className={`tk-menu-item${query.sort === entry.key ? ' is-on' : ''}`}
+                onClick={() => set({ sort: entry.key as SortKey })}
+              >
+                {entry.label}
+              </button>
+            ))}
+            {sort && (
+              <button
+                type="button"
+                className="tk-menu-clear"
+                onClick={() => set({ descending: !query.descending })}
+              >
+                {query.descending ? sort.desc : sort.asc}
+              </button>
+            )}
+          </Menu>
+        </div>
+      </div>
+
+      <div className="tk-chips">
+        <div className="tk-chip-set">
+          <button
+            type="button"
+            className={`tk-chip${query.priorities.length === 0 ? ' is-on' : ''}`}
+            onClick={() => togglePriority(null)}
+          >
+            <span className="tk-chip-ico is-all" aria-hidden="true">
+              {PRIORITY_ICON}
+            </span>
+            All
+          </button>
+          {PRIORITIES.map((priority) => (
+            <button
+              key={priority}
+              type="button"
+              className={`tk-chip${query.priorities.includes(priority) ? ' is-on' : ''}`}
+              onClick={() => togglePriority(priority)}
+            >
+              <span className={`tk-chip-ico is-${priority}`} aria-hidden="true">
+                {PRIORITY_ICON}
+              </span>
+              {priority[0]!.toUpperCase() + priority.slice(1)}
             </button>
           ))}
         </div>
 
-        <label className="tk-select-wrap">
-          <span className="tk-sr">Sort by</span>
-          <select
-            className="tk-select"
-            value={query.sort}
-            onChange={(event) => set('sort', event.target.value as TaskQuery['sort'])}
-          >
-            {SORTS.map((entry) => (
-              <option key={entry.key} value={entry.key}>
-                Sort: {entry.label}
-              </option>
+        {subjects.length > 0 && (
+          <div className="tk-chip-set tk-chip-subjects">
+            {shown.map((subject) => (
+              <button
+                key={subject.id}
+                type="button"
+                className={`tk-chip${query.subjects.includes(subject.id) ? ' is-on' : ''}`}
+                onClick={() => toggleSubject(subject.id)}
+              >
+                {subject.label}
+              </button>
             ))}
-          </select>
-        </label>
-
-        <button
-          type="button"
-          className="tk-btn tk-dir"
-          aria-label={query.descending ? 'Sort ascending' : 'Sort descending'}
-          title={query.descending ? 'Descending' : 'Ascending'}
-          onClick={() => set('descending', !query.descending)}
-        >
-          {query.descending ? '↓' : '↑'}
-        </button>
-      </div>
-
-      <div className="tk-tools-row tk-facets">
-        {PRIORITIES.map((priority) => (
-          <button
-            key={priority}
-            type="button"
-            className={`tk-chip pri-${priority}${query.priorities.includes(priority) ? ' is-on' : ''}`}
-            aria-pressed={query.priorities.includes(priority)}
-            onClick={() => set('priorities', toggle(query.priorities, priority))}
-          >
-            {priority}
-          </button>
-        ))}
-
-        {subjects.length > 0 && <span className="tk-facet-rule" aria-hidden="true" />}
-
-        {subjects.map((subject) => (
-          <button
-            key={subject.id}
-            type="button"
-            className={`tk-chip${query.subjects.includes(subject.id) ? ' is-on' : ''}`}
-            aria-pressed={query.subjects.includes(subject.id)}
-            onClick={() => set('subjects', toggle(query.subjects, subject.id))}
-          >
-            {subject.label || subject.name}
-          </button>
-        ))}
-
-        <span className="tk-showing tk-quiet">
-          {showing === total ? `${total} tasks` : `${showing} of ${total}`}
-        </span>
-
-        {isFiltered(query) && (
-          <button type="button" className="tk-btn is-quiet" onClick={() => onQuery({ ...query, status: 'open', search: '', subjects: [], priorities: [] })}>
-            Clear filters
-          </button>
+            {subjects.length > CHIPS && (
+              <button type="button" className="tk-chip is-more" onClick={() => setMore(!more)}>
+                {more ? 'Less' : `+ ${subjects.length - CHIPS} More`}
+              </button>
+            )}
+          </div>
         )}
       </div>
+
+      {showing !== total && (
+        <p className="tk-showing">
+          Showing {showing.toLocaleString()} of {total.toLocaleString()}
+        </p>
+      )}
     </div>
   );
 }
 
+// --------------------------------------------------------------------------
+// The bar that appears when rows are selected
+// --------------------------------------------------------------------------
 export interface BulkBarProps {
   count: number;
   busy: boolean;
@@ -180,12 +352,6 @@ export interface BulkBarProps {
   onClear: () => void;
 }
 
-/**
- * What is possible once rows are selected.
- *
- * Only appears when something is picked. A bar of disabled buttons sitting over
- * every list is a permanent reminder of what the reader is not doing.
- */
 export function BulkBar({ count, busy, onComplete, onDelete, onClear }: BulkBarProps) {
   if (count === 0) return null;
   return (
@@ -193,13 +359,13 @@ export function BulkBar({ count, busy, onComplete, onDelete, onClear }: BulkBarP
       <strong>
         {count} selected
       </strong>
-      <button type="button" className="tk-btn is-primary" disabled={busy} onClick={onComplete}>
+      <button type="button" className="tk-bulk-do" disabled={busy} onClick={onComplete}>
         Complete
       </button>
-      <button type="button" className="tk-btn is-danger" disabled={busy} onClick={onDelete}>
+      <button type="button" className="tk-bulk-do is-bad" disabled={busy} onClick={onDelete}>
         Delete
       </button>
-      <button type="button" className="tk-btn is-quiet" disabled={busy} onClick={onClear}>
+      <button type="button" className="tk-bulk-clear" onClick={onClear}>
         Clear
       </button>
     </div>

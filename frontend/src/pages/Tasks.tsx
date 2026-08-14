@@ -26,24 +26,45 @@
  * vouch for what it is showing. That is `useApi`'s contract and the dashboard's
  * rule, kept here so the two pages cannot drift.
  *
- * ## Skeleton
+ * ## The right-hand column
  *
- * The shape is here and every control works against the real endpoints. What
- * is deliberately not here yet: editing a task's date, priority or XP after it
- * is made (the row renames only), the goal/milestone link, timers, and any
- * grouping other than by due date. Each is a row of the same list, and none of
- * them changes the arithmetic in components/Tasks/board.ts.
+ * The list answers "what have I got on"; the rail beside it answers "what about
+ * right now" — the sitting in progress, the next three things, what is on a
+ * run, and a one-line way in. None of it takes the page's filters, because
+ * searching for "physics" should not empty the panel telling you what is due at
+ * four o'clock.
+ *
+ * ## What is reconstructed rather than recorded
+ *
+ * Three things on this page are derived from the task list because nothing
+ * records them: the trend line under each stat card (from `created_at` and
+ * `completed_at`), a task's time estimate (the median `completion_seconds` of
+ * its previously finished namesakes), and the streaks (consecutive completion
+ * days per title). Each is honest about the past that still exists in the list
+ * and no further — see the notes in components/Tasks/board.ts.
+ *
+ * ## What is deliberately not here yet
+ *
+ * Editing a task's date, priority or XP after it is made — the row renames
+ * only — and the goal/milestone link. Stars are kept in this browser rather
+ * than on the account, because the task record has no field for one.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BulkBar,
   Composer,
   EMPTY_QUERY,
+  Sidebar,
+  StatCards,
   TaskRow,
-  TaskSummary,
   Toolbar,
+  plannedSeconds,
   groupTasks,
+  statSeries,
+  streaks,
   taskCounts,
+  upcoming,
+  type Bucket,
   type TaskQuery,
 } from '@/components/Tasks';
 import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
@@ -54,6 +75,50 @@ import type { Task } from '@/types';
 import { isoStamp } from '@/utils/calendarGrid';
 import '@/styles/tasks.css';
 
+/**
+ * Starred task ids, kept in this browser.
+ *
+ * **Not on the account, because the task record has no field for one.** Adding
+ * a column, a migration and an endpoint to remember which rows a reader likes
+ * the look of is a bigger change than the feature is worth, and a star that
+ * lives in localStorage is honest about what it is: a mark on this machine, for
+ * pinning a handful of rows to the top of a long list while you work through
+ * it. If it ever needs to follow the account, this hook is the one thing that
+ * changes.
+ */
+function useStars(username: string | null): [Set<string>, (id: string) => void] {
+  const key = `tasks:starred:${username ?? 'anon'}`;
+  const [ids, setIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(key) || '[]') as string[];
+      setIds(new Set(Array.isArray(raw) ? raw : []));
+    } catch {
+      setIds(new Set());
+    }
+  }, [key]);
+
+  const toggle = useCallback(
+    (id: string) => {
+      setIds((current) => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        try {
+          localStorage.setItem(key, JSON.stringify([...next]));
+        } catch {
+          // A browser refusing storage is not a reason to refuse the click.
+        }
+        return next;
+      });
+    },
+    [key],
+  );
+
+  return [ids, toggle];
+}
+
 export default function Tasks() {
   useDocumentTitle('Tasks');
 
@@ -62,20 +127,68 @@ export default function Tasks() {
 
   const [query, setQuery] = useState<TaskQuery>(EMPTY_QUERY);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [grouped, setGrouped] = useState(true);
+  const [shut, setShut] = useState<Set<Bucket>>(new Set());
+  const [composing, setComposing] = useState(false);
+  const [starred, setStarred] = useStars(username);
+  const [pageMenu, setPageMenu] = useState(false);
+  const pageMenuRef = useRef<HTMLDivElement>(null);
+
+  // The header's overflow closes the same way every other menu on the page
+  // does. Kept here rather than in a shared hook because it is the only one
+  // outside components/Tasks/Toolbar.
+  useEffect(() => {
+    if (!pageMenu) return;
+    const away = (event: MouseEvent) => {
+      if (pageMenuRef.current && !pageMenuRef.current.contains(event.target as Node)) {
+        setPageMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', away);
+    return () => document.removeEventListener('mousedown', away);
+  }, [pageMenu]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
   const list = useMemo(() => data?.tasks ?? [], [data]);
   const counts = useMemo(() => taskCounts(list), [list]);
-  const groups = useMemo(() => groupTasks(list, query), [list, query]);
+  const series = useMemo(() => statSeries(list), [list]);
+  const nextUp = useMemo(() => upcoming(list, 3), [list]);
+  const runs = useMemo(() => streaks(list, 3), [list]);
+  // Grouping is the reader's to switch off, and the sort takes it away on its
+  // own when the ordering is no longer by date — see `groupTasks`.
+  const groups = useMemo(
+    () => groupTasks(list, query, new Date(), grouped),
+    [list, query, grouped],
+  );
   const showing = useMemo(
     () => groups.reduce((sum, group) => sum + group.tasks.length, 0),
     [groups],
   );
 
-  /** Only the subjects this account actually files things under. */
-  const used = useMemo(() => subjects.filter((subject) => subject.used > 0), [subjects]);
+  /**
+   * The subjects worth a chip, the ones on the current list first.
+   *
+   * `subject.used` is a lifetime count, and ordering the chips by it put an
+   * account's biggest-ever subjects in the row while the two subjects every
+   * open task actually carries sat behind "+ More". A filter row is for cutting
+   * down what is on screen, so it is ordered by what is on screen — with the
+   * lifetime count as the tiebreak, so the tail past the open list is still in
+   * a sensible order rather than an arbitrary one.
+   */
+  const used = useMemo(() => {
+    const here = new Map<string, number>();
+    list.forEach((task) => {
+      if (task.status === 'done' || !task.subject) return;
+      here.set(task.subject, (here.get(task.subject) ?? 0) + 1);
+    });
+    return subjects
+      .filter((subject) => subject.used > 0 || here.has(subject.id))
+      .sort(
+        (a, b) => (here.get(b.id) ?? 0) - (here.get(a.id) ?? 0) || b.used - a.used,
+      );
+  }, [subjects, list]);
   const subjectName = useCallback(
     (id: string | undefined) => subjects.find((entry) => entry.id === id)?.label ?? null,
     [subjects],
@@ -296,6 +409,23 @@ export default function Tasks() {
     [list, picked, reload],
   );
 
+  const toggleGroup = useCallback((key: Bucket) => {
+    setShut((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  /** Quick Add's three fields, through the same create the full form uses. */
+  const quickAdd = useCallback(
+    (name: string, due: string | null, priority: 'high' | 'medium' | 'low') => {
+      add({ name, priority, due_date: due, xp_reward: 25 });
+    },
+    [add],
+  );
+
   // ---- The shell ----------------------------------------------------------
   if (loading) return <Loading label="Reading your tasks" />;
   if (!data) {
@@ -307,7 +437,7 @@ export default function Tasks() {
       <Ambient />
       <div className="tk-shell page-shell">
         <header className="tk-head">
-          <div>
+          <div className="tk-head-title">
             <h1>
               <span className="tk-head-ico" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -317,9 +447,74 @@ export default function Tasks() {
               </span>
               Tasks
             </h1>
-            <p className="tk-quiet">Everything you have on, and what it is worth.</p>
+            <p className="tk-quiet">Organize your work. Focus on what matters.</p>
           </div>
           <div className="tk-head-tools">
+            <button
+              type="button"
+              className="tk-new"
+              aria-expanded={composing}
+              onClick={() => setComposing(!composing)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              New Task
+              <i className={`tk-new-caret${composing ? ' is-open' : ''}`} aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </i>
+            </button>
+            {/* The overflow: the things that act on the page rather than on a
+                task, which is why they are not in the toolbar with the filters. */}
+            <div className="tk-row-menu" ref={pageMenuRef}>
+              <button
+                type="button"
+                className="tk-more is-page"
+                aria-label="More for this page"
+                aria-expanded={pageMenu}
+                onClick={() => setPageMenu(!pageMenu)}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="1.7" />
+                  <circle cx="12" cy="12" r="1.7" />
+                  <circle cx="19" cy="12" r="1.7" />
+                </svg>
+              </button>
+              {pageMenu && (
+                <div className="tk-menu-panel is-row">
+                  <button
+                    type="button"
+                    className="tk-menu-item"
+                    onClick={() => { setPageMenu(false); setQuery({ ...query, status: query.status === 'all' ? 'open' : 'all' }); }}
+                  >
+                    {query.status === 'all' ? 'Hide completed' : 'Show completed'}
+                  </button>
+                  <button
+                    type="button"
+                    className="tk-menu-item"
+                    onClick={() => { setPageMenu(false); setShut(shut.size > 0 ? new Set() : new Set(groups.map((group) => group.key))); }}
+                  >
+                    {shut.size > 0 ? 'Expand all' : 'Collapse all'}
+                  </button>
+                  <button
+                    type="button"
+                    className="tk-menu-item"
+                    onClick={() => { setPageMenu(false); setQuery(EMPTY_QUERY); setGrouped(true); }}
+                  >
+                    Reset the view
+                  </button>
+                  <button
+                    type="button"
+                    className="tk-menu-item"
+                    onClick={() => { setPageMenu(false); reload(); }}
+                  >
+                    Refresh
+                  </button>
+                </div>
+              )}
+            </div>
             <RefreshButton busy={refreshing} onRefresh={reload} />
           </div>
         </header>
@@ -330,61 +525,104 @@ export default function Tasks() {
           </p>
         )}
 
-        <TaskSummary counts={counts} />
+        <div className="tk-body">
+          <div className="tk-main">
+            <StatCards counts={counts} series={series} />
 
-        <Composer subjects={subjects} busy={saving} onAdd={add} />
+            {composing && (
+              <Composer subjects={subjects} busy={saving} onAdd={add} />
+            )}
 
-        <Toolbar
-          query={query}
-          onQuery={setQuery}
-          subjects={used}
-          showing={showing}
-          total={list.length}
-        />
+            <Toolbar
+              query={query}
+              onQuery={setQuery}
+              subjects={used}
+              showing={showing}
+              total={list.length}
+              grouped={grouped}
+              onGrouped={setGrouped}
+            />
 
-        <BulkBar
-          count={picked.size}
-          busy={saving}
-          onComplete={() => void bulk((task) => (task.status === 'done' ? Promise.resolve() : complete(task)))}
-          onDelete={() => void bulk((task) => Promise.resolve(drop(task)))}
-          onClear={() => setPicked(new Set())}
-        />
+            <BulkBar
+              count={picked.size}
+              busy={saving}
+              onComplete={() => void bulk((task) => (task.status === 'done' ? Promise.resolve() : complete(task)))}
+              onDelete={() => void bulk((task) => Promise.resolve(drop(task)))}
+              onClear={() => setPicked(new Set())}
+            />
 
-        {groups.length === 0 ? (
-          <p className="tk-empty">
-            {list.length === 0
-              ? 'Nothing here yet. The box above is the fastest way to change that.'
-              : 'No task matches what you are looking for. Clear the filters to see the rest.'}
-          </p>
-        ) : (
-          groups.map((group) => (
-            <section className={`tk-group is-${group.key}`} key={group.key}>
-              <header className="tk-group-head">
-                <h2>
-                  {group.label}
-                  <span className="tk-group-count">{group.tasks.length}</span>
-                </h2>
-                <p className="tk-quiet">{group.hint}</p>
-              </header>
-              <ul className="tk-list">
-                {group.tasks.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    subject={subjectName(task.subject)}
-                    selected={picked.has(task.id)}
-                    busy={busyId === task.id || saving}
-                    onSelect={select}
-                    onComplete={(entry) => void complete(entry)}
-                    onReopen={reopen}
-                    onRename={rename}
-                    onDelete={drop}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))
-        )}
+            {groups.length === 0 ? (
+              <p className="tk-empty">
+                {list.length === 0
+                  ? 'Nothing here yet. Quick Add is the fastest way to change that.'
+                  : 'No task matches what you are looking for. Clear the filters to see the rest.'}
+              </p>
+            ) : (
+              groups.map((group) => {
+                const closed = shut.has(group.key);
+                return (
+                  <section className={`tk-group is-${group.key}`} key={group.key}>
+                    <header className="tk-group-head">
+                      <button
+                        type="button"
+                        className="tk-group-toggle"
+                        aria-expanded={!closed}
+                        onClick={() => toggleGroup(group.key)}
+                      >
+                        <h2>
+                          {group.label}
+                          <span className="tk-group-count">{group.tasks.length}</span>
+                        </h2>
+                        <i className={`tk-group-caret${closed ? ' is-shut' : ''}`} aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M6 9l6 6 6-6" />
+                          </svg>
+                        </i>
+                      </button>
+                      <p className="tk-quiet">{group.hint}</p>
+                    </header>
+                    {!closed && (
+                      <ul className="tk-list">
+                        {group.tasks.map((task) => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            subject={subjectName(task.subject)}
+                            estimate={plannedSeconds(task)}
+                            selected={picked.has(task.id)}
+                            starred={starred.has(task.id)}
+                            busy={busyId === task.id || saving}
+                            onSelect={select}
+                            onComplete={(entry) => void complete(entry)}
+                            onReopen={reopen}
+                            onRename={rename}
+                            onDelete={drop}
+                            onStar={(entry) => setStarred(entry.id)}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                );
+              })
+            )}
+          </div>
+
+          <Sidebar
+            username={username}
+            upcoming={nextUp}
+            streaks={runs}
+            busy={saving}
+            subjectName={subjectName}
+            onAdd={quickAdd}
+            onOpenFull={() => setComposing(true)}
+            onShowUpcoming={() => {
+              setQuery({ ...EMPTY_QUERY, sort: 'due' });
+              setGrouped(true);
+            }}
+            onShowStreaks={() => setQuery({ ...EMPTY_QUERY, status: 'done', sort: 'created', descending: true })}
+          />
+        </div>
       </div>
     </div>
   );
