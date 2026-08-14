@@ -8,6 +8,7 @@
  *   import { tasks, goals } from '@/services';
  *   const result = await tasks.getUserData(username);
  */
+export * as analytics from './analytics';
 export * as api from './api';
 export * as auth from './auth';
 export * as avatars from './avatars';

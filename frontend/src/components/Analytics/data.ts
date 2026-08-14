@@ -4,9 +4,9 @@
  * Everything here reads the day series the backend already builds — the same
  * rows the growth page slices — so the two pages cannot tell different stories
  * about the same account. Where a panel needs something the backend has no
- * answer for, it says so in the open: see `SAMPLE` at the bottom, which is the
- * whole of the invented data on this page and is kept in one place precisely so
- * it can be deleted in one edit when the endpoints exist.
+ * answer for, it says so in the open: `scoreHistory` at the bottom is the last
+ * of the invented data on this page, and it is kept there alone so it can be
+ * deleted in one edit when the endpoint for the score's history exists.
  *
  * The windows here are long ones — a quarter to the whole account — because
  * this page is about trajectory. utils/growthSummary's `RANGES` are the short
@@ -17,7 +17,6 @@ import {
   compact,
   type RangeSlice,
 } from '@/utils/growthSummary';
-import { percentileFor } from './score';
 import type { GrowthDay } from '@/types';
 
 // --------------------------------------------------------------------------
@@ -472,59 +471,26 @@ export function comparisonBars(slice: RangeSlice, score: number | null): Compari
 // Invented data
 // --------------------------------------------------------------------------
 /**
- * The two panels nothing in this account can answer, kept together.
- *
- * **Four of the five percentile bars need other people's accounts.** Nothing on
- * the backend aggregates across users — `benchCategories` in utils/growthBench
- * deliberately benchmarks the reader against their own record for exactly this
- * reason — so "top 14% on XP earned" cannot be computed and is a placeholder.
- * The fifth is not: the Growth Score row is placed against the stated
- * distribution in ./score, from this account's own score, which is why
- * `standingRows` takes the score rather than the table carrying a fifth number.
+ * The one panel left that nothing in this account can answer.
  *
  * **The growth score has no history.** `get_growth_ratings` files a dated
  * snapshot per metric every time it is read (backend/tracking/analytics.py),
  * so the history is being recorded — but no endpoint reads it back out yet.
  * When one does, this shape is what the panel wants.
  *
- * Both panels carry a "Sample" chip in the UI so the figures are never mistaken
- * for the reader's own. Delete this block, the chip, and the props that thread
- * it through when the endpoints land.
- */
-export const SAMPLE = {
-  /** Percentile bands for the "Where You Stand" panel. */
-  standing: [
-    { label: 'XP Earned', percentile: 14, tone: 'violet' },
-    { label: 'Focus Time', percentile: 18, tone: 'blue' },
-    { label: 'Consistency', percentile: 11, tone: 'green' },
-    { label: 'Task Completion', percentile: 21, tone: 'amber' },
-  ] as Array<{ label: string; percentile: number; tone: string }>,
-} as const;
-
-/**
- * The "Where You Stand" rows: four placeholders and one real placement.
+ * The panel carries a "Sample" chip in the UI so the figures are never mistaken
+ * for the reader's own. Delete this block, the chip, and the prop that threads
+ * it through when the endpoint lands.
  *
- * The Growth Score row runs through the same `percentileFor` the badge on the
- * score panel uses, so the two figures on one page are one figure. They were
- * two constants before, and they disagreed the moment either was touched.
+ * "Where You Stand" used to be here too, as four constant percentile bands.
+ * It is measured now — backend/tracking/standing.py ranks the account against
+ * every other one with a comparable record, and @/services/analytics fetches
+ * it — which is why nothing on that panel is invented and it has no chip.
  */
-export function standingRows(
-  score: number | null,
-): Array<{ label: string; percentile: number; tone: string }> {
-  return [
-    ...SAMPLE.standing,
-    {
-      label: 'Growth Score',
-      percentile: score === null ? 50 : percentileFor(score),
-      tone: 'violet',
-    },
-  ];
-}
-
 /**
  * A plausible run-up to the score the account actually has.
  *
- * The endpoint for the real history does not exist yet (see `SAMPLE`), and a
+ * The endpoint for the real history does not exist yet, and a
  * panel titled "over time" with one point in it is worse than one with a shape.
  * So the shape is generated and the **last point is the account's real score** —
  * the figure stated beside it is never invented, only the path to it is.

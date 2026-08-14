@@ -17,7 +17,7 @@ import {
   type Grain,
   type MetricKey,
 } from './data';
-import { percentileLabel, type ScoreFactor } from './score';
+import { formatPercentile, percentileLabel, type ScoreFactor } from './score';
 import { compact } from '@/utils/growthSummary';
 import type { GrowthDay } from '@/types';
 
@@ -133,6 +133,13 @@ export interface ScorePanelProps {
   factors: ScoreFactor[];
   series: number[];
   marks: string[];
+  /**
+   * The measured placement from `/api/standing`, when there is one.
+   *
+   * Null falls back to the modelled band. See the note on the panel for why
+   * this argument exists at all rather than the badge simply reading the model.
+   */
+  percentile?: number | null;
 }
 
 /**
@@ -145,14 +152,23 @@ export interface ScorePanelProps {
  * each — "22/30 days active", not "Consistency 73" — since the score is the
  * abstraction and the measurement is the thing they can change.
  *
- * The band under the score is computed from the score itself (`percentileFor`),
- * so it moves when the score does. It is a placement against a stated
- * distribution rather than a count of other people's accounts, and the panel
- * says exactly that under the badge rather than leaving "Top 8%" to be read as
- * a headcount.
+ * **The band under the score is measured where it can be and modelled where it
+ * cannot.** It reads the same rank the "Where You Stand" panel prints, from
+ * `/api/standing`, whenever the instance has enough comparable accounts to
+ * produce one. Before that endpoint existed it was always modelled — a
+ * placement against a stated distribution, from the score itself — and it still
+ * is on an instance too small to rank against, because a band that disappeared
+ * on a new install would take the reader's only sense of scale with it.
+ *
+ * The distinction is not cosmetic and the badge does not hide it: the tooltip
+ * says which of the two the reader is looking at. Two figures on one page both
+ * labelled "of Ascen users", one counted and one modelled, is exactly the sort
+ * of quiet disagreement this file is arranged to prevent — the panel and
+ * `StandingPanel` now state one number.
  */
-export function ScorePanel({ score, factors, series, marks }: ScorePanelProps) {
-  const band = percentileLabel(score);
+export function ScorePanel({ score, factors, series, marks, percentile }: ScorePanelProps) {
+  const measured = percentile ?? null;
+  const band = measured === null ? percentileLabel(score) : `Top ${formatPercentile(measured)}%`;
 
   return (
     <Panel
@@ -171,7 +187,11 @@ export function ScorePanel({ score, factors, series, marks }: ScorePanelProps) {
         {band && (
           <div
             className="ax-percentile"
-            title="Where this score sits in the modelled distribution of Ascen growth scores — 5.0 is the middle, and the scale runs from top 99.9% to top 0.1%."
+            title={
+              measured === null
+                ? 'Where this score sits in the modelled distribution of Ascen growth scores — 5.0 is the middle, and the scale runs from top 99.9% to top 0.1%.'
+                : 'Counted, not modelled: this score ranked against every other account with a comparable record. The same figure the "Where You Stand" panel prints.'
+            }
           >
             <span className="ax-percentile-icon" aria-hidden="true" />
             <strong>{band}</strong>

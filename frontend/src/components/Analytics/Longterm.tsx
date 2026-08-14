@@ -12,6 +12,7 @@ import { GLYPHS, type GlyphName } from './glyphs';
 import { axisSpan, datePositions } from './data';
 import { formatPercentile } from './score';
 import type { Compounding, ComparisonBar } from './data';
+import type { Standing, StandingKey } from '@/services/analytics';
 import { compact } from '@/utils/growthSummary';
 import type { Insight } from '@/utils/growthSummary';
 
@@ -284,43 +285,90 @@ export function InsightsPanel({ insights, limit }: { insights: Insight[]; limit?
 // Where you stand
 // --------------------------------------------------------------------------
 export interface StandingPanelProps {
-  rows: Array<{ label: string; percentile: number; tone: string }>;
+  /** From `/api/standing`. Null while it is in flight or the call failed. */
+  standing: Standing | null;
 }
 
 /**
- * Percentile bars — the one panel on this page with no account behind it.
+ * Percentile bars — measured across accounts, not modelled.
  *
- * Nothing on the backend aggregates across users, so these figures are
- * placeholders and the panel says so with the Sample chip rather than quietly
- * passing them off as measurements. See SAMPLE in ./data.
+ * This was the one panel on the page with nothing behind it: nothing on the
+ * backend aggregated across users, so the four bars were constants under a
+ * Sample chip. backend/tracking/standing.py does that aggregation now, and each
+ * bar is a plain rank — how many comparable accounts this one is ahead of on
+ * that measure, ties split.
+ *
+ * **The cohort size is part of the figure, not a footnote.** "Top 25%" means
+ * something different out of four hundred accounts than out of four, and a
+ * panel that prints the first without the second is inviting the wrong reading
+ * of a number that is otherwise perfectly honest. Under the backend's floor it
+ * prints no percentages at all rather than ranking a reader against one or two
+ * other people.
  */
-export function StandingPanel({ rows }: StandingPanelProps) {
+export function StandingPanel({ standing }: StandingPanelProps) {
+  if (!standing) {
+    return (
+      <Panel title="Where You Stand" footer={<span className="ax-link">View benchmark details →</span>}>
+        <p className="ax-empty">Working out where you stand…</p>
+      </Panel>
+    );
+  }
+
+  if (!standing.enough) {
+    return (
+      <Panel
+        title="Where You Stand"
+        note={`Compared to ${standing.cohort.toLocaleString()} Ascen ${standing.cohort === 1 ? 'user' : 'users'}`}
+        footer={<span className="ax-link">View benchmark details →</span>}
+      >
+        <p className="ax-empty">
+          There are not enough accounts with a comparable record yet to place you against — this
+          needs {standing.floor} others and there {standing.cohort - 1 === 1 ? 'is' : 'are'}{' '}
+          {standing.cohort - 1}. A rank out of two or three is arithmetic rather than a comparison,
+          and you would be reading it as one.
+        </p>
+      </Panel>
+    );
+  }
+
   return (
     <Panel
       title="Where You Stand"
-      note="Compared to Ascen users"
-      sample
+      note={`Compared to ${standing.cohort.toLocaleString()} Ascen ${standing.cohort === 1 ? 'user' : 'users'} with a comparable record`}
       footer={<span className="ax-link">View benchmark details →</span>}
     >
       <ul className="ax-standing">
-        {rows.map((row) => (
-          <li key={row.label}>
-            <span className="ax-standing-label">{row.label}</span>
-            <span className="ax-standing-track">
-              <i
-                style={{
-                  width: `${100 - row.percentile}%`,
-                  background: toneVar(row.tone),
-                }}
-              />
-            </span>
-            {/* Through the same formatter as the badge on the score panel, so
-                the two places this page states a percentile state it the same
-                way — one said "Top 17.7%" beside the other's "Top 18%". */}
-            <span className="ax-standing-rank">Top {formatPercentile(row.percentile)}%</span>
-          </li>
-        ))}
+        {standing.rows.map((row) => {
+          const measure = STANDING[row.key];
+          if (!measure || row.percentile === null) return null;
+          return (
+            <li key={row.key}>
+              <span className="ax-standing-label">{measure.label}</span>
+              <span className="ax-standing-track">
+                <i
+                  style={{
+                    width: `${100 - row.percentile}%`,
+                    background: toneVar(measure.tone),
+                  }}
+                />
+              </span>
+              {/* Through the same formatter as the badge on the score panel, so
+                  the two places this page states a percentile state it the same
+                  way — one said "Top 17.7%" beside the other's "Top 18%". */}
+              <span className="ax-standing-rank">Top {formatPercentile(row.percentile)}%</span>
+            </li>
+          );
+        })}
       </ul>
     </Panel>
   );
 }
+
+/** What each measure is called and painted, keyed by the backend's `MEASURES`. */
+const STANDING: Record<StandingKey, { label: string; tone: string }> = {
+  xp: { label: 'XP Earned', tone: 'violet' },
+  focus: { label: 'Focus Time', tone: 'blue' },
+  consistency: { label: 'Consistency', tone: 'green' },
+  tasks: { label: 'Task Completion', tone: 'amber' },
+  score: { label: 'Growth Score', tone: 'violet' },
+};

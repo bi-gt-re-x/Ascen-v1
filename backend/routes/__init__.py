@@ -19,14 +19,15 @@ from importlib import import_module
 from backend.routes import assets, spa
 
 # Imported by name so this list reads as the map of the app. The stubs in
-# backend/api/ (achievements, notes, library, history, settings, analytics,
-# growthtree) are deliberately absent — they carry no router yet.
+# backend/api/ (achievements, notes, library, history, settings, growthtree)
+# are deliberately absent — they carry no router yet.
 API_MODULES = (
     'dashboard',
     'tasks',
     'calendar',
     'goals',
     'growth',
+    'analytics',
     'focus',
     'quote',
     'subjects',

@@ -30,13 +30,19 @@
  *
  * ## How it holds together
  *
- * **Three calls, one window, five tabs.** The whole day series (`days: 0`), the
- * account's stats and tasks, and the report card. Every panel on every tab is
- * arithmetic over those three — nothing here fetches per tab — and every tab is
- * scoped by the one window picker, so two tabs can never quietly be describing
- * different periods. The exceptions are deliberate and marked: the Overview
- * heatmap always draws a year, and the Habits calendar carries its own zoom,
- * because a map of 91 squares and a map of 730 are not the same picture.
+ * **Four calls, one window, five tabs.** The whole day series (`days: 0`), the
+ * account's stats and tasks, the report card, and where this account stands
+ * against the others. Every panel on every tab is arithmetic over the first
+ * three — nothing here fetches per tab — and every tab is scoped by the one
+ * window picker, so two tabs can never quietly be describing different periods.
+ * The exceptions are deliberate and marked: the Overview heatmap always draws a
+ * year, and the Habits calendar carries its own zoom, because a map of 91
+ * squares and a map of 730 are not the same picture.
+ *
+ * The fourth call is the odd one and stays separate for a reason: it is the only
+ * thing on the page computed from anybody else's record, so it cannot be
+ * arithmetic over the series, and it is unscoped by the window because "where
+ * you stand" is a question about the account rather than about a quarter of it.
  *
  * **A tab is a route.** `/analytics`, `/trends`, `/habits`, `/insights`,
  * `/recommendations` all render this component and differ only in which view
@@ -118,7 +124,6 @@ import {
   scoreHistory,
   sliceWindow,
   spanLabel,
-  standingRows,
   windowOption,
   type Grain,
   type MetricKey,
@@ -126,7 +131,8 @@ import {
 } from '@/components/Analytics/data';
 import { growthScore, type ScoreFactor } from '@/components/Analytics/score';
 import { useApi, useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
-import { growth as growthService } from '@/services';
+import { analytics as analyticsService, growth as growthService } from '@/services';
+import type { Standing } from '@/services/analytics';
 import {
   growthInsights,
   heatmapGrid,
@@ -239,6 +245,20 @@ export default function Analytics() {
   );
   const ratings = useApi<Ratings>(ratingsCall, [username]);
 
+  // The fourth call, and the only one that reads anything but this account:
+  // "Where You Stand" ranks the reader against every other account with a
+  // comparable record, which is arithmetic the client cannot do and should not
+  // have the data for. Unscoped by the window picker on purpose — the panel
+  // asks where this account stands, not where it stood over a quarter.
+  const standingCall = useCallback(
+    () =>
+      username
+        ? analyticsService.standing(username)
+        : Promise.resolve({ success: false as const, message: 'Sign in to see where you stand.' }),
+    [username],
+  );
+  const standing = useApi<Standing>(standingCall, [username]);
+
   const [span, setSpan] = useState<WindowKey>('1y');
   const [metric, setMetric] = useState<MetricKey>('xp');
   const [grain, setGrain] = useState<Grain>('daily');
@@ -302,7 +322,6 @@ export default function Analytics() {
   const score = card.value;
   const scoreLine = useMemo(() => scoreHistory(score ?? 0), [score]);
   const bars = useMemo(() => comparisonBars(slice, score), [score, slice]);
-  const standing = useMemo(() => standingRows(score), [score]);
 
   const breakdown = useMemo(
     () => subjectXp(bySubject, subjects, fromIso, toIso, RADAR_SUBJECTS),
@@ -470,7 +489,7 @@ export default function Analytics() {
             sparks={sparks}
             score={score}
             scoreFactors={card.factors}
-            standing={standing}
+            standing={standing.data ?? null}
             scoreLine={scoreLine}
             compareLabel={compareLabel}
             slice={slice}
@@ -648,7 +667,7 @@ interface OverviewProps {
   sparks: ReturnType<typeof tileSeries>;
   score: number | null;
   scoreFactors: ScoreFactor[];
-  standing: ReturnType<typeof standingRows>;
+  standing: Standing | null;
   scoreLine: number[];
   compareLabel: string;
   slice: ReturnType<typeof sliceWindow>;
@@ -709,6 +728,9 @@ function OverviewView(props: OverviewProps) {
           factors={props.scoreFactors}
           series={props.scoreLine}
           marks={['Start', '', '', 'Now']}
+          // The counted placement, so the badge here and the Growth Score row
+          // on "Where You Stand" are one figure rather than two that disagree.
+          percentile={props.standing?.rows.find((row) => row.key === 'score')?.percentile ?? null}
         />
       </section>
 
@@ -739,7 +761,7 @@ function OverviewView(props: OverviewProps) {
             totals — the fifth finding down is where the list stops being
             findings and starts being facts. The Insights tab shows the rest. */}
         <InsightsPanel insights={props.insights} limit={OVERVIEW_INSIGHTS} />
-        <StandingPanel rows={props.standing} />
+        <StandingPanel standing={props.standing} />
       </section>
 
       <section className="ax-foot">
