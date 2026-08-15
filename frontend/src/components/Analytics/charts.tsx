@@ -13,7 +13,8 @@
  * the box and `preserveAspectRatio` does the rest, so a panel that changes
  * width at a breakpoint needs no JS to stay drawn correctly.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 /** The series colours, as the CSS variable each panel paints with. */
 export type Tone = 'violet' | 'blue' | 'green' | 'amber' | 'pink';
@@ -613,6 +614,50 @@ export function Panel({ title, note, aside, sample, className, children, footer 
       {children}
       {footer && <div className="ax-panel-foot">{footer}</div>}
     </section>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Panel footers
+// --------------------------------------------------------------------------
+/**
+ * The two things a panel's footer is allowed to be.
+ *
+ * It used to be allowed to be a third: a `<span>` styled like a link, pointing
+ * nowhere. Eleven panels carried one — "View all insights →", "View streak
+ * history →", "How projections work →" — and not one of them had a handler or
+ * an href. They were the page's most-clicked dead end, and the cost is not the
+ * click: a reader who presses two of them and gets nothing stops believing the
+ * rest of the page, including the parts that work.
+ *
+ * So a footer either goes somewhere (`PanelLink`, to a tab that exists) or it
+ * opens in place (`PanelNote`, for the ones whose honest destination was always
+ * an explanation rather than another screen). Nothing here renders a control
+ * that does not do what it looks like it does.
+ */
+export function PanelLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link className="ax-link" to={to}>
+      {children} →
+    </Link>
+  );
+}
+
+/** A footer that explains itself in place rather than sending the reader away. */
+export function PanelNote({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="ax-link"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        {label} {open ? '↑' : '↓'}
+      </button>
+      {open && <div className="ax-note">{children}</div>}
+    </>
   );
 }
 

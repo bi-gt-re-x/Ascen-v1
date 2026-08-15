@@ -7,7 +7,8 @@
  * that is not is the score line's *shape*, which is generated because no
  * endpoint reads the score's history back yet, and the note under it says so.
  */
-import { AreaChart, Delta, Panel, toneVar } from './charts';
+import { AreaChart, Delta, Panel, PanelNote, toneVar } from './charts';
+import { ScoringDetails } from './ScoringDetails';
 import {
   METRICS,
   GRAINS,
@@ -173,7 +174,15 @@ export function ScorePanel({ score, factors, series, marks, percentile }: ScoreP
   return (
     <Panel
       title="Growth Score Over Time"
-      footer={<span className="ax-link">How it&rsquo;s calculated →</span>}
+      /* `ScoringDetails` was written for this and then never mounted anywhere —
+         exported, documented, orphaned. It is the honest destination for this
+         footer, and opening it in place beats sending a reader to a page that
+         would only hold the same five paragraphs. */
+      footer={
+        <PanelNote label="How this is calculated">
+          <ScoringDetails />
+        </PanelNote>
+      }
     >
       <div className="ax-score-head">
         <div>

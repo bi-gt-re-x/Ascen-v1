@@ -100,12 +100,35 @@ html[data-theme="dark"] .ax-page {
     text-align: center;
 }
 
+/* A footer control. `cursor: default` was correct while these were spans
+   pointing nowhere; now that every one of them goes somewhere or opens
+   something, it is a pointer and it responds to hover like a control. */
 .ax-link {
+    display: inline-block;
+    padding: 0;
+    border: 0;
+    background: none;
     color: var(--ax-muted);
+    font: inherit;
     font-size: 12.5px;
     font-weight: 500;
-    cursor: default;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color .15s ease;
 }
+.ax-link:hover { color: var(--ax-violet); }
+
+/* What a footer opens in place: the explanation that was always the honest
+   destination for "How this is calculated →". */
+.ax-note {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ax-line-soft);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ax-muted);
+}
+.ax-note > * { margin-top: 0; }
 
 /* The change against the period before. Three states and one of them is
    "there is no earlier period", which has to look different from a flat 0%. */
@@ -2602,4 +2625,79 @@ html[data-theme="dark"] .ax-page {
     .ax-finding-body,
     .ax-finding-mark,
     .ax-try { transition: none; }
+}
+
+/* ==========================================================================
+   What changed, and where to go next.
+
+   Two additions in service of the same thing: a page somebody comes back to.
+   Everything else on the Overview states where the account *is*, which reads
+   identically on every visit; these two say what moved and what to do about it.
+   ========================================================================== */
+.ax-since {
+    margin: 0 0 2px;
+    padding: 11px 15px;
+    border-radius: 11px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    font-size: 13.5px;
+    color: var(--ax-text);
+}
+.ax-since strong { font-weight: 700; }
+.ax-since.is-up {
+    border-color: color-mix(in srgb, var(--ax-green) 34%, transparent);
+    background: color-mix(in srgb, var(--ax-green) 8%, transparent);
+}
+.ax-since.is-down {
+    border-color: color-mix(in srgb, var(--ax-amber) 34%, transparent);
+    background: color-mix(in srgb, var(--ax-amber) 8%, transparent);
+}
+
+/* The hand-off at the bottom of the Overview. Deliberately plain: it is a
+   signpost, and a signpost that competes with the panels above it for
+   attention is a fourth thing to read rather than a way out. */
+.ax-next > p {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+.ax-next-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+.ax-next-row a {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 16px;
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    background: var(--ax-card);
+    text-decoration: none;
+    transition: border-color .15s ease, transform .15s ease;
+}
+.ax-next-row a:hover {
+    border-color: color-mix(in srgb, var(--ax-violet) 50%, transparent);
+    transform: translateY(-1px);
+}
+.ax-next-row strong { font-size: 13.5px; font-weight: 650; color: var(--ax-text); }
+.ax-next-row span { font-size: 12px; line-height: 1.5; color: var(--ax-muted); }
+
+/* The confirmation after a recommendation is taken. */
+.ax-adopted {
+    margin: 0 0 4px;
+    padding: 11px 15px;
+    border-radius: 11px;
+    border: 1px solid color-mix(in srgb, var(--ax-green) 34%, transparent);
+    background: color-mix(in srgb, var(--ax-green) 9%, transparent);
+    font-size: 13.5px;
+}
+.ax-adopted a { color: var(--ax-violet); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-next-row a, .ax-link { transition: none; }
 }

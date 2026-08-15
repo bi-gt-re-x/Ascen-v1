@@ -65,7 +65,7 @@
  * utils/advice, one per file, so they can be deleted in four edits.
  */
 import { useCallback, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
 import {
   ComparePanel,
@@ -84,6 +84,7 @@ import {
   MilestonePanel,
   PatternsPanel,
   ScorePanel,
+  SinceLast,
   StandingPanel,
   StreaksPanel,
   SubjectPanel,
@@ -131,8 +132,12 @@ import {
 } from '@/components/Analytics/data';
 import { growthScore, type ScoreFactor } from '@/components/Analytics/score';
 import { useApi, useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
-import { analytics as analyticsService, growth as growthService } from '@/services';
-import type { Standing } from '@/services/analytics';
+import {
+  analytics as analyticsService,
+  growth as growthService,
+  tasks as taskService,
+} from '@/services';
+import type { MetricHistory, Standing } from '@/services/analytics';
 import {
   growthInsights,
   heatmapGrid,
@@ -175,7 +180,7 @@ import {
   weeklyPoints,
   type ComparisonKey,
 } from '@/utils/trends';
-import { SAMPLE_ADVICE, outlook, recommendations } from '@/utils/advice';
+import { SAMPLE_ADVICE, outlook, recommendations, type Advice } from '@/utils/advice';
 import type { Ratings } from '@/types';
 import '@/styles/analytics.css';
 
@@ -185,15 +190,8 @@ const RADAR_SUBJECTS = 6;
 /** How many recommendations get a card of their own before the rest go in a list. */
 const HEADLINE_ADVICE = 3;
 
-/**
- * How many findings the Overview's insight panel shows.
- *
- * Four, because the panel is one of three in a row rather than the page, and
- * because `growthInsights` emits in priority order: the top of its list is the
- * patterns and the movement, and everything past the fourth row is a true fact
- * that is not a finding. The Insights tab renders the same panel unlimited.
- */
-const OVERVIEW_INSIGHTS = 4;
+/** What an adopted suggestion is worth as a task. Its own habit is the reward. */
+const DEFAULT_ADVICE_XP = 25;
 
 /** The window the momentum panel compares, in days. See `momentum`. */
 const MOMENTUM_DAYS = 90;
@@ -259,6 +257,61 @@ export default function Analytics() {
   );
   const standing = useApi<Standing>(standingCall, [username]);
 
+  // The score's own recorded past. See the note on `SinceLast` for what it is
+  // for, and services/analytics for why it took an endpoint to reach it.
+  const historyCall = useCallback(
+    () =>
+      username
+        ? analyticsService.metricHistory(username, 'overall')
+        : Promise.resolve({ success: false as const, message: 'Sign in to see your history.' }),
+    [username],
+  );
+  const scoreLog = useApi<MetricHistory>(historyCall, [username]);
+
+  // ---- Accepting a recommendation ----------------------------------------
+  /**
+   * Turn a suggestion into a task on the list, due tomorrow.
+   *
+   * Tomorrow rather than today because every suggestion on this page is a
+   * change to how the *next* stretch of work goes — "claim one weekend day",
+   * "move one session out of the late shift" — and dropping it onto a day
+   * already half spent makes it the thing you failed at tonight rather than the
+   * thing you are trying next.
+   *
+   * The task's title is the suggestion's, so the two are recognisably the same
+   * thing when it turns up in the list a week later. Its description is the
+   * reasoning, which is the part a reader will have forgotten by then and the
+   * part that makes it worth keeping rather than deleting.
+   */
+  const [adopting, setAdopting] = useState<string | null>(null);
+  const [adopted, setAdopted] = useState<string | null>(null);
+
+  const adopt = useCallback(
+    async (item: Advice) => {
+      if (!username) return false;
+      setAdopting(item.id);
+      setAdopted(null);
+      try {
+        const due = new Date();
+        due.setDate(due.getDate() + 1);
+        const result = await taskService.createTask(username, {
+          name: item.title,
+          priority: item.priority === 'high' ? 'high' : item.priority === 'medium' ? 'medium' : 'low',
+          xp_reward: DEFAULT_ADVICE_XP,
+          due_date: due.toISOString().slice(0, 10),
+        });
+        if (!result.success) return false;
+        setAdopted(item.title);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setAdopting(null);
+      }
+    },
+    [username],
+  );
+
   const [span, setSpan] = useState<WindowKey>('1y');
   const [metric, setMetric] = useState<MetricKey>('xp');
   const [grain, setGrain] = useState<Grain>('daily');
@@ -320,7 +373,31 @@ export default function Analytics() {
   // card rather than read off `overall` — see components/Analytics/score.
   const card = useMemo(() => growthScore(ratings.data ?? null), [ratings.data]);
   const score = card.value;
-  const scoreLine = useMemo(() => scoreHistory(score ?? 0), [score]);
+  /**
+   * The score's line: its own recorded past where there is one.
+   *
+   * `scoreHistory` generates a plausible climb with the real score pinned on
+   * the end, and it is still the fallback because a panel titled "over time"
+   * with one point in it is worse than one with a shape. But an account that
+   * has opened the report card three times has three real readings, and drawing
+   * an invented curve over the top of them would be a choice rather than a
+   * limitation.
+   */
+  const recorded = scoreLog.data?.points ?? [];
+  const scoreLine = useMemo(
+    () =>
+      recorded.length >= 3
+        ? recorded.map((point) => point.score / 10)
+        : scoreHistory(score ?? 0),
+    [recorded, score],
+  );
+  const scoreMarks = useMemo(
+    () =>
+      recorded.length >= 3
+        ? ['First reading', '', '', 'Now']
+        : ['Start', '', '', 'Now'],
+    [recorded],
+  );
   const bars = useMemo(() => comparisonBars(slice, score), [score, slice]);
 
   const breakdown = useMemo(
@@ -491,6 +568,8 @@ export default function Analytics() {
             scoreFactors={card.factors}
             standing={standing.data ?? null}
             scoreLine={scoreLine}
+            scoreMarks={scoreMarks}
+            sinceLast={<SinceLast points={recorded} />}
             compareLabel={compareLabel}
             slice={slice}
             spanText={spanText}
@@ -542,6 +621,14 @@ export default function Analytics() {
             <section className="ax-section ax-grid ax-grid-halves-even">
               <MomentumPanel rows={pace} window={MOMENTUM_DAYS} />
               <CompoundingPanel data={curve} />
+            </section>
+            {/* Both moved off the Overview, which was carrying them at lower
+                resolution under a heading that had already been answered. A
+                year against the last one and the dates things were reached are
+                the same question this tab is for: what the pace has been. */}
+            <section className="ax-section ax-grid ax-grid-halves-even">
+              <ComparisonPanel bars={bars} />
+              <MilestonePanel reached={reached} />
             </section>
             <section className="ax-foot">
               <p>A slope you can see through the noise is worth more than a good fortnight. 📈</p>
@@ -616,8 +703,14 @@ export default function Analytics() {
               <WeekPanel week={week} />
               <RhythmPanel rhythm={rhythm} />
             </section>
+            {/* The radar came off the Overview to sit beside the panel that
+                explains it: one draws the shape of the week by subject, the
+                other says whether that shape is drifting. */}
             <section className="ax-section ax-grid ax-grid-halves-even">
+              <SubjectPanel rows={breakdown.rows} previous={previousBySubject} />
               <BalancePanel balance={balance} />
+            </section>
+            <section className="ax-section">
               <InsightsPanel insights={insights} />
             </section>
             <section className="ax-foot">
@@ -635,12 +728,24 @@ export default function Analytics() {
             <section className="ax-section">
               <OutlookPanel outlook={projection} sample={adviceIsSample} />
             </section>
+            {adopted && (
+              <p className="ax-adopted" role="status">
+                <strong>{adopted}</strong> is on your task list for tomorrow.{' '}
+                <Link to="/tasks">Open Tasks</Link>
+              </p>
+            )}
             <section className="ax-section">
               <CategoryFilter items={advice} chosen={category} onChoose={setCategory} />
               {shown.length > 0 && (
                 <div className="ax-grid ax-grid-three">
                   {shown.slice(0, HEADLINE_ADVICE).map((item, index) => (
-                    <AdviceCard key={item.id} item={item} rank={index + 1} />
+                    <AdviceCard
+                      key={item.id}
+                      item={item}
+                      rank={index + 1}
+                      onAdopt={adopt}
+                      adopting={adopting}
+                    />
                   ))}
                 </div>
               )}
@@ -668,7 +773,10 @@ interface OverviewProps {
   score: number | null;
   scoreFactors: ScoreFactor[];
   standing: Standing | null;
+  /** The "what changed" strip. Null when there is not enough history. */
+  sinceLast: React.ReactNode;
   scoreLine: number[];
+  scoreMarks: string[];
   compareLabel: string;
   slice: ReturnType<typeof sliceWindow>;
   spanText: string;
@@ -702,6 +810,9 @@ interface OverviewProps {
 function OverviewView(props: OverviewProps) {
   return (
     <>
+      {/* What moved, before anything that merely *is*. See `SinceLast`. */}
+      {props.sinceLast}
+
       <section id="overview" className="ax-section">
         <Tiles
           figures={props.figures}
@@ -727,45 +838,60 @@ function OverviewView(props: OverviewProps) {
           score={props.score}
           factors={props.scoreFactors}
           series={props.scoreLine}
-          marks={['Start', '', '', 'Now']}
+          marks={props.scoreMarks}
           // The counted placement, so the badge here and the Growth Score row
           // on "Where You Stand" are one figure rather than two that disagree.
           percentile={props.standing?.rows.find((row) => row.key === 'score')?.percentile ?? null}
         />
       </section>
 
-      <section id="breakdown" className="ax-section ax-grid ax-grid-three">
-        <SubjectPanel rows={props.breakdown.rows} previous={props.previousBySubject} />
+      <section id="standing" className="ax-section ax-grid ax-grid-three">
         <ConsistencyPanel
           rate={props.rhythmRate.rate}
           previousRate={props.rhythmRate.previousRate}
           rows={props.heatRows}
           compareLabel={props.compareLabel}
         />
-        <MilestonePanel reached={props.reached} />
-      </section>
-
-      <section id="longterm" className="ax-section ax-grid ax-grid-halves">
-        <ComparisonPanel bars={props.bars} />
-        <CompoundingPanel data={props.curve} />
-      </section>
-
-      <section id="standing" className="ax-section ax-grid ax-grid-three">
         <StreaksPanel
           current={props.currentStreak}
           best={props.bestStreak}
           bestMonth={props.rhythmRate.bestMonth}
         />
-        {/* Four, not everything the window can say. This panel shares a row
-            with two others and sits under a page that has already stated the
-            totals — the fifth finding down is where the list stops being
-            findings and starts being facts. The Insights tab shows the rest. */}
-        <InsightsPanel insights={props.insights} limit={OVERVIEW_INSIGHTS} />
         <StandingPanel standing={props.standing} />
       </section>
 
-      <section className="ax-foot">
-        <p>Long-term growth is the result of consistent daily actions. Keep compounding. 🚀</p>
+      {/* Where the tab hands over.
+
+          This used to run four rows longer: a subject radar, a milestone list,
+          a year-on-year bar chart, the compounding projection and four
+          insights, all before the reader reached the bottom. Every one of them
+          exists in full on a tab built for it — the radar and the balance on
+          Insights, the milestones and the pace on Trends, the projection on
+          Trends, the findings on Insights — and the Overview was answering
+          "how am I doing" by restating all four other tabs at lower
+          resolution.
+
+          What is left is the shortest honest answer to that question: what
+          moved, the totals, the trajectory and the score, then whether you are
+          showing up and how that compares. One screen, no scrolling past the
+          part you came for, and three links out to whichever of the four
+          questions you actually have. */}
+      <section className="ax-section ax-next">
+        <p>Where to go next</p>
+        <div className="ax-next-row">
+          <Link to="/trends">
+            <strong>Trends</strong>
+            <span>Which way each measure is heading, and the pace behind it</span>
+          </Link>
+          <Link to="/insights">
+            <strong>Insights</strong>
+            <span>Why your record looks like this, with the evidence</span>
+          </Link>
+          <Link to="/recommendations">
+            <strong>Recommendations</strong>
+            <span>What to change, ranked by what it is worth</span>
+          </Link>
+        </div>
       </section>
     </>
   );

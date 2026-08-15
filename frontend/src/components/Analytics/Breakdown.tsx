@@ -7,7 +7,7 @@
  * than at three different periods.
  */
 import type { CSSProperties } from 'react';
-import { Panel, Radar, TONES, toneVar, type RadarAxis } from './charts';
+import { Panel, Radar, TONES, toneVar, type RadarAxis, PanelLink, PanelNote } from './charts';
 import { GLYPHS, type GlyphName } from './glyphs';
 import { HEAT_WEEKDAYS, type HeatRow, type ReachedMilestone } from '@/utils/growthSummary';
 import type { SubjectXpRow } from '@/utils/subjectXp';
@@ -44,7 +44,7 @@ export function SubjectPanel({ rows, previous }: SubjectPanelProps) {
   }));
 
   return (
-    <Panel title="Subject Growth (XP Earned)" footer={<span className="ax-link">View subject breakdown →</span>}>
+    <Panel title="Subject Growth (XP Earned)" footer={<PanelLink to="/insights">See how the balance is shifting</PanelLink>}>
       {rows.length === 0 ? (
         <p className="ax-empty">No finished tasks carry a subject in this window yet.</p>
       ) : (
@@ -106,7 +106,14 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
   return (
     <Panel
       title="Consistency Over Time"
-      footer={<span className="ax-link">What affects consistency? →</span>}
+      footer={
+        <PanelNote label="What moves this">
+          The share of days in the window with any work recorded on them. Nothing else feeds
+          it — not how much, not how long, not what it was for. A fifteen-minute day and a
+          six-hour day count the same, which is the point: this measures showing up, and the
+          panels beside it measure everything you did once you had.
+        </PanelNote>
+      }
     >
       <div className="ax-consistency-head">
         <strong className="ax-big">{rate}%</strong>
@@ -194,7 +201,7 @@ export function MilestonePanel({ reached }: { reached: ReachedMilestone[] }) {
   const shown = [...reached].reverse().slice(0, 5);
 
   return (
-    <Panel title="Milestone Timeline" footer={<span className="ax-link">View all milestones →</span>}>
+    <Panel title="Milestone Timeline" footer={<PanelLink to="/trends">See the pace behind these</PanelLink>}>
       {shown.length === 0 ? (
         <p className="ax-empty">No milestones cleared yet — the first is 1,000 XP.</p>
       ) : (

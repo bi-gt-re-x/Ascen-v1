@@ -36,3 +36,31 @@ export interface Standing {
 export function standing(username: string): Promise<ApiResult<Standing>> {
   return get<Standing>('/api/standing', { username });
 }
+
+/** One dated reading of a graded metric. Scores are out of 100. */
+export interface MetricPoint {
+  date: string;
+  score: number;
+  grade: string;
+}
+
+export interface MetricHistory {
+  metric: string;
+  /** Oldest first. */
+  points: MetricPoint[];
+}
+
+/**
+ * Past grades for one metric.
+ *
+ * The snapshots have been accumulating since the report card existed — reading
+ * `/api/get_growth_ratings` files a dated row per metric — and nothing read
+ * them back until now. The page drew its "score over time" line from a
+ * generated shape with the real score pinned on the end.
+ */
+export function metricHistory(
+  username: string,
+  metric = 'overall',
+): Promise<ApiResult<MetricHistory>> {
+  return get<MetricHistory>('/api/metric_history', { username, metric });
+}

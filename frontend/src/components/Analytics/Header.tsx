@@ -284,3 +284,77 @@ export function Controls({
     </div>
   );
 }
+
+
+// --------------------------------------------------------------------------
+// What changed since last time
+// --------------------------------------------------------------------------
+export interface SinceLastProps {
+  /** Recorded readings of the overall score, out of 100, oldest first. */
+  points: Array<{ date: string; score: number }>;
+}
+
+/** How far back a reading can be and still count as "last time". */
+const STALE_DAYS = 45;
+
+/**
+ * The one line on this page a returning reader is actually here for.
+ *
+ * Everything else states where the account *is*. This states what **moved**,
+ * which is the only thing that rewards coming back: a score of 6.5 is a status
+ * and reads the same on every visit, but "6.5, up from 6.1 on Tuesday" is news,
+ * and news is what a weekly habit is made of.
+ *
+ * It needed an endpoint. The grades have been filed daily since the report card
+ * existed and nothing ever read them back — see `/api/metric_history`.
+ *
+ * **The comparison is against the last *different* reading, not yesterday's.**
+ * A score that has sat at 65 for a fortnight against yesterday's 65 produces
+ * "no change" every single day, which is both true and useless; against the
+ * last time it actually moved it produces "steady for twelve days", which is a
+ * real statement about the account. Beyond `STALE_DAYS` there is nothing
+ * honest to compare to and the strip says so rather than reaching further.
+ */
+export function SinceLast({ points }: SinceLastProps) {
+  if (points.length < 2) return null;
+
+  const last = points[points.length - 1]!;
+  const now = last.score / 10;
+
+  // Back to the most recent reading that differs, and how long ago that was.
+  let earlier: { date: string; score: number } | null = null;
+  for (let index = points.length - 2; index >= 0; index--) {
+    if (points[index]!.score !== last.score) {
+      earlier = points[index]!;
+      break;
+    }
+  }
+
+  const days = (from: string) =>
+    Math.round(
+      (new Date(`${last.date}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) /
+        86_400_000,
+    );
+
+  if (!earlier) {
+    const held = days(points[0]!.date);
+    if (held < 2) return null;
+    return (
+      <p className="ax-since is-flat">
+        Your growth score has held at <strong>{now.toFixed(1)}</strong> for {held} days.
+      </p>
+    );
+  }
+
+  const gap = days(earlier.date);
+  if (gap > STALE_DAYS) return null;
+  const move = now - earlier.score / 10;
+  const up = move > 0;
+
+  return (
+    <p className={`ax-since is-${up ? 'up' : 'down'}`}>
+      Your growth score is <strong>{now.toFixed(1)}</strong>, {up ? 'up' : 'down'} from{' '}
+      {(earlier.score / 10).toFixed(1)} {gap === 1 ? 'yesterday' : `${gap} days ago`}.
+    </p>
+  );
+}

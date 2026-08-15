@@ -7,7 +7,7 @@
  * number rather than two claims that could drift apart.
  */
 import type { CSSProperties } from 'react';
-import { AreaChart, GroupedBars, Panel, toneVar, type BarPair } from './charts';
+import { AreaChart, GroupedBars, Panel, PanelLink, PanelNote, toneVar, type BarPair } from './charts';
 import { GLYPHS, type GlyphName } from './glyphs';
 import { axisSpan, datePositions } from './data';
 import { formatPercentile } from './score';
@@ -31,7 +31,7 @@ export function ComparisonPanel({ bars }: { bars: ComparisonBar[] }) {
   return (
     <Panel
       title="Yearly Progress Comparison"
-      footer={<span className="ax-link">View detailed yearly breakdown →</span>}
+      footer={<PanelLink to="/trends">See which way each measure is heading</PanelLink>}
       aside={
         <div className="ax-legend ax-legend-tight">
           <span className="ax-legend-item">
@@ -133,7 +133,15 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
     <Panel
       title="Compounding Growth"
       note="See how small daily actions turn into massive long-term results."
-      footer={<span className="ax-link">How projections work →</span>}
+      footer={
+        <PanelNote label="How this is projected">
+          Your daily average across the window, multiplied by the days ahead. Nothing here
+          assumes the pace compounds, improves, or that a good month repeats — it is the
+          arithmetic of doing exactly what you already do, for longer. The line stops at
+          twelve months because a flat multiplication drawn over five years is a straight
+          diagonal that says nothing the three figures above do not.
+        </PanelNote>
+      }
     >
       <div className="ax-figures">
         <div className="ax-figure">
@@ -205,7 +213,7 @@ export interface StreaksPanelProps {
 
 export function StreaksPanel({ current, best, bestMonth }: StreaksPanelProps) {
   return (
-    <Panel title="Longest Streaks" footer={<span className="ax-link">View streak history →</span>}>
+    <Panel title="Longest Streaks" footer={<PanelLink to="/habits">See what you actually keep up</PanelLink>}>
       <div className="ax-streaks">
         <div className="ax-streak">
           <span className="ax-streak-icon" aria-hidden="true">
@@ -257,7 +265,7 @@ export function InsightsPanel({ insights, limit }: { insights: Insight[]; limit?
   const shown = limit ? insights.slice(0, limit) : insights;
 
   return (
-    <Panel title="Key Growth Insights" footer={<span className="ax-link">View all insights →</span>}>
+    <Panel title="Key Growth Insights" footer={<PanelLink to="/insights">Read the evidence behind these</PanelLink>}>
       {shown.length === 0 ? (
         <p className="ax-empty">Not enough history in this window to find a pattern yet.</p>
       ) : (
@@ -308,7 +316,7 @@ export interface StandingPanelProps {
 export function StandingPanel({ standing }: StandingPanelProps) {
   if (!standing) {
     return (
-      <Panel title="Where You Stand" footer={<span className="ax-link">View benchmark details →</span>}>
+      <Panel title="Where You Stand" footer={STANDING_NOTE}>
         <p className="ax-empty">Working out where you stand…</p>
       </Panel>
     );
@@ -319,7 +327,7 @@ export function StandingPanel({ standing }: StandingPanelProps) {
       <Panel
         title="Where You Stand"
         note={`Compared to ${standing.cohort.toLocaleString()} Ascen ${standing.cohort === 1 ? 'user' : 'users'}`}
-        footer={<span className="ax-link">View benchmark details →</span>}
+        footer={STANDING_NOTE}
       >
         <p className="ax-empty">
           There are not enough accounts with a comparable record yet to place you against — this
@@ -335,7 +343,7 @@ export function StandingPanel({ standing }: StandingPanelProps) {
     <Panel
       title="Where You Stand"
       note={`Compared to ${standing.cohort.toLocaleString()} Ascen ${standing.cohort === 1 ? 'user' : 'users'} with a comparable record`}
-      footer={<span className="ax-link">View benchmark details →</span>}
+      footer={STANDING_NOTE}
     >
       <ul className="ax-standing">
         {standing.rows.map((row) => {
@@ -363,6 +371,17 @@ export function StandingPanel({ standing }: StandingPanelProps) {
     </Panel>
   );
 }
+
+/** One note, three states — the panel says the same thing however it renders. */
+const STANDING_NOTE = (
+  <PanelNote label="How this is worked out">
+    A plain rank, not a model. Each bar counts how many other accounts you are ahead of on
+    that measure, with ties split down the middle. Only accounts with at least three days of
+    work on them are counted — an account that signed up and never came back is not somebody
+    to be measured against, and a cohort made mostly of those would put everybody in the top
+    1% of nothing. Below three comparable accounts no percentages are shown at all.
+  </PanelNote>
+);
 
 /** What each measure is called and painted, keyed by the backend's `MEASURES`. */
 const STANDING: Record<StandingKey, { label: string; tone: string }> = {

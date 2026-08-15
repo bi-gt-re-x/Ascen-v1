@@ -93,10 +93,23 @@ function useTrying(): [Set<string>, (id: string) => void] {
  * anything at all" — and an account with five low-impact suggestions should be
  * able to see that at a glance without doing five divisions.
  */
-export function AdviceCard({ item, rank }: { item: Advice; rank: number }) {
+export function AdviceCard({
+  item,
+  rank,
+  onAdopt,
+  adopting,
+}: {
+  item: Advice;
+  rank: number;
+  /** Writes the suggestion into the task list. See the note on the button. */
+  onAdopt: (item: Advice) => Promise<boolean>;
+  /** The id currently being written, so only its own button shows the wait. */
+  adopting: string | null;
+}) {
   const tone = KIND_TONE[item.kind];
   const [trying, toggle] = useTrying();
   const chosen = trying.has(item.id);
+  const busy = adopting === item.id;
 
   return (
     <article className={`ax-panel ax-advice${chosen ? ' is-trying' : ''}`}>
@@ -153,13 +166,30 @@ export function AdviceCard({ item, rank }: { item: Advice; rank: number }) {
           </span>
           <span className="ax-muted ax-small">{item.workings}</span>
         </div>
+        {/* **This makes a task now.** It used to set a flag in localStorage and
+            nothing else: the page would compute that a change was worth five
+            thousand XP a year, the reader would agree with it, press the
+            button — and then have to go and act on it somewhere else, from
+            memory. A recommendation that cannot be accepted is an essay.
+
+            The flag is still set, because "I decided to do this" and "a task
+            exists" are different facts and the card still wants to show the
+            first. Pressing it again releases the mark and leaves the task
+            alone: deleting work on a second click is not what an undo of a
+            decision means. */}
         <button
           type="button"
           className={`ax-try${chosen ? ' is-on' : ''}`}
           aria-pressed={chosen}
-          onClick={() => toggle(item.id)}
+          disabled={busy}
+          onClick={() => {
+            if (chosen) return toggle(item.id);
+            void onAdopt(item).then((ok) => {
+              if (ok) toggle(item.id);
+            });
+          }}
         >
-          {chosen ? '✓ Trying this' : 'Try this'}
+          {busy ? 'Adding…' : chosen ? '✓ On your list' : 'Add this to my tasks'}
         </button>
       </footer>
     </article>
