@@ -18,9 +18,25 @@ they mean to work, how long a sitting is, what it is for — and it turns the
 tabs from "come back in three weeks" into "here is what you said, here is what
 happened". It goes in `user_settings` — the key/value table that already exists
 for exactly this, a preference rather than a measurement — under BASELINE_KEY.
+
+`/api/adopted_advice` is the third, and it exists to answer the question the
+Recommendations tab could not: *did the change work.* The tab would compute
+that closing your three-day gaps was worth four thousand XP a year, the reader
+would agree and press the button, and then nothing ever came back. A page built
+entirely on "here is the number behind this claim" was missing the only number
+that would have proved any of it.
+
+**What is stored is an id and a date, and nothing else.** Not the measurement
+at the time — that would be a figure written once and never checkable again.
+The day series already holds every day this account has ever had, so the
+"before" side of the comparison can be recomputed from it whenever it is asked
+for, which means the verdict can never drift out of step with the arithmetic
+that produced it. The same rule the goals table follows: progress is derived,
+never accumulated. The measuring itself lives on the client in
+utils/followup.ts, next to the rules whose promises it is checking.
 """
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -59,6 +75,39 @@ SESSION_MINUTES = (5, 480)
 
 #: Where the baseline lives in `user_settings`.
 BASELINE_KEY = 'analytics_baseline'
+
+#: Where the adopted recommendations live in `user_settings`.
+ADOPTED_KEY = 'analytics_adopted'
+
+#: How many adoptions one account may carry.
+#:
+#: A cap rather than a rule about behaviour: every one of these is measured on
+#: every render of the tab, and an account that pressed every button on every
+#: visit for a year would be asking the page to run a hundred before/after
+#: comparisons to draw one panel. Fifty is far more than anybody will adopt and
+#: still a number. The oldest fall off first — see `_remember`.
+ADOPTED_LIMIT = 50
+
+
+class AdoptAdvice(BaseModel):
+    """A recommendation the reader has said they will act on.
+
+    The title rides along and is stored beside the id on purpose. Ids are
+    stable but the rules behind them are not — a rule can be retitled, retuned
+    or deleted between the day somebody adopts it and the day they come back to
+    see whether it worked — and a follow-up panel that could only say
+    "close-gaps" about a rule that no longer exists would be worse than one that
+    remembers what the reader actually agreed to.
+    """
+
+    username: str = ''
+    id: str = ''
+    title: str = ''
+
+
+class DropAdvice(BaseModel):
+    username: str = ''
+    id: str = ''
 
 
 @router.get('/api/standing')
@@ -101,6 +150,37 @@ def get_metric_history(username: str = '', metric: str = 'overall'):
         {'date': row.get('date'), 'score': row.get('score'), 'grade': row.get('grade')}
         for row in rows if row.get('date') is not None
     ])
+
+
+@router.get('/api/metric_histories')
+def get_metric_histories(username: str = ''):
+    """Every graded metric's past readings at once, grouped by metric.
+
+    The endpoint above answers about one metric and is what the score panel
+    reads. This answers about all of them, and exists for the follow-up on the
+    Recommendations tab: a reader who adopted "your consistency score is the one
+    holding the grade down" needs that metric's history to find out whether it
+    moved, and which metric it is depends on what they adopted.
+
+    One call rather than one per adopted metric. The rows all come out of the
+    same table read either way, so fanning out would be several round trips to
+    answer a question one already can.
+    """
+    if not username:
+        return fail('Username required')
+
+    series: dict = {}
+    for row in analytics_tracking.history(username):
+        name = row.get('metric')
+        if not name or row.get('date') is None:
+            continue
+        series.setdefault(name, []).append({
+            'date': row.get('date'),
+            'score': row.get('score'),
+            'grade': row.get('grade'),
+        })
+
+    return ok(series=series)
 
 
 def _clean(raw):
@@ -186,3 +266,115 @@ def set_baseline(body: SetBaseline):
     })
 
     return ok(baseline=_clean(stored))
+
+
+# --------------------------------------------------------------------------
+# Adopted recommendations
+# --------------------------------------------------------------------------
+def _adopted(raw) -> List[dict]:
+    """The stored adoptions, oldest first, with anything unusable dropped.
+
+    Defensive for the same reason `_clean` is, and with one addition that
+    matters more here: a row without a readable date is discarded rather than
+    kept, because the date is the entire basis of the comparison drawn from it.
+    An adoption with no date cannot be measured, and a row that cannot be
+    measured but still appears in the list would be a permanent "waiting" entry
+    that never resolves.
+    """
+    if not isinstance(raw, list):
+        return []
+
+    out = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        ident = str(item.get('id') or '')
+        on = str(item.get('on') or '')
+        if not ident or not on:
+            continue
+        try:
+            date.fromisoformat(on)
+        except ValueError:
+            continue
+        out.append({'id': ident, 'title': str(item.get('title') or ident), 'on': on})
+
+    out.sort(key=lambda row: row['on'])
+    return out
+
+
+def _remember(rows: List[dict], ident: str, title: str) -> List[dict]:
+    """Add an adoption, keeping the original date if there already is one.
+
+    Pressing the button twice on the same card is not a new decision, and
+    re-stamping it with today would quietly reset a comparison that had been
+    accumulating for three weeks. The title *is* refreshed, so a rule that has
+    been reworded since reads as its current self.
+    """
+    for row in rows:
+        if row['id'] == ident:
+            row['title'] = title or row['title']
+            return rows
+
+    rows.append({'id': ident, 'title': title or ident, 'on': date.today().isoformat()})
+    return rows[-ADOPTED_LIMIT:]
+
+
+@router.get('/api/adopted_advice')
+def get_adopted(username: str = ''):
+    """Every recommendation this account has said it would act on, oldest first."""
+    if not username:
+        return fail('Username required')
+
+    _, user = load_user(username)
+    if not user:
+        return fail('User not found')
+
+    return ok(adopted=_adopted(db.user_setting(username, ADOPTED_KEY)))
+
+
+@router.post('/api/adopt_advice')
+def adopt_advice(body: AdoptAdvice):
+    """Record that the reader is acting on a recommendation, dated today.
+
+    Dated today rather than tomorrow, even though the task this creates is due
+    tomorrow: the decision is what is being recorded here, and the comparison
+    that follows wants the day the reader changed their mind about how they
+    work. A day either way is inside the noise of a fortnight-long window
+    anyway, and "the day I pressed the button" is the one a reader can
+    remember.
+    """
+    if not body.username or not body.id:
+        return fail('Username and id required')
+
+    _, user = load_user(body.username)
+    if not user:
+        return fail('User not found')
+
+    rows = _adopted(db.user_setting(body.username, ADOPTED_KEY))
+    stored = db.set_user_setting(
+        body.username, ADOPTED_KEY, _remember(rows, body.id, body.title))
+
+    return ok(adopted=_adopted(stored))
+
+
+@router.post('/api/drop_advice')
+def drop_advice(body: DropAdvice):
+    """Forget an adoption.
+
+    This deletes the record of the decision and nothing else — any task the
+    adoption created stays where it is. Undoing "I said I would do this" is not
+    the same as undoing the work, and silently deleting somebody's task on a
+    second click is not what either button meant.
+    """
+    if not body.username or not body.id:
+        return fail('Username and id required')
+
+    _, user = load_user(body.username)
+    if not user:
+        return fail('User not found')
+
+    rows = [row for row in _adopted(db.user_setting(body.username, ADOPTED_KEY))
+            if row['id'] != body.id]
+    stored = db.set_user_setting(body.username, ADOPTED_KEY, rows)
+
+    return ok(adopted=_adopted(stored))

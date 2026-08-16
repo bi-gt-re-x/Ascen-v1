@@ -240,7 +240,12 @@ export function recommendations(input: AdviceInput): Advice[] {
   // ---- balance ------------------------------------------------------------
   if (balance.fading.length > 0) {
     out.push({
-      id: 'restart-fading',
+      // The subject rides in the id, and it is the subject *id* rather than its
+      // name. This is the one rule whose measure is about a particular subject
+      // rather than about the account as a whole, and utils/followup has to
+      // know which one a month later to check whether it actually restarted —
+      // by which time the subject may have been renamed. See `measureFor`.
+      id: `restart-fading:${balance.fadingIds[0]}`,
       kind: 'balance',
       category: 'Subject Balance',
       title: `Restart ${balance.fading[0]}`,

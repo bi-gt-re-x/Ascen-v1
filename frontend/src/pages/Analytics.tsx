@@ -122,6 +122,7 @@ import {
   AlsoPanel,
   CategoryFilter,
   Caveat,
+  FollowupPanel,
   OutlookPanel,
 } from '@/components/Recommendations';
 /**
@@ -158,7 +159,13 @@ import {
   growth as growthService,
   tasks as taskService,
 } from '@/services';
-import type { BaselineResult, MetricHistory, Standing } from '@/services/analytics';
+import type {
+  AdoptedResult,
+  BaselineResult,
+  MetricHistories,
+  MetricHistory,
+  Standing,
+} from '@/services/analytics';
 import {
   growthInsights,
   heatmapGrid,
@@ -193,6 +200,7 @@ import {
   type ComparisonKey,
 } from '@/utils/trends';
 import { outlook, recommendations, type Advice } from '@/utils/advice';
+import { SETTLE, reviewAdopted, summarise } from '@/utils/followup';
 import type { Ratings } from '@/types';
 import '@/styles/analytics.css';
 /**
@@ -311,6 +319,30 @@ export default function Analytics() {
   );
   const baseline = useApi<BaselineResult>(baselineCall, [username]);
 
+  // What the reader has said they will act on, and when they said it. Two
+  // fields and a date; everything the follow-up draws from it is recomputed
+  // off the series here. See utils/followup.
+  const adoptedCall = useCallback(
+    () =>
+      username
+        ? analyticsService.adoptedAdvice(username)
+        : Promise.resolve({ success: false as const, message: 'Sign in to see your changes.' }),
+    [username],
+  );
+  const adopted = useApi<AdoptedResult>(adoptedCall, [username]);
+
+  // Every graded metric's dated readings, for the follow-up on a recommendation
+  // about the report card. Which metric matters depends on what was adopted,
+  // which is why this is all of them in one call rather than one per id.
+  const gradedCall = useCallback(
+    () =>
+      username
+        ? analyticsService.metricHistories(username)
+        : Promise.resolve({ success: false as const, message: 'Sign in to see your history.' }),
+    [username],
+  );
+  const gradedLog = useApi<MetricHistories>(gradedCall, [username]);
+
   // The score's own recorded past. See the note on `SinceLast` for what it is
   // for, and services/analytics for why it took an endpoint to reach it.
   const historyCall = useCallback(
@@ -324,27 +356,35 @@ export default function Analytics() {
 
   // ---- Accepting a recommendation ----------------------------------------
   /**
-   * Turn a suggestion into a task on the list, due tomorrow.
+   * Turn a recommendation into a task, and start the clock on measuring it.
    *
-   * Tomorrow rather than today because every suggestion on this page is a
-   * change to how the *next* stretch of work goes — "claim one weekend day",
-   * "move one session out of the late shift" — and dropping it onto a day
+   * Two writes, and the second is the one that makes this page worth coming
+   * back to. The task is what a reader acts on; the dated adoption record is
+   * what lets the tab answer, three weeks later, whether the thing it promised
+   * would move actually moved. The button used to do only the first, which left
+   * the page making a confident claim about four thousand XP a year and then
+   * never mentioning it again.
+   *
+   * The task is due tomorrow rather than today because every recommendation
+   * here is a change to how the *next* stretch of work goes — "claim one
+   * weekend day", "move one session earlier" — and dropping it onto a day
    * already half spent makes it the thing you failed at tonight rather than the
    * thing you are trying next.
    *
-   * The task's title is the suggestion's, so the two are recognisably the same
-   * thing when it turns up in the list a week later. Its description is the
-   * reasoning, which is the part a reader will have forgotten by then and the
-   * part that makes it worth keeping rather than deleting.
+   * **The task is the required half.** If the task write fails there is nothing
+   * to adopt and the whole thing reports failure; if the task lands and the
+   * record does not, the reader still gets what they pressed the button for and
+   * loses only the follow-up. Failing the visible half because the bookkeeping
+   * half failed would be the wrong way round.
    */
   const [adopting, setAdopting] = useState<string | null>(null);
-  const [adopted, setAdopted] = useState<string | null>(null);
+  const [justAdopted, setJustAdopted] = useState<string | null>(null);
 
   const adopt = useCallback(
     async (item: Advice) => {
       if (!username) return false;
       setAdopting(item.id);
-      setAdopted(null);
+      setJustAdopted(null);
       try {
         const due = new Date();
         due.setDate(due.getDate() + 1);
@@ -355,7 +395,10 @@ export default function Analytics() {
           due_date: due.toISOString().slice(0, 10),
         });
         if (!result.success) return false;
-        setAdopted(item.title);
+
+        await analyticsService.adoptAdvice(username, item.id, item.title);
+        adopted.reload();
+        setJustAdopted(item.title);
         return true;
       } catch {
         return false;
@@ -363,7 +406,30 @@ export default function Analytics() {
         setAdopting(null);
       }
     },
-    [username],
+    [adopted, username],
+  );
+
+  /**
+   * Stop measuring a change.
+   *
+   * Removes the record of the decision and leaves any task it created alone —
+   * see the endpoint. A reader who has decided a recommendation was not for
+   * them wants it off this panel, not their task list rewritten under them.
+   */
+  const [dropping, setDropping] = useState<string | null>(null);
+
+  const dropAdopted = useCallback(
+    async (id: string) => {
+      if (!username) return;
+      setDropping(id);
+      try {
+        await analyticsService.dropAdvice(username, id);
+        adopted.reload();
+      } finally {
+        setDropping(null);
+      }
+    },
+    [adopted, username],
   );
 
   const [span, setSpan] = useState<WindowKey>('1y');
@@ -539,13 +605,41 @@ export default function Analytics() {
     [advice, category],
   );
 
+  /**
+   * What happened after each adopted change.
+   *
+   * Fed the *whole* series rather than the window, and that is the one thing
+   * about this call that matters: a follow-up is anchored to the day the change
+   * was adopted and needs the days on both sides of it, which the page's window
+   * picker knows nothing about. A reader looking at the last 30 days should
+   * still see the verdict on a change they made in March.
+   */
+  const reviews = useMemo(
+    () =>
+      reviewAdopted({
+        adopted: adopted.data?.adopted ?? [],
+        days: all,
+        tasks,
+        graded: gradedLog.data?.series ?? {},
+      }),
+    [adopted.data, all, gradedLog.data, tasks],
+  );
+  const reviewSummary = useMemo(() => summarise(reviews), [reviews]);
+
+  /** The ids already being tracked, so a card knows whether it is one of them. */
+  const adoptedIds = useMemo(
+    () => new Set((adopted.data?.adopted ?? []).map((row) => row.id)),
+    [adopted.data],
+  );
+
   // ---- The shell ----------------------------------------------------------
   const refresh = useCallback(() => {
     series.reload();
     account.reload();
     ratings.reload();
     goals.reload();
-  }, [account, goals, ratings, series]);
+    adopted.reload();
+  }, [account, adopted, goals, ratings, series]);
 
   /** The streak, which three of the chapters read and none of them fetch. */
   const streak = account.data?.stats?.current_streak ?? 0;
@@ -891,6 +985,28 @@ export default function Analytics() {
           </>
         )}
 
+        {/* The follow-up sits above the branch, not inside it, and this is the
+            only panel on the page that does.
+
+            The two arms below are about whether there is anything to *suggest*
+            — a fortnight of record, and a rule that fired. Whether there is
+            anything to *report on* is a different question with a different
+            answer: an account that adopted three changes and then went quiet
+            for a month has nothing to recommend and three results waiting, and
+            hiding those behind the same gate would mean the one thing this tab
+            promised to come back and tell you disappears exactly when it
+            finally has something to say. */}
+        {view.key === 'recommendations' && (
+          <section className="ax-section">
+            <FollowupPanel
+              reviews={reviews}
+              summary={reviewSummary}
+              onDrop={dropAdopted}
+              dropping={dropping}
+            />
+          </section>
+        )}
+
         {view.key === 'recommendations' && (waitFor('recommendations') > 0 || advice.length === 0) && (
           <Locked
             title="Recommendations"
@@ -917,10 +1033,10 @@ export default function Analytics() {
             <section className="ax-section">
               <OutlookPanel outlook={projection} />
             </section>
-            {adopted && (
+            {justAdopted && (
               <p className="ax-adopted" role="status">
-                <strong>{adopted}</strong> is on your task list for tomorrow.{' '}
-                <Link to="/tasks">Open Tasks</Link>
+                <strong>{justAdopted}</strong> is on your task list for tomorrow, and this tab will
+                tell you in {SETTLE} days whether it moved. <Link to="/tasks">Open Tasks</Link>
               </p>
             )}
             <section className="ax-section">
@@ -934,6 +1050,7 @@ export default function Analytics() {
                       rank={index + 1}
                       onAdopt={adopt}
                       adopting={adopting}
+                      adopted={adoptedIds.has(item.id)}
                     />
                   ))}
                 </div>

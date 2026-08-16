@@ -1,8 +1,12 @@
 /**
- * The Recommendations page's panels.
+ * The Recommendations tab's panels.
  *
- * The suggestions themselves are generated in utils/advice, which reads
- * utils/behaviour — the same functions the Insights page states its findings
- * from. These components only render what those two decided.
+ * The recommendations themselves are generated in utils/advice, which reads
+ * utils/behaviour — the same functions the Insights tab states its findings
+ * from. Whether any of them worked is decided in utils/followup, which measures
+ * the same quantities a second time. These components only render what those
+ * three decided.
  */
 export { AdviceCard, CategoryFilter, OutlookPanel, AlsoPanel, Caveat } from './Panels';
+export { FollowupPanel } from './Followup';
+export type { FollowupPanelProps } from './Followup';

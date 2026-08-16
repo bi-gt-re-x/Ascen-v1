@@ -10,7 +10,7 @@
  * Same `Panel`, same grid, same tiles as the analytics page, so the three pages
  * are one place.
  */
-import { useCallback, useEffect, useState } from 'react';
+
 import { AreaChart, Panel, toneVar } from '@/components/Analytics';
 import {
   PRIORITY_LABEL,
@@ -30,85 +30,62 @@ const KIND_TONE: Record<Advice['kind'], string> = {
   quality: 'pink',
 };
 
-/**
- * Which suggestions the reader has said they will try.
+/*
+ * Which recommendations the reader has adopted used to live in localStorage,
+ * under `ascen:advice-trying`, as a set of ids and nothing else.
  *
- * Local to the browser, and that is the honest scope of it: nothing on the
- * backend models an accepted recommendation, so a button that claimed to
- * schedule anything would be lying about what it did. What it can honestly do
- * is remember the decision and mark the card, which is most of the value — the
- * page's job is to get one change picked, and a page that forgets which one was
- * picked the moment it reloads is not helping with that.
+ * It is on the account now (backend/api/analytics.py). Two reasons, and the
+ * second is the one that mattered: a decision recorded in one browser was
+ * invisible in every other, and — more importantly — a set of ids carries no
+ * date, so there was no way to ask what had changed *since* the reader decided
+ * anything. The follow-up panel needs the day, so the day is what is stored.
  *
- * Keyed by advice id, which is stable across renders because the rules generate
- * fixed ids rather than indices.
+ * Nothing migrates the old key. It held at most a handful of ids with no dates
+ * attached, which is exactly the data the new record cannot use.
  */
-const TRYING_KEY = 'ascen:advice-trying';
-
-function useTrying(): [Set<string>, (id: string) => void] {
-  const [ids, setIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(TRYING_KEY);
-      if (raw) setIds(new Set(JSON.parse(raw) as string[]));
-    } catch {
-      // A corrupt or unavailable store is not worth a broken page — the cards
-      // simply open unmarked, which is the state a first visit is in anyway.
-    }
-  }, []);
-
-  const toggle = useCallback((id: string) => {
-    setIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      try {
-        window.localStorage.setItem(TRYING_KEY, JSON.stringify([...next]));
-      } catch {
-        // Same again: remembering is a convenience, not a requirement.
-      }
-      return next;
-    });
-  }, []);
-
-  return [ids, toggle];
-}
 
 // --------------------------------------------------------------------------
 // A recommendation
 // --------------------------------------------------------------------------
 /**
- * One suggestion, with everything needed to decide on it and nothing else.
+ * One recommendation, with everything needed to decide on it and nothing else.
  *
- * The card answers six questions in the order a reader asks them: what, how
- * much is it worth, why does Ascen think so, what do I actually do, how hard is
- * it, and what is the evidence. The last of those is the one most pages like
- * this omit, and it is the reason this one can be argued with — a card that
- * claims a habit is worth twelve thousand XP a year and will not show its
- * arithmetic is asking to be believed rather than read.
+ * The card answers five questions in the order a reader asks them: what, how
+ * much is it worth, what do I actually do, why does Ascen think so, and what is
+ * the evidence. The last of those is the one most pages like this omit, and it
+ * is the reason this one can be argued with — a card that claims a habit is
+ * worth twelve thousand XP a year and will not show its arithmetic is asking to
+ * be believed rather than read.
  *
  * The priority chip ranks; the XP figure quantifies. They are both here because
  * they answer different questions — "which of these first" and "is this worth
- * anything at all" — and an account with five low-impact suggestions should be
- * able to see that at a glance without doing five divisions.
+ * anything at all" — and an account with five low-impact ones should be able to
+ * see that at a glance without doing five divisions.
  */
 export function AdviceCard({
   item,
   rank,
   onAdopt,
   adopting,
+  adopted,
 }: {
   item: Advice;
   rank: number;
-  /** Writes the suggestion into the task list. See the note on the button. */
+  /** Makes the task and starts the clock on measuring it. See the button. */
   onAdopt: (item: Advice) => Promise<boolean>;
   /** The id currently being written, so only its own button shows the wait. */
   adopting: string | null;
+  /**
+   * Whether this one is already being tracked.
+   *
+   * From the account rather than from the browser — see the note at the top of
+   * this file — which is what makes a card open marked on a second device and
+   * what gives the follow-up panel a date to measure from.
+   */
+  adopted: boolean;
 }) {
   const tone = KIND_TONE[item.kind];
-  const [trying, toggle] = useTrying();
-  const chosen = trying.has(item.id);
+  const chosen = adopted;
   const busy = adopting === item.id;
 
   return (
@@ -162,31 +139,30 @@ export function AdviceCard({
           <span>{item.evidence}</span>
           <span>{item.workings}</span>
         </details>
-        {/* **This makes a task now.** It used to set a flag in localStorage and
-            nothing else: the page would compute that a change was worth five
-            thousand XP a year, the reader would agree with it, press the
-            button — and then have to go and act on it somewhere else, from
-            memory. A recommendation that cannot be accepted is an essay.
+        {/* **This makes a task and starts a measurement.** It used to set a
+            flag in localStorage and nothing else: the page would compute that a
+            change was worth five thousand XP a year, the reader would agree
+            with it, press the button — and then have to go and act on it
+            somewhere else, from memory, with nothing ever coming back to say
+            whether it had worked. A recommendation that cannot be accepted is
+            an essay; one that is never checked is a guess.
 
-            The flag is still set, because "I decided to do this" and "a task
-            exists" are different facts and the card still wants to show the
-            first. Pressing it again releases the mark and leaves the task
-            alone: deleting work on a second click is not what an undo of a
-            decision means. */}
-        <button
-          type="button"
-          className={`ax-try${chosen ? ' is-on' : ''}`}
-          aria-pressed={chosen}
-          disabled={busy}
-          onClick={() => {
-            if (chosen) return toggle(item.id);
-            void onAdopt(item).then((ok) => {
-              if (ok) toggle(item.id);
-            });
-          }}
-        >
-          {busy ? 'Adding…' : chosen ? '✓ On your list' : 'Add to tasks'}
-        </button>
+            Once adopted the button stops being a control. Untracking happens on
+            the follow-up panel, where the thing being given up is visible —
+            here it would sit under a card the reader is reading for the first
+            time, one slip away from discarding three weeks of comparison. */}
+        {chosen ? (
+          <span className="ax-try is-on">✓ Tracking</span>
+        ) : (
+          <button
+            type="button"
+            className="ax-try"
+            disabled={busy}
+            onClick={() => void onAdopt(item)}
+          >
+            {busy ? 'Adding…' : 'Add to tasks'}
+          </button>
+        )}
       </footer>
     </article>
   );

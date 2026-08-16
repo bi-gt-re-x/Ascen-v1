@@ -98,3 +98,57 @@ export function setBaseline(
 ): Promise<ApiResult<BaselineResult>> {
   return post<BaselineResult>('/api/baseline', { username, ...values });
 }
+
+/** Every graded metric's readings, keyed by metric name. */
+export interface MetricHistories {
+  series: Record<string, MetricPoint[]>;
+}
+
+/**
+ * All five metrics' histories in one call.
+ *
+ * `metricHistory` above answers about one metric and is what the score panel
+ * reads. This is for the follow-up on Recommendations, which needs whichever
+ * metric the reader happened to adopt a recommendation about.
+ */
+export function metricHistories(username: string): Promise<ApiResult<MetricHistories>> {
+  return get<MetricHistories>('/api/metric_histories', { username });
+}
+
+/**
+ * A recommendation the reader said they would act on, and when.
+ *
+ * Two fields and a date is the whole record. The "did it work" comparison that
+ * hangs off it is recomputed from the day series every time — see
+ * utils/followup for why nothing is snapshotted here.
+ */
+export interface AdoptedAdvice {
+  id: string;
+  /** What the rule was called on the day it was adopted. */
+  title: string;
+  /** ISO date. */
+  on: string;
+}
+
+export interface AdoptedResult {
+  /** Oldest first, as the backend returns them. */
+  adopted: AdoptedAdvice[];
+}
+
+export function adoptedAdvice(username: string): Promise<ApiResult<AdoptedResult>> {
+  return get<AdoptedResult>('/api/adopted_advice', { username });
+}
+
+/** Records the decision. Re-adopting keeps the original date. */
+export function adoptAdvice(
+  username: string,
+  id: string,
+  title: string,
+): Promise<ApiResult<AdoptedResult>> {
+  return post<AdoptedResult>('/api/adopt_advice', { username, id, title });
+}
+
+/** Forgets the decision. Any task it created is left alone. */
+export function dropAdvice(username: string, id: string): Promise<ApiResult<AdoptedResult>> {
+  return post<AdoptedResult>('/api/drop_advice', { username, id });
+}

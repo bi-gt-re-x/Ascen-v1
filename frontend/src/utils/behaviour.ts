@@ -347,6 +347,16 @@ export interface BalanceShape {
   carrying: number;
   /** Subjects touched in the earlier half but not the later one. */
   fading: string[];
+  /**
+   * The same subjects, as ids rather than names.
+   *
+   * `fading` is what a panel prints and is therefore whatever the subject is
+   * called today. This is what a recommendation about one of them is keyed on,
+   * so that the follow-up measuring whether it was restarted is looking at the
+   * same subject a month later even if it has been renamed since — see
+   * `measureFor` in utils/followup. Same order as `fading`.
+   */
+  fadingIds: string[];
   /** Every subject with XP in the window, largest first. */
   rows: BalanceRow[];
   /** The window's total subject XP — what every share is a share of. */
@@ -371,6 +381,7 @@ export function balanceShape(
     leader: null,
     carrying: 0,
     fading: [],
+    fadingIds: [],
     rows: [],
     total: 0,
   };
@@ -427,13 +438,18 @@ export function balanceShape(
     return { name: nameOf(id), xp, share: (xp / total) * 100, early: before, late: after, direction };
   });
 
+  // Worked out once and split two ways: the names for the panels, the ids for
+  // the recommendation that will be measured against them later.
+  const fadingIds = [...early.entries()]
+    .filter(([id, xp]) => xp / total >= 0.02 && !late.has(id))
+    .map(([id]) => id);
+
   return {
     concentration: Math.round((leaderXp / total) * 100),
     leader: nameOf(leaderId),
     carrying: ranked.filter(([, xp]) => xp / total >= 0.05).length,
-    fading: [...early.entries()]
-      .filter(([id, xp]) => xp / total >= 0.02 && !late.has(id))
-      .map(([id]) => nameOf(id)),
+    fading: fadingIds.map(nameOf),
+    fadingIds,
     rows,
     total,
   };
