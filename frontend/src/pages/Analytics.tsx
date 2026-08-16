@@ -1,58 +1,59 @@
 /**
- * Analytics — one page, five tabs, and three of them are the point.
+ * Analytics — one page, seven tabs, and the first one is the point.
  *
- * This page was the graded report card, then it was the long view of an
- * account, and it is now the place the app does its thinking. The reason for
- * the last change is the reason for the shape of the file: analysis split
- * across three separate pages in the rail was three pages nobody moved between,
- * and the whole value of the analysis is in the movement — what I do, then why
- * I do it, then what to change. Putting them in one bar makes the sequence a
- * click instead of a navigation.
+ * This page was the graded report card, then the long view of an account, and
+ * it is now the place the app does its thinking. Analysis split across separate
+ * pages in the rail was pages nobody moved between, and the value of the
+ * analysis is in the movement — what I do, then why, then what to change. One
+ * bar makes that sequence a click instead of a navigation.
  *
- * ## The five tabs and the lines between them
+ * ## The seven tabs
  *
- * - **Overview** — the long view. Totals, trajectory, milestones, where the
- *   account stands. This is what the page was and it is unchanged.
- * - **Trends** — the derivative rather than the level. Which way each measure
- *   is heading and whether the slope survives its own noise.
- * - **Habits — what I do.** Recurring behaviour, counted. Cards, a calendar, a
- *   timeline. It never says *why*: the moment it does, the next tab has no
- *   reason to exist.
- * - **Insights — why and how.** Two counts put together, with the evidence for
- *   the connection graded and printed. It never says what to do.
  * - **Recommendations — how I improve.** Instructions, ranked by what each is
  *   worth, with the arithmetic attached. It never re-states a finding as news.
+ *   It leads the bar and owns the rail entry, because it is the only tab that
+ *   ends in a button and it used to sit five clicks behind four screens of
+ *   description.
+ * - **Overview** — totals, trajectory, the score, where the account stands.
+ * - **Trends** — the derivative rather than the level, plus the long-term
+ *   projection that was the growth page's Long Term chapter.
+ * - **Habits — what I do.** Recurring behaviour, counted, plus the growth
+ *   page's Focus chapter: whether it can be executed reliably. It never says
+ *   *why*: the moment it does, the next tab has no reason to exist.
+ * - **Insights — why and how.** Two counts put together, with the evidence for
+ *   the connection graded and printed. It never says what to do.
+ * - **Subjects** — mastery. The growth page's Subject chapter.
+ * - **Records** — achievement, against the reader's own best and their goals.
  *
- * Keeping those boundaries sharp is the single design decision this page is
- * built around, which is why each tab has a different personality rather than
- * three grids of the same card, and why the bar carries a line of prose saying
- * what the open tab is for.
+ * Keeping the middle boundaries sharp is the design decision this page is built
+ * around: three tabs that all show cards of numbers are one tab with a broken
+ * picker.
  *
  * ## How it holds together
  *
- * **Four calls, one window, five tabs.** The whole day series (`days: 0`), the
- * account's stats and tasks, the report card, and where this account stands
- * against the others. Every panel on every tab is arithmetic over the first
- * three — nothing here fetches per tab — and every tab is scoped by the one
- * window picker, so two tabs can never quietly be describing different periods.
- * The exceptions are deliberate and marked: the Overview heatmap always draws a
- * year, and the Habits calendar carries its own zoom, because a map of 91
- * squares and a map of 730 are not the same picture.
+ * **Five calls, one window, seven tabs.** The whole day series (`days: 0`), the
+ * account's stats and tasks, the report card, where this account stands against
+ * the others, and the baseline. Every panel is arithmetic over the first three
+ * — nothing here fetches per tab — and every tab is scoped by the one window
+ * picker, so two tabs can never quietly be describing different periods. The
+ * exceptions are deliberate: the Overview heatmap always draws a year and the
+ * Habits calendar carries its own zoom, because a map of 91 squares and a map
+ * of 730 are not the same picture.
  *
- * The fourth call is the odd one and stays separate for a reason: it is the only
- * thing on the page computed from anybody else's record, so it cannot be
- * arithmetic over the series, and it is unscoped by the window because "where
- * you stand" is a question about the account rather than about a quarter of it.
+ * Standing is the odd call and stays separate: it is the only thing here
+ * computed from anybody else's record, so it cannot be arithmetic over the
+ * series, and it is unscoped by the window because "where you stand" is a
+ * question about the account rather than about a quarter of it.
  *
- * **A tab is a route.** `/analytics`, `/trends`, `/habits`, `/insights`,
- * `/recommendations` all render this component and differ only in which view
- * opens. That is what makes the rail, the back button and a pasted link agree
- * about which tab is showing — local state would have broken all three.
+ * **A tab is a route.** Seven paths render this component and differ only in
+ * which view opens. That is what makes the rail, the back button and a pasted
+ * link agree about which tab is showing — local state would have broken all
+ * three. `/growth` redirects here; see App.tsx.
  *
- * **All five compute on every render, and that is on purpose.** Everything is
+ * **Everything computes on every render, and that is on purpose.** All of it is
  * memoised against the slice, so switching tabs recomputes nothing; the cost of
  * running the arithmetic for a hidden tab is a few hundred array passes once
- * per window change, and the alternative — five children each holding their own
+ * per window change, and the alternative — children each holding their own
  * memos — would put the arithmetic out of reach of the page that has to decide,
  * before rendering a tab, whether that tab has anything to say.
  *
@@ -62,7 +63,8 @@
  * new account's first impression of the analysis a page of numbers about
  * somebody who does not exist, and taught the reader to discount the real ones
  * that arrived later. A tab that cannot be filled now says what it is waiting
- * for and when it opens — see `Locked` in components/Analytics.
+ * for and when it opens — see `Locked` — and a new account is offered the one
+ * thing it can actually do here, which is `BaselineSetup`.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -697,13 +699,7 @@ export default function Analytics() {
                    take the page — the offer belongs beside the totals it would
                    give a meaning to, not in front of them. */
                 <section className="ax-baseline-offer">
-                  <div>
-                    <strong>These numbers have nothing to be measured against.</strong>
-                    <p>
-                      Say how often you mean to work and how long a sitting is, and every figure
-                      on this page gets a target behind it.
-                    </p>
-                  </div>
+                  <strong>No target behind these numbers.</strong>
                   <button
                     type="button"
                     className="ax-btn ax-btn-primary"
@@ -723,17 +719,12 @@ export default function Analytics() {
             remaining={waitFor('trends')}
             need={NEED_DAYS.trends}
             have={historyDays}
-            promise="A trend is a slope you can see through the noise, and three weeks is the shortest run that can tell one from a good fortnight."
-            brings={[
-              'Which way each of your measures is heading, and how fast',
-              'This period against the last, with the partial week marked',
-              'Whether the movement is real or inside the noise',
-              'The pace behind your totals, and where it projects to',
-            ]}
-            emptyMessage="You have the days, but none of your measures has moved far enough in one direction to call a trend. Nothing is sliding, which is the good version of this result."
+            promise="Three weeks is the shortest run that tells a slope from a good fortnight."
+            brings={['Direction, per measure', 'This period vs last', 'Signal or noise', 'Where the pace projects']}
+            emptyMessage="Nothing has moved far enough in one direction to call a trend."
             action={
               <Link to="/analytics" className="ax-btn">
-                See the totals instead
+                See totals
               </Link>
             }
           />
@@ -786,9 +777,6 @@ export default function Analytics() {
               <h2 className="ax-band">Where this is heading</h2>
               <LongTermChapter all={all} streak={streak} />
             </section>
-            <section className="ax-foot">
-              <p>A slope you can see through the noise is worth more than a good fortnight. 📈</p>
-            </section>
           </>
         )}
 
@@ -798,14 +786,9 @@ export default function Analytics() {
             remaining={waitFor('habits')}
             need={NEED_DAYS.habits}
             have={historyDays}
-            promise="A habit is something you have done repeatedly, so it takes weeks of repetition before there is one to find."
-            brings={[
-              'The routines you keep, counted and dated',
-              'A calendar of every day you worked, at your own zoom',
-              'Which of your habits are holding and which are slipping',
-              'When each one started, and what it displaced',
-            ]}
-            emptyMessage="You have the days, but nothing in your record repeats often enough yet to count as a habit. Finishing tasks in the same subject on a regular rhythm is what turns this on."
+            promise="A habit needs weeks of repetition before there is one to find."
+            brings={['Routines, counted', 'Every day you worked', 'Holding or slipping', 'When each began']}
+            emptyMessage="Nothing repeats often enough yet to count as a habit."
             action={
               <Link to="/tasks" className="ax-btn">
                 Open Tasks
@@ -843,9 +826,6 @@ export default function Analytics() {
               <h2 className="ax-band">Can you execute it reliably</h2>
               <FocusChapter all={all} tasks={tasks} subjects={subjects} streak={streak} />
             </section>
-            <section className="ax-foot">
-              <p>This is what you do. Open Insights to find out why. 🔁</p>
-            </section>
           </>
         )}
 
@@ -855,16 +835,11 @@ export default function Analytics() {
             remaining={waitFor('insights')}
             need={NEED_DAYS.insights}
             have={historyDays}
-            promise="An explanation needs two comparable stretches to hold against each other, which is why this is the longest wait on the page."
-            brings={[
-              'Why your last stretch went the way it did, with the evidence graded',
-              'How you tend to work — your hours, your week, your rhythm',
-              'Which of your measures actually move together, with r and n printed',
-              'What is working, stated as a finding rather than a total',
-            ]}
+            promise="An explanation needs two comparable stretches to hold against each other."
+            brings={['Why the last stretch went that way', 'Your hours, week and rhythm', 'What moves together, with r and n', 'What is working']}
             action={
               <Link to="/habits" className="ax-btn">
-                See what you do
+                See habits
               </Link>
             }
           />
@@ -913,9 +888,6 @@ export default function Analytics() {
             <section className="ax-section">
               <InsightsPanel insights={insights} />
             </section>
-            <section className="ax-foot">
-              <p>Patterns are easier to change than totals. Read these, then open Recommendations. 🔎</p>
-            </section>
           </>
         )}
 
@@ -925,17 +897,12 @@ export default function Analytics() {
             remaining={waitFor('recommendations')}
             need={NEED_DAYS.recommendations}
             have={historyDays}
-            promise="Every suggestion here is worth a number of XP a year computed from your own averages, and an average needs a fortnight before it means anything."
-            brings={[
-              'What to change, ranked by what each change is worth to you',
-              'The arithmetic behind every figure, so you can argue with it',
-              'How hard each one is, before you decide to start',
-              'A button that puts any of them on your task list for tomorrow',
-            ]}
-            emptyMessage="You have the days, and none of the rules found anything to fix. No long gaps, no dead weekend, no late shift worth moving. That is what a clean record looks like — there is no filler here to hand you instead."
+            promise="Each one is priced off your own averages, and an average needs a fortnight."
+            brings={['What to change, ranked by worth', 'The arithmetic behind each', 'How hard it is', 'One tap to your task list']}
+            emptyMessage="No long gaps, no dead weekend, no late shift worth moving. Nothing to fix."
             action={
               <Link to="/analytics" className="ax-btn">
-                See where you stand
+                See totals
               </Link>
             }
           />
@@ -976,9 +943,6 @@ export default function Analytics() {
               <AlsoPanel items={shown.slice(HEADLINE_ADVICE)} />
               <Caveat />
             </section>
-            <section className="ax-foot">
-              <p>Pick one. A change you actually make beats three you agree with. 🎯</p>
-            </section>
           </>
         )}
 
@@ -989,9 +953,6 @@ export default function Analytics() {
         {view.key === 'subjects' && (
           <div className="ax-section gr-scope">
             <SkillsChapter all={all} tasks={tasks} subjects={subjects} />
-            <section className="ax-foot">
-              <p>Volume is what you did. A level is what it left behind. 📚</p>
-            </section>
           </div>
         )}
 
@@ -1004,9 +965,6 @@ export default function Analytics() {
               goalsLoading={goals.loading}
               streak={streak}
             />
-            <section className="ax-foot">
-              <p>The only record worth beating here is your own. 🏅</p>
-            </section>
           </div>
         )}
           </>

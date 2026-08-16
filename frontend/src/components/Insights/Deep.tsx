@@ -100,7 +100,7 @@ export function WhyPanel({
   return (
     <Panel
       title="Why the last stretch went the way it did"
-      note="What in your own record accounts for the change. Open one to see the figures."
+      note="What accounts for the change"
     >
       {!notice.ready ? (
         <Waiting notice={notice} />
@@ -133,7 +133,7 @@ export function HowPanel({
   return (
     <Panel
       title="How you tend to work"
-      note="The conditions your better work shows up under. Associations, not mechanisms."
+      note="Associations, not mechanisms"
     >
       {!notice.ready ? (
         <Waiting notice={notice} />
@@ -170,7 +170,7 @@ export function WorkingPanel({ wins }: { wins: Win[] }) {
   return (
     <Panel
       title="What’s working right now"
-      note="Measured improvements over the previous period of the same length."
+      note="Against the period before"
     >
       {wins.length === 0 ? (
         <p className="ax-empty">
@@ -219,7 +219,7 @@ export function RelationshipsPanel({
   return (
     <Panel
       title="What moves with what"
-      note="Correlation, not cause. Every dot is one day or one week of your own record."
+      note="Correlation, not cause"
     >
       {!notice.ready || !active ? (
         <Waiting

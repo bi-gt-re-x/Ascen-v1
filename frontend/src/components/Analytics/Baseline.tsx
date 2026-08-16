@@ -102,12 +102,12 @@ export function BaselineSetup({
         <h2>{editing ? 'What you are aiming at' : 'What does a normal week look like?'}</h2>
         <p className="ax-baseline-lead">
           {editing
-            ? 'Everything on this page compares what happened against what you said you were aiming at. Change it whenever the aim changes.'
-            : 'Your record is too new to analyse — that takes a couple of weeks. This is the part that does not need any: tell the page what you are aiming at, and from tomorrow every tab can compare what happened against it.'}
+            ? 'Every figure here is measured against this.'
+            : 'Two minutes now. Everything on this page is measured against it from tomorrow.'}
         </p>
 
         <div className="ax-baseline-q">
-          <h3>How many days a week do you mean to work?</h3>
+          <h3>Days a week</h3>
           <div className="ax-baseline-days" role="group" aria-label="Days a week">
             {DAY_CHOICES.map((choice) => (
               <button
@@ -121,15 +121,11 @@ export function BaselineSetup({
               </button>
             ))}
           </div>
-          <p className="ax-baseline-hint">
-            {days === 7
-              ? 'Every day. The Habits tab will tell you honestly whether that held.'
-              : `${days} of 7. Missing one is a miss; missing three in a row is a gap.`}
-          </p>
+
         </div>
 
         <div className="ax-baseline-q">
-          <h3>How long is a normal sitting?</h3>
+          <h3>A normal sitting</h3>
           <div className="ax-baseline-sessions" role="group" aria-label="Session length">
             {SESSION_CHOICES.map((choice) => (
               <button
@@ -149,7 +145,7 @@ export function BaselineSetup({
         {subjects.length > 0 && (
           <div className="ax-baseline-q">
             <h3>
-              What is this mostly for? <em>Optional</em>
+              Mostly for <em>optional</em>
             </h3>
             <select
               className="ax-baseline-select"
@@ -164,19 +160,17 @@ export function BaselineSetup({
                 </option>
               ))}
             </select>
-            <p className="ax-baseline-hint">
-              Pick one only if it is true. A subject named here is one the page will hold you to.
-            </p>
+
           </div>
         )}
 
         <p className="ax-baseline-sum">
-          That comes to <strong>{weeklyHours} hours a week</strong> — {days} × {minutes} minutes.
+          <strong>{weeklyHours}h</strong> a week
         </p>
 
         {failed && (
           <p className="ax-baseline-failed" role="alert">
-            That did not save. Check your connection and try again.
+            Did not save. Try again.
           </p>
         )}
 
@@ -187,11 +181,11 @@ export function BaselineSetup({
             onClick={save}
             disabled={saving}
           >
-            {saving ? 'Saving…' : editing ? 'Update baseline' : 'Set my baseline'}
+            {saving ? 'Saving…' : editing ? 'Update' : 'Set baseline'}
           </button>
           {onSkip && !editing && (
             <button type="button" className="ax-baseline-skip" onClick={onSkip}>
-              Skip for now
+              Skip
             </button>
           )}
         </div>
@@ -271,16 +265,16 @@ export function BaselinePanel({
   const rows = [
     {
       key: 'days',
-      label: 'Days worked',
-      actual: `${workedPerWeek} of 7 a week`,
-      target: `you said ${aim.active_days}`,
+      label: 'Days a week',
+      actual: `${workedPerWeek}`,
+      target: `aimed ${aim.active_days}`,
       pct: daysPct,
     },
     {
       key: 'session',
-      label: 'Typical sitting',
-      actual: typicalSession > 0 ? `${Math.round(typicalSession)} min` : 'nothing logged',
-      target: `you said ${aim.session_minutes}`,
+      label: 'Sitting',
+      actual: typicalSession > 0 ? `${Math.round(typicalSession)} min` : '—',
+      target: `aimed ${aim.session_minutes}`,
       pct: sessionPct,
     },
   ];
@@ -288,7 +282,7 @@ export function BaselinePanel({
   return (
     <Panel
       title="Against your baseline"
-      note={`What you said you were aiming at, and what ${span} actually came to.`}
+      note={span}
       aside={
         <button type="button" className="ax-baseline-edit" onClick={onEdit}>
           Edit
@@ -310,7 +304,7 @@ export function BaselinePanel({
                 style={{ width: `${Math.max(2, Math.min(100, row.pct))}%` }}
               />
             </span>
-            <span className="ax-baseline-row-pct">{row.pct}% of what you aimed at</span>
+            <span className="ax-baseline-row-pct">{row.pct}%</span>
           </li>
         ))}
       </ul>
@@ -318,11 +312,10 @@ export function BaselinePanel({
         Set{' '}
         {setOn
           ? new Date(`${setOn}T00:00:00`).toLocaleDateString('en-US', {
-              month: 'long',
+              month: 'short',
               day: 'numeric',
             })
           : 'earlier'}
-        . If the aim has changed, change it — a target you have stopped meaning is worse than none.
       </p>
     </Panel>
   );

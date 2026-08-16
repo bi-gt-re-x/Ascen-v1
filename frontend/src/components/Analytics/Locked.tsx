@@ -37,9 +37,9 @@ export interface LockedProps {
   need: number;
   /** How many the account has. */
   have: number;
-  /** One line on what this tab will do once it has the days. */
+  /** A short clause on why the wait is this long. Kept to one line. */
   promise: string;
-  /** The panels that will appear, so the wait is for something specific. */
+  /** What will appear, three or four words each — a list, not sentences. */
   brings: string[];
   /**
    * What to say when there are enough days and still no findings. Required for
@@ -73,13 +73,8 @@ export function Locked({
     return (
       <section className="ax-locked ax-locked-empty">
         <div className="ax-locked-body">
-          <h2>Nothing to report on {title.toLowerCase()} yet</h2>
-          <p className="ax-locked-lead">
-            {emptyMessage ??
-              `Your record is long enough to analyse, and nothing in it stands out
-               strongly enough to be worth stating. That is a real answer rather
-               than an empty one.`}
-          </p>
+          <h2>Nothing to report.</h2>
+          <p className="ax-locked-lead">{emptyMessage ?? 'Your record is long enough. Nothing in it stands out.'}</p>
           {action && <div className="ax-locked-action">{action}</div>}
         </div>
       </section>
@@ -92,31 +87,28 @@ export function Locked({
     <section className="ax-locked">
       <div className="ax-locked-body">
         <p className="ax-locked-eyebrow">{title}</p>
+        {/* The number is the message. It used to open with a sentence of
+            justification and put the count in the middle of it. */}
         <h2>
-          {remaining} more {remaining === 1 ? 'day' : 'days'} of history
+          <strong>{remaining}</strong> more {remaining === 1 ? 'day' : 'days'}
         </h2>
         <p className="ax-locked-lead">
-          {promise} This tab needs {need} days to say anything about it that would
-          still be true next week, and your record has {have}. Keep going and it
-          opens on {unlockDate(remaining)}.
+          Opens {unlockDate(remaining)}. {promise}
         </p>
 
         <div className="ax-locked-meter" role="img" aria-label={`${have} of ${need} days`}>
           <span className="ax-locked-fill" style={{ width: `${pct}%` }} />
         </div>
         <p className="ax-locked-count">
-          {have} of {need} days
+          {have} / {need} days
         </p>
 
         {brings.length > 0 && (
-          <>
-            <p className="ax-locked-sub">What opens here</p>
-            <ul className="ax-locked-list">
-              {brings.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </>
+          <ul className="ax-locked-list">
+            {brings.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
         )}
 
         {action && <div className="ax-locked-action">{action}</div>}

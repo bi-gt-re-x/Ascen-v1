@@ -132,7 +132,7 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
   return (
     <Panel
       title="Compounding Growth"
-      note="See how small daily actions turn into massive long-term results."
+      note="Small actions, compounded"
       footer={
         <PanelNote label="How this is projected">
           Your daily average across the window, multiplied by the days ahead. Nothing here

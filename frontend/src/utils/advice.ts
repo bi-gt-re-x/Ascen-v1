@@ -61,14 +61,12 @@ export interface Advice {
   id: string;
   kind: AdviceKind;
   category: AdviceCategory;
-  /** The instruction, in the imperative. */
+  /** The instruction, in the imperative. Short enough to be a heading. */
   title: string;
-  /** What in the record produced it. */
+  /** What in the record produced it. One sentence. */
   because: string;
-  /** What to actually do, concretely enough to start today. */
+  /** What to actually do, concretely enough to start today. One sentence. */
   action: string;
-  /** What changes if it works, in words rather than XP. */
-  benefit: string;
   /** The count behind it — the line a sceptical reader checks first. */
   evidence: string;
   /** XP a year, if it worked. Drives the ordering. */
@@ -157,14 +155,9 @@ export function recommendations(input: AdviceInput): Advice[] {
       id: 'close-gaps',
       kind: 'frequency',
       category: 'Consistency',
-      title: 'Put something small in the three-day gaps',
-      because: `You have taken ${rhythm.gapCount} breaks of three days or more in this range, and a
-        break costs you the days themselves plus the streak they interrupt.`,
-      action: `A gap almost never starts as a decision — it starts with one missed day that nothing
-        pulled you back from. Set the smallest task you will still count as a day: fifteen minutes,
-        one problem, one page. The purpose is not the XP, it is that the run never breaks, so there
-        is no restart to negotiate on day four.`,
-      benefit: 'Fewer restarts, and a streak that survives a bad week.',
+      title: 'Fill the three-day gaps',
+      because: `${rhythm.gapCount} breaks of three days or more. A gap costs the days plus the streak.`,
+      action: 'On a day you would skip, do the smallest thing that counts — fifteen minutes, one problem, one page. The run never breaks, so there is no restart.',
       evidence: `${rhythm.gapCount} breaks of 3+ days across ${rhythm.span.toLocaleString()} days${
         rhythm.longestGap ? `, the longest running ${rhythm.longestGap.days} days` : ''
       }.`,
@@ -183,12 +176,8 @@ export function recommendations(input: AdviceInput): Advice[] {
       kind: 'frequency',
       category: 'Scheduling',
       title: 'Claim one weekend day',
-      because: `Your weekends run ${Math.abs(week.weekendGap)}% lighter than your weekdays, so two of
-        every seven days are close to unavailable.`,
-      action: `Not both days — one. Pick the weekend day that is already the better of the two and
-        give it a single fixed session at a fixed hour, the same one every week. Two of seven days
-        is 29% of your available time; you do not have to use all of it to get most of the benefit.`,
-      benefit: 'A seven-day week instead of a five-day one, without working every weekend.',
+      because: `Weekends run ${Math.abs(week.weekendGap)}% lighter. Two of every seven days are near-unavailable.`,
+      action: 'One day, not both. Take the better of the two and give it one fixed session at the same hour every week.',
       evidence: `Weekend days average ${Math.round(
         week.stats.filter((stat) => stat.index === 0 || stat.index === 6).reduce((sum, stat) => sum + stat.avgXp, 0) / 2,
       ).toLocaleString()} XP against ${Math.round(
@@ -208,14 +197,9 @@ export function recommendations(input: AdviceInput): Advice[] {
       id: 'longer-sittings',
       kind: 'depth',
       category: 'Focus',
-      title: 'Add fifteen minutes to the sitting you already have',
-      because: `Your typical sitting is ${Math.round(rhythm.typicalSession)} minutes, which is short
-        enough that a fair share of it is spent getting started rather than working.`,
-      action: `The expensive part of a session is the beginning — finding the place, remembering the
-        problem. You are already paying that cost; extending a session you have started is far
-        cheaper than starting another one. Add a quarter of an hour to the end, not a second session
-        to the day.`,
-      benefit: 'More work out of the sessions you are already sitting down for.',
+      title: 'Add 15 minutes to each sitting',
+      because: `Your sittings run ${Math.round(rhythm.typicalSession)} minutes — short enough that much of one goes on starting.`,
+      action: 'Add the time to the end of a sitting you were having anyway. Starting costs more than continuing, and you have already paid it.',
       evidence: `Typical sitting ${Math.round(rhythm.typicalSession)} minutes${
         rhythm.longestSession ? `, against a best of ${Math.round(rhythm.longestSession.minutes)}` : ''
       }, across the ${Math.round(rhythm.activeRate)}% of days you work.`,
@@ -234,17 +218,11 @@ export function recommendations(input: AdviceInput): Advice[] {
       id: 'earlier',
       kind: 'timing',
       category: 'Time Management',
-      title: 'Move one session out of the late shift',
-      because: `${clock.lateShare}% of what you finish lands after 10 PM or before 5 AM, and late
-        work is the first thing that disappears on a tired or busy day.`,
+      title: 'Move one session earlier',
+      because: `${clock.lateShare}% of your work lands after 10 PM. Late work is the first thing a bad day loses.`,
       action: clock.coreWindow
-        ? `Your reliable window is ${hourText(clock.coreWindow.from)}–${hourText(clock.coreWindow.to)}.
-           Move the single most important task of the day into it, and let the late slot keep the
-           work that does not matter if it is missed. This is not about sleeping more; it is about
-           which work is exposed when the day goes wrong.`
-        : `Pick the hour you are most often free and awake, and put the most important task of the
-           day there instead of at the end of it.`,
-      benefit: 'The work that matters stops being the work most likely to be skipped.',
+        ? `Move the day's most important task into ${hourText(clock.coreWindow.from)}–${hourText(clock.coreWindow.to)}, your reliable window. Leave the late slot for work that can be missed.`
+        : "Put the day's most important task in the hour you are most reliably free, not at the end of the day.",
       evidence: `${clock.lateShare}% of completions land after 10 PM or before 5 AM${
         clock.coreWindow
           ? `, against a reliable window of ${hourText(clock.coreWindow.from)}–${hourText(
@@ -266,13 +244,8 @@ export function recommendations(input: AdviceInput): Advice[] {
       kind: 'balance',
       category: 'Subject Balance',
       title: `Restart ${balance.fading[0]}`,
-      because: `${balance.fading.join(' and ')} had real work behind ${
-        balance.fading.length === 1 ? 'it' : 'them'
-      } earlier in this range and none at all in the second half.`,
-      action: `Nothing was decided here — a subject like this stops by drifting, and the totals go on
-        looking healthy because they still contain all the work you did before. One scheduled session
-        is usually enough to find out whether you actually dropped it on purpose.`,
-      benefit: 'A subject you meant to keep stops disappearing by accident.',
+      because: `${balance.fading.join(' and ')} had real work early in this range and none in the second half.`,
+      action: 'Book one session. That is enough to find out whether you dropped it on purpose or it just drifted.',
       evidence: `${balance.fading.join(', ')} carried real work in the first half of this range and none in the second.`,
       impact: 0,
       workings: 'No XP claim: this is about what is missing from the week, not about the total.',
@@ -285,14 +258,9 @@ export function recommendations(input: AdviceInput): Advice[] {
       id: 'rebalance',
       kind: 'balance',
       category: 'Subject Balance',
-      title: `Decide whether ${balance.leader} should be ${balance.concentration}% of your week`,
-      because: `${balance.leader} takes ${balance.concentration}% of your XP, more than everything
-        else combined.`,
-      action: `This is genuinely not a mistake — depth is how anything gets mastered, and an account
-        spread evenly over nine subjects is an account that is not getting good at any of them. But
-        it should be a choice rather than a habit: if it is deliberate, protect it, and if it is
-        drift, the fix is one recurring session on the subject you would rather be building.`,
-      benefit: 'The shape of your week becomes a decision instead of an accident.',
+      title: `${balance.leader} is ${balance.concentration}% of your week`,
+      because: 'More than everything else combined. Depth is not a fault, but it should be a choice.',
+      action: 'If it is deliberate, protect it. If it is drift, book one recurring session on the subject you would rather be building.',
       evidence: `${balance.leader} holds ${balance.concentration}% of your XP across ${balance.carrying} subjects with real weight behind them.`,
       impact: 0,
       workings: 'No XP claim: the total does not change, only what it is made of.',
@@ -310,11 +278,9 @@ export function recommendations(input: AdviceInput): Advice[] {
         id: `metric-${name}`,
         kind: 'quality',
         category: METRIC_CATEGORY[name] ?? 'Productivity',
-        title: `Your ${name} score is the one holding the grade down`,
-        because: `It sits at ${metric.score}/100, below every other metric on your report card, so it
-          is the one costing you the most overall grade per point of improvement.`,
-        action: METRIC_ADVICE[name] ?? 'Work on this metric directly — it is the lowest of the five.',
-        benefit: 'The cheapest point of overall grade available, per unit of effort spent.',
+        title: `${name[0]!.toUpperCase()}${name.slice(1)} is holding your grade down`,
+        because: `${metric.score}/100 — the lowest of your five graded metrics.`,
+        action: METRIC_ADVICE[name] ?? 'Work on this metric directly. It is the lowest of the five.',
         evidence: `${name} scores ${metric.score}/100, the lowest of the five graded metrics.`,
         impact: 0,
         workings: 'No XP claim: the report card grades how you work, not how much.',
@@ -376,14 +342,9 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
       id: 'one-more-day',
       kind: 'frequency',
       category: 'Consistency',
-      title: 'Add one more working day to the week',
-      because: `You carry work on ${Math.round(rhythm.activeRate)}% of the days in this range, so the
-        week already has room in it without any day you keep getting longer.`,
-      action: `Pick the day you most often skip — it is usually the same one — and give it the
-        smallest session you will still count as a day. The target is the day being on the board at
-        all, not what it is worth: this is the only change here that costs nothing on any of the days
-        you already work.`,
-      benefit: 'More days on the board, without a longer day on any of them.',
+      title: 'Add one day a week',
+      because: `You work ${Math.round(rhythm.activeRate)}% of days. The week has room without any day getting longer.`,
+      action: 'Take the day you most often skip — usually the same one — and give it the smallest session that counts. Being on the board is the target, not the size.',
       evidence: `${Math.round(rhythm.activeRate)}% of the ${rhythm.span.toLocaleString()} days in
         this range carried work.`,
       impact: Math.round(52 * perDay),
@@ -402,13 +363,9 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
       id: 'longer-sittings',
       kind: 'depth',
       category: 'Focus',
-      title: 'Add ten minutes to the sitting you already have',
-      because: `Your typical sitting is ${Math.round(rhythm.typicalSession)} minutes. That is not
-        short, but the beginning of a session is its expensive part and you have already paid it.`,
-      action: `Extending a session you have started is cheaper than starting another one — the
-        finding of the place and the remembering of the problem are already done. Add the ten minutes
-        to the end of a sitting you were having anyway, rather than to the plan for tomorrow.`,
-      benefit: 'More work out of the sessions you are already sitting down for.',
+      title: 'Add 10 minutes to each sitting',
+      because: `Your sittings run ${Math.round(rhythm.typicalSession)} minutes. Starting costs more than continuing, and you have already paid it.`,
+      action: 'Add the time to the end of a sitting you were having anyway, not to tomorrow\u2019s plan.',
       evidence: `Typical sitting ${Math.round(rhythm.typicalSession)} minutes${
         rhythm.longestSession ? `, against a best of ${Math.round(rhythm.longestSession.minutes)}` : ''
       }, across the ${Math.round(rhythm.activeRate)}% of days you work.`,
@@ -435,11 +392,9 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
           id: `metric-${name}`,
           kind: 'quality',
           category: METRIC_CATEGORY[name] ?? 'Productivity',
-          title: `${name[0]!.toUpperCase()}${name.slice(1)} is the cheapest point on your report card`,
-          because: `It sits at ${metric.score}/100 — among the lowest of your five graded metrics, so
-            it is where a point of improvement costs you the least effort.`,
-          action: METRIC_ADVICE[name] ?? 'Work on this metric directly — it is among the lowest of the five.',
-          benefit: 'A better grade for less work than any of the other four would take.',
+          title: `${name[0]!.toUpperCase()}${name.slice(1)} is your cheapest point`,
+          because: `${metric.score}/100 — among the lowest of your five graded metrics, so a point costs least here.`,
+          action: METRIC_ADVICE[name] ?? 'Work on this metric directly. It is among the lowest of the five.',
           evidence: `${name} scores ${metric.score}/100 against a best of ${Math.max(
             ...metrics.map(([, entry]) => entry.score),
           )}/100 elsewhere on the card.`,
@@ -458,14 +413,9 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
       id: 'rebalance',
       kind: 'balance',
       category: 'Subject Balance',
-      title: `Decide whether ${balance.leader} should be ${balance.concentration}% of your week`,
-      because: `${balance.leader} takes ${balance.concentration}% of your XP across
-        ${balance.carrying} subjects with real weight behind them.`,
-      action: `Depth is how anything gets mastered and an account spread evenly over nine subjects is
-        an account getting good at none of them — so this is not a fault. It is worth being a
-        decision rather than a habit: if it is deliberate, protect it; if it is drift, one recurring
-        session on the subject you would rather be building is the whole fix.`,
-      benefit: 'The shape of your week becomes a decision instead of an accident.',
+      title: `${balance.leader} is ${balance.concentration}% of your week`,
+      because: `Across ${balance.carrying} subjects with real weight behind them. Depth is not a fault, but it should be a choice.`,
+      action: 'If it is deliberate, protect it. If it is drift, book one recurring session on the subject you would rather be building.',
       evidence: `${balance.leader} holds ${balance.concentration}% of your XP across ${balance.carrying} subjects with real weight behind them.`,
       impact: 0,
       workings: 'No XP claim: the total does not change, only what it is made of.',
@@ -486,14 +436,9 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
       id: 'quietest-weekday',
       kind: 'timing',
       category: 'Scheduling',
-      title: `${quietest.label} is the day that goes missing`,
-      because: `${quietest.label}s average ${Math.round(quietest.avgXp).toLocaleString()} XP against
-        ${Math.round(busiest.avgXp).toLocaleString()} on a ${busiest.label}, and it is the same day
-        every week rather than a run of bad luck.`,
-      action: `A weekday that is reliably quieter than the rest is usually a scheduling fact rather
-        than a motivation one — something else has that slot. Find what it is before deciding it is a
-        discipline problem, then give the day one fixed session at an hour that is actually free.`,
-      benefit: 'A week without a hole in the same place in it.',
+      title: `${quietest.label} goes missing`,
+      because: `${Math.round(quietest.avgXp).toLocaleString()} XP against ${Math.round(busiest.avgXp).toLocaleString()} on a ${busiest.label} — the same day every week, not bad luck.`,
+      action: 'Something else owns that slot. Find out what before calling it discipline, then give the day one session at an hour that is actually free.',
       evidence: `${quietest.label} averages ${Math.round(quietest.avgXp).toLocaleString()} XP across
         ${quietest.days} of them, ${Math.round(quietest.activeRate)}% of which carried any work.`,
       impact: Math.round(lift * 52),
@@ -519,14 +464,9 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
         id: 'raise-the-floor',
         kind: 'depth',
         category: 'Consistency',
-        title: 'Raise the floor rather than the ceiling',
-        because: `Your quietest working days average ${Math.round(quietAvg).toLocaleString()} XP
-          against a typical day's ${Math.round(median).toLocaleString()} — the spread between your
-          days is wider than the spread between your weeks.`,
-        action: `A best day is not repeatable on demand and a quiet day usually is: the quiet ones
-          are where the recoverable work is. Set the minimum you will do on a day you have already
-          decided to work, and hold that rather than trying to beat your record.`,
-        benefit: 'A steadier week, from the days you were going to work anyway.',
+        title: 'Raise the floor, not the ceiling',
+        because: `Your quietest working days average ${Math.round(quietAvg).toLocaleString()} XP against a typical ${Math.round(median).toLocaleString()}.`,
+        action: 'Set a minimum for any day you have decided to work, and hold it. Quiet days are recoverable; best days are not repeatable on demand.',
         evidence: `The quietest ${quiet.length} of ${worked.length} working days average
           ${Math.round(quietAvg).toLocaleString()} XP, against a median of
           ${Math.round(median).toLocaleString()}.`,

@@ -79,15 +79,15 @@ export const VIEWS: View[] = [
     path: '/recommendations',
     purpose: 'What to change, ranked by what it would actually be worth.',
     title: 'Recommendations',
-    blurb: 'What to do differently, drawn from your own record, with the arithmetic attached.',
+    blurb: 'What to change, and what it is worth.',
   },
   {
     key: 'overview',
     label: 'Overview',
     path: '/analytics',
     purpose: 'The long view — totals, trajectory and where the account stands.',
-    title: 'Advanced Analytics',
-    blurb: 'Track your long-term progress. Build compounding growth.',
+    title: 'Overview',
+    blurb: 'Where you stand.',
   },
   {
     key: 'trends',
@@ -95,7 +95,7 @@ export const VIEWS: View[] = [
     path: '/trends',
     purpose: 'Which way each measure is heading, and whether the movement is real.',
     title: 'Trends',
-    blurb: 'The direction rather than the level — what is moving, and how fast.',
+    blurb: 'What is moving, and how fast.',
   },
   {
     key: 'habits',
@@ -103,7 +103,7 @@ export const VIEWS: View[] = [
     path: '/habits',
     purpose: 'What you do — the routines, streaks and rhythms in your own record.',
     title: 'Habits',
-    blurb: 'What you repeatedly do, counted. The behaviour, not the explanation.',
+    blurb: 'What you repeat.',
   },
   {
     key: 'insights',
@@ -111,23 +111,23 @@ export const VIEWS: View[] = [
     path: '/insights',
     purpose: 'Why and how you work — what conditions your better work shows up under.',
     title: 'Insights',
-    blurb: 'Why your record looks the way it does, with the evidence behind each reading.',
+    blurb: 'Why it looks like this.',
   },
   {
     key: 'subjects',
     label: 'Subjects',
     path: '/subjects',
     purpose: 'What you are getting good at — every subject as a level, counted off your own tasks.',
-    title: 'Subject Growth',
-    blurb: 'Mastery rather than volume — where the work went, and what it built.',
+    title: 'Subjects',
+    blurb: 'What you are getting good at.',
   },
   {
     key: 'records',
     label: 'Records',
     path: '/records',
     purpose: 'How far along you are, against your own record and the goals you set.',
-    title: 'Personal Records',
-    blurb: 'Your own best, the ladder ahead, and the pace each goal needs.',
+    title: 'Records',
+    blurb: 'Your own best, and the ladder ahead.',
   },
 ];
 
@@ -141,17 +141,15 @@ export interface ViewTabsProps {
 }
 
 /**
- * The five major tabs — the page's only tab bar.
+ * The seven major tabs — the page's only tab bar.
  *
- * Pressing one changes what is on the page, because the five answer different
- * questions and nobody reading "what should I change" wants to scroll past two
- * years of totals to reach it. The purpose line under the bar is not
- * decoration: it is what keeps a reader from treating Habits, Insights and
- * Recommendations as three interchangeable piles of cards.
+ * A line of prose under the bar used to say what the open tab was for. It is a
+ * `title` on each button now. The sentence was doing real work when the tabs
+ * were five unfamiliar words, and it was still a paragraph of explanation
+ * sitting above every screen on the page forever — the labels carry it once a
+ * reader has been here twice, and hover carries it for the once they have not.
  */
 export function ViewTabs({ active, onView }: ViewTabsProps) {
-  const current = VIEWS.find((view) => view.key === active) ?? VIEWS[0]!;
-
   return (
     <div className="ax-views">
       <nav className="ax-tabs ax-tabs-major" aria-label="Analytics sections">
@@ -162,12 +160,12 @@ export function ViewTabs({ active, onView }: ViewTabsProps) {
             className={`ax-tab${view.key === active ? ' is-on' : ''}`}
             aria-current={view.key === active ? 'page' : undefined}
             onClick={() => onView(view)}
+            title={view.purpose}
           >
             {view.label}
           </button>
         ))}
       </nav>
-      <p className="ax-views-purpose">{current.purpose}</p>
     </div>
   );
 }

@@ -126,7 +126,7 @@ export function DirectionPanel({
   return (
     <Panel
       title="Which way each measure is heading"
-      note="A line fitted through every day in the window, with how much of the variation it explains."
+      note="Fitted line, with how much it explains"
     >
       {directions.length === 0 ? (
         <p className="ax-empty">{verdict}</p>

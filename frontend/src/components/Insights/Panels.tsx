@@ -188,7 +188,7 @@ export function WeekPanel({ week }: { week: WeekShape }) {
   }));
 
   return (
-    <Panel title="When you do your best work" note="Average XP per occurrence of each weekday">
+    <Panel title="When you do your best work" note="Average XP per weekday">
       <Columns columns={columns} />
       <p className="ax-prose">
         {week.best && week.worst && week.best.index !== week.worst.index ? (
@@ -243,7 +243,7 @@ export function ClockPanel({ clock }: { clock: ClockShape }) {
   }));
 
   return (
-    <Panel title="The clock you keep" note="Tasks finished, by the hour they were finished">
+    <Panel title="The clock you keep" note="Tasks finished, by hour">
       <Columns columns={columns} tone="blue" />
       <p className="ax-prose">
         {clock.coreWindow ? (

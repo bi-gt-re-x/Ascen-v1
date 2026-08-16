@@ -245,7 +245,7 @@ export function HabitCalendarPanel({ byDate, lastIso, accountDays }: HabitCalend
   return (
     <Panel
       title="Habit calendar"
-      note="One square a day. Darker means more finished; click one to see what."
+      note="One square a day — click for detail"
       aside={
         <div className="ax-chips ax-chips-sm" role="group" aria-label="Calendar window">
           {CALENDAR_WINDOWS.map((option) => (
@@ -369,7 +369,7 @@ export function PatternsPanel({ patterns }: { patterns: HabitPattern[] }) {
   return (
     <Panel
       title="Patterns in what you do"
-      note="Recurring behaviours, as counts. Why they happen is the Insights tab’s question."
+      note="Counts. Why is the Insights tab"
     >
       {patterns.length === 0 ? (
         <p className="ax-empty">
@@ -418,7 +418,7 @@ export function ConsistencyPanel({ habits }: { habits: Habit[] }) {
   return (
     <Panel
       title="Which habits are actually stable"
-      note="Sorted by how reliably each one turns up, not by how much it earns."
+      note="By reliability, not by earnings"
     >
       <div className="ax-buckets">
         {grouped.map(({ strength, list }) => (
@@ -476,7 +476,7 @@ export function TimelinePanel({
   return (
     <Panel
       title="Your behavioural history"
-      note="Each habit’s rate across the range, in four steps. Where it started, where it is."
+      note="Where each started, where it is"
     >
       {withPhases.length === 0 ? (
         <p className="ax-empty">

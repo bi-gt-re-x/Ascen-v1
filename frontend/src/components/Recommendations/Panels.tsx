@@ -146,26 +146,22 @@ export function AdviceCard({
         </span>
       </div>
 
-      <p className="ax-prose">
-        <span className="ax-advice-tag">Why</span>
-        {item.because}
-      </p>
-      <p className="ax-prose">
-        <span className="ax-advice-tag">Try</span>
-        {item.action}
-      </p>
-      <p className="ax-prose ax-advice-benefit">
-        <span className="ax-advice-tag">Expect</span>
-        {item.benefit}
-      </p>
+      {/* Two lines, unlabelled. The card used to run three tagged paragraphs —
+          Why, Try, Expect — which meant a reader looking for the instruction
+          had to find it among two others and then read past the label to reach
+          it. The instruction is the card, so it is set as the card's own text;
+          the finding behind it sits under it in the quieter colour; and Expect
+          is gone, because "what changes if it works" was the title and the XP
+          figure said twice more. */}
+      <p className="ax-advice-do">{item.action}</p>
+      <p className="ax-advice-why">{item.because}</p>
 
       <footer className="ax-advice-foot">
-        <div className="ax-advice-evidence">
-          <span className="ax-muted ax-small">
-            <b>Evidence:</b> {item.evidence}
-          </span>
-          <span className="ax-muted ax-small">{item.workings}</span>
-        </div>
+        <details className="ax-advice-evidence">
+          <summary>Show the numbers</summary>
+          <span>{item.evidence}</span>
+          <span>{item.workings}</span>
+        </details>
         {/* **This makes a task now.** It used to set a flag in localStorage and
             nothing else: the page would compute that a change was worth five
             thousand XP a year, the reader would agree with it, press the
@@ -189,7 +185,7 @@ export function AdviceCard({
             });
           }}
         >
-          {busy ? 'Adding…' : chosen ? '✓ On your list' : 'Add this to my tasks'}
+          {busy ? 'Adding…' : chosen ? '✓ On your list' : 'Add to tasks'}
         </button>
       </footer>
     </article>
@@ -253,8 +249,8 @@ export function OutlookPanel({ outlook }: { outlook: Outlook }) {
 
   return (
     <Panel
-      title="The same five years, both ways"
-      note="Your current pace against the pace with every scored suggestion taken"
+      title="Five years, both ways"
+      note="Your pace now, and with every change made"
     >
       <div className="ax-figures">
         <div className="ax-figure">
@@ -297,10 +293,7 @@ export function OutlookPanel({ outlook }: { outlook: Outlook }) {
       </div>
 
       <p className="ax-prose">
-        Both lines start from what you have actually banked, so the gap between them is the entire
-        claim this page is making. It widens slowly and then obviously, which is the honest shape of
-        a habit change: nothing you do this month will separate them, and everything you do this
-        month decides which one you are on.
+        Both lines start from what you have banked. The gap is the whole claim.
       </p>
     </Panel>
   );
@@ -311,13 +304,9 @@ export function OutlookPanel({ outlook }: { outlook: Outlook }) {
 // --------------------------------------------------------------------------
 export function AlsoPanel({ items }: { items: Advice[] }) {
   return (
-    <Panel title="Also worth doing" note="Smaller, or about shape rather than size">
+    <Panel title="Also worth doing" note="Smaller, or about shape">
       {items.length === 0 ? (
-        <p className="ax-prose">
-          Nothing else in your record crosses the threshold for a suggestion. That is a real result,
-          not an empty state — the thresholds are your own numbers, and not tripping them means the
-          habit is in reasonable order on every count this page knows how to check.
-        </p>
+        <p className="ax-prose">Nothing else crosses the threshold. Your record is in order on every count this page checks.</p>
       ) : (
         <ul className="ax-also">
           {items.map((item) => (
@@ -339,18 +328,14 @@ export function AlsoPanel({ items }: { items: Advice[] }) {
 /** The closing note, which is a caveat and belongs at the end. */
 export function Caveat() {
   return (
-    <Panel title="How to read all this">
+    <Panel title="How to read these">
       <p className="ax-prose">
-        These are generated from thresholds in your own history, not from a list somebody wrote in
-        advance. That is their strength and their limit: they can see that you take three-day breaks
-        and cannot see that two of them were holidays, or that the subject you dropped was dropped
-        because the course ended.
+        Every one comes from a threshold in your own history. So they can see you take three-day
+        breaks and cannot see that two were holidays.
       </p>
       <p className="ax-prose">
-        Take the ones that describe a problem you recognise. Ignore the ones that describe a
-        deliberate choice — an account that spends 60% of its effort on one subject because that is
-        the thing it is trying to be good at is not making a mistake, and this page has no way to
-        know the difference. The numbers are real; whether they matter is yours to say.
+        Take the ones you recognise. Ignore the ones describing a choice you made on purpose. The
+        numbers are real; whether they matter is yours to say.
       </p>
     </Panel>
   );

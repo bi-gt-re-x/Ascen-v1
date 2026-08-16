@@ -84,7 +84,7 @@ html[data-theme="dark"] .ax-page {
 /* ---------- Shared atoms -------------------------------------------------- */
 .ax-muted { color: var(--ax-muted); }
 .ax-small { font-size: 11.5px; }
-.ax-big { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.ax-big { font-size: 40px; font-weight: 700; letter-spacing: -.03em; }
 
 .ax-sr {
     position: absolute;
@@ -195,17 +195,26 @@ html[data-theme="dark"] .ax-page {
 }
 
 .ax-locked-body h2 {
-    margin: 0 0 10px;
-    font-size: 24px;
+    margin: 0 0 12px;
+    font-size: 30px;
     font-weight: 700;
-    letter-spacing: -.02em;
+    letter-spacing: -.03em;
     color: var(--ax-text);
+    line-height: 1.1;
+}
+
+.ax-locked-body h2 strong {
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: -.045em;
+    color: var(--ax-violet);
+    margin-right: 4px;
 }
 
 .ax-locked-lead {
     margin: 0;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 16px;
+    line-height: 1.5;
     color: var(--ax-muted);
 }
 
@@ -227,22 +236,13 @@ html[data-theme="dark"] .ax-page {
 
 .ax-locked-count {
     margin: 0;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--ax-faint);
 }
 
-.ax-locked-sub {
-    margin: 22px 0 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--ax-faint);
-}
-
 .ax-locked-list {
-    margin: 0;
+    margin: 24px 0 0;
     padding: 0;
     list-style: none;
     display: grid;
@@ -252,7 +252,7 @@ html[data-theme="dark"] .ax-page {
 .ax-locked-list li {
     position: relative;
     padding-left: 22px;
-    font-size: 13px;
+    font-size: 15px;
     line-height: 1.5;
     color: var(--ax-text);
 }
@@ -304,27 +304,30 @@ html[data-theme="dark"] .ax-page {
 }
 
 .ax-baseline-body h2 {
-    margin: 0 0 10px;
-    font-size: 25px;
+    margin: 0 0 12px;
+    font-size: 32px;
     font-weight: 700;
-    letter-spacing: -.02em;
+    letter-spacing: -.03em;
+    line-height: 1.15;
     color: var(--ax-text);
 }
 
 .ax-baseline-lead {
     margin: 0;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 16px;
+    line-height: 1.5;
     color: var(--ax-muted);
 }
 
 .ax-baseline-q { margin-top: 26px; }
 
 .ax-baseline-q h3 {
-    margin: 0 0 10px;
-    font-size: 14px;
+    margin: 0 0 12px;
+    font-size: 13px;
     font-weight: 650;
-    color: var(--ax-text);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
 }
 
 .ax-baseline-q h3 em {
@@ -334,26 +337,19 @@ html[data-theme="dark"] .ax-page {
     color: var(--ax-faint);
 }
 
-.ax-baseline-hint {
-    margin: 9px 0 0;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--ax-faint);
-}
-
 /* Seven buttons rather than a number input — the answer has seven possible
    values and a spinner would be three interactions for one of them. */
 .ax-baseline-days { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .ax-baseline-day {
-    width: 44px;
-    height: 42px;
+    width: 52px;
+    height: 50px;
     border-radius: 10px;
     border: 1px solid var(--ax-line);
     background: var(--ax-card);
     color: var(--ax-text);
     font-family: inherit;
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 650;
     cursor: pointer;
     transition: background .12s ease, border-color .12s ease, color .12s ease;
@@ -412,14 +408,17 @@ html[data-theme="dark"] .ax-page {
 
 .ax-baseline-sum {
     margin: 26px 0 0;
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: var(--ax-card-2);
-    font-size: 13px;
-    color: var(--ax-muted);
+    font-size: 15px;
+    color: var(--ax-faint);
 }
 
-.ax-baseline-sum strong { color: var(--ax-text); font-weight: 650; }
+.ax-baseline-sum strong {
+    color: var(--ax-text);
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: -.03em;
+    margin-right: 4px;
+}
 
 .ax-baseline-failed {
     margin: 14px 0 0;
@@ -496,10 +495,21 @@ html[data-theme="dark"] .ax-page {
     margin-bottom: 7px;
 }
 
-.ax-baseline-row-label { font-size: 13px; font-weight: 650; color: var(--ax-text); }
+.ax-baseline-row-label {
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
 
-.ax-baseline-row-actual { font-size: 13px; color: var(--ax-text); }
-.ax-baseline-row-actual em { font-style: normal; color: var(--ax-faint); }
+.ax-baseline-row-actual { font-size: 20px; font-weight: 650; letter-spacing: -.02em; color: var(--ax-text); }
+.ax-baseline-row-actual em {
+    font-style: normal;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ax-faint);
+}
 
 .ax-baseline-row-track {
     display: block;
@@ -549,15 +559,7 @@ html[data-theme="dark"] .ax-page {
     background: var(--ax-card-2);
 }
 
-.ax-baseline-offer strong { font-size: 13.5px; color: var(--ax-text); }
-
-.ax-baseline-offer p {
-    margin: 4px 0 0;
-    font-size: 12.5px;
-    line-height: 1.5;
-    color: var(--ax-muted);
-    max-width: 62ch;
-}
+.ax-baseline-offer strong { font-size: 17px; font-weight: 650; color: var(--ax-text); }
 
 /* The score panel with fewer than two recorded readings. Sits where the chart
    would be, at about the chart's height, so the panel does not jump when the
@@ -584,15 +586,15 @@ html[data-theme="dark"] .ax-page {
 
 .ax-head h1 {
     margin: 0 0 4px;
-    font-size: 24px;
+    font-size: 32px;
     font-weight: 700;
-    letter-spacing: -.02em;
+    letter-spacing: -.03em;
     display: flex;
     align-items: center;
     gap: 9px;
 }
 
-.ax-head p { margin: 0; font-size: 13px; }
+.ax-head p { margin: 0; font-size: 15px; color: var(--ax-muted); }
 
 .ax-head-icon {
     width: 20px; height: 20px;
@@ -658,14 +660,14 @@ html[data-theme="dark"] .ax-page {
 
 .ax-tab {
     flex: 1 0 auto;
-    padding: 8px 16px;
+    padding: 9px 18px;
     border: 0;
     border-radius: 8px;
     background: transparent;
     color: var(--ax-muted);
     font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 14.5px;
+    font-weight: 550;
     white-space: nowrap;
     cursor: pointer;
     transition: background .16s, color .16s;
@@ -825,9 +827,9 @@ html[data-theme="dark"] .ax-page {
 
 .ax-panel h2 {
     margin: 0;
-    font-size: 14.5px;
-    font-weight: 600;
-    letter-spacing: -.01em;
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -.015em;
 }
 
 .ax-panel-note {
@@ -905,13 +907,13 @@ html[data-theme="dark"] .ax-page {
 .ax-tone-pink { color: var(--ax-pink); }
 
 .ax-tile-value {
-    font-size: 27px;
+    font-size: 36px;
     font-weight: 700;
     letter-spacing: -.025em;
     line-height: 1.15;
 }
 .ax-tile-unit {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 500;
     font-style: normal;
     color: var(--ax-muted);
@@ -1676,7 +1678,7 @@ html[data-theme="dark"] .ax-page {
 
 /* The insights tiles state a word, not a number, so they need a smaller face
    than the analytics ones — "Wednesday" at 27px wraps in a quarter row. */
-.ax-tile-value-sm { font-size: 20px; }
+.ax-tile-value-sm { font-size: 26px; }
 .ax-tile-dot {
     width: 9px; height: 9px;
     border-radius: 3px;
@@ -1908,7 +1910,13 @@ html[data-theme="dark"] .ax-page {
     margin-bottom: 2px;
 }
 
-.ax-advice h2 { margin: 0; font-size: 14.5px; font-weight: 600; line-height: 1.35; }
+.ax-advice h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -.025em;
+}
 
 .ax-advice-impact {
     display: flex;
@@ -1917,22 +1925,27 @@ html[data-theme="dark"] .ax-page {
     text-align: right;
     white-space: nowrap;
 }
-.ax-advice-impact strong { font-size: 15px; font-weight: 700; color: var(--ax-good); }
-
-/* The Why / Do label sits on the first line of its own paragraph. */
-.ax-advice-tag {
-    display: inline-block;
-    margin-right: 7px;
-    padding: 1px 7px;
-    border-radius: 5px;
-    background: var(--ax-card-2);
-    border: 1px solid var(--ax-line);
-    color: var(--ax-faint);
-    font-size: 9.5px;
+.ax-advice-impact strong {
+    font-size: 26px;
     font-weight: 700;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    vertical-align: 1px;
+    letter-spacing: -.03em;
+    color: var(--ax-good);
+}
+
+/* What to do, and why. No labels — the order carries it: the instruction is
+   the loud one and the finding is the quiet one under it. */
+.ax-advice-do {
+    margin: 14px 0 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ax-text);
+}
+
+.ax-advice-why {
+    margin: 10px 0 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ax-faint);
 }
 
 .ax-advice-foot {
@@ -2254,12 +2267,6 @@ html[data-theme="dark"] .ax-page {
 
 /* What the open tab is for. Load-bearing prose: it is the thing that stops
    Habits, Insights and Recommendations reading as three piles of cards. */
-.ax-views-purpose {
-    margin: 0 0 2px 4px;
-    font-size: 12.5px;
-    color: var(--ax-muted);
-}
-
 /* ---------- Panel furniture ----------------------------------------------- */
 /* The top-right container: the Sample chip first, then whatever control the
    panel owns. One position for one meaning across every panel on the page. */
@@ -2283,12 +2290,11 @@ html[data-theme="dark"] .ax-page {
 /* A heading between sections, for the one place a tab breaks into named parts
    without a panel around them. */
 .ax-band {
-    margin: 0 0 12px 2px;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: .02em;
-    text-transform: uppercase;
-    color: var(--ax-faint);
+    margin: 0 0 14px 2px;
+    font-size: 19px;
+    font-weight: 650;
+    letter-spacing: -.015em;
+    color: var(--ax-text);
 }
 
 .ax-prose-tight { margin: 4px 0 0; font-size: 12px; line-height: 1.55; }
@@ -2944,16 +2950,30 @@ html[data-theme="dark"] .ax-page {
 
 .ax-advice-chips .ax-effort { margin-left: auto; padding-bottom: 0; }
 
-.ax-advice-benefit { color: var(--ax-muted); }
-
 .ax-advice-foot { align-items: center; }
-.ax-advice-evidence {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
+
+.ax-advice-evidence { min-width: 0; }
+
+.ax-advice-evidence summary {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ax-faint);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
 }
-.ax-advice-evidence b { color: var(--ax-muted); font-weight: 700; }
+.ax-advice-evidence summary::-webkit-details-marker { display: none; }
+.ax-advice-evidence summary::after { content: " →"; }
+.ax-advice-evidence summary:hover { color: var(--ax-text); }
+.ax-advice-evidence[open] summary::after { content: " ↓"; }
+
+.ax-advice-evidence span {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+}
 
 /* The commitment. Local to the browser and honest about it — see `useTrying`
    in components/Recommendations/Panels. */
