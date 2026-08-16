@@ -61,7 +61,8 @@ export function Trajectory({
 
   return (
     <Panel
-      title="Growth Trajectory Over Time"
+      title="Productivity, consistency and quality over time"
+      note="This period against the one before it, day for day. The three rates first; the running totals underneath them."
       aside={
         <label className="ax-select-wrap">
           <span className="ax-sr">Chart grain</span>
@@ -103,9 +104,7 @@ export function Trajectory({
             ? [{ values: before.map((point) => point.value), tone: 'violet' as const, muted: true }]
             : []),
         ]}
-        ticks={axisTicks(peak, (value) =>
-          option.key === 'quality' ? value.toFixed(1) : compact(value),
-        )}
+        ticks={axisTicks(peak, option.axis ?? compact)}
         marks={axisMarks(now.map((point) => point.date), 8)}
       />
 

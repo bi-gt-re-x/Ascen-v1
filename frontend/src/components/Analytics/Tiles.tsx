@@ -1,9 +1,17 @@
 /**
  * The five figures across the top, each with its own days drawn under it.
  *
- * They are the page's thesis in one row: how much was earned, how long was
- * spent, how much got finished, the daily rate, and the grade that comes out of
- * all four. Everything below is one of these five taken apart.
+ * They are the page's thesis in one row, and the order is the argument: how
+ * much work a day, how often at all, how much each piece was worth — then the
+ * volume behind those three, and the grade that comes out of all of it.
+ *
+ * It used to open on totals: XP banked, hours logged, tasks finished. Totals
+ * are the one thing on this page that cannot go down, so a row of them reads as
+ * progress on every window a reader picks, including the bad ones — an account
+ * that halved its output still shows a larger lifetime figure than last month.
+ * Productivity, consistency and quality are rates, and a rate can fall. That is
+ * the whole reason they lead: they are the three figures that can tell the
+ * reader something they did not want to hear.
  *
  * The deltas are the window against the equal-length window before it, which is
  * `summaryFigures`' own rule — so a tile and the comparison panel further down
@@ -29,6 +37,8 @@ interface TileSpec {
   key: string;
   label: string;
   value: string;
+  /** The small trailing unit — "XP/day", "/10". Not every tile carries one. */
+  unit?: string;
   delta: number | null;
   series: number[];
   tone: Tone;
@@ -39,24 +49,36 @@ interface TileSpec {
 export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: TilesProps) {
   const tiles: TileSpec[] = [
     {
-      key: 'xp',
-      glyph: 'sparkle',
-      label: 'Total XP Earned',
-      value: figures.xp.value.toLocaleString(),
-      delta: figures.xp.delta,
+      key: 'productivity',
+      glyph: 'trend',
+      label: 'Productivity',
+      value: Math.round(figures.xpPerDay.value).toLocaleString(),
+      unit: 'XP/day',
+      delta: figures.xpPerDay.delta,
       series: sparks.xp,
       tone: 'violet',
-      hint: 'Every point banked inside the window.',
+      hint: 'XP per day of the window, not per day something happened — a fortnight off pulls this down, which is the point.',
     },
     {
-      key: 'focus',
-      glyph: 'clock',
-      label: 'Total Focus Time',
-      value: `${Math.round(figures.focusHours.value).toLocaleString()}h`,
-      delta: figures.focusHours.delta,
-      series: sparks.focusHours,
-      tone: 'blue',
-      hint: 'Time logged in focus sessions.',
+      key: 'consistency',
+      glyph: 'flame',
+      label: 'Consistency',
+      value: `${Math.round(figures.consistency.value)}%`,
+      delta: figures.consistency.delta,
+      series: sparks.consistency,
+      tone: 'amber',
+      hint: 'The share of days in the window with any work on them. A fifteen-minute day counts the same as a six-hour one — this measures showing up.',
+    },
+    {
+      key: 'quality',
+      glyph: 'target',
+      label: 'Quality',
+      value: figures.quality.value.toFixed(1),
+      unit: 'XP/task',
+      delta: figures.quality.delta,
+      series: sparks.quality,
+      tone: 'pink',
+      hint: 'XP per task finished, averaged over the days that finished any. It rises when the work gets harder, not when there is more of it.',
     },
     {
       key: 'tasks',
@@ -66,17 +88,7 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       delta: figures.tasks.delta,
       series: sparks.tasks,
       tone: 'green',
-      hint: 'Tasks finished, counted on the day they were finished.',
-    },
-    {
-      key: 'perday',
-      glyph: 'calendar',
-      label: 'Average Daily XP',
-      value: Math.round(figures.xpPerDay.value).toLocaleString(),
-      delta: figures.xpPerDay.delta,
-      series: sparks.xp,
-      tone: 'amber',
-      hint: 'Per day of the window, not per day something happened.',
+      hint: 'The volume behind the three rates beside it, counted on the day each task was finished.',
     },
     {
       key: 'score',
@@ -87,7 +99,7 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       // ./data. A tile with no baseline says so rather than inventing one.
       delta: null,
       series: scoreSeries,
-      tone: 'violet',
+      tone: 'blue',
       hint: 'The mean of productivity, quality, consistency, efficiency and focus.',
     },
   ];
@@ -110,6 +122,7 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
           <strong className="ax-tile-value">
             {tile.value}
             {tile.key === 'score' && score !== null && <em className="ax-tile-unit">/10</em>}
+            {tile.unit && <em className="ax-tile-unit">{tile.unit}</em>}
           </strong>
           <Delta value={tile.delta} suffix={compareLabel} />
           <Sparkline values={tile.series} tone={tile.tone} />

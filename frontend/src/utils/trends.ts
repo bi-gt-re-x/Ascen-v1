@@ -29,23 +29,67 @@ const mean = (list: number[]) =>
 // --------------------------------------------------------------------------
 // What gets tracked
 // --------------------------------------------------------------------------
+/**
+ * How a metric's days are collapsed into one figure for a stretch.
+ *
+ * Three, not two, and the third is the one that used to be missing. `sum` is a
+ * total. `mean` averages over every day in the stretch, which is what a rate
+ * like productivity means — the empty days are part of the average and dropping
+ * them is how "XP per day" quietly becomes "XP per day I felt like it". Only
+ * `meanActive` skips the blanks, and only for quality, where a day that
+ * finished nothing has no XP-per-task to contribute rather than a zero.
+ */
+export type TrendAgg = 'sum' | 'mean' | 'meanActive';
+
 export interface TrendMetric {
   key: string;
   label: string;
   read: (day: GrowthDay) => number;
   format: (value: number) => string;
-  /** Averaged per day rather than summed — a rate, not a total. */
-  rate?: boolean;
+  /** Defaults to `sum`. See `TrendAgg`. */
+  agg?: TrendAgg;
   tone: string;
 }
 
+/**
+ * What the tab tracks, the three that matter first.
+ *
+ * This was five totals-and-counts: XP earned, tasks, focus minutes, days
+ * worked, XP per task. Four of them measured the same thing — how much happened
+ * — and all four move together with the length of the window, so the tab could
+ * report four rising measures on a stretch where nothing about the work had
+ * changed except that there was more calendar in it.
+ *
+ * Productivity, consistency and quality are three genuinely different questions
+ * that can disagree with each other: doing more per day, doing it on more days,
+ * and each piece being worth more. A tab about direction earns its keep exactly
+ * where those three point different ways, and it could not show that before.
+ * Tasks and focus stay on as the volume behind them.
+ */
 export const TREND_METRICS: TrendMetric[] = [
   {
-    key: 'xp',
-    label: 'XP earned',
+    key: 'productivity',
+    label: 'Productivity',
     read: (day) => num(day.xp_earned),
-    format: (value) => Math.round(value).toLocaleString(),
+    format: (value) => `${Math.round(value).toLocaleString()} XP/day`,
+    agg: 'mean',
     tone: 'violet',
+  },
+  {
+    key: 'consistency',
+    label: 'Consistency',
+    read: (day) => (num(day.xp_earned) > 0 ? 100 : 0),
+    format: (value) => `${Math.round(value)}%`,
+    agg: 'mean',
+    tone: 'amber',
+  },
+  {
+    key: 'quality',
+    label: 'Quality',
+    read: (day) => num(day.avg_task_xp),
+    format: (value) => `${value.toFixed(1)} XP/task`,
+    agg: 'meanActive',
+    tone: 'pink',
   },
   {
     key: 'tasks',
@@ -61,22 +105,15 @@ export const TREND_METRICS: TrendMetric[] = [
     format: (value) => (value >= 60 ? `${Math.round(value / 60)}h` : `${Math.round(value)}m`),
     tone: 'blue',
   },
-  {
-    key: 'active',
-    label: 'Days worked',
-    read: (day) => (num(day.xp_earned) > 0 ? 1 : 0),
-    format: (value) => Math.round(value).toLocaleString(),
-    tone: 'amber',
-  },
-  {
-    key: 'quality',
-    label: 'XP per task',
-    read: (day) => num(day.avg_task_xp),
-    format: (value) => value.toFixed(1),
-    rate: true,
-    tone: 'pink',
-  },
 ];
+
+/** One stretch's figure for one metric, by whichever rule the metric states. */
+function collapse(metric: TrendMetric, days: GrowthDay[]): number {
+  const values = days.map(metric.read);
+  if (metric.agg === 'mean') return mean(values);
+  if (metric.agg === 'meanActive') return mean(values.filter((value) => value > 0));
+  return values.reduce((a, b) => a + b, 0);
+}
 
 // --------------------------------------------------------------------------
 // Comparisons
@@ -170,12 +207,8 @@ export function trendRows(days: GrowthDay[], key: ComparisonKey): TrendRow[] {
   const comparable = now.length > 0 && was.length === now.length;
 
   return TREND_METRICS.map((metric) => {
-    const total = (rows: GrowthDay[]) => {
-      const values = rows.map(metric.read);
-      return metric.rate ? mean(values.filter((value) => value > 0)) : values.reduce((a, b) => a + b, 0);
-    };
-    const a = total(now);
-    const b = total(was);
+    const a = collapse(metric, now);
+    const b = collapse(metric, was);
     return {
       key: metric.key,
       label: metric.label,
@@ -254,6 +287,32 @@ export function smooth(values: number[], window: number): number[] {
  * anything under a fifth of the variation explained is called flat regardless
  * of which way the line points.
  */
+/**
+ * A metric's daily series, with days that have no reading carried forward.
+ *
+ * Only for `meanActive` metrics, and quality is the one. Its raw series is
+ * XP-per-task on the days that finished a task and a zero on every other day,
+ * and those zeros are not low quality — they are no measurement. Fitting
+ * through them makes the line a picture of attendance: an account whose work
+ * got steadily harder while it showed up less would be reported as quality
+ * *falling*, which is the opposite of what happened, and with a confident fit,
+ * because attendance is the strongest signal in the series.
+ *
+ * Carrying the last reading forward keeps one value per day — so the slope is
+ * still per day and `perWeek` still means a week — while letting the fit see
+ * only the readings. Leading blanks take the first real reading, since there is
+ * nothing behind them to carry.
+ */
+function carried(days: GrowthDay[], read: (day: GrowthDay) => number): number[] {
+  const raw = days.map(read);
+  const first = raw.find((value) => value > 0) ?? 0;
+  let last = first;
+  return raw.map((value) => {
+    if (value > 0) last = value;
+    return last;
+  });
+}
+
 export function directions(days: GrowthDay[]): Direction[] {
   if (days.length < 14) return [];
   // The window is smoothed before fitting: a fit through raw daily values on an
@@ -262,7 +321,8 @@ export function directions(days: GrowthDay[]): Direction[] {
   const smoothing = span >= 180 ? 14 : span >= 60 ? 7 : 3;
 
   return TREND_METRICS.map((metric) => {
-    const raw = days.map(metric.read);
+    const raw =
+      metric.agg === 'meanActive' ? carried(days, metric.read) : days.map(metric.read);
     const smoothed = smooth(raw, smoothing);
     const { slope, r2 } = fitLine(smoothed);
     const perWeek = slope * 7;
@@ -281,7 +341,7 @@ export function directions(days: GrowthDay[]): Direction[] {
           }`
         : `${heading === 'rising' ? 'Climbing' : 'Falling'} by about ${metric.format(
             Math.abs(perWeek),
-          )} a week — ${Math.abs(percent ?? 0)}% of a typical day, every week. The fitted line accounts for ${Math.round(
+          )} a week — ${Math.abs(percent ?? 0)}% of this window's own average, every week. The fitted line accounts for ${Math.round(
             r2 * 100,
           )}% of the variation across the window.`;
 
@@ -313,14 +373,20 @@ export function trendVerdict(list: Direction[]): string {
       ? rows[0]!.label
       : `${rows.slice(0, -1).map((row) => row.label).join(', ')} and ${rows[rows.length - 1]!.label}`;
 
+  // Disagreement is checked before either landslide, and that ordering is the
+  // point of the sentence. It used to run the other way: "most of these are
+  // falling together" fired on three fallers and said nothing about the fourth
+  // measure climbing steeply, which is precisely the finding a reader needed —
+  // an account showing up less often while the work it does gets harder is not
+  // an account in decline, and the old wording told it that it was.
+  if (up.length > 0 && down.length > 0) {
+    return `${names(up)} ${up.length === 1 ? 'is' : 'are'} climbing while ${names(down)} ${down.length === 1 ? 'is' : 'are'} falling. That disagreement is the finding: productivity up against consistency down means fewer, bigger days; quality up against consistency down means the work got harder rather than more frequent. Read the split, not the average of it.`;
+  }
   if (up.length >= 3) {
-    return 'Three or more measures are climbing together, which is the signal worth trusting. A single line rising can be a good fortnight; XP, tasks and focus moving the same way is a change in how much you are doing.';
+    return 'Three or more measures are climbing together, which is the signal worth trusting. A single line rising can be a good fortnight; productivity, consistency and quality moving the same way is a change in how you work rather than a change in the calendar.';
   }
   if (down.length >= 3) {
-    return 'Most of these are falling together. That is worth taking at face value rather than explaining away — and the fix is almost always about how often you work rather than how hard.';
-  }
-  if (up.length > 0 && down.length > 0) {
-    return 'These are pulling in different directions, which usually means the shape of the work changed rather than the amount — fewer, larger sessions, or more, smaller ones.';
+    return 'Most of these are falling together, and none is climbing against them. That is worth taking at face value rather than explaining away — and the fix is almost always consistency rather than intensity, because showing up on more days lifts the other two and grinding harder on the same days does not.';
   }
   // One or two moving and the rest flat. Naming them matters: the sentence used
   // to fall through to "nothing has a slope worth reporting" here, which
@@ -375,8 +441,7 @@ export function weeklyPoints(days: GrowthDay[]): WeekPoint[] {
       const rows = buckets.get(key)!;
       const values: Record<string, number> = {};
       TREND_METRICS.forEach((metric) => {
-        const list = rows.map(metric.read);
-        values[metric.key] = metric.rate ? mean(list.filter((value) => value > 0)) : list.reduce((a, b) => a + b, 0);
+        values[metric.key] = collapse(metric, rows);
       });
       return {
         date: key,

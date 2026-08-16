@@ -163,7 +163,13 @@ export function datePositions(dates: string[]): number[] {
 // --------------------------------------------------------------------------
 // The trajectory chart's five series
 // --------------------------------------------------------------------------
-export type MetricKey = 'xp' | 'focus' | 'tasks' | 'productivity' | 'quality';
+export type MetricKey =
+  | 'productivity'
+  | 'consistency'
+  | 'quality'
+  | 'xp'
+  | 'tasks'
+  | 'focus';
 
 export interface MetricOption {
   key: MetricKey;
@@ -177,32 +183,34 @@ export interface MetricOption {
    */
   cumulative: boolean;
   format: (value: number) => string;
+  /**
+   * How the y-axis prints this metric's numbers.
+   *
+   * Separate from `format` because an axis tick has no room for a unit — it is
+   * repeated six times up the left edge and the panel has already said what the
+   * series is. Defaults to `compact` at the call site.
+   */
+  axis?: (value: number) => string;
 }
 
 const num = (value: unknown) => Number(value) || 0;
 
+/**
+ * The chart's series, the three that matter first.
+ *
+ * The order here is the order of the chips above the chart, and it opens on the
+ * three rates rather than on the three totals underneath them. A cumulative
+ * series is a line that can only go up: it draws the same reassuring climb for
+ * an account that is accelerating and one that has nearly stopped, because the
+ * difference between those two is the *slope*, and a total's slope is the one
+ * thing a reader does not read off a line. Productivity, consistency and
+ * quality are the same record differentiated — flat means flat and down means
+ * down — which is what makes them worth a chart at all.
+ *
+ * The totals are still here, below the fold of the chip row, because "how much
+ * have I banked" is a real question. It is just not the first one.
+ */
 export const METRICS: MetricOption[] = [
-  {
-    key: 'xp',
-    label: 'XP Earned',
-    read: (day) => num(day.xp_earned),
-    cumulative: true,
-    format: (value) => `${compact(value)} XP`,
-  },
-  {
-    key: 'focus',
-    label: 'Focus Time',
-    read: (day) => num(day.focus_minutes) / 60,
-    cumulative: true,
-    format: (value) => `${Math.round(value).toLocaleString()}h`,
-  },
-  {
-    key: 'tasks',
-    label: 'Tasks Completed',
-    read: (day) => num(day.tasks_completed),
-    cumulative: true,
-    format: (value) => `${Math.round(value).toLocaleString()} tasks`,
-  },
   {
     key: 'productivity',
     label: 'Productivity',
@@ -211,11 +219,45 @@ export const METRICS: MetricOption[] = [
     format: (value) => `${Math.round(value).toLocaleString()} XP/day`,
   },
   {
+    // A day is worked or it is not, so the raw series is 0s and 100s and the
+    // *bucket* is what carries the meaning: averaging a week of them is the
+    // share of that week worked. At daily grain this is deliberately a barcode
+    // — the grain picker is right there, and weekly is where it becomes a line.
+    key: 'consistency',
+    label: 'Consistency',
+    read: (day) => (num(day.xp_earned) > 0 ? 100 : 0),
+    cumulative: false,
+    format: (value) => `${Math.round(value)}% of days`,
+    axis: (value) => `${Math.round(value)}%`,
+  },
+  {
     key: 'quality',
-    label: 'Quality Score',
+    label: 'Quality',
     read: (day) => num(day.avg_task_xp),
     cumulative: false,
-    format: (value) => `${value.toFixed(1)} avg XP`,
+    format: (value) => `${value.toFixed(1)} XP/task`,
+    axis: (value) => value.toFixed(1),
+  },
+  {
+    key: 'xp',
+    label: 'XP Earned (total)',
+    read: (day) => num(day.xp_earned),
+    cumulative: true,
+    format: (value) => `${compact(value)} XP`,
+  },
+  {
+    key: 'tasks',
+    label: 'Tasks (total)',
+    read: (day) => num(day.tasks_completed),
+    cumulative: true,
+    format: (value) => `${Math.round(value).toLocaleString()} tasks`,
+  },
+  {
+    key: 'focus',
+    label: 'Focus Time (total)',
+    read: (day) => num(day.focus_minutes) / 60,
+    cumulative: true,
+    format: (value) => `${Math.round(value).toLocaleString()}h`,
   },
 ];
 
@@ -423,26 +465,53 @@ export interface ComparisonBar {
  * the panel restates the tiles rather than recomputing them differently. When
  * there is no previous period the bars still draw — at zero, which reads as
  * "nothing to compare with" and is the truth.
+ *
+ * The three rates lead, for the reason the tiles do: a longer window banks more
+ * of everything, so a pair of *total* bars compares two calendars as much as it
+ * compares two performances. XP a day, days worked and XP a task are the three
+ * that hold still when the window does.
+ *
+ * The Growth Score bar is gone. It was the fifth pair and its previous half was
+ * hard-coded to zero — no earlier reading of the score is recorded — so it drew
+ * one bar beside an empty slot in a panel whose entire subject is the pair. The
+ * score's own history has a panel on the Overview that draws it properly, or
+ * says why it cannot.
  */
-export function comparisonBars(slice: RangeSlice, score: number | null): ComparisonBar[] {
+export function comparisonBars(slice: RangeSlice): ComparisonBar[] {
   const sum = (days: GrowthDay[], read: (day: GrowthDay) => number) =>
     days.reduce((acc, day) => acc + read(day), 0);
   const { current, previous } = slice;
   const perDay = (days: GrowthDay[]) =>
     days.length ? sum(days, (day) => num(day.xp_earned)) / days.length : 0;
+  const worked = (days: GrowthDay[]) =>
+    days.length
+      ? (days.filter((day) => num(day.xp_earned) > 0).length / days.length) * 100
+      : 0;
+  const perTask = (days: GrowthDay[]) => {
+    const withTasks = days.filter((day) => num(day.tasks_completed) > 0);
+    return withTasks.length
+      ? sum(withTasks, (day) => num(day.avg_task_xp)) / withTasks.length
+      : 0;
+  };
 
   return [
     {
-      label: 'XP Earned',
-      current: sum(current, (day) => num(day.xp_earned)),
-      previous: sum(previous, (day) => num(day.xp_earned)),
-      format: compact,
+      label: 'Productivity (XP/day)',
+      current: perDay(current),
+      previous: perDay(previous),
+      format: (value) => Math.round(value).toLocaleString(),
     },
     {
-      label: 'Focus Time (hrs)',
-      current: sum(current, (day) => num(day.focus_minutes)) / 60,
-      previous: sum(previous, (day) => num(day.focus_minutes)) / 60,
-      format: (value) => Math.round(value).toLocaleString(),
+      label: 'Consistency (% of days)',
+      current: worked(current),
+      previous: worked(previous),
+      format: (value) => `${Math.round(value)}%`,
+    },
+    {
+      label: 'Quality (XP/task)',
+      current: perTask(current),
+      previous: perTask(previous),
+      format: (value) => value.toFixed(1),
     },
     {
       label: 'Tasks Completed',
@@ -451,18 +520,10 @@ export function comparisonBars(slice: RangeSlice, score: number | null): Compari
       format: (value) => Math.round(value).toLocaleString(),
     },
     {
-      label: 'Avg Daily XP',
-      current: perDay(current),
-      previous: perDay(previous),
-      format: (value) => Math.round(value).toLocaleString(),
-    },
-    {
-      label: 'Growth Score (/10)',
-      current: score ?? 0,
-      // No history of the score is recorded, so there is no earlier reading to
-      // put beside it. Zero draws no bar, which is better than inventing one.
-      previous: 0,
-      format: (value) => value.toFixed(1),
+      label: 'XP Earned',
+      current: sum(current, (day) => num(day.xp_earned)),
+      previous: sum(previous, (day) => num(day.xp_earned)),
+      format: compact,
     },
   ];
 }

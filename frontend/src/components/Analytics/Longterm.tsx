@@ -30,7 +30,8 @@ export function ComparisonPanel({ bars }: { bars: ComparisonBar[] }) {
 
   return (
     <Panel
-      title="Yearly Progress Comparison"
+      title="This period against the last"
+      note="The three rates first — they hold still when the window changes length, and the totals below them do not."
       footer={<PanelLink to="/trends">See which way each measure is heading</PanelLink>}
       aside={
         <div className="ax-legend ax-legend-tight">

@@ -108,6 +108,16 @@ export interface GrowthSummaryFigures {
   tasks: SummaryFigure;
   xpPerDay: SummaryFigure;
   focusHours: SummaryFigure;
+  /**
+   * Share of the window's days with any work on them, 0-100.
+   *
+   * The same arithmetic `consistency` in components/Analytics/data does, kept
+   * here as well so the headline tile and the heatmap panel under it are one
+   * figure rather than two that could drift.
+   */
+  consistency: SummaryFigure;
+  /** Average XP per task finished, over the days that finished any. */
+  quality: SummaryFigure;
   /** How many days the comparison covers, for the tiles' own wording. */
   comparedDays: number;
 }
@@ -125,6 +135,27 @@ export interface TileSeries {
   xp: number[];
   tasks: number[];
   focusHours: number[];
+  /** The rolling active-day rate. See `rollingRate` for why it is not raw. */
+  consistency: number[];
+  quality: number[];
+}
+
+/**
+ * How many of the last `window` days had work on them, per day, as a percentage.
+ *
+ * Consistency read raw is a series of 0s and 100s — a barcode, not a shape, and
+ * a sparkline of one is unreadable at 26 pixels high. Rolling it over a week
+ * turns the same record into the thing the tile is actually claiming: whether
+ * showing up is becoming more or less usual. The window is short enough that a
+ * fortnight off still shows as a trough rather than a dip.
+ */
+function rollingRate(days: GrowthDay[], window = 7): number[] {
+  return days.map((_, index) => {
+    const from = Math.max(0, index - window + 1);
+    const slice = days.slice(from, index + 1);
+    const active = slice.filter((day) => (Number(day.xp_earned) || 0) > 0).length;
+    return slice.length ? (active / slice.length) * 100 : 0;
+  });
 }
 
 export function tileSeries(slice: RangeSlice): TileSeries {
@@ -134,6 +165,8 @@ export function tileSeries(slice: RangeSlice): TileSeries {
     xp: read((day) => day.xp_earned),
     tasks: read((day) => day.tasks_completed),
     focusHours: read((day) => day.focus_minutes / 60),
+    consistency: rollingRate(slice.current),
+    quality: read((day) => day.avg_task_xp),
   };
 }
 
@@ -176,11 +209,31 @@ export function summaryFigures(slice: RangeSlice): GrowthSummaryFigures {
   const perDayNow = current.length ? xpNow / current.length : 0;
   const perDayWas = before.length ? xpWas / before.length : 0;
 
+  // Showing up, as a share of the window. Same rule as the rate above — over
+  // days in the range, not over days that had something on them, or a fortnight
+  // off would raise the figure it ought to lower.
+  const rate = (days: GrowthDay[]) =>
+    days.length
+      ? (days.filter((day) => (Number(day.xp_earned) || 0) > 0).length / days.length) * 100
+      : 0;
+
+  // Averaged over the days that finished something rather than over the window:
+  // a day with no tasks has no XP-per-task, and counting it as zero would make
+  // quality a second, worse reading of consistency.
+  const perTask = (days: GrowthDay[]) => {
+    const worked = days.filter((day) => (Number(day.tasks_completed) || 0) > 0);
+    return worked.length
+      ? worked.reduce((sum, day) => sum + (Number(day.avg_task_xp) || 0), 0) / worked.length
+      : 0;
+  };
+
   return {
     xp: figure(xpNow, xpWas),
     tasks: figure(tasksNow, tasksWas),
     xpPerDay: figure(perDayNow, perDayWas, 1),
     focusHours: figure(focusNow, focusWas, 1),
+    consistency: figure(rate(current), rate(before)),
+    quality: figure(perTask(current), perTask(before), 1),
     comparedDays: before.length,
   };
 }

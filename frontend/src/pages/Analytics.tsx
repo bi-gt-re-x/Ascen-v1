@@ -14,7 +14,9 @@
  *   It leads the bar and owns the rail entry, because it is the only tab that
  *   ends in a button and it used to sit five clicks behind four screens of
  *   description.
- * - **Overview** — totals, trajectory, the score, where the account stands.
+ * - **Overview** — productivity, consistency and quality, their trajectory, the
+ *   score, and where the account stands. The three rates lead every panel on
+ *   this tab; the totals they came from sit behind them. See `Tiles` for why.
  * - **Trends** — the derivative rather than the level, plus the long-term
  *   projection that was the growth page's Long Term chapter.
  * - **Habits — what I do.** Recurring behaviour, counted, plus the growth
@@ -433,11 +435,14 @@ export default function Analytics() {
   );
 
   const [span, setSpan] = useState<WindowKey>('1y');
-  const [metric, setMetric] = useState<MetricKey>('xp');
-  const [grain, setGrain] = useState<Grain>('daily');
+  // Productivity rather than total XP, and weekly rather than daily. The pair
+  // is one decision: the chart opens on a rate, and a rate at daily grain over
+  // a year is scatter. See METRICS in components/Analytics/data.
+  const [metric, setMetric] = useState<MetricKey>('productivity');
+  const [grain, setGrain] = useState<Grain>('weekly');
   const [subject, setSubject] = useState('');
   const [comparison, setComparison] = useState<ComparisonKey>('thirty');
-  const [trendMetric, setTrendMetric] = useState('xp');
+  const [trendMetric, setTrendMetric] = useState('productivity');
   const [category, setCategory] = useState('');
 
   const all = useMemo(() => series.data?.growth_data ?? [], [series.data]);
@@ -510,7 +515,7 @@ export default function Analytics() {
     () => (recorded.length >= 2 ? ['First reading', '', '', 'Now'] : []),
     [recorded],
   );
-  const bars = useMemo(() => comparisonBars(slice, score), [score, slice]);
+  const bars = useMemo(() => comparisonBars(slice), [slice]);
 
   const breakdown = useMemo(
     () => subjectXp(bySubject, subjects, fromIso, toIso, RADAR_SUBJECTS),
@@ -843,7 +848,7 @@ export default function Analytics() {
                 weeks={weeks}
                 metricKey={trendMetric}
                 metricLabel={
-                  TREND_METRICS.find((entry) => entry.key === trendMetric)?.label ?? 'XP earned'
+                  TREND_METRICS.find((entry) => entry.key === trendMetric)?.label ?? 'Productivity'
                 }
                 tone={TREND_METRICS.find((entry) => entry.key === trendMetric)?.tone ?? 'violet'}
                 options={TREND_METRICS.map((entry) => ({ key: entry.key, label: entry.label }))}
@@ -1207,8 +1212,9 @@ function OverviewView(props: OverviewProps) {
           resolution.
 
           What is left is the shortest honest answer to that question: what
-          moved, the totals, the trajectory and the score, then whether you are
-          showing up and how that compares. One screen, no scrolling past the
+          moved, then productivity, consistency and quality — how much a day,
+          how often, and how much each piece was worth — then their trajectory
+          and the score they roll up into. One screen, no scrolling past the
           part you came for, and three links out to whichever of the four
           questions you actually have. */}
       <section className="ax-section ax-next">
@@ -1216,7 +1222,7 @@ function OverviewView(props: OverviewProps) {
         <div className="ax-next-row">
           <Link to="/trends">
             <strong>Trends</strong>
-            <span>Which way each measure is heading, and the pace behind it</span>
+            <span>Whether productivity, consistency and quality are actually moving</span>
           </Link>
           <Link to="/insights">
             <strong>Insights</strong>
