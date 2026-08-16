@@ -32,6 +32,14 @@ export {
 
 export { ComparePanel, DirectionPanel, TrendChart, TrendTiles } from './Trends';
 
+/** What a tab shows instead of inventing figures it does not have. */
+export { Locked } from './Locked';
+export type { LockedProps } from './Locked';
+
+/** The one thing on this page an account can do on its first day. */
+export { BaselinePanel, BaselineSetup } from './Baseline';
+export type { BaselinePanelProps, BaselineSetupProps, BaselineValues } from './Baseline';
+
 export { Tiles } from './Tiles';
 export type { TilesProps } from './Tiles';
 

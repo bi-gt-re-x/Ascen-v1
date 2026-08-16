@@ -221,11 +221,10 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
           title={chosen ? `${chosen.name} — growth` : 'Growth'}
           hint={
             thin
-              ? 'Not enough finished work in this subject to draw its own line yet, so the shape below is an illustration of what this panel becomes. Nothing in it is measured.'
+              ? 'Not enough finished work in this subject to draw its own line yet.'
               : "Level over time, counted from the account's first day rather than the window's — the line is where you stand, not what you earned lately. Each mark is a level reached."
           }
         >
-          {thin && <span className="gr-panel-tag">Sample</span>}
           <Seg
             value={window}
             options={CURVE_WINDOWS.map((entry) => ({ key: entry.key, label: entry.label }))}
@@ -234,17 +233,22 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
           />
         </PanelHead>
 
-        <LevelPlot curve={thin ? SAMPLE_CURVE : curve!} sample={thin} />
+        {/* An invented eight-month climb used to be drawn here under a Sample
+            tag, on the grounds that a young skill otherwise reads as a broken
+            panel. It read as a measurement instead, which is worse than an
+            honest gap — see the note on placeholder data in pages/Analytics. */}
+        {thin ? (
+          <p className="gr-plot-empty">
+            {chosen?.label ?? 'This skill'} has {chosen?.tasks ?? 0} finished{' '}
+            {chosen?.tasks === 1 ? 'task' : 'tasks'} behind it, and a line needs at least{' '}
+            {CURVE_FLOOR} points to have a shape. Finish a few more in this subject and its climb
+            appears here.
+          </p>
+        ) : (
+          <LevelPlot curve={curve!} />
+        )}
         <ul className="gr-lt-legend">
-          {thin ? (
-            <li>
-              <i className="gr-lt-key tone-xp is-sample" aria-hidden="true" />
-              <span className="gr-lt-name">
-                An illustration — {chosen?.label ?? 'this skill'} has {chosen?.tasks ?? 0} finished{' '}
-                {chosen?.tasks === 1 ? 'task' : 'tasks'} behind it, and a line needs a few weeks
-              </span>
-            </li>
-          ) : (
+          {!thin && (
             <>
               <li>
                 <i className="gr-lt-key tone-xp" aria-hidden="true" />
@@ -270,6 +274,7 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
           )}
         </ul>
       </section>
+
 
       {/* --- The same skill, five ways -------------------------------------- */}
       <section className="gr-panel gr-balance">
@@ -430,34 +435,6 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
 const CURVE_FLOOR = 4;
 
 /**
- * The shape this panel becomes, for a skill too young to have one.
- *
- * ⚠ **Every number here is invented.** It is a drawing of a plausible eight
- * months — a climb, a plateau, a second climb — and it exists because the
- * alternative for a skill with two finished tasks in it is a flat rule across
- * an empty box, which reads as a broken panel rather than as a young skill.
- *
- * It is only ever rendered under a "Sample" tag with a caption saying so, and
- * it is never mixed with real points: a panel is entirely this or entirely
- * measured. See `thin` in the chapter above.
- */
-const SAMPLE_CURVE: NonNullable<ReturnType<typeof skillCurve>> = {
-  levels: [
-    1.0, 1.15, 1.42, 1.8, 2.05, 2.12, 2.3, 2.66, 3.02, 3.18, 3.24, 3.3, 3.52,
-    3.9, 4.24, 4.4, 4.52, 4.78, 5.1, 5.34, 5.46, 5.6,
-  ],
-  xp: [],
-  labels: [],
-  milestones: [
-    { tier: 2, index: 4, on: '' },
-    { tier: 3, index: 9, on: '' },
-    { tier: 4, index: 14, on: '' },
-    { tier: 5, index: 18, on: '' },
-  ],
-  ticks: [1, 2, 3, 4, 5, 6],
-};
-
-/**
  * A subject's level over time, with its level-ups marked.
  *
  * The y axis is whole levels rather than XP, because the question this panel
@@ -468,13 +445,7 @@ const SAMPLE_CURVE: NonNullable<ReturnType<typeof skillCurve>> = {
  * downwards, because a single line in a wide box is a thin thing to look at and
  * this is the panel the tab is named after.
  */
-function LevelPlot({
-  curve,
-  sample = false,
-}: {
-  curve: NonNullable<ReturnType<typeof skillCurve>>;
-  sample?: boolean;
-}) {
+function LevelPlot({ curve }: { curve: NonNullable<ReturnType<typeof skillCurve>> }) {
   const low = curve.ticks[0]!;
   const high = curve.ticks[curve.ticks.length - 1]!;
   const span = Math.max(0.001, high - low);
@@ -488,7 +459,7 @@ function LevelPlot({
   const area = `${path} L${((curve.levels.length - 1) * step).toFixed(2)} ${H} L0 ${H} Z`;
 
   return (
-    <div className={`gr-lt-plot${sample ? ' is-sample' : ''}`}>
+    <div className="gr-lt-plot">
       <div className="gr-lt-ticks" aria-hidden="true">
         {[...curve.ticks].reverse().map((tick) => (
           <span key={tick}>L{tick}</span>
@@ -501,13 +472,9 @@ function LevelPlot({
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label={
-            sample
-              ? 'An illustration of a skill climbing through five levels. Nothing in it is measured.'
-              : `Level ${curve.levels[0]!.toFixed(2)} to ${curve.levels[
-                  curve.levels.length - 1
-                ]!.toFixed(2)} over the window.`
-          }
+          aria-label={`Level ${curve.levels[0]!.toFixed(2)} to ${curve.levels[
+            curve.levels.length - 1
+          ]!.toFixed(2)} over the window.`}
         >
           <defs>
             {/* Bounding-box units, so the wash follows the box however the

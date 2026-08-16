@@ -226,23 +226,32 @@ export function ScorePanel({ score, factors, series, marks, percentile }: ScoreP
         </ul>
       )}
 
-      <AreaChart
-        id="ax-score"
-        height={130}
-        series={[{ values: series, tone: 'violet' }]}
-        ticks={['10', '8', '6', '4', '2', '0']}
-        marks={marks}
-      />
+      {/* Two readings or none. This panel used to draw a generated climb when
+          the account had no recorded history — a plausible curve with the real
+          score pinned on its last point, disclaimed in the sentence below. It
+          was the last invented figure on the page and it lived on the one tab
+          that never carried a Sample chip, which made it the easiest thing here
+          to mistake for a measurement. A panel titled "over time" with nothing
+          to draw now says that, which is shorter and true. */}
+      {series.length >= 2 ? (
+        <AreaChart
+          id="ax-score"
+          height={130}
+          series={[{ values: series, tone: 'violet' }]}
+          ticks={['10', '8', '6', '4', '2', '0']}
+          marks={marks}
+        />
+      ) : (
+        <p className="ax-score-nohistory">
+          No line yet — your score is recorded each time you open this page, and two readings are
+          the fewest that can be drawn between. Come back tomorrow and this becomes a history.
+        </p>
+      )}
 
-      {/* The Sample chip that used to sit in this panel's corner is gone. The
-          figures never needed it — the score, the five factors and the band are
-          all this account's — but the line still does, because no endpoint
-          reads the score's history back yet. So the caveat moved into the
-          sentence that was already here, where it is read rather than worn. */}
       <p className="ax-panel-note ax-panel-note-foot">
         The mean of the five report-card metrics — productivity, quality, consistency, efficiency
-        and focus — each worth up to 2.0 of the ten. The line is an illustration of the climb to
-        today&rsquo;s figure; a day-by-day history is not recorded yet.
+        and focus — each worth up to 2.0 of the ten.
+        {series.length >= 2 && ' Every point on the line is a reading taken when you opened this page.'}
       </p>
     </Panel>
   );

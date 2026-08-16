@@ -38,7 +38,6 @@ export interface ComparePanelProps {
   onChoose: (key: ComparisonKey) => void;
   /** How many days into an unfinished calendar period the reader is. */
   partial: number | null;
-  sample?: boolean;
 }
 
 /**
@@ -51,7 +50,7 @@ export interface ComparePanelProps {
  * a collapse. The rolling comparison has no such problem and is the one to
  * reach for when the question is "am I improving".
  */
-export function ComparePanel({ rows, chosen, onChoose, partial, sample }: ComparePanelProps) {
+export function ComparePanel({ rows, chosen, onChoose, partial }: ComparePanelProps) {
   const option = COMPARISONS.find((entry) => entry.key === chosen) ?? COMPARISONS[0]!;
 
   return (
@@ -62,7 +61,6 @@ export function ComparePanel({ rows, chosen, onChoose, partial, sample }: Compar
           ? `${option.nowLabel} is only ${partial} ${partial === 1 ? 'day' : 'days'} old, so the two stretches are not the same length and no percentage is shown.`
           : `${option.nowLabel} against ${option.wasLabel.toLowerCase()}, day for day.`
       }
-      sample={sample}
       aside={
         <div className="ax-chips ax-chips-sm" role="group" aria-label="Comparison">
           {COMPARISONS.map((entry) => (
@@ -121,17 +119,14 @@ export function ComparePanel({ rows, chosen, onChoose, partial, sample }: Compar
 export function DirectionPanel({
   directions,
   verdict,
-  sample,
 }: {
   directions: Direction[];
   verdict: string;
-  sample?: boolean;
 }) {
   return (
     <Panel
       title="Which way each measure is heading"
       note="A line fitted through every day in the window, with how much of the variation it explains."
-      sample={sample}
     >
       {directions.length === 0 ? (
         <p className="ax-empty">{verdict}</p>
@@ -173,7 +168,6 @@ export interface TrendChartProps {
   tone: string;
   options: Array<{ key: string; label: string }>;
   onMetric: (key: string) => void;
-  sample?: boolean;
 }
 
 /**
@@ -192,7 +186,6 @@ export function TrendChart({
   tone,
   options,
   onMetric,
-  sample,
 }: TrendChartProps) {
   const values = weeks.map((week) => week.values[metricKey] ?? 0);
   const peak = Math.max(...values, 1);
@@ -207,7 +200,6 @@ export function TrendChart({
     <Panel
       title="The shape of the window"
       note={`${metricLabel}, one point a week across ${weeks.length} whole weeks.`}
-      sample={sample}
       aside={
         <div className="ax-chips ax-chips-sm" role="group" aria-label="Metric">
           {options.map((option) => (

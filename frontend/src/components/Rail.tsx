@@ -96,33 +96,29 @@ const TABS: Tab[] = [
     ),
   },
   {
-    to: '/analytics',
+    // Points at Recommendations rather than the Overview, which is a change and
+    // a deliberate one: the rail's job is to put a reader somewhere useful, and
+    // of the seven tabs it is the only one that ends in something to do. The
+    // Overview is one click along the bar for anyone who wants the totals.
+    to: '/recommendations',
     // The page calls itself Advanced Analytics; the rail says Analytics. The
     // rail is a column of one-word destinations and the odd two-word one
     // wraps — the heading is where the full name belongs.
     label: 'Analytics',
-    also: ['/trends', '/habits', '/insights', '/recommendations'],
+    also: ['/analytics', '/trends', '/habits', '/insights', '/subjects', '/records', '/growth'],
     icon: (
       <svg {...stroke}>
         <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
       </svg>
     ),
   },
-  {
-    to: '/growth',
-    label: 'Growth',
-    icon: (
-      <svg {...stroke}>
-        <path d="M3 17L9 11l4 4 8-8" />
-        <path d="M16 7h5v5" />
-      </svg>
-    ),
-  },
-  // Insights and Recommendations had entries of their own here while they were
-  // separate pages. They are two tabs of the analytics page now, so the rail
-  // points at that page once and the tab bar does the rest — a rail entry per
-  // tab would have been the same destination listed three times. Their URLs
-  // still work and still open the right tab; see `Tab.also` above.
+  // Growth had an entry here until its five tabs became four tabs of the
+  // analytics page and one duplicate of its Overview. Insights and
+  // Recommendations had entries before that, for the same reason and with the
+  // same ending. The rail points at the one page once and the tab bar does the
+  // rest — a rail entry per tab would be the same destination listed seven
+  // times. Every one of those URLs still works and still opens the right tab;
+  // see `Tab.also` above, and the `/growth` redirect in App.tsx.
   {
     to: '/tasks',
     label: 'Tasks',

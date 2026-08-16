@@ -93,17 +93,14 @@ export function FindingCard({ finding }: { finding: Finding }) {
 export function WhyPanel({
   findings,
   notice,
-  sample,
 }: {
   findings: Finding[];
   notice: Unlock;
-  sample?: boolean;
 }) {
   return (
     <Panel
       title="Why the last stretch went the way it did"
       note="What in your own record accounts for the change. Open one to see the figures."
-      sample={sample}
     >
       {!notice.ready ? (
         <Waiting notice={notice} />
@@ -129,17 +126,14 @@ export function WhyPanel({
 export function HowPanel({
   findings,
   notice,
-  sample,
 }: {
   findings: Finding[];
   notice: Unlock;
-  sample?: boolean;
 }) {
   return (
     <Panel
       title="How you tend to work"
       note="The conditions your better work shows up under. Associations, not mechanisms."
-      sample={sample}
     >
       {!notice.ready ? (
         <Waiting notice={notice} />
@@ -172,12 +166,11 @@ export function HowPanel({
  * stretch produces nothing and the panel says exactly that rather than
  * reaching for an encouragement.
  */
-export function WorkingPanel({ wins, sample }: { wins: Win[]; sample?: boolean }) {
+export function WorkingPanel({ wins }: { wins: Win[] }) {
   return (
     <Panel
       title="What’s working right now"
       note="Measured improvements over the previous period of the same length."
-      sample={sample}
     >
       {wins.length === 0 ? (
         <p className="ax-empty">
@@ -216,11 +209,9 @@ export function WorkingPanel({ wins, sample }: { wins: Win[]; sample?: boolean }
 export function RelationshipsPanel({
   relationships,
   notice,
-  sample,
 }: {
   relationships: Relationship[];
   notice: Unlock;
-  sample?: boolean;
 }) {
   const [chosen, setChosen] = useState(0);
   const active = relationships[Math.min(chosen, relationships.length - 1)];
@@ -229,7 +220,6 @@ export function RelationshipsPanel({
     <Panel
       title="What moves with what"
       note="Correlation, not cause. Every dot is one day or one week of your own record."
-      sample={sample}
     >
       {!notice.ready || !active ? (
         <Waiting

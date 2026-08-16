@@ -18,7 +18,14 @@ import type { GrowthDay } from '@/types';
 // --------------------------------------------------------------------------
 // The major tabs
 // --------------------------------------------------------------------------
-export type ViewKey = 'overview' | 'trends' | 'habits' | 'insights' | 'recommendations';
+export type ViewKey =
+  | 'recommendations'
+  | 'overview'
+  | 'trends'
+  | 'habits'
+  | 'insights'
+  | 'subjects'
+  | 'records';
 
 export interface View {
   key: ViewKey;
@@ -32,11 +39,19 @@ export interface View {
 }
 
 /**
- * The five views, in the order they are meant to be read.
+ * The seven views, in the order they are meant to be read.
  *
- * The middle three are the whole point of the page and their boundaries are
- * deliberately sharp, because three tabs that all show cards of numbers are one
- * tab with a broken picker:
+ * **Recommendations leads, and that is a change from how this page was built.**
+ * The old order was an editorial sequence — the long view, then the direction,
+ * then what I do, then why, then what to change — which is the right order for
+ * somebody with a year of record and the wrong one for everybody else. It put
+ * the only tab that ends in a button five clicks from the rail, behind four
+ * screens of description. A reader who never reaches it got a report; a reader
+ * who opens on it gets something to do. The sequence still exists for anyone
+ * who wants it, and every tab still hands off to the next.
+ *
+ * The three tabs in the middle have deliberately sharp boundaries, because
+ * three tabs that all show cards of numbers are one tab with a broken picker:
  *
  * - **Habits — what I do.** Counts of recurring behaviour. Visual, historical.
  *   Never says why.
@@ -45,13 +60,27 @@ export interface View {
  * - **Recommendations — how I improve.** Instructions with a number and the
  *   arithmetic behind it attached. Never re-states a finding as news.
  *
- * Overview keeps the long view of the account that this page has always been,
- * and Trends sits between it and Habits: the derivative rather than the level.
+ * **Subjects and Records came from the growth page**, which no longer exists as
+ * a page of its own. It carried five tabs drawn from the same fetch as this one
+ * and overlapping it in four places — its own heatmap, its own milestones, its
+ * own donut, its own insight list, each a lower-resolution copy of a panel that
+ * is on one of these tabs already. Its Overview dissolved into this one's; its
+ * Long Term chapter went to Trends and its Focus chapter to Habits, which is
+ * where each of them was answering the same question at higher resolution. Ten
+ * tabs across two pages, one rail entry apiece, became seven here.
  *
  * Each is a route rather than local state so that the rail, the browser's back
  * button and a pasted link all agree about which tab is open.
  */
 export const VIEWS: View[] = [
+  {
+    key: 'recommendations',
+    label: 'Recommendations',
+    path: '/recommendations',
+    purpose: 'What to change, ranked by what it would actually be worth.',
+    title: 'Recommendations',
+    blurb: 'What to do differently, drawn from your own record, with the arithmetic attached.',
+  },
   {
     key: 'overview',
     label: 'Overview',
@@ -85,12 +114,20 @@ export const VIEWS: View[] = [
     blurb: 'Why your record looks the way it does, with the evidence behind each reading.',
   },
   {
-    key: 'recommendations',
-    label: 'Recommendations',
-    path: '/recommendations',
-    purpose: 'What to change, ranked by what it would actually be worth.',
-    title: 'Recommendations',
-    blurb: 'What to do differently, drawn from your own record, with the arithmetic attached.',
+    key: 'subjects',
+    label: 'Subjects',
+    path: '/subjects',
+    purpose: 'What you are getting good at — every subject as a level, counted off your own tasks.',
+    title: 'Subject Growth',
+    blurb: 'Mastery rather than volume — where the work went, and what it built.',
+  },
+  {
+    key: 'records',
+    label: 'Records',
+    path: '/records',
+    purpose: 'How far along you are, against your own record and the goals you set.',
+    title: 'Personal Records',
+    blurb: 'Your own best, the ladder ahead, and the pace each goal needs.',
   },
 ];
 
@@ -141,15 +178,6 @@ export interface HeaderProps {
   rows: GrowthDay[];
   /** Which tab is open. Its title and blurb are the header's. */
   view?: View;
-  /**
-   * True when this tab is drawing placeholder figures.
-   *
-   * The chip goes in the top-right container beside the date pill, which is
-   * where the same mark sits on every panel (see `Panel` in ./charts). One
-   * position for one meaning, so "is any of this mine?" is answered in the same
-   * place whether the reader is looking at a panel or at the page.
-   */
-  sample?: boolean;
   /** Pushed in beside Export — a refresh control, usually. */
   actions?: ReactNode;
 }
@@ -164,7 +192,7 @@ export interface HeaderProps {
  * fields, unrounded — the panels round for display and a spreadsheet should not
  * inherit that.
  */
-export function Header({ span, rows, view, sample, actions }: HeaderProps) {
+export function Header({ span, rows, view, actions }: HeaderProps) {
   const shown = view ?? VIEWS[0]!;
   const save = () => {
     if (rows.length === 0) return;
@@ -196,14 +224,6 @@ export function Header({ span, rows, view, sample, actions }: HeaderProps) {
         <p className="ax-muted">{shown.blurb}</p>
       </div>
       <div className="ax-head-actions">
-        {sample && (
-          <span
-            className="ax-sample ax-sample-page"
-            title="This tab is showing placeholder figures — your own record cannot fill it yet"
-          >
-            Sample data
-          </span>
-        )}
         <span className="ax-pill">
           <span className="ax-pill-icon" aria-hidden="true" />
           {span}

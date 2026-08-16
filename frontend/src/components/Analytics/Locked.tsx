@@ -1,0 +1,126 @@
+/**
+ * What a tab shows when this account cannot fill it yet.
+ *
+ * This replaces the sample data. Four tabs used to fall back to invented
+ * figures behind a small chip, which was the wrong trade twice over: a new
+ * account's first impression of the analysis was a screen of numbers that were
+ * not about them, and the chip was a footnote against a full page of confident
+ * charts. The lesson a reader took from it was that the figures here are set
+ * dressing — and that lesson stuck to the real ones later.
+ *
+ * So a tab that cannot be filled says so, and says exactly what it is waiting
+ * for. That is strictly more useful than a fake chart: a countdown is a reason
+ * to come back on a named day, where a placeholder is a reason to discount
+ * everything on the page.
+ *
+ * Two states, because there are two ways to have nothing to show and telling
+ * them apart is the whole value:
+ *
+ * - **Waiting** (`remaining` > 0). The record is too short. Show the count, the
+ *   date it lands, and what will be here — a promise with a deadline.
+ * - **Nothing found** (`remaining` = 0). The record is long enough and the
+ *   analysis genuinely produced nothing. That is a real result and gets said
+ *   plainly rather than dressed as a wait: an account with an even week and no
+ *   gaps has nothing to fix on those counts, and deserves to hear it.
+ */
+import type { ReactNode } from 'react';
+
+export interface LockedProps {
+  /** The tab's own name, as the reader sees it in the bar. */
+  title: string;
+  /**
+   * Days of history still needed, or 0 when the record is long enough and the
+   * analysis simply found nothing. See the note above.
+   */
+  remaining: number;
+  /** How many days this tab needs in total — printed as the bar's end. */
+  need: number;
+  /** How many the account has. */
+  have: number;
+  /** One line on what this tab will do once it has the days. */
+  promise: string;
+  /** The panels that will appear, so the wait is for something specific. */
+  brings: string[];
+  /**
+   * What to say when there are enough days and still no findings. Required for
+   * the second state, because the honest sentence is different every time and a
+   * generic one would be the placeholder problem again in one line.
+   */
+  emptyMessage?: string;
+  /** A way out of the dead end — usually a link to something to go do. */
+  action?: ReactNode;
+}
+
+/** The day the tab turns on, written out. */
+function unlockDate(remaining: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + remaining);
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+
+export function Locked({
+  title,
+  remaining,
+  need,
+  have,
+  promise,
+  brings,
+  emptyMessage,
+  action,
+}: LockedProps) {
+  // Enough history, nothing found. Not a wait — a result.
+  if (remaining <= 0) {
+    return (
+      <section className="ax-locked ax-locked-empty">
+        <div className="ax-locked-body">
+          <h2>Nothing to report on {title.toLowerCase()} yet</h2>
+          <p className="ax-locked-lead">
+            {emptyMessage ??
+              `Your record is long enough to analyse, and nothing in it stands out
+               strongly enough to be worth stating. That is a real answer rather
+               than an empty one.`}
+          </p>
+          {action && <div className="ax-locked-action">{action}</div>}
+        </div>
+      </section>
+    );
+  }
+
+  const pct = Math.max(0, Math.min(100, Math.round((have / need) * 100)));
+
+  return (
+    <section className="ax-locked">
+      <div className="ax-locked-body">
+        <p className="ax-locked-eyebrow">{title}</p>
+        <h2>
+          {remaining} more {remaining === 1 ? 'day' : 'days'} of history
+        </h2>
+        <p className="ax-locked-lead">
+          {promise} This tab needs {need} days to say anything about it that would
+          still be true next week, and your record has {have}. Keep going and it
+          opens on {unlockDate(remaining)}.
+        </p>
+
+        <div className="ax-locked-meter" role="img" aria-label={`${have} of ${need} days`}>
+          <span className="ax-locked-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="ax-locked-count">
+          {have} of {need} days
+        </p>
+
+        {brings.length > 0 && (
+          <>
+            <p className="ax-locked-sub">What opens here</p>
+            <ul className="ax-locked-list">
+              {brings.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {action && <div className="ax-locked-action">{action}</div>}
+      </div>
+    </section>
+  );
+}

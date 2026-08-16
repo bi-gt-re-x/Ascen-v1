@@ -28,82 +28,10 @@ import {
   goalBenchmarks,
   personalRecords,
   xpLadder,
-  type GoalBench,
 } from '@/utils/growthBench';
 import { longDate } from '@/utils/growthChapters';
 import { EmptyChapter, HeroRow, Notes, PanelHead } from './ChapterParts';
 import { Glyph } from './GrowthPanels';
-
-/**
- * What this panel looks like with goals in it.
- *
- * ⚠ **Every figure here is invented.** They are the external standards the
- * panel spends its empty state naming — a Codeforces rating, a LeetCode count,
- * an RCM grade, a reading target — drawn as the rows they become once somebody
- * sets one as a goal with a number and a date on it. Nothing in them is read
- * from the account, and they are never mixed with real goals: the panel shows
- * these or it shows the reader's own, never both.
- *
- * They exist because an empty panel is a paragraph explaining a shape nobody
- * has seen. It is only ever drawn under the "Sample" tag in the head, with the
- * caption above it saying so — the same bargain the Overview's Skills Progress
- * and the Skills chapter's level curve strike. Delete it the day goals arrive
- * on this account, and take the tag and the caption with it.
- */
-const SAMPLE_GOALS: GoalBench[] = [
-  {
-    key: 'sample-codeforces',
-    title: 'Codeforces rating — reach 1400',
-    unit: 'rating',
-    current: 1236,
-    target: 1400,
-    percent: 88,
-    deadline: '2026-12-31',
-    daysLeft: 143,
-    needPace: 1.1,
-    havePace: 1.4,
-    standing: 'ahead',
-  },
-  {
-    key: 'sample-leetcode',
-    title: 'LeetCode — 300 problems solved',
-    unit: 'problems',
-    current: 184,
-    target: 300,
-    percent: 61,
-    deadline: '2026-11-01',
-    daysLeft: 83,
-    needPace: 1.4,
-    havePace: 1.3,
-    standing: 'on track',
-  },
-  {
-    key: 'sample-rcm',
-    title: 'RCM Level 8 piano — exam ready',
-    unit: 'practice hours',
-    current: 46,
-    target: 120,
-    percent: 38,
-    deadline: '2027-02-14',
-    daysLeft: 188,
-    needPace: 0.4,
-    havePace: 0.2,
-    standing: 'behind',
-  },
-  {
-    key: 'sample-reading',
-    title: 'Read 24 books this year',
-    unit: 'books',
-    current: 24,
-    target: 24,
-    percent: 100,
-    deadline: '2026-12-31',
-    daysLeft: 143,
-    needPace: null,
-    havePace: null,
-    standing: 'done',
-  },
-];
 
 /**
  * How many goals the panel draws.
@@ -160,17 +88,8 @@ export function BenchmarksChapter({
 
   const held = records.filter((record) => record.on !== null).length;
 
-  /**
-   * Whether the goal panel is drawing placeholders.
-   *
-   * Only once the goals call has come back — a panel that flashes four invented
-   * rows on its way to the reader's real ones would be worse than the wait. The
-   * panel is entirely sample or entirely measured; see `SAMPLE_GOALS`.
-   */
-  const sample = !goalsLoading && goalRows.length === 0;
-  const allGoals = sample ? SAMPLE_GOALS : goalRows;
-  const rows = allGoals.slice(0, GOAL_ROWS);
-  const hidden = allGoals.length - rows.length;
+  const rows = goalRows.slice(0, GOAL_ROWS);
+  const hidden = goalRows.length - rows.length;
 
   return (
     <div className="gr-grid">
@@ -325,11 +244,7 @@ export function BenchmarksChapter({
         <PanelHead
           title="Goal benchmarks"
           icon="target"
-          hint={
-            sample
-              ? 'Placeholder rows. You have no goals set, so these are an illustration of what this panel becomes — nothing in them is read from your account.'
-              : 'Your own goals, with the pace each needs against the pace you are going. The pace comes from your last 30 days, because a goal set yesterday has no history of its own. The panel shows the three with the most left to do.'
-          }
+          hint="Your own goals, with the pace each needs against the pace you are going. The pace comes from your last 30 days, because a goal set yesterday has no history of its own. The panel shows the three with the most left to do."
           note={
             goalRows.length > GOAL_ROWS
               ? `${GOAL_ROWS} of ${goalRows.length}`
@@ -337,22 +252,23 @@ export function BenchmarksChapter({
                 ? `${goalRows.length} set`
                 : undefined
           }
-        >
-          {sample && <span className="gr-panel-tag">Sample</span>}
-        </PanelHead>
+        />
         {goalsLoading ? (
           <p className="gr-empty">Reading your goals…</p>
+        ) : goalRows.length === 0 ? (
+          /* Four invented rows — a Codeforces rating, a LeetCode count, an RCM
+             grade, a reading target — used to be drawn here under a Sample tag.
+             The empty state says the same thing in a sentence and costs the
+             reader nothing to disbelieve. */
+          <p className="gr-goals-note">
+            No goals set yet. A goal is the one place a target this app does not track — a
+            Codeforces rating, an RCM grade, a book count — becomes a number with a deadline on
+            it, and this panel then shows the pace it needs against the pace you are going.{' '}
+            <a href="/goals">Set one on your Goals page.</a>
+          </p>
         ) : (
           <>
-            {sample && (
-              <p className="gr-goals-note">
-                No goals set — these are placeholders. A goal is the one place a target
-                this app does not track — a Codeforces rating, an RCM grade, a book count —
-                becomes a number with a deadline on it, and your own rows replace these the
-                moment one exists.
-              </p>
-            )}
-            <ul className={`gr-goals${sample ? ' is-sample' : ''}`}>
+            <ul className="gr-goals">
               {rows.map((goal) => (
                 <li className="gr-goal" key={goal.key}>
                   <div className="gr-goal-head">

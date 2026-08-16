@@ -1291,7 +1291,8 @@ html[data-theme="light"] #growthCard.growth-card {
    top of it (`--accent-ink`), and the pressed/hover step (`--accent-deep`).
    Reach for those rather than writing the hex again, or the next theme is four
    find-and-replaces instead of one block. */
-#growthCard {
+#growthCard,
+.gr-scope {
     --tone-blue: #4f7fe0;
     --tone-purple: #7c5cd6;
     --tone-green: #24a06b;
@@ -1333,7 +1334,8 @@ html[data-theme="light"] #growthCard.growth-card {
     display: inline-flex; align-items: center; justify-content: center;
     background: var(--accent-soft); color: var(--accent);
 }
-#growthCard .gr-title {
+#growthCard .gr-title,
+.gr-scope .gr-title {
     /* Left-aligned, sentence case, its own size — the base rule centres an
        uppercase, letter-spaced h1, which was the old card's masthead. */
     margin: 0;
@@ -1346,7 +1348,8 @@ html[data-theme="light"] #growthCard.growth-card {
     text-shadow: none;
     animation: none;
 }
-#growthCard .gr-sub {
+#growthCard .gr-sub,
+.gr-scope .gr-sub {
     margin: 5px 0 0;
     text-align: left;
     font-size: 0.92rem;
@@ -1619,7 +1622,8 @@ html[data-theme="light"] #growthCard.growth-card {
    centred — out-specifies a bare class. It was quietly winning: the Insights
    panel rendered at nearly 18px, centred, which is also what stopped its card
    from fitting the height the grid now gives it. */
-#growthCard .gr-empty { margin: 0; font-size: 13px; color: var(--ink-faint); font-style: italic; text-align: left; }
+#growthCard .gr-empty,
+.gr-scope .gr-empty { margin: 0; font-size: 13px; color: var(--ink-faint); font-style: italic; text-align: left; }
 .gr-hint {
     display: inline-flex; align-items: center;
     color: #b6bcc8; cursor: help;
@@ -1710,7 +1714,8 @@ html[data-theme="light"] #growthCard.growth-card {
    page scrolls past it. */
 .gr-chart-head { align-items: flex-start; }
 .gr-chart-tools { flex: none; display: flex; align-items: center; gap: 7px; }
-#growthCard .gr-chart-panel .chart-container {
+#growthCard .gr-chart-panel .chart-container,
+.gr-scope .gr-chart-panel .chart-container {
     background: transparent; border-radius: 0; box-shadow: none;
     padding: 0; margin: 0;
     flex: 1 1 auto; min-height: 0;
@@ -1720,7 +1725,8 @@ html[data-theme="light"] #growthCard.growth-card {
    — the row is the fixed thing now. It repaints on mount and on window resize
    (see components/Growth/GrowthChart), and both are when this box can change
    size, so the buffer never goes stale against the box. */
-#growthCard .gr-chart-panel canvas {
+#growthCard .gr-chart-panel canvas,
+.gr-scope .gr-chart-panel canvas {
     /* Basis 0, not auto: the buffer the renderer sets gives the element an
        intrinsic height, and taking that as the basis makes it overshoot the
        box by however much the last paint measured. */
@@ -2237,16 +2243,6 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     font-size: 11px; font-weight: 700; color: var(--ink);
     white-space: nowrap; min-width: 30px; text-align: right;
 }
-/* The mark that says the numbers beside it are not measured. Quiet, because it
-   is a caveat and not a feature — but present, because the alternative is five
-   invented figures passing as real ones. */
-.gr-panel-tag {
-    flex: none; padding: 2px 8px; border-radius: 999px;
-    background: var(--inset-bg); border: 1px solid var(--inset-edge);
-    font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-    color: var(--ink-faint); white-space: nowrap;
-}
-
 /* ---- Insights ------------------------------------------------------------ */
 .gr-insight-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
 .gr-insight {
@@ -2263,8 +2259,10 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-insight-ico.tone-watch { background: #f4eefb; color: var(--tone-purple); }
 .gr-insight-ico.tone-note  { background: #fdf3e6; color: var(--tone-amber); }
 /* Id-scoped for the same reason as .gr-empty above — see the note there. */
-#growthCard .gr-insight-head { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--ink); text-align: left; }
-#growthCard .gr-insight-hint { margin: 2px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--ink-quiet); text-align: left; }
+#growthCard .gr-insight-head,
+.gr-scope .gr-insight-head { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--ink); text-align: left; }
+#growthCard .gr-insight-hint,
+.gr-scope .gr-insight-hint { margin: 2px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--ink-quiet); text-align: left; }
 
 /* ==========================================================================
    THE CHAPTERS
@@ -2378,7 +2376,8 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-hero-grade.g-D { --g-ink: #d1660f; --g-bg: #fdeee2; --g-edge: #f4d5ba; }
 .gr-hero-grade.g-F { --g-ink: var(--tone-red);   --g-bg: #fbeaee; --g-edge: #f3ccd6; }
 
-#growthCard .gr-hero-foot {
+#growthCard .gr-hero-foot,
+.gr-scope .gr-hero-foot {
     margin: 9px 0 0; text-align: left;
     font-size: 11.5px; line-height: 1.45; color: var(--ink-quiet);
 }
@@ -2547,7 +2546,8 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-mix-delta.is-up { color: var(--tone-green); }
 .gr-mix-delta.is-down { color: var(--tone-red); }
 .gr-mix-delta.is-quiet { color: var(--ink-faint); }
-#growthCard .gr-mix-foot {
+#growthCard .gr-mix-foot,
+.gr-scope .gr-mix-foot {
     flex: none; margin: 12px 0 0; text-align: left;
     font-size: 10.5px; line-height: 1.4; color: var(--ink-faint);
 }
@@ -2630,7 +2630,8 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 }
 .gr-recov-figure strong { font-size: 40px; font-weight: 800; line-height: 1; color: var(--accent); letter-spacing: -0.02em; }
 .gr-recov-figure > span { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
-#growthCard .gr-recov-figure p {
+#growthCard .gr-recov-figure p,
+.gr-scope .gr-recov-figure p {
     margin: 7px 0 0; text-align: left;
     font-size: 11.5px; line-height: 1.5; color: var(--ink-quiet);
 }
@@ -2713,11 +2714,16 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-lt-area { fill: url(#grSkillWash); stroke: none; }
 .gr-lt-wash-top  { stop-color: var(--accent); stop-opacity: .34; }
 .gr-lt-wash-foot { stop-color: var(--accent); stop-opacity: 0; }
-/* The illustration a young skill gets in place of its own line. Quieter than a
-   measured one, and always under a "Sample" tag — see `SAMPLE_CURVE`. */
-.gr-lt-plot.is-sample { opacity: .72; }
-.gr-lt-plot.is-sample .gr-lt-line { stroke-dasharray: 4 3; }
-.gr-lt-key.is-sample { opacity: .5; }
+/* A skill with too few points to draw gets a sentence instead of a line — the
+   illustrated climb that used to fill this box is gone. */
+.gr-plot-empty {
+    margin: 10px 0 0;
+    padding: 26px 18px;
+    border: 1px dashed var(--inset-edge);
+    border-radius: 10px;
+    background: var(--inset-bg);
+    font-size: 11.5px; line-height: 1.55; color: var(--ink-faint);
+}
 
 /* ---- The radar -----------------------------------------------------------
    The one chart on this page that cannot be stretched: a radar that is not
@@ -2920,13 +2926,10 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     list-style: none; margin: 0; padding: 0;
     display: flex; flex-direction: column; gap: 12px;
 }
-/* The placeholder rows, held back from the page's own figures. Not so faint
-   that they cannot be read — the point of them is to show the shape — just
-   enough that they do not sit at the same weight as measured work. The
-   "Sample" tag in the head and the caption above are what actually say so;
-   this only keeps the eye honest. */
-.gr-goals.is-sample { opacity: .72; }
-#growthCard .gr-goals-note {
+/* The sentence an account with no goals set gets, where four invented rows
+   used to be. */
+#growthCard .gr-goals-note,
+.gr-scope .gr-goals-note {
     flex: none; margin: 0 0 12px;
     font-size: 10.5px; line-height: 1.45; color: var(--ink-faint);
 }
@@ -2935,7 +2938,8 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
    slack in a card stretched to its neighbour's height is already taken there
    and this line sits on the floor — level with the end of "Reading these"
    beside it, which is the point of capping the list in the first place. */
-#growthCard .gr-goals-foot {
+#growthCard .gr-goals-foot,
+.gr-scope .gr-goals-foot {
     flex: none; margin: 12px 0 0;
     font-size: 10.5px; line-height: 1.45; color: var(--ink-faint);
 }
@@ -2990,7 +2994,8 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
    is the variables at the top of this section being re-pointed, which is the
    whole reason they are variables.
    ========================================================================== */
-html[data-theme="dark"] #growthCard {
+html[data-theme="dark"] #growthCard,
+html[data-theme="dark"] .gr-scope {
     --tone-blue: #4a8ff5;
     --tone-purple: #a78bfa;
     --tone-green: #34d399;

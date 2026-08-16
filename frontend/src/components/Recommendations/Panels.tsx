@@ -246,7 +246,7 @@ export function CategoryFilter({
 // --------------------------------------------------------------------------
 // The projection
 // --------------------------------------------------------------------------
-export function OutlookPanel({ outlook, sample }: { outlook: Outlook; sample?: boolean }) {
+export function OutlookPanel({ outlook }: { outlook: Outlook }) {
   const peak = Math.max(...outlook.improvedLine, 1);
   const ticks: string[] = [];
   for (let step = 4; step >= 0; step--) ticks.push(compact((peak / 4) * step));
@@ -255,7 +255,6 @@ export function OutlookPanel({ outlook, sample }: { outlook: Outlook; sample?: b
     <Panel
       title="The same five years, both ways"
       note="Your current pace against the pace with every scored suggestion taken"
-      sample={sample}
     >
       <div className="ax-figures">
         <div className="ax-figure">
@@ -310,9 +309,9 @@ export function OutlookPanel({ outlook, sample }: { outlook: Outlook; sample?: b
 // --------------------------------------------------------------------------
 // The rest
 // --------------------------------------------------------------------------
-export function AlsoPanel({ items, sample }: { items: Advice[]; sample?: boolean }) {
+export function AlsoPanel({ items }: { items: Advice[] }) {
   return (
-    <Panel title="Also worth doing" note="Smaller, or about shape rather than size" sample={sample}>
+    <Panel title="Also worth doing" note="Smaller, or about shape rather than size">
       {items.length === 0 ? (
         <p className="ax-prose">
           Nothing else in your record crosses the threshold for a suggestion. That is a real result,

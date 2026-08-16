@@ -3,10 +3,10 @@
  *
  * Everything here reads the day series the backend already builds — the same
  * rows the growth page slices — so the two pages cannot tell different stories
- * about the same account. Where a panel needs something the backend has no
- * answer for, it says so in the open: `scoreHistory` at the bottom is the last
- * of the invented data on this page, and it is kept there alone so it can be
- * deleted in one edit when the endpoint for the score's history exists.
+ * about the same account. Nothing here invents a figure. `scoreHistory` used to
+ * sit at the bottom generating a plausible run-up to the growth score, and it
+ * went with the rest of the placeholder data: the score panel draws its own
+ * recorded readings or draws nothing.
  *
  * The windows here are long ones — a quarter to the whole account — because
  * this page is about trajectory. utils/growthSummary's `RANGES` are the short
@@ -467,44 +467,3 @@ export function comparisonBars(slice: RangeSlice, score: number | null): Compari
   ];
 }
 
-// --------------------------------------------------------------------------
-// Invented data
-// --------------------------------------------------------------------------
-/**
- * The one panel left that nothing in this account can answer.
- *
- * **The growth score has no history.** `get_growth_ratings` files a dated
- * snapshot per metric every time it is read (backend/tracking/analytics.py),
- * so the history is being recorded — but no endpoint reads it back out yet.
- * When one does, this shape is what the panel wants.
- *
- * The panel carries a "Sample" chip in the UI so the figures are never mistaken
- * for the reader's own. Delete this block, the chip, and the prop that threads
- * it through when the endpoint lands.
- *
- * "Where You Stand" used to be here too, as four constant percentile bands.
- * It is measured now — backend/tracking/standing.py ranks the account against
- * every other one with a comparable record, and @/services/analytics fetches
- * it — which is why nothing on that panel is invented and it has no chip.
- */
-/**
- * A plausible run-up to the score the account actually has.
- *
- * The endpoint for the real history does not exist yet, and a
- * panel titled "over time" with one point in it is worse than one with a shape.
- * So the shape is generated and the **last point is the account's real score** —
- * the figure stated beside it is never invented, only the path to it is.
- */
-export function scoreHistory(score: number, points = 40): number[] {
-  const out: number[] = [];
-  for (let index = 0; index < points; index++) {
-    const t = index / (points - 1);
-    // A climb that flattens, plus a fixed wobble so it reads as a measurement
-    // rather than a curve. Deterministic: the same account draws the same line
-    // on every render, which a random walk would not.
-    const climb = score * (0.55 + 0.45 * Math.sqrt(t));
-    const wobble = Math.sin(index * 1.7) * 0.18 + Math.sin(index * 0.6) * 0.12;
-    out.push(Math.max(0, index === points - 1 ? score : climb + wobble));
-  }
-  return out;
-}

@@ -1,21 +1,26 @@
 /**
- * The growth page's parts.
+ * The four chapters that were the growth page.
  *
- * GrowthChart is the canvas; the drawing it does lives in
- * utils/growthChart.ts, which knows nothing about React. The three small
- * static shapes — the tile sparklines, the trend curve, the long-term lines —
- * are SVG instead, and live in MiniChart; see the note there for why the page
- * uses both. The Overview's panels are in GrowthPanels, and read figures worked
- * out by utils/growthSummary.
+ * There is no growth page any more. It carried five tabs: an Overview built
+ * from the panels in GrowthPanels, and four chapters. The Overview answered
+ * "how am I doing" with a chart, a donut, a heatmap and a milestone list —
+ * every one of which the analytics page already answered at higher resolution
+ * on a tab built for it — so it went, and its panels went with it. The four
+ * chapters are the part that was doing real work, and they are tabs of
+ * /analytics now: Long Term under Trends, Focus under Habits, and Subjects and
+ * Records as tabs of their own.
  *
- * The four chapters that are not Overview have a file each — they are pages
- * rather than panels — and share their furniture through ChapterParts: one hero
- * row, one tile grid, one bar row, one insight list, so the five tabs read as
- * one system. Their arithmetic is in utils/growthFocus, growthSkills,
- * growthBench and growthChapters.
+ * They kept their shape on the way across. Each is handed the day series, the
+ * tasks, the subject index and the streak — all of which the analytics page has
+ * for its own panels — and none of them fetches. Their arithmetic is in
+ * utils/growthFocus, growthSkills, growthBench and growthChapters, and they
+ * share their furniture through ChapterParts so the four read as one system.
  *
- * The graded report card is not here. It is /analytics — the other half of the
- * original growth.js — and its parts are in components/Analytics.
+ * `GrowthChart` is the canvas the Overview's chart panel drew into, and its
+ * drawing lives in utils/growthChart.ts, which knows nothing about React. It is
+ * still exported and nothing mounts it — kept because it is the only renderer
+ * for the five XP and focus series, and the analytics page's own trajectory
+ * chart is a different chart rather than a replacement for it.
  */
 export { GrowthChart } from './GrowthChart';
 export type { GrowthChartProps } from './GrowthChart';
@@ -33,29 +38,5 @@ export type {
   SparklineProps,
   TrendChartProps,
 } from './MiniChart';
-export {
-  CategoryDonut,
-  ChartHead,
-  ChartStrip,
-  ExportReport,
-  GrowthSummary,
-  Insights,
-  LongTerm,
-  Milestones,
-  RangePicker,
-  SkillsProgress,
-  XpHeatmap,
-} from './GrowthPanels';
-export type {
-  CategoryDonutProps,
-  ChartHeadProps,
-  ChartStripProps,
-  ExportReportProps,
-  GrowthSummaryProps,
-  InsightsProps,
-  LongTermProps,
-  MilestonesProps,
-  RangePickerProps,
-  SkillsProgressProps,
-  XpHeatmapProps,
-} from './GrowthPanels';
+/** What the chapters share — see the note at the top of GrowthPanels. */
+export { CountValue, Glyph, Hint } from './GrowthPanels';

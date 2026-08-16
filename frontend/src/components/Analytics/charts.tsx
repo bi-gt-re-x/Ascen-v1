@@ -567,8 +567,6 @@ export interface PanelProps {
   note?: string;
   /** Pushed to the right of the title row — a picker, usually. */
   aside?: ReactNode;
-  /** Marks a panel drawn from invented figures. See SAMPLE in ./data. */
-  sample?: boolean;
   className?: string;
   children: ReactNode;
   /** The link row along the bottom. */
@@ -576,39 +574,22 @@ export interface PanelProps {
 }
 
 /**
- * A panel, and the one place the Sample chip is drawn.
+ * A panel.
  *
- * **The chip sits in the top right, opposite the title.** It used to sit beside
- * the heading, which read as part of the heading — "Where You Stand Sample" —
- * and put the least important word on a panel in the position the eye lands on
- * first. Top right is where a provenance mark belongs and where every panel on
- * the page has one in the same place, so a reader scanning a tab can tell at a
- * glance which figures are theirs without reading a single heading.
- *
- * When a panel has both a chip and an `aside` control, the chip goes first: a
- * picker acts on the panel and the chip describes it, and the description is
- * the thing that must not be missed.
+ * It used to carry one more thing: a Sample chip in the top right, marking a
+ * panel drawn from invented figures. Both the chip and the figures behind it
+ * are gone — a panel on this page is now always this account's own record, so
+ * there is nothing left to disclaim. A tab that cannot be filled says so as a
+ * whole rather than shipping placeholder panels with a footnote; see `Locked`.
  */
-export function Panel({ title, note, aside, sample, className, children, footer }: PanelProps) {
+export function Panel({ title, note, aside, className, children, footer }: PanelProps) {
   return (
     <section className={`ax-panel${className ? ` ${className}` : ''}`}>
       <header className="ax-panel-head">
         <div className="ax-panel-title">
           <h2>{title}</h2>
         </div>
-        {(sample || aside) && (
-          <div className="ax-panel-aside">
-            {sample && (
-              <span
-                className="ax-sample"
-                title="Placeholder figures — your own record cannot fill this panel yet"
-              >
-                Sample
-              </span>
-            )}
-            {aside}
-          </div>
-        )}
+        {aside && <div className="ax-panel-aside">{aside}</div>}
       </header>
       {note && <p className="ax-panel-note">{note}</p>}
       {children}

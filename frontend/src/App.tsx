@@ -26,7 +26,6 @@ const Homepage = lazy(() => import('@/pages/Homepage'));
 const Goals = lazy(() => import('@/pages/Goals'));
 const Tasks = lazy(() => import('@/pages/Tasks'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
-const Growth = lazy(() => import('@/pages/Growth'));
 const AboutUs = lazy(() => import('@/pages/AboutUs'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
@@ -66,14 +65,12 @@ function FrontDoor() {
  * scrollbar appears. Its task list still scrolls inside its own card, which is
  * what the pinning was really for — see .dash-main in styles/dashboard-home.css.
  *
- * Growth came off the list for the same reason. It was one chart in one card,
- * which fits any screen; it is a chart and six panels now, which does not fit
- * most, and pinned it simply lost the bottom three.
- *
- * Analytics came off with the redesign, and it is the clearest case of the
- * three. It was a report card and a scoring panel side by side — one screen by
- * construction. It is fourteen panels down a scroll now, and the pinning was
- * hiding everything below the summary tiles.
+ * Analytics came off with the redesign, and it is the clearest case. It was a
+ * report card and a scoring panel side by side — one screen by construction. It
+ * is seven tabs of panels down a scroll now, and the pinning was hiding
+ * everything below the summary tiles. Growth had come off before it for the
+ * same reason, back when it was a page of its own; its chapters are tabs of
+ * Analytics now and inherit the ruling.
  *
  * Goals came off for the fourth time in the same story. It was a shell with a
  * list scrolling inside it; it is a ladder of goals, a stats row and a timeline
@@ -134,17 +131,24 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/goals" element={<Goals />} />
-              <Route path="/growth" element={<Growth />} />
-              {/* One page, five tabs, five URLs. The analytics page reads the
+              {/* One page, seven tabs, seven URLs. The analytics page reads the
                   pathname to decide which tab opens (VIEWS in
                   components/Analytics/Header), so the rail, the back button and
                   a pasted link all agree about what is showing — none of which
                   a local useState could have managed. */}
+              <Route path="/recommendations" element={<Analytics />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/trends" element={<Analytics />} />
               <Route path="/habits" element={<Analytics />} />
               <Route path="/insights" element={<Analytics />} />
-              <Route path="/recommendations" element={<Analytics />} />
+              <Route path="/subjects" element={<Analytics />} />
+              <Route path="/records" element={<Analytics />} />
+              {/* The growth page was the other half of the original growth.js
+                  and had five tabs of its own, four of which are now tabs above
+                  and the fifth of which was a lower-resolution copy of the
+                  Overview. The path stays and redirects, because it is the one
+                  the server-rendered app used and links to it exist. */}
+              <Route path="/growth" element={<Navigate to="/analytics" replace />} />
               <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
               <Route path="/calendar/day" element={<CalendarDay />} />
               <Route path="/calendar/week" element={<CalendarWeek />} />

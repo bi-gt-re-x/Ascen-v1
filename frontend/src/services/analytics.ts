@@ -9,7 +9,7 @@
  *
  * Backend: backend/api/analytics.py, backend/tracking/standing.py.
  */
-import { get } from './api';
+import { get, post } from './api';
 import type { ApiResult } from '@/types';
 
 /** The measures, in the order the panel lists them. Matches MEASURES server-side. */
@@ -63,4 +63,38 @@ export function metricHistory(
   metric = 'overall',
 ): Promise<ApiResult<MetricHistory>> {
   return get<MetricHistory>('/api/metric_history', { username, metric });
+}
+
+/**
+ * What the account said it was aiming at.
+ *
+ * The one thing on the analytics page that is stated rather than measured, and
+ * the only reason a brand-new account has anything to do there. Everything else
+ * the page draws needs a fortnight to three weeks of record first.
+ */
+export interface Baseline {
+  /** Days a week they mean to work, 1-7. */
+  active_days: number;
+  /** What they consider a normal sitting, in minutes. */
+  session_minutes: number;
+  /** The subject id this is mostly for, or '' for no one subject. */
+  focus_subject: string;
+  /** The day it was set, ISO. What makes a stale baseline legible as stale. */
+  set_on: string;
+}
+
+/** `baseline: null` means this account has never set one — a real answer. */
+export interface BaselineResult {
+  baseline: Baseline | null;
+}
+
+export function baseline(username: string): Promise<ApiResult<BaselineResult>> {
+  return get<BaselineResult>('/api/baseline', { username });
+}
+
+export function setBaseline(
+  username: string,
+  values: Pick<Baseline, 'active_days' | 'session_minutes' | 'focus_subject'>,
+): Promise<ApiResult<BaselineResult>> {
+  return post<BaselineResult>('/api/baseline', { username, ...values });
 }

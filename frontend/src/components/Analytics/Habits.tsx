@@ -211,7 +211,6 @@ export interface HabitCalendarProps {
   byDate: Map<string, HabitDay>;
   lastIso: string;
   accountDays: number;
-  sample?: boolean;
 }
 
 /**
@@ -227,7 +226,7 @@ export interface HabitCalendarProps {
  * `habitCalendar`. A heatmap that cannot be interrogated is decorative; one
  * that names what happened on the dark Tuesday is a record.
  */
-export function HabitCalendarPanel({ byDate, lastIso, accountDays, sample }: HabitCalendarProps) {
+export function HabitCalendarPanel({ byDate, lastIso, accountDays }: HabitCalendarProps) {
   const [window, setWindow] = useState<CalendarKey>('90');
   const [picked, setPicked] = useState<string | null>(null);
 
@@ -247,7 +246,6 @@ export function HabitCalendarPanel({ byDate, lastIso, accountDays, sample }: Hab
     <Panel
       title="Habit calendar"
       note="One square a day. Darker means more finished; click one to see what."
-      sample={sample}
       aside={
         <div className="ax-chips ax-chips-sm" role="group" aria-label="Calendar window">
           {CALENDAR_WINDOWS.map((option) => (
@@ -367,12 +365,11 @@ export function HabitCalendarPanel({ byDate, lastIso, accountDays, sample }: Hab
  * and "Sometimes" is under half — and the count it was read off is printed
  * underneath, because a tendency stated without its denominator is an assertion.
  */
-export function PatternsPanel({ patterns, sample }: { patterns: HabitPattern[]; sample?: boolean }) {
+export function PatternsPanel({ patterns }: { patterns: HabitPattern[] }) {
   return (
     <Panel
       title="Patterns in what you do"
       note="Recurring behaviours, as counts. Why they happen is the Insights tab’s question."
-      sample={sample}
     >
       {patterns.length === 0 ? (
         <p className="ax-empty">
@@ -412,7 +409,7 @@ const ORDER: HabitStrength[] = ['strong', 'developing', 'inconsistent', 'declini
  * an empty Declining column is the best news on the panel and hiding it would
  * throw that away.
  */
-export function ConsistencyPanel({ habits, sample }: { habits: Habit[]; sample?: boolean }) {
+export function ConsistencyPanel({ habits }: { habits: Habit[] }) {
   const grouped = ORDER.map((strength) => ({
     strength,
     list: habits.filter((habit) => habit.strength === strength),
@@ -422,7 +419,6 @@ export function ConsistencyPanel({ habits, sample }: { habits: Habit[]; sample?:
     <Panel
       title="Which habits are actually stable"
       note="Sorted by how reliably each one turns up, not by how much it earns."
-      sample={sample}
     >
       <div className="ax-buckets">
         {grouped.map(({ strength, list }) => (
@@ -471,11 +467,9 @@ const EVENT_WORD: Record<HabitShift['event'], string> = {
 export function TimelinePanel({
   habits,
   shifts,
-  sample,
 }: {
   habits: Habit[];
   shifts: HabitShift[];
-  sample?: boolean;
 }) {
   const withPhases = habits.filter((habit) => habit.phases.length >= 2).slice(0, 6);
 
@@ -483,7 +477,6 @@ export function TimelinePanel({
     <Panel
       title="Your behavioural history"
       note="Each habit’s rate across the range, in four steps. Where it started, where it is."
-      sample={sample}
     >
       {withPhases.length === 0 ? (
         <p className="ax-empty">

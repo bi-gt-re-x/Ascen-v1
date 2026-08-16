@@ -452,3 +452,40 @@ def save_event_colors(rows):
         [{'color': r['color'], 'claimed_week': r.get('claimed_week')} for r in rows],
         columns=['color', 'claimed_week'],
     )
+
+
+def user_settings():
+    return read_table('user_settings')
+
+
+def save_user_settings(rows):
+    write_table('user_settings', rows)
+
+
+def user_setting(username, key):
+    """One account's value for one key, already decoded, or None.
+
+    `value` is in JSON_COLUMNS, so what comes back is whatever was stored —
+    usually a dict. None means the account has never set this key, which is a
+    real answer and is not the same as an empty one: the analytics page shows a
+    new reader the baseline setup screen precisely because the key is absent.
+    """
+    for row in read_table('user_settings'):
+        if row.get('user_id') == username and row.get('key') == key:
+            return row.get('value')
+    return None
+
+
+def set_user_setting(username, key, value):
+    """Write one account's value for one key, replacing any previous one.
+
+    The whole table is rewritten because that is what `write_table` does and
+    what every other saver here relies on — see the note on it. The table holds
+    one short row per preference per account, so the cost of the rewrite is not
+    a consideration at this size.
+    """
+    rows = [row for row in read_table('user_settings')
+            if not (row.get('user_id') == username and row.get('key') == key)]
+    rows.append({'user_id': username, 'key': key, 'value': value})
+    write_table('user_settings', rows, columns=['user_id', 'key', 'value'])
+    return value
