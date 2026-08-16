@@ -192,6 +192,10 @@ export interface Measure {
 const UNMEASURED: Record<string, string> = {
   rebalance:
     'No measure — this one asks you to decide whether the shape of your week is deliberate, and either answer can be the right one.',
+  'stretch-harder':
+    'No measure — the difficulty of your work is your own rating of it, and a page that scored you on rating it harder would be asking for the rating rather than the work.',
+  'difficulty-is-the-half':
+    'No measure — the difficulty of your work is your own rating of it, and a page that scored you on rating it harder would be asking for the rating rather than the work.',
 };
 
 /** The bottom quarter of working days, averaged. What `raise-the-floor` is about. */
@@ -210,6 +214,67 @@ function weakestWeekday(days: GrowthDay[]): number | null {
   const stats = weekShape(days).stats.filter((stat) => stat.days > 0);
   if (stats.length < 5) return null;
   return Math.min(...stats.map((stat) => stat.avgXp));
+}
+
+/** The longest unbroken run of working days. What `plan-a-light-day` is about. */
+function longestRun(days: GrowthDay[]): number | null {
+  if (days.length === 0) return null;
+  let best = 0;
+  let run = 0;
+  days.forEach((day) => {
+    run = num(day.xp_earned) > 0 ? run + 1 : 0;
+    if (run > best) best = run;
+  });
+  return best;
+}
+
+/**
+ * Share of the window's XP in its busiest tenth of working days, 0-100.
+ *
+ * What `even-out-the-load` and `after-the-peak` both claim to move, and the
+ * one figure that separates "the same work, spread" from "less work": it is a
+ * share rather than a total, so an account that simply did less scores exactly
+ * where it did before rather than being congratulated for slowing down.
+ */
+function loadConcentration(days: GrowthDay[]): number | null {
+  const worked = days.map((day) => num(day.xp_earned)).filter((xp) => xp > 0);
+  if (worked.length < 4) return null;
+  const total = worked.reduce((sum, xp) => sum + xp, 0);
+  if (total <= 0) return null;
+  const top = [...worked].sort((a, b) => b - a).slice(0, Math.max(1, Math.round(worked.length / 10)));
+  return (top.reduce((sum, xp) => sum + xp, 0) / total) * 100;
+}
+
+/** Share of working days that carry any focus minutes. What `log-the-focus` is about. */
+function focusCoverage(days: GrowthDay[]): number | null {
+  const worked = days.filter((day) => num(day.xp_earned) > 0).length;
+  if (worked < 4) return null;
+  const logged = days.filter((day) => num(day.focus_minutes) > 0).length;
+  return (logged / worked) * 100;
+}
+
+/** Mean execution star over the tasks finished in the window. 1-5, or null. */
+function executionAverage(_days: GrowthDay[], tasks: Task[]): number | null {
+  const scores = tasks
+    .filter((task) => task.status === 'done')
+    .map((task) => Number(task.execution))
+    .filter((value) => Number.isFinite(value) && value >= 1 && value <= 5);
+  if (scores.length < 3) return null;
+  return scores.reduce((sum, value) => sum + value, 0) / scores.length;
+}
+
+/** Share of finished tasks carrying both stars, 0-100. What `rate-your-work` is about. */
+function ratingCoverage(_days: GrowthDay[], tasks: Task[]): number | null {
+  const done = tasks.filter((task) => task.status === 'done');
+  if (done.length < 4) return null;
+  const rated = done.filter(
+    (task) =>
+      Number.isFinite(Number(task.difficulty)) &&
+      Number.isFinite(Number(task.execution)) &&
+      Number(task.difficulty) >= 1 &&
+      Number(task.execution) >= 1,
+  ).length;
+  return (rated / done.length) * 100;
 }
 
 /**
@@ -323,6 +388,60 @@ export function measureFor(id: string): Measure | null {
         noise: 0,
         kind: 'series',
         of: (days) => quietDayAverage(days),
+      };
+
+    case 'plan-a-light-day':
+      return {
+        label: 'Longest run with no let-up',
+        unit: ' days',
+        better: 'lower',
+        noise: 2,
+        kind: 'series',
+        of: (days) => longestRun(days),
+      };
+
+    // Both burnout rules about the shape of the load move the same figure, and
+    // it is a share rather than a total on purpose — see `loadConcentration`.
+    case 'even-out-the-load':
+    case 'after-the-peak':
+      return {
+        label: 'XP in your busiest days',
+        unit: '%',
+        better: 'lower',
+        noise: 5,
+        kind: 'series',
+        of: (days) => loadConcentration(days),
+      };
+
+    case 'execution-slipping':
+    case 'execution-is-the-half':
+      return {
+        label: 'Execution you rated',
+        unit: ' / 5',
+        better: 'higher',
+        noise: 0.3,
+        kind: 'series',
+        of: executionAverage,
+      };
+
+    case 'rate-your-work':
+      return {
+        label: 'Finished tasks you rated',
+        unit: '%',
+        better: 'higher',
+        noise: 8,
+        kind: 'series',
+        of: ratingCoverage,
+      };
+
+    case 'log-the-focus':
+      return {
+        label: 'Working days with focus logged',
+        unit: '%',
+        better: 'higher',
+        noise: 8,
+        kind: 'series',
+        of: (days) => focusCoverage(days),
       };
 
     default:

@@ -3390,18 +3390,31 @@ html[data-theme="dark"] .ax-page {
 .ax-quality-band-share { font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------- The 5x5 grid -------------------------------------------------
-   Difficulty across, execution up. The cells are square by construction —
-   `aspect-ratio` on a five-column grid — so the shape does not change with
-   the panel's width, which is what lets a reader compare the cloud's position
-   between two windows. */
+   Difficulty across, execution up.
+
+   Sized by its panel rather than by a cap. The cells used to be square by
+   `aspect-ratio` and the whole figure pinned at 268px, on the reasoning that
+   five columns of a half-width panel would be 240px each and a grid 1,200px
+   tall. That is true of squares and only of squares: the cap left a postage
+   stamp centred in a box built for a chart, with the panel beside it running
+   twice its height. Both axes are `1fr` now, so the twenty-five cells take the
+   panel's full width and whatever height is left under the note — `flex: 1`
+   below is what claims that height, the panel being a flex column — and the
+   cells come out as wide rectangles. That is the trade, and it is a cheap one:
+   the reading here is positional, and a rectangle carries a position exactly
+   as well as a square. `min-height` keeps the figure legible when it is the
+   tallest thing in the panel and there is no leftover height to claim. */
 .ax-qgrid {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas:
         "y cells"
         ". x";
     gap: 8px;
     margin: 4px 0 6px;
+    flex: 1;
+    min-height: 260px;
 }
 .ax-qgrid-y {
     grid-area: y;
@@ -3412,24 +3425,22 @@ html[data-theme="dark"] .ax-page {
     text-align: center;
     align-self: center;
 }
-/* Capped, not stretched. The cells are square by `aspect-ratio`, so five
-   columns across a half-width panel would be 240px each and a grid nearly
-   1,200px tall — a panel that dwarfs everything beside it and needs scrolling
-   to read twenty-five numbers. The cap fixes the whole figure's size, which is
-   also what lets the panel be the same height whether or not anything has been
-   rated: the grid does not grow with the data, only the shading does. */
+/* Five by five, both directions stretched. The grid still does not grow with
+   the data — only the shading does — so the panel is the same height whether
+   or not anything has been rated, which was the one thing the old cap was
+   right about and is preserved here by the fixed track counts. */
 .ax-qgrid-cells {
     grid-area: cells;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: 6px;
     width: 100%;
-    max-width: 268px;
+    height: 100%;
 }
-.ax-qgrid-x { max-width: 268px; }
 .ax-qgrid-cell {
-    aspect-ratio: 1;
-    border-radius: 7px;
+    min-height: 32px;
+    border-radius: 8px;
     border: 1px solid var(--ax-line-soft);
     display: flex;
     align-items: center;
@@ -3447,16 +3458,12 @@ html[data-theme="dark"] .ax-page {
 .ax-qgrid-x {
     grid-area: x;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
     font-size: 10.5px;
     color: var(--ax-muted);
     text-align: center;
 }
-
-/* The whole figure sits in the middle of whatever width the panel has, rather
-   than hugging the left edge once the cap stops it growing. */
-.ax-qgrid { justify-content: center; }
 
 /* ---------- Best and worst rated tasks ----------------------------------- */
 .ax-rated {

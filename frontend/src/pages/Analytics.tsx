@@ -626,8 +626,13 @@ export default function Analytics() {
         rhythm,
         balance,
         ratings: ratings.data ?? null,
+        // The same summary the Overview's quality panels draw, so the Execution
+        // and Quality cards cannot say something the picture beside them
+        // contradicts. Safe on an account that has never rated anything: every
+        // rule reading it checks `rated` first.
+        quality: qualitySummary,
       }),
-    [balance, clock, ratings.data, rhythm, slice, week],
+    [balance, clock, qualitySummary, ratings.data, rhythm, slice, week],
   );
 
   const banked = Number(all[all.length - 1]?.cumulative_xp) || 0;

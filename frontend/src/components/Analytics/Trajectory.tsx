@@ -11,9 +11,10 @@ import { AreaChart, Delta, Panel, PanelNote, toneVar } from './charts';
 import { ScoringDetails } from './ScoringDetails';
 import {
   METRICS,
-  GRAINS,
   axisMarks,
   bucketed,
+  grainWithin,
+  grainsFor,
   metricOption,
   type Grain,
   type MetricKey,
@@ -55,8 +56,18 @@ export function Trajectory({
   previousSpanLabel,
 }: TrajectoryProps) {
   const option = metricOption(metric);
-  const now = bucketed(current, option, grain);
-  const before = bucketed(previous, option, grain);
+  /*
+   * The grain the window can actually draw, which is not always the one the
+   * reader last picked. Held here rather than pushed back into the page's state
+   * on purpose: the state means "the grain I want", and a reader who chooses
+   * Monthly at 1Y and then looks at a week should get their monthly view back
+   * when they return to 1Y rather than have the narrow window quietly rewrite
+   * the preference. See `grainWithin`.
+   */
+  const grains = grainsFor(current.length);
+  const active = grainWithin(grain, current.length);
+  const now = bucketed(current, option, active);
+  const before = bucketed(previous, option, active);
   const peak = Math.max(...now.map((p) => p.value), ...before.map((p) => p.value), 1);
 
   return (
@@ -68,10 +79,10 @@ export function Trajectory({
           <span className="ax-sr">Chart grain</span>
           <select
             className="ax-select"
-            value={grain}
+            value={active}
             onChange={(event) => onGrain(event.target.value as Grain)}
           >
-            {GRAINS.map((entry) => (
+            {grains.map((entry) => (
               <option key={entry.key} value={entry.key}>
                 {entry.label}
               </option>

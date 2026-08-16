@@ -290,6 +290,31 @@ export const GRAINS: Array<{ key: Grain; label: string; days: number }> = [
   { key: 'monthly', label: 'Monthly', days: 30 },
 ];
 
+/**
+ * The grains a window of this many days can actually draw, coarsest last.
+ *
+ * A grain needs two buckets to be a line at all, and a picker that offers one
+ * it cannot draw is a control that appears to do nothing: choosing Monthly on
+ * a 7-day window produced a single point, `linePath` refused a series of one,
+ * and the chart went blank with the select still reading "Monthly". Offering
+ * only what the window supports says the same thing honestly — the option is
+ * absent because the range is short, and it comes back when the range grows.
+ *
+ * Daily is always offered, because a window with fewer than two days has
+ * nothing to draw at any grain and the empty chart is then about the record
+ * rather than about the picker.
+ */
+export function grainsFor(dayCount: number): typeof GRAINS {
+  const usable = GRAINS.filter((entry) => dayCount >= entry.days * 2);
+  return usable.length > 0 ? usable : [GRAINS[0]!];
+}
+
+/** The chosen grain if this window can draw it, otherwise the coarsest it can. */
+export function grainWithin(grain: Grain, dayCount: number): Grain {
+  const usable = grainsFor(dayCount);
+  return usable.some((entry) => entry.key === grain) ? grain : usable[usable.length - 1]!.key;
+}
+
 export interface SeriesPoint {
   /** The bucket's closing day, ISO. */
   date: string;
@@ -309,12 +334,24 @@ export interface SeriesPoint {
  * two runs of the same length bucket to the same number of points, so the
  * dashed line sits under the solid one at the same x for the same distance
  * into the period rather than at the same date.
+ *
+ * **`maxPoints` is a safety ceiling, not the grain.** It used to default to 60,
+ * which is roughly the number of points that reads as a line in a box this
+ * wide — and that number, applied as `max(grainDays, days/60)`, quietly ate the
+ * grain picker on every long window. A year is 365 days, so daily asked for
+ * 1-day buckets, got `ceil(365/60)` = 7, and drew exactly the weekly chart;
+ * two years gave both daily and weekly 13-day buckets. On the page's default
+ * window, two of the three options were the same picture. The ceiling is a
+ * thousand now: high enough that every window the picker offers draws its grain
+ * as asked, and still there so a decade of "All Time" at daily grain does not
+ * try to put four thousand points through one path. Callers that genuinely want
+ * a coarse series — the compounding chart — pass their own number.
  */
 export function bucketed(
   days: GrowthDay[],
   metric: MetricOption,
   grain: Grain,
-  maxPoints = 60,
+  maxPoints = 1000,
 ): SeriesPoint[] {
   if (days.length === 0) return [];
 

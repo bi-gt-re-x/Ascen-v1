@@ -22,12 +22,20 @@ import {
 } from '@/utils/advice';
 import { compact } from '@/utils/growthSummary';
 
+/*
+ * Five series colours and six kinds, so `load` takes `--ax-bad` rather than a
+ * sixth series tone. That is not a shortage worked around: burnout is the one
+ * kind here that is a warning rather than an opportunity — every other card
+ * offers something to gain and these offer something to stop — and the page's
+ * own "this went the wrong way" colour is the honest one to say it in.
+ */
 const KIND_TONE: Record<Advice['kind'], string> = {
   frequency: 'violet',
   timing: 'blue',
   depth: 'green',
   balance: 'amber',
   quality: 'pink',
+  load: 'bad',
 };
 
 /*

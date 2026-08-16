@@ -25,9 +25,10 @@
  */
 import type { GrowthDay } from '@/types';
 import type { BalanceShape, ClockShape, RhythmShape, WeekShape } from './behaviour';
+import type { RatingSummary } from './ratings';
 import type { Ratings } from '@/types';
 
-export type AdviceKind = 'frequency' | 'timing' | 'depth' | 'balance' | 'quality';
+export type AdviceKind = 'frequency' | 'timing' | 'depth' | 'balance' | 'quality' | 'load';
 
 /**
  * What area of the habit a suggestion is about.
@@ -35,16 +36,24 @@ export type AdviceKind = 'frequency' | 'timing' | 'depth' | 'balance' | 'quality
  * Separate from `kind`, which is the *shape* of the change (how often, when,
  * how long). A reader filters by category — "show me the scheduling ones" — and
  * groups by kind without ever being told the word.
+ *
+ * Seven, and each one is reachable: every category here has at least one strict
+ * rule that can produce it and at least one fallback, so a chip never appears
+ * for a taxonomy the rules cannot fill. The set replaced an eight-name list
+ * that had grown apart from the rules — "Habit Building" and "Task Management"
+ * were never emitted by anything, "Time Management" and "Scheduling" were the
+ * same question asked twice, and there was no home at all for the two things
+ * the app measures most closely: how well the work went, and whether the pace
+ * is one this account can keep.
  */
 export type AdviceCategory =
   | 'Productivity'
   | 'Consistency'
-  | 'Focus'
+  | 'Quality'
+  | 'Execution'
+  | 'Focus Time'
   | 'Scheduling'
-  | 'Task Management'
-  | 'Subject Balance'
-  | 'Time Management'
-  | 'Habit Building';
+  | 'Burnout';
 
 /**
  * How much this is likely to be worth, as three bands rather than a number.
@@ -88,6 +97,7 @@ const KIND_LABEL: Record<AdviceKind, string> = {
   depth: 'How long',
   balance: 'What on',
   quality: 'How well',
+  load: 'How hard',
 };
 
 export function kindLabel(kind: AdviceKind): string {
@@ -122,6 +132,16 @@ export interface AdviceInput {
   rhythm: RhythmShape;
   balance: BalanceShape;
   ratings: Ratings | null;
+  /**
+   * What the reader said about their finished work, over the same window.
+   *
+   * Optional in the sense that every rule reading it checks `rated` first:
+   * rating is the one thing in Ascen that is asked rather than measured, an
+   * account may never do it, and a page that turned silence into a low score
+   * would be inventing the opinion the prompt exists to collect. See
+   * utils/ratings.
+   */
+  quality: RatingSummary | null;
 }
 
 /** XP on a day this account actually worked — the unit every projection uses. */
@@ -129,6 +149,73 @@ function xpPerActiveDay(days: GrowthDay[]): number {
   const active = days.filter((day) => (Number(day.xp_earned) || 0) > 0);
   if (active.length === 0) return 0;
   return active.reduce((sum, day) => sum + (Number(day.xp_earned) || 0), 0) / active.length;
+}
+
+// --------------------------------------------------------------------------
+// Load — what the burnout rules read
+// --------------------------------------------------------------------------
+/**
+ * Whether the pace is one this account is keeping or one it is surviving.
+ *
+ * Three measurements, and none of them is "you worked a lot". A long run of
+ * working days is a streak, which this app celebrates elsewhere and is not
+ * about to scold anybody for; what these read is whether the *shape* of the
+ * effort is sustainable — an unbroken run with no light day in it, output
+ * piled into a handful of heavy days, and the quiet that follows those days.
+ * A reader who is genuinely fine on all three is told nothing about burnout,
+ * which is the point: the alternative is a wellbeing card that fires on a
+ * schedule, and one of those is worth nothing the second time it appears.
+ */
+interface LoadShape {
+  /** The longest unbroken run of days with any work on them. */
+  longestRun: number;
+  /** Share of the window's XP carried by its busiest tenth of working days. */
+  topShare: number;
+  /** Working days in the heaviest tenth. */
+  topDays: number;
+  /** Average XP on the day after a heavy day, against the ordinary average. */
+  afterHeavy: number | null;
+  ordinary: number;
+}
+
+function loadShape(days: GrowthDay[]): LoadShape {
+  const xp = days.map((day) => Number(day.xp_earned) || 0);
+
+  let longestRun = 0;
+  let run = 0;
+  xp.forEach((value) => {
+    run = value > 0 ? run + 1 : 0;
+    if (run > longestRun) longestRun = run;
+  });
+
+  const worked = xp.filter((value) => value > 0);
+  const total = worked.reduce((sum, value) => sum + value, 0);
+  const sorted = [...worked].sort((a, b) => b - a);
+  const topDays = Math.max(1, Math.round(worked.length / 10));
+  const topShare = total > 0 ? (sorted.slice(0, topDays).reduce((sum, v) => sum + v, 0) / total) * 100 : 0;
+
+  // The day *after* each heavy day, against every day that does not follow one.
+  // A crash shows up here and nowhere else: the heavy days themselves look like
+  // the account's best work, and the average over the whole window hides the
+  // trough because the spike is in the same average.
+  const heavyAt = sorted[Math.max(0, topDays - 1)] ?? Infinity;
+  const following: number[] = [];
+  const rest: number[] = [];
+  xp.forEach((value, index) => {
+    if (index === 0) return;
+    if ((xp[index - 1] ?? 0) >= heavyAt && heavyAt > 0) following.push(value);
+    else rest.push(value);
+  });
+  const mean = (values: number[]) =>
+    values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+
+  return {
+    longestRun,
+    topShare: Math.round(topShare),
+    topDays,
+    afterHeavy: following.length >= 3 ? mean(following) : null,
+    ordinary: mean(rest),
+  };
 }
 
 /**
@@ -139,12 +226,14 @@ function xpPerActiveDay(days: GrowthDay[]): number {
  * without a second pass over the same thresholds.
  */
 export function recommendations(input: AdviceInput): Advice[] {
-  const { days, week, clock, rhythm, balance, ratings } = input;
+  const { days, week, clock, rhythm, balance, ratings, quality } = input;
   const out: Rule[] = [];
   const perDay = xpPerActiveDay(days);
   const yearScale = days.length > 0 ? 365 / days.length : 0;
 
   if (perDay <= 0 || days.length < 14) return [];
+
+  const load = loadShape(days);
 
   // ---- frequency: the gaps ------------------------------------------------
   if (rhythm.gapCount > 0) {
@@ -196,7 +285,7 @@ export function recommendations(input: AdviceInput): Advice[] {
     out.push({
       id: 'longer-sittings',
       kind: 'depth',
-      category: 'Focus',
+      category: 'Focus Time',
       title: 'Add 15 minutes to each sitting',
       because: `Your sittings run ${Math.round(rhythm.typicalSession)} minutes — short enough that much of one goes on starting.`,
       action: 'Add the time to the end of a sitting you were having anyway. Starting costs more than continuing, and you have already paid it.',
@@ -217,7 +306,7 @@ export function recommendations(input: AdviceInput): Advice[] {
     out.push({
       id: 'earlier',
       kind: 'timing',
-      category: 'Time Management',
+      category: 'Scheduling',
       title: 'Move one session earlier',
       because: `${clock.lateShare}% of your work lands after 10 PM. Late work is the first thing a bad day loses.`,
       action: clock.coreWindow
@@ -247,7 +336,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       // by which time the subject may have been renamed. See `measureFor`.
       id: `restart-fading:${balance.fadingIds[0]}`,
       kind: 'balance',
-      category: 'Subject Balance',
+      category: 'Consistency',
       title: `Restart ${balance.fading[0]}`,
       because: `${balance.fading.join(' and ')} had real work early in this range and none in the second half.`,
       action: 'Book one session. That is enough to find out whether you dropped it on purpose or it just drifted.',
@@ -262,7 +351,7 @@ export function recommendations(input: AdviceInput): Advice[] {
     out.push({
       id: 'rebalance',
       kind: 'balance',
-      category: 'Subject Balance',
+      category: 'Productivity',
       title: `${balance.leader} is ${balance.concentration}% of your week`,
       because: 'More than everything else combined. Depth is not a fault, but it should be a choice.',
       action: 'If it is deliberate, protect it. If it is drift, book one recurring session on the subject you would rather be building.',
@@ -294,12 +383,102 @@ export function recommendations(input: AdviceInput): Advice[] {
     }
   }
 
+  // ---- burnout: no let-up -------------------------------------------------
+  // A three-week run with no day off in it, at sittings long enough for the run
+  // to cost something. The second half of that gate is what stops this being a
+  // card every consistent account sees: three weeks of fifteen-minute days is a
+  // habit, not a load, and calling it burnout would make the word worthless
+  // here. Deliberately not phrased as "break your streak" either — the app
+  // counts streaks, the reader has earned this one, and advice that costs
+  // somebody the thing they came for gets ignored on sight. A light day keeps
+  // the run and is the actual recommendation.
+  if (load.longestRun >= 21 && rhythm.typicalSession >= 45) {
+    out.push({
+      id: 'plan-a-light-day',
+      kind: 'load',
+      category: 'Burnout',
+      title: 'Plan the light day before you need it',
+      because: `${load.longestRun} days running with work on every one of them, and no let-up you chose.`,
+      action: 'Pick one day a week and set its target at the smallest thing that counts. The streak survives, and the day stops being decided for you by how tired you are.',
+      evidence: `Longest unbroken run in this range: ${load.longestRun} days, across ${rhythm.span.toLocaleString()} days at ${Math.round(rhythm.activeRate)}% active.`,
+      impact: 0,
+      workings: 'No XP claim: this is about the pace being one you can hold, not about the total.',
+      effort: 1,
+    });
+  }
+
+  // ---- burnout: the work is in bursts -------------------------------------
+  if (load.topShare >= 30 && load.topDays >= 2) {
+    out.push({
+      id: 'even-out-the-load',
+      kind: 'load',
+      category: 'Burnout',
+      title: 'Your output is piled into your biggest days',
+      because: `A tenth of your working days — ${load.topDays} of them — carry ${load.topShare}% of everything in this range.`,
+      action: 'Cap the big days rather than lifting the small ones. Move the last hour of a heavy day onto the next quiet one — the total is the same and the recovery is not.',
+      evidence: `${load.topDays} of your working days hold ${load.topShare}% of the window's XP.`,
+      impact: 0,
+      workings: 'No XP claim: spreading the same work over more days does not add any of it.',
+      effort: 3,
+    });
+  }
+
+  // ---- execution: how it went, not how hard it was ------------------------
+  if (quality && quality.rated >= 5 && (quality.execution ?? 5) < 3) {
+    const value = quality.execution ?? 0;
+    out.push({
+      id: 'execution-slipping',
+      kind: 'quality',
+      category: 'Execution',
+      title: 'The work is getting done, not going well',
+      because: `You rate execution ${value.toFixed(1)} out of 5 — most of what you finish, you finish unhappy with.`,
+      action: 'Take one task a day and give it the whole sitting instead of a share of it. Execution is what suffers first when a session is split, and it is the half of quality you control on the day.',
+      evidence: `Execution averages ${value.toFixed(1)}/5 across the ${quality.rated} tasks you rated, against a difficulty of ${(quality.difficulty ?? 0).toFixed(1)}/5.`,
+      impact: 0,
+      workings: 'No XP claim: this is your own rating of the work, and XP does not read it.',
+      effort: 3,
+    });
+  }
+
+  // ---- quality: rated too little to be told anything ----------------------
+  if (quality && quality.finished >= 10 && quality.coverage < 40) {
+    out.push({
+      id: 'rate-your-work',
+      kind: 'quality',
+      category: 'Quality',
+      title: 'Rate what you finish',
+      because: `${quality.coverage}% of your finished tasks carry a rating, so most of the quality picture is missing rather than bad.`,
+      action: 'Answer the two star rows when they appear instead of closing them. It is the one number here the app cannot measure for you, and ten rated tasks is enough for the panel to say something.',
+      evidence: `${quality.rated} of ${quality.finished} finished tasks in this range were rated on both rows.`,
+      impact: 0,
+      workings: 'No XP claim: rating a task does not change what it was worth.',
+      effort: 1,
+    });
+  }
+
+  // ---- quality: comfortable work, done well -------------------------------
+  // The top-left corner of the grid on the Overview, stated as an instruction.
+  if (quality && quality.rated >= 5 && (quality.difficulty ?? 5) < 2.5 && (quality.execution ?? 0) >= 3.5) {
+    out.push({
+      id: 'stretch-harder',
+      kind: 'quality',
+      category: 'Quality',
+      title: 'Nothing you finish is hard',
+      because: `Difficulty averages ${(quality.difficulty ?? 0).toFixed(1)}/5 while execution runs ${(quality.execution ?? 0).toFixed(1)}/5 — comfortable work, done well.`,
+      action: 'Put one task on the list you are not sure you can finish. Comfortable work still earns XP, which is exactly why an account can sit here for months without noticing.',
+      evidence: `Across ${quality.rated} rated tasks: difficulty ${(quality.difficulty ?? 0).toFixed(1)}/5, execution ${(quality.execution ?? 0).toFixed(1)}/5, quality ${(quality.quality ?? 0).toFixed(1)}/25.`,
+      impact: 0,
+      workings: 'No XP claim: harder work is not worth more XP, it is worth more.',
+      effort: 4,
+    });
+  }
+
   // ---- the floor ----------------------------------------------------------
   // Topped up to FLOOR from the same measurements, read at a lower threshold.
   // Nothing invented — see `fallbacks`.
   if (out.length < FLOOR) {
     const have = new Set(out.map((rule) => rule.id));
-    for (const rule of fallbacks(input, perDay, yearScale)) {
+    for (const rule of fallbacks(input, perDay, yearScale, load)) {
       if (out.length >= FLOOR) break;
       if (have.has(rule.id)) continue;
       out.push(rule);
@@ -307,7 +486,7 @@ export function recommendations(input: AdviceInput): Advice[] {
     }
   }
 
-  return rank(out, perDay * 365);
+  return rank(out, perDay * 365).slice(0, CEILING);
 }
 
 /**
@@ -319,6 +498,21 @@ export function recommendations(input: AdviceInput): Advice[] {
  * than as an account with little to fix.
  */
 const FLOOR = 3;
+
+/**
+ * The most it will ever hand back, however much the record supports.
+ *
+ * Ten, and the number is about the reader rather than about the rules. With
+ * seven categories and a fallback pass behind each, a long-running account can
+ * cross fifteen thresholds at once — and a list of fifteen things to change is
+ * not a plan, it is a reason to close the tab. Three lead the page as cards,
+ * the rest sit under "also worth doing" and behind the category chips, and the
+ * ones that did not make ten were the ones ranked least worth doing anyway.
+ *
+ * Applied after `rank`, so what survives is the top of the list rather than
+ * whichever rules happen to be written first in this file.
+ */
+const CEILING = 10;
 
 /**
  * What is drawn on to reach the floor, in the order it is drawn on.
@@ -335,8 +529,13 @@ const FLOOR = 3;
  * is skipped if the strict pass already emitted the same id, so an account with
  * three real findings never sees any of this.
  */
-function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[] {
-  const { days, week, rhythm, balance, ratings } = input;
+function fallbacks(
+  input: AdviceInput,
+  perDay: number,
+  yearScale: number,
+  load: LoadShape,
+): Rule[] {
+  const { days, week, rhythm, balance, ratings, quality } = input;
   const out: Rule[] = [];
 
   // ---- one more day in the week ------------------------------------------
@@ -367,7 +566,7 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
     out.push({
       id: 'longer-sittings',
       kind: 'depth',
-      category: 'Focus',
+      category: 'Focus Time',
       title: 'Add 10 minutes to each sitting',
       because: `Your sittings run ${Math.round(rhythm.typicalSession)} minutes. Starting costs more than continuing, and you have already paid it.`,
       action: 'Add the time to the end of a sitting you were having anyway, not to tomorrow\u2019s plan.',
@@ -417,7 +616,7 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
     out.push({
       id: 'rebalance',
       kind: 'balance',
-      category: 'Subject Balance',
+      category: 'Productivity',
       title: `${balance.leader} is ${balance.concentration}% of your week`,
       because: `Across ${balance.carrying} subjects with real weight behind them. Depth is not a fault, but it should be a choice.`,
       action: 'If it is deliberate, protect it. If it is drift, book one recurring session on the subject you would rather be building.',
@@ -483,6 +682,75 @@ function fallbacks(input: AdviceInput, perDay: number, yearScale: number): Rule[
     }
   }
 
+  // ---- execution, at "the weaker of the two rows" -------------------------
+  // The strict rule fires below 3 out of 5, which is a genuinely unhappy
+  // account. This one only claims that one of the two halves is lower than the
+  // other, which is true of every account whose halves are not identical — and
+  // it says which, because "raise your quality" is not an instruction and
+  // "the half you rate lower is execution" is.
+  if (quality && quality.rated >= 3 && quality.execution !== null && quality.difficulty !== null) {
+    const behind = quality.execution <= quality.difficulty;
+    out.push({
+      id: behind ? 'execution-is-the-half' : 'difficulty-is-the-half',
+      kind: 'quality',
+      category: behind ? 'Execution' : 'Quality',
+      title: behind ? 'Execution is the half to move' : 'Difficulty is the half to move',
+      because: behind
+        ? `Execution ${quality.execution.toFixed(1)} against difficulty ${quality.difficulty.toFixed(1)} — quality is the product, and this is the smaller number.`
+        : `Difficulty ${quality.difficulty.toFixed(1)} against execution ${quality.execution.toFixed(1)} — you finish well what you take on, and what you take on is the smaller number.`,
+      action: behind
+        ? 'Finish one task properly before starting the next. A point of execution is worth as much to the product as a point of difficulty and costs far less to find.'
+        : 'Take on one task a week you would normally leave off the list. You already finish what you start well enough for that to be the cheaper half.',
+      evidence: `Across ${quality.rated} rated tasks: difficulty ${quality.difficulty.toFixed(1)}/5, execution ${quality.execution.toFixed(1)}/5, quality ${(quality.quality ?? 0).toFixed(1)}/25.`,
+      impact: 0,
+      workings: 'No XP claim: these are your own ratings of the work, and XP does not read them.',
+      effort: 2,
+    });
+  }
+
+  // ---- burnout, at "the day after" ----------------------------------------
+  // No threshold on how hard the heavy days were, only on what follows them.
+  // An account that works evenly has nothing here, because there is no heavy
+  // day for a quiet one to follow.
+  if (load.afterHeavy !== null && load.ordinary > 0 && load.afterHeavy < load.ordinary * 0.7) {
+    const drop = Math.round((1 - load.afterHeavy / load.ordinary) * 100);
+    out.push({
+      id: 'after-the-peak',
+      kind: 'load',
+      category: 'Burnout',
+      title: 'Your big days cost you the next one',
+      because: `The day after a heavy one runs ${drop}% below your ordinary day. The push is being paid for, just not on the day you notice.`,
+      action: 'Stop a heavy day one task early. The task moves to tomorrow, which is a day you were going to lose anyway — that is the whole trade.',
+      evidence: `Days following your heaviest ${load.topDays} average ${Math.round(load.afterHeavy).toLocaleString()} XP against ${Math.round(load.ordinary).toLocaleString()} on every other day.`,
+      impact: 0,
+      workings: 'No XP claim: this moves work between days rather than adding any.',
+      effort: 2,
+    });
+  }
+
+  // ---- focus, at "you finish more than you log" ---------------------------
+  // Every account whose focus timer is used less often than its task list.
+  // Not a scolding about the timer: focus is a graded metric, and a metric fed
+  // by a third of the days it could be fed by is scoring the logging rather
+  // than the work.
+  const workedDays = days.filter((day) => (Number(day.xp_earned) || 0) > 0).length;
+  const focusDays = days.filter((day) => (Number(day.focus_minutes) || 0) > 0).length;
+  if (workedDays >= 5 && focusDays < workedDays * 0.6) {
+    const share = Math.round((focusDays / workedDays) * 100);
+    out.push({
+      id: 'log-the-focus',
+      kind: 'depth',
+      category: 'Focus Time',
+      title: 'Most of your work goes unlogged',
+      because: `${share}% of the days you finished something have any focus time on them, so the focus score is grading the timer rather than the work.`,
+      action: 'Start the timer before the first task rather than remembering it afterwards. It is the only input on the report card that has to be running to count.',
+      evidence: `${focusDays} of ${workedDays} working days in this range carry any focus minutes.`,
+      impact: 0,
+      workings: 'No XP claim: logging a session does not add XP to it.',
+      effort: 1,
+    });
+  }
+
   return out;
 }
 
@@ -516,10 +784,10 @@ function rank(rules: Rule[], yearlyPace: number): Advice[] {
 /** Which area of the habit each graded metric actually belongs to. */
 const METRIC_CATEGORY: Record<string, AdviceCategory> = {
   productivity: 'Productivity',
-  quality: 'Task Management',
+  quality: 'Quality',
   consistency: 'Consistency',
   efficiency: 'Scheduling',
-  focus: 'Focus',
+  focus: 'Focus Time',
 };
 
 /** What each report-card metric actually responds to. */
