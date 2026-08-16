@@ -217,7 +217,9 @@ export function TrendChart({
       }
     >
       {weeks.length < 3 ? (
-        <p className="ax-empty">
+        /* The chart's own height, so the panel is the same panel whether or
+           not the window has three weeks in it. See `.ax-empty-chart`. */
+        <p className="ax-empty ax-empty-chart">
           Three whole weeks is the floor for a line worth drawing. Widen the window, or come back
           once the account has a month of history in it.
         </p>

@@ -93,11 +93,48 @@ html[data-theme="dark"] .ax-page {
     overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
+/* An empty state holds the box its content would have had.
+ *
+ * This used to be a bare centred paragraph, so a panel with nothing to say
+ * shrank to three lines and a border. On a new account that is most of the
+ * page, and the result was a layout that reflowed as the account filled up:
+ * cards changed height, rows changed height, and a reader coming back after a
+ * week met a different-shaped page rather than the same page with more in it.
+ * The panels beside it moved too, because a row is as tall as its tallest
+ * member — so one empty panel could resize its neighbour.
+ *
+ * The floor is what a small panel's content comes to. Where an empty state
+ * stands in for something taller the caller says so with a modifier, and the
+ * two below are the only sizes needed: a chart's box, or none at all for an
+ * empty state nested inside a panel that is otherwise full.
+ *
+ * `.ax-radar-empty` has worked this way since it was written; this is that
+ * idea applied to the rest of the page rather than a new one.
+ */
 .ax-empty {
-    margin: 18px 0;
+    display: grid;
+    place-items: center;
+    min-height: 150px;
+    margin: 0;
+    padding: 18px 12px;
     color: var(--ax-muted);
     font-size: 13px;
+    line-height: 1.6;
     text-align: center;
+}
+
+/* An empty state replacing a chart takes the chart's own height, so switching
+   a picker to a metric with no data does not resize the panel. */
+.ax-empty-chart { min-height: var(--ax-chart-h, 220px); }
+
+/* One column of a panel whose other column has content. Nothing is collapsing
+   here — the panel is already the height of its fuller half — and a 150px
+   floor inside it would only push that half's rows apart. */
+.ax-empty-sm {
+    min-height: 0;
+    padding: 4px 0;
+    text-align: left;
+    place-items: start;
 }
 
 /* A footer control. `cursor: default` was correct while these were spans
@@ -718,14 +755,20 @@ html[data-theme="dark"] .ax-page {
 /* The score panel with fewer than two recorded readings. Sits where the chart
    would be, at about the chart's height, so the panel does not jump when the
    line arrives. */
+/* Stands in for the 130px score chart, and is that tall — an account on its
+   second reading should see the panel it already had, with a line in it. */
 .ax-score-nohistory {
+    display: grid;
+    place-items: center;
+    min-height: 130px;
     margin: 10px 0 0;
-    padding: 22px 18px;
+    padding: 18px;
     border: 1px dashed var(--ax-line);
     border-radius: 10px;
     background: var(--ax-card-2);
     font-size: 13px;
     line-height: 1.55;
+    text-align: center;
     color: var(--ax-muted);
 }
 
@@ -3274,11 +3317,24 @@ html[data-theme="dark"] .ax-page {
    they share is making "nothing rated" look like a considered answer rather
    than a broken panel — hence `.ax-quality-empty` being a prose block with a
    button rather than a greyed-out chart. See components/Analytics/Quality. */
+/* The height a rated quality panel comes to, held whether or not anything has
+   been rated. These two sit side by side on the Overview, and on a new account
+   both are empty — without a floor the row collapsed to a pair of paragraphs
+   and every panel below it jumped up the page the day the first task was
+   rated. `justify-content: center` rather than a top-aligned block, so the
+   sentence sits where the figures it stands in for would. */
 .ax-quality-empty {
     display: flex;
+    flex: 1;
     flex-direction: column;
     align-items: flex-start;
+    justify-content: center;
     gap: 12px;
+    /* Sized against a rated panel rather than picked: the filled version is a
+       score, two half-bars, four quadrant rows and up to four findings, which
+       comes to a little over 350px of body. Within a few pixels of that means
+       the Overview does not reflow the day somebody rates their first task. */
+    min-height: 352px;
     padding: 18px 2px 6px;
 }
 .ax-quality-empty p { margin: 0; font-size: 13.5px; line-height: 1.62; }
@@ -3356,12 +3412,21 @@ html[data-theme="dark"] .ax-page {
     text-align: center;
     align-self: center;
 }
+/* Capped, not stretched. The cells are square by `aspect-ratio`, so five
+   columns across a half-width panel would be 240px each and a grid nearly
+   1,200px tall — a panel that dwarfs everything beside it and needs scrolling
+   to read twenty-five numbers. The cap fixes the whole figure's size, which is
+   also what lets the panel be the same height whether or not anything has been
+   rated: the grid does not grow with the data, only the shading does. */
 .ax-qgrid-cells {
     grid-area: cells;
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 4px;
+    width: 100%;
+    max-width: 268px;
 }
+.ax-qgrid-x { max-width: 268px; }
 .ax-qgrid-cell {
     aspect-ratio: 1;
     border-radius: 7px;
@@ -3388,6 +3453,10 @@ html[data-theme="dark"] .ax-page {
     color: var(--ax-muted);
     text-align: center;
 }
+
+/* The whole figure sits in the middle of whatever width the panel has, rather
+   than hugging the left edge once the cap stops it growing. */
+.ax-qgrid { justify-content: center; }
 
 /* ---------- Best and worst rated tasks ----------------------------------- */
 .ax-rated {

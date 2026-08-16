@@ -312,7 +312,7 @@ export function RatedTasksPanel({ rated, summary }: RatedTasksPanelProps) {
     <div className="ax-rated-col">
       <h3 className="ax-rated-title">{title}</h3>
       {rows.length === 0 ? (
-        <p className="ax-empty ax-small">
+        <p className="ax-empty ax-empty-sm ax-small">
           Not enough rated tasks yet for these to be a separate list.
         </p>
       ) : (

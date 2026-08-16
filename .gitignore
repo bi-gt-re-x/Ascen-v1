@@ -20,3 +20,8 @@ frontend/dist/
 data/ascen.db
 data/ascen.db-wal
 data/ascen.db-shm
+
+# Database snapshots taken before a seeding or migration run. Local safety
+# copies of an already-ignored file; the .json exports beside them are the
+# tracked fixtures.
+data/backups/*.db
