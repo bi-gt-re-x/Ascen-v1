@@ -3268,3 +3268,170 @@ html[data-theme="dark"] .ax-page {
 @media (prefers-reduced-motion: reduce) {
     .ax-next-row a, .ax-link { transition: none; }
 }
+
+/* ---------- Quality: what the reader said about the work ------------------
+   Three panels reading the one optional input in the app. The styling job
+   they share is making "nothing rated" look like a considered answer rather
+   than a broken panel — hence `.ax-quality-empty` being a prose block with a
+   button rather than a greyed-out chart. See components/Analytics/Quality. */
+.ax-quality-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px 2px 6px;
+}
+.ax-quality-empty p { margin: 0; font-size: 13.5px; line-height: 1.62; }
+.ax-quality-empty strong { color: var(--ax-text); }
+
+.ax-quality-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-bottom: 16px;
+}
+.ax-quality-head .ax-tile-unit { margin-left: 4px; }
+
+.ax-quality-halves {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: grid;
+    gap: 11px;
+}
+.ax-quality-halves li {
+    display: grid;
+    grid-template-columns: 74px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+}
+.ax-quality-half-label { font-size: 12.5px; font-weight: 600; color: var(--ax-text); }
+.ax-quality-half-value { font-size: 12.5px; font-weight: 650; white-space: nowrap; }
+.ax-quality-half-value em {
+    font-style: normal;
+    font-weight: 500;
+    color: var(--ax-muted);
+    margin-left: 5px;
+}
+
+.ax-quality-bands {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+    display: grid;
+    gap: 9px;
+}
+.ax-quality-bands li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 9px;
+    font-size: 12.5px;
+}
+.ax-quality-band-label { color: var(--ax-text); }
+.ax-quality-band-share { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---------- The 5x5 grid -------------------------------------------------
+   Difficulty across, execution up. The cells are square by construction —
+   `aspect-ratio` on a five-column grid — so the shape does not change with
+   the panel's width, which is what lets a reader compare the cloud's position
+   between two windows. */
+.ax-qgrid {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+        "y cells"
+        ". x";
+    gap: 8px;
+    margin: 4px 0 6px;
+}
+.ax-qgrid-y {
+    grid-area: y;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 11px;
+    color: var(--ax-muted);
+    text-align: center;
+    align-self: center;
+}
+.ax-qgrid-cells {
+    grid-area: cells;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+}
+.ax-qgrid-cell {
+    aspect-ratio: 1;
+    border-radius: 7px;
+    border: 1px solid var(--ax-line-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--ax-text);
+    /* One colour at a computed opacity rather than five bands: the count is
+       already printed in the cell, so the fill only has to carry "more" and
+       "less" and a continuous ramp does that with no legend. */
+    background: color-mix(in srgb, var(--ax-violet) calc(var(--fill) * 62%), transparent);
+}
+.ax-qgrid-cell.is-empty { background: transparent; }
+.ax-qgrid-x {
+    grid-area: x;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    font-size: 10.5px;
+    color: var(--ax-muted);
+    text-align: center;
+}
+
+/* ---------- Best and worst rated tasks ----------------------------------- */
+.ax-rated {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ax-gap);
+}
+.ax-rated-title {
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    font-weight: 650;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-muted);
+}
+.ax-rated-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ax-rated-list li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-areas:
+        "score name"
+        "score words";
+    align-items: center;
+    gap: 1px 10px;
+}
+.ax-rated-score {
+    grid-area: score;
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+.ax-rated-name {
+    grid-area: name;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ax-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ax-rated-list li > .ax-small { grid-area: words; }
+
+@media (max-width: 640px) {
+    .ax-rated { grid-template-columns: 1fr; }
+    .ax-quality-halves li { grid-template-columns: 66px minmax(0, 1fr) auto; }
+}

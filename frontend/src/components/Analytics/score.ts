@@ -90,7 +90,12 @@ export function growthScore(ratings: Ratings | null): GrowthScore {
       name: 'quality',
       label: 'Quality',
       score: m.quality.score,
-      raw: `${Math.round(m.quality.avg_task_xp).toLocaleString()} XP/task`,
+      // Difficulty × execution, or the XP proxy while nothing is rated. Same
+      // rule as ./metrics: the basis is printed, never assumed.
+      raw:
+        m.quality.basis === 'ratings'
+          ? `${m.quality.avg_quality.toFixed(1)}/${m.quality.max_quality} rated`
+          : 'no ratings yet',
     },
     {
       name: 'consistency',

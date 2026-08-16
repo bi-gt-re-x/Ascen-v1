@@ -253,6 +253,18 @@ export interface GrowthDay {
   avg_task_xp: number;
   focus_minutes: number;
   cumulative_focus_minutes: number;
+  /**
+   * How many of the day's finished tasks were rated on both rows.
+   *
+   * **This is the field to branch on, never `quality_score`.** The prompt after
+   * a completed task is optional, so a zero score means nobody said rather than
+   * "the work was bad", and the two must never be drawn as the same thing.
+   */
+  rated_tasks: number;
+  /** Mean of difficulty × execution over that day's rated tasks, 1-25. */
+  quality_score: number;
+  avg_difficulty: number;
+  avg_execution: number;
 }
 
 // --------------------------------------------------------------------------
@@ -275,7 +287,26 @@ export interface Ratings {
   overall: MetricBase & { message: string };
   metrics: {
     productivity: MetricBase & { avg_daily_xp: number };
-    quality: MetricBase & { avg_task_xp: number };
+    quality: MetricBase & {
+      avg_task_xp: number;
+      /**
+       * Which measurement the score came from.
+       *
+       * `ratings` is difficulty × execution over the tasks the reader rated.
+       * `xp` is the old XP-per-task proxy, used only while nothing has been
+       * rated — the prompt is optional and an account that skips it is not
+       * graded zero for quality. Every surface that prints the figure prints
+       * the basis with it.
+       */
+      basis: 'ratings' | 'xp';
+      rated_tasks: number;
+      total_tasks: number;
+      /** Mean of difficulty × execution, out of `max_quality`. */
+      avg_quality: number;
+      avg_difficulty: number;
+      avg_execution: number;
+      max_quality: number;
+    };
     consistency: MetricBase & {
       active_days: number;
       total_days: number;

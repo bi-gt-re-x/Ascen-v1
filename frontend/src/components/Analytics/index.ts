@@ -43,6 +43,14 @@ export type { BaselinePanelProps, BaselineSetupProps, BaselineValues } from './B
 export { Tiles } from './Tiles';
 export type { TilesProps } from './Tiles';
 
+/** The panels drawn from the one optional thing in the app. See ./Quality. */
+export { QualityPanel, QualityGridPanel, RatedTasksPanel } from './Quality';
+export type {
+  QualityPanelProps,
+  QualityGridPanelProps,
+  RatedTasksPanelProps,
+} from './Quality';
+
 export { Trajectory, ScorePanel } from './Trajectory';
 export type { TrajectoryProps, ScorePanelProps } from './Trajectory';
 

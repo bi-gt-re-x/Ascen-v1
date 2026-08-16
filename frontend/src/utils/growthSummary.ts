@@ -116,8 +116,18 @@ export interface GrowthSummaryFigures {
    * figure rather than two that could drift.
    */
   consistency: SummaryFigure;
-  /** Average XP per task finished, over the days that finished any. */
+  /**
+   * Mean difficulty × execution over the window's rated tasks, out of 25.
+   *
+   * Weighted by how many tasks each day rated rather than averaging the daily
+   * averages — a day that rated one task and a day that rated nine are not
+   * equal evidence, and treating them as such lets a single outlying Tuesday
+   * outvote a whole week.
+   */
   quality: SummaryFigure;
+  /** How many tasks in the window were rated, and how many were finished. */
+  ratedTasks: number;
+  finishedTasks: number;
   /** How many days the comparison covers, for the tiles' own wording. */
   comparedDays: number;
 }
@@ -158,6 +168,16 @@ function rollingRate(days: GrowthDay[], window = 7): number[] {
   });
 }
 
+/** The quality readings there are, held across the days that have none. */
+function carriedQuality(days: GrowthDay[]): number[] {
+  const first = days.find((day) => (Number(day.rated_tasks) || 0) > 0);
+  let last = Number(first?.quality_score) || 0;
+  return days.map((day) => {
+    if ((Number(day.rated_tasks) || 0) > 0) last = Number(day.quality_score) || 0;
+    return last;
+  });
+}
+
 export function tileSeries(slice: RangeSlice): TileSeries {
   const read = (get: (day: GrowthDay) => number) =>
     slice.current.map((day) => Number(get(day)) || 0);
@@ -166,7 +186,10 @@ export function tileSeries(slice: RangeSlice): TileSeries {
     tasks: read((day) => day.tasks_completed),
     focusHours: read((day) => day.focus_minutes / 60),
     consistency: rollingRate(slice.current),
-    quality: read((day) => day.avg_task_xp),
+    // Unrated days carry the last rating forward rather than dropping to zero.
+    // A sparkline is a shape, and a shape that falls to the floor every time
+    // somebody skipped an optional prompt is a picture of the prompt.
+    quality: carriedQuality(slice.current),
   };
 }
 
@@ -217,14 +240,18 @@ export function summaryFigures(slice: RangeSlice): GrowthSummaryFigures {
       ? (days.filter((day) => (Number(day.xp_earned) || 0) > 0).length / days.length) * 100
       : 0;
 
-  // Averaged over the days that finished something rather than over the window:
-  // a day with no tasks has no XP-per-task, and counting it as zero would make
-  // quality a second, worse reading of consistency.
+  // Quality is what the reader said about the work: how hard it was times how
+  // well it went, over the tasks they rated. Days with nothing rated are not in
+  // the denominator — the prompt is optional, and counting a skipped one as a
+  // zero would grade somebody on the answers they declined to give.
   const perTask = (days: GrowthDay[]) => {
-    const worked = days.filter((day) => (Number(day.tasks_completed) || 0) > 0);
-    return worked.length
-      ? worked.reduce((sum, day) => sum + (Number(day.avg_task_xp) || 0), 0) / worked.length
-      : 0;
+    const rated = days.reduce((sum, day) => sum + (Number(day.rated_tasks) || 0), 0);
+    if (!rated) return 0;
+    const weighted = days.reduce(
+      (sum, day) => sum + (Number(day.quality_score) || 0) * (Number(day.rated_tasks) || 0),
+      0,
+    );
+    return weighted / rated;
   };
 
   return {
@@ -234,6 +261,8 @@ export function summaryFigures(slice: RangeSlice): GrowthSummaryFigures {
     focusHours: figure(focusNow, focusWas, 1),
     consistency: figure(rate(current), rate(before)),
     quality: figure(perTask(current), perTask(before), 1),
+    ratedTasks: total(current, (day) => day.rated_tasks),
+    finishedTasks: Math.round(tasksNow),
     comparedDays: before.length,
   };
 }

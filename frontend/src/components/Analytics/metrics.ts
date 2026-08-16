@@ -50,7 +50,15 @@ export function metricLines(ratings: Ratings): MetricLine[] {
       name: 'quality',
       label: 'Quality',
       emoji: '🎯',
-      raw: `${format.number(m.quality.avg_task_xp)} XP/task`,
+      // Difficulty × execution when there is anything rated, and the old XP
+      // proxy when there is not — with the row saying which, because those are
+      // two different measurements and a reader comparing this week to last
+      // needs to know if the basis changed underneath them. See the note on
+      // `basis` in types/models and the docstring in backend/tracking/analytics.
+      raw:
+        m.quality.basis === 'ratings'
+          ? `${m.quality.avg_quality.toFixed(1)}/${m.quality.max_quality} over ${m.quality.rated_tasks} rated`
+          : `${format.number(m.quality.avg_task_xp)} XP/task — none rated yet`,
       score: m.quality.score,
       grade: m.quality.grade,
     },

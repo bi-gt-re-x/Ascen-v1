@@ -72,13 +72,20 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
     {
       key: 'quality',
       glyph: 'target',
+      // The one tile whose figure the app cannot measure — it is what the
+      // reader said, and it reads "—" rather than 0 when they said nothing.
+      // Rating is optional and a zero here would be the page inventing a bad
+      // review out of a skipped dialog. See utils/ratings.
       label: 'Quality',
-      value: figures.quality.value.toFixed(1),
-      unit: 'XP/task',
-      delta: figures.quality.delta,
-      series: sparks.quality,
+      value: figures.ratedTasks === 0 ? '—' : figures.quality.value.toFixed(1),
+      unit: figures.ratedTasks === 0 ? undefined : '/ 25',
+      delta: figures.ratedTasks === 0 ? null : figures.quality.delta,
+      series: figures.ratedTasks === 0 ? [] : sparks.quality,
       tone: 'pink',
-      hint: 'XP per task finished, averaged over the days that finished any. It rises when the work gets harder, not when there is more of it.',
+      hint:
+        figures.ratedTasks === 0
+          ? 'How hard your tasks were times how well they went, from the star rows after a completed task. Optional — nothing here is filled in until you rate something.'
+          : `How hard each task was times how well it went, out of 25, over the ${figures.ratedTasks} of ${figures.finishedTasks} finished tasks you rated in this window.`,
     },
     {
       key: 'tasks',

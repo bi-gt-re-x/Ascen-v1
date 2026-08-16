@@ -90,6 +90,9 @@ import {
   Locked,
   MilestonePanel,
   PatternsPanel,
+  QualityGridPanel,
+  QualityPanel,
+  RatedTasksPanel,
   ScorePanel,
   SinceLast,
   StandingPanel,
@@ -201,6 +204,13 @@ import {
   weeklyPoints,
   type ComparisonKey,
 } from '@/utils/trends';
+import {
+  qualityBands,
+  qualityGrid,
+  ratedTasks,
+  ratingFindings,
+  summariseRatings,
+} from '@/utils/ratings';
 import { outlook, recommendations, type Advice } from '@/utils/advice';
 import { SETTLE, reviewAdopted, summarise } from '@/utils/followup';
 import type { Ratings } from '@/types';
@@ -532,6 +542,24 @@ export default function Analytics() {
     return map;
   }, [bySubject, subjects, wasFrom, wasTo]);
 
+  // ---- Ratings ------------------------------------------------------------
+  /**
+   * What the reader said about the work, over the window on screen.
+   *
+   * Scoped by the window like everything else, and by the subject filter,
+   * because these are tasks and the filter narrows tasks. Every one of these is
+   * safe on an account that has never rated anything — see utils/ratings, where
+   * "nothing rated" is a first-class answer rather than a zero.
+   */
+  const qualitySummary = useMemo(
+    () => summariseRatings(bySubject, fromIso, toIso),
+    [bySubject, fromIso, toIso],
+  );
+  const rated = useMemo(() => ratedTasks(bySubject, fromIso, toIso), [bySubject, fromIso, toIso]);
+  const ratingRows = useMemo(() => ratingFindings(qualitySummary, rated), [rated, qualitySummary]);
+  const ratingBands = useMemo(() => qualityBands(rated), [rated]);
+  const ratingGrid = useMemo(() => qualityGrid(rated), [rated]);
+
   // ---- The behavioural shapes, shared by three tabs -----------------------
   const week = useMemo(() => weekShape(slice.current), [slice]);
   const clock = useMemo(() => clockShape(finished), [finished]);
@@ -783,6 +811,17 @@ export default function Analytics() {
             insights={insights}
             currentStreak={account.data?.stats?.current_streak ?? 0}
             bestStreak={account.data?.stats?.best_streak ?? 0}
+            quality={
+              <>
+                <QualityPanel
+                  summary={qualitySummary}
+                  findings={ratingRows}
+                  bands={ratingBands}
+                  span={spanText}
+                />
+                <QualityGridPanel cells={ratingGrid} summary={qualitySummary} />
+              </>
+            }
             baseline={
               aim ? (
                 <BaselinePanel
@@ -984,7 +1023,14 @@ export default function Analytics() {
               <SubjectPanel rows={breakdown.rows} previous={previousBySubject} />
               <BalancePanel balance={balance} />
             </section>
-            <section className="ax-section">
+            {/* The one panel on this tab that names individual tasks. Every
+                other finding here is an aggregate, and an aggregate cannot
+                answer the question a reader has straight after reading one —
+                which tasks were those. It sits on Insights rather than the
+                Overview because "why did this window go like that" is exactly
+                the question a list of your best and worst work answers. */}
+            <section className="ax-section ax-grid ax-grid-halves-even">
+              <RatedTasksPanel rated={rated} summary={qualitySummary} />
               <InsightsPanel insights={insights} />
             </section>
           </>
@@ -1129,6 +1175,14 @@ interface OverviewProps {
   bestStreak: number;
   /** The baseline panel, or the offer to set one. See `BaselinePanel`. */
   baseline: React.ReactNode;
+  /**
+   * The two rating panels, passed in rather than built here.
+   *
+   * They read the task list and the subject filter, which this component is not
+   * given — every other panel on the Overview is arithmetic over the day series
+   * alone. Handing them down whole keeps that true.
+   */
+  quality: React.ReactNode;
 }
 
 /**
@@ -1184,6 +1238,15 @@ function OverviewView(props: OverviewProps) {
           excellent against a three-day aim and a miss against a six-day one —
           so the thing that makes the rest of this tab legible goes above it. */}
       <section className="ax-section">{props.baseline}</section>
+
+      {/* Quality, in full, directly under the tile that states it in one
+          number. It sits here rather than on a tab of its own because it is one
+          of the three measures this tab now leads with, and because it is the
+          only one whose figure the app did not measure — the reader did. Two
+          panels: what they said, and where the tasks they said it about
+          actually landed. Both are self-effacing when nothing has been rated;
+          see components/Analytics/Quality. */}
+      <section className="ax-section ax-grid ax-grid-halves-even">{props.quality}</section>
 
       <section id="standing" className="ax-section ax-grid ax-grid-three">
         <ConsistencyPanel

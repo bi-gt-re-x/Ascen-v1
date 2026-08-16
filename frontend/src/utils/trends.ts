@@ -36,15 +36,21 @@ const mean = (list: number[]) =>
  * total. `mean` averages over every day in the stretch, which is what a rate
  * like productivity means — the empty days are part of the average and dropping
  * them is how "XP per day" quietly becomes "XP per day I felt like it". Only
- * `meanActive` skips the blanks, and only for quality, where a day that
- * finished nothing has no XP-per-task to contribute rather than a zero.
+ * `weighted` skips the blanks, and only for quality, whose reading exists on
+ * the days that rated a task and nowhere else: an unrated day contributes
+ * nothing to the average rather than contributing a zero, and a day that rated
+ * six tasks counts for six. The prompt behind those ratings is optional, and an
+ * average that treated skipping it as a bad review would report the reader's
+ * silence as their opinion.
  */
-export type TrendAgg = 'sum' | 'mean' | 'meanActive';
+export type TrendAgg = 'sum' | 'mean' | 'weighted';
 
 export interface TrendMetric {
   key: string;
   label: string;
   read: (day: GrowthDay) => number;
+  /** How much a day counts. Required by `weighted`, ignored otherwise. */
+  weigh?: (day: GrowthDay) => number;
   format: (value: number) => string;
   /** Defaults to `sum`. See `TrendAgg`. */
   agg?: TrendAgg;
@@ -86,9 +92,10 @@ export const TREND_METRICS: TrendMetric[] = [
   {
     key: 'quality',
     label: 'Quality',
-    read: (day) => num(day.avg_task_xp),
-    format: (value) => `${value.toFixed(1)} XP/task`,
-    agg: 'meanActive',
+    read: (day) => num(day.quality_score),
+    weigh: (day) => num(day.rated_tasks),
+    format: (value) => `${value.toFixed(1)} / 25`,
+    agg: 'weighted',
     tone: 'pink',
   },
   {
@@ -111,7 +118,12 @@ export const TREND_METRICS: TrendMetric[] = [
 function collapse(metric: TrendMetric, days: GrowthDay[]): number {
   const values = days.map(metric.read);
   if (metric.agg === 'mean') return mean(values);
-  if (metric.agg === 'meanActive') return mean(values.filter((value) => value > 0));
+  if (metric.agg === 'weighted') {
+    const weigh = metric.weigh ?? (() => 1);
+    const weight = days.reduce((sum, day) => sum + weigh(day), 0);
+    if (weight === 0) return 0;
+    return days.reduce((sum, day) => sum + metric.read(day) * weigh(day), 0) / weight;
+  }
   return values.reduce((a, b) => a + b, 0);
 }
 
@@ -189,7 +201,15 @@ export interface TrendRow {
   delta: number | null;
   nowText: string;
   wasText: string;
-  /** The current stretch day by day, for the row's sparkline. */
+  /**
+   * The current stretch day by day, for the row's sparkline.
+   *
+   * A weighted metric's blanks are carried, not drawn — see `carried`. Quality
+   * has a reading only on the days a task was rated, and plotting the rest as
+   * zeros gives the tile a sawtooth crashing to the floor three times a week,
+   * which reads as collapsing quality when it is a picture of an optional
+   * prompt going unanswered.
+   */
   series: number[];
   tone: string;
 }
@@ -217,7 +237,7 @@ export function trendRows(days: GrowthDay[], key: ComparisonKey): TrendRow[] {
       delta: comparable && b > 0 ? Math.round(((a - b) / b) * 100) : null,
       nowText: metric.format(a),
       wasText: comparable ? metric.format(b) : '—',
-      series: now.map(metric.read),
+      series: metric.agg === 'weighted' ? carried(now, metric) : now.map(metric.read),
       tone: metric.tone,
     };
   });
@@ -290,25 +310,25 @@ export function smooth(values: number[], window: number): number[] {
 /**
  * A metric's daily series, with days that have no reading carried forward.
  *
- * Only for `meanActive` metrics, and quality is the one. Its raw series is
- * XP-per-task on the days that finished a task and a zero on every other day,
- * and those zeros are not low quality — they are no measurement. Fitting
- * through them makes the line a picture of attendance: an account whose work
- * got steadily harder while it showed up less would be reported as quality
- * *falling*, which is the opposite of what happened, and with a confident fit,
- * because attendance is the strongest signal in the series.
+ * Only for `weighted` metrics, and quality is the one. Its reading exists on
+ * the days that rated a task and nowhere else, and those blanks are not low
+ * quality — they are no measurement, usually because an optional prompt was
+ * skipped. Fitting through them as zeros makes the line a picture of how often
+ * the reader answers a dialog: an account whose work got steadily harder while
+ * it rated fewer tasks would be reported as quality *falling*, with a confident
+ * fit, because rating frequency is then the strongest signal in the series.
  *
  * Carrying the last reading forward keeps one value per day — so the slope is
  * still per day and `perWeek` still means a week — while letting the fit see
  * only the readings. Leading blanks take the first real reading, since there is
  * nothing behind them to carry.
  */
-function carried(days: GrowthDay[], read: (day: GrowthDay) => number): number[] {
-  const raw = days.map(read);
-  const first = raw.find((value) => value > 0) ?? 0;
-  let last = first;
-  return raw.map((value) => {
-    if (value > 0) last = value;
+function carried(days: GrowthDay[], metric: TrendMetric): number[] {
+  const weigh = metric.weigh ?? (() => 1);
+  const first = days.find((day) => weigh(day) > 0);
+  let last = first ? metric.read(first) : 0;
+  return days.map((day) => {
+    if (weigh(day) > 0) last = metric.read(day);
     return last;
   });
 }
@@ -321,8 +341,7 @@ export function directions(days: GrowthDay[]): Direction[] {
   const smoothing = span >= 180 ? 14 : span >= 60 ? 7 : 3;
 
   return TREND_METRICS.map((metric) => {
-    const raw =
-      metric.agg === 'meanActive' ? carried(days, metric.read) : days.map(metric.read);
+    const raw = metric.agg === 'weighted' ? carried(days, metric) : days.map(metric.read);
     const smoothed = smooth(raw, smoothing);
     const { slope, r2 } = fitLine(smoothed);
     const perWeek = slope * 7;
@@ -416,6 +435,14 @@ export interface WeekPoint {
  * Days are too noisy to see a direction in and months are too few to see one
  * happen. The first and last weeks are dropped when they are partial: a
  * three-day week drawn at full width is a cliff at each end of every chart.
+ *
+ * A week with no readings for a weighted metric holds the previous week's
+ * value rather than plotting zero. Quality is the only such metric, and a
+ * fortnight where nobody answered the rating prompt would otherwise put a
+ * canyon in the middle of the chart — a canyon a reader would take for a
+ * collapse in the quality of the work, when the work may not have changed at
+ * all. Held is not invented: the line stays where the last real reading left
+ * it and moves again when a new one arrives.
  */
 export function weeklyPoints(days: GrowthDay[]): WeekPoint[] {
   const buckets = new Map<string, GrowthDay[]>();
@@ -431,6 +458,9 @@ export function weeklyPoints(days: GrowthDay[]): WeekPoint[] {
   });
 
   const keys = [...buckets.keys()].sort();
+  // The last real reading per weighted metric, for the weeks that have none.
+  const held: Record<string, number> = {};
+
   return keys
     .filter((key, index) => {
       const rows = buckets.get(key)!;
@@ -441,7 +471,14 @@ export function weeklyPoints(days: GrowthDay[]): WeekPoint[] {
       const rows = buckets.get(key)!;
       const values: Record<string, number> = {};
       TREND_METRICS.forEach((metric) => {
-        values[metric.key] = collapse(metric, rows);
+        if (metric.agg !== 'weighted') {
+          values[metric.key] = collapse(metric, rows);
+          return;
+        }
+        const weigh = metric.weigh ?? (() => 1);
+        const weight = rows.reduce((sum, day) => sum + weigh(day), 0);
+        if (weight > 0) held[metric.key] = collapse(metric, rows);
+        values[metric.key] = held[metric.key] ?? 0;
       });
       return {
         date: key,

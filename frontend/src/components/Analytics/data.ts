@@ -182,6 +182,19 @@ export interface MetricOption {
    * chart ends up claiming every account improves forever.
    */
   cumulative: boolean;
+  /**
+   * How much a day counts toward a rate bucket. Defaults to 1 per day.
+   *
+   * Only quality uses it, and it is the whole reason the series is honest. Its
+   * reading exists on the days that rated a task and nowhere else, so a plain
+   * average over the bucket divides a week's ratings by seven and draws the
+   * result as a collapse in quality — when what actually happened is that the
+   * reader skipped an optional prompt on four of the days. Weighting by the
+   * number of ratings behind each day makes an unrated day contribute nothing
+   * to the bucket instead of contributing a zero, and makes a day that rated
+   * six tasks count for six.
+   */
+  weigh?: (day: GrowthDay) => number;
   format: (value: number) => string;
   /**
    * How the y-axis prints this metric's numbers.
@@ -231,11 +244,15 @@ export const METRICS: MetricOption[] = [
     axis: (value) => `${Math.round(value)}%`,
   },
   {
+    // Difficulty × execution over the day's rated tasks. `weigh` is what keeps
+    // the unrated days out of the bucket rather than dragging it to zero — see
+    // `bucketed`, and the note on GrowthDay.rated_tasks for why that matters.
     key: 'quality',
     label: 'Quality',
-    read: (day) => num(day.avg_task_xp),
+    read: (day) => num(day.quality_score),
+    weigh: (day) => num(day.rated_tasks),
     cumulative: false,
-    format: (value) => `${value.toFixed(1)} XP/task`,
+    format: (value) => `${value.toFixed(1)} / 25`,
     axis: (value) => value.toFixed(1),
   },
   {
@@ -308,17 +325,23 @@ export function bucketed(
   let running = 0;
   let inBucket = 0;
   let count = 0;
+  // A weighted metric's last drawn value, carried across buckets that had no
+  // readings at all. Without it a fortnight with nothing rated puts a hole in
+  // the middle of the line, and a hole reads as a crash rather than a silence.
+  let held = 0;
 
   days.forEach((day, index) => {
+    const weight = metric.weigh ? metric.weigh(day) : 1;
     const value = metric.read(day);
     running += value;
-    inBucket += value;
-    count += 1;
+    inBucket += value * weight;
+    count += weight;
 
     if (index % size !== size - 1 && index !== days.length - 1) return;
+    if (!metric.cumulative && count > 0) held = inBucket / count;
     out.push({
       date: day.date,
-      value: metric.cumulative ? running : count ? inBucket / count : 0,
+      value: metric.cumulative ? running : count > 0 ? inBucket / count : held,
     });
     inBucket = 0;
     count = 0;
@@ -330,8 +353,11 @@ export function bucketed(
 /** The whole-window figure a metric comes to, in the units it is stated in. */
 export function metricTotal(days: GrowthDay[], metric: MetricOption): number {
   if (days.length === 0) return 0;
-  const sum = days.reduce((acc, day) => acc + metric.read(day), 0);
-  return metric.cumulative ? sum : sum / days.length;
+  if (metric.cumulative) return days.reduce((acc, day) => acc + metric.read(day), 0);
+  const weigh = metric.weigh ?? (() => 1);
+  const weight = days.reduce((acc, day) => acc + weigh(day), 0);
+  if (weight === 0) return 0;
+  return days.reduce((acc, day) => acc + metric.read(day) * weigh(day), 0) / weight;
 }
 
 // --------------------------------------------------------------------------
@@ -487,10 +513,11 @@ export function comparisonBars(slice: RangeSlice): ComparisonBar[] {
     days.length
       ? (days.filter((day) => num(day.xp_earned) > 0).length / days.length) * 100
       : 0;
+  // Weighted by ratings, not by days. See `perTask` in utils/growthSummary.
   const perTask = (days: GrowthDay[]) => {
-    const withTasks = days.filter((day) => num(day.tasks_completed) > 0);
-    return withTasks.length
-      ? sum(withTasks, (day) => num(day.avg_task_xp)) / withTasks.length
+    const rated = sum(days, (day) => num(day.rated_tasks));
+    return rated
+      ? sum(days, (day) => num(day.quality_score) * num(day.rated_tasks)) / rated
       : 0;
   };
 
@@ -508,7 +535,7 @@ export function comparisonBars(slice: RangeSlice): ComparisonBar[] {
       format: (value) => `${Math.round(value)}%`,
     },
     {
-      label: 'Quality (XP/task)',
+      label: 'Quality (of 25)',
       current: perTask(current),
       previous: perTask(previous),
       format: (value) => value.toFixed(1),
