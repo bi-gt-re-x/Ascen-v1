@@ -23,6 +23,11 @@ GATED_PATHS = ('/dashboard', '/calendar', '/goals', '/growth', '/analytics',
                # The analytics page's other four tabs, each on its own URL and
                # each read entirely off the account's own history.
                '/trends', '/habits', '/insights', '/recommendations',
+               # The skill trees are the account's own finished tasks grouped
+               # by subject, so there is nothing on the page for a visitor with
+               # no account. The old placeholder path is gated with it because
+               # it lands there.
+               '/skill-trees', '/growth-tree',
                # The calendar's three views are three URLs now, and each of
                # them shows the account's own week as plainly as /calendar did.
                '/calendar/day', '/calendar/week', '/calendar/month')

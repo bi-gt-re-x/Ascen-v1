@@ -7,7 +7,9 @@
  *
  * There were eight. Tasks was the first to leave — it is pages/Tasks.tsx now,
  * with its own route in App.tsx, which is exactly the exit this file's own
- * instructions below describe.
+ * instructions below describe. Growth Tree left the same way and is
+ * pages/SkillTrees.tsx; its old path redirects, because the placeholder was
+ * routed long enough for links to it to exist.
  *
  * The point of these is honesty. Each route in the top bar and in the app's
  * structure resolves to something that says what it will be, rather than to a
@@ -36,12 +38,6 @@ interface Unbuilt {
 }
 
 const PAGES: Record<string, Unbuilt> = {
-  '/growth-tree': {
-    name: 'Growth Tree',
-    description:
-      'A branching skill tree: which nodes are unlocked, and what unlocks the next one.',
-    files: ['backend/api/growthtree.py — a stub', 'backend/tracking/tree.py — a stub'],
-  },
   '/focus': {
     name: 'Focus',
     description:

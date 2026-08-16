@@ -26,6 +26,7 @@ const Homepage = lazy(() => import('@/pages/Homepage'));
 const Goals = lazy(() => import('@/pages/Goals'));
 const Tasks = lazy(() => import('@/pages/Tasks'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
+const SkillTrees = lazy(() => import('@/pages/SkillTrees'));
 const AboutUs = lazy(() => import('@/pages/AboutUs'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
@@ -149,6 +150,14 @@ export default function App() {
                   Overview. The path stays and redirects, because it is the one
                   the server-rendered app used and links to it exist. */}
               <Route path="/growth" element={<Navigate to="/analytics" replace />} />
+              {/* The skill trees. `/growth-tree` was the placeholder's path and
+                  redirects, for the same reason `/growth` does: it was routed,
+                  it was described in the app's structure, and links to it
+                  exist. Its entry in pages/Unbuilt.tsx is gone — building one
+                  for real is exactly the exit that file's instructions
+                  describe. */}
+              <Route path="/skill-trees" element={<SkillTrees />} />
+              <Route path="/growth-tree" element={<Navigate to="/skill-trees" replace />} />
               <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
               <Route path="/calendar/day" element={<CalendarDay />} />
               <Route path="/calendar/week" element={<CalendarWeek />} />

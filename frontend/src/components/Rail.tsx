@@ -140,6 +140,28 @@ const TABS: Tab[] = [
     ),
   },
   {
+    // The one two-word label here, and the note above warns those wrap. This
+    // one does not — it fits the open rail on a line and the collapsed rail
+    // shows the icon alone like every other entry. "Skills" would have been
+    // one word and the wrong one: the analytics page has a Skills tab
+    // answering a different question, and two destinations sharing a name is
+    // worse than a label a character longer than the rest.
+    to: '/skill-trees',
+    label: 'Skill Trees',
+    // The path the placeholder reserved, kept so links to it still land.
+    also: ['/growth-tree'],
+    icon: (
+      <svg {...stroke}>
+        <path d="M12 21v-8" />
+        <path d="M12 13 7.5 9.5M12 13l4.5-3.5" />
+        <circle cx="12" cy="4" r="2.2" />
+        <circle cx="5.5" cy="8" r="2.2" />
+        <circle cx="18.5" cy="8" r="2.2" />
+        <path d="M12 6.2v2.4" />
+      </svg>
+    ),
+  },
+  {
     to: '/achievements',
     label: 'Achievements',
     icon: (

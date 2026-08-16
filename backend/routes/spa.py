@@ -53,6 +53,12 @@ SPA_ROUTES = (
     '/habits',
     '/insights',
     '/recommendations',
+    # A skill tree per subject, built from finished tasks. `/growth-tree` was
+    # the placeholder's path and redirects to it in src/App.tsx; it is here so
+    # that a hard refresh on the old URL still reaches the router that does the
+    # redirecting.
+    '/skill-trees',
+    '/growth-tree',
     # The calendar is one page in three views. It was one URL and a script
     # that swapped panes; it is three routes now, and /calendar keeps working
     # by redirecting to the week — see src/App.tsx.

@@ -1,0 +1,434 @@
+/* ==========================================================================
+   skilltree.css — a tree per subject, grown out of finished work.
+
+   Every class is prefixed `st-`, for the same reason analytics.css prefixes
+   `ax-`: styles/dashboard.css is loaded on every page and dresses a pile of
+   generic names, so a page reaching for `.card` or `.stat-row` inherits a look
+   it did not ask for and has to fight it in both themes. A private prefix
+   starts from the browser's defaults and nothing else.
+
+   Colour is a token block on `.st-page`, redeclared once for dark. Nothing
+   below the block names a colour, so the two themes are one layout.
+   ========================================================================== */
+
+.st-page {
+    --st-bg: #f4f6f8;
+    --st-card: #ffffff;
+    --st-card-2: #f7f8fb;
+    --st-line: #e6e9ef;
+    --st-line-soft: #eef0f5;
+
+    --st-text: #1f2733;
+    --st-muted: #6b7684;
+    --st-faint: #98a1ae;
+
+    /* One colour per branch, and the same three the rest of the app uses for
+       XP, focus and tasks — Depth is violet because it is XP, Rhythm is green
+       because it counts days worked. A reader who knows the analytics page
+       already knows what these mean. */
+    --st-violet: #6c5ce7;
+    --st-blue: #2f80ed;
+    --st-green: #27ae60;
+
+    --st-radius: 14px;
+    --st-gap: 16px;
+    --st-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+
+    background: var(--st-bg);
+    color: var(--st-text);
+    min-height: 100vh;
+    padding: 26px 0 40px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+html[data-theme="dark"] .st-page {
+    --st-bg: #0d1117;
+    --st-card: #151b24;
+    --st-card-2: #1b222c;
+    --st-line: #232b36;
+    --st-line-soft: #1e2530;
+
+    --st-text: #e6edf3;
+    --st-muted: #8b949e;
+    --st-faint: #6e7781;
+
+    --st-violet: #8b7cf8;
+    --st-blue: #4da3ff;
+    --st-green: #3fb950;
+
+    --st-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+}
+
+.st-shell {
+    --shell-max: 1500px;
+    --shell-fluid: 96%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--st-gap);
+    position: relative;
+    z-index: 1;
+}
+
+/* ---------- The head ------------------------------------------------------ */
+.st-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.st-head h1 {
+    margin: 0 0 6px;
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+.st-head p {
+    margin: 0;
+    max-width: 74ch;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--st-muted);
+}
+
+/* ---------- The strip ----------------------------------------------------- */
+.st-totals {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--st-gap);
+}
+.st-total {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--st-card);
+    border: 1px solid var(--st-line);
+    border-radius: var(--st-radius);
+    box-shadow: var(--st-shadow);
+    padding: 14px 16px 13px;
+    min-width: 0;
+}
+.st-total > span {
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--st-muted);
+}
+.st-total strong {
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+}
+/* A subject's name where the other three tiles carry a number. It is set
+   smaller because a long one at 27px wraps the tile to three lines and pushes
+   the row's height onto every tile beside it. */
+.st-total .st-total-word {
+    font-size: 19px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.st-total strong i {
+    font-style: normal;
+    font-size: 16px;
+    color: var(--st-faint);
+}
+.st-total em {
+    font-style: normal;
+    font-size: 12px;
+    color: var(--st-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- The grid of trees --------------------------------------------- */
+.st-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+    gap: var(--st-gap);
+    align-items: start;
+}
+
+.st-tree {
+    display: flex;
+    flex-direction: column;
+    background: var(--st-card);
+    border: 1px solid var(--st-line);
+    border-radius: var(--st-radius);
+    box-shadow: var(--st-shadow);
+    padding: 16px 18px 14px;
+    min-width: 0;
+}
+
+.st-tree-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+.st-tree-icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: var(--st-card-2);
+    border: 1px solid var(--st-line);
+    color: var(--st-violet);
+}
+.st-tree-icon .cal-ico { width: 19px; height: 19px; }
+.st-tree-initial {
+    font-style: normal;
+    font-size: 16px;
+    font-weight: 700;
+}
+.st-tree-title { min-width: 0; }
+.st-tree-title h2 {
+    margin: 0;
+    font-size: 16.5px;
+    font-weight: 650;
+    letter-spacing: -.015em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.st-tree-rank {
+    display: block;
+    font-size: 12px;
+    color: var(--st-muted);
+}
+.st-tree-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.2;
+}
+.st-tree-progress strong {
+    font-size: 19px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.st-tree-progress em {
+    font-style: normal;
+    font-size: 13px;
+    color: var(--st-faint);
+}
+.st-tree-progress > span {
+    font-size: 11px;
+    color: var(--st-muted);
+}
+
+/* ---------- The trunk ----------------------------------------------------- */
+.st-trunk { margin: 14px 0 4px; }
+.st-trunk-bar {
+    height: 7px;
+    border-radius: 999px;
+    background: var(--st-line-soft);
+    overflow: hidden;
+}
+.st-trunk-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--st-violet);
+}
+.st-trunk-note {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--st-muted);
+}
+
+/* ---------- The branches --------------------------------------------------
+   Each branch is a row of five nodes with a rail behind them. The rail is
+   drawn on the list rather than between the nodes, so a branch is one line
+   whatever the nodes do — a connector per gap meant five elements agreeing
+   about a vertical centre they each computed separately. */
+.st-branches {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.st-branch {
+    border-top: 1px solid var(--st-line-soft);
+    padding-top: 12px;
+}
+.st-branch-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.st-branch-head h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--tone);
+}
+.st-branch-count {
+    font-size: 12px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--st-muted);
+}
+.st-branch-have {
+    margin-left: auto;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--st-faint);
+}
+.st-branch-measure {
+    margin: 4px 0 12px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--st-muted);
+}
+
+.st-nodes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    position: relative;
+}
+/* The rail, behind the dots and level with their centres. 11px is half the
+   dot's height, so the line meets them wherever the row's text wraps. */
+.st-nodes::before {
+    content: "";
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 11px;
+    height: 2px;
+    background: var(--st-line);
+    border-radius: 2px;
+}
+
+.st-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    text-align: center;
+    min-width: 0;
+    position: relative;
+}
+.st-node-dot {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--st-line);
+    background: var(--st-card);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+}
+.st-node-dot svg { width: 12px; height: 12px; }
+/* The partial fill on the node being worked toward: a column rising from the
+   bottom of the dot, at the share of the step already covered. A ring would
+   have needed a second SVG per node to say the same thing. */
+.st-node-dot i {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--tone);
+    opacity: .38;
+}
+
+.st-node.is-open .st-node-dot {
+    background: var(--tone);
+    border-color: var(--tone);
+}
+.st-node.is-next .st-node-dot {
+    border-color: var(--tone);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 18%, transparent);
+}
+.st-node.is-far .st-node-dot { background: var(--st-card-2); }
+
+.st-node-name {
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--st-text);
+}
+.st-node-need {
+    font-size: 10px;
+    line-height: 1.3;
+    color: var(--st-faint);
+    font-variant-numeric: tabular-nums;
+}
+.st-node.is-far .st-node-name,
+.st-node.is-far .st-node-need { color: var(--st-faint); }
+.st-node.is-next .st-node-need { color: var(--tone); font-weight: 650; }
+
+/* ---------- Empty, and the closing note ----------------------------------- */
+.st-empty,
+.st-note {
+    background: var(--st-card);
+    border: 1px solid var(--st-line);
+    border-radius: var(--st-radius);
+    box-shadow: var(--st-shadow);
+    padding: 20px 22px 18px;
+}
+.st-empty h2,
+.st-note h2 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+}
+.st-empty p,
+.st-note p {
+    margin: 0 0 10px;
+    max-width: 80ch;
+    font-size: 13.5px;
+    line-height: 1.62;
+    color: var(--st-muted);
+}
+.st-note p:last-child { margin-bottom: 0; }
+.st-note strong { color: var(--st-text); }
+.st-note a,
+.st-empty a { color: var(--st-violet); }
+
+.st-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    padding: 8px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--st-line);
+    background: var(--st-card-2);
+    color: var(--st-text);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+.st-btn:hover { border-color: var(--st-violet); color: var(--st-violet); }
+
+/* ---------- Responsive ---------------------------------------------------- */
+@media (max-width: 1024px) {
+    .st-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+    .st-totals { grid-template-columns: 1fr; }
+    /* Five nodes across a phone gives each one about 55px, which is narrower
+       than "Getting somewhere" can wrap into legibly. The rail goes with them:
+       a horizontal line behind a vertical list is a line through nothing. */
+    .st-nodes { grid-template-columns: 1fr; gap: 10px; }
+    .st-nodes::before { display: none; }
+    .st-node { flex-direction: row; text-align: left; gap: 10px; }
+    .st-node-need { margin-left: auto; }
+}
