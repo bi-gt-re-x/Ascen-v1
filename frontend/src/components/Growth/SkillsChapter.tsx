@@ -25,7 +25,6 @@ import { useMemo, useState } from 'react';
 import type { Subject } from '@/services/subjects';
 import type { GrowthDay, Task } from '@/types';
 import { iconUrl } from '@/services/subjects';
-import { LEVEL_XP_STEP } from '@/services/constants';
 import {
   CURVE_WINDOWS,
   accountLevel,
@@ -38,6 +37,7 @@ import {
   type CurveKey,
   type SkillCard,
 } from '@/utils/growthSkills';
+import { MAX_LEVEL, TIERS, costOf } from '@/utils/mastery';
 import { longDate } from '@/utils/growthChapters';
 import { EmptyChapter, HeroRow, Notes, PanelHead, Seg, W, H } from './ChapterParts';
 import { Glyph } from './GrowthPanels';
@@ -180,9 +180,12 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
                 <span className="gr-skillcard-rank">{card.rank}</span>
               </div>
 
+              {/* The band leads and the number follows it. A name is what a
+                  reader remembers a subject by — "Chemistry is Adept" — and
+                  4.37 is what they check it against. */}
               <div className="gr-skillcard-level">
                 <strong>{card.level.exact.toFixed(2)}</strong>
-                <span>Level</span>
+                <span>Level · {card.level.band.from}–{card.level.band.to}</span>
               </div>
 
               <span className="gr-skillcard-track">
@@ -191,7 +194,11 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
 
               <div className="gr-skillcard-foot">
                 <span>{Math.round(card.xp).toLocaleString()} XP</span>
-                <span>{Math.round(card.level.toNext).toLocaleString()} to next</span>
+                <span>
+                  {card.level.maxed
+                    ? 'ladder complete'
+                    : `${Math.round(card.level.toNext).toLocaleString()} to next`}
+                </span>
               </div>
 
               <div className="gr-skillcard-meta">
@@ -398,7 +405,7 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
               tone: 'note',
               icon: 'info',
               head: 'A skill is a subject with finished work in it.',
-              hint: `Every level, rank and track above is counted off your own tasks. Level N costs N × ${LEVEL_XP_STEP} XP — the same ladder your account level follows, so a skill level and the number on your profile mean the same thing.`,
+              hint: `Every level, rank and track above is counted off your own tasks. The mastery ladder runs 1 to ${MAX_LEVEL} across ${TIERS.length} bands — ${TIERS[0]!.name} to ${TIERS[TIERS.length - 1]!.name} — and gets steeper as it climbs: level 1 costs ${costOf(1)} XP and level 99 costs ${costOf(99).toLocaleString()}. It is not the ladder your account level follows, which is a straight line with no cap; the card above says which is which.`,
             },
             {
               tone: unfiled.xp > lifetime ? 'watch' : 'note',

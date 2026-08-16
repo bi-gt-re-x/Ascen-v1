@@ -10,14 +10,21 @@
  * could be. So a subject the reader has finished tasks in is a skill, its XP is
  * the XP of those tasks, and every figure below follows from those two.
  *
- * ## The level is the app's own ladder, read continuously
+ * ## The level is the mastery ladder, read continuously
  *
- * Level N costs N × 100 XP — the same rule as `levelForTotalXp`, which is the
- * rule the account's own level follows (backend/tracking/xp.py). A skill is not
- * a second currency: 300 XP of chemistry is level 2.5 by exactly the ladder
- * that 300 XP of anything is. What is different is that this reads the
- * *fraction*, because a page about getting better at something has to be able
- * to show a week's work, and a week rarely finishes a level.
+ * A hundred levels with twenty-one named bands, in utils/mastery. What is
+ * different here is that this reads the *fraction*, because a page about
+ * getting better at something has to be able to show a week's work, and a week
+ * rarely finishes a level.
+ *
+ * This used to be the account's own ladder — level N costs N × 100 XP, the rule
+ * in backend/tracking/xp.py — on the argument that a skill should not be a
+ * second currency. That argument lost to two facts about the curve: it was
+ * linear, so the levels a real subject actually reaches were the cheap ones and
+ * everything past thirty was unreachable; and six rank names over an unbounded
+ * ladder meant the last one arrived at level eleven. The account's level is
+ * unchanged. See the note at the top of utils/mastery for why the two curves
+ * are allowed to differ.
  *
  * ## The tree is a mastery track, and says so
  *
@@ -30,7 +37,9 @@
  */
 import type { GrowthDay, Task } from '@/types';
 import type { Subject } from '@/services/subjects';
-import { LEVEL_XP_STEP } from '@/services/constants';
+import { MAX_LEVEL, masteryLevel, rankFor, xpToReach } from './mastery';
+import type { MasteryLevel as SkillLevel } from './mastery';
+import { levelForTotalXp } from './format';
 
 const num = (value: unknown): number => Number(value) || 0;
 
@@ -46,56 +55,20 @@ function shiftDay(iso: string, n: number): string {
 // --------------------------------------------------------------------------
 // Levels
 // --------------------------------------------------------------------------
-/** Lifetime XP needed to *reach* level `level`. Level 1 is free. */
-export function xpToReach(level: number): number {
-  const previous = Math.max(0, level - 1);
-  return (LEVEL_XP_STEP * previous * (previous + 1)) / 2;
-}
-
-export interface SkillLevel {
-  /** The whole level, as the rest of the app counts it. */
-  tier: number;
-  /** The same thing with the fraction of the current level on it — 4.37. */
-  exact: number;
-  xpInLevel: number;
-  xpRequired: number;
-  /** 0-100 through the current level. */
-  percent: number;
-  /** XP still to earn before the next whole level. */
-  toNext: number;
-}
-
-export function skillLevel(xp: number): SkillLevel {
-  const total = Math.max(0, xp);
-  let tier = 1;
-  while (total >= xpToReach(tier + 1)) tier += 1;
-
-  const xpInLevel = total - xpToReach(tier);
-  const xpRequired = tier * LEVEL_XP_STEP;
-  const percent = xpRequired > 0 ? (xpInLevel / xpRequired) * 100 : 0;
-
-  return {
-    tier,
-    exact: tier + (xpRequired > 0 ? xpInLevel / xpRequired : 0),
-    xpInLevel,
-    xpRequired,
-    percent,
-    toNext: Math.max(0, xpRequired - xpInLevel),
-  };
-}
-
 /**
- * What a tier is called.
+ * The ladder, re-exported.
  *
- * Ranks rather than "Level 4" twice: the number says how far, the rank says
- * what that is worth, and a ladder of names is most of what makes a progression
- * screen feel like one. Two levels a rank, so a rank is a month or two of work
- * rather than a label that never changes.
+ * `SkillLevel` is `MasteryLevel` under the name the rest of this file and its
+ * components already use, and the two helpers keep the names their callers know
+ * them by. The arithmetic all lives in utils/mastery — the table is long enough
+ * that it deserves its own file, and keeping it out of here is what stops a
+ * hundred hard-coded numbers from sitting in the middle of the counting code.
  */
-export function rankFor(tier: number): string {
-  const ranks = ['Novice', 'Apprentice', 'Adept', 'Practitioner', 'Expert', 'Master'];
-  return ranks[Math.min(ranks.length - 1, Math.floor((tier - 1) / 2))]!;
-}
+export { MAX_LEVEL, costOf, rankFor, tierFor, nextTier, xpToReach } from './mastery';
+export type { MasteryLevel as SkillLevel, Tier } from './mastery';
+
+/** Where a subject's lifetime XP lands on the mastery ladder. */
+export const skillLevel = masteryLevel;
 
 // --------------------------------------------------------------------------
 // The cards
@@ -372,8 +345,12 @@ export function masteryTrack(card: SkillCard, ahead = 3): TrackNode[] {
   const perDay = card.xp30 / 30;
   const nodes: TrackNode[] = [];
   const from = Math.max(1, card.level.tier - 2);
+  // The ladder ends at 100, so the rungs ahead do too — an Eternal subject
+  // shows the last few behind it and nothing after, rather than three locked
+  // nodes that can never be reached.
+  const to = Math.min(MAX_LEVEL, card.level.tier + ahead);
 
-  for (let tier = from; tier <= card.level.tier + ahead; tier++) {
+  for (let tier = from; tier <= to; tier++) {
     const needs = xpToReach(tier);
     const state: TrackNode['state'] =
       tier < card.level.tier ? 'done' : tier === card.level.tier ? 'current' : 'locked';
@@ -520,7 +497,34 @@ export function unfiledXp(tasks: Task[], subjects: Map<string, Subject>): { xp: 
   return { xp, count };
 }
 
-/** The account's own level, for the header of the skills page. */
-export function accountLevel(all: GrowthDay[]): SkillLevel {
-  return skillLevel(num(all[all.length - 1]?.cumulative_xp));
+export interface AccountLevel {
+  tier: number;
+  xpInLevel: number;
+  xpRequired: number;
+  percent: number;
+  toNext: number;
+}
+
+/**
+ * The account's own level, for the header of the mastery tab.
+ *
+ * **Deliberately not on the mastery ladder.** This is the number on the
+ * profile, the dashboard and the rail, and it follows `level_for_total_xp` in
+ * backend/tracking/xp.py — level N costs N × 100 XP, no cap, no names. Reading
+ * it off the mastery table would put two different answers to "what level am I"
+ * on two screens of the same app, which is worse than the two curves simply
+ * being different things.
+ *
+ * The tab prints both, a card apart, and labels which is which: "Account level"
+ * here, and a subject's own level with its band name on every skill card.
+ */
+export function accountLevel(all: GrowthDay[]): AccountLevel {
+  const breakdown = levelForTotalXp(num(all[all.length - 1]?.cumulative_xp));
+  return {
+    tier: breakdown.level,
+    xpInLevel: breakdown.xpInLevel,
+    xpRequired: breakdown.xpRequired,
+    percent: breakdown.percent,
+    toNext: Math.max(0, breakdown.xpRequired - breakdown.xpInLevel),
+  };
 }

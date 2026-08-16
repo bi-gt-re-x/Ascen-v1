@@ -41,6 +41,7 @@ import {
   WeeklyOverview,
   XpCard,
 } from '@/components/Dashboard';
+import { RatePrompt } from '@/components/Tasks';
 import {
   bucketTasks,
   daySummary,
@@ -153,6 +154,10 @@ export default function Dashboard() {
         // router, so it never re-reads on its own. This is the one thing that
         // moves those numbers.
         window.dispatchEvent(new Event(STATS_CHANGED));
+
+        // Ask how it went, now that the work is banked. Nothing waits on the
+        // answer — see `rating` below and components/Tasks/RatePrompt.
+        setRating({ id: String(task.id), name: task.title });
       } catch (cause) {
         setFailure(
           cause instanceof Error ? cause.message : 'Could not complete that task.',
@@ -163,6 +168,34 @@ export default function Dashboard() {
       }
     },
     [username, mutate, reload, data],
+  );
+
+  // ---- Rating a finished task ---------------------------------------------
+  /**
+   * The task the prompt is asking about, or null when it is closed.
+   *
+   * The same prompt the tasks page raises, from the same component, because a
+   * task completed here and one completed there have to ask the same question —
+   * two dialogs would become two slightly different questions inside a month.
+   */
+  const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
+
+  const saveRating = useCallback(
+    (values: { difficulty?: number; execution?: number }) => {
+      const target = rating;
+      setRating(null);
+      if (!username || !target) return;
+      void taskService.rateTask(username, target.id, values).then((result) => {
+        if (!result.success) return;
+        mutate((current) => ({
+          ...current,
+          tasks: current.tasks.map((entry) =>
+            String(entry.id) === target.id ? { ...entry, ...values } : entry,
+          ),
+        }));
+      });
+    },
+    [mutate, rating, username],
   );
 
   const addTask = useCallback(
@@ -291,6 +324,19 @@ export default function Dashboard() {
       <DailyQuote />
 
       {levelled !== null && <LevelUp level={levelled} onDone={() => setLevelled(null)} />}
+
+      {/* Held behind the level-up, not raced against it. Both are triggered by
+          the same completion, and a dialog that lands on top of the
+          celebration would cover the one moment the app is allowed to be
+          pleased with somebody. `levelled` clears itself when the animation
+          finishes, and this appears then. */}
+      {rating && levelled === null && (
+        <RatePrompt
+          taskName={rating.name}
+          onSubmit={saveRating}
+          onClose={() => setRating(null)}
+        />
+      )}
 
       <TaskModal
         open={adding}

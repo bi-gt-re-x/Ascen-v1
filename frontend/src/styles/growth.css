@@ -2675,10 +2675,15 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
     flex: 1 1 auto; min-width: 0; font-size: 12.5px; font-weight: 700; color: var(--ink);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* The band name. Bigger than it was: with twenty-one of them it is the thing a
+   reader recognises a subject by, where the old six-name ladder had every
+   subject reading "Master" by level eleven. `white-space: nowrap` because
+   "Grand Champion" and "Elite Ascendant" are two words and must not stack. */
 .gr-skillcard-rank {
-    flex: none; padding: 2px 7px; border-radius: 999px;
+    flex: none; padding: 3px 9px; border-radius: 999px;
     background: var(--accent-soft); color: var(--accent);
-    font-size: 9px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase;
+    white-space: nowrap;
 }
 .gr-skillcard-level { display: flex; align-items: baseline; gap: 5px; }
 .gr-skillcard-level strong {

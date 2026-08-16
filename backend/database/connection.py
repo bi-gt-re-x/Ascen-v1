@@ -87,6 +87,18 @@ ADDED_COLUMNS = (
     # honest reading: they were done for their own sake.
     ('tasks', 'goal_id', 'TEXT'),
     ('tasks', 'milestone_id', 'TEXT'),
+
+    # How hard it was and how well it went, one to five, asked once when the
+    # task is marked done. Null on every task finished before the prompt
+    # existed and on every one where it was dismissed — see data/sql/tasks.sql
+    # for why an unrated task must never be read as a zero.
+    #
+    # No CHECK constraint here, unlike the seed file: ALTER TABLE ADD COLUMN
+    # cannot attach one to a table that already has rows, and rewriting the
+    # table to add it is exactly the kind of migration ADDED_COLUMNS refuses to
+    # carry. The range is enforced by the endpoint instead.
+    ('tasks', 'difficulty', 'INTEGER'),
+    ('tasks', 'execution', 'INTEGER'),
 )
 
 # Tables added to the app after the database was first created.

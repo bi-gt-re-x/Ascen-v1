@@ -160,6 +160,35 @@ export function completeTask(
   });
 }
 
+export interface TaskRating {
+  task_id: string;
+  difficulty?: number;
+  execution?: number;
+}
+
+/**
+ * What the person thought of a task they just finished.
+ *
+ * A separate call from `completeTask`, and deliberately so: completing is the
+ * act and this is an opinion about it. A task stays done whether or not the
+ * prompt that follows is answered, dismissed, or fails to reach the server —
+ * nobody's XP sits behind a dialog.
+ *
+ * Either rating may be omitted. A reader who answers one row and closes the
+ * dialog keeps the answer they gave.
+ */
+export function rateTask(
+  username: string,
+  taskId: string,
+  ratings: { difficulty?: number; execution?: number },
+): Promise<ApiResult<TaskRating>> {
+  return post<TaskRating>('/api/rate_task', {
+    username,
+    task_id: taskId,
+    ...ratings,
+  });
+}
+
 /**
  * The most recent completion, as `{xp, at}` where `at` is its ledger id.
  *

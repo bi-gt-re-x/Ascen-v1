@@ -1,0 +1,214 @@
+/* The completion rating prompt — two rows of five stars, over whatever page
+ * raised it.
+ *
+ * It appears from the tasks page and from the dashboard, which do not share a
+ * stylesheet, so — like the subject picker — everything here is a custom
+ * property declared on the dialog itself rather than inherited from whichever
+ * page it landed on. Nothing in this file styles anything outside `.tk-rate-*`.
+ *
+ * The stars are labels wrapping hidden radios, so the whole row is one radio
+ * group: arrow keys move through it, the group is announced with a name, and
+ * the visible star is just the label's text. `:focus-visible` on the input
+ * paints a ring on the star beside it, which is the only reason the input is
+ * hidden with opacity rather than `display: none`.
+ */
+.tk-rate-backdrop {
+    --rt-ink: #111827;
+    --rt-ink-soft: #6b7280;
+    --rt-ink-faint: #9aa3b2;
+    --rt-surface: #ffffff;
+    --rt-surface-soft: #f6f7fb;
+    --rt-line: #e6e9f0;
+    --rt-accent: #6c5ce7;
+    --rt-star: #e8a33d;
+    --rt-star-off: #d7dbe4;
+
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(16, 20, 30, .45);
+    backdrop-filter: blur(2px);
+    animation: tk-rate-in .14s ease-out;
+}
+
+html[data-theme="dark"] .tk-rate-backdrop {
+    --rt-ink: #f0f2f6;
+    --rt-ink-soft: #c2c9d4;
+    --rt-ink-faint: #8b93a2;
+    --rt-surface: #161b22;
+    --rt-surface-soft: #1b212b;
+    --rt-line: #263041;
+    --rt-accent: #8b7cf0;
+    --rt-star: #f0b458;
+    --rt-star-off: #39414f;
+
+    background: rgba(0, 0, 0, .6);
+}
+
+@keyframes tk-rate-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.tk-rate-popup {
+    width: min(420px, 100%);
+    background: var(--rt-surface);
+    border: 1px solid var(--rt-line);
+    border-radius: 16px;
+    box-shadow: 0 18px 48px rgba(16, 24, 40, .22);
+    padding: 24px 26px 20px;
+    animation: tk-rate-rise .16s ease-out;
+}
+
+@keyframes tk-rate-rise {
+    from { transform: translateY(6px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+.tk-rate-title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 650;
+    letter-spacing: -.02em;
+    color: var(--rt-ink);
+}
+
+/* The task's own name, so the dialog is plainly about the thing just ticked
+   off and not about the day in general. One line, clipped — a task title can
+   be a paragraph and this is a caption. */
+.tk-rate-task {
+    margin: 5px 0 0;
+    font-size: 13px;
+    color: var(--rt-ink-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tk-rate-row {
+    margin: 22px 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.tk-rate-label {
+    padding: 0;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--rt-ink);
+}
+
+.tk-rate-label span {
+    margin-left: 7px;
+    font-weight: 400;
+    font-size: 12.5px;
+    color: var(--rt-ink-faint);
+}
+
+.tk-rate-stars {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tk-rate-star {
+    position: relative;
+    cursor: pointer;
+    line-height: 1;
+    font-size: 30px;
+    color: var(--rt-star-off);
+    transition: color .1s ease, transform .1s ease;
+}
+
+.tk-rate-star.is-on { color: var(--rt-star); }
+.tk-rate-star:hover { transform: scale(1.12); }
+
+.tk-rate-star input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+.tk-rate-star input:focus-visible + span {
+    outline: 2px solid var(--rt-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+/* The word for whatever the cursor is over. Holds its height when empty so
+   the dialog does not jump the first time a star is hovered. */
+.tk-rate-word {
+    margin-left: 10px;
+    min-height: 1em;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rt-ink-soft);
+}
+
+.tk-rate-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tk-rate-actions {
+    margin-top: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+}
+
+.tk-rate-skip {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 13.5px;
+    color: var(--rt-ink-faint);
+    cursor: pointer;
+}
+.tk-rate-skip:hover { color: var(--rt-ink); }
+
+.tk-rate-save {
+    height: 38px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--rt-accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.tk-rate-save:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* Disabled until something is actually chosen. Skip is the way out with no
+   answer, and a Save that recorded nothing would be the same button twice. */
+.tk-rate-save:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 420px) {
+    .tk-rate-popup { padding: 20px 18px 16px; }
+    .tk-rate-star { font-size: 26px; }
+    .tk-rate-word { width: 100%; margin: 6px 0 0; }
+    .tk-rate-stars { flex-wrap: wrap; }
+}

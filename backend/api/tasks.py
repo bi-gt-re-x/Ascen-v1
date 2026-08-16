@@ -79,6 +79,25 @@ class CompleteTask(BaseModel):
     task_id: Optional[str] = None
 
 
+class RateTask(BaseModel):
+    """What the person thought of a task they just finished.
+
+    Both ratings are optional and independent: the prompt asks two questions
+    and a reader is allowed to answer one of them. See `rate_task`.
+    """
+
+    username: Optional[str] = None
+    task_id: Optional[str] = None
+    #: How hard it was, 1-5. Null means not answered.
+    difficulty: Optional[int] = None
+    #: How well it went, 1-5. Null means not answered.
+    execution: Optional[int] = None
+
+
+#: What a star rating is allowed to be, both ends inclusive.
+RATING_RANGE = (1, 5)
+
+
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
@@ -345,6 +364,51 @@ def complete_task(body: CompleteTask):
         best_streak=user['best_streak'],
         task_id=body.task_id,
         completion_status='done',
+    )
+
+
+@router.post('/api/rate_task')
+def rate_task(body: RateTask):
+    """Record what the person said about a task they just finished.
+
+    A separate call from `/api/complete_task` on purpose. Completing is the act
+    and the rating is an opinion about it, and the two must not share a failure:
+    a task marked done has to stay done whether or not the prompt that follows
+    it is answered, reaches the server, or is dismissed. Anything else would put
+    somebody's XP behind a dialog.
+
+    Both fields are optional and each is stored on its own, so a reader who
+    answers one star row and closes the dialog keeps the answer they gave. Out
+    of range is a failure rather than a clamp — a 7 is a caller bug, and
+    silently filing it as a 5 would put a number in the record that nobody
+    chose.
+    """
+    if not body.username or not body.task_id:
+        return fail('Username and task_id required')
+
+    if body.difficulty is None and body.execution is None:
+        return fail('Nothing to record.')
+
+    for name, value in (('Difficulty', body.difficulty), ('Execution', body.execution)):
+        if value is not None and not (RATING_RANGE[0] <= value <= RATING_RANGE[1]):
+            return fail('{} must be between {} and {}.'.format(name, *RATING_RANGE))
+
+    tasks = db.tasks()
+    task = _find(tasks, body.task_id, body.username)
+    if not task:
+        return fail('Task not found')
+
+    if body.difficulty is not None:
+        task['difficulty'] = int(body.difficulty)
+    if body.execution is not None:
+        task['execution'] = int(body.execution)
+
+    db.save_tasks(tasks)
+
+    return ok(
+        task_id=body.task_id,
+        difficulty=task.get('difficulty'),
+        execution=task.get('execution'),
     )
 
 

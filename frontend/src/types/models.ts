@@ -73,6 +73,15 @@ export interface Task {
   completion_seconds?: number;
   /** Whether it beat its deadline. Absent when it had none. */
   met_deadline?: boolean;
+  /**
+   * How hard it was and how well it went, 1-5 each, asked once on completion.
+   *
+   * Both absent unless the person answered. Absent is not zero and must never
+   * be averaged as one: a task nobody rated says nothing about the work, where
+   * a task rated 1 says something quite specific.
+   */
+  difficulty?: number;
+  execution?: number;
   timer_duration?: number;
   timer_expired?: boolean;
 }

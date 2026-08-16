@@ -48,7 +48,20 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- how long it took, and whether it beat its deadline. Tasks completed
     -- before this was tracked are left out of those scores.
     completion_seconds  INTEGER,
-    met_deadline        BOOLEAN
+    met_deadline        BOOLEAN,
+
+    -- What the person said about the work, one to five stars each, asked once
+    -- when the task is marked done. Both nullable and both stay null when the
+    -- prompt is dismissed: an unrated task is a task nobody rated, which is a
+    -- different thing from one rated zero, and nothing may average the two
+    -- together.
+    --
+    -- Deliberately two numbers rather than one. How hard a task was and how
+    -- well it went are independent — an easy task done badly and a brutal one
+    -- done well are the two readings a single "how did that go" would collapse
+    -- into the same middling star.
+    difficulty          INTEGER CHECK (difficulty BETWEEN 1 AND 5),
+    execution           INTEGER CHECK (execution BETWEEN 1 AND 5)
 );
 
 CREATE INDEX IF NOT EXISTS tasks_user_status_idx ON tasks (user_id, status);

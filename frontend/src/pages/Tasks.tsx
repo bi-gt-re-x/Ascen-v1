@@ -54,6 +54,7 @@ import {
   BulkBar,
   Composer,
   EMPTY_QUERY,
+  RatePrompt,
   Sidebar,
   StatCards,
   TaskRow,
@@ -250,10 +251,43 @@ export default function Tasks() {
         // The rail carries the level and the XP total and never re-reads on its
         // own. This is what moves them.
         window.dispatchEvent(new Event(STATS_CHANGED));
+        // Ask, now that the work is banked and nothing depends on the answer.
+        setRating({ id: String(task.id), name: task.title });
         return true;
       });
     },
     [username, mutate, run],
+  );
+
+  // ---- Rating a finished task ---------------------------------------------
+  /**
+   * The task the prompt is asking about, or null when it is closed.
+   *
+   * Set *after* the completion has landed, so the dialog is never open over a
+   * task that failed to complete. Nothing downstream waits on it: the row is
+   * already done, the XP is already banked, and every route out of the dialog —
+   * Save, Skip, Escape, the backdrop — simply clears this.
+   */
+  const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
+
+  const saveRating = useCallback(
+    (values: { difficulty?: number; execution?: number }) => {
+      const target = rating;
+      setRating(null);
+      if (!username || !target) return;
+      void taskService.rateTask(username, target.id, values).then((result) => {
+        if (!result.success) return;
+        // Onto the local copy, so a re-render of the row shows what was said
+        // without a round trip for the whole list.
+        mutate((current) => ({
+          ...current,
+          tasks: current.tasks.map((entry) =>
+            String(entry.id) === target.id ? { ...entry, ...values } : entry,
+          ),
+        }));
+      });
+    },
+    [mutate, rating, username],
   );
 
   /**
@@ -638,6 +672,15 @@ export default function Tasks() {
           />
         </div>
       </div>
+
+      {/* Over everything, after the completion has landed. See `rating`. */}
+      {rating && (
+        <RatePrompt
+          taskName={rating.name}
+          onSubmit={saveRating}
+          onClose={() => setRating(null)}
+        />
+      )}
     </div>
   );
 }

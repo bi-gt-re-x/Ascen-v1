@@ -51,3 +51,7 @@ export type {
   TaskGroup,
   TaskQuery,
 } from './board';
+
+/** The one question the app asks back, once, when a task is marked done. */
+export { RatePrompt } from './RatePrompt';
+export type { RatePromptProps } from './RatePrompt';
