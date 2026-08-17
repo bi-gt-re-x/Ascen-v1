@@ -9,7 +9,8 @@
  * with its own route in App.tsx, which is exactly the exit this file's own
  * instructions below describe. Growth Tree left the same way and is
  * pages/SkillTrees.tsx; its old path redirects, because the placeholder was
- * routed long enough for links to it to exist.
+ * routed long enough for links to it to exist. Notes left next, into
+ * pages/Notes.tsx over the table data/sql/notes.sql had been holding for it.
  *
  * The point of these is honesty. Each route in the top bar and in the app's
  * structure resolves to something that says what it will be, rather than to a
@@ -55,14 +56,6 @@ const PAGES: Record<string, Unbuilt> = {
     files: [
       'backend/api/achievements.py — a stub',
       'data/sql/achievements.sql — tables exist, schema only',
-    ],
-  },
-  '/notes': {
-    name: 'Notes',
-    description: 'Free-form notes attached to days, tasks or goals.',
-    files: [
-      'backend/api/notes.py — a stub',
-      'data/sql/notes.sql — tables exist, schema only',
     ],
   },
   '/library': {

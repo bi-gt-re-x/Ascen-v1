@@ -28,6 +28,8 @@ GATED_PATHS = ('/dashboard', '/calendar', '/goals', '/growth', '/analytics',
                # no account. The old placeholder path is gated with it because
                # it lands there.
                '/skill-trees', '/growth-tree',
+               # Notes are the account's own writing and nobody else's.
+               '/notes',
                # The calendar's three views are three URLs now, and each of
                # them shows the account's own week as plainly as /calendar did.
                '/calendar/day', '/calendar/week', '/calendar/month')

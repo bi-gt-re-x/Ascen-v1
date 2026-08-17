@@ -9,11 +9,12 @@
  *
  * **The layout contract is a variable, not a shape.** Pages do not know what
  * the navigation looks like; they know that `--rail-w` is taken from the left
- * and `--topnav-h` from the top. `--topnav-h` is 0 now and kept only because a
- * dozen stylesheets size themselves with `calc(100vh - var(--topnav-h))`, and
- * subtracting nothing is exactly right — the rail costs height nowhere. That is
- * what let the navigation turn ninety degrees without a single page's height
- * arithmetic changing.
+ * and `--topnav-h` from the top. `--topnav-h` sat at 0 through the years the
+ * rail was the only navigation, kept because a dozen stylesheets size
+ * themselves with `calc(100vh - var(--topnav-h))` — and subtracting nothing was
+ * the right answer, not a shim, which is what let the navigation turn ninety
+ * degrees without a single page's height arithmetic changing. `Topbar` gave it
+ * a height again and those same pages gave the height back, untouched.
  *
  * Collapsing works the same way it always did, through the same class and the
  * same localStorage key: `html.nav-collapsed` drops `--rail-w` to a strip wide
@@ -146,8 +147,12 @@ const TABS: Tab[] = [
     // one word and the wrong one: the analytics page has a Skills tab
     // answering a different question, and two destinations sharing a name is
     // worse than a label a character longer than the rest.
+    //
+    // Singular, matching the page's own heading: the page is one graph with a
+    // category picker, not a shelf of trees, and the rail saying otherwise
+    // would promise a different screen from the one it opens.
     to: '/skill-trees',
-    label: 'Skill Trees',
+    label: 'Skill Tree',
     // The path the placeholder reserved, kept so links to it still land.
     also: ['/growth-tree'],
     icon: (
@@ -158,6 +163,16 @@ const TABS: Tab[] = [
         <circle cx="5.5" cy="8" r="2.2" />
         <circle cx="18.5" cy="8" r="2.2" />
         <path d="M12 6.2v2.4" />
+      </svg>
+    ),
+  },
+  {
+    to: '/notes',
+    label: 'Notes',
+    icon: (
+      <svg {...stroke}>
+        <path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+        <path d="M15 3v5h5M8.5 13h7M8.5 17h4" />
       </svg>
     ),
   },

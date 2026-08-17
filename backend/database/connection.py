@@ -466,6 +466,14 @@ def save_event_colors(rows):
     )
 
 
+def notes():
+    return read_table('notes')
+
+
+def save_notes(rows):
+    write_table('notes', rows)
+
+
 def user_settings():
     return read_table('user_settings')
 

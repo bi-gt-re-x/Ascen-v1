@@ -1,0 +1,317 @@
+/* ==========================================================================
+   notes.css — the page that scores nothing. See src/pages/Notes.tsx.
+
+   Prefixed `nt-` for the reason analytics.css prefixes `ax-`: dashboard.css is
+   loaded on every page and dresses a pile of generic names, so a page reaching
+   for `.card` inherits a look it did not ask for. A private prefix starts from
+   the browser's defaults.
+
+   Colour is a token block on `.nt-page`, redeclared once for dark.
+   ========================================================================== */
+
+.nt-page {
+    --nt-bg: #f4f6f8;
+    --nt-card: #ffffff;
+    --nt-card-2: #f7f8fb;
+    --nt-line: #e6e9ef;
+    --nt-line-soft: #eef0f5;
+
+    --nt-text: #1f2733;
+    --nt-muted: #6b7684;
+    --nt-faint: #98a1ae;
+
+    --nt-accent: #6c5ce7;
+    --nt-bad: #c0392b;
+
+    --nt-radius: 14px;
+    --nt-gap: 16px;
+    --nt-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+
+    background: var(--nt-bg);
+    color: var(--nt-text);
+    min-height: calc(100vh - var(--topnav-h, 0px));
+    padding: 26px 0 40px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+html[data-theme="dark"] .nt-page {
+    --nt-bg: #0d1117;
+    --nt-card: #151b24;
+    --nt-card-2: #1b222c;
+    --nt-line: #232b36;
+    --nt-line-soft: #1e2530;
+
+    --nt-text: #e6edf3;
+    --nt-muted: #8b949e;
+    --nt-faint: #6e7781;
+
+    --nt-accent: #8b7cf8;
+    --nt-bad: #f85149;
+
+    --nt-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+}
+
+.nt-shell {
+    --shell-max: 1500px;
+    --shell-fluid: 96%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--nt-gap);
+    position: relative;
+    z-index: 1;
+}
+
+/* ---------- Head ---------------------------------------------------------- */
+.nt-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.nt-head h1 {
+    margin: 0 0 6px;
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+.nt-head p {
+    margin: 0;
+    max-width: 74ch;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--nt-muted);
+}
+
+/* ---------- The two panels ------------------------------------------------
+   A fixed-width list beside an editor that takes the rest. The list is fixed
+   because it is an index — a column of titles that grows and shrinks with the
+   window is harder to scan than one that stays where it was. */
+.nt-body {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: var(--nt-gap);
+    align-items: stretch;
+    /* Tall enough to write in, and bounded so the two panels scroll their own
+       contents rather than the page. */
+    min-height: 560px;
+    height: calc(100vh - var(--topnav-h, 0px) - 200px);
+}
+
+.nt-list-panel,
+.nt-editor {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--nt-card);
+    border: 1px solid var(--nt-line);
+    border-radius: var(--nt-radius);
+    box-shadow: var(--nt-shadow);
+}
+
+/* ---------- The list ------------------------------------------------------ */
+.nt-list-head {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--nt-line-soft);
+}
+.nt-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 8px 11px;
+    border: 1px solid var(--nt-line);
+    border-radius: 9px;
+    background: var(--nt-card-2);
+    color: var(--nt-text);
+    font-family: inherit;
+    font-size: 13px;
+}
+.nt-search:focus { outline: none; border-color: var(--nt-accent); background: var(--nt-card); }
+
+.nt-new {
+    flex: none;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 9px;
+    background: var(--nt-accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+}
+.nt-new:hover { filter: brightness(1.06); }
+
+.nt-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow-y: auto;
+    min-height: 0;
+}
+.nt-list-empty {
+    margin: 0;
+    padding: 22px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--nt-muted);
+}
+
+.nt-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 11px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.nt-item:hover { background: var(--nt-card-2); }
+.nt-item.is-open {
+    background: var(--nt-card-2);
+    border-color: var(--nt-accent);
+}
+
+.nt-item-top { display: flex; align-items: center; gap: 8px; }
+.nt-item-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 650;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.nt-pin { flex: none; display: flex; color: var(--nt-accent); }
+.nt-pin svg { width: 13px; height: 13px; }
+
+.nt-item-preview,
+.nt-item-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.nt-item-preview { font-size: 12.5px; color: var(--nt-muted); }
+.nt-item-meta { font-size: 11px; color: var(--nt-faint); }
+
+/* ---------- The editor ---------------------------------------------------- */
+.nt-editor-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--nt-line-soft);
+}
+.nt-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 6px 2px;
+    border: none;
+    background: none;
+    color: var(--nt-text);
+    font-family: inherit;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -.015em;
+}
+.nt-title:focus { outline: none; }
+.nt-title::placeholder { color: var(--nt-faint); }
+
+.nt-pin-btn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--nt-line);
+    border-radius: 10px;
+    background: var(--nt-card);
+    color: var(--nt-faint);
+    cursor: pointer;
+}
+.nt-pin-btn:hover { color: var(--nt-text); }
+.nt-pin-btn.is-on {
+    background: color-mix(in srgb, var(--nt-accent) 12%, transparent);
+    border-color: var(--nt-accent);
+    color: var(--nt-accent);
+}
+.nt-pin-btn svg { width: 15px; height: 15px; }
+
+.nt-body-input {
+    flex: 1 1 auto;
+    min-height: 0;
+    resize: none;
+    padding: 16px;
+    border: none;
+    background: none;
+    color: var(--nt-text);
+    font-family: inherit;
+    font-size: 14.5px;
+    line-height: 1.7;
+}
+.nt-body-input:focus { outline: none; }
+.nt-body-input::placeholder { color: var(--nt-faint); }
+
+.nt-editor-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 11px 14px;
+    border-top: 1px solid var(--nt-line-soft);
+}
+
+.nt-date { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--nt-muted); }
+.nt-date input {
+    padding: 6px 9px;
+    border: 1px solid var(--nt-line);
+    border-radius: 8px;
+    background: var(--nt-card-2);
+    color: var(--nt-text);
+    font-family: inherit;
+    font-size: 12.5px;
+}
+
+.nt-actions { display: flex; align-items: center; gap: 8px; }
+.nt-message { font-size: 12px; color: var(--nt-muted); }
+
+.nt-save,
+.nt-delete {
+    padding: 8px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--nt-line);
+    background: var(--nt-card-2);
+    color: var(--nt-text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+}
+.nt-delete { color: var(--nt-bad); }
+.nt-delete:hover { border-color: var(--nt-bad); }
+.nt-save { background: var(--nt-accent); border-color: var(--nt-accent); color: #fff; }
+.nt-save:hover:not(:disabled) { filter: brightness(1.06); }
+.nt-save:disabled { opacity: .5; cursor: default; }
+
+/* ---------- Narrow -------------------------------------------------------- */
+@media (max-width: 900px) {
+    /* The list stops being a column beside the editor and becomes a short
+       index above it. Height goes with it — an editor sized off the viewport
+       under a list that also scrolls gives two scrollbars and no room. */
+    .nt-body { grid-template-columns: 1fr; height: auto; min-height: 0; }
+    .nt-list { max-height: 320px; }
+    .nt-body-input { min-height: 340px; }
+}

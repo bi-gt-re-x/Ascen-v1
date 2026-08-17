@@ -1,434 +1,699 @@
 /* ==========================================================================
-   skilltree.css — a tree per subject, grown out of finished work.
+   skilltree.css — the branching graph. See src/pages/SkillTrees.tsx.
 
-   Every class is prefixed `st-`, for the same reason analytics.css prefixes
+   Every class is prefixed `stx-`, for the same reason analytics.css prefixes
    `ax-`: styles/dashboard.css is loaded on every page and dresses a pile of
    generic names, so a page reaching for `.card` or `.stat-row` inherits a look
    it did not ask for and has to fight it in both themes. A private prefix
    starts from the browser's defaults and nothing else.
 
-   Colour is a token block on `.st-page`, redeclared once for dark. Nothing
+   Colour is a token block on `.stx-page`, redeclared once for dark. Nothing
    below the block names a colour, so the two themes are one layout.
+
+   ## The row geometry is a contract
+
+   `--stx-row-h` is the height of one branch row, and three things agree about
+   it without measuring each other: the leaf column packs three leaves into
+   exactly that height, the trunk's spine is inset by half of it so the line
+   starts and ends on the first and last node's centre, and the `<Fan/>` SVG in
+   the page is drawn against a viewBox of the same height. Change it here and
+   the number in the component has to change with it.
    ========================================================================== */
 
-.st-page {
-    --st-bg: #f4f6f8;
-    --st-card: #ffffff;
-    --st-card-2: #f7f8fb;
-    --st-line: #e6e9ef;
-    --st-line-soft: #eef0f5;
+.stx-page {
+    --stx-bg: #f4f6f8;
+    --stx-card: #ffffff;
+    --stx-card-2: #f7f8fb;
+    --stx-line: #e6e9ef;
+    --stx-line-soft: #eef0f5;
+    --stx-wire: #d8dce6;
 
-    --st-text: #1f2733;
-    --st-muted: #6b7684;
-    --st-faint: #98a1ae;
+    --stx-text: #1f2733;
+    --stx-muted: #6b7684;
+    --stx-faint: #98a1ae;
 
-    /* One colour per branch, and the same three the rest of the app uses for
-       XP, focus and tasks — Depth is violet because it is XP, Rhythm is green
-       because it counts days worked. A reader who knows the analytics page
-       already knows what these mean. */
-    --st-violet: #6c5ce7;
-    --st-blue: #2f80ed;
-    --st-green: #27ae60;
+    --stx-violet: #6c5ce7;
+    --stx-blue: #2f80ed;
+    --stx-green: #27ae60;
 
-    --st-radius: 14px;
-    --st-gap: 16px;
-    --st-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+    --stx-radius: 16px;
+    --stx-gap: 16px;
+    --stx-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
 
-    background: var(--st-bg);
-    color: var(--st-text);
-    min-height: 100vh;
+    /* See the note at the top: three separate things depend on this number. */
+    --stx-row-h: 176px;
+    --stx-leaf-h: 52px;
+
+    background: var(--stx-bg);
+    color: var(--stx-text);
+    min-height: calc(100vh - var(--topnav-h, 0px));
     padding: 26px 0 40px;
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
-html[data-theme="dark"] .st-page {
-    --st-bg: #0d1117;
-    --st-card: #151b24;
-    --st-card-2: #1b222c;
-    --st-line: #232b36;
-    --st-line-soft: #1e2530;
+html[data-theme="dark"] .stx-page {
+    --stx-bg: #0d1117;
+    --stx-card: #151b24;
+    --stx-card-2: #1b222c;
+    --stx-line: #232b36;
+    --stx-line-soft: #1e2530;
+    --stx-wire: #2b3442;
 
-    --st-text: #e6edf3;
-    --st-muted: #8b949e;
-    --st-faint: #6e7781;
+    --stx-text: #e6edf3;
+    --stx-muted: #8b949e;
+    --stx-faint: #6e7781;
 
-    --st-violet: #8b7cf8;
-    --st-blue: #4da3ff;
-    --st-green: #3fb950;
+    --stx-violet: #8b7cf8;
+    --stx-blue: #4da3ff;
+    --stx-green: #3fb950;
 
-    --st-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --stx-shadow: 0 1px 2px rgba(0, 0, 0, .3);
 }
 
-.st-shell {
-    --shell-max: 1500px;
+.stx-shell {
+    --shell-max: 1520px;
     --shell-fluid: 96%;
     display: flex;
     flex-direction: column;
-    gap: var(--st-gap);
+    gap: var(--stx-gap);
     position: relative;
     z-index: 1;
 }
 
-/* ---------- The head ------------------------------------------------------ */
-.st-head {
+.stx-sr {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0);
+    white-space: nowrap; border: 0;
+}
+
+/* ---------- Head ---------------------------------------------------------- */
+.stx-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
 }
-.st-head h1 {
-    margin: 0 0 6px;
+.stx-head h1 {
+    margin: 0 0 4px;
     font-size: 27px;
     font-weight: 700;
     letter-spacing: -.02em;
 }
-.st-head p {
-    margin: 0;
-    max-width: 74ch;
-    font-size: 13.5px;
-    line-height: 1.6;
-    color: var(--st-muted);
-}
+.stx-head p { margin: 0; font-size: 14px; color: var(--stx-muted); }
 
-/* ---------- The strip ----------------------------------------------------- */
-.st-totals {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--st-gap);
+.stx-select {
+    appearance: none;
+    padding: 10px 34px 10px 15px;
+    border: 1px solid var(--stx-line);
+    border-radius: 11px;
+    background: var(--stx-card);
+    color: var(--stx-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    /* The chevron, drawn rather than shipped — one selector, both themes,
+       because it paints with currentColor through a mask. */
+    background-image: none;
 }
-.st-total {
+.stx-select-wrap { position: relative; display: inline-flex; }
+.stx-select-wrap::after {
+    content: "";
+    position: absolute;
+    right: 13px;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    transform: translateY(-65%) rotate(45deg);
+    border-right: 2px solid var(--stx-muted);
+    border-bottom: 2px solid var(--stx-muted);
+    pointer-events: none;
+}
+.stx-select:focus { outline: 2px solid var(--stx-violet); outline-offset: 1px; }
+
+/* ---------- The three-part layout ----------------------------------------
+   Stats above the canvas on the left, the detail panel down the right across
+   both rows. The detail panel is a fixed column because it is a reading pane:
+   a description and a list of nodes reflowing every time the window moves is
+   harder to come back to than one that stays where it was. */
+.stx-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--stx-gap);
+    align-items: start;
+}
+.stx-stats { grid-column: 1; grid-row: 1; }
+.stx-canvas { grid-column: 1; grid-row: 2; }
+.stx-detail { grid-column: 2; grid-row: 1 / span 2; }
+
+/* ---------- Stats --------------------------------------------------------- */
+.stx-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    background: var(--stx-card);
+    border: 1px solid var(--stx-line);
+    border-radius: var(--stx-radius);
+    box-shadow: var(--stx-shadow);
+    padding: 4px;
+}
+.stx-stat {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    background: var(--st-card);
-    border: 1px solid var(--st-line);
-    border-radius: var(--st-radius);
-    box-shadow: var(--st-shadow);
-    padding: 14px 16px 13px;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
     min-width: 0;
 }
-.st-total > span {
-    font-size: 11px;
-    font-weight: 650;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    color: var(--st-muted);
+/* Hairlines between the three rather than three cards: they are one reading of
+   one view, and three boxes would read as three unrelated figures. */
+.stx-stat + .stx-stat { border-left: 1px solid var(--stx-line-soft); }
+.stx-stat > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.stx-stat span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--stx-muted);
 }
-.st-total strong {
-    font-size: 27px;
+.stx-stat strong {
+    font-size: 25px;
     font-weight: 700;
     letter-spacing: -.02em;
     font-variant-numeric: tabular-nums;
     line-height: 1.15;
 }
-/* A subject's name where the other three tiles carry a number. It is set
-   smaller because a long one at 27px wraps the tile to three lines and pushes
-   the row's height onto every tile beside it. */
-.st-total .st-total-word {
-    font-size: 19px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.st-total strong i {
+.stx-stat strong i { font-style: normal; font-size: 15px; color: var(--stx-faint); }
+.stx-stat em {
     font-style: normal;
-    font-size: 16px;
-    color: var(--st-faint);
-}
-.st-total em {
-    font-style: normal;
-    font-size: 12px;
-    color: var(--st-muted);
+    font-size: 11.5px;
+    color: var(--stx-faint);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* ---------- The grid of trees --------------------------------------------- */
-.st-grid {
+.stx-ring { width: 46px; height: 46px; flex: none; }
+.stx-ring-track { fill: none; stroke: var(--stx-line); stroke-width: 5; }
+.stx-ring-arc {
+    fill: none;
+    stroke: var(--stx-violet);
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+
+.stx-stat-icon {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
-    gap: var(--st-gap);
-    align-items: start;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    flex: none;
+}
+.stx-stat-icon svg { width: 21px; height: 21px; }
+.stx-stat-icon.is-green {
+    background: color-mix(in srgb, var(--stx-green) 13%, transparent);
+    color: var(--stx-green);
+}
+.stx-stat-icon.is-violet {
+    background: color-mix(in srgb, var(--stx-violet) 13%, transparent);
+    color: var(--stx-violet);
 }
 
-.st-tree {
+/* ---------- The canvas ---------------------------------------------------- */
+.stx-canvas {
+    position: relative;
+    display: grid;
+    grid-template-columns: 156px minmax(0, 1fr);
+    min-height: 520px;
+    background: var(--stx-card);
+    border: 1px solid var(--stx-line);
+    border-radius: var(--stx-radius);
+    box-shadow: var(--stx-shadow);
+    overflow: hidden;
+}
+/* Filling the window is a class rather than the Fullscreen API: the API takes
+   the element out of the document's stacking context, which drops the page's
+   own theme variables on some engines and cannot be left by clicking the
+   button that opened it. Escape closes this one — see the page. */
+.stx-canvas.is-full {
+    position: fixed;
+    inset: 0;
+    z-index: 950;
+    border-radius: 0;
+    min-height: 0;
+}
+
+.stx-cats {
     display: flex;
     flex-direction: column;
-    background: var(--st-card);
-    border: 1px solid var(--st-line);
-    border-radius: var(--st-radius);
-    box-shadow: var(--st-shadow);
-    padding: 16px 18px 14px;
+    gap: 2px;
+    padding: 14px 10px;
+    border-right: 1px solid var(--stx-line-soft);
+    background: var(--stx-card-2);
+    overflow-y: auto;
+}
+.stx-cat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 11px;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    color: var(--stx-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+.stx-cat:hover { background: var(--stx-card); color: var(--stx-text); }
+.stx-cat.is-on {
+    background: color-mix(in srgb, var(--stx-violet) 12%, transparent);
+    color: var(--stx-violet);
+}
+.stx-cat-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.stx-cat-count { flex: none; font-size: 11.5px; color: var(--stx-faint); font-variant-numeric: tabular-nums; }
+.stx-cat.is-on .stx-cat-count { color: inherit; }
+
+.stx-canvas-scroll {
+    overflow: auto;
+    padding: 24px 16px 60px;
+}
+.stx-canvas-zoom { width: max-content; }
+
+/* ---------- The graph ------------------------------------------------------
+   Root on the left, a spine, then one row per subject. Every wire is either a
+   1fr-free absolute rule against `--stx-row-h` or the SVG fan in the page —
+   nothing here measures the DOM, which is what keeps the drawing correct while
+   the canvas is being zoomed. */
+.stx-graph { display: flex; align-items: center; gap: 0; }
+
+.stx-root-col {
+    display: flex;
+    align-items: center;
+    flex: none;
+}
+.stx-junction {
+    width: 24px;
+    height: 2px;
+    background: var(--stx-wire);
+    position: relative;
+}
+.stx-junction::after {
+    content: "";
+    position: absolute;
+    right: -4px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: var(--stx-card);
+    border: 2px solid var(--stx-wire);
+}
+
+.stx-branch-col {
+    position: relative;
+    padding-left: 38px;
+    flex: none;
+}
+/* The spine. Inset by half a row at each end so it starts on the first node's
+   centre and stops on the last one's, rather than running past both. */
+.stx-branch-col::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: calc(var(--stx-row-h) / 2);
+    bottom: calc(var(--stx-row-h) / 2);
+    width: 2px;
+    background: var(--stx-wire);
+    border-radius: 2px;
+}
+/* A single row has no span for a spine to cover, and a 0-height line with two
+   rounded ends is a smudge. */
+.stx-branch-col:has(.stx-row:only-child)::before { display: none; }
+
+.stx-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--stx-row-h);
+}
+/* The stub from the spine into this row's node. */
+.stx-row::before {
+    content: "";
+    position: absolute;
+    left: -38px;
+    top: 50%;
+    width: 38px;
+    height: 2px;
+    background: var(--stx-wire);
+}
+
+/* ---------- Nodes --------------------------------------------------------- */
+.stx-node {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    box-sizing: border-box;
+    padding: 11px 15px;
+    border: 1px solid var(--stx-line);
+    border-radius: 14px;
+    background: var(--stx-card);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
+    color: var(--stx-text);
+    font-family: inherit;
+    text-align: left;
+}
+button.stx-node { cursor: pointer; }
+button.stx-node:hover { border-color: var(--stx-violet); }
+button.stx-node:focus-visible { outline: 2px solid var(--stx-violet); outline-offset: 2px; }
+
+.stx-node-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.stx-node-body strong {
+    font-size: 13.5px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.stx-node-body em {
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--stx-muted);
+}
+
+.stx-node-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    flex: none;
+    background: color-mix(in srgb, var(--stx-violet) 12%, transparent);
+    color: var(--stx-violet);
+}
+.stx-node-icon .cal-ico { width: 17px; height: 17px; }
+.stx-initial { font-style: normal; font-size: 14px; font-weight: 700; }
+
+/* The level bar along the bottom edge of a root or branch node — the same
+   figure the detail panel prints, at a glance and without a number. */
+.stx-node-bar {
+    position: absolute;
+    left: 15px;
+    right: 15px;
+    bottom: 8px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--stx-line-soft);
+    overflow: hidden;
+}
+.stx-node-bar span { display: block; height: 100%; background: var(--stx-violet); border-radius: inherit; }
+
+/* Sized so root + spine + branch + fan + leaf clears the canvas at a laptop
+   width with the rail open — about 660px of graph in 660px of canvas. Past
+   that the canvas scrolls rather than the nodes shrinking: a node narrow
+   enough to always fit is a node that cannot hold "Machine Learning". */
+.stx-root,
+.stx-branch {
+    width: 206px;
+    padding-bottom: 17px;
+}
+.stx-root {
+    border-color: color-mix(in srgb, var(--stx-violet) 45%, var(--stx-line));
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--stx-violet) 14%, transparent);
+}
+.stx-root-icon {
+    background: var(--stx-violet);
+    color: #fff;
+}
+.stx-root-icon svg { width: 19px; height: 19px; }
+
+.stx-branch.is-chosen,
+.stx-leaf.is-chosen {
+    border-color: var(--stx-violet);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--stx-violet) 16%, transparent);
+}
+
+/* ---------- Leaves -------------------------------------------------------- */
+.stx-fan { flex: none; width: 32px; height: var(--stx-row-h); }
+.stx-fan path { fill: none; stroke: var(--stx-wire); stroke-width: 2; }
+
+.stx-leaf-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: var(--stx-row-h);
+    flex: none;
+}
+.stx-leaf {
+    width: 188px;
+    height: var(--stx-leaf-h);
+    padding: 0 14px;
+    border-radius: 13px;
+}
+.stx-leaf-mark {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    flex: none;
+    background: var(--stx-line-soft);
+    color: var(--stx-faint);
+}
+.stx-leaf-mark svg { width: 14px; height: 14px; }
+
+/* Three states, and each is a different fact rather than three shades of one.
+   Complete is finished work, in-progress is a branch with a next node, locked
+   is a branch with nothing on it yet — and locked is grey rather than red
+   because it is the starting state of every branch on every account. */
+.stx-leaf.is-done .stx-leaf-mark { background: var(--stx-green); color: #fff; }
+.stx-leaf.is-part .stx-leaf-mark {
+    background: color-mix(in srgb, var(--tone) 16%, transparent);
+    color: var(--tone);
+}
+.stx-leaf.is-locked { background: var(--stx-card-2); }
+.stx-leaf.is-locked .stx-node-body strong { color: var(--stx-muted); }
+
+/* ---------- Zoom ---------------------------------------------------------- */
+.stx-zoom {
+    position: absolute;
+    left: 170px;
+    bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--stx-line);
+    border-radius: 11px;
+    overflow: hidden;
+    background: var(--stx-card);
+    box-shadow: var(--stx-shadow);
+}
+.stx-zoom button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--stx-card);
+    color: var(--stx-muted);
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+.stx-zoom button + button { border-top: 1px solid var(--stx-line-soft); }
+.stx-zoom button:hover:not(:disabled) { background: var(--stx-card-2); color: var(--stx-text); }
+.stx-zoom button:disabled { opacity: .4; cursor: default; }
+.stx-zoom svg { width: 15px; height: 15px; }
+
+/* ---------- The detail panel ---------------------------------------------- */
+.stx-detail {
+    display: flex;
+    flex-direction: column;
+    background: var(--stx-card);
+    border: 1px solid var(--stx-line);
+    border-radius: var(--stx-radius);
+    box-shadow: var(--stx-shadow);
+    padding: 18px 18px 16px;
     min-width: 0;
 }
 
-.st-tree-head {
+.stx-detail-head {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
 }
-.st-tree-icon {
+.stx-detail-icon {
     display: grid;
     place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 11px;
-    background: var(--st-card-2);
-    border: 1px solid var(--st-line);
-    color: var(--st-violet);
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: var(--stx-violet);
+    color: #fff;
 }
-.st-tree-icon .cal-ico { width: 19px; height: 19px; }
-.st-tree-initial {
-    font-style: normal;
-    font-size: 16px;
-    font-weight: 700;
-}
-.st-tree-title { min-width: 0; }
-.st-tree-title h2 {
+.stx-detail-icon .cal-ico { width: 22px; height: 22px; }
+.stx-detail-icon .stx-initial { font-size: 18px; }
+.stx-detail-head h2 {
     margin: 0;
-    font-size: 16.5px;
-    font-weight: 650;
-    letter-spacing: -.015em;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.02em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.st-tree-rank {
-    display: block;
-    font-size: 12px;
-    color: var(--st-muted);
-}
-.st-tree-progress {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    line-height: 1.2;
-}
-.st-tree-progress strong {
-    font-size: 19px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-}
-.st-tree-progress em {
-    font-style: normal;
-    font-size: 13px;
-    color: var(--st-faint);
-}
-.st-tree-progress > span {
-    font-size: 11px;
-    color: var(--st-muted);
-}
+.stx-detail-level { font-size: 13px; color: var(--stx-muted); }
+.stx-detail-xp { font-size: 11.5px; color: var(--stx-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* ---------- The trunk ----------------------------------------------------- */
-.st-trunk { margin: 14px 0 4px; }
-.st-trunk-bar {
-    height: 7px;
+.stx-detail-bar {
+    height: 5px;
+    margin: 12px 0 14px;
     border-radius: 999px;
-    background: var(--st-line-soft);
+    background: var(--stx-line-soft);
     overflow: hidden;
 }
-.st-trunk-bar i {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--st-violet);
-}
-.st-trunk-note {
-    display: block;
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--st-muted);
+.stx-detail-bar i { display: block; height: 100%; background: var(--stx-violet); border-radius: inherit; }
+
+.stx-detail-blurb {
+    margin: 0 0 18px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--stx-muted);
 }
 
-/* ---------- The branches --------------------------------------------------
-   Each branch is a row of five nodes with a rail behind them. The rail is
-   drawn on the list rather than between the nodes, so a branch is one line
-   whatever the nodes do — a connector per gap meant five elements agreeing
-   about a vertical centre they each computed separately. */
-.st-branches {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-top: 14px;
-}
-
-.st-branch {
-    border-top: 1px solid var(--st-line-soft);
-    padding-top: 12px;
-}
-.st-branch-head {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-}
-.st-branch-head h3 {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    color: var(--tone);
-}
-.st-branch-count {
-    font-size: 12px;
-    font-weight: 650;
-    font-variant-numeric: tabular-nums;
-    color: var(--st-muted);
-}
-.st-branch-have {
-    margin-left: auto;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: var(--st-faint);
-}
-.st-branch-measure {
-    margin: 4px 0 12px;
-    font-size: 11.5px;
-    line-height: 1.55;
-    color: var(--st-muted);
-}
-
-.st-nodes {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px;
-    position: relative;
-}
-/* The rail, behind the dots and level with their centres. 11px is half the
-   dot's height, so the line meets them wherever the row's text wraps. */
-.st-nodes::before {
-    content: "";
-    position: absolute;
-    left: 10%;
-    right: 10%;
-    top: 11px;
-    height: 2px;
-    background: var(--st-line);
-    border-radius: 2px;
-}
-
-.st-node {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    text-align: center;
-    min-width: 0;
-    position: relative;
-}
-.st-node-dot {
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 2px solid var(--st-line);
-    background: var(--st-card);
-    color: #fff;
-    position: relative;
-    overflow: hidden;
-}
-.st-node-dot svg { width: 12px; height: 12px; }
-/* The partial fill on the node being worked toward: a column rising from the
-   bottom of the dot, at the share of the step already covered. A ring would
-   have needed a second SVG per node to say the same thing. */
-.st-node-dot i {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--tone);
-    opacity: .38;
-}
-
-.st-node.is-open .st-node-dot {
-    background: var(--tone);
-    border-color: var(--tone);
-}
-.st-node.is-next .st-node-dot {
-    border-color: var(--tone);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 18%, transparent);
-}
-.st-node.is-far .st-node-dot { background: var(--st-card-2); }
-
-.st-node-name {
-    font-size: 10.5px;
-    font-weight: 600;
-    line-height: 1.3;
-    color: var(--st-text);
-}
-.st-node-need {
-    font-size: 10px;
-    line-height: 1.3;
-    color: var(--st-faint);
-    font-variant-numeric: tabular-nums;
-}
-.st-node.is-far .st-node-name,
-.st-node.is-far .st-node-need { color: var(--st-faint); }
-.st-node.is-next .st-node-need { color: var(--tone); font-weight: 650; }
-
-/* ---------- Empty, and the closing note ----------------------------------- */
-.st-empty,
-.st-note {
-    background: var(--st-card);
-    border: 1px solid var(--st-line);
-    border-radius: var(--st-radius);
-    box-shadow: var(--st-shadow);
-    padding: 20px 22px 18px;
-}
-.st-empty h2,
-.st-note h2 {
-    margin: 0 0 8px;
-    font-size: 16px;
+.stx-detail-title {
+    margin: 0 0 10px;
+    font-size: 13.5px;
     font-weight: 650;
     letter-spacing: -.01em;
 }
-.st-empty p,
-.st-note p {
-    margin: 0 0 10px;
-    max-width: 80ch;
-    font-size: 13.5px;
-    line-height: 1.62;
-    color: var(--st-muted);
-}
-.st-note p:last-child { margin-bottom: 0; }
-.st-note strong { color: var(--st-text); }
-.st-note a,
-.st-empty a { color: var(--st-violet); }
+.stx-detail-title + * { margin-bottom: 18px; }
 
-.st-btn {
-    display: inline-flex;
+.stx-detail-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.stx-detail-facts li {
+    display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 4px;
-    padding: 8px 14px;
-    border-radius: 9px;
-    border: 1px solid var(--st-line);
-    background: var(--st-card-2);
-    color: var(--st-text);
+    gap: 9px;
     font-size: 13px;
-    font-weight: 600;
+    color: var(--stx-text);
+}
+.stx-tick {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    background: var(--stx-green);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.stx-next {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 13px;
+    border: 1px solid var(--stx-line);
+    border-radius: 12px;
+    background: var(--stx-card-2);
+}
+.stx-next > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.stx-next strong { font-size: 13px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stx-next span { font-size: 11.5px; color: var(--stx-muted); }
+.stx-next-pct { flex: none; font-size: 13px; font-weight: 700; color: var(--stx-violet); font-variant-numeric: tabular-nums; }
+.stx-next-mark {
+    position: relative;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--stx-violet);
+    overflow: hidden;
+}
+.stx-next-mark i {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: color-mix(in srgb, var(--stx-violet) 45%, transparent);
+}
+
+.stx-milestones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.stx-milestones li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 0;
+    font-size: 12.5px;
+    border-bottom: 1px solid var(--stx-line-soft);
+}
+.stx-milestones li:last-child { border-bottom: none; }
+.stx-ms-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stx-ms-state { flex: none; font-size: 11.5px; font-weight: 600; color: var(--stx-faint); }
+.stx-milestones li.is-open .stx-ms-state { color: var(--stx-green); }
+.stx-milestones li.is-next .stx-ms-state { color: var(--stx-violet); }
+.stx-milestones li.is-far .stx-ms-name { color: var(--stx-muted); }
+
+.stx-detail-note {
+    margin: 0 0 18px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--stx-muted);
+}
+
+.stx-cta {
+    display: block;
+    margin-top: auto;
+    padding: 12px 16px;
+    border-radius: 11px;
+    background: var(--stx-violet);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 650;
+    text-align: center;
     text-decoration: none;
 }
-.st-btn:hover { border-color: var(--st-violet); color: var(--st-violet); }
+.stx-cta:hover { filter: brightness(1.07); }
+
+/* ---------- Empty --------------------------------------------------------- */
+.stx-empty {
+    background: var(--stx-card);
+    border: 1px solid var(--stx-line);
+    border-radius: var(--stx-radius);
+    box-shadow: var(--stx-shadow);
+    padding: 26px 26px 22px;
+}
+.stx-empty h2 { margin: 0 0 8px; font-size: 17px; font-weight: 650; }
+.stx-empty p { margin: 0 0 14px; max-width: 80ch; font-size: 13.5px; line-height: 1.62; color: var(--stx-muted); }
+.stx-empty .stx-cta { display: inline-block; margin-top: 0; }
 
 /* ---------- Responsive ---------------------------------------------------- */
-@media (max-width: 1024px) {
-    .st-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1180px) {
+    /* The detail panel goes under the canvas rather than beside it. It is a
+       reading pane, and a 240px-wide one is a column of orphans. */
+    .stx-layout { grid-template-columns: minmax(0, 1fr); }
+    .stx-stats { grid-column: 1; grid-row: 1; }
+    .stx-canvas { grid-column: 1; grid-row: 2; }
+    .stx-detail { grid-column: 1; grid-row: 3; }
+    .stx-cta { margin-top: 18px; }
 }
-@media (max-width: 560px) {
-    .st-totals { grid-template-columns: 1fr; }
-    /* Five nodes across a phone gives each one about 55px, which is narrower
-       than "Getting somewhere" can wrap into legibly. The rail goes with them:
-       a horizontal line behind a vertical list is a line through nothing. */
-    .st-nodes { grid-template-columns: 1fr; gap: 10px; }
-    .st-nodes::before { display: none; }
-    .st-node { flex-direction: row; text-align: left; gap: 10px; }
-    .st-node-need { margin-left: auto; }
+@media (max-width: 820px) {
+    .stx-stats { grid-template-columns: 1fr; }
+    .stx-stat + .stx-stat { border-left: none; border-top: 1px solid var(--stx-line-soft); }
+    /* The category column becomes a scrolling row above the graph: 172px of a
+       narrow window spent on a list of nine names leaves no graph. */
+    .stx-canvas { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+    .stx-cats {
+        flex-direction: row;
+        border-right: none;
+        border-bottom: 1px solid var(--stx-line-soft);
+        overflow-x: auto;
+        padding: 10px;
+    }
+    .stx-cat { flex: none; }
+    .stx-zoom { left: auto; right: 16px; }
 }

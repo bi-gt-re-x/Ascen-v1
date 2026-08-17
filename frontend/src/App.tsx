@@ -12,7 +12,7 @@
  */
 import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { Loading, Rail } from '@/components';
+import { Loading, Rail, Topbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
 import { useAuth, usePinnedViewport } from '@/hooks';
 import Dashboard from '@/pages/Dashboard';
@@ -27,6 +27,7 @@ const Goals = lazy(() => import('@/pages/Goals'));
 const Tasks = lazy(() => import('@/pages/Tasks'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
 const SkillTrees = lazy(() => import('@/pages/SkillTrees'));
+const Notes = lazy(() => import('@/pages/Notes'));
 const AboutUs = lazy(() => import('@/pages/AboutUs'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
@@ -116,6 +117,10 @@ export default function App() {
   return (
     <>
       {!landing && <Rail />}
+      {/* Beside the rail rather than above it: the rail owns the full height
+          and the bar starts at `--rail-w`. Outside the router with the rail,
+          so its one account read happens once for the session. */}
+      {!landing && <Topbar />}
       <main className="app-main">
         <Suspense fallback={<Loading />}>
           <Routes>
@@ -157,6 +162,7 @@ export default function App() {
                   for real is exactly the exit that file's instructions
                   describe. */}
               <Route path="/skill-trees" element={<SkillTrees />} />
+              <Route path="/notes" element={<Notes />} />
               <Route path="/growth-tree" element={<Navigate to="/skill-trees" replace />} />
               <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
               <Route path="/calendar/day" element={<CalendarDay />} />

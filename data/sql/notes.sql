@@ -1,7 +1,8 @@
 -- notes — free-form notes attached to a day, a task or a goal.
 --
--- Not built yet: no page, no API, no JSON store. This is the shape the
--- Notes page would need, so backend/pages/notes.py has something to fill in.
+-- Built: backend/api/notes.py serves it and frontend/src/pages/Notes.tsx
+-- draws it. The shape below is unchanged from when it was only a shape — the
+-- API was written against this file rather than the other way round.
 
 CREATE TABLE IF NOT EXISTS notes (
     id           TEXT PRIMARY KEY,

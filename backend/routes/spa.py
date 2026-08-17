@@ -59,6 +59,8 @@ SPA_ROUTES = (
     # redirecting.
     '/skill-trees',
     '/growth-tree',
+    # Free-form notes. The one page whose contents the app does not score.
+    '/notes',
     # The calendar is one page in three views. It was one URL and a script
     # that swapped panes; it is three routes now, and /calendar keeps working
     # by redirecting to the week — see src/App.tsx.

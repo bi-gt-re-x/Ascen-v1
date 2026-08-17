@@ -22,6 +22,15 @@ export interface Subject {
   label: string;
   /** The icon's file name under /static/icons/. */
   icon: string;
+  /**
+   * Which of the nine groups it belongs to — "Computing", "Creative".
+   *
+   * Sent on every subject rather than as a separate group→ids map, so a client
+   * grouping the list never has to join two responses. The names come from
+   * backend/config/subjects.py, where they were section comments until the
+   * skill trees needed a category column.
+   */
+  group: string;
   /** How many of this user's tasks carry it. Drives the ordering. */
   used: number;
 }

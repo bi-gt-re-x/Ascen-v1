@@ -1,0 +1,282 @@
+/* The bar across the top of every app page — see src/components/Topbar.tsx.
+ *
+ * Colours are the rail's, because the two are one piece of chrome around the
+ * page: #FFFFFF on #EAEAEA borders with #2C302E ink in light, the
+ * #0D1117 / #161B22 / #30363D set in dark.
+ *
+ * It is fixed and starts at `--rail-w`, so it sits beside the rail rather than
+ * over it and moves with the rail when that collapses. `--topnav-h` is its
+ * height and is declared in rail.css, where the note explains why the variable
+ * outlived the original bar.
+ */
+
+.topbar {
+    position: fixed;
+    top: 0;
+    left: var(--rail-w);
+    right: 0;
+    height: var(--topnav-h);
+    z-index: 880;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 24px;
+    background: #FFFFFF;
+    border-bottom: 1px solid #EAEAEA;
+    transition: left .22s ease;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Each control and the panel it opens. `position: relative` here is what the
+   panels hang off, so a panel is anchored to its own button rather than to the
+   bar — the account menu has to sit at the right edge and the search under the
+   magnifier, and one shared anchor could not do both. */
+.topbar-slot { position: relative; }
+
+.topbar-btn {
+    display: grid;
+    place-items: center;
+    position: relative;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: none;
+    border-radius: 11px;
+    background: none;
+    color: #6C757D;
+    cursor: pointer;
+}
+.topbar-btn:hover { background: #F4F6F8; color: #2C302E; }
+.topbar-btn.is-on { background: #F1EDE7; color: #2C302E; }
+.topbar-btn:focus-visible { outline: 2px solid #2C302E; outline-offset: 1px; }
+.topbar-btn svg { width: 19px; height: 19px; }
+
+.topbar-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    background: #C0392B;
+    color: #FFFFFF;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+/* --- The account button ------------------------------------------------- */
+.topbar-account {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-left: 6px;
+    padding: 4px 10px 4px 4px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: #2C302E;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.topbar-account:hover { background: #F4F6F8; }
+.topbar-account.is-on { background: #F1EDE7; }
+.topbar-account:focus-visible { outline: 2px solid #2C302E; outline-offset: 1px; }
+
+.topbar-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: none;
+    background: #F2F4F7;
+}
+.topbar-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-caret { width: 15px; height: 15px; color: #9297A3; flex: none; }
+
+/* --- The panels ---------------------------------------------------------- */
+.topbar-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 10;
+    box-sizing: border-box;
+    background: #FFFFFF;
+    border: 1px solid #EAEAEA;
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(16, 24, 40, .12);
+    padding: 12px;
+}
+
+.topbar-search { width: min(360px, 78vw); }
+.topbar-alerts { width: min(340px, 82vw); }
+.topbar-account-menu { width: 216px; padding: 10px; }
+
+.topbar-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border: 1px solid #EAEAEA;
+    border-radius: 10px;
+    background: #F8F9FB;
+    color: #2C302E;
+    font-family: inherit;
+    font-size: 14px;
+}
+.topbar-search-input:focus { outline: none; border-color: #A38A70; background: #FFFFFF; }
+
+.topbar-empty {
+    margin: 10px 2px 2px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #6C757D;
+}
+
+.topbar-results,
+.topbar-alert-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.topbar-results a,
+.topbar-alert-list a {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 9px;
+    border-radius: 9px;
+    color: #2C302E;
+    text-decoration: none;
+    font-size: 13.5px;
+}
+.topbar-results a:hover,
+.topbar-alert-list a:hover { background: #F4F6F8; }
+
+.topbar-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.topbar-dot.is-open { background: #A38A70; }
+.topbar-dot.is-done { background: #27AE60; }
+.topbar-result-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-result-meta { flex: none; font-size: 11.5px; color: #9297A3; }
+
+.topbar-panel-head {
+    padding: 2px 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #9297A3;
+}
+
+.topbar-alert-list a { align-items: flex-start; }
+.topbar-alert-list span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.topbar-alert-list strong { font-size: 13px; font-weight: 650; }
+.topbar-alert-list em { font-style: normal; font-size: 12px; color: #6C757D; }
+.topbar-alert-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+    margin-top: 5px;
+}
+/* Late is the only one painted as a problem. Due-today is a fact about the
+   plan and the streak note is a reminder, and colouring all three red would
+   make the one that is actually behind indistinguishable. */
+.topbar-alert-dot.is-late { background: #C0392B; }
+.topbar-alert-dot.is-today { background: #A38A70; }
+.topbar-alert-dot.is-streak { background: #E69500; }
+
+.topbar-account-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 9px 10px;
+    border-bottom: 1px solid #F0F2F5;
+    margin-bottom: 6px;
+}
+.topbar-account-head strong { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; }
+.topbar-account-head span { font-size: 11.5px; color: #6C757D; }
+
+.topbar-account-menu a,
+.topbar-signout {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 9px;
+    border: none;
+    border-radius: 9px;
+    background: none;
+    color: #2C302E;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+.topbar-account-menu a:hover,
+.topbar-signout:hover { background: #F4F6F8; }
+.topbar-signout { color: #C0392B; margin-top: 4px; border-top: 1px solid #F0F2F5; border-radius: 0 0 9px 9px; }
+
+/* --- Dark ---------------------------------------------------------------- */
+html[data-theme="dark"] .topbar {
+    background: #0D1117;
+    border-bottom-color: #30363D;
+}
+html[data-theme="dark"] .topbar-btn { color: #8B949E; }
+html[data-theme="dark"] .topbar-btn:hover { background: #161B22; color: #E6EDF3; }
+html[data-theme="dark"] .topbar-btn.is-on { background: #1C2430; color: #E6EDF3; }
+html[data-theme="dark"] .topbar-badge { background: #F85149; color: #0D1117; }
+html[data-theme="dark"] .topbar-account { color: #E6EDF3; }
+html[data-theme="dark"] .topbar-account:hover,
+html[data-theme="dark"] .topbar-account.is-on { background: #161B22; }
+html[data-theme="dark"] .topbar-avatar { background: #161B22; }
+html[data-theme="dark"] .topbar-caret { color: #6E7681; }
+html[data-theme="dark"] .topbar-panel {
+    background: #161B22;
+    border-color: #30363D;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .5);
+}
+html[data-theme="dark"] .topbar-search-input {
+    background: #0D1117;
+    border-color: #30363D;
+    color: #E6EDF3;
+}
+html[data-theme="dark"] .topbar-search-input:focus { border-color: #A38A70; background: #0D1117; }
+html[data-theme="dark"] .topbar-empty,
+html[data-theme="dark"] .topbar-result-meta,
+html[data-theme="dark"] .topbar-panel-head,
+html[data-theme="dark"] .topbar-alert-list em,
+html[data-theme="dark"] .topbar-account-head span { color: #8B949E; }
+html[data-theme="dark"] .topbar-results a,
+html[data-theme="dark"] .topbar-alert-list a,
+html[data-theme="dark"] .topbar-account-menu a { color: #E6EDF3; }
+html[data-theme="dark"] .topbar-results a:hover,
+html[data-theme="dark"] .topbar-alert-list a:hover,
+html[data-theme="dark"] .topbar-account-menu a:hover,
+html[data-theme="dark"] .topbar-signout:hover { background: #1C2430; }
+html[data-theme="dark"] .topbar-account-head,
+html[data-theme="dark"] .topbar-signout { border-color: #30363D; }
+html[data-theme="dark"] .topbar-signout { color: #F85149; }
+
+/* --- Narrow -------------------------------------------------------------- */
+@media (max-width: 640px) {
+    .topbar { padding: 0 12px; }
+    /* The name goes, the avatar stays. A truncated username in a 90px box is
+       not an identity, and the picture already is one. */
+    .topbar-name, .topbar-caret { display: none; }
+    .topbar-account { padding: 4px; }
+}

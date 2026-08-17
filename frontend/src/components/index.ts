@@ -15,6 +15,7 @@
 export { Ambient } from './Ambient';
 export type { AmbientProps } from './Ambient';
 export { Rail, STATS_CHANGED } from './Rail';
+export { Topbar } from './Topbar';
 export { ErrorState, Loading, NotBuilt } from './PageState';
 export { RefreshButton } from './RefreshButton';
 export type { RefreshButtonProps } from './RefreshButton';

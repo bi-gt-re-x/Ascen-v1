@@ -7,17 +7,20 @@
  * The rail is fixed, so it cannot be pushed around by whatever layout a page
  * uses. `body.has-rail` pays for that by reserving the width back as padding.
  *
- * **`--topnav-h` is still declared, and is 0.** This was a bar across the top
- * and that variable was its height; a dozen stylesheets across the app size
- * themselves with `calc(100vh - var(--topnav-h))`. The rail costs no height, so
- * subtracting nothing is not a shim — it is the right answer, and it is why the
- * navigation could turn ninety degrees without touching one page's arithmetic.
- * Do not delete it, and do not give it a value.
+ * **`--topnav-h` has a height again.** It was the original top bar's, and it
+ * was kept at 0 through the years the rail was the only navigation, because a
+ * dozen stylesheets across the app size themselves with
+ * `calc(100vh - var(--topnav-h))` and subtracting nothing was the right answer
+ * rather than a shim. src/components/Topbar.tsx put a bar back across the top,
+ * and giving the variable its value is the entire layout change that took:
+ * every pinned page gave the bar its height back without one of them being
+ * edited. That is what the variable was for, and why it survived having
+ * nothing to describe.
  */
 
 :root {
     --rail-w: 240px;
-    --topnav-h: 0px;
+    --topnav-h: 68px;
 }
 
 /* --- The rail ---------------------------------------------------------- */
@@ -94,11 +97,19 @@
 .rail-toggle svg { width: 17px; height: 17px; }
 html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
 
-/* --- Destinations ------------------------------------------------------ */
+/* --- Destinations ------------------------------------------------------
+   Set to breathe rather than to fit. The rail held eight destinations in a
+   3px-gapped column of 39px rows, which packed them into the top third and
+   left the space between the last one and the foot doing nothing — a column
+   that reads as a list of options rather than as a set of places. The rows are
+   taller, the gap is wider and the icons are bigger; the whole set still
+   clears the foot on a laptop, and `overflow-y: auto` below is what happens on
+   a short window rather than the shape being compressed to avoid it. */
 .rail-links {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 6px;
+    padding-top: 4px;
     /* Takes the space the foot does not, so the account block sits on the
        bottom edge however few destinations there are. */
     flex: 1 1 auto;
@@ -111,19 +122,19 @@ html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
 .rail-link {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 10px;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
     color: #6C757D;
-    font-size: 14.5px;
+    font-size: 15px;
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
 }
 
 .rail-link svg {
-    width: 19px;
-    height: 19px;
+    width: 21px;
+    height: 21px;
     flex: none;
 }
 
@@ -407,6 +418,10 @@ html.nav-collapsed .rail-brand { flex-direction: column; gap: 10px; }
 body.has-rail {
     box-sizing: border-box;
     padding-left: var(--rail-w);
+    /* The top bar is fixed like the rail, so the same trick pays for it: the
+       page starts below the bar instead of underneath it. Zero for the years
+       the variable was zero, which is why no page had to learn about this. */
+    padding-top: var(--topnav-h);
     transition: padding-left .22s ease;
 }
 
