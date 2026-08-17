@@ -14,8 +14,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Subject } from '@/services/subjects';
-import type { SortKey, StatusFilter, TaskQuery } from './board';
-import { PRIORITIES, SORTS, isFiltered } from './board';
+import type { GroupKey, SortKey, StatusFilter, TaskQuery } from './board';
+import { GROUPS, PRIORITIES, SORTS, activeFilters, isFiltered } from './board';
 
 /** Subject chips shown before the rest go behind "+ More". */
 const CHIPS = 7;
@@ -55,6 +55,8 @@ function Menu({
   onOpen,
   children,
   on,
+  count,
+  value,
 }: {
   name: string;
   label: string;
@@ -64,6 +66,10 @@ function Menu({
   children: React.ReactNode;
   /** Whether this menu is holding a non-default setting. */
   on?: boolean;
+  /** How many settings it is holding, when that is worth a number. */
+  count?: number;
+  /** The current choice, printed beside the label. */
+  value?: string;
 }) {
   const close = useCallback(() => onOpen(null), [onOpen]);
   const ref = useDismiss(close);
@@ -77,10 +83,65 @@ function Menu({
         onClick={() => onOpen(open ? null : name)}
       >
         {icon}
-        {label}
+        <span className="tk-tool-label">{label}</span>
+        {/* The setting itself, on the button. A menu whose state can only be
+            read by opening it is a menu the reader opens to find out what they
+            already chose. */}
+        {value && <span className="tk-tool-value">{value}</span>}
+        {count !== undefined && count > 0 && <span className="tk-tool-count">{count}</span>}
+        <svg className="tk-tool-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
       </button>
-      {open && <div className="tk-menu-panel">{children}</div>}
+      {open && (
+        <div className="tk-menu-panel" role="menu">
+          {children}
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * One option in a menu: a tick slot, a label, and the reason to pick it.
+ *
+ * The tick is a slot rather than a conditional glyph — it holds its width when
+ * empty — so the labels sit on one left edge instead of stepping sideways as
+ * the choice moves between them. The old items marked the current one with
+ * colour and weight alone, which reads as emphasis rather than as selection
+ * and disappears entirely for anyone who cannot see the violet.
+ */
+function Choice({
+  on,
+  label,
+  hint,
+  onPick,
+}: {
+  on: boolean;
+  label: string;
+  hint?: string;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitemradio"
+      aria-checked={on}
+      className={`tk-menu-item is-choice${on ? ' is-on' : ''}`}
+      onClick={onPick}
+    >
+      <span className="tk-tick" aria-hidden="true">
+        {on && (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m5 13 4 4L19 7" />
+          </svg>
+        )}
+      </span>
+      <span className="tk-choice-body">
+        <span className="tk-choice-label">{label}</span>
+        {hint && <span className="tk-choice-hint">{hint}</span>}
+      </span>
+    </button>
   );
 }
 
@@ -125,9 +186,9 @@ export interface ToolbarProps {
   subjects: Subject[];
   showing: number;
   total: number;
-  /** Whether the reader has asked for headings by due date. */
-  grouped: boolean;
-  onGrouped: (on: boolean) => void;
+  /** What the list is cut into headings by. */
+  group: GroupKey;
+  onGroup: (key: GroupKey) => void;
 }
 
 export function Toolbar({
@@ -136,8 +197,8 @@ export function Toolbar({
   subjects,
   showing,
   total,
-  grouped,
-  onGrouped,
+  group,
+  onGroup,
 }: ToolbarProps) {
   const [open, setOpen] = useState<string | null>(null);
   const [more, setMore] = useState(false);
@@ -175,6 +236,7 @@ export function Toolbar({
 
   const shown = more ? subjects : subjects.slice(0, CHIPS);
   const sort = SORTS.find((entry) => entry.key === query.sort);
+  const groupEntry = GROUPS.find((entry) => entry.key === group);
 
   return (
     <div className="tk-toolbar">
@@ -202,33 +264,69 @@ export function Toolbar({
             open={open === 'filter'}
             onOpen={setOpen}
             on={isFiltered(query)}
+            count={activeFilters(query)}
           >
             <p className="tk-menu-head">Reach</p>
-            <button
-              type="button"
-              className={`tk-menu-item${query.horizon === 'week' ? ' is-on' : ''}`}
-              onClick={() => set({ horizon: 'week' })}
-            >
-              The next 7 days
-            </button>
-            <button
-              type="button"
-              className={`tk-menu-item${query.horizon === 'all' ? ' is-on' : ''}`}
-              onClick={() => set({ horizon: 'all' })}
-            >
-              Everything dated
-            </button>
+            <Choice
+              on={query.horizon === 'week'}
+              label="The next 7 days"
+              hint="Plus anything undated."
+              onPick={() => set({ horizon: 'week' })}
+            />
+            <Choice
+              on={query.horizon === 'all'}
+              label="Everything dated"
+              hint="However far out it goes."
+              onPick={() => set({ horizon: 'all' })}
+            />
+
             <p className="tk-menu-head">Show</p>
             {STATUSES.map((entry) => (
-              <button
+              <Choice
                 key={entry.key}
-                type="button"
-                className={`tk-menu-item${query.status === entry.key ? ' is-on' : ''}`}
-                onClick={() => set({ status: entry.key })}
-              >
-                {entry.label}
-              </button>
+                on={query.status === entry.key}
+                label={entry.label}
+                onPick={() => set({ status: entry.key })}
+              />
             ))}
+
+            {/* Priority and subject are chips below, and this is where the
+                reader is told so. A Filter menu that silently excludes two of
+                the five filters reads as a complete list of them. */}
+            {(query.priorities.length > 0 || query.subjects.length > 0) && (
+              <>
+                <p className="tk-menu-head">From the chips</p>
+                {query.priorities.length > 0 && (
+                  <button
+                    type="button"
+                    className="tk-menu-item is-chipnote"
+                    onClick={() => set({ priorities: [] })}
+                  >
+                    <span>
+                      {query.priorities.length === 1
+                        ? `${query.priorities[0]![0]!.toUpperCase()}${query.priorities[0]!.slice(1)} priority`
+                        : `${query.priorities.length} priorities`}
+                    </span>
+                    <span className="tk-menu-drop">Clear</span>
+                  </button>
+                )}
+                {query.subjects.length > 0 && (
+                  <button
+                    type="button"
+                    className="tk-menu-item is-chipnote"
+                    onClick={() => set({ subjects: [] })}
+                  >
+                    <span>
+                      {query.subjects.length === 1
+                        ? '1 subject'
+                        : `${query.subjects.length} subjects`}
+                    </span>
+                    <span className="tk-menu-drop">Clear</span>
+                  </button>
+                )}
+              </>
+            )}
+
             {isFiltered(query) && (
               <button
                 type="button"
@@ -248,23 +346,30 @@ export function Toolbar({
             icon={ICON.group}
             open={open === 'group'}
             onOpen={setOpen}
-            on={!grouped}
+            on={group !== 'due'}
+            value={groupEntry?.label}
           >
-            <p className="tk-menu-head">Headings</p>
-            <button
-              type="button"
-              className={`tk-menu-item${grouped ? ' is-on' : ''}`}
-              onClick={() => onGrouped(true)}
-            >
-              By due date
-            </button>
-            <button
-              type="button"
-              className={`tk-menu-item${grouped ? '' : ' is-on'}`}
-              onClick={() => onGrouped(false)}
-            >
-              One flat list
-            </button>
+            <p className="tk-menu-head">Headings by</p>
+            {GROUPS.map((entry) => (
+              <Choice
+                key={entry.key}
+                on={group === entry.key}
+                label={entry.label}
+                hint={entry.hint}
+                onPick={() => onGroup(entry.key)}
+              />
+            ))}
+            {/* The one pairing that cannot do what it says, said out loud
+                rather than left to be noticed. See `groupTasks`. */}
+            {group === 'due' && query.sort !== 'due' && (
+              <p className="tk-menu-note">
+                Date headings need a date order. Sorting by {sort?.noun} flattens the list —
+                <button type="button" onClick={() => set({ sort: 'due' })}>
+                  sort by due date
+                </button>
+                to get them back.
+              </p>
+            )}
           </Menu>
 
           <Menu
@@ -274,26 +379,41 @@ export function Toolbar({
             open={open === 'sort'}
             onOpen={setOpen}
             on={query.sort !== 'due' || query.descending}
+            value={sort?.label}
           >
             <p className="tk-menu-head">Order by</p>
             {SORTS.map((entry) => (
-              <button
+              <Choice
                 key={entry.key}
-                type="button"
-                className={`tk-menu-item${query.sort === entry.key ? ' is-on' : ''}`}
-                onClick={() => set({ sort: entry.key as SortKey })}
-              >
-                {entry.label}
-              </button>
+                on={query.sort === entry.key}
+                label={entry.label}
+                /* The direction in the words that fit this field — "highest
+                   first", never "descending", which is meaningless here and
+                   actively wrong for priority. */
+                hint={query.descending ? entry.desc : entry.asc}
+                onPick={() => set({ sort: entry.key as SortKey })}
+              />
             ))}
+
+            {/* Direction as a pair of choices rather than the footer toggle it
+                was. That toggle sat in the `tk-menu-clear` slot, styled like the
+                destructive action at the foot of the Filter menu, and printed
+                the direction it would switch *to* — so the one place the
+                current direction appeared said the opposite of it. */}
             {sort && (
-              <button
-                type="button"
-                className="tk-menu-clear"
-                onClick={() => set({ descending: !query.descending })}
-              >
-                {query.descending ? sort.desc : sort.asc}
-              </button>
+              <>
+                <p className="tk-menu-head">Direction</p>
+                <Choice
+                  on={!query.descending}
+                  label={sort.asc[0]!.toUpperCase() + sort.asc.slice(1)}
+                  onPick={() => set({ descending: false })}
+                />
+                <Choice
+                  on={query.descending}
+                  label={sort.desc[0]!.toUpperCase() + sort.desc.slice(1)}
+                  onPick={() => set({ descending: true })}
+                />
+              </>
             )}
           </Menu>
         </div>

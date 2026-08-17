@@ -115,6 +115,30 @@ export type Bucket =
   | 'done'
   | 'all';
 
+/**
+ * What the list is cut into headings by.
+ *
+ * This was a boolean — headings by due date, or one flat list — and it had a
+ * hole in it that the note on `groupTasks` used to describe as a feature: the
+ * buckets are themselves an ordering by date, so grouping had to stand aside
+ * whenever the reader sorted by anything else. The result was a control that
+ * silently did nothing on four of the five sorts.
+ *
+ * A key rather than a flag closes it. Grouping by priority and sorting by XP
+ * are two different questions and the answers compose: three headings, each
+ * ordered by XP. The only pairing that still collapses is due-date grouping
+ * under a non-date sort, and that one collapses honestly — see `groupTasks`.
+ */
+export type GroupKey = 'due' | 'priority' | 'subject' | 'status' | 'none';
+
+export const GROUPS: Array<{ key: GroupKey; label: string; hint: string }> = [
+  { key: 'due', label: 'Due date', hint: 'Late, today, this week, later.' },
+  { key: 'priority', label: 'Priority', hint: 'High, medium, low.' },
+  { key: 'subject', label: 'Subject', hint: 'What the work is about.' },
+  { key: 'status', label: 'Status', hint: 'Still open, or finished.' },
+  { key: 'none', label: 'No headings', hint: 'One flat list.' },
+];
+
 export const BUCKETS: Array<{ key: Bucket; label: string; hint: string }> = [
   { key: 'overdue', label: 'Overdue', hint: 'Past its date. Move it or finish it.' },
   { key: 'today', label: 'Due Today', hint: 'Due before the day is out.' },
@@ -252,7 +276,8 @@ export function sortTasks(tasks: Task[], sort: SortKey, descending = false): Tas
 }
 
 export interface TaskGroup {
-  key: Bucket;
+  /** Stable per heading — the bucket, the priority, the subject id. */
+  key: string;
   label: string;
   hint: string;
   tasks: Task[];
@@ -261,13 +286,18 @@ export interface TaskGroup {
 /**
  * The filtered, sorted list, cut into the sections the page draws.
  *
- * Grouped by due date **only when the reader is sorting by due date**, and one
- * flat list otherwise. The buckets are themselves an ordering by date, so
- * keeping them under a sort by XP meant the sort could only order rows inside a
- * group the reader had not asked for: picking "Sort: XP" left a 10 XP task
- * above a 50 XP one because one was due sooner. A control that silently does
- * less than it says is worse than one that is not there, so the grouping steps
- * aside for the sort rather than quietly outranking it.
+ * The sort orders the rows; the grouping decides where the headings fall. They
+ * are separate questions and they compose — "by priority, ordered by XP" is
+ * three headings with the biggest task at the top of each — which is what the
+ * boolean this replaced could not express. See `GroupKey`.
+ *
+ * **Due-date grouping still steps aside for a non-date sort**, and that one is
+ * deliberate rather than a leftover. The buckets *are* an ordering by date, so
+ * "group by due date, sort by XP" can only order rows inside sections the
+ * reader did not ask to be in date order: a 10 XP task sits above a 50 XP one
+ * because one is due sooner. Rather than do less than it says, the grouping
+ * drops to a flat list and the heading says what the ordering actually is.
+ * Every other grouping has no such quarrel with any sort.
  *
  * Empty groups are dropped — a heading over nothing is a heading about nothing.
  */
@@ -275,27 +305,86 @@ export function groupTasks(
   tasks: Task[],
   query: TaskQuery,
   today = new Date(),
-  grouped = true,
+  group: GroupKey = 'due',
+  /** Subject id → label, for `group: 'subject'`. Missing ids read as unfiled. */
+  subjectLabel: (id: string | undefined) => string | null = () => null,
 ): TaskGroup[] {
   const sorted = sortTasks(filterTasks(tasks, query), query.sort, query.descending);
   if (sorted.length === 0) return [];
 
-  if (!grouped || query.sort !== 'due') {
-    const entry = SORTS.find((sort) => sort.key === query.sort);
-    return [
-      {
-        key: 'all',
-        label: 'All tasks',
-        hint: entry ? `Ordered by ${entry.noun}, ${query.descending ? entry.desc : entry.asc}.` : '',
-        tasks: sorted,
-      },
-    ];
+  const entry = SORTS.find((sort) => sort.key === query.sort);
+  const ordering = entry
+    ? `Ordered by ${entry.noun}, ${query.descending ? entry.desc : entry.asc}.`
+    : '';
+
+  const flat = (label: string): TaskGroup[] => [
+    { key: 'all', label, hint: ordering, tasks: sorted },
+  ];
+
+  if (group === 'none') return flat('All tasks');
+  if (group === 'due' && query.sort !== 'due') return flat('All tasks');
+
+  if (group === 'due') {
+    return BUCKETS.map((bucket) => ({
+      ...bucket,
+      tasks: sorted.filter((task) => bucketOf(task, today) === bucket.key),
+    })).filter((entry) => entry.tasks.length > 0);
   }
 
-  return BUCKETS.map((bucket) => ({
-    ...bucket,
-    tasks: sorted.filter((task) => bucketOf(task, today) === bucket.key),
-  })).filter((group) => group.tasks.length > 0);
+  if (group === 'priority') {
+    return PRIORITIES.map((priority) => ({
+      key: priority,
+      label: `${priority[0]!.toUpperCase()}${priority.slice(1)} priority`,
+      hint: ordering,
+      tasks: sorted.filter((task) => task.priority === priority),
+    })).filter((entry) => entry.tasks.length > 0);
+  }
+
+  if (group === 'status') {
+    return [
+      { key: 'open', label: 'Open', hint: ordering },
+      { key: 'done', label: 'Completed', hint: 'Already behind you.' },
+    ]
+      .map((entry) => ({
+        ...entry,
+        tasks: sorted.filter((task) =>
+          entry.key === 'done' ? task.status === 'done' : task.status !== 'done',
+        ),
+      }))
+      .filter((entry) => entry.tasks.length > 0);
+  }
+
+  // By subject. The headings follow the order the tasks are already in rather
+  // than the alphabet, so the sort decides which subject leads — a list sorted
+  // by due date opens on whatever is due soonest, which is the point of having
+  // sorted it. Unfiled work is last for the same reason "No date" is: it is not
+  // a subject that came out badly, it is the absence of one.
+  const seen = new Map<string, TaskGroup>();
+  const unfiled: Task[] = [];
+  sorted.forEach((task) => {
+    const id = task.subject;
+    if (!id) {
+      unfiled.push(task);
+      return;
+    }
+    const found = seen.get(id);
+    if (found) {
+      found.tasks.push(task);
+      return;
+    }
+    seen.set(id, {
+      key: id,
+      label: subjectLabel(id) ?? 'Subject',
+      hint: ordering,
+      tasks: [task],
+    });
+  });
+
+  const groups = [...seen.values()];
+  if (unfiled.length > 0) {
+    groups.push({ key: 'unfiled', label: 'No subject', hint: 'Real work, just not filed.', tasks: unfiled });
+  }
+  return groups;
 }
 
 // --------------------------------------------------------------------------
@@ -366,6 +455,24 @@ export function taskCounts(tasks: Task[], today = new Date()): TaskCounts {
 }
 
 /** Whether anything is narrowing the list — what the Clear button is for. */
+/**
+ * How many cuts the reader has made, as a number for the Filter button.
+ *
+ * The search is not counted: it has its own box, in view, with what was typed
+ * still in it, so adding it to a badge on a menu that does not contain it
+ * would point at the wrong control. Each facet counts once however many values
+ * it holds — "2" on the button means two kinds of filter, which is what a
+ * reader wanting to know what is hiding rows needs; the menu shows the rest.
+ */
+export function activeFilters(query: TaskQuery): number {
+  return (
+    Number(query.status !== EMPTY_QUERY.status) +
+    Number(query.horizon !== EMPTY_QUERY.horizon) +
+    Number(query.subjects.length > 0) +
+    Number(query.priorities.length > 0)
+  );
+}
+
 export function isFiltered(query: TaskQuery): boolean {
   return (
     query.status !== EMPTY_QUERY.status ||

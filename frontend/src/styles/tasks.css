@@ -28,12 +28,21 @@
     --tk-radius: 14px;
     --tk-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
 
-    --shell-max: 1420px;
+    /* The page grows with the window instead of stopping at a number.
+       1420px was the cap and on a wide monitor it left the list at about half
+       the screen with grey either side; the list is the half of this page that
+       can actually use room. The floor keeps the two columns from crushing
+       each other on a laptop, and `.page-shell` takes the smaller of the two. */
+    --shell-max: clamp(1080px, 94vw, 1760px);
     --shell-fluid: 96%;
 
     background: var(--tk-bg);
     color: var(--tk-text);
-    min-height: 100vh;
+    /* Not `100vh`: `body.has-rail` already reserves the fixed top bar as
+       padding, so a child asking for the whole viewport on top of that made
+       every visit to this page start with 68px of scroll under an otherwise
+       complete screen. */
+    min-height: calc(100vh - var(--topnav-h, 0px));
     padding: 26px 0 60px;
 }
 
@@ -119,17 +128,25 @@ html[data-theme='dark'] .tk-page {
    grows with the window is the half of the page that actually uses the room. */
 .tk-body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 20px;
+    /* The rail keeps its shape and gives way first: its panels are fixed
+       content that gains nothing from being wider, so it takes a share of the
+       window between a readable floor and the width it was drawn at. */
+    grid-template-columns: minmax(0, 1fr) clamp(288px, 23vw, 360px);
+    gap: clamp(16px, 1.6vw, 26px);
     align-items: start;
 }
 .tk-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
 /* ---------- Stat cards ---------------------------------------------------- */
+/* Five across when there is room for five, and however many fit when there is
+   not. It was a hard `repeat(5, ...)` with a jump to two at 900px, so between
+   those the cards were squeezed to 150px with the figures wrapping under their
+   own labels; auto-fit gives the row a floor and lets it reflow at whatever
+   width it actually runs out at. */
 .tk-stats {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 15vw, 176px), 1fr));
+    gap: clamp(10px, 1vw, 14px);
 }
 .tk-stat {
     position: relative;
@@ -168,11 +185,16 @@ html[data-theme='dark'] .tk-page {
 .tk-spark.is-green path { stroke: var(--tk-green); }
 
 /* ---------- Toolbar ------------------------------------------------------- */
-.tk-toolbar { display: flex; flex-direction: column; gap: 12px; }
-.tk-toolbar-top { display: flex; align-items: center; gap: 12px; }
+.tk-toolbar { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.tk-toolbar-top { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
 .tk-search {
-    flex: 1 1 auto;
+    /* Shrinks to a floor rather than to nothing: the menus beside it may take
+       what they need, but a search box narrower than the words in it is not a
+       search box. Below that floor the row wraps instead — see the 900px
+       block at the foot of this file. */
+    flex: 1 1 200px;
+    min-width: 0;
     display: flex; align-items: center; gap: 10px;
     padding: 0 13px;
     height: 46px;
@@ -200,8 +222,14 @@ html[data-theme='dark'] .tk-page {
     font: 600 11px/1 inherit;
 }
 
+/* `flex: 0 1 auto`, not `none`. As `none` this row could not give a pixel back,
+   so once the buttons started printing what they were set to — "Group: Due
+   date" — the whole bar overflowed the column and ran under the rail beside
+   it. It shrinks now, and what gives way inside it is the value text, then the
+   label, in that order. */
 .tk-tools {
-    flex: none;
+    flex: 0 1 auto;
+    min-width: 0;
     display: flex; align-items: center;
     height: 46px;
     border: 1px solid var(--tk-line);
@@ -209,24 +237,59 @@ html[data-theme='dark'] .tk-page {
     background: var(--tk-card);
     overflow: visible;
 }
-.tk-menu { position: relative; }
+.tk-menu { position: relative; min-width: 0; }
 .tk-menu + .tk-menu .tk-tool { border-left: 1px solid var(--tk-line); }
 .tk-tool {
     display: inline-flex; align-items: center; gap: 8px;
     height: 44px;
-    padding: 0 15px;
+    min-width: 0;
+    padding: 0 13px;
     border: 0; background: none;
     color: var(--tk-muted);
     font-size: 13px; font-weight: 550;
+    white-space: nowrap;
     cursor: pointer;
 }
-.tk-tool svg { width: 15px; height: 15px; }
+.tk-tool > svg { width: 15px; height: 15px; flex: none; }
 .tk-tool:hover { color: var(--tk-text); }
 .tk-tool.is-open, .tk-tool.is-on { color: var(--tk-violet); }
+.tk-tool.is-open { background: color-mix(in srgb, var(--tk-violet) 9%, transparent); }
+.tk-tool-label { flex: none; }
+
+/* The current setting, on the button. Truncates rather than widening the bar:
+   "when it was added" is a long answer to a question the menu repeats. */
+.tk-tool-value {
+    min-width: 0;
+    max-width: 92px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--tk-text);
+    font-weight: 650;
+}
+.tk-tool.is-open .tk-tool-value, .tk-tool.is-on .tk-tool-value { color: inherit; }
+
+/* How many cuts are hiding rows. Not a dot — the number is the useful part,
+   and a reader who cannot find a task wants to know there are two of them. */
+.tk-tool-count {
+    display: grid; place-items: center;
+    min-width: 17px; height: 17px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--tk-violet); color: #fff;
+    font-size: 10.5px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.tk-tool-caret {
+    width: 13px; height: 13px; flex: none;
+    color: var(--tk-faint);
+    transition: transform .16s ease;
+}
+.tk-tool.is-open .tk-tool-caret { transform: rotate(180deg); color: inherit; }
 
 .tk-menu-panel {
     position: absolute; z-index: 30; top: calc(100% + 7px); right: 0;
-    min-width: 186px;
+    min-width: 232px;
+    max-width: min(300px, calc(100vw - 32px));
     padding: 6px;
     border: 1px solid var(--tk-line);
     border-radius: 12px;
@@ -250,6 +313,49 @@ html[data-theme='dark'] .tk-page {
 }
 .tk-menu-item:hover { background: var(--tk-card-2); }
 .tk-menu-item.is-on { color: var(--tk-violet); font-weight: 620; }
+
+/* ---------- Menu choices -------------------------------------------------
+   A tick slot that holds its width whether or not it is filled, so the labels
+   keep one left edge as the choice moves between them — and so selection is
+   carried by a mark rather than by colour alone. */
+.tk-menu-item.is-choice { align-items: flex-start; gap: 9px; padding: 7px 10px; }
+.tk-tick {
+    flex: none;
+    display: grid; place-items: center;
+    width: 14px; height: 18px;
+    color: var(--tk-violet);
+}
+.tk-tick svg { width: 12px; height: 12px; }
+.tk-choice-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tk-choice-label { font-size: 13px; line-height: 1.35; }
+.tk-choice-hint {
+    font-size: 11px; line-height: 1.35;
+    color: var(--tk-faint);
+    overflow: hidden; text-overflow: ellipsis;
+}
+.tk-menu-item.is-choice.is-on .tk-choice-hint { color: color-mix(in srgb, var(--tk-violet) 70%, var(--tk-muted)); }
+
+/* A filter that lives in the chip row below, named here with the way to drop
+   it — so the Filter menu accounts for every cut, including the two it does
+   not itself hold. */
+.tk-menu-item.is-chipnote { justify-content: space-between; color: var(--tk-muted); font-size: 12.5px; }
+.tk-menu-drop { flex: none; font-size: 11.5px; font-weight: 650; color: var(--tk-violet); }
+
+/* The one pairing of group and sort that cannot do what it says. */
+.tk-menu-note {
+    margin: 6px 4px 2px;
+    padding: 8px 9px;
+    border-radius: 8px;
+    background: var(--tk-card-2);
+    font-size: 11.5px; line-height: 1.5;
+    color: var(--tk-muted);
+}
+.tk-menu-note button {
+    border: 0; background: none; padding: 0 0 0 3px;
+    color: var(--tk-violet); font: inherit; font-weight: 650;
+    cursor: pointer;
+}
+.tk-menu-note button:hover { text-decoration: underline; }
 .tk-menu-item.is-bad { color: var(--tk-red); }
 .tk-menu-item.is-pick input { accent-color: var(--tk-violet); }
 .tk-menu-clear {
@@ -624,14 +730,32 @@ html[data-theme='dark'] .tk-page {
    reader loses least by scrolling to. */
 @media (max-width: 1240px) {
     .tk-body { grid-template-columns: minmax(0, 1fr); }
-    .tk-rail { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tk-rail { position: static; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+}
+/* The controls give up their words before they give up their row. The three
+   menus at full width are "Filter · Group: Due date · Sort: Due date", which is
+   most of a narrow bar; the icons and the count survive, and what each is set
+   to is one press away. */
+@media (max-width: 1080px) {
+    .tk-tool-value { display: none; }
 }
 @media (max-width: 900px) {
-    .tk-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .tk-rail { grid-template-columns: minmax(0, 1fr); }
     .tk-toolbar-top { flex-wrap: wrap; }
+    /* The search takes the first line whole and the menus the second, rather
+       than the search shrinking to a slot too narrow to read what is in it. */
+    .tk-search { flex: 1 0 100%; }
+    .tk-tools { width: 100%; }
+    .tk-menu { flex: 1 1 0; }
+    .tk-tool { width: 100%; justify-content: center; }
     .tk-row { grid-template-columns: auto minmax(0, 1fr) auto; }
     .tk-row .tk-star { display: none; }
+}
+/* Menus anchored to the right edge run off a phone screen when the button they
+   hang from is near the left of it. */
+@media (max-width: 620px) {
+    .tk-menu-panel { right: auto; left: 0; }
+    .tk-menu:last-child .tk-menu-panel { right: 0; left: auto; }
+    .tk-tool-label { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
     .tk-dial-fill, .tk-new, .tk-chip, .tk-row { transition: none; }

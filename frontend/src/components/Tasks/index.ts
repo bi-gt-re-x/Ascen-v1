@@ -19,12 +19,14 @@ export { BulkBar, Toolbar } from './Toolbar';
 export type { BulkBarProps, ToolbarProps } from './Toolbar';
 export {
   BUCKETS,
+  GROUPS,
   HORIZON_DAYS,
   EMPTY_QUERY,
   PRIORITIES,
   SORTS,
   TREND_DAYS,
   beyondHorizon,
+  activeFilters,
   bucketOf,
   plannedSeconds,
   dueLabel,
@@ -43,6 +45,7 @@ export {
 } from './board';
 export type {
   Bucket,
+  GroupKey,
   SortKey,
   StatSeries,
   StatusFilter,

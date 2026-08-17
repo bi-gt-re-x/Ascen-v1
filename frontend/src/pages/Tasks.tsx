@@ -66,7 +66,7 @@ import {
   streaks,
   taskCounts,
   upcoming,
-  type Bucket,
+  type GroupKey,
   type TaskQuery,
 } from '@/components/Tasks';
 import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
@@ -129,8 +129,8 @@ export default function Tasks() {
 
   const [query, setQuery] = useState<TaskQuery>(EMPTY_QUERY);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [grouped, setGrouped] = useState(true);
-  const [shut, setShut] = useState<Set<Bucket>>(new Set());
+  const [group, setGroup] = useState<GroupKey>('due');
+  const [shut, setShut] = useState<Set<string>>(new Set());
   const [composing, setComposing] = useState(false);
   const [starred, setStarred] = useStars(username);
   const [pageMenu, setPageMenu] = useState(false);
@@ -159,11 +159,17 @@ export default function Tasks() {
   const nextUp = useMemo(() => upcoming(list, 3), [list]);
   const beyond = useMemo(() => beyondHorizon(list), [list]);
   const runs = useMemo(() => streaks(list, 3), [list]);
-  // Grouping is the reader's to switch off, and the sort takes it away on its
-  // own when the ordering is no longer by date — see `groupTasks`.
+  const subjectName = useCallback(
+    (id: string | undefined) => subjects.find((entry) => entry.id === id)?.label ?? null,
+    [subjects],
+  );
+
+  // Grouping is the reader's to choose, and it composes with the sort — the
+  // one pairing that cannot is date headings under a non-date order, which
+  // flattens and says so. See `groupTasks`.
   const groups = useMemo(
-    () => groupTasks(list, query, new Date(), grouped),
-    [list, query, grouped],
+    () => groupTasks(list, query, new Date(), group, subjectName),
+    [group, list, query, subjectName],
   );
   const showing = useMemo(
     () => groups.reduce((sum, group) => sum + group.tasks.length, 0),
@@ -192,10 +198,6 @@ export default function Tasks() {
         (a, b) => (here.get(b.id) ?? 0) - (here.get(a.id) ?? 0) || b.used - a.used,
       );
   }, [subjects, list]);
-  const subjectName = useCallback(
-    (id: string | undefined) => subjects.find((entry) => entry.id === id)?.label ?? null,
-    [subjects],
-  );
 
   // ---- Writes -------------------------------------------------------------
   /**
@@ -445,7 +447,7 @@ export default function Tasks() {
     [list, picked, reload],
   );
 
-  const toggleGroup = useCallback((key: Bucket) => {
+  const toggleGroup = useCallback((key: string) => {
     setShut((current) => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
@@ -537,7 +539,7 @@ export default function Tasks() {
                   <button
                     type="button"
                     className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); setQuery(EMPTY_QUERY); setGrouped(true); }}
+                    onClick={() => { setPageMenu(false); setQuery(EMPTY_QUERY); setGroup('due'); }}
                   >
                     Reset the view
                   </button>
@@ -575,8 +577,8 @@ export default function Tasks() {
               subjects={used}
               showing={showing}
               total={list.length}
-              grouped={grouped}
-              onGrouped={setGrouped}
+              group={group}
+              onGroup={setGroup}
             />
 
             <BulkBar
@@ -666,7 +668,7 @@ export default function Tasks() {
             onOpenFull={() => setComposing(true)}
             onShowUpcoming={() => {
               setQuery({ ...EMPTY_QUERY, sort: 'due' });
-              setGrouped(true);
+              setGroup('due');
             }}
             onShowStreaks={() => setQuery({ ...EMPTY_QUERY, status: 'done', sort: 'created', descending: true })}
           />
