@@ -85,9 +85,16 @@
    The card's top offset comes from the body's padding-top instead. */
 
 .calendar-container {
-    /* The fixed top nav takes its height off the top of the viewport, so the
-       card fills what is actually left rather than overflowing by 64px. */
-    height: calc(100vh - var(--topnav-h, 64px));
+    /* Whatever the body has left, which is the whole of the arithmetic now.
+     *
+     * This was `calc(100vh - var(--topnav-h))`, taking the bar off the viewport
+     * itself — right while the body above was reserving nothing, and a double
+     * subtraction the moment it started reserving the bar properly. The body
+     * owns the offsets (the bar at the top, the rail on the left, 14px at the
+     * bottom); this fills what that leaves and does not need to know what any
+     * of them are. */
+    height: 100%;
+    min-height: 0;
 }
 
 /* Calendar Card */
@@ -1968,12 +1975,25 @@ body:has(.calendar-container) {
      * say what it means about the left, so it says it.
      *
      * It was 46px, to clear a fixed theme button that ended around 60px down
-     * the window. That button went with the top bar — the theme switch is on
-     * the rail now — so the space above the calendar was clearing nothing. Zero
-     * lifts the whole view about 7% of the window's height, and hands the same
-     * 50px back to the grid: the card is `height: 100%` of this box, so it now
-     * ends where the window does instead of 50px below it. */
-    padding-top: 0;
+     * the window. That button went with the top bar — the theme switch was on
+     * the rail then — so the space above the calendar was clearing nothing, and
+     * it went to zero.
+     *
+     * Zero is now wrong, and it is the same mistake as the left. There is a bar
+     * across the top again (components/Topbar), it is fixed, and `body.has-rail`
+     * reserves its height as padding-top — which this beat, exactly as the old
+     * shorthand beat the padding-left below, and for the same reason: same
+     * specificity, loaded later. So the calendar alone was laid out from the top
+     * edge of the window with the first 68px of it underneath the bar, which is
+     * where the Week view's header — the date, the arrows, Today, the view
+     * switcher — was going. It was never a scroll and never the full-screen
+     * transition; it was this line, on every visit, and full screen only made it
+     * easier to notice.
+     *
+     * The variable, not 68px: it is declared in styles/rail.css beside the bar
+     * that owns it, and this is the same value `body.has-rail` would have set if
+     * this rule were not here. */
+    padding-top: var(--topnav-h);
     padding-right: 14px;
     padding-bottom: 14px;
     padding-left: calc(var(--rail-w) + 14px);
