@@ -158,7 +158,14 @@
 
 /* padding-top keeps the first hour label (whose text sits 7px above its row)
    from being clipped at the very top, so 6 AM is fully reachable when scrolled up. */
-.wk-scroll { display: grid; grid-template-columns: var(--wk-gutter) minmax(0, 1fr); max-height: 62vh; overflow-y: auto; margin-top: 0; padding-top: 28px; }
+/* `overflow-anchor: none` because the grid is placed on purpose — useNowScroll
+   puts the now line in the middle on arrival, and after that the scroll belongs
+   to the reader. Scroll anchoring is the browser quietly re-scrolling a box to
+   keep whatever it picked as an anchor still, which it does when the box
+   changes size; entering full screen changes the size of every box on this
+   page at once, and the grid drifting off the hour the reader left it on is
+   the browser being helpful about a position that was already correct. */
+.wk-scroll { display: grid; grid-template-columns: var(--wk-gutter) minmax(0, 1fr); max-height: 62vh; overflow-y: auto; overflow-anchor: none; margin-top: 0; padding-top: 28px; }
 
 /* Above 1120px the calendar card is a fixed 100vh panel with hidden overflow
    (below that it's height:auto and the whole page scrolls). In the fixed-card
@@ -166,7 +173,7 @@
    so the stats sidebar can scroll on the left and nothing is clipped. */
 @media (min-width: 1121px) {
     .wk-main { align-items: stretch; flex: 1 1 auto; min-height: 0; }
-    .wk-sidebar { min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+    .wk-sidebar { min-height: 0; overflow-y: auto; overflow-x: hidden; overflow-anchor: none; padding-right: 4px; }
     .wk-gridwrap { display: flex; flex-direction: column; min-height: 0; }
     .wk-scroll { flex: 1 1 auto; min-height: 0; max-height: none; }
 }

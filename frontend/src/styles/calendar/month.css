@@ -113,7 +113,12 @@
 
     position: relative;
 
-    animation: fadeIn 1s ease-out;
+    /* `animation: fadeIn 1s ease-out` stood here. It is gone: the page already
+       fades in as a whole (styles/page-fade.css), so this was a second fade
+       over the top of the first, and a one-second animation on the element
+       that owns the view's height is a second of the card being re-composited
+       every time the browser re-runs it — which it does on a viewport change
+       such as entering full screen. */
 
     overflow-y: auto;
 
@@ -2032,7 +2037,29 @@ body:has(.calendar-container) .app-main {
     border-radius: 32px;
     color: #f4f4f6;
     box-shadow: 0 24px 60px rgba(16, 24, 40, 0.18);
-    overflow: hidden;
+    /* `clip`, not `hidden`, and the difference is the whole point.
+     *
+     * `overflow: hidden` still makes a scroll *container* — it only takes the
+     * scrollbar away. Nothing can scroll it by hand, but plenty can scroll it
+     * without being asked: the browser's scroll anchoring when the box changes
+     * size, a focus landing on something below the fold, a scrollIntoView
+     * anywhere inside. The symptom was the card sitting one header higher than
+     * it should, so the week's own header — the date, the arrows, Today, the
+     * view switcher — was above the top of the card and gone, with no
+     * scrollbar to bring it back. It showed on entering full screen, which is
+     * a viewport change, and a viewport change resizes every box on this page
+     * at once.
+     *
+     * Which of those routes was taking it is not established — the point of
+     * `clip` is that it does not matter.
+     *
+     * `overflow: clip` is not a scroll container at all. Its scrollTop cannot
+     * be set, by script or by the browser, so the header cannot leave the top
+     * of the card. Anything genuinely too tall now clips at the bottom, which
+     * is a layout bug you can see rather than a header that has silently gone.
+     * The height chain below (view-pane → wk-main → wk-scroll) is what stops
+     * that happening; see styles/calendar/week.css. */
+    overflow: clip;
     display: flex;
     flex-direction: column;
 }

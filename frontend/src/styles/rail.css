@@ -285,6 +285,13 @@ body.has-rail {
     body.pins-viewport {
         height: 100vh;
         overflow: hidden;
+        /* `hidden` hides the scrollbar but still leaves this a scroll box, and
+           a scroll box the browser is allowed to re-scroll when it changes
+           size. It changes size whenever the viewport does — entering full
+           screen, most obviously — and any offset it picked up here would slide
+           the whole page up under the fixed top bar with no scrollbar to undo
+           it. The page is pinned; it has one position and this keeps it. */
+        overflow-anchor: none;
     }
 }
 

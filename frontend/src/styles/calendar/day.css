@@ -292,7 +292,9 @@
    scrolls, so the columns stack. */
 @media (min-width: 1121px) {
     .day-layout { grid-template-rows: minmax(0, 1fr); align-items: stretch; }
-    .day-sidebar { overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+    /* overflow-anchor as on the Week view's column — see styles/calendar/week.css
+       for why a box that changes size must not re-scroll itself. */
+    .day-sidebar { overflow-y: auto; overflow-x: hidden; overflow-anchor: none; padding-right: 4px; }
 }
 @media (max-width: 1120px) {
     .day-layout { grid-template-columns: minmax(0, 1fr); }
