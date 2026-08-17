@@ -124,7 +124,11 @@ export const VIEWS: View[] = [
   {
     key: 'records',
     label: 'Records',
-    path: '/records',
+    // A level down from `/records`, which is the Records page now — see the
+    // note beside the route in App.tsx. This tab is about *standing*: where the
+    // last thirty days rank, how the goals with deadlines are pacing, which
+    // round numbers are cleared. The page is about the high scores themselves.
+    path: '/analytics/records',
     purpose: 'How far along you are, against your own record and the goals you set.',
     title: 'Records',
     blurb: 'Your own best, and the ladder ahead.',

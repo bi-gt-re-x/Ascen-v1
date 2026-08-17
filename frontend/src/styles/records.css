@@ -1,0 +1,259 @@
+/* Records — see src/pages/Records.tsx.
+ *
+ * One page, two sections, and the difference between them is drawn rather than
+ * only labelled: the records you hold are cards, laid out as a board of high
+ * scores; the ones you are chasing are rows, because a row can carry a bar and
+ * a bar is what "how close" looks like.
+ *
+ * Colours are the app's: #2C302E ink on #FFFFFF over the #F6F7F9 page, #EAEAEA
+ * hairlines, and #A8845C — the same tan the rail marks the current page with —
+ * for anything that means "this is yours".
+ */
+
+.rc-page {
+    box-sizing: border-box;
+    width: min(95%, 1180px);
+    margin-inline: auto;
+    padding: 34px 0 64px;
+}
+
+/* --- The head ---------------------------------------------------------- */
+.rc-head { margin-bottom: 30px; }
+.rc-title {
+    margin: 0 0 6px;
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #2c302e;
+}
+.rc-sub { margin: 0; font-size: 14px; color: #6c757d; }
+
+.rc-section { margin-bottom: 40px; }
+.rc-section-title {
+    margin: 0 0 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #9297a3;
+}
+
+.rc-empty {
+    margin: 0;
+    padding: 22px 24px;
+    border: 1px dashed #dfe3e8;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #6c757d;
+    background: #fff;
+}
+
+.rc-note {
+    margin: 14px 2px 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #9297a3;
+}
+
+/* --- The board of records ----------------------------------------------- */
+.rc-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+    gap: 14px;
+}
+
+.rc-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .03), 0 6px 16px rgba(16, 24, 40, .04);
+    /* The lift is the only motion here that is not a number moving. Small, and
+       on a page whose whole content is things worth being pleased about. */
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.rc-card:hover {
+    transform: translateY(-2px);
+    border-color: #e0d9cd;
+    box-shadow: 0 2px 4px rgba(16, 24, 40, .04), 0 12px 26px rgba(16, 24, 40, .07);
+}
+
+/* A record nobody has set yet is quiet rather than absent: the card names the
+   thing so the reader knows it is on offer. */
+.rc-card.is-unset { background: #fbfbfc; box-shadow: none; }
+.rc-card.is-unset:hover { transform: none; border-color: #eaeaea; box-shadow: none; }
+
+.rc-ico {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    border-radius: 9px;
+    background: #f4f1ec;
+    color: #a8845c;
+}
+.rc-card.is-unset .rc-ico { background: #f2f4f7; color: #b0b6c0; }
+
+.rc-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.rc-figure { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; }
+.rc-num {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #2c302e;
+    /* Fixed-width digits, so a figure travelling from 0 to 1,240 does not
+       shuffle its neighbours sideways on every frame. */
+    font-variant-numeric: tabular-nums;
+}
+.rc-unit { font-size: 13px; font-weight: 600; color: #9297a3; }
+
+.rc-none {
+    margin-top: 4px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #b0b6c0;
+}
+
+.rc-when { margin-top: 4px; font-size: 11.5px; color: #9297a3; }
+
+/* --- What is being chased ------------------------------------------------ */
+.rc-chases {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+}
+
+.rc-chase {
+    padding: 18px 20px;
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .03), 0 6px 16px rgba(16, 24, 40, .04);
+}
+/* A record currently being held reads as won rather than as in progress. */
+.rc-chase.is-held { border-color: #cfe3d5; background: #fbfdfb; }
+
+.rc-chase-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.rc-chase-ico {
+    display: inline-flex; flex: none;
+    width: 24px; height: 24px;
+    align-items: center; justify-content: center;
+    border-radius: 7px; background: #f4f1ec; color: #a8845c;
+}
+.rc-chase.is-held .rc-chase-ico { background: #e7f3ea; color: #2d7148; }
+.rc-chase-label {
+    flex: 1 1 auto; min-width: 0;
+    font-size: 13.5px; font-weight: 600; color: #2c302e;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rc-chase-target {
+    flex: none;
+    font-size: 12.5px; font-weight: 700; color: #9297a3;
+    font-variant-numeric: tabular-nums;
+}
+
+.rc-track {
+    height: 8px;
+    border-radius: 999px;
+    background: #eef0f3;
+    overflow: hidden;
+}
+.rc-track i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #c4a882, #a8845c);
+    /* The width is already tweened by useCountUp, one frame at a time. The
+       transition is here for the frames it does not emit — the last one, and
+       any the browser drops — so the bar never steps. */
+    transition: width .18s linear;
+}
+.rc-chase.is-held .rc-track i { background: linear-gradient(90deg, #6fbf8d, #2d7148); }
+
+.rc-chase-foot {
+    margin: 10px 0 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #6c757d;
+    font-variant-numeric: tabular-nums;
+}
+.rc-chase-foot strong { color: #2c302e; font-weight: 700; }
+.rc-chase.is-held .rc-chase-foot strong { color: #2d7148; }
+
+/* --- Dark ---------------------------------------------------------------- */
+html[data-theme="dark"] .rc-title { color: #f0f2f5; }
+html[data-theme="dark"] .rc-sub,
+html[data-theme="dark"] .rc-empty,
+html[data-theme="dark"] .rc-chase-foot { color: #8b949e; }
+html[data-theme="dark"] .rc-section-title,
+html[data-theme="dark"] .rc-note,
+html[data-theme="dark"] .rc-when,
+html[data-theme="dark"] .rc-unit,
+html[data-theme="dark"] .rc-chase-target { color: #7d8492; }
+
+html[data-theme="dark"] .rc-empty { background: #161b22; border-color: #30363d; }
+
+html[data-theme="dark"] .rc-card,
+html[data-theme="dark"] .rc-chase {
+    background: #161b22;
+    border-color: #262c36;
+    box-shadow: none;
+}
+html[data-theme="dark"] .rc-card:hover {
+    border-color: #3d3527;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, .45);
+}
+html[data-theme="dark"] .rc-card.is-unset { background: #12161c; }
+html[data-theme="dark"] .rc-card.is-unset:hover { border-color: #262c36; }
+
+html[data-theme="dark"] .rc-ico,
+html[data-theme="dark"] .rc-chase-ico { background: #2a2118; color: #d8c3a5; }
+html[data-theme="dark"] .rc-card.is-unset .rc-ico { background: #1c222c; color: #4b525e; }
+
+html[data-theme="dark"] .rc-label { color: #8b949e; }
+html[data-theme="dark"] .rc-num,
+html[data-theme="dark"] .rc-chase-label,
+html[data-theme="dark"] .rc-chase-foot strong { color: #f0f2f5; }
+html[data-theme="dark"] .rc-none { color: #4b525e; }
+
+html[data-theme="dark"] .rc-track { background: #21262d; }
+html[data-theme="dark"] .rc-track i { background: linear-gradient(90deg, #d8c3a5, #a8845c); }
+
+html[data-theme="dark"] .rc-chase.is-held { background: #121a15; border-color: #24402e; }
+html[data-theme="dark"] .rc-chase.is-held .rc-chase-ico { background: #16261c; color: #6fbf8d; }
+html[data-theme="dark"] .rc-chase.is-held .rc-track i { background: linear-gradient(90deg, #6fbf8d, #3da064); }
+html[data-theme="dark"] .rc-chase.is-held .rc-chase-foot strong { color: #6fbf8d; }
+
+/* --- Motion off ---------------------------------------------------------- */
+/* The count-up already stops itself (hooks/useCountUp reads the same query).
+   This is the rest of it: the card lift and the bar's smoothing. */
+@media (prefers-reduced-motion: reduce) {
+    .rc-card, .rc-track i { transition: none; }
+    .rc-card:hover { transform: none; }
+}
+
+/* --- Narrow -------------------------------------------------------------- */
+@media (max-width: 640px) {
+    .rc-page { padding: 22px 0 48px; }
+    .rc-cards { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }
+    .rc-card { padding: 16px; }
+    .rc-num { font-size: 23px; }
+    .rc-chases { grid-template-columns: minmax(0, 1fr); }
+}

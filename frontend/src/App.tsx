@@ -28,6 +28,7 @@ const Tasks = lazy(() => import('@/pages/Tasks'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
 const SkillTrees = lazy(() => import('@/pages/SkillTrees'));
 const Notes = lazy(() => import('@/pages/Notes'));
+const Records = lazy(() => import('@/pages/Records'));
 const AboutUs = lazy(() => import('@/pages/AboutUs'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
@@ -148,7 +149,16 @@ export default function App() {
               <Route path="/habits" element={<Analytics />} />
               <Route path="/insights" element={<Analytics />} />
               <Route path="/subjects" element={<Analytics />} />
-              <Route path="/records" element={<Analytics />} />
+              {/* The analytics tab called Records used to be `/records`. It
+                  moved down a level when Records became a page of its own: the
+                  tab asks where the last thirty days *stand* — the percentile,
+                  the goal pacing, the round numbers cleared — and the page asks
+                  what the high scores actually are. Two different questions, and
+                  the shorter path belongs to the one a reader means when they
+                  say "my records". Anyone arriving on an old `/records` link
+                  lands on that page, which is the better half of the pair to be
+                  wrong about. */}
+              <Route path="/analytics/records" element={<Analytics />} />
               {/* The growth page was the other half of the original growth.js
                   and had five tabs of its own, four of which are now tabs above
                   and the fifth of which was a lower-resolution copy of the
@@ -163,6 +173,7 @@ export default function App() {
                   describe. */}
               <Route path="/skill-trees" element={<SkillTrees />} />
               <Route path="/notes" element={<Notes />} />
+              <Route path="/records" element={<Records />} />
               <Route path="/growth-tree" element={<Navigate to="/skill-trees" replace />} />
               <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
               <Route path="/calendar/day" element={<CalendarDay />} />

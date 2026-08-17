@@ -369,7 +369,23 @@ export function xpLadder(all: GrowthDay[], span = 6): LadderStep[] {
 export interface BestRecord {
   key: string;
   label: string;
+  /** The figure as it is printed — "1,240 XP". */
   value: string;
+  /**
+   * The same figure as a number, at the precision `value` shows it to.
+   *
+   * Both, rather than one built from the other, because the two callers want
+   * different things. The analytics tab prints the string and is done; the
+   * Records page counts the number up from zero, and a count-up needs the
+   * number, the unit and the decimal places kept apart — see hooks/useCountUp,
+   * which asks to be fed the value at the precision it is displayed so it does
+   * not animate digits nobody can see.
+   */
+  amount: number;
+  /** What follows the number: "XP", "days", "hrs", or nothing. */
+  unit: string;
+  /** How many decimals `value` shows. */
+  decimals: number;
   on: string | null;
   icon: string;
 }
@@ -418,15 +434,132 @@ export function personalRecords(all: GrowthDay[], tasks: Task[], streak: number)
       { value: 0, on: null },
     );
 
+  /** One row, with the printed form and the number kept in step. */
+  const record = (
+    key: string,
+    label: string,
+    amount: number,
+    unit: string,
+    decimals: number,
+    on: string | null,
+    icon: string,
+  ): BestRecord => {
+    const rounded = decimals > 0
+      ? Number(amount.toFixed(decimals))
+      : Math.round(amount);
+    const printed = decimals > 0
+      ? rounded.toFixed(decimals)
+      : rounded.toLocaleString();
+    return {
+      key,
+      label,
+      value: unit ? `${printed} ${unit}` : printed,
+      amount: rounded,
+      unit,
+      decimals,
+      on,
+      icon,
+    };
+  };
+
   return [
-    { key: 'day', label: 'Best day', value: `${Math.round(bestXpDay.value).toLocaleString()} XP`, on: bestXpDay.on, icon: 'spark' },
-    { key: 'week', label: 'Best week', value: `${Math.round(week.value).toLocaleString()} XP`, on: week.on, icon: 'trend' },
-    { key: 'tasks', label: 'Most tasks in a day', value: `${Math.round(bestTasks.value)}`, on: bestTasks.on, icon: 'check' },
-    { key: 'focus', label: 'Deepest day', value: `${(bestFocus.value / 60).toFixed(1)} hrs`, on: bestFocus.on, icon: 'clock' },
-    { key: 'streak', label: 'Longest streak', value: `${best} days`, on: null, icon: 'flame' },
-    { key: 'heaviest', label: 'Heaviest single task', value: `${Math.round(heaviest.value).toLocaleString()} XP`, on: heaviest.on, icon: 'trophy' },
-    { key: 'now', label: 'Streak right now', value: `${streak} days`, on: null, icon: 'target' },
+    record('day', 'Best day', bestXpDay.value, 'XP', 0, bestXpDay.on, 'spark'),
+    record('week', 'Best week', week.value, 'XP', 0, week.on, 'trend'),
+    record('tasks', 'Most tasks in a day', bestTasks.value, '', 0, bestTasks.on, 'check'),
+    record('focus', 'Deepest day', bestFocus.value / 60, 'hrs', 1, bestFocus.on, 'clock'),
+    record('streak', 'Longest streak', best, 'days', 0, null, 'flame'),
+    record('heaviest', 'Heaviest single task', heaviest.value, 'XP', 0, heaviest.on, 'trophy'),
+    record('now', 'Streak right now', streak, 'days', 0, null, 'target'),
   ];
+}
+
+// --------------------------------------------------------------------------
+// The next record
+// --------------------------------------------------------------------------
+export interface RecordChase {
+  key: string;
+  /** The record being chased — "Best day". */
+  label: string;
+  /** What the live figure is measured over: "today", "the last 7 days". */
+  window: string;
+  /** The standing record. Beating it means passing this. */
+  target: number;
+  /** Where the live counterpart stands right now. */
+  current: number;
+  /** Still to go. Zero once the record has been matched or passed. */
+  remaining: number;
+  /** 0-100, capped. */
+  percent: number;
+  unit: string;
+  decimals: number;
+  icon: string;
+  /** True when the live figure has already reached the record. */
+  held: boolean;
+}
+
+/**
+ * What it would take to beat each record, and how close today is.
+ *
+ * Only the records with a live counterpart are here, and that is the whole
+ * selection rule. "Best day" has one — today — so the gap between them is a
+ * real thing to chase. "Heaviest single task" does not: there is no running
+ * total of the biggest task you might finish later, and a bar showing 0% of it
+ * every day until the day it is beaten would be a bar that is wrong on every
+ * day but one.
+ *
+ * A record the account is currently holding — today *is* the best day — reads
+ * as held rather than as 100% of itself, because those are different facts and
+ * only one of them is worth being pleased about.
+ *
+ * The XP ladder is not folded in here. Its rungs are round numbers somebody
+ * else picked, not records this account set, and mixing "beat your own best
+ * week" with "reach 25,000 XP" in one list would blur the only thing that
+ * makes a personal record personal.
+ */
+export function recordChase(all: GrowthDay[], streak: number): RecordChase[] {
+  if (all.length === 0) return [];
+
+  const records = personalRecords(all, [], streak);
+  const by = new Map(records.map((row) => [row.key, row]));
+  const today = all[all.length - 1]!;
+
+  const lastSeven = sumOver(all.slice(-7), (day) => num(day.xp_earned));
+
+  const chase = (
+    key: string,
+    window: string,
+    current: number,
+  ): RecordChase | null => {
+    const record = by.get(key);
+    if (!record) return null;
+    const decimals = record.decimals;
+    const at = decimals > 0 ? Number(current.toFixed(decimals)) : Math.round(current);
+    const target = record.amount;
+    // A record of zero is not a record — an account with no focus time yet has
+    // nothing to beat, and a bar at 100% of nothing says otherwise.
+    if (target <= 0) return null;
+    return {
+      key,
+      label: record.label,
+      window,
+      target,
+      current: at,
+      remaining: Math.max(0, Number((target - at).toFixed(decimals))),
+      percent: Math.min(100, (at / target) * 100),
+      unit: record.unit,
+      decimals,
+      icon: record.icon,
+      held: at >= target,
+    };
+  };
+
+  return [
+    chase('day', 'today', num(today.xp_earned)),
+    chase('week', 'the last 7 days', lastSeven),
+    chase('tasks', 'today', num(today.tasks_completed)),
+    chase('focus', 'today', num(today.focus_minutes) / 60),
+    chase('streak', 'right now', streak),
+  ].filter((row): row is RecordChase => row !== null);
 }
 
 // --------------------------------------------------------------------------

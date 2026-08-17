@@ -113,7 +113,19 @@ const TABS: Tab[] = [
     // rail is a column of one-word destinations and the odd two-word one
     // wraps — the heading is where the full name belongs.
     label: 'Analytics',
-    also: ['/analytics', '/trends', '/habits', '/insights', '/subjects', '/records', '/growth'],
+    // `/records` is gone from this list: it is the Records entry below now, and
+    // leaving it here would light Analytics up while the reader is on a page
+    // that has its own entry. The analytics tab of that name is
+    // `/analytics/records`, which is here in its place.
+    also: [
+      '/analytics',
+      '/analytics/records',
+      '/trends',
+      '/habits',
+      '/insights',
+      '/subjects',
+      '/growth',
+    ],
     icon: (
       <svg {...stroke}>
         <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
@@ -190,6 +202,20 @@ const TABS: Tab[] = [
       <svg {...stroke}>
         <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" />
         <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
+      </svg>
+    ),
+  },
+  {
+    // Under Achievements, and beside it on purpose: both are the account
+    // looking back at itself. An achievement is a thing the app decided was
+    // worth marking; a record is the reader's own high score, which is theirs
+    // whether or not anything was awarded for it.
+    to: '/records',
+    label: 'Records',
+    icon: (
+      <svg {...stroke}>
+        <path d="M4 20V9M9.5 20V4M15 20v-8M20.5 20v-5" />
+        <path d="M3 20h18" />
       </svg>
     ),
   },
