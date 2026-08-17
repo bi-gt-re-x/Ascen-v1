@@ -74,6 +74,16 @@
     text-align: center;
 }
 
+/* --- Dark mode ----------------------------------------------------------- */
+/* Same 38px square as search and alerts — it is a control in the same row and
+   sizing it differently would only announce that it arrived later. `is-on`
+   would be wrong here: the other two light up while their panel is open, and
+   this one has no panel; a permanent tint on the button whenever dark mode is
+   on would read as "this menu is open" forever. The icon carries the state:
+   the moon takes the row's grey like the others, and the sun is the one thing
+   in this bar with a colour of its own. */
+.topbar-theme.is-dark svg { color: #E3B341; }
+
 /* --- The account button ------------------------------------------------- */
 .topbar-account {
     display: flex;
@@ -121,7 +131,9 @@
 
 .topbar-search { width: min(360px, 78vw); }
 .topbar-alerts { width: min(340px, 82vw); }
-.topbar-account-menu { width: 216px; padding: 10px; }
+/* Wider than the 216px it was: the avatar picker moved in from the rail, and
+   fifty pictures in a 216px scroller is a peephole. */
+.topbar-account-menu { width: min(300px, 88vw); padding: 10px; }
 
 .topbar-search-input {
     width: 100%;
@@ -210,6 +222,46 @@
 .topbar-account-head strong { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; }
 .topbar-account-head span { font-size: 11.5px; color: #6C757D; }
 
+/* --- The avatar picker, inherited from the rail -------------------------- */
+/* All fifty in one line. overflow-x carries them; `flex: none` on the options
+   is what stops the row from squeezing them to fit instead of scrolling. The
+   negative inset lets the row bleed to the menu's edges, so the last picture
+   is cut off by the panel rather than by a gutter — which is what tells the
+   reader there is more of it to the right. */
+.topbar-avatar-row {
+    display: flex;
+    gap: 7px;
+    margin: 0 -10px 8px;
+    padding: 2px 10px 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #C9CDD4 transparent;
+    overscroll-behavior-x: contain;
+    border-bottom: 1px solid #F0F2F5;
+}
+.topbar-avatar-row::-webkit-scrollbar { height: 7px; }
+.topbar-avatar-row::-webkit-scrollbar-track { background: transparent; }
+.topbar-avatar-row::-webkit-scrollbar-thumb { background: #C9CDD4; border-radius: 4px; }
+
+.topbar-avatar-option {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #F2F4F7;
+    cursor: pointer;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+.topbar-avatar-option:hover { background: #E4E8EE; }
+.topbar-avatar-option.is-current { outline-color: #2C302E; }
+.topbar-avatar-option img { width: 34px; height: 34px; border-radius: 50%; display: block; }
+
 .topbar-account-menu a,
 .topbar-signout {
     display: block;
@@ -269,8 +321,18 @@ html[data-theme="dark"] .topbar-alert-list a:hover,
 html[data-theme="dark"] .topbar-account-menu a:hover,
 html[data-theme="dark"] .topbar-signout:hover { background: #1C2430; }
 html[data-theme="dark"] .topbar-account-head,
+html[data-theme="dark"] .topbar-avatar-row,
 html[data-theme="dark"] .topbar-signout { border-color: #30363D; }
 html[data-theme="dark"] .topbar-signout { color: #F85149; }
+
+html[data-theme="dark"] .topbar-avatar-option { background: #21262D; }
+html[data-theme="dark"] .topbar-avatar-option:hover { background: #2D333B; }
+html[data-theme="dark"] .topbar-avatar-option.is-current {
+    outline-color: #7FB3FF;
+    background: #1F2A3A;
+}
+html[data-theme="dark"] .topbar-avatar-row { scrollbar-color: #3A424D transparent; }
+html[data-theme="dark"] .topbar-avatar-row::-webkit-scrollbar-thumb { background: #3A424D; }
 
 /* --- Narrow -------------------------------------------------------------- */
 @media (max-width: 640px) {

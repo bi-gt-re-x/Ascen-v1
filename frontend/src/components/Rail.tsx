@@ -3,9 +3,10 @@
  *
  * It was a bar across the top until the calendar was redesigned against a
  * mock-up that had a rail, and a rail on one page with a bar on every other is
- * two apps. So this replaces the bar everywhere, and carries everything the bar
- * carried: the way home, the destinations, the theme, and the account menu with
- * its fifty pictures and its way out.
+ * two apps. So this replaces the bar everywhere: the way home, the
+ * destinations, and — in the foot — how far the account has got. The theme
+ * switch and the account menu stood here too until a bar came back across the
+ * top and they went to it, which is where a reader looks for them.
  *
  * **The layout contract is a variable, not a shape.** Pages do not know what
  * the navigation looks like; they know that `--rail-w` is taken from the left
@@ -20,21 +21,27 @@
  * same localStorage key: `html.nav-collapsed` drops `--rail-w` to a strip wide
  * enough for the icons, and every page widens into it without knowing why.
  *
- * The level and XP under the avatar are the one thing here that reads account
- * data. The rail is mounted outside the router, so that is one call for the
- * session rather than one per page — and because it never unmounts, it would
- * otherwise still be showing the level you had when you opened the app. The
- * dashboard announces `ascen:stats-changed` when a completion moves the total,
- * and this listens. A custom event rather than shared state because that is the
- * whole of the dependency: one number, one direction, no reply.
+ * The rank and XP in the foot are the one thing here that reads account data.
+ * The rail is mounted outside the router, so that is one call for the session
+ * rather than one per page — and because it never unmounts, it would otherwise
+ * still be showing the level you had when you opened the app. The dashboard
+ * announces `ascen:stats-changed` when a completion moves the total, and this
+ * listens. A custom event rather than shared state because that is the whole of
+ * the dependency: one number, one direction, no reply.
+ *
+ * **The foot says what you are, not who you are.** It used to be an avatar and
+ * a username — the name you already typed to get in, over a picture, above the
+ * same level the bar below it was drawing. Now it is the rank the level earns
+ * you and the bar that gets you to the next one, which is the only thing on
+ * this screen that changes when you finish something. Who is signed in belongs
+ * to the top bar's account menu, which is also where the avatar picker went
+ * when the plate that used to open it stopped existing.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { useAuth, useTheme, useUserData } from '@/hooks';
-import { AVATARS, avatarPath } from '@/services/avatars';
-import { auth } from '@/services';
+import { useAuth, useUserData } from '@/hooks';
 import { format } from '@/utils';
-import type { Theme } from '@/types';
+import { rankFor } from '@/utils/mastery';
 import '@/styles/rail.css';
 
 const COLLAPSE_KEY = 'topnavCollapsed';
@@ -199,8 +206,7 @@ const TABS: Tab[] = [
 ];
 
 export function Rail() {
-  const { status, username, avatar, signOut, refresh } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { status } = useAuth();
   const { data, reload } = useUserData();
   // Only for `Tab.also` — NavLink handles its own path on every other entry.
   const { pathname } = useLocation();
@@ -212,9 +218,6 @@ export function Rail() {
       return false; // private mode: the rail just starts open
     }
   });
-  const [menuOpen, setMenuOpen] = useState(false);
-  const accountRef = useRef<HTMLDivElement>(null);
-
   // `nav-collapsed` on <html> is what shrinks --rail-w; every page sizes itself
   // off that variable, so the page grows into the space on its own.
   useEffect(() => {
@@ -234,46 +237,54 @@ export function Rail() {
     return () => window.removeEventListener(STATS_CHANGED, onChanged);
   }, [reload]);
 
-  // A click anywhere else closes the account menu.
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onDown = (event: MouseEvent) => {
-      if (!accountRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [menuOpen]);
-
-  const chooseAvatar = useCallback(
-    async (name: string) => {
-      const result = await auth.setAvatar(name);
-      // Re-ask rather than assuming: the server is what decides which picture
-      // an account has, and it rejects a name that is not one of the fifty.
-      if (result.success) await refresh();
-    },
-    [refresh],
-  );
-
-  /** Which of the fifty is currently the account's, by filename. */
-  const currentAvatar = avatar.split('/').pop()?.replace('.svg', '') ?? '';
-
   const signedIn = status === 'signed-in';
   const level = data ? format.levelForTotalXp(data.stats.xp) : null;
+  /* The same twenty band names the skill trees use, read off the account level
+     rather than a subject's. One ladder of names across the app: "Adept" has to
+     mean the same distance travelled wherever it is printed, or it is
+     decoration. */
+  const rank = level ? rankFor(level.level) : null;
 
   return (
     <nav className="rail" aria-label="Main">
       {/* The mark is a span, not a link: secret/easter-egg.js counts clicks on
-          it. The wordmark beside it is the link home. */}
+          it. The wordmark beside it is the link home.
+
+          The mark is drawn inline rather than loaded from /static/images: the
+          file is a one-colour near-black glyph, which needed `mix-blend-mode:
+          multiply` to sit on white and an `invert(1)` to survive the dark rail
+          — two hacks to fake a colour it did not have. Inline, the A and its
+          detached foot are two paths that take the brand's violet directly and
+          lighten in dark like everything else. Same geometry as the file, so
+          the two marks are still the same mark. */}
       <div className="rail-brand">
         <span className="rail-brand-mark" id="topnavBrandMark">
-          <img src="/static/images/logo.svg" alt="" />
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path
+              className="rail-mark-body"
+              fillRule="evenodd"
+              d="M49 19 L81 80 L17 80 Z M49 49 L63 75 L37 75 Z"
+            />
+            <rect
+              className="rail-mark-foot"
+              x="57"
+              y="57"
+              width="31"
+              height="15"
+              rx="7.5"
+              transform="rotate(30 72.5 64.5)"
+            />
+          </svg>
         </span>
         <NavLink className="rail-brand-name" to="/home">
           Ascen
         </NavLink>
 
+        {/* Three lines rather than the chevron it was. The chevron pointed at
+            the edge it folded into, which is the honest icon for a panel and
+            the wrong one for a rail that is never fully gone — it leaves a
+            strip of icons behind, and a reader who has seen it do that once
+            reads the lines as "the menu" and the chevron as "close". */}
         <button
           type="button"
           className="rail-toggle"
@@ -282,8 +293,8 @@ export function Rail() {
           title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
           onClick={() => setCollapsed((value) => !value)}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 6-6 6 6 6" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
+            <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
       </div>
@@ -304,124 +315,43 @@ export function Rail() {
         ))}
       </div>
 
+      {/* The dark-mode switch stood here until it moved to the top bar, where
+          the rest of the app's controls already were. See components/Topbar. */}
       <div className="rail-foot">
-        {/* The theme, as the design's switch rather than the bar's select. Two
-            themes is a yes/no, and a two-option dropdown was always a switch
-            wearing a dropdown's clothes. */}
-        <button
-          type="button"
-          className={`rail-theme${theme === 'dark' ? ' is-dark' : ''}`}
-          role="switch"
-          aria-checked={theme === 'dark'}
-          onClick={() => setTheme((theme === 'dark' ? 'light' : 'dark') as Theme)}
-          title="Dark mode"
-        >
-          <span className="rail-theme-ico" aria-hidden="true">
-            <svg {...stroke}>
-              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
-            </svg>
-          </span>
-          <span className="rail-theme-label">Dark Mode</span>
-          <span className="rail-switch" aria-hidden="true">
-            <i />
-          </span>
-        </button>
-
         {signedIn ? (
-          <div className="rail-account" ref={accountRef}>
-            <button
-              type="button"
-              className="rail-account-btn"
-              aria-haspopup="true"
-              aria-expanded={menuOpen}
-              aria-label="Account menu"
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <img
-                className="rail-avatar"
-                src={avatar}
-                alt=""
-                title={username ?? ''}
-                width={38}
-                height={38}
-              />
-              <span className="rail-account-body">
-                <span className="rail-account-name">{username}</span>
-                {level && <span className="rail-account-level">Level {level.level}</span>}
+          /* Nothing at all until the account read lands. The alternative is a
+             plate reading "Beginner, level 1" for a second on every load, which
+             is a wrong answer rather than a missing one — and the reader it is
+             wrong for is the one who has been playing longest. */
+          level &&
+          rank && (
+            <div className="rail-rank">
+              {/* The whole name when the rail is open, the level's number when
+                  it is a strip. "Grand Champion" in 54px of usable width is an
+                  ellipsis, and an ellipsis is not a rank. */}
+              <span className="rail-rank-title" title={`${rank} · Level ${level.level}`}>
+                {rank}
               </span>
-            </button>
+              <span className="rail-rank-num" aria-hidden="true">
+                {level.level}
+              </span>
 
-            {level && (
-              <>
-                <div className="rail-xp-row">
-                  <span>Level {level.level}</span>
-                  <span>{format.number(data?.stats.xp ?? 0)} XP</span>
-                </div>
-                <div
-                  className="rail-xp-bar"
-                  role="progressbar"
-                  aria-valuenow={Math.round(level.percent)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`Level ${level.level} progress`}
-                >
-                  <i style={{ width: `${level.percent}%` }} />
-                </div>
-              </>
-            )}
-
-            {/* Opens up and to the right of the avatar: the rail sits at the
-                bottom-left of the screen, so a menu below it would be off the
-                bottom of the window. */}
-            <div className="account-menu" hidden={!menuOpen}>
-              <div className="account-menu-head">
-                <span className="account-menu-name" title={username ?? ''}>
-                  {username}
-                </span>
-                <button
-                  type="button"
-                  className="account-logout"
-                  onClick={() => void signOut()}
-                >
-                  <svg {...stroke}>
-                    <path d="M10 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
-                    <path d="M16 17l5-5-5-5" />
-                    <path d="M21 12H9" />
-                  </svg>
-                  <span>Log Out</span>
-                </button>
+              <div className="rail-xp-row">
+                <span>Level {level.level}</span>
+                <span>{format.number(data?.stats.xp ?? 0)} XP</span>
               </div>
-
               <div
-                className="account-avatar-row"
-                role="radiogroup"
-                aria-label="Profile picture"
+                className="rail-xp-bar"
+                role="progressbar"
+                aria-valuenow={Math.round(level.percent)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${rank}, level ${level.level} progress`}
               >
-                {AVATARS.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    role="radio"
-                    className={`account-avatar-option${
-                      name === currentAvatar ? ' is-current' : ''
-                    }`}
-                    aria-checked={name === currentAvatar}
-                    title={name}
-                    aria-label={name}
-                    onClick={() => void chooseAvatar(name)}
-                  >
-                    <img
-                      src={avatarPath(name)}
-                      alt=""
-                      width={40}
-                      height={40}
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
+                <i style={{ width: `${level.percent}%` }} />
               </div>
             </div>
-          </div>
+          )
         ) : (
           /* A plain Link, not a NavLink: it points at /home, so on the landing
              page NavLink would mark it active and paint it as the "you are

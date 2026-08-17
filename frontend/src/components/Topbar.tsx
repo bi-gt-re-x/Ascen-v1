@@ -20,16 +20,22 @@
  *   and a streak that will break tonight. Nothing is generated on a schedule,
  *   so an account in good order gets no badge at all, which is what makes the
  *   badge worth looking at on the day it appears.
- *   **The account menu** is the short one: who is signed in, the level, and the
- *   way out. The rail's own account block keeps the avatar picker — this is
- *   the menu you reach for on the way past, not the one you configure in.
+ *   **Dark mode** is a switch, not a two-option dropdown — it stood in the
+ *   rail's foot until the foot became the rank and the XP bar, and it belongs
+ *   with the rest of the app's controls anyway.
+ *   **The account menu** is now the only one: who is signed in, the level, the
+ *   fifty pictures, and the way out. It inherited the avatar picker from the
+ *   rail, whose account plate is gone — a picker with no way to open it is a
+ *   deleted feature with extra steps.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth, useUserData } from '@/hooks';
+import { useAuth, useTheme, useUserData } from '@/hooks';
+import { AVATARS, avatarPath } from '@/services/avatars';
+import { auth } from '@/services';
 import { format } from '@/utils';
 import { isoDate } from '@/utils/dates';
-import type { Task } from '@/types';
+import type { Task, Theme } from '@/types';
 import '@/styles/topbar.css';
 
 const stroke = {
@@ -126,7 +132,8 @@ function alertsFrom(tasks: Task[], streak: number): Alert[] {
 // The bar
 // --------------------------------------------------------------------------
 export function Topbar() {
-  const { username, avatar, signOut } = useAuth();
+  const { username, avatar, signOut, refresh } = useAuth();
+  const { theme, setTheme } = useTheme();
   /*
    * A second read of /api/get_user_data — the rail makes the first, for the
    * level under the avatar. Two small GETs per page load rather than a store
@@ -186,6 +193,19 @@ export function Topbar() {
       setOpen((current) => (current === panel ? null : panel)),
     [],
   );
+
+  const chooseAvatar = useCallback(
+    async (name: string) => {
+      const result = await auth.setAvatar(name);
+      // Re-ask rather than assuming: the server is what decides which picture
+      // an account has, and it rejects a name that is not one of the fifty.
+      if (result.success) await refresh();
+    },
+    [refresh],
+  );
+
+  /** Which of the fifty is currently the account's, by filename. */
+  const currentAvatar = avatar.split('/').pop()?.replace('.svg', '') ?? '';
 
   return (
     <header className="topbar" ref={barRef}>
@@ -293,6 +313,32 @@ export function Topbar() {
           )}
         </div>
 
+        {/* ---- Dark mode ---- */}
+        {/* The only control here that opens nothing, so it is the only one that
+            does not sit in a `topbar-slot` — there is no panel to anchor. The
+            icon shows the theme you would be switching to, which is the one
+            question a reader has when they look at it. */}
+        <button
+          type="button"
+          className={`topbar-btn topbar-theme${theme === 'dark' ? ' is-dark' : ''}`}
+          role="switch"
+          aria-checked={theme === 'dark'}
+          aria-label="Dark mode"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          onClick={() => setTheme((theme === 'dark' ? 'light' : 'dark') as Theme)}
+        >
+          {theme === 'dark' ? (
+            <svg {...stroke}>
+              <circle cx="12" cy="12" r="4.2" />
+              <path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7" />
+            </svg>
+          ) : (
+            <svg {...stroke}>
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+            </svg>
+          )}
+        </button>
+
         {/* ---- Account ---- */}
         <div className="topbar-slot">
           <button
@@ -319,6 +365,32 @@ export function Topbar() {
                   </span>
                 )}
               </div>
+              {/* All fifty in one scrolling line, as they were in the rail.
+                  A wrapping grid would be ten rows deep and turn a menu into a
+                  page; the row is the shape that fits a menu. */}
+              <div
+                className="topbar-avatar-row"
+                role="radiogroup"
+                aria-label="Profile picture"
+              >
+                {AVATARS.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    role="radio"
+                    className={`topbar-avatar-option${
+                      name === currentAvatar ? ' is-current' : ''
+                    }`}
+                    aria-checked={name === currentAvatar}
+                    title={name}
+                    aria-label={name}
+                    onClick={() => void chooseAvatar(name)}
+                  >
+                    <img src={avatarPath(name)} alt="" width={34} height={34} loading="lazy" />
+                  </button>
+                ))}
+              </div>
+
               <Link to="/dashboard" onClick={() => setOpen(null)}>
                 Dashboard
               </Link>

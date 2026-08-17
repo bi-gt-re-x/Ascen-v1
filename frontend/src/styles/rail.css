@@ -42,7 +42,7 @@
 
 /* --- Brand ------------------------------------------------------------- */
 /* Two elements, not one: the mark (a span, and the easter egg's target) and
-   the wordmark (the only link home). The collapse chevron rides with them. */
+   the wordmark (the only link home). The collapse toggle rides with them. */
 .rail-brand {
     display: flex;
     align-items: center;
@@ -57,21 +57,29 @@
     flex: none;
 }
 
-.rail-brand-mark img {
+/* The mark is inline SVG now, so the colours are declarations rather than the
+   `mix-blend-mode: multiply` / `filter: invert(1)` pair that used to make a
+   near-black PNG-shaped SVG survive both themes. Two tones: the A carries the
+   violet, the detached foot sits a few steps lighter so it reads as its own
+   piece at 30px instead of a nick in the outline. */
+.rail-brand-mark svg {
     width: 30px;
     height: 30px;
-    object-fit: contain;
     display: block;
-    /* Drops the image's white background into the white rail. */
-    mix-blend-mode: multiply;
 }
+.rail-mark-body { fill: #5A5FD8; }
+.rail-mark-foot { fill: #8D93F0; }
 
+/* Set as a wordmark rather than as a word: caps and open tracking, which is
+   what carries a five-letter name beside a mark. The size drops because spaced
+   capitals read a good deal larger than the same number in sentence case. */
 .rail-brand-name {
     flex: 1 1 auto;
     min-width: 0;
-    font-size: 21px;
-    font-weight: 800;
-    letter-spacing: -0.01em;
+    font-size: 17px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
     color: inherit;
     text-decoration: none;
     overflow: hidden;
@@ -94,8 +102,9 @@
 }
 .rail-toggle:hover { background: #F2F4F7; color: #2C302E; }
 .rail-toggle:focus-visible { outline: 2px solid #2C302E; outline-offset: 1px; }
-.rail-toggle svg { width: 17px; height: 17px; }
-html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
+.rail-toggle svg { width: 18px; height: 18px; }
+/* The chevron used to flip here to point the other way. Three lines have no
+   direction to flip, which is the point of them — see the note in Rail.tsx. */
 
 /* --- Destinations ------------------------------------------------------
    Set to breathe rather than to fit. The rail held eight destinations in a
@@ -110,8 +119,8 @@ html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
     flex-direction: column;
     gap: 6px;
     padding-top: 4px;
-    /* Takes the space the foot does not, so the account block sits on the
-       bottom edge however few destinations there are. */
+    /* Takes the space the foot does not, so the rank block sits on the bottom
+       edge however few destinations there are. */
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -153,7 +162,12 @@ html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
 }
 .rail-link.active svg { color: #A38A70; }
 
-/* --- The foot: theme, then the account --------------------------------- */
+/* --- The foot: the rank and the bar to the next one --------------------- */
+/* It held the dark-mode switch and an avatar-and-username plate. The switch is
+   in the top bar with the rest of the controls, and the plate is gone: it
+   showed the reader the name they had just typed to get in, over a picture,
+   above the level the bar below it was already drawing. What is left is the
+   one thing here that moves when you finish something. */
 .rail-foot {
     flex: none;
     display: flex;
@@ -163,105 +177,39 @@ html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
     border-top: 1px solid #F0F2F5;
 }
 
-/* --- Dark mode switch --------------------------------------------------- */
-.rail-theme {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 9px 12px;
-    border: 1px solid #EAEAEA;
-    border-radius: 12px;
-    background: #FFFFFF;
-    color: #6C757D;
-    font-family: inherit;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: left;
-}
-.rail-theme:hover { background: #F8F9FB; }
-.rail-theme:focus-visible { outline: 2px solid #2C302E; outline-offset: 2px; }
-.rail-theme-ico { display: flex; flex: none; }
-.rail-theme-ico svg { width: 17px; height: 17px; }
-.rail-theme-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* --- Rank --------------------------------------------------------------- */
+.rail-rank { padding: 0 8px; }
 
-.rail-switch {
-    flex: none;
-    width: 34px;
-    height: 19px;
-    border-radius: 999px;
-    background: #E2E6EC;
-    padding: 2px;
-    box-sizing: border-box;
-    transition: background .18s ease;
-}
-.rail-switch i {
+.rail-rank-title {
     display: block;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: #FFFFFF;
-    box-shadow: 0 1px 3px rgba(16, 24, 40, .28);
-    transition: transform .18s ease;
-}
-.rail-theme.is-dark .rail-switch { background: #A38A70; }
-.rail-theme.is-dark .rail-switch i { transform: translateX(15px); }
-
-/* --- Account ------------------------------------------------------------ */
-.rail-account { position: relative; }
-
-.rail-account-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 8px;
-    border: none;
-    border-radius: 12px;
-    background: none;
-    cursor: pointer;
-    text-align: left;
-}
-.rail-account-btn:hover { background: #F4F6F8; }
-.rail-account-btn:focus-visible { outline: 2px solid #2C302E; outline-offset: 2px; }
-
-.rail-avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    display: block;
-    object-fit: cover;
-    background: #E8ECF2;
-    user-select: none;
-    flex: none;
-}
-
-.rail-account-body {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 0;
-}
-
-.rail-account-name {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
     color: #2C302E;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-/* Shown beside the name only while the rail is collapsed to icons, where the
-   row below it is hidden. Open, the row below says it with the XP. */
-.rail-account-level { display: none; }
+/* The collapsed rail's version of the title: the level's number alone, which
+   is the part of "Grand Champion, level 53" that survives 54px. */
+.rail-rank-num {
+    display: none;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: center;
+    color: #2C302E;
+}
 
+/* No padding of its own — `.rail-rank` above sets the inset for all three
+   rows, so the title, the numbers and the bar share one left edge. */
 .rail-xp-row {
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    padding: 0 8px;
+    margin-top: 2px;
     font-size: 11.5px;
     font-weight: 600;
     color: #9297A3;
@@ -269,7 +217,7 @@ html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
 
 .rail-xp-bar {
     height: 5px;
-    margin: 5px 8px 0;
+    margin-top: 6px;
     border-radius: 999px;
     background: #EDEFF3;
     overflow: hidden;
@@ -280,106 +228,6 @@ html.nav-collapsed .rail-toggle svg { transform: rotate(180deg); }
     border-radius: 999px;
     background: #A38A70;
     transition: width .45s cubic-bezier(0.22, 0.68, 0.28, 1);
-}
-
-/* --- Account menu ------------------------------------------------------- */
-/* Opens up and to the right of the avatar. The rail's foot is at the bottom of
-   the screen, so a menu dropping below it would be off the window; and the rail
-   is only 240px wide, so it opens beside rather than inside. */
-.account-menu {
-    position: absolute;
-    bottom: 0;
-    left: calc(100% + 12px);
-    z-index: 950;
-    width: 320px;
-    max-width: calc(100vw - var(--rail-w) - 24px);
-    background: #FFFFFF;
-    border: 1px solid #EAEAEA;
-    border-radius: 4px;
-    box-shadow: 0 18px 44px rgba(16, 24, 40, 0.16);
-}
-.account-menu[hidden] { display: none; }
-
-.account-menu-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 14px 14px 12px;
-    border-bottom: 1px solid #EAEAEA;
-}
-
-/* A long username shortens rather than pushing the button out of the menu. */
-.account-menu-name {
-    min-width: 0;
-    flex: 1 1 auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 15px;
-    font-weight: 600;
-    color: #2C302E;
-}
-
-.account-logout {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 7px 12px;
-    border: none;
-    border-radius: 4px;
-    background: #D93A34;
-    color: #FFFFFF;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-.account-logout:hover { background: #C0302B; }
-.account-logout:disabled { opacity: 0.6; cursor: default; }
-.account-logout svg { width: 16px; height: 16px; }
-
-/* All fifty in one line. overflow-x carries them; `flex: none` on the options
-   is what stops the row from squeezing them to fit instead of scrolling. */
-.account-avatar-row {
-    display: flex;
-    gap: 8px;
-    padding: 12px 14px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: #C9CDD4 transparent;
-    overscroll-behavior-x: contain;
-}
-.account-avatar-row::-webkit-scrollbar { height: 8px; }
-.account-avatar-row::-webkit-scrollbar-track { background: transparent; }
-.account-avatar-row::-webkit-scrollbar-thumb {
-    background: #C9CDD4;
-    border-radius: 4px;
-}
-
-.account-avatar-option {
-    flex: none;
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background: #F2F4F7;
-    cursor: pointer;
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-}
-.account-avatar-option:hover { background: #E4E8EE; }
-.account-avatar-option.is-current { outline-color: #2C302E; }
-.account-avatar-option img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: block;
 }
 
 /* --- Collapsed --------------------------------------------------------- */
@@ -395,18 +243,14 @@ html.nav-collapsed .rail { padding-left: 10px; padding-right: 10px; }
 html.nav-collapsed .rail-brand { justify-content: center; padding-bottom: 18px; gap: 0; }
 html.nav-collapsed .rail-brand-name,
 html.nav-collapsed .rail-link span,
-html.nav-collapsed .rail-theme-label,
-html.nav-collapsed .rail-switch,
-html.nav-collapsed .rail-account-name,
+html.nav-collapsed .rail-rank-title,
 html.nav-collapsed .rail-xp-row { display: none; }
 
-html.nav-collapsed .rail-link,
-html.nav-collapsed .rail-theme { justify-content: center; padding-left: 0; padding-right: 0; }
-html.nav-collapsed .rail-account-btn { justify-content: center; }
-html.nav-collapsed .rail-account-body { display: none; }
-html.nav-collapsed .rail-xp-bar { margin-inline: 4px; }
+html.nav-collapsed .rail-link { justify-content: center; padding-left: 0; padding-right: 0; }
+html.nav-collapsed .rail-rank { padding-inline: 4px; }
+html.nav-collapsed .rail-rank-num { display: block; }
 
-/* The chevron has nowhere to sit beside a hidden wordmark, so it goes under the
+/* The toggle has nowhere to sit beside a hidden wordmark, so it goes under the
    mark rather than out of reach. */
 html.nav-collapsed .rail-brand { flex-direction: column; gap: 10px; }
 
@@ -460,11 +304,11 @@ html[data-theme="dark"] .rail {
 html[data-theme="dark"] .rail-brand,
 html[data-theme="dark"] .rail-brand-name { color: #F0F2F5; }
 
-/* The mark is drawn in near-black, which disappears against the dark rail. */
-html[data-theme="dark"] .rail-brand-mark img {
-    mix-blend-mode: screen;
-    filter: invert(1);
-}
+/* The same violet a few steps up. The light theme's #5A5FD8 is legible on
+   white and muddy on #161B22, which is what a mid-tone brand colour does on
+   both — so it lifts here rather than being asked to work in two places. */
+html[data-theme="dark"] .rail-mark-body { fill: #8085EE; }
+html[data-theme="dark"] .rail-mark-foot { fill: #B0B4F8; }
 
 html[data-theme="dark"] .rail-link { color: #8B949E; }
 html[data-theme="dark"] .rail-link:hover { color: #F0F2F5; background: #21262D; }
@@ -476,36 +320,10 @@ html[data-theme="dark"] .rail-toggle:hover { background: #21262D; color: #F0F2F5
 html[data-theme="dark"] .rail-toggle:focus-visible { outline-color: #7FB3FF; }
 
 html[data-theme="dark"] .rail-foot { border-top-color: #21262D; }
-html[data-theme="dark"] .rail-theme {
-    background: #161B22;
-    border-color: #30363D;
-    color: #8B949E;
-}
-html[data-theme="dark"] .rail-theme:hover { background: #1B222B; }
-html[data-theme="dark"] .rail-switch { background: #30363D; }
-html[data-theme="dark"] .rail-switch i { background: #E6EDF3; }
-
-html[data-theme="dark"] .rail-avatar { background: #232A33; }
-html[data-theme="dark"] .rail-account-btn:hover { background: #21262D; }
-html[data-theme="dark"] .rail-account-name { color: #F0F2F5; }
+html[data-theme="dark"] .rail-rank-title,
+html[data-theme="dark"] .rail-rank-num { color: #F0F2F5; }
 html[data-theme="dark"] .rail-xp-row { color: #8B949E; }
 html[data-theme="dark"] .rail-xp-bar { background: #21262D; }
-
-html[data-theme="dark"] .account-menu {
-    background: #161B22;
-    border-color: #30363D;
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
-}
-html[data-theme="dark"] .account-menu-head { border-bottom-color: #30363D; }
-html[data-theme="dark"] .account-menu-name { color: #E6EDF3; }
-html[data-theme="dark"] .account-avatar-option { background: #21262D; }
-html[data-theme="dark"] .account-avatar-option:hover { background: #2D333B; }
-html[data-theme="dark"] .account-avatar-option.is-current {
-    outline-color: #7FB3FF;
-    background: #1F2A3A;
-}
-html[data-theme="dark"] .account-avatar-row { scrollbar-color: #3A424D transparent; }
-html[data-theme="dark"] .account-avatar-row::-webkit-scrollbar-thumb { background: #3A424D; }
 
 /* --- Narrower screens --------------------------------------------------- */
 /* The labels go first: eight icons still name themselves, and every page gets
@@ -516,15 +334,11 @@ html[data-theme="dark"] .account-avatar-row::-webkit-scrollbar-thumb { backgroun
     .rail-brand { flex-direction: column; justify-content: center; gap: 10px; padding-bottom: 18px; }
     .rail-brand-name,
     .rail-link span,
-    .rail-theme-label,
-    .rail-switch,
-    .rail-account-name,
+    .rail-rank-title,
     .rail-xp-row { display: none; }
-    .rail-link,
-    .rail-theme { justify-content: center; padding-left: 0; padding-right: 0; }
-    .rail-account-btn { justify-content: center; }
-    .rail-account-body { display: none; }
-    .rail-xp-bar { margin-inline: 4px; }
+    .rail-link { justify-content: center; padding-left: 0; padding-right: 0; }
+    .rail-rank { padding-inline: 4px; }
+    .rail-rank-num { display: block; }
 }
 
 /* Narrower than the icons and a page can both use, the rail lies down along the
@@ -547,9 +361,10 @@ html[data-theme="dark"] .account-avatar-row::-webkit-scrollbar-thumb { backgroun
     }
     html[data-theme="dark"] .rail { border-top-color: #30363D; }
 
-    /* The brand and the account block are the two things a phone can do
-       without: the wordmark's job is done by the dashboard tab, and the account
-       menu is reachable from the settings page. */
+    /* The brand and the foot are the two things a phone can do without: the
+       wordmark's job is done by the dashboard tab, and the rank and XP bar are
+       on the dashboard itself. The top bar is still up there with the account
+       and the theme, so nothing here is the only way to anything. */
     .rail-brand,
     .rail-foot { display: none; }
 

@@ -886,7 +886,7 @@ html.theme-shift .dd-frame,
 html.theme-shift .dd-card,
 html.theme-shift .dd-side,
 html.theme-shift .td-task,
-html.theme-shift .account-menu,
+html.theme-shift .topbar-panel,
 html.theme-shift .footer {
     transition: background-color 500ms var(--hm-ease-soft),
                 background-image 500ms var(--hm-ease-soft),
