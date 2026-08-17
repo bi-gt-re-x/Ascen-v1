@@ -1135,12 +1135,14 @@ html[data-theme="dark"] .wk-focus-chip.is-empty { color: #6b7280; }
    the two and is now the only one, in month.css beside the base rules. Nothing
    about how it is drawn belongs in a file about the Week view. */
 
-/* A task finished after its deadline used to say so here, in deep red on the
- * block's floor. Both the label and this rule are gone: the floor of a block
- * is the span it was booked for, full stop, and a red time on it was a third
- * meaning for a line that already had two. Lateness is not lost — an unfinished
- * task past its due time wears `is-overdue` (see styles/calendar/palette.css),
- * which is the state a reader can still act on. */
+/* A task finished after its deadline used to say so here, with a *completion*
+ * time in deep red on the block's floor. That label is gone and stays gone: the
+ * floor of a block is the span it was booked for, and when it was actually
+ * ticked off is what the tick and the green name are for.
+ *
+ * An unfinished task past its due time is a different question, and it is the
+ * one the reader can still act on. It wears `is-overdue`, which now reddens the
+ * hours rather than ringing the block — see styles/calendar/palette.css. */
 
 
 /* The one-row block, at the height it is actually given.

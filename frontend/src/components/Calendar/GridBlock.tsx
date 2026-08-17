@@ -19,14 +19,7 @@
  */
 import { CardMenu } from './CardMenu';
 import { iconUrlFor } from '@/utils/calendarIcons';
-import {
-  blockLabel,
-  hmToDate,
-  hmLabelShort,
-  rangeLabel,
-  timeLabelShort,
-  type Block,
-} from '@/utils/calendarGrid';
+import { blockLabel, hmToDate, rangeLabel, type Block } from '@/utils/calendarGrid';
 import { dates } from '@/utils';
 
 export interface GridBlockProps {
@@ -186,7 +179,14 @@ export function GridBlock({
             <div className="wk-event-title">
               <BlockTitle name={block.name} />
             </div>
-            <span className="wk-event-start">{hmLabelShort(block.startHM)}</span>
+            {/* The whole span, as on every other block. This said the start
+                alone, which on the one-row layout is the only time there is
+                room for — and "8:30" on a block that runs to 9:15 is the half
+                of the fact that raises the question. The range is three
+                characters longer and the name gives way for them. */}
+            <span className="wk-event-start">
+              {rangeLabel(hmToDate(block.startHM), hmToDate(block.endHM))}
+            </span>
           </div>
         ) : (
           <>
@@ -220,46 +220,32 @@ export function GridBlock({
     block.priority === 'high' ? 'prio-high' : block.priority === 'medium' ? 'prio-medium' : 'prio-low';
 
 
-  // A task writes its two ends where they actually are: the start beside the
-  // name on the block's top edge, the end on its bottom edge. The block *is*
-  // the span, so the two labels sit on the two lines the reader is already
-  // reading the times off — and the pair no longer has to fit on one line, so
-  // neither of them ellipsises in a column a seventh of the grid wide. (This
-  // line used to be the whole range, "11 AM – 12:25 PM", and before that "Due
-  // Aug 4, 12:25 PM", which did ellipsise.) Events keep the range: an event
-  // has no start label at the top to pair with.
+  // A task says when it runs, once, as a range: "11 AM – 12:25 PM".
+  //
+  // The two ends used to be split across the block — the start beside the name
+  // on the top edge, the end alone on the floor — on the reasoning that the
+  // block *is* the span, so each label sat on the line the reader was already
+  // reading that time off. It reads worse than it argues. A time on its own is
+  // ambiguous about which end it is, the two are far enough apart on a tall
+  // block that they stop being a pair, and it made tasks the only thing on the
+  // grid that did not write its hours the way events do. One line, one form,
+  // both kinds.
   //
   // The one exception is a task that overruns the column: it says where it
   // goes instead, because that is a different day and a time alone would not
   // say so.
   const endDT = block.dueDT ?? block.startDT;
-  let footText = timeLabelShort(endDT);
+  let footText = rangeLabel(block.startDT, endDT);
   let footClass = 'wk-event-due';
   if (block.contDT) {
-    // The one case that still names a day, because it is a different one.
+    // The one case that names a day, because it is a different one.
     footText = `Continued on ${dates.formatDate(block.contDT, { month: 'short', day: 'numeric' })}`;
     footClass = 'wk-event-cont';
-  } else if (block.snug) {
-    // A short block gets one line under its name, and that line is the whole
-    // span: "8:30 – 9 AM". It used to be a single time, and on a finished task
-    // it was the moment it was ticked off *with its date on it* — so a block
-    // drawn from 8:30 to 9:00 read "Aug 10 7:13 PM", which is neither of the
-    // two times the reader dragged out. A block says when it runs. When it was
-    // actually finished is what the tick and the green name are for.
-    footText = rangeLabel(block.startDT, endDT);
   }
 
-  // The start time beside the title, on the blocks that have nothing else to
-  // say it with.
-  //
-  // A short block's floor already carries the whole span — "12:15 – 1 PM" — so
-  // repeating the start beside the name printed the same fact twice inside two
-  // centimetres, and on the narrowest blocks it was the thing squeezing the
-  // name into an ellipsis. The one-row layout keeps it, because there the head
-  // is the only line there is; a task continuing onto another day keeps it too,
-  // because its floor is spent naming that day rather than a time.
-  const showStart = !block.snug || block.compact || Boolean(block.contDT);
-  const startText = showStart ? timeLabelShort(block.startDT) : '';
+  // The one-row layout has no floor to put the range on, so it goes beside the
+  // name — the same string, in the only place there is.
+  const headText = block.compact ? rangeLabel(block.startDT, endDT) : '';
   const title = `${block.title}${block.cont ? ' — continued' : ''}`;
 
   return (
@@ -325,7 +311,7 @@ export function GridBlock({
             </BlockTitle>
           </div>
         )}
-        {startText && <span className="wk-event-start">{startText}</span>}
+        {headText && <span className="wk-event-start">{headText}</span>}
       </div>
 
       {!block.compact && (

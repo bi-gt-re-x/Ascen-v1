@@ -167,7 +167,43 @@
 }
 .day-mini-cell:hover { background: #f2f3f6; }
 .day-mini-cell.is-muted { color: #c2c6d0; }
-.day-mini-cell.is-today { font-weight: 700; color: #a8845c; }
+
+/* The week on screen, banded across its row. Square between the ends and
+   rounded at them, so seven cells with a 2px gap read as one bar rather than
+   as seven chips — the gap is small enough that the tint closes over it. */
+.day-mini-cell.is-inweek {
+    background: #f4f1ec;
+    color: #6b5a45;
+    border-radius: 0;
+    /* Closes the 2px grid gap without moving the cell off its column. */
+    box-shadow: -2px 0 0 #f4f1ec, 2px 0 0 #f4f1ec;
+}
+.day-mini-cell.is-inweek.is-muted { color: #bdb3a4; }
+.day-mini-cell.is-inweek:hover { background: #ebe5db; box-shadow: -2px 0 0 #ebe5db, 2px 0 0 #ebe5db; }
+.day-mini-cell.is-week-head {
+    border-radius: 999px 0 0 999px;
+    box-shadow: 2px 0 0 #f4f1ec;
+}
+.day-mini-cell.is-week-head:hover { box-shadow: 2px 0 0 #ebe5db; }
+.day-mini-cell.is-week-tail {
+    border-radius: 0 999px 999px 0;
+    box-shadow: -2px 0 0 #f4f1ec;
+}
+.day-mini-cell.is-week-tail:hover { box-shadow: -2px 0 0 #ebe5db; }
+
+/* Today, wherever it falls — a filled disc, so it is still the loudest thing
+   in the grid when the band is drawn underneath it. */
+.day-mini-cell.is-today {
+    font-weight: 700;
+    color: #ffffff;
+    background: #c4553d;
+    border-radius: 999px;
+}
+.day-mini-cell.is-today:hover { background: #ab4632; }
+/* The disc has to survive the band's own box-shadow, which would otherwise
+   paint the tint over its left and right edges. */
+.day-mini-cell.is-inweek.is-today { box-shadow: none; }
+
 .day-mini-cell.is-selected { background: #1a1f26; color: #fff; font-weight: 700; }
 .day-mini-cell.is-selected:hover { background: #2b323c; }
 
@@ -307,6 +343,23 @@ html[data-theme="dark"] .day-mini-arrow:hover { background: #1c222c; color: #e6e
 html[data-theme="dark"] .day-mini-cell { color: #c9d1d9; }
 html[data-theme="dark"] .day-mini-cell:hover { background: #1c222c; }
 html[data-theme="dark"] .day-mini-cell.is-muted { color: #4b525e; }
+html[data-theme="dark"] .day-mini-cell.is-inweek {
+    background: #241d14;
+    color: #d8c3a5;
+    box-shadow: -2px 0 0 #241d14, 2px 0 0 #241d14;
+}
+html[data-theme="dark"] .day-mini-cell.is-inweek.is-muted { color: #7a6a55; }
+html[data-theme="dark"] .day-mini-cell.is-inweek:hover {
+    background: #2e2519;
+    box-shadow: -2px 0 0 #2e2519, 2px 0 0 #2e2519;
+}
+html[data-theme="dark"] .day-mini-cell.is-week-head { box-shadow: 2px 0 0 #241d14; }
+html[data-theme="dark"] .day-mini-cell.is-week-head:hover { box-shadow: 2px 0 0 #2e2519; }
+html[data-theme="dark"] .day-mini-cell.is-week-tail { box-shadow: -2px 0 0 #241d14; }
+html[data-theme="dark"] .day-mini-cell.is-week-tail:hover { box-shadow: -2px 0 0 #2e2519; }
+html[data-theme="dark"] .day-mini-cell.is-today { background: #d4614a; color: #1a0f0c; }
+html[data-theme="dark"] .day-mini-cell.is-today:hover { background: #e0705a; }
+html[data-theme="dark"] .day-mini-cell.is-inweek.is-today { box-shadow: none; }
 html[data-theme="dark"] .day-mini-cell.is-selected { background: #e6e9f0; color: #12161c; }
 html[data-theme="dark"] .day-mini-cell.is-selected:hover { background: #cfd3db; }
 html[data-theme="dark"] .wk-stat-sub { color: #7d8492; }

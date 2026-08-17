@@ -131,6 +131,19 @@ export default function Week() {
       return false;
     }
   });
+  /**
+   * The overview's mini-month cursor.
+   *
+   * Its own, like the Day view's: paging to March must not drag the week
+   * along, or the panel is a second set of week arrows rather than a way to
+   * look around. Stepping the week re-syncs it below, so the month on show is
+   * always the month the banded week is in unless the reader has gone
+   * wandering.
+   */
+  const [mini, setMini] = useState(() => {
+    const start = mondayOf(new Date());
+    return { year: start.getFullYear(), month: start.getMonth() };
+  });
   const [history, setHistory] = useState<FocusHistory>({});
   /** The day whose focus chip is currently an input, if any. */
   const [focusEditing, setFocusEditing] = useState<string | null>(null);
@@ -509,6 +522,31 @@ export default function Week() {
     [actions, slot],
   );
 
+  /** Moving the week re-syncs the mini-month to the month that week starts in. */
+  const goToWeek = useCallback((date: Date) => {
+    const start = mondayOf(date);
+    setMonday(start);
+    setMini({ year: start.getFullYear(), month: start.getMonth() });
+  }, []);
+
+  /* Not a functional update: it has to set the mini-month too, and queueing
+     that from inside an updater makes the updater a side effect — which React
+     is free to run twice. `monday` in the closure is the state this render was
+     drawn from, which is the week the arrow the reader pressed belongs to. */
+  const stepWeek = useCallback(
+    (weeks: number) => goToWeek(dates.addDays(monday, weeks * 7)),
+    [goToWeek, monday],
+  );
+
+  const stepMini = useCallback(
+    (delta: number) =>
+      setMini((current) => {
+        const at = new Date(current.year, current.month + delta, 1);
+        return { year: at.getFullYear(), month: at.getMonth() };
+      }),
+    [],
+  );
+
   const toggleSidebar = useCallback(() => {
     setCollapsed((was) => {
       try {
@@ -540,7 +578,7 @@ export default function Week() {
               type="button"
               className="wk-arrow"
               aria-label="Previous week"
-              onClick={() => setMonday((current) => dates.addDays(current, -7))}
+              onClick={() => stepWeek(-1)}
             >
               ‹
             </button>
@@ -550,7 +588,7 @@ export default function Week() {
               type="button"
               className="wk-arrow"
               aria-label="Next week"
-              onClick={() => setMonday((current) => dates.addDays(current, 7))}
+              onClick={() => stepWeek(1)}
             >
               ›
             </button>
@@ -563,7 +601,7 @@ export default function Week() {
             type="button"
             className="wk-today"
             onClick={() => {
-              setMonday(mondayOf(new Date()));
+              goToWeek(new Date());
               centerOnNow();
             }}
           >
@@ -734,6 +772,14 @@ export default function Week() {
 
         </div>
         <WeekSidebar
+          mini={{
+            year: mini.year,
+            month: mini.month,
+            from: mondayIso,
+            to: sundayIso,
+            onStep: stepMini,
+            onPick: (iso) => goToWeek(dates.fromIsoDate(iso)),
+          }}
           stats={overview}
           streak={Number(stats.current_streak) || 0}
           focus={focus}

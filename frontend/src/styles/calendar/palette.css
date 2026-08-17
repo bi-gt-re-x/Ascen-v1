@@ -217,16 +217,29 @@ html[data-theme="dark"] .wk-event[data-family].is-done {
 }
 .wk-event[data-family].is-done .wk-event-title { color: var(--ev-ink-quiet); }
 
-/* Overdue: past its deadline and still not done. The red family, and quietly —
-   a ring inside the block's own edge rather than a repaint, so the block still
-   says which kind of work it is while it says it is late. */
-.wk-event[data-family].is-overdue {
-    border-color: var(--event-red-400);
-    box-shadow: inset 0 0 0 1px var(--event-red-300);
+/* Overdue: past its deadline and still not done.
+ *
+ * This was a red border plus a red ring inside it — two outlines around the
+ * whole block. On a busy week it was the loudest thing on the grid, and it was
+ * loud about the blocks a reader is already anxious about; worse, it fought
+ * the family edge it was drawn over, so a late block stopped saying which kind
+ * of work it was at exactly the moment that matters.
+ *
+ * The block keeps its own edge. What goes red is the line that made it late:
+ * the hours. It is one line of small text inside a block the reader is already
+ * reading, it cannot be mistaken for a selection or a clash ring — both of
+ * which *are* outlines — and it puts the colour on the fact rather than around
+ * the object. */
+/* Both slots: the range sits on the floor on a normal block and beside the name
+   on the one-row one, and a late block is late in either layout. */
+.wk-event[data-family].is-overdue .wk-event-due,
+.wk-event[data-family].is-overdue .wk-event-start {
+    color: var(--event-red-600);
+    font-weight: 600;
 }
-html[data-theme="dark"] .wk-event[data-family].is-overdue {
-    border-color: var(--event-red-400);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--event-red-400) 55%, var(--event-dark-base));
+html[data-theme="dark"] .wk-event[data-family].is-overdue .wk-event-due,
+html[data-theme="dark"] .wk-event[data-family].is-overdue .wk-event-start {
+    color: var(--event-red-300);
 }
 
 /* ==========================================================================

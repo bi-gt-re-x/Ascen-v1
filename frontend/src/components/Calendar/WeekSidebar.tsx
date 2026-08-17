@@ -32,6 +32,7 @@
  * is a card the dashboard already draws.
  */
 import { useMemo } from 'react';
+import { MiniMonth } from './MiniMonth';
 import { fmtHM } from '@/hooks/useFocusSession';
 import { useCountUp } from '@/hooks/useCountUp';
 import { OTHER_KEY, type SubjectXp } from '@/utils/subjectXp';
@@ -89,7 +90,28 @@ export interface UpcomingEntry {
   when: string;
 }
 
+/**
+ * The month at the head of the column, and the week it has banded.
+ *
+ * The cursor is the caller's because paging the month must not move the week —
+ * see MiniMonth. `from`/`to` are the seven days on screen, which is what the
+ * band draws and the reason this panel leads the column: every figure below it
+ * is about those seven days, and until now the only thing saying *which* seven
+ * was the date range in the header, on the far side of the grid.
+ */
+export interface WeekMini {
+  year: number;
+  month: number;
+  /** Monday and Sunday of the week on screen. */
+  from: string;
+  to: string;
+  onStep: (delta: number) => void;
+  /** Moves the week to the one the picked day falls in. */
+  onPick: (iso: string) => void;
+}
+
 export interface WeekSidebarProps {
+  mini: WeekMini;
   stats: WeekStats;
   streak: number;
   /** Focused against planned across the week — the last card in the column. */
@@ -366,6 +388,7 @@ function sparkPoints(days: WeekDay[]): { x: number; y: number }[] {
 }
 
 export function WeekSidebar({
+  mini,
   stats,
   streak,
   focus,
@@ -401,6 +424,19 @@ export function WeekSidebar({
 
   return (
     <aside className="wk-sidebar" id="wkSidebar" hidden={collapsed}>
+      {/* --- The month, with this week on it -------------------------------
+          Monday-first, so the seven days band one row instead of wrapping
+          across two. The Day view's copy stays Sunday-first — see MiniMonth. */}
+      <MiniMonth
+        year={mini.year}
+        month={mini.month}
+        fromIso={mini.from}
+        toIso={mini.to}
+        weekStart={1}
+        onStep={mini.onStep}
+        onPick={mini.onPick}
+      />
+
       {/* --- This Week Progress ------------------------------------------- */}
       <section className="wk-panel">
         <h3 className="wk-panel-title">This Week Progress</h3>
