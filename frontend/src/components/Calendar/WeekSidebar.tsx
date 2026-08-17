@@ -112,6 +112,8 @@ export interface WeekMini {
 
 export interface WeekSidebarProps {
   mini: WeekMini;
+  /** Opens the subject library in place of this column. */
+  onOpenLibrary: () => void;
   stats: WeekStats;
   streak: number;
   /** Focused against planned across the week — the last card in the column. */
@@ -389,6 +391,7 @@ function sparkPoints(days: WeekDay[]): { x: number; y: number }[] {
 
 export function WeekSidebar({
   mini,
+  onOpenLibrary,
   stats,
   streak,
   focus,
@@ -424,6 +427,28 @@ export function WeekSidebar({
 
   return (
     <aside className="wk-sidebar" id="wkSidebar" hidden={collapsed}>
+      {/* --- The way to the subject library --------------------------------
+          At the very top, above the month. It is the one control in this
+          column rather than a reading of the week, and everything below it is
+          a reading of the week — so it goes where a control goes, before the
+          figures rather than buried among them. */}
+      <button type="button" className="wk-library-btn" onClick={onOpenLibrary}>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.9}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H8v16H5.5A1.5 1.5 0 0 1 4 18.5Z" />
+          <path d="M8 4h3.5v16H8z" />
+          <path d="m14.2 5.1 2.6-.7a1.5 1.5 0 0 1 1.8 1l3 11a1.5 1.5 0 0 1-1 1.9l-2.6.7Z" />
+        </svg>
+        <span>Subject Library</span>
+      </button>
+
       {/* --- The month, with this week on it -------------------------------
           Monday-first, so the seven days band one row instead of wrapping
           across two. The Day view's copy stays Sunday-first — see MiniMonth. */}

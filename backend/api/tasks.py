@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from backend.api.goals import apply_task_completion
 from backend.api.reply import fail, ok
+from backend.api import subjects as user_subjects
 from backend.config import subjects as subject_catalogue
 from backend.database import connection as db
 from backend.tracking import xp as xp_tracking
@@ -138,16 +139,27 @@ def _delete(task_id, username=None):
     db.save_tasks(kept)
 
 
-def _subject(raw):
-    """A subject id the catalogue recognises, or None.
+def _subject(raw, username=None):
+    """A subject id this account may file a task under, or None.
 
-    Anything else — a stale id from an older build, a typo, a value someone
-    posted by hand — is dropped rather than stored. A task with no subject is a
-    perfectly ordinary task, so there is nothing to fail here; storing a value
-    nothing can draw an icon for would be the worse outcome.
+    Two things can recognise one: the catalogue, and the account's own list of
+    subjects it made itself (backend/api/subjects.py). Anything else — a stale
+    id from an older build, a typo, a value someone posted by hand — is dropped
+    rather than stored. A task with no subject is a perfectly ordinary task, so
+    there is nothing to fail here; storing a value nothing can draw an icon for
+    would be the worse outcome.
+
+    The account is asked for by name because a custom subject belongs to one:
+    without it, one user's `own_thesis_plan` would validate against another's.
+    Called with no username the catalogue is the only answer, which is the
+    behaviour this had before custom subjects existed.
     """
     found = subject_catalogue.get(raw)
-    return found['id'] if found else None
+    if found:
+        return found['id']
+    if username and raw and raw in user_subjects.own_ids(username):
+        return raw
+    return None
 
 
 def _create(body: CreateTask):
@@ -170,7 +182,7 @@ def _create(body: CreateTask):
         # Honor a client-supplied created_at (the week calendar's drag-to-create
         # task uses it to place the block on the dragged slot); default to now.
         "created_at": body.created_at or datetime.now().isoformat(),
-        "subject": _subject(body.subject),
+        "subject": _subject(body.subject, body.username),
     })
     db.save_tasks(tasks)
     return ok(task_id=task_id)
@@ -216,7 +228,7 @@ def update_task(task_id: str, body: UpdateTask):
     if 'due_date' in sent:
         task['due_date'] = body.due_date
     if 'subject' in sent:
-        task['subject'] = _subject(body.subject)
+        task['subject'] = _subject(body.subject, body.username)
     if 'completed' in sent:
         task['status'] = 'done' if body.completed else 'todo'
         # Record the completion time (the task's "end") when finishing; clear it

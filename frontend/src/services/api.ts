@@ -98,6 +98,20 @@ export function put<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
   });
 }
 
+/**
+ * A change to part of a resource, where PUT would mean "and the rest is as
+ * sent". The subject library's colour endpoint is the first of these: it
+ * changes one field of a subject and must not be read as a description of the
+ * whole one.
+ */
+export function patch<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
+  return request<T>(path, {
+    method: 'PATCH',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
 export function del<T>(path: string, query?: Query): Promise<ApiResult<T>> {
   return request<T>(path, { method: 'DELETE' }, query);
 }

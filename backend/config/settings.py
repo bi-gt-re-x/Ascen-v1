@@ -71,7 +71,7 @@ DB_PATH = os.environ.get('ASCEN_DB') or os.path.join(DATA_DIR, 'ascen.db')
 # one can reference it: users first, then everything that hangs off a user.
 SCHEMA_FILES = [
     'users', 'tasks', 'goals', 'growth', 'focus', 'events', 'analytics',
-    'achievements', 'history', 'library', 'notes', 'settings',
+    'achievements', 'history', 'library', 'notes', 'settings', 'subjects',
 ]
 
 # --- Behaviour -----------------------------------------------------------

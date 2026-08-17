@@ -37,6 +37,8 @@ export type {
 } from './Prompts';
 export { RecurrencePicker } from './RecurrencePicker';
 export type { RecurrencePickerProps } from './RecurrencePicker';
+export { SubjectLibrary } from './SubjectLibrary';
+export type { SubjectLibraryProps } from './SubjectLibrary';
 export { MAX_TASK_XP, MIN_TASK_XP, TaskModal, xpToPriority } from './TaskModal';
 export type { TaskDraft, TaskModalProps } from './TaskModal';
 export { DayColumn, TimeLabels, nowFor } from './TimeGrid';

@@ -132,6 +132,19 @@ ADDED_TABLES = ('''
 ''', '''
     CREATE INDEX IF NOT EXISTS goal_milestones_goal_idx
         ON goal_milestones (goal_id, position)
+''', '''
+    CREATE TABLE IF NOT EXISTS user_subjects (
+        user_id     TEXT NOT NULL REFERENCES users (username) ON DELETE CASCADE,
+        subject_id  TEXT NOT NULL,
+        name        TEXT NOT NULL DEFAULT '',
+        family      TEXT,
+        custom      BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (user_id, subject_id)
+    )
+''', '''
+    CREATE INDEX IF NOT EXISTS user_subjects_user_idx
+        ON user_subjects (user_id)
 ''')
 
 
@@ -445,6 +458,20 @@ def metric_snapshots():
 
 def save_metric_snapshots(rows):
     write_table('metric_snapshots', rows)
+
+
+def user_subjects():
+    """What each account has changed about the subject catalogue.
+
+    One row per (account, subject): a subject the account invented, or a
+    colour it chose for one of the hundred. See data/sql/subjects.sql for why
+    those are one table rather than two.
+    """
+    return read_table('user_subjects')
+
+
+def save_user_subjects(rows):
+    write_table('user_subjects', rows)
 
 
 def event_colors():

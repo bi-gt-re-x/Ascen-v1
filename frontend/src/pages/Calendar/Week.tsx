@@ -26,6 +26,7 @@ import {
   ConflictDialog,
   CreateChooser,
   DayColumn,
+  SubjectLibrary,
   TimeLabels,
   ViewSwitcher,
   WeekSidebar,
@@ -40,6 +41,7 @@ import {
   useNow,
   useNowScroll,
   useSubjectIndex,
+  useSubjects,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import { planFamilies } from '@/utils/calendarFamilies';
@@ -120,6 +122,9 @@ export default function Week() {
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
   const subjects = useSubjectIndex(username);
+  // The same catalogue as a list, for the library. Both hooks read one cache,
+  // so this is not a second request — see hooks/useSubjects.
+  const subjectList = useSubjects(username);
   const now = useNow();
   const navigate = useNavigate();
 
@@ -144,6 +149,8 @@ export default function Week() {
     const start = mondayOf(new Date());
     return { year: start.getFullYear(), month: start.getMonth() };
   });
+  /** True while the overview column is showing the subject library instead. */
+  const [library, setLibrary] = useState(false);
   const [history, setHistory] = useState<FocusHistory>({});
   /** The day whose focus chip is currently an input, if any. */
   const [focusEditing, setFocusEditing] = useState<string | null>(null);
@@ -771,6 +778,17 @@ export default function Week() {
           </div>
 
         </div>
+        {/* One column, two things it can be. The library replaces the overview
+            rather than opening over it: they are the same panel of the same
+            width, and a dialog would put the grid behind a scrim at exactly
+            the moment the reader wants to watch it change colour. */}
+        {library && !collapsed ? (
+          <SubjectLibrary
+            subjects={subjectList}
+            username={username}
+            onClose={() => setLibrary(false)}
+          />
+        ) : (
         <WeekSidebar
           mini={{
             year: mini.year,
@@ -780,6 +798,7 @@ export default function Week() {
             onStep: stepMini,
             onPick: (iso) => goToWeek(dates.fromIsoDate(iso)),
           }}
+          onOpenLibrary={() => setLibrary(true)}
           stats={overview}
           streak={Number(stats.current_streak) || 0}
           focus={focus}
@@ -791,7 +810,7 @@ export default function Week() {
           onViewAnalytics={() => navigate('/analytics')}
           collapsed={collapsed}
         />
-
+        )}
       </div>
 
       <BlockDialogs actions={actions} username={username} wide />

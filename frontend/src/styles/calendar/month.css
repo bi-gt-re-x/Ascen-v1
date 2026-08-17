@@ -85,15 +85,20 @@
    The card's top offset comes from the body's padding-top instead. */
 
 .calendar-container {
-    /* Whatever the body has left, which is the whole of the arithmetic now.
+    /* The viewport, less the two things above and below the card: the fixed top
+     * bar, and the gutter the body keeps under it.
      *
-     * This was `calc(100vh - var(--topnav-h))`, taking the bar off the viewport
-     * itself — right while the body above was reserving nothing, and a double
-     * subtraction the moment it started reserving the bar properly. The body
-     * owns the offsets (the bar at the top, the rail on the left, 14px at the
-     * bottom); this fills what that leaves and does not need to know what any
-     * of them are. */
-    height: 100%;
+     * `height: 100%` is what this wants to say and it does not work. The body
+     * rule below is a flex column and this is a flex item with `flex: 1 1 auto`;
+     * the percentage does not resolve against it, and the item is sized from its
+     * content instead — which is the 23-hour grid, so the card came out 2345px
+     * tall inside an 820px window and every column inside it stopped being able
+     * to scroll. Measured, not guessed: 100% gave 2345, the calc gives 738.
+     *
+     * Both terms are variables so neither can drift from the thing it is
+     * subtracting. `--topnav-h` belongs to the bar (styles/rail.css) and
+     * `--cal-gutter` to the body rule below, which is the one that spends it. */
+    height: calc(100vh - var(--topnav-h, 64px) - var(--cal-gutter, 14px));
     min-height: 0;
 }
 
@@ -1952,6 +1957,12 @@ html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297;
    confined rather than deleted. */
 body:has(.calendar-container) {
     background: #0e0f12; /* dark theme page background (default) */
+    /* The margin this page keeps around the card, on the three sides the
+       chrome does not already own. A variable because .calendar-container has
+       to subtract it to size itself, and a card that subtracts a different
+       number from the one the body spends is exactly the drift that put the
+       week's header under the top bar. */
+    --cal-gutter: 14px;
     /* Fit the whole page in the viewport — no vertical page scroll */
     height: 100vh;
     overflow: hidden;
@@ -1994,9 +2005,9 @@ body:has(.calendar-container) {
      * that owns it, and this is the same value `body.has-rail` would have set if
      * this rule were not here. */
     padding-top: var(--topnav-h);
-    padding-right: 14px;
-    padding-bottom: 14px;
-    padding-left: calc(var(--rail-w) + 14px);
+    padding-right: var(--cal-gutter);
+    padding-bottom: var(--cal-gutter);
+    padding-left: calc(var(--rail-w) + var(--cal-gutter));
     box-sizing: border-box;
 }
 

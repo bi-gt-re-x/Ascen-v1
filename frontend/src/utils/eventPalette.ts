@@ -256,10 +256,51 @@ export const SUBJECT_FAMILY: Record<string, Family> = {
   travel: 'yellow', journaling: 'yellow',
 };
 
-/** The family a task belongs to. Unfiled work is Miscellaneous, which is gray. */
+/**
+ * What the account has said, overriding the table above.
+ *
+ * `SUBJECT_FAMILY` is this app's opinion about what kind of work each of the
+ * hundred subjects is. The subject library (components/Calendar/SubjectLibrary)
+ * lets a reader disagree, and lets them name subjects the hundred never had —
+ * and a subject the table has never heard of has no opinion to override.
+ *
+ * A module-level map rather than a parameter because of who has to read it.
+ * `familyForSubject` is called from `utils/calendarGrid` and
+ * `utils/calendarFamilies`, which are pure functions over tasks and events with
+ * no account in scope and a dozen callers between them; threading an override
+ * map through all of that to change one lookup would put the account into the
+ * signature of everything that draws a block. Instead the hook that owns the
+ * library publishes here whenever the answer changes — see
+ * hooks/useSubjects.ts — and the lookup stays a lookup.
+ *
+ * One account is signed in at a time, so one map is the whole of the state.
+ */
+const OVERRIDES = new Map<string, Family>();
+
+/**
+ * Replace the account's colour choices wholesale.
+ *
+ * Wholesale rather than per-subject: the caller has just been handed the full
+ * list by the server, and applying that as a set means a colour cleared
+ * somewhere else is cleared here too. Called with nothing on sign-out, which
+ * puts every subject back to the table above.
+ */
+export function setSubjectFamilies(entries: Iterable<readonly [string, Family]>): void {
+  OVERRIDES.clear();
+  for (const [subject, family] of entries) OVERRIDES.set(subject, family);
+}
+
+/**
+ * The family a task belongs to.
+ *
+ * The account's choice, then this app's, then gray — which is the honest
+ * answer for "this is on the calendar and nobody has said what kind of work it
+ * is", and is what a subject the account invented gets until it is given a
+ * colour.
+ */
 export function familyForSubject(subject: string | null | undefined): Family {
   if (!subject) return 'gray';
-  return SUBJECT_FAMILY[subject] ?? 'gray';
+  return OVERRIDES.get(subject) ?? SUBJECT_FAMILY[subject] ?? 'gray';
 }
 
 /** Whether a string names one of the twelve. */

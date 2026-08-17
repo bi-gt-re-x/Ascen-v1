@@ -88,8 +88,43 @@
 .wk-main.sidebar-collapsed .wk-sidebar { display: none; }
 
 
-/* ---- Sidebar ---- */
-.wk-sidebar { display: flex; flex-direction: column; gap: 16px; }
+/* ---- Sidebar ----
+   It scrolls, and it says so.
+
+   The scroll used to be declared only inside the min-width:1121px block below,
+   which left 1000-1120px with a column that neither scrolled nor stacked —
+   whatever did not fit in the card was simply clipped, and the subject library
+   is a hundred rows long. It is declared here instead and given back at 1000px,
+   where the column stops being a column.
+
+   The scrollbar is drawn, against the rule for the rest of the calendar. That
+   rule (`body:has(.calendar-container) *`, in month.css) is right about the
+   grid — a view whose whole job is to be looked at should not have three
+   gutters down it — and wrong about this one column, which is a long list that
+   has to be read to the bottom. `scrollbar-gutter: stable` keeps the rows from
+   shifting sideways when the bar appears. */
+.wk-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overflow-anchor: none;
+    padding-right: 4px;
+}
+body:has(.calendar-container) .wk-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: #c9cdd4 transparent;
+    scrollbar-gutter: stable;
+}
+body:has(.calendar-container) .wk-sidebar::-webkit-scrollbar { width: 8px; display: block; }
+body:has(.calendar-container) .wk-sidebar::-webkit-scrollbar-track { background: transparent; }
+body:has(.calendar-container) .wk-sidebar::-webkit-scrollbar-thumb {
+    background: #c9cdd4; border-radius: 4px;
+}
+html[data-theme="dark"] body:has(.calendar-container) .wk-sidebar { scrollbar-color: #3a424d transparent; }
+html[data-theme="dark"] body:has(.calendar-container) .wk-sidebar::-webkit-scrollbar-thumb { background: #3a424d; }
 .wk-panel {
     background: #fff; border: 1px solid #eef0f2; border-radius: 14px; padding: 20px;
     box-shadow: 0 1px 2px rgba(16,24,40,.03), 0 4px 12px rgba(16,24,40,.04);
@@ -173,7 +208,9 @@
    so the stats sidebar can scroll on the left and nothing is clipped. */
 @media (min-width: 1121px) {
     .wk-main { align-items: stretch; flex: 1 1 auto; min-height: 0; }
-    .wk-sidebar { min-height: 0; overflow-y: auto; overflow-x: hidden; overflow-anchor: none; padding-right: 4px; }
+    /* The column's own scroll is declared with the column now — see above. It
+       used to be here, which left 1000-1120px unable to either scroll it or
+       stack it. */
     .wk-gridwrap { display: flex; flex-direction: column; min-height: 0; }
     .wk-scroll { flex: 1 1 auto; min-height: 0; max-height: none; }
 }
@@ -718,10 +755,167 @@ html[data-theme="dark"] .wk-recur-row:hover { background: #232a35; }
 @media (max-width: 1000px) {
     .wk-main { grid-template-columns: minmax(0, 1fr); }
     .wk-scroll { max-height: 70vh; }
+    /* Stacked above the grid, the column is part of the page's own scroll and
+       must not keep one of its own — a scroller inside a scroller, both going
+       the same way, is the thing where the wheel does the wrong one. */
+    .wk-sidebar { overflow: visible; padding-right: 0; }
     /* Sidebar stacks above the grid here, so the header flows normally too. */
     .wk-header { display: flex; flex-wrap: wrap; gap: 16px; }
     .wk-headmain { flex: 1 1 auto; padding-left: 0; }
 }
+
+/* ==========================================================================
+   Subject Library — components/Calendar/SubjectLibrary.tsx
+   ==========================================================================
+   The overview column's other self. It shares `.wk-sidebar` (and so its
+   scroll) and `.wk-panel` (and so its card), because it is the same column
+   showing something else rather than a different piece of furniture. */
+
+/* The way in, at the top of the overview. Drawn as a control rather than as a
+   panel: it is the one thing in that column that does something, and
+   everything under it is a reading of the week. */
+.wk-library-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 11px 14px;
+    border: 1px solid #e5e7eb; border-radius: 12px;
+    background: #fff; color: #374151;
+    font-family: inherit; font-size: 13.5px; font-weight: 600;
+    cursor: pointer; text-align: left; flex: none;
+}
+.wk-library-btn:hover { background: #f6f7f9; border-color: #d7dbe0; color: #111827; }
+.wk-library-btn:focus-visible { outline: 2px solid #a8845c; outline-offset: 2px; }
+.wk-library-btn svg { width: 17px; height: 17px; flex: none; color: #a8845c; }
+
+.sl-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex: none;
+}
+.sl-title { margin: 0; font-size: 16px; font-weight: 700; color: #111827; }
+.sl-back {
+    border: 1px solid #e5e7eb; background: #fff; border-radius: 999px;
+    padding: 6px 16px; font-family: inherit; font-size: 13px; font-weight: 600;
+    color: #374151; cursor: pointer;
+}
+.sl-back:hover { background: #f6f7f9; color: #111827; }
+
+.sl-panel { padding: 16px; }
+.sl-section {
+    margin: 0 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #9297ab;
+}
+
+.sl-error {
+    margin: 0; padding: 9px 12px; border-radius: 10px;
+    background: #fdecea; border: 1px solid #f5c6c0;
+    font-size: 12.5px; color: #8d3228; flex: none;
+}
+
+/* ---- Adding one of your own ---- */
+.sl-add { display: flex; gap: 8px; margin-bottom: 12px; }
+.sl-add-field, .sl-search {
+    flex: 1 1 auto; min-width: 0; box-sizing: border-box;
+    padding: 8px 11px; border: 1px solid #e5e7eb; border-radius: 9px;
+    background: #fafbfc; color: #111827; font-family: inherit; font-size: 13px;
+}
+.sl-add-field:focus, .sl-search:focus {
+    outline: none; border-color: #a8845c; background: #fff;
+    box-shadow: 0 0 0 3px rgba(168,132,92,.15);
+}
+.sl-search { width: 100%; margin-bottom: 12px; }
+.sl-add-btn {
+    flex: none; padding: 8px 15px; border: 0; border-radius: 9px;
+    background: #2c302e; color: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.sl-add-btn:hover:not(:disabled) { background: #434946; }
+.sl-add-btn:disabled { opacity: .45; cursor: default; }
+
+.sl-empty { margin: 0; font-size: 12.5px; line-height: 1.55; color: #6b7280; }
+
+/* ---- The rows ---- */
+.sl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sl-row { border-radius: 9px; }
+.sl-row.is-open { background: #fafbfc; }
+.sl-row.is-busy { opacity: .55; pointer-events: none; }
+
+.sl-rowhead { display: flex; align-items: center; gap: 9px; padding: 5px 7px; }
+
+/* The colour, and the way to change it. A filled disc rather than a square:
+   it is the same mark the grid's blocks carry beside their names. */
+.sl-dot {
+    flex: none; width: 15px; height: 15px; padding: 0;
+    border: 0; border-radius: 50%; background: var(--sw, #9ca3af);
+    cursor: pointer; outline: 2px solid transparent; outline-offset: 2px;
+}
+.sl-dot:hover { outline-color: #d7dbe0; }
+.sl-dot:focus-visible { outline-color: #a8845c; }
+
+.sl-name {
+    flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px;
+    padding: 0; border: 0; background: none; cursor: pointer;
+    font-family: inherit; font-size: 13.5px; color: #374151; text-align: left;
+}
+.sl-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-name:hover { color: #111827; }
+.sl-ico { flex: none; opacity: .75; }
+
+.sl-count {
+    flex: none; font-size: 11px; font-weight: 600; color: #9297ab;
+    background: #f2f4f7; border-radius: 999px; padding: 1px 7px;
+}
+
+.sl-del {
+    flex: none; width: 22px; height: 22px; padding: 0; border: 0;
+    border-radius: 6px; background: none; color: #b0b6c0;
+    font-size: 17px; line-height: 1; cursor: pointer;
+}
+.sl-del:hover { background: #fdecea; color: #b42318; }
+
+/* ---- The twelve ---- */
+.sl-picker { padding: 2px 7px 10px; }
+.sl-swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; }
+.sl-swatch {
+    aspect-ratio: 1 / 1; padding: 0; border: 0; border-radius: 50%;
+    background: var(--sw, #9ca3af); cursor: pointer;
+    outline: 2px solid transparent; outline-offset: 2px;
+}
+.sl-swatch:hover { outline-color: #d7dbe0; }
+.sl-swatch.is-current { outline-color: #2c302e; }
+.sl-swatch:focus-visible { outline-color: #a8845c; }
+
+.sl-reset {
+    margin-top: 10px; padding: 0; border: 0; background: none;
+    font-family: inherit; font-size: 12px; font-weight: 600; color: #a8845c;
+    cursor: pointer;
+}
+.sl-reset:hover { text-decoration: underline; }
+
+.sl-note {
+    margin: 0; font-size: 11.5px; line-height: 1.55; color: #9297ab; flex: none;
+}
+
+/* ---- Library, dark ---- */
+html[data-theme="dark"] .wk-library-btn { background: #161b22; border-color: #2b323c; color: #e6e8f0; }
+html[data-theme="dark"] .wk-library-btn:hover { background: #1c222c; border-color: #39414f; }
+html[data-theme="dark"] .wk-library-btn svg { color: #d8c3a5; }
+html[data-theme="dark"] .sl-title { color: #f4f4f6; }
+html[data-theme="dark"] .sl-back { background: #161b22; border-color: #2b323c; color: #e6e8f0; }
+html[data-theme="dark"] .sl-back:hover { background: #1c222c; }
+html[data-theme="dark"] .sl-section, html[data-theme="dark"] .sl-note { color: #7d8492; }
+html[data-theme="dark"] .sl-empty { color: #8b93a3; }
+html[data-theme="dark"] .sl-error { background: #2a1615; border-color: #5e2a25; color: #f5a29b; }
+html[data-theme="dark"] .sl-add-field,
+html[data-theme="dark"] .sl-search { background: #0f141b; border-color: #262c36; color: #e6e9f0; }
+html[data-theme="dark"] .sl-add-btn { background: #e6e9f0; color: #12161c; }
+html[data-theme="dark"] .sl-add-btn:hover:not(:disabled) { background: #cfd3db; }
+html[data-theme="dark"] .sl-row.is-open { background: #0f141b; }
+html[data-theme="dark"] .sl-name { color: #c9d1d9; }
+html[data-theme="dark"] .sl-name:hover { color: #f4f4f6; }
+html[data-theme="dark"] .sl-count { background: #1c222c; color: #8b93a3; }
+html[data-theme="dark"] .sl-del:hover { background: #2a1615; color: #f5a29b; }
+html[data-theme="dark"] .sl-dot:hover, html[data-theme="dark"] .sl-swatch:hover { outline-color: #39414f; }
+html[data-theme="dark"] .sl-swatch.is-current { outline-color: #e6e9f0; }
+html[data-theme="dark"] .sl-reset { color: #d8c3a5; }
 
 /* ---- Dark theme ---- */
 html[data-theme="dark"] .wk-title,

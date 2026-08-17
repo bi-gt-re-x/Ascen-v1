@@ -13,11 +13,39 @@
  * hundred rows to reflect that in a dialog the reader has just closed is not
  * worth it; the next page load has it right.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { list as listSubjects, type Subject } from '@/services/subjects';
+import { setSubjectFamilies, type Family } from '@/utils/eventPalette';
 
 const cache = new Map<string, Subject[]>();
 const inFlight = new Map<string, Promise<Subject[]>>();
+
+/**
+ * Fired when the catalogue changes — a subject added, deleted or recoloured.
+ *
+ * The cache is module-wide and a dozen components read it, so a change made in
+ * the subject library has to reach the grid drawn beside it, the picker in an
+ * open dialog, and the dashboard's task rows. A custom event rather than
+ * shared state for the same reason the rail listens for one: it is a single
+ * fact travelling one way, with no reply.
+ */
+export const SUBJECTS_CHANGED = 'ascen:subjects-changed';
+
+/**
+ * Publish the account's colour choices where the drawing code can reach them.
+ *
+ * `familyForSubject` is called from pure functions with no account in scope —
+ * see the note on `setSubjectFamilies` in utils/eventPalette. This is the one
+ * place that knows both the account and its subjects, so this is where the two
+ * are joined.
+ */
+function publishFamilies(list: Subject[]): void {
+  setSubjectFamilies(
+    list
+      .filter((subject): subject is Subject & { family: Family } => Boolean(subject.family))
+      .map((subject) => [subject.id, subject.family] as const),
+  );
+}
 
 function load(username: string): Promise<Subject[]> {
   const cached = cache.get(username);
@@ -31,7 +59,10 @@ function load(username: string): Promise<Subject[]> {
       const list = result.success ? result.subjects : [];
       // Only a real answer is cached. An empty list from a failed request
       // would otherwise be the answer for the rest of the session.
-      if (result.success) cache.set(username, list);
+      if (result.success) {
+        cache.set(username, list);
+        publishFamilies(list);
+      }
       return list;
     })
     .catch(() => [] as Subject[])
@@ -43,16 +74,28 @@ function load(username: string): Promise<Subject[]> {
   return request;
 }
 
+/**
+ * Re-read the catalogue and tell everyone reading it.
+ *
+ * The cache is deliberately not invalidated when a *task* is created — see the
+ * note at the top. Editing the catalogue itself is the opposite case: the
+ * reader has just changed it on purpose and is looking at the thing they
+ * changed.
+ */
+export async function refreshSubjects(username: string): Promise<void> {
+  cache.delete(username);
+  inFlight.delete(username);
+  await load(username);
+  window.dispatchEvent(new CustomEvent(SUBJECTS_CHANGED));
+}
+
 export function useSubjects(username: string | null): Subject[] {
   const [list, setList] = useState<Subject[]>(() =>
     username ? cache.get(username) ?? [] : [],
   );
 
-  useEffect(() => {
-    if (!username) {
-      setList([]);
-      return;
-    }
+  const read = useCallback(() => {
+    if (!username) return undefined;
     let live = true;
     void load(username).then((result) => {
       if (live) setList(result);
@@ -61,6 +104,24 @@ export function useSubjects(username: string | null): Subject[] {
       live = false;
     };
   }, [username]);
+
+  useEffect(() => {
+    if (!username) {
+      setList([]);
+      // Nobody is signed in, so no account's colours are in force.
+      setSubjectFamilies([]);
+      return;
+    }
+    return read();
+  }, [read, username]);
+
+  // A change made anywhere — the library is the only place, today — reaches
+  // every other reader of the catalogue without any of them knowing about it.
+  useEffect(() => {
+    const onChanged = () => read();
+    window.addEventListener(SUBJECTS_CHANGED, onChanged);
+    return () => window.removeEventListener(SUBJECTS_CHANGED, onChanged);
+  }, [read]);
 
   return list;
 }
