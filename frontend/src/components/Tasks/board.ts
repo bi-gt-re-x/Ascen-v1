@@ -159,6 +159,30 @@ function dayOf(value: string | undefined | null): number | null {
   return Number.isNaN(at) ? null : at;
 }
 
+/**
+ * The stamp itself, to the minute — what `dayOf` throws away.
+ *
+ * Buckets, streaks and the sparklines all want the *day*: a task due at 9am and
+ * one due at 6pm are both due today, and rounding them to the same midnight is
+ * the whole point. Sorting wants the opposite. Ordered by due date, those two
+ * tasks have an order, and `dayOf` collapsed it — every task sharing a date
+ * tied, fell through to the id tiebreak, and came out alphabetical by database
+ * key. On an account whose work is dated to the day rather than the hour that
+ * is invisible; on one that blocks out its calendar it meant the Sort menu
+ * printed "soonest first" over a list in no order at all, and the direction
+ * toggle moved nothing.
+ *
+ * A bare `YYYY-MM-DD` is read as local midnight rather than handed to
+ * `new Date`, which would read it as UTC and drag it onto the wrong day for
+ * anyone west of Greenwich — the same reason `dayOf` builds the string it does.
+ */
+function instantOf(value: string | undefined | null): number | null {
+  if (!value) return null;
+  const raw = String(value);
+  const at = new Date(raw.includes('T') ? raw : `${raw.slice(0, 10)}T00:00:00`).getTime();
+  return Number.isNaN(at) ? null : at;
+}
+
 export function bucketOf(task: Task, today = new Date()): Bucket {
   if (task.status === 'done') return 'done';
   const due = dayOf(task.due_date);
@@ -195,7 +219,7 @@ export function dueLabel(task: Task, today = new Date()): string | null {
  * facet lists. An empty facet means "every one of these" rather than "none",
  * which is the only reading that lets a filter row start switched off.
  */
-export function filterTasks(tasks: Task[], query: TaskQuery): Task[] {
+export function filterTasks(tasks: Task[], query: TaskQuery, today = new Date()): Task[] {
   const needle = query.search.trim().toLowerCase();
 
   return tasks.filter((task) => {
@@ -215,7 +239,7 @@ export function filterTasks(tasks: Task[], query: TaskQuery): Task[] {
     }
 
     if (query.horizon === 'week') {
-      const bucket = bucketOf(task);
+      const bucket = bucketOf(task, today);
       // Everything a reader can act on this week, plus the undated — see the
       // note on `horizon`. `done` is let through because the status filter is
       // what decides whether completed work is on the page at all, and a
@@ -229,6 +253,9 @@ export function filterTasks(tasks: Task[], query: TaskQuery): Task[] {
 /**
  * One comparison per sort key, with a stable fallback.
  *
+ * Dates compare as instants rather than as days — see `instantOf`. Two tasks
+ * due the same afternoon have an order and the list shows it.
+ *
  * Undated tasks sort to the end of a due-date sort in both directions. They are
  * not "the furthest away" — they are not on the axis at all — and letting them
  * lead a descending sort would put the least urgent work at the top of a list
@@ -240,8 +267,8 @@ export function sortTasks(tasks: Task[], sort: SortKey, descending = false): Tas
   return [...tasks].sort((a, b) => {
     switch (sort) {
       case 'due': {
-        const left = dayOf(a.due_date);
-        const right = dayOf(b.due_date);
+        const left = instantOf(a.due_date);
+        const right = instantOf(b.due_date);
         if (left === null && right === null) break;
         if (left === null) return 1;
         if (right === null) return -1;
@@ -259,7 +286,7 @@ export function sortTasks(tasks: Task[], sort: SortKey, descending = false): Tas
         break;
       }
       case 'created': {
-        const gap = (dayOf(a.created_at) ?? 0) - (dayOf(b.created_at) ?? 0);
+        const gap = (instantOf(a.created_at) ?? 0) - (instantOf(b.created_at) ?? 0);
         if (gap !== 0) return gap * direction;
         break;
       }
@@ -309,7 +336,7 @@ export function groupTasks(
   /** Subject id → label, for `group: 'subject'`. Missing ids read as unfiled. */
   subjectLabel: (id: string | undefined) => string | null = () => null,
 ): TaskGroup[] {
-  const sorted = sortTasks(filterTasks(tasks, query), query.sort, query.descending);
+  const sorted = sortTasks(filterTasks(tasks, query, today), query.sort, query.descending);
   if (sorted.length === 0) return [];
 
   const entry = SORTS.find((sort) => sort.key === query.sort);
@@ -374,7 +401,10 @@ export function groupTasks(
     }
     seen.set(id, {
       key: id,
-      label: subjectLabel(id) ?? 'Subject',
+      // The id rather than a generic word, so a subject list that has not
+      // arrived yet gives four distinguishable headings instead of four
+      // identical ones reading "Subject".
+      label: subjectLabel(id) ?? id,
       hint: ordering,
       tasks: [task],
     });

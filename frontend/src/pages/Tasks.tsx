@@ -456,6 +456,20 @@ export default function Tasks() {
     });
   }, []);
 
+  /**
+   * Changing what the headings are opens all of them again.
+   *
+   * `shut` holds group keys, and the keys are not unique across groupings —
+   * "done" is a due-date bucket and a status group, "all" is every flat list.
+   * Collapsing Completed under date headings and then switching to status
+   * headings brought the collapse along with it, so a heading the reader had
+   * never touched arrived shut. New headings are new sections; they open.
+   */
+  const chooseGroup = useCallback((key: GroupKey) => {
+    setGroup(key);
+    setShut(new Set());
+  }, []);
+
   /** Quick Add's three fields, through the same create the full form uses. */
   const quickAdd = useCallback(
     (name: string, due: string | null, priority: 'high' | 'medium' | 'low') => {
@@ -539,7 +553,7 @@ export default function Tasks() {
                   <button
                     type="button"
                     className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); setQuery(EMPTY_QUERY); setGroup('due'); }}
+                    onClick={() => { setPageMenu(false); setQuery(EMPTY_QUERY); setGroup('due'); setShut(new Set()); }}
                   >
                     Reset the view
                   </button>
@@ -578,7 +592,7 @@ export default function Tasks() {
               showing={showing}
               total={list.length}
               group={group}
-              onGroup={setGroup}
+              onGroup={chooseGroup}
             />
 
             <BulkBar
