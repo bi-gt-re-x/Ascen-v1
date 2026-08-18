@@ -31,10 +31,27 @@
     /* The page grows with the window instead of stopping at a number.
        1420px was the cap and on a wide monitor it left the list at about half
        the screen with grey either side; the list is the half of this page that
-       can actually use room. The floor keeps the two columns from crushing
-       each other on a laptop, and `.page-shell` takes the smaller of the two. */
-    --shell-max: clamp(1080px, 94vw, 1760px);
-    --shell-fluid: 96%;
+       can actually use room.
+
+       The cap that replaced it was `clamp(1080px, 94vw, 1760px)`, and it kept
+       the same fault in a smaller form for two reasons. `vw` is the *viewport*,
+       and this shell does not live in the viewport — the nav rail takes about
+       210px off the left before the page starts, so 94vw was measuring a box
+       210px wider than the one being sized and the term never bound. What did
+       bind was the 1760px ceiling: past roughly a 2100px window the shell
+       stopped growing while the room kept coming, so the widest screens went
+       back to a list with grey either side. On a laptop the percentage governed
+       and the page filled; on the monitor it was the page that could most use
+       the room that used the least of it.
+
+       So: no `vw`, and a ceiling high enough that the percentage is what
+       governs at any width a display actually comes in. `--shell-fluid` is a
+       share of the content column, which is the box being sized, so the page
+       fills the same proportion of the room at 1440px as at 2560px. The
+       ceiling is still there for the genuinely enormous, where a list running
+       the full span stops being one column and starts being a horizon. */
+    --shell-max: 2400px;
+    --shell-fluid: 97%;
 
     background: var(--tk-bg);
     color: var(--tk-text);
@@ -784,6 +801,27 @@ html[data-theme='dark'] .tk-page {
     cursor: pointer;
 }
 .tk-horizon button:hover { text-decoration: underline; }
+
+/* ---------- The rest of a heading ----------------------------------------
+   Sits inside the section, under its rows, because it is about that heading
+   rather than about the page — unlike `.tk-horizon`, which is about where the
+   whole list stops. Full width and dashed so it reads as the seam in a list it
+   belongs to and not as another row in it. */
+.tk-more-rows {
+    display: flex; align-items: baseline; justify-content: center; gap: 5px;
+    width: 100%;
+    margin-top: 8px;
+    padding: 9px 12px;
+    border: 1px dashed var(--tk-line);
+    border-radius: 10px;
+    background: none;
+    color: var(--tk-violet);
+    font: inherit; font-size: 12.5px; font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+.tk-more-rows span { color: var(--tk-faint); font-weight: 500; }
+.tk-more-rows:hover { background: var(--tk-hover, rgba(99, 91, 255, .05)); border-color: var(--tk-violet); }
 
 /* ---------- The composer -------------------------------------------------
    The New Task form, which opens under the header rather than over the page.

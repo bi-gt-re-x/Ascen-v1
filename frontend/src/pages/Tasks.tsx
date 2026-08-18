@@ -78,6 +78,25 @@ import { isoStamp } from '@/utils/calendarGrid';
 import '@/styles/tasks.css';
 
 /**
+ * How many rows a heading draws before it asks.
+ *
+ * The filters decide what belongs on the page; this decides how much of it is
+ * built at once, and they are not the same question. Even with the horizon
+ * bounding both directions, "Everything dated" over "Everything" is every task
+ * the account has ever had — four thousand of them here, five years deep — and
+ * a TaskRow is a couple of dozen nodes with a checkbox, badges and three icons
+ * in it. Mounting the lot cost seconds, and it cost them again on every click
+ * of Filter, Group or Sort, because changing any of those rebuilds the list.
+ * The controls were doing exactly what they said; the page was too busy
+ * building rows nobody had scrolled to for the result to arrive.
+ *
+ * So a heading draws a screenful or two and offers the rest. The count beside
+ * the heading is still the whole group — what is being withheld is the drawing
+ * of the rows, never the fact of them.
+ */
+const PAGE = 60;
+
+/**
  * Starred task ids, kept in this browser.
  *
  * **Not on the account, because the task record has no field for one.** Adding
@@ -131,6 +150,8 @@ export default function Tasks() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [group, setGroup] = useState<GroupKey>('due');
   const [shut, setShut] = useState<Set<string>>(new Set());
+  /** Per heading, how many rows it has been asked to draw. See `PAGE`. */
+  const [drawn, setDrawn] = useState<Record<string, number>>({});
   const [composing, setComposing] = useState(false);
   const [starred, setStarred] = useStars(username);
   const [pageMenu, setPageMenu] = useState(false);
@@ -157,7 +178,7 @@ export default function Tasks() {
   const counts = useMemo(() => taskCounts(list), [list]);
   const series = useMemo(() => statSeries(list), [list]);
   const nextUp = useMemo(() => upcoming(list, 3), [list]);
-  const beyond = useMemo(() => beyondHorizon(list), [list]);
+  const beyond = useMemo(() => beyondHorizon(list, query), [list, query]);
   const runs = useMemo(() => streaks(list, 3), [list]);
   const subjectName = useCallback(
     (id: string | undefined) => subjects.find((entry) => entry.id === id)?.label ?? null,
@@ -374,7 +395,22 @@ export default function Tasks() {
       setFailure(null);
       void (async () => {
         try {
-          const result = await taskService.createTask(username, draft);
+          // `show_on_calendar` is stated rather than left out. The backend's
+          // default for it is `True` (backend/api/tasks.py), so a draft that
+          // stayed quiet — which is every draft this page makes, from the
+          // composer and from Quick Add alike — landed on the calendar as a
+          // block running from the moment it was typed to whenever it was due.
+          // Type "History essay", due Friday, and a four-day bar appeared
+          // across a grid the reader keeps for things they actually scheduled.
+          // pages/Dashboard.tsx found the same hole and states the same field;
+          // tasks reach the calendar by being made on it.
+          //
+          // The optimistic row below has always said `false`, so until the
+          // next reload the page also disagreed with what it had just stored.
+          const result = await taskService.createTask(username, {
+            show_on_calendar: false,
+            ...draft,
+          });
           if (!result.success) {
             setFailure(result.message);
             return;
@@ -483,6 +519,18 @@ export default function Tasks() {
       else next.add(key);
       return next;
     });
+  }, []);
+
+  // A heading expanded to a thousand rows must not carry that expansion onto
+  // whatever the next query puts under the same key — "done" and "all" are
+  // reused across groupings, and inheriting a large draw count is how the
+  // freeze `PAGE` exists to prevent would come back through the side door.
+  useEffect(() => {
+    setDrawn({});
+  }, [query, group]);
+
+  const drawMore = useCallback((key: string, from: number) => {
+    setDrawn((current) => ({ ...current, [key]: from + PAGE }));
   }, []);
 
   /**
@@ -641,6 +689,8 @@ export default function Tasks() {
             ) : (
               groups.map((group) => {
                 const closed = shut.has(group.key);
+                const cap = drawn[group.key] ?? PAGE;
+                const rest = group.tasks.length - cap;
                 return (
                   <section className={`tk-group is-${group.key}`} key={group.key}>
                     <header className="tk-group-head">
@@ -664,7 +714,7 @@ export default function Tasks() {
                     </header>
                     {!closed && (
                       <ul className="tk-list">
-                        {group.tasks.map((task) => (
+                        {group.tasks.slice(0, cap).map((task) => (
                           <TaskRow
                             key={task.id}
                             task={task}
@@ -683,6 +733,16 @@ export default function Tasks() {
                         ))}
                       </ul>
                     )}
+                    {!closed && rest > 0 && (
+                      <button
+                        type="button"
+                        className="tk-more-rows"
+                        onClick={() => drawMore(group.key, cap)}
+                      >
+                        Show {Math.min(rest, PAGE).toLocaleString()} more
+                        <span> of {rest.toLocaleString()} left in {group.label}</span>
+                      </button>
+                    )}
                   </section>
                 );
               })
@@ -693,7 +753,7 @@ export default function Tasks() {
                 is a list a reader assumes is all of it. */}
             {query.horizon === 'week' && beyond > 0 && (
               <p className="tk-horizon">
-                {beyond.toLocaleString()} more dated past this week.{' '}
+                {beyond.toLocaleString()} more outside this week.{' '}
                 <button type="button" onClick={() => setQuery({ ...query, horizon: 'all' })}>
                   Show everything
                 </button>

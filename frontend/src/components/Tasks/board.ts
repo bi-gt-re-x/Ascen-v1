@@ -241,10 +241,34 @@ export function filterTasks(tasks: Task[], query: TaskQuery, today = new Date())
     if (query.horizon === 'week') {
       const bucket = bucketOf(task, today);
       // Everything a reader can act on this week, plus the undated — see the
-      // note on `horizon`. `done` is let through because the status filter is
-      // what decides whether completed work is on the page at all, and a
-      // horizon that also hid it would make "Completed" show nothing.
+      // note on `horizon`.
       if (bucket === 'later') return false;
+
+      // Completed work is bounded by the week *behind* rather than let through
+      // whole. `bucketOf` answers 'done' for anything finished, whenever it was
+      // finished, so the horizon used to skip past every completed task in the
+      // account — the reasoning being that a horizon which also hid them would
+      // make "Completed" show nothing.
+      //
+      // It would not have; it would have shown the last week of them. What the
+      // exemption actually did was make "Show completed" mean "show the whole
+      // archive": on a real account that is four thousand rows and five years
+      // of history mounted at once, and every subsequent click on Filter,
+      // Group or Sort rebuilt all of them. The controls were wired correctly
+      // and did nothing you could see, because the page spent seconds
+      // reconciling a list nobody asked to read to the bottom of.
+      //
+      // A week forward for what is coming, a week back for what is done. The
+      // rest of the archive is one menu item away — the same place the rest of
+      // the future is — rather than in the way.
+      if (bucket === 'done') {
+        const finished = dayOf(task.completed_at);
+        // No completion date means it cannot be placed in time, and a task
+        // that cannot be dated is not one to drop silently.
+        if (finished !== null && midnight(today) - finished > HORIZON_DAYS * DAY) {
+          return false;
+        }
+      }
     }
     return true;
   });
@@ -761,7 +785,27 @@ export function streaks(tasks: Task[], limit = 3, today = new Date()): Streak[] 
   return out.sort((a, b) => b.days - a.days || a.title.localeCompare(b.title)).slice(0, limit);
 }
 
-/** Open tasks dated past the week — what the "show everything" line counts. */
-export function beyondHorizon(tasks: Task[], today = new Date()): number {
-  return tasks.filter((task) => bucketOf(task, today) === 'later').length;
+/**
+ * How many more rows dropping the week horizon would put on the page.
+ *
+ * Asked of the query rather than of the tasks alone, because the answer
+ * depends on the rest of the filters: with "Open tasks" showing, lifting the
+ * horizon reveals work dated further out and nothing else; with "Everything"
+ * showing it also reveals the completed archive behind the last seven days.
+ * A fixed count of far-dated open tasks would have understated the second case
+ * by about four thousand, under a line whose whole job is to say what is not
+ * being shown.
+ *
+ * Measured by running the filter both ways and taking the difference, so the
+ * number cannot drift from what the horizon actually does.
+ */
+export function beyondHorizon(
+  tasks: Task[],
+  query: TaskQuery,
+  today = new Date(),
+): number {
+  if (query.horizon !== 'week') return 0;
+  const within = filterTasks(tasks, query, today).length;
+  const without = filterTasks(tasks, { ...query, horizon: 'all' }, today).length;
+  return Math.max(0, without - within);
 }
