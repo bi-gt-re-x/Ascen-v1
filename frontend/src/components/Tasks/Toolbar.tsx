@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Subject } from '@/services/subjects';
 import type { GroupKey, SortKey, StatusFilter, TaskQuery } from './board';
 import { GROUPS, PRIORITIES, SORTS, activeFilters, isFiltered } from './board';
+import { XP_BANDS, type XpBand } from '@/utils/priority';
 
 /** Subject chips shown before the rest go behind "+ More". */
 const CHIPS = 7;
@@ -257,6 +258,18 @@ export function Toolbar({
     return set({ priorities: query.priorities.includes(priority) ? [] : [priority] });
   };
 
+  // Multi-select, unlike priority: the bands are six narrow slices and
+  // "Hard or Very Challenging" is the obvious thing to ask for. Clicking the
+  // one that is on turns it off, so a single click still gets you back to all.
+  const toggleBand = (band: XpBand | null) => {
+    if (band === null) return set({ bands: [] });
+    return set({
+      bands: query.bands.includes(band)
+        ? query.bands.filter((entry) => entry !== band)
+        : [...query.bands, band],
+    });
+  };
+
   const toggleSubject = (id: string) => {
     const on = query.subjects.includes(id);
     set({ subjects: on ? query.subjects.filter((entry) => entry !== id) : [...query.subjects, id] });
@@ -321,7 +334,7 @@ export function Toolbar({
             {/* Priority and subject are chips below, and this is where the
                 reader is told so. A Filter menu that silently excludes two of
                 the five filters reads as a complete list of them. */}
-            {(query.priorities.length > 0 || query.subjects.length > 0) && (
+            {(query.priorities.length > 0 || query.subjects.length > 0 || query.bands.length > 0) && (
               <>
                 <p className="tk-menu-head">From the chips</p>
                 {query.priorities.length > 0 && (
@@ -334,6 +347,20 @@ export function Toolbar({
                       {query.priorities.length === 1
                         ? `${query.priorities[0]![0]!.toUpperCase()}${query.priorities[0]!.slice(1)} priority`
                         : `${query.priorities.length} priorities`}
+                    </span>
+                    <span className="tk-menu-drop">Clear</span>
+                  </button>
+                )}
+                {query.bands.length > 0 && (
+                  <button
+                    type="button"
+                    className="tk-menu-item is-chipnote"
+                    onClick={() => set({ bands: [] })}
+                  >
+                    <span>
+                      {query.bands.length === 1
+                        ? query.bands[0]
+                        : `${query.bands.length} difficulties`}
                     </span>
                     <span className="tk-menu-drop">Clear</span>
                   </button>
@@ -360,7 +387,7 @@ export function Toolbar({
                 type="button"
                 className="tk-menu-clear"
                 onClick={() =>
-                  set({ status: 'open', search: '', subjects: [], priorities: [], horizon: 'week' })
+                  set({ status: 'open', search: '', subjects: [], priorities: [], bands: [], horizon: 'week' })
                 }
               >
                 Clear every filter
@@ -470,6 +497,32 @@ export function Toolbar({
                 {PRIORITY_ICON}
               </span>
               {priority[0]!.toUpperCase() + priority.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* The six difficulty bands, by name. They are a row of chips rather
+            than a menu for the same reason priority is: a reader working
+            through a list cuts by "what is big" over and over, and a control
+            they have to open to read the state of is one they open to find out
+            what they already chose. */}
+        <div className="tk-chip-set">
+          <button
+            type="button"
+            className={`tk-chip${query.bands.length === 0 ? ' is-on' : ''}`}
+            onClick={() => toggleBand(null)}
+          >
+            Any XP
+          </button>
+          {XP_BANDS.map((band) => (
+            <button
+              key={band.label}
+              type="button"
+              className={`tk-chip is-band${query.bands.includes(band.label) ? ' is-on' : ''}`}
+              title={`${band.from} XP and up`}
+              onClick={() => toggleBand(band.label)}
+            >
+              {band.label}
             </button>
           ))}
         </div>

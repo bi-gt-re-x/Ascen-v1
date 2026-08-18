@@ -44,13 +44,23 @@
        and the page filled; on the monitor it was the page that could most use
        the room that used the least of it.
 
-       So: no `vw`, and a ceiling high enough that the percentage is what
-       governs at any width a display actually comes in. `--shell-fluid` is a
-       share of the content column, which is the box being sized, so the page
-       fills the same proportion of the room at 1440px as at 2560px. The
-       ceiling is still there for the genuinely enormous, where a list running
-       the full span stops being one column and starts being a horizon. */
-    --shell-max: 2400px;
+       Then a 2400px ceiling replaced it, which was the same mistake a third
+       time in a smaller form: it simply moved the width the page stops growing
+       at from 1760px to 2475px. Under that it filled; over it the grey came
+       back, and an ultrawide or a 4K panel at native scaling is over it.
+
+       There is no ceiling now. `--shell-max: 100%` takes the cap out of
+       `min(fluid, max)` entirely, so `--shell-fluid` is the only term and the
+       page fills the same 97% of the content column at every width — 1440,
+       2400, 3440, 5120. `--shell-fluid` is a share of the content column,
+       which is the box being sized; the nav rail is outside it, which is what
+       the `vw` version got wrong.
+
+       This is a deliberate choice for this page rather than a default worth
+       copying. A task list is rows and a fixed-width rail, and rows are happy
+       arbitrarily wide — the rail stops growing at 360px on its own and the
+       list takes the rest. A page of prose would want the ceiling back. */
+    --shell-max: 100%;
     --shell-fluid: 97%;
 
     background: var(--tk-bg);

@@ -16,6 +16,7 @@
  * read the same tasks through the same service; only the questions differ.
  */
 import type { Task, TaskPriority } from '@/types';
+import { XP_BANDS, xpToBand, type XpBand } from '@/utils/priority';
 
 const DAY = 86_400_000;
 
@@ -36,6 +37,16 @@ export interface TaskQuery {
   subjects: string[];
   /** Priorities to keep. Empty means all three. */
   priorities: TaskPriority[];
+  /**
+   * Difficulty bands to keep, by name. Empty means all six.
+   *
+   * A separate cut from `priorities` rather than a finer spelling of it. The
+   * stored priority is three values and the bands are six, so "Hard" and
+   * "Very Challenging" are both `high` and no priority filter can tell them
+   * apart — which is the whole reason a reader would reach for this one.
+   * See utils/priority.ts for where the two scales meet.
+   */
+  bands: XpBand[];
   sort: SortKey;
   /** Sorts run ascending unless this says otherwise. */
   descending: boolean;
@@ -60,6 +71,7 @@ export const EMPTY_QUERY: TaskQuery = {
   search: '',
   subjects: [],
   priorities: [],
+  bands: [],
   sort: 'due',
   descending: false,
   horizon: 'week',
@@ -129,11 +141,12 @@ export type Bucket =
  * ordered by XP. The only pairing that still collapses is due-date grouping
  * under a non-date sort, and that one collapses honestly — see `groupTasks`.
  */
-export type GroupKey = 'due' | 'priority' | 'subject' | 'status' | 'none';
+export type GroupKey = 'due' | 'priority' | 'band' | 'subject' | 'status' | 'none';
 
 export const GROUPS: Array<{ key: GroupKey; label: string; hint: string }> = [
   { key: 'due', label: 'Due date', hint: 'Late, today, this week, later.' },
   { key: 'priority', label: 'Priority', hint: 'High, medium, low.' },
+  { key: 'band', label: 'Difficulty', hint: 'Easy through Very Challenging.' },
   { key: 'subject', label: 'Subject', hint: 'What the work is about.' },
   { key: 'status', label: 'Status', hint: 'Still open, or finished.' },
   { key: 'none', label: 'No headings', hint: 'One flat list.' },
@@ -235,6 +248,9 @@ export function filterTasks(tasks: Task[], query: TaskQuery, today = new Date())
       return false;
     }
     if (query.priorities.length > 0 && !query.priorities.includes(task.priority)) {
+      return false;
+    }
+    if (query.bands.length > 0 && !query.bands.includes(xpToBand(Number(task.xp_value) || 0))) {
       return false;
     }
 
@@ -391,6 +407,23 @@ export function groupTasks(
     })).filter((entry) => entry.tasks.length > 0);
   }
 
+  if (group === 'band') {
+    // Hardest first, which is the order the headings are useful in: the reader
+    // opening this wants to see what the big rocks are, not scroll past the
+    // ten-XP errands to reach them.
+    return [...XP_BANDS]
+      .reverse()
+      .map((band) => ({
+        key: band.label,
+        label: band.label,
+        hint: ordering,
+        tasks: sorted.filter(
+          (task) => xpToBand(Number(task.xp_value) || 0) === band.label,
+        ),
+      }))
+      .filter((entry) => entry.tasks.length > 0);
+  }
+
   if (group === 'status') {
     return [
       { key: 'open', label: 'Open', hint: ordering },
@@ -523,7 +556,8 @@ export function activeFilters(query: TaskQuery): number {
     Number(query.status !== EMPTY_QUERY.status) +
     Number(query.horizon !== EMPTY_QUERY.horizon) +
     Number(query.subjects.length > 0) +
-    Number(query.priorities.length > 0)
+    Number(query.priorities.length > 0) +
+    Number(query.bands.length > 0)
   );
 }
 
@@ -533,7 +567,8 @@ export function isFiltered(query: TaskQuery): boolean {
     query.horizon !== EMPTY_QUERY.horizon ||
     query.search.trim() !== '' ||
     query.subjects.length > 0 ||
-    query.priorities.length > 0
+    query.priorities.length > 0 ||
+    query.bands.length > 0
   );
 }
 
