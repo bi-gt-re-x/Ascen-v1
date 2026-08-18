@@ -10,9 +10,9 @@
  * end — the grid draws the block between them — which is why the dialog asks
  * for both and why editing one moves the block rather than nudging a deadline.
  *
- * Difficulty is not asked for. It follows from XP — 10-39 easy, 40-69 medium,
- * 70-100 hard, see utils/priority.ts — so asking again would be inviting the
- * two to disagree.
+ * Difficulty is not asked for. It follows from XP — Easy through Very
+ * Challenging across 10-250, see utils/priority.ts — so asking again would be
+ * inviting the two to disagree.
  */
 import { useEffect, useState } from 'react';
 import { RecurrencePicker } from './RecurrencePicker';

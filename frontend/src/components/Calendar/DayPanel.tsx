@@ -12,8 +12,9 @@
  * than an empty field beside a dash.
  */
 import { useEffect, useState } from 'react';
-import { xpToDifficulty } from '@/utils/priority';
+import { xpToDifficulty, xpToPriority, type XpBand } from '@/utils/priority';
 import type { DayEntry } from './entries';
+import type { TaskPriority } from '@/types';
 
 export interface DayPanelProps {
   entries: DayEntry[];
@@ -29,19 +30,27 @@ export interface DayPanelProps {
 }
 
 /**
- * The band a card is labelled with.
+ * The band a card is labelled with, and the tone it is drawn in.
  *
- * A task carries its own priority and that is what the card says — the same
- * word the task list, the grid blocks and the Week view's priority chart use
- * for it, so one task cannot read "High" in one place and "Medium" in another.
- * An event has no such column, so its band is read off the XP, which is the
- * rule this card has always used.
+ * Two values because there are now two scales and they are different sizes.
+ * The **band** is one of six words — Easy through Very Challenging — and it is
+ * a fact about the XP, so it is always read off the XP. The **tone** is the
+ * three-value priority the card is coloured by, and that still prefers the
+ * task's own `priority` column, so a card cannot be tinted one way here and
+ * another way on the grid or in the Week view's chart.
+ *
+ * The card used to return one word for both, which worked while the two scales
+ * had the same three steps. Six band names cannot come out of a three-value
+ * column, so a task worth 210 XP would have read "High" — true of its priority
+ * and no longer the name of its band. An event has no priority column, so its
+ * tone is read off the XP as well.
  */
-function difficulty(xp: number, priority?: string): 'High' | 'Medium' | 'Low' {
-  if (priority === 'high') return 'High';
-  if (priority === 'medium') return 'Medium';
-  if (priority === 'low') return 'Low';
-  return xpToDifficulty(xp);
+function difficulty(xp: number, priority?: string): { band: XpBand; tone: TaskPriority } {
+  const tone: TaskPriority =
+    priority === 'high' || priority === 'medium' || priority === 'low'
+      ? priority
+      : xpToPriority(xp);
+  return { band: xpToDifficulty(xp), tone };
 }
 
 function EventIcon() {
@@ -147,7 +156,7 @@ export function DayPanel({
               const classes = [
                 'task-section',
                 isTask ? 'dashboard-task' : 'calendar-event',
-                isTask ? `priority-${level.toLowerCase()}` : '',
+                isTask ? `priority-${level.tone}` : '',
                 entry.completed ? 'task-completed' : 'task-in-progress',
                 entry.hasConflict && !isTask ? 'conflict' : '',
                 canComplete ? 'can-complete' : '',
@@ -168,8 +177,14 @@ export function DayPanel({
                     {isTask && (
                       <div className="card-tags">
                         <span className="task-kind-badge">Task {taskNumber}</span>
-                        <span className={`difficulty-badge difficulty-${level.toLowerCase()}`}>
-                          {level} Priority
+                        {/* The band, on its own. It used to print
+                            "{level} Priority", which was already naming a
+                            difficulty badge after the priority scale and reads
+                            as nonsense against the six bands — "Very
+                            Challenging Priority". The colour still carries the
+                            priority; this carries the band. */}
+                        <span className={`difficulty-badge difficulty-${level.tone}`}>
+                          {level.band}
                         </span>
                       </div>
                     )}

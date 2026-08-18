@@ -16,6 +16,7 @@ import { SubjectPicker } from '@/components';
 import type { Subject } from '@/services/subjects';
 import type { NewTask } from '@/services/tasks';
 import type { TaskPriority } from '@/types';
+import { MAX_TASK_XP, MIN_TASK_XP } from '@/utils/priority';
 
 export interface ComposerProps {
   subjects: Subject[];
@@ -24,7 +25,7 @@ export interface ComposerProps {
 }
 
 /** What a task is worth when the reader does not say. Matches the backend's. */
-const DEFAULT_XP = 10;
+const DEFAULT_XP = MIN_TASK_XP;
 
 export function Composer({ subjects, busy, onAdd }: ComposerProps) {
   const [name, setName] = useState('');
@@ -42,7 +43,10 @@ export function Composer({ subjects, busy, onAdd }: ComposerProps) {
     onAdd({
       name: title,
       priority,
-      xp_reward: Number(xp) || DEFAULT_XP,
+      // Clamped on the way out, the way both task dialogs do it. `min` and
+      // `max` on a number input are advice to the spinner, not a limit on what
+      // can be typed into it.
+      xp_reward: Math.max(MIN_TASK_XP, Math.min(MAX_TASK_XP, Number(xp) || DEFAULT_XP)),
       due_date: due || null,
       subject,
     });
@@ -98,8 +102,12 @@ export function Composer({ subjects, busy, onAdd }: ComposerProps) {
             <input
               className="tk-input"
               type="number"
-              min={0}
-              max={999}
+              /* The same floor and ceiling the two task dialogs use. This box
+                 accepted 0 to 999, so the one form on the Tasks page could
+                 write a task worth nothing, or worth four times the top of the
+                 scale every other surface bands against. */
+              min={MIN_TASK_XP}
+              max={MAX_TASK_XP}
               value={xp}
               onChange={(event) => setXp(Number(event.target.value))}
             />
