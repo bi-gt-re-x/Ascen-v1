@@ -2107,12 +2107,20 @@ html[data-theme="dark"] .ax-page {
     margin-bottom: 2px;
 }
 
+/* Back to the compact scale.
+   "Fewer words, bigger type" (de6b1bb) set these cards at display sizes — a
+   22px title over a 26px XP figure over 16px body — on the reasoning that the
+   tab leads the page. At three across it made each card a poster: one
+   recommendation filled a screen, and the compact list at the foot of the same
+   tab, "Also worth doing", read the same information at half the size without
+   losing any of it. These are back at that scale. The card keeps everything it
+   gained in that pass — the labels gone, the instruction leading, the
+   arithmetic folded behind "Show the numbers" — and only the type comes down. */
 .ax-advice h2 {
     margin: 0;
-    font-size: 22px;
-    font-weight: 650;
-    line-height: 1.2;
-    letter-spacing: -.025em;
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.35;
 }
 
 .ax-advice-impact {
@@ -2123,24 +2131,23 @@ html[data-theme="dark"] .ax-page {
     white-space: nowrap;
 }
 .ax-advice-impact strong {
-    font-size: 26px;
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: -.03em;
     color: var(--ax-good);
 }
 
 /* What to do, and why. No labels — the order carries it: the instruction is
    the loud one and the finding is the quiet one under it. */
 .ax-advice-do {
-    margin: 14px 0 0;
-    font-size: 16px;
-    line-height: 1.5;
+    margin: 10px 0 0;
+    font-size: 13px;
+    line-height: 1.6;
     color: var(--ax-text);
 }
 
 .ax-advice-why {
-    margin: 10px 0 0;
-    font-size: 13.5px;
+    margin: 7px 0 0;
+    font-size: 12px;
     line-height: 1.5;
     color: var(--ax-faint);
 }

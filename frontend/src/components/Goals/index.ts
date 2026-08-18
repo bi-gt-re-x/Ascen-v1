@@ -13,6 +13,8 @@ export { GoalsHeader, GoalsSummaryRow } from './GoalsSummary';
 export type { GoalsSummaryProps } from './GoalsSummary';
 export { GoalLadder, RUNGS } from './GoalLadder';
 export type { GoalLadderProps } from './GoalLadder';
+export { GoalsSidebar, RAIL_GOALS } from './GoalsSidebar';
+export type { GoalsSidebarProps } from './GoalsSidebar';
 export { GoalStats } from './GoalStats';
 export type { GoalStatsProps } from './GoalStats';
 export { MilestonesPanel } from './MilestonesPanel';

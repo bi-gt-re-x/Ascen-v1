@@ -3258,3 +3258,195 @@ html[data-theme="dark"] .gx-page {
     .gx-ladders > .gx-ladder, .gx-rails > .gx-rail { animation: none; }
     .gx-card { transition: none; }
 }
+
+/* ==========================================================================
+   The rail — Big Goals and System Goals
+   --------------------------------------------------------------------------
+   Two columns, the same arrangement the tasks page and the calendar use: the
+   analysis takes the room it can use and the rail keeps its shape, because its
+   panels are fixed content that gains nothing from being wider.
+
+   Everything below is written in the page's own tokens, which is the whole
+   reason the system cards could come out of `.gx-legacy`. That wrapper existed
+   to hand the old GoalCard back the dark surface it was drawn against; a card
+   built from `--gx-*` needs no such thing and follows the page into dark mode
+   with the rest of it.
+   ========================================================================== */
+.gx-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 380px);
+    gap: clamp(16px, 1.6vw, 26px);
+    align-items: start;
+}
+.gx-main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+
+.gx-rail-col {
+    position: sticky;
+    top: calc(var(--topnav-h, 0px) + 18px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+/* ---------- The two tabs -------------------------------------------------- */
+.gx-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--gx-line);
+    border-radius: 12px;
+    background: var(--gx-card-2);
+}
+.gx-tab {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: var(--gx-muted);
+    font: inherit; font-size: 12.5px; font-weight: 650;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+.gx-tab:hover { color: var(--gx-text); }
+.gx-tab.is-on {
+    background: var(--gx-card);
+    color: var(--gx-text);
+    box-shadow: var(--gx-shadow);
+}
+.gx-tab-count {
+    min-width: 18px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gx-violet) 13%, transparent);
+    color: var(--gx-violet);
+    font-size: 10.5px; font-weight: 700;
+}
+
+/* ---------- The panel under them ------------------------------------------ */
+.gx-panel {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    background: var(--gx-card);
+    box-shadow: var(--gx-shadow);
+}
+.gx-panel-empty, .gx-panel-note {
+    margin: 0;
+    color: var(--gx-faint);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.gx-panel-note { text-align: center; }
+.gx-panel-cta {
+    padding: 9px 12px;
+    border: 1px dashed var(--gx-line);
+    border-radius: 10px;
+    background: none;
+    color: var(--gx-violet);
+    font: inherit; font-size: 12.5px; font-weight: 650;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+.gx-panel-cta:hover {
+    background: color-mix(in srgb, var(--gx-violet) 6%, transparent);
+    border-color: var(--gx-violet);
+}
+
+/* ---------- Big goals, as rows -------------------------------------------- */
+.gx-raillist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.gx-railrow {
+    width: 100%;
+    display: flex; flex-direction: column; gap: 5px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+.gx-railrow:hover { background: var(--gx-card-2); }
+.gx-railrow-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.gx-railrow-title {
+    color: var(--gx-text); font-size: 13px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.gx-railrow-pct { color: var(--gx-muted); font-size: 11.5px; font-weight: 700; flex: none; }
+.gx-railrow-sub { font-size: 11.5px; }
+.gx-railrow-track {
+    height: 4px; border-radius: 999px; background: var(--gx-line-soft); overflow: hidden;
+}
+.gx-railrow-track i {
+    display: block; height: 100%; border-radius: 999px;
+    background: var(--gx-violet);
+    transition: width .3s ease;
+}
+
+/* ---------- System goal cards --------------------------------------------- */
+.gx-syslist { display: flex; flex-direction: column; gap: 10px; }
+.gx-sys {
+    display: flex; flex-direction: column; gap: 9px;
+    padding: 12px;
+    border: 1px solid var(--gx-line);
+    border-radius: 13px;
+    background: var(--gx-card-2);
+}
+.gx-sys.is-done { border-color: color-mix(in srgb, var(--gx-good) 42%, var(--gx-line)); }
+
+.gx-sys-head { display: flex; align-items: center; gap: 9px; }
+.gx-sys-ico {
+    width: 30px; height: 30px; flex: none;
+    display: grid; place-items: center;
+    border-radius: 9px;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.gx-sys-ico svg { width: 16px; height: 16px; }
+/* One colour per counter, so the four read apart at a glance. */
+.gx-sys-ico.is-xp     { color: var(--gx-violet); }
+.gx-sys-ico.is-streak { color: var(--gx-amber); }
+.gx-sys-ico.is-tasks  { color: var(--gx-blue); }
+.gx-sys-ico.is-focus  { color: var(--gx-teal); }
+
+.gx-sys-name { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.gx-sys-name strong {
+    color: var(--gx-text); font-size: 12.5px; font-weight: 650;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gx-sys-name .gx-quiet { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
+.gx-sys-pct { flex: none; color: var(--gx-muted); font-size: 12px; font-weight: 700; }
+.gx-sys-pct.is-done { color: var(--gx-good); }
+
+.gx-sys-figures { display: flex; align-items: baseline; gap: 5px; }
+.gx-sys-figures b {
+    color: var(--gx-text); font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1;
+}
+.gx-sys-figures .gx-quiet { font-size: 11.5px; }
+
+.gx-sys-track { height: 6px; border-radius: 999px; background: var(--gx-line-soft); overflow: hidden; }
+.gx-sys-fill { display: block; height: 100%; border-radius: 999px; transition: width .3s ease; }
+.gx-sys-fill.is-xp     { background: var(--gx-violet); }
+.gx-sys-fill.is-streak { background: var(--gx-amber); }
+.gx-sys-fill.is-tasks  { background: var(--gx-blue); }
+.gx-sys-fill.is-focus  { background: var(--gx-teal); }
+
+.gx-sys-foot { display: flex; gap: 14px; }
+.gx-sys-foot button {
+    border: 0; background: none; padding: 0;
+    color: var(--gx-muted); font: inherit; font-size: 11.5px; font-weight: 600;
+    cursor: pointer;
+}
+.gx-sys-foot button:hover { color: var(--gx-text); text-decoration: underline; }
+.gx-sys-foot button.is-bad:hover { color: var(--gx-bad); }
+
+/* The rail goes under the page on anything too narrow to hold both, at the
+   same width the tasks page folds at. */
+@media (max-width: 1240px) {
+    .gx-body { grid-template-columns: minmax(0, 1fr); }
+    .gx-rail-col { position: static; }
+    .gx-syslist { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+}

@@ -43,7 +43,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Band,
   ConfirmModal,
-  GoalCard,
   GoalDetail,
   GoalInsights,
   GoalLadder,
@@ -61,6 +60,7 @@ import {
   isOverdue,
   measureOf,
   msUntilNextDeadline,
+  GoalsSidebar,
 } from '@/components/Goals';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
 import { useAuth, useDocumentTitle, useUserData } from '@/hooks';
@@ -321,6 +321,9 @@ export default function Goals() {
     [active],
   );
 
+  /** Which of the rail's two tabs is showing. See components/Goals/GoalsSidebar. */
+  const [railTab, setRailTab] = useState<'goals' | 'system'>('goals');
+
   const open = list.find((goal) => goal.id === openId) ?? null;
 
   if (loading) return <Loading label="Reading your goals" />;
@@ -362,6 +365,13 @@ export default function Goals() {
         {error && <ErrorState message={error} onRetry={() => void load()} />}
 
         <VisionLine goals={list} />
+
+        {/* The page and the rail beside it. Everything that was the page is
+            now the left column; the rail is the standing answer to "what am I
+            carrying", in the same place on every visit — the calendar's
+            arrangement, for the same reason. */}
+        <div className="gx-body">
+        <div className="gx-main">
 
         {/* ---- 1. The goals themselves, and the route through each one ----
             The top of the page is the plan: every goal you are working on,
@@ -437,38 +447,12 @@ export default function Goals() {
           </Band>
         </div>
 
-        {/* ---- 5. The counters, kept ------------------------------------- */}
-        {counters.length > 0 && (
-          <Band
-            title="Tracked counters"
-            hint="Goals the app fills in for you — XP, streaks, tasks and focus time."
-          >
-            {/* The old cards were drawn for a page that painted the whole
-                document dark. `gx-legacy` gives them that surface back
-                locally, rather than this page giving up its own. */}
-            <div className="gx-legacy goals-list">
-              {counters.map((goal) => (
-                <GoalCard
-                  key={goal.id}
-                  goal={goal}
-                  busy={busy}
-                  onEdit={(entry) => {
-                    setEditing(entry);
-                    setModalOpen(true);
-                  }}
-                  onDelete={setPendingDelete}
-                  onAddProgress={() => undefined}
-                  onSetProgress={() => undefined}
-                  onGiveUp={setPendingDelete}
-                  onMoreTime={(entry) => {
-                    setEditing(entry);
-                    setModalOpen(true);
-                  }}
-                />
-              ))}
-            </div>
-          </Band>
-        )}
+        {/* ---- 5. The counters ------------------------------------------
+            Moved to the rail's System Goals tab. They were here under
+            "Tracked counters", drawn with the old GoalCard inside a
+            `gx-legacy` wrapper whose only job was to hand those cards back the
+            dark surface they were designed against — a stylesheet this page
+            stopped using. See components/Goals/GoalsSidebar. */}
 
         {/* ---- 6. When, goal by goal -------------------------------------
             One rail each, rather than the single merged rail this page used
@@ -513,6 +497,22 @@ export default function Goals() {
         )}
 
         <GoalsCta onNew={() => setWizardOpen(true)} />
+        </div>
+
+          <GoalsSidebar
+            outcomes={outcomes}
+            counters={counters}
+            tab={railTab}
+            onTab={setRailTab}
+            onOpen={(goal) => setOpenId(goal.id)}
+            onEdit={(goal) => {
+              setEditing(goal);
+              setModalOpen(true);
+            }}
+            onDelete={setPendingDelete}
+            onNew={() => setWizardOpen(true)}
+          />
+        </div>
       </div>
 
       {open && (
