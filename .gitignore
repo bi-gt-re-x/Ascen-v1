@@ -18,6 +18,10 @@ frontend/dist/
 
 # The live database, rebuilt from data/sql/ when absent
 data/ascen.db
+
+# Snapshots taken before a bulk write (scripts/seed_year.py). Local
+# safety copies of the live database, not history worth carrying.
+data/backups/*.db*
 data/ascen.db-wal
 data/ascen.db-shm
 
