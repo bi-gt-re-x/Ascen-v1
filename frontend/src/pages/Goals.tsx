@@ -51,6 +51,7 @@ import {
   GoalTimeline,
   GoalsCta,
   HealthRing,
+  MilestoneCalendar,
   NewGoalWizard,
   NextMilestones,
   OverviewStrip,
@@ -504,6 +505,19 @@ export default function Goals() {
             <RecentlyCompleted goals={list} />
           </Band>
         )}
+
+        {/* ---- 8. The same checkpoints, as months --------------------------
+            Last on the page because it is the widest view of the smallest
+            thing: every rail above is one goal in order, and this is all of
+            them at once, on the days they actually land. It answers the
+            question the lists cannot — which weeks are full — so it belongs
+            after them rather than instead of them. */}
+        <Band
+          title="Milestone Calendar"
+          hint="Every dated checkpoint on the day it lands. Darker days carry more; pick one to see what."
+        >
+          <MilestoneCalendar goals={list} onOpen={(goal) => setOpenId(goal.id)} />
+        </Band>
 
         <GoalsCta onNew={() => setWizardOpen(true)} />
         </div>

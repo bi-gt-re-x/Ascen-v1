@@ -3573,3 +3573,196 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     color: var(--gx-violet);
 }
 .gx-wizard-tip svg { width: 15px; height: 15px; }
+
+/* ---------- The milestone calendar ---------------------------------------
+   The last band on the page: four months of squares, one per day, weighted by
+   how many checkpoints land on each. Everything here is sized off the cell —
+   28px is the smallest square that still takes a comfortable click and still
+   fits a two-digit date — and coloured off `--tone`, which each cell sets from
+   its own state rather than from the goal's category. A grid mixing nine
+   category hues stops being readable as density, which is the only thing this
+   view is for. */
+.gx-cal { display: flex; flex-direction: column; gap: 14px; }
+
+.gx-cal-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.gx-cal-nav { display: flex; align-items: center; gap: 6px; }
+.gx-cal-arrow {
+    display: grid;
+    place-items: center;
+    width: 26px; height: 26px;
+    padding: 0;
+    border: 1px solid var(--gx-line);
+    border-radius: 8px;
+    background: var(--gx-card-2);
+    color: var(--gx-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease;
+}
+.gx-cal-arrow:hover { border-color: var(--gx-violet); color: var(--gx-violet); }
+.gx-cal-span {
+    min-width: 15ch;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--gx-text);
+    font-variant-numeric: tabular-nums;
+}
+.gx-cal-today {
+    padding: 4px 10px;
+    border: 1px solid var(--gx-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--gx-muted);
+    font-size: 11.5px;
+    cursor: pointer;
+}
+.gx-cal-today:hover { border-color: var(--gx-violet); color: var(--gx-violet); }
+
+.gx-cal-key {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 11.5px;
+    color: var(--gx-muted);
+}
+.gx-cal-key li { display: flex; align-items: center; gap: 5px; }
+.gx-cal-dot { width: 9px; height: 9px; border-radius: 3px; }
+.gx-cal-dot.is-done { background: var(--gx-good); }
+.gx-cal-dot.is-due  { background: var(--gx-violet); }
+.gx-cal-dot.is-late { background: var(--gx-bad); }
+
+/* auto-fit rather than a fixed four: the band narrows with the rail beside it,
+   and four months squeezed to 150px each are unreadable in a way two months at
+   full width are not. */
+.gx-cal-months {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
+    gap: 16px;
+}
+.gx-cal-month { min-width: 0; }
+.gx-cal-month h3 {
+    margin: 0 0 7px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: var(--gx-text);
+}
+.gx-cal-dow, .gx-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+}
+.gx-cal-dow {
+    margin-bottom: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--gx-faint);
+    text-align: center;
+}
+
+.gx-cal-cell {
+    position: relative;
+    aspect-ratio: 1;
+    min-height: 28px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: var(--gx-card-2);
+    color: var(--gx-muted);
+    font: inherit;
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+    transition: transform .12s ease, border-color .12s ease;
+}
+/* The neighbouring months' tail and head. Kept rather than blanked so the
+   weeks stay whole — a row that starts mid-air reads as a missing day. */
+.gx-cal-cell.is-outside { opacity: .38; }
+.gx-cal-cell.is-today { border-color: var(--gx-violet); font-weight: 700; color: var(--gx-text); }
+
+/* A day with checkpoints on it. `--tone` is the state's colour, and the three
+   loads are the same colour at three strengths — density read as darkness,
+   which is the one thing this grid is asked to show. */
+.gx-cal-cell.has-marks {
+    cursor: pointer;
+    color: var(--gx-text);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--tone) 16%, var(--gx-card-2));
+    border-color: color-mix(in srgb, var(--tone) 34%, transparent);
+}
+.gx-cal-cell.has-marks[data-load="2"] { background: color-mix(in srgb, var(--tone) 34%, var(--gx-card-2)); }
+.gx-cal-cell.has-marks[data-load="3"] {
+    background: color-mix(in srgb, var(--tone) 56%, var(--gx-card-2));
+    border-color: color-mix(in srgb, var(--tone) 62%, transparent);
+}
+.gx-cal-cell.is-done { --tone: var(--gx-good); }
+.gx-cal-cell.is-due  { --tone: var(--gx-violet); }
+.gx-cal-cell.is-late { --tone: var(--gx-bad); }
+.gx-cal-cell.has-marks:hover { transform: translateY(-1px); border-color: var(--tone); }
+.gx-cal-cell.is-picked {
+    border-color: var(--tone, var(--gx-violet));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tone, var(--gx-violet)) 30%, transparent);
+}
+
+/* ---------- What the picked day holds ------------------------------------ */
+.gx-cal-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--gx-muted); }
+.gx-cal-day {
+    padding-top: 12px;
+    border-top: 1px solid var(--gx-line-soft);
+}
+.gx-cal-day h4 {
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--gx-text);
+}
+.gx-cal-day ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.gx-cal-day li { min-width: 0; }
+.gx-cal-day button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 16px auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 9px;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.gx-cal-day button:hover { background: var(--gx-card-2); }
+.gx-cal-mark { color: var(--tone); font-size: 11px; text-align: center; }
+.gx-cal-goal {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--tone);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+.gx-cal-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 720px) {
+    .gx-cal-months { grid-template-columns: 1fr; }
+    .gx-cal-head { flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gx-cal-cell { transition: none; }
+    .gx-cal-cell.has-marks:hover { transform: none; }
+}

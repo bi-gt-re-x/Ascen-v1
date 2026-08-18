@@ -15,6 +15,8 @@ export { GoalLadder, RUNGS } from './GoalLadder';
 export type { GoalLadderProps } from './GoalLadder';
 export { GoalsSidebar, RAIL_GOALS } from './GoalsSidebar';
 export type { GoalsSidebarProps } from './GoalsSidebar';
+export { MilestoneCalendar, milestoneDays } from './MilestoneCalendar';
+export type { MilestoneCalendarProps, MilestoneDay } from './MilestoneCalendar';
 export { GoalStats } from './GoalStats';
 export type { GoalStatsProps } from './GoalStats';
 export { MilestonesPanel } from './MilestonesPanel';
