@@ -427,11 +427,26 @@ export function OutcomeCard({
 export function GoalTimeline({
   goals,
   onOpen,
+  onDate,
   today = new Date(),
   limit = 9,
 }: {
   goals: Goal[];
   onOpen: (goal: Goal) => void;
+  /**
+   * Set or clear when a checkpoint is meant to be reached.
+   *
+   * Optional, and the rail is read-only without it. `target_date` has been on
+   * the milestone model, in the API and on this page's own sort keys since the
+   * table existed — every view here reads it, sorts by it and prints "in 12d"
+   * off it — and nothing in the app ever let anyone write one. A rail whose
+   * order is a date the reader has no way to set is a rail that draws whatever
+   * order the rows happen to be in and calls it a timeline.
+   *
+   * An empty string clears the date, which is the value an emptied date input
+   * gives and what the backend reads as "no date".
+   */
+  onDate?: (milestone: Milestone, date: string) => void;
   today?: Date;
   limit?: number;
 }) {
@@ -483,17 +498,40 @@ export function GoalTimeline({
           <span className="gx-tl-goal">{entry.goal.title}</span>
           <span className="gx-tl-title">{entry.row.title}</span>
         </button>
-        <span className="gx-tl-when">
-          {entry.at === null
-            ? 'no date'
-            : entry.done
-              ? formatGoalDate(new Date(entry.at).toISOString())
-              : days !== null && days < 0
-                ? `${Math.abs(days)}d late`
-                : days === 0
-                  ? 'today'
-                  : `in ${days}d`}
-        </span>
+        {/* Done is a fact and gets a date; anything ahead is a plan and gets
+            a control. A finished checkpoint prints when it was reached, which
+            is not a thing to edit. */}
+        {onDate && !entry.done ? (
+          <label className="gx-tl-set">
+            <span className={days !== null && days < 0 ? 'is-late' : undefined}>
+              {entry.at === null
+                ? 'Set a date'
+                : days !== null && days < 0
+                  ? `${Math.abs(days)}d late`
+                  : days === 0
+                    ? 'today'
+                    : `in ${days}d`}
+            </span>
+            <input
+              type="date"
+              value={entry.row.target_date ? String(entry.row.target_date).slice(0, 10) : ''}
+              aria-label={`When to finish ${entry.row.title}`}
+              onChange={(event) => onDate(entry.row, event.target.value)}
+            />
+          </label>
+        ) : (
+          <span className="gx-tl-when">
+            {entry.at === null
+              ? 'no date'
+              : entry.done
+                ? formatGoalDate(new Date(entry.at).toISOString())
+                : days !== null && days < 0
+                  ? `${Math.abs(days)}d late`
+                  : days === 0
+                    ? 'today'
+                    : `in ${days}d`}
+          </span>
+        )}
       </li>
     );
   };

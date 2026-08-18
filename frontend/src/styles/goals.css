@@ -1952,6 +1952,12 @@ html[data-theme="dark"] .goals-shell {
     --gx-watch: #b47b18;
     --gx-bad: #c0403c;
 
+    /* The inset every card on this page uses, so the things inside two
+       different cards in the same row line up with each other and not just
+       their own borders. The masthead's buttons and the rail's contents share
+       a right edge because they share this. */
+    --gx-pad: 18px;
+
     --gx-radius: 16px;
     --gx-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 6px 18px rgba(16, 24, 40, .05);
 
@@ -2000,8 +2006,14 @@ html[data-theme="dark"] .gx-page {
 .tone-grey   { --tone: var(--gx-grey); }
 
 .gx-shell {
-    --shell-max: 1400px;
-    --shell-fluid: 94%;
+    /* No ceiling, so the rail sits near the right edge of the room rather than
+       at the right edge of a 1400px box floating in it — and so the header's
+       buttons, which share this width, land on that same edge. The tasks page
+       has the long note on why `vw` and a fixed cap were both wrong here; the
+       short version is that `--shell-fluid` is a share of the content column,
+       which is the box being sized, and it is the only term left. */
+    --shell-max: 100%;
+    --shell-fluid: 97%;
     position: relative;
     z-index: 1;
     display: flex;
@@ -2072,12 +2084,27 @@ html[data-theme="dark"] .gx-page {
 .gx-page .gx-btn.is-quiet { background: transparent; }
 
 /* ---------- Header -------------------------------------------------------- */
+/* The masthead.
+   A card rather than three stacked lines on the page background. It carried
+   the title, a subtitle and the Vision sentence as loose paragraphs with
+   nothing holding them together, which at this width left a lot of pale grid
+   showing between the words and the first band. Boxing it gives the page
+   something to start on and puts the tools on the same baseline as the title.
+   `align-items: flex-end` keeps the buttons on the title's baseline; it is the
+   whole reason the tools do not float up beside the icon. */
 .gx-head {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 20px;
+    gap: 20px 24px;
     flex-wrap: wrap;
+    padding: 20px var(--gx-pad);
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--gx-violet) 5%, transparent), transparent 62%),
+        var(--gx-card);
+    box-shadow: var(--gx-shadow);
 }
 .gx-head h1 {
     display: flex;
@@ -2103,6 +2130,31 @@ html[data-theme="dark"] .gx-page {
 .gx-head-ico svg { width: 20px; height: 20px; }
 .gx-head p { margin: 0; font-size: 13.5px; }
 .gx-head-tools { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+/* The Vision line, inside the masthead now rather than adrift under it. A
+   pill for the label and the sentence beside it, on one baseline — it used to
+   be an uppercase caption followed by prose with a paragraph's worth of space
+   above and below, which read as a section heading for the band underneath it
+   rather than as a summary of the page. */
+.gx-head .gx-vision {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--gx-muted);
+}
+.gx-head .gx-vision > span:first-child {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gx-violet) 13%, transparent);
+    color: var(--gx-violet);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
 
 /* ---------- Bands --------------------------------------------------------- */
 .gx-band { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
@@ -3328,7 +3380,7 @@ html[data-theme="dark"] .gx-page {
 /* ---------- The panel under them ------------------------------------------ */
 .gx-panel {
     display: flex; flex-direction: column; gap: 10px;
-    padding: 14px;
+    padding: 14px var(--gx-pad);
     border: 1px solid var(--gx-line);
     border-radius: var(--gx-radius);
     background: var(--gx-card);
@@ -3450,3 +3502,48 @@ html[data-theme="dark"] .gx-page {
     .gx-rail-col { position: static; }
     .gx-syslist { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
 }
+
+/* ---------- Setting when a checkpoint lands ------------------------------- */
+/* The rail's date control. It reads as the text it replaces until you go near
+   it — the row is a timeline, not a form, and a page of date inputs in boxes
+   would say the opposite. The native picker is the whole control: a `<label>`
+   around it means the words are the hit target too. */
+.gx-tl-set {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 84px;
+    padding: 3px 7px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gx-faint);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.gx-tl-set:hover { background: var(--gx-card-2); border-color: var(--gx-line); color: var(--gx-text); }
+.gx-tl-set:focus-within { border-color: var(--gx-violet); color: var(--gx-text); }
+.gx-tl-set span.is-late { color: var(--gx-bad); }
+/* Over the label rather than beside it, so the row keeps the shape it has when
+   the date is only being read. */
+.gx-tl-set input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+}
+
+/* Native controls follow the theme.
+   Date pickers, spinners and scrollbars are drawn by the browser, and without
+   this the dark page opened a white calendar. One declaration covers every
+   native widget on the page rather than a rule per control. */
+html[data-theme="dark"] .gx-page { color-scheme: dark; }
+.gx-page { color-scheme: light; }

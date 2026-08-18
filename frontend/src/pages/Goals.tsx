@@ -239,6 +239,15 @@ export default function Goals() {
     [username, write],
   );
 
+  /** When a checkpoint is meant to be reached. Empty string clears it. */
+  const setMilestoneDate = useCallback(
+    (milestone: Milestone, date: string) => {
+      if (!username) return;
+      void write(() => goalService.updateMilestone(username, milestone.id, { target_date: date }));
+    },
+    [username, write],
+  );
+
   const removeMilestone = useCallback(
     (milestone: Milestone) => {
       if (!username) return;
@@ -346,6 +355,7 @@ export default function Goals() {
               Goals
             </h1>
             <p className="gx-quiet">Turn long-term ambitions into measurable progress.</p>
+            <VisionLine goals={list} />
           </div>
           <div className="gx-head-tools">
             <RefreshButton busy={busy} onRefresh={() => void load(true)} />
@@ -363,8 +373,6 @@ export default function Goals() {
         </header>
 
         {error && <ErrorState message={error} onRetry={() => void load()} />}
-
-        <VisionLine goals={list} />
 
         {/* The page and the rail beside it. Everything that was the page is
             now the left column; the rail is the standing answer to "what am I
@@ -481,6 +489,7 @@ export default function Goals() {
                   <GoalTimeline
                     goals={[goal]}
                     onOpen={(entry) => setOpenId(entry.id)}
+                    onDate={setMilestoneDate}
                     limit={TIMELINE_ROWS}
                   />
                 </section>
