@@ -26,10 +26,38 @@ const STATUSES: Array<{ key: StatusFilter; label: string }> = [
   { key: 'all', label: 'Everything' },
 ];
 
-function useDismiss(onClose: () => void) {
+/**
+ * Close on Escape, or on a click outside — but only while actually open.
+ *
+ * The `open` guard is the whole of the fix for menus that opened, highlighted
+ * and closed without ever changing anything. It was missing, so all three
+ * menus kept a document `mousedown` listener registered at all times, and the
+ * three of them share one `open` value — only one panel can be up at once.
+ *
+ * A click on an option inside the Group panel is therefore *outside* Filter's
+ * ref and outside Sort's, so both of their listeners fired and both called
+ * `onOpen(null)`. That is a state change on `mousedown`, so React unmounted
+ * the panel — with the pointer still down and the option still under it. A
+ * `click` only exists if mousedown and mouseup land on the same live element,
+ * and by mouseup the option was gone. `onPick` never ran. The reader saw a
+ * menu open, saw it close on the option they chose, and saw the list keep
+ * exactly the order it had, which reads as "the sort does nothing" — and the
+ * ordering, grouping and filtering underneath were correct the entire time and
+ * were simply never asked for.
+ *
+ * The chips were never affected: they are plain buttons outside any menu, and
+ * nothing unmounts them mid-click. That is why priority and subject filtered
+ * while the three menus beside them did not.
+ *
+ * Every other dismissable in the app already guards this way — Topbar's
+ * account menu, TaskRow's row menu, the page overflow in pages/Tasks.tsx. This
+ * one is now the fourth rather than the exception.
+ */
+function useDismiss(onClose: () => void, open: boolean) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!open) return;
     const away = (event: MouseEvent) => {
       if (ref.current && !ref.current.contains(event.target as Node)) onClose();
     };
@@ -42,7 +70,7 @@ function useDismiss(onClose: () => void) {
       document.removeEventListener('mousedown', away);
       document.removeEventListener('keydown', key);
     };
-  }, [onClose]);
+  }, [onClose, open]);
 
   return ref;
 }
@@ -72,7 +100,7 @@ function Menu({
   value?: string;
 }) {
   const close = useCallback(() => onOpen(null), [onOpen]);
-  const ref = useDismiss(close);
+  const ref = useDismiss(close, open);
 
   return (
     <div className="tk-menu" ref={ref}>
