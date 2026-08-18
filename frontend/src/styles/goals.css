@@ -3547,3 +3547,29 @@ html[data-theme="dark"] .gx-page {
    native widget on the page rather than a rule per control. */
 html[data-theme="dark"] .gx-page { color-scheme: dark; }
 .gx-page { color-scheme: light; }
+
+/* ---------- The wizard's advice line -------------------------------------- */
+/* One sentence at the top of each step. Quiet enough to skip on the steps a
+   reader already knows how to answer, and in the page's tokens so it follows
+   both themes with everything else. */
+.gx-wizard-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 0 0 16px;
+    padding: 11px 13px;
+    border: 1px solid color-mix(in srgb, var(--gx-violet) 26%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--gx-violet) 7%, transparent);
+    color: var(--gx-muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+.gx-wizard-tip > span {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 20px; height: 20px;
+    color: var(--gx-violet);
+}
+.gx-wizard-tip svg { width: 15px; height: 15px; }

@@ -29,6 +29,45 @@ const STEPS = [
   'Break it into checkpoints',
 ] as const;
 
+/**
+ * One line of advice per step, at the top of the panel.
+ *
+ * The wizard asks good questions and then leaves the reader to answer them
+ * cold — and the hard part of setting a goal is not the typing, it is knowing
+ * what a good answer looks like. Each of these is the thing someone who had
+ * written a lot of goals would say before you started that step, and they are
+ * one sentence because a paragraph of coaching above a text box is something
+ * to scroll past.
+ */
+const TIPS: Record<number, string> = {
+  0: 'Name the finish line, not the effort — "Reach USACO Gold", not "practise more". You want to be able to tell, on a given day, whether you got there.',
+  1: 'Write the reason you would still want this in three months. It is the thing you will read back on the week you do not feel like it.',
+  2: 'A date you half-believe beats no date: with one the app can say whether you are on pace, and without one it can only say you are still going.',
+  3: 'Pick milestones when finishing is a state you arrive at, and a number when it is something that accumulates. Most real goals are milestones.',
+  4: 'Three to six is the range that works. Each one should be a state the goal reaches, not a task you do — and dates get filled in for you.',
+};
+
+/** How far out a goal's date starts, when the reader has not moved it. */
+const DEFAULT_HORIZON_DAYS = 90;
+
+/**
+ * A first target date, `DEFAULT_HORIZON_DAYS` from today.
+ *
+ * The field opened empty, and an empty date field is almost always left empty
+ * — so goals arrived with no deadline, which is the one answer that costs the
+ * app the ability to say anything about pace, and which then leaves every
+ * checkpoint under the goal undated too (see `_spread_dates` in
+ * backend/api/goals.py, which lays the checkpoints out across whatever this
+ * ends up being). A quarter is a real horizon rather than a placeholder: long
+ * enough for something worth calling a goal, near enough to argue with. The
+ * reader changes it on the step it is asked on.
+ */
+function defaultDeadline(today = new Date()): string {
+  const at = new Date(today);
+  at.setDate(at.getDate() + DEFAULT_HORIZON_DAYS);
+  return at.toISOString().slice(0, 10);
+}
+
 export interface NewGoalWizardProps {
   open: boolean;
   busy: boolean;
@@ -42,7 +81,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<GoalCategory>('other');
   const [why, setWhy] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [deadline, setDeadline] = useState(defaultDeadline);
   const [priority, setPriority] = useState(5);
   const [measure, setMeasure] = useState<GoalMeasure>('milestones');
   const [unit, setUnit] = useState('');
@@ -57,7 +96,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
     setDescription('');
     setCategory('other');
     setWhy('');
-    setDeadline('');
+    setDeadline(defaultDeadline());
     setPriority(5);
     setMeasure('milestones');
     setUnit('');
@@ -132,6 +171,17 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
         </span>
 
         <div className="gx-wizard-body">
+          {TIPS[step] && (
+            <p className="gx-wizard-tip">
+              <span aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18h6M10 21h4" />
+                  <path d="M12 3a6 6 0 0 0-3.5 10.9c.3.3.5.7.5 1.1h6c0-.4.2-.8.5-1.1A6 6 0 0 0 12 3z" />
+                </svg>
+              </span>
+              {TIPS[step]}
+            </p>
+          )}
           {step === 0 && (
             <>
               <label htmlFor="gx-title">The outcome, not the activity</label>
@@ -290,6 +340,13 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
           {step === 4 && (
             <>
               <label>The checkpoints, in the order you will hit them</label>
+              {milestones.length > 0 && (
+                <p className="gx-hint">
+                  {deadline
+                    ? `Dates are spread evenly between today and ${deadline}, the last landing on it. Move any of them from the goal's timeline.`
+                    : 'With no target date these fall a fortnight apart from today. Move any of them from the goal\u2019s timeline.'}
+                </p>
+              )}
               <ol className="gx-draft-list">
                 {milestones.map((entry, index) => (
                   <li key={`${entry}-${index}`}>

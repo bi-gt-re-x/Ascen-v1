@@ -60,9 +60,38 @@ from datetime import date, datetime, timedelta
 
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'ascen.db')
 
-# Stamped into `description` on every row this writes, so a re-run can find its
-# own work and nothing else. Tasks the account made by hand are never touched.
-TAG = '[seeded:year]'
+# How a re-run finds its own work, and nothing else.
+#
+# This used to be a marker string written into `description`. That was visible:
+# `description` is a real field on a real task, the Tasks page searches it
+# along with the title, and every row this wrote carried "[seeded:year]" in a
+# column the account is entitled to use for its own notes. A bookkeeping mark
+# does not belong in the data it is keeping book on.
+#
+# So the mark is the id instead. `db.new_id` (backend/database/connection.py)
+# hands out the current millisecond, which since 2001 has been a 13-digit
+# number starting 1.0e12 and today is 1.79e12 and climbing. The window below
+# is therefore reserved by construction: it is 13 digits, it sorts and
+# compares as one, and no clock will ever land in it again. Ids are never
+# shown to anyone, so nothing about the mark reaches the account.
+SEED_ID_LOW = '1000000000000'
+SEED_ID_HIGH = '1099999999999'
+
+# The old marker, cleared on the next run so the rows it wrote lose it.
+LEGACY_TAG = '[seeded:year]'
+
+# What `description` gets now: the same empty string every other task carries
+# when nobody wrote a note on it.
+TAG = ''
+
+# The WHERE clause matching rows this script owns.
+OWNED = (
+    "user_id = ? AND ("
+    " (id >= ? AND id <= ? AND length(id) = 13)"
+    " OR description = ?"
+    ")"
+)
+OWNED_ARGS = lambda user: (user, SEED_ID_LOW, SEED_ID_HIGH, LEGACY_TAG)
 
 # ---------------------------------------------------------------------------
 # The week
@@ -240,7 +269,7 @@ def minutes(hhmm: str) -> int:
 def build(user: str, start: date, days: int, min_xp: int, seed: int):
     rng = random.Random(seed)
     rows = []
-    base = int(datetime.now().timestamp() * 1000)
+    base = int(SEED_ID_LOW)
 
     def add(day, title, subject, priority, xp, span=None):
         """One task. `span` is (start, end) for a block, None for a to-do."""
@@ -361,7 +390,7 @@ def main():
     con = sqlite3.connect(DB)
     try:
         gone = con.execute(
-            'DELETE FROM tasks WHERE user_id = ? AND description = ?', (args.user, TAG)
+            f'DELETE FROM tasks WHERE {OWNED}', OWNED_ARGS(args.user)
         ).rowcount
         if args.clear:
             con.commit()

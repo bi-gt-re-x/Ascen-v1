@@ -36,7 +36,7 @@ are evidence that the work is happening, and they belong to the health and the
 analytics on the page, not to the percentage. See utils/goalHealth.ts on the
 front end, which is where "is this on track" is decided.
 """
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, List, Optional
 
 from fastapi import APIRouter
@@ -274,6 +274,52 @@ def _fresh_milestone_id(rows):
     while str(candidate) in taken:
         candidate += 1
     return str(candidate)
+
+
+def _spread_dates(count, deadline, today=None):
+    """A first date for each checkpoint, from today to the goal's deadline.
+
+    Every milestone was written with `target_date: ''`, and the only way to
+    put one on was an API call nothing in the app made — so a goal created with
+    five checkpoints arrived with five undated rows, and every view that orders
+    by date drew them in whatever order they came out of the table.
+
+    These are a starting position, not a plan: the reader moves any of them
+    from the goal timeline. What makes them worth writing is that they are
+    ordered and spaced, so the rail reads as a sequence from the moment the
+    goal exists.
+
+    With a deadline, the checkpoints divide the run-up to it evenly and the
+    last one lands on the day itself — five checkpoints before a date twenty
+    weeks out are four weeks apart. Without one, they fall a fortnight apart
+    from today, which is a pace rather than a promise and is the honest answer
+    when the reader declined to give a date.
+
+    A deadline already past, or today, gets nothing: back-dating a checkpoint
+    to before the goal was written would make the timeline open on a row that
+    was late the moment it was created.
+    """
+    if count <= 0:
+        return []
+    start = (today or datetime.now()).date()
+
+    end = None
+    if deadline:
+        try:
+            end = date.fromisoformat(str(deadline)[:10])
+        except ValueError:
+            end = None
+    if end is not None and end <= start:
+        end = None
+
+    if end is None:
+        return [(start + timedelta(days=14 * (i + 1))).isoformat() for i in range(count)]
+
+    span = (end - start).days
+    return [
+        (start + timedelta(days=round(span * (i + 1) / count))).isoformat()
+        for i in range(count)
+    ]
 
 
 def _milestones_of(rows, goal_id):
@@ -564,6 +610,7 @@ def add_goal(body: AddGoal):
     rows = db.goal_milestones()
     if titles:
         now = datetime.now().isoformat()
+        dates = _spread_dates(len(titles), body.deadline)
         for position, title in enumerate(titles):
             rows.append({
                 "id": _fresh_milestone_id(rows),
@@ -573,7 +620,7 @@ def add_goal(body: AddGoal):
                 "note": '',
                 "position": position,
                 "status": 'pending',
-                "target_date": '',
+                "target_date": dates[position],
                 "created_at": now,
             })
 
