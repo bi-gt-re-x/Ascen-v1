@@ -423,6 +423,29 @@ export default function Tasks() {
   }, []);
 
   /**
+   * The selection, cut down to what the filters actually left on the page.
+   *
+   * `picked` outlives the list it was made from — tick two rows, then search,
+   * change the subject chip, or pull the horizon back to the week, and those
+   * rows leave the page while their ids stay in the set. Read raw, that gave a
+   * bar reading "2 selected" over a list showing neither of them, and a Delete
+   * button that reached past the filter and removed two tasks the reader could
+   * not see. An irreversible action has to be about what is on screen.
+   *
+   * Intersected rather than pruned, so the filter is a lens and not a
+   * guillotine: clearing the search brings the rows back still ticked, which is
+   * what someone who narrowed the list to find a third one expects. Collapsing
+   * a section does not hide a row for this purpose — the heading is still
+   * there, still counting them, and folding it away is not deselection.
+   */
+  const chosen = useMemo(() => {
+    if (picked.size === 0) return [];
+    const onPage = new Set<string>();
+    groups.forEach((entry) => entry.tasks.forEach((task) => onPage.add(String(task.id))));
+    return list.filter((task) => picked.has(task.id) && onPage.has(String(task.id)));
+  }, [groups, list, picked]);
+
+  /**
    * A bulk action is the single action, repeated in order.
    *
    * One request per task rather than a batch endpoint, because there is not one
@@ -433,18 +456,24 @@ export default function Tasks() {
    */
   const bulk = useCallback(
     async (action: (task: Task) => Promise<unknown>) => {
-      const chosen = list.filter((task) => picked.has(task.id));
       setSaving(true);
       for (const task of chosen) {
         await action(task);
       }
-      setPicked(new Set());
+      // Only what was acted on lets go of its tick. A selection sitting behind
+      // the current filter was not part of this action and clearing it here
+      // would be the same reach past the filter, in the other direction.
+      setPicked((current) => {
+        const next = new Set(current);
+        chosen.forEach((task) => next.delete(task.id));
+        return next;
+      });
       setSaving(false);
       // One re-read at the end rather than one per task: the page has applied
       // every change already, and this is the cheap way to be sure.
       reload();
     },
-    [list, picked, reload],
+    [chosen, reload],
   );
 
   const toggleGroup = useCallback((key: string) => {
@@ -596,7 +625,7 @@ export default function Tasks() {
             />
 
             <BulkBar
-              count={picked.size}
+              count={chosen.length}
               busy={saving}
               onComplete={() => void bulk((task) => (task.status === 'done' ? Promise.resolve() : complete(task)))}
               onDelete={() => void bulk((task) => Promise.resolve(drop(task)))}
