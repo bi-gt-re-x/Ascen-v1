@@ -3766,3 +3766,362 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     .gx-cal-cell { transition: none; }
     .gx-cal-cell.has-marks:hover { transform: none; }
 }
+
+/* ==========================================================================
+   The doing half of the page — greeting, next moves, momentum, trajectory,
+   growth areas and the margin notes. Everything here shares the page's tokens
+   and its `--tone` convention: a row sets its goal's category tone and the
+   parts inside it read `var(--tone)` rather than naming a colour.
+   ========================================================================== */
+
+/* ---------- The opening line --------------------------------------------- */
+.gx-greet { margin-top: 12px; }
+.gx-greet-hi {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gx-text);
+}
+.gx-greet-line {
+    margin: 3px 0 0;
+    font-size: 13.5px;
+    color: var(--gx-muted);
+}
+.gx-greet-line strong { color: var(--gx-text); font-weight: 700; }
+.gx-greet-split { margin-left: 10px; padding-left: 11px; border-left: 1px solid var(--gx-line); }
+.gx-greet-split em { font-style: normal; color: var(--gx-watch); font-weight: 600; }
+
+/* A pair of bands that are one thought. The second is narrower because it is a
+   reading and the first is a list you work down. */
+.gx-two-wide { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+
+/* ---------- Next moves ---------------------------------------------------- */
+.gx-moves { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.gx-move {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 13px;
+    border: 1px solid var(--gx-line-soft);
+    border-radius: 12px;
+    background: var(--gx-card-2);
+    transition: border-color .15s ease, opacity .2s ease;
+}
+.gx-move:hover { border-color: color-mix(in srgb, var(--tone) 45%, transparent); }
+/* Ticked, waiting on the server. It fades rather than vanishing: a row that
+   disappears under the cursor takes the next one's click with it. */
+.gx-move.is-going { opacity: .45; }
+
+.gx-move-tick {
+    display: grid;
+    place-items: center;
+    width: 24px; height: 24px;
+    padding: 0;
+    border: 1.5px solid var(--gx-line);
+    border-radius: 50%;
+    background: transparent;
+    color: transparent;
+    cursor: pointer;
+    transition: border-color .14s ease, background .14s ease, color .14s ease;
+}
+.gx-move-tick svg { width: 13px; height: 13px; }
+.gx-move-tick:not(:disabled):hover {
+    border-color: var(--gx-good);
+    background: color-mix(in srgb, var(--gx-good) 16%, transparent);
+    color: var(--gx-good);
+}
+.gx-move.is-going .gx-move-tick { border-color: var(--gx-good); background: var(--gx-good); color: #fff; }
+.gx-move-tick:disabled { cursor: default; }
+
+.gx-move-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gx-move-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-move-goal {
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--tone);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-move-goal:hover { text-decoration: underline; }
+
+.gx-move-facts {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 11.5px;
+    color: var(--gx-faint);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.gx-move-late { color: var(--gx-bad); font-weight: 600; }
+.gx-move-xp {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gx-violet) 15%, transparent);
+    color: var(--gx-violet);
+    font-weight: 600;
+}
+
+/* ---------- Momentum ------------------------------------------------------ */
+.gx-mo { display: flex; flex-direction: column; gap: 12px; }
+.gx-mo-line { margin: 0; font-size: 13px; line-height: 1.55; color: var(--gx-muted); }
+.gx-mo-line strong { color: var(--gx-text); font-size: 15px; }
+.gx-mo-bar {
+    height: 9px;
+    border-radius: 999px;
+    background: var(--gx-card-2);
+    overflow: hidden;
+}
+.gx-mo-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--gx-violet), var(--gx-teal));
+    transition: width .5s cubic-bezier(.22, 1, .36, 1);
+}
+.gx-mo-days { display: flex; gap: 5px; }
+.gx-mo-days i {
+    flex: 1;
+    height: 20px;
+    border-radius: 5px;
+    background: var(--gx-card-2);
+    border: 1px solid var(--gx-line-soft);
+}
+.gx-mo-days i.is-lit {
+    background: color-mix(in srgb, var(--gx-violet) 55%, transparent);
+    border-color: color-mix(in srgb, var(--gx-violet) 60%, transparent);
+}
+
+/* ---------- Trajectory ---------------------------------------------------- */
+.gx-traj { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 20px; }
+.gx-traj-row { min-width: 0; }
+.gx-traj-head {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 11px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.gx-traj-title {
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-traj-head .gx-quiet { flex: none; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* The scale. A track, the covered part of it, and a mark where the value is —
+   the mark is what makes it a position rather than a bar. */
+.gx-traj-rail {
+    position: relative;
+    height: 8px;
+    margin: 0 0 14px;
+    border-radius: 999px;
+    background: var(--gx-card-2);
+}
+.gx-traj-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 55%, transparent), var(--tone));
+    transition: width .6s cubic-bezier(.22, 1, .36, 1);
+}
+.gx-traj-dot {
+    position: absolute;
+    top: 50%;
+    width: 15px; height: 15px;
+    margin-left: -7.5px;
+    border-radius: 50%;
+    background: var(--tone);
+    border: 2.5px solid var(--gx-card);
+    transform: translateY(-50%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone) 50%, transparent);
+    transition: left .6s cubic-bezier(.22, 1, .36, 1);
+}
+/* The target end, so the rail reads as running *to* something. */
+.gx-traj-end {
+    position: absolute;
+    right: 0; top: 50%;
+    width: 3px; height: 15px;
+    border-radius: 2px;
+    background: var(--gx-faint);
+    transform: translateY(-50%);
+}
+
+.gx-traj-figs { display: flex; gap: 26px; margin: 0; }
+.gx-traj-figs div { display: flex; flex-direction: column; gap: 2px; }
+.gx-traj-figs dt { font-size: 11px; color: var(--gx-faint); }
+.gx-traj-figs dd {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.gx-traj-figs dd em { font-style: normal; font-size: 11.5px; font-weight: 500; color: var(--gx-muted); }
+.gx-traj-figs dd.is-there { color: var(--gx-good); font-size: 13.5px; }
+.gx-traj-none { margin: 0; font-size: 12.5px; color: var(--gx-faint); }
+
+/* Checkpoint goals: stops on a line, not a scale. */
+.gx-stops {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+}
+.gx-stop {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    padding-top: 20px;
+    text-align: center;
+}
+/* The line between the stops, drawn on each so it stops at the last one. */
+.gx-stop::before {
+    content: '';
+    position: absolute;
+    top: 6px; left: 50%; right: -50%;
+    height: 2px;
+    background: var(--gx-line);
+}
+.gx-stop:last-child::before { display: none; }
+.gx-stop > i {
+    position: absolute;
+    top: 0; left: 50%;
+    width: 13px; height: 13px;
+    margin-left: -6.5px;
+    border-radius: 50%;
+    border: 2px solid var(--gx-line);
+    background: var(--gx-card);
+    z-index: 1;
+}
+.gx-stop > span {
+    display: block;
+    padding: 0 5px;
+    font-size: 10.5px;
+    line-height: 1.35;
+    color: var(--gx-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-stop.is-done > i { background: var(--tone); border-color: var(--tone); }
+.gx-stop.is-done > span { color: var(--gx-muted); }
+.gx-stop.is-active > i {
+    border-color: var(--tone);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 25%, transparent);
+}
+.gx-stop.is-active > span { color: var(--gx-text); font-weight: 600; }
+
+/* ---------- Growth areas -------------------------------------------------- */
+.gx-areas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.gx-area > button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(88px, 1.1fr) auto minmax(90px, 2fr) 44px;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    text-align: left;
+    cursor: default;
+}
+.gx-area > button:not(:disabled) { cursor: pointer; }
+.gx-area > button:not(:disabled):hover { background: var(--gx-card-2); }
+.gx-area-name { font-size: 13px; font-weight: 600; }
+.gx-area-n { font-size: 11.5px; color: var(--gx-faint); white-space: nowrap; }
+.gx-area-bar { height: 7px; border-radius: 999px; background: var(--gx-card-2); overflow: hidden; }
+.gx-area-bar > i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--tone);
+    transition: width .55s cubic-bezier(.22, 1, .36, 1);
+}
+.gx-area-pct {
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- The margin notes ---------------------------------------------- */
+.gx-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+.gx-note { position: relative; display: flex; flex-direction: column; gap: 5px; }
+.gx-note-goal {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--tone);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.gx-note-goal:hover { text-decoration: underline; }
+.gx-note-body {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--gx-line);
+    border-radius: 10px;
+    background: var(--gx-card-2);
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    transition: border-color .15s ease;
+}
+.gx-note-body::placeholder { color: var(--gx-faint); }
+.gx-note-body:focus { border-color: color-mix(in srgb, var(--tone) 55%, transparent); }
+/* On the title row, not the box. Bottom-right put it under the textarea's own
+   resize grip, where it was both unreadable and in the way of the drag. */
+.gx-note-when {
+    position: absolute;
+    top: 0; right: 2px;
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--gx-faint);
+    pointer-events: none;
+}
+
+@media (max-width: 1080px) {
+    .gx-two-wide { grid-template-columns: minmax(0, 1fr); }
+    .gx-traj-figs { gap: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gx-mo-bar > span, .gx-traj-fill, .gx-traj-dot, .gx-area-bar > i { transition: none; }
+}

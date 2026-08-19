@@ -17,6 +17,22 @@ export { GoalsSidebar, RAIL_GOALS } from './GoalsSidebar';
 export type { GoalsSidebarProps } from './GoalsSidebar';
 export { MilestoneCalendar, milestoneDays } from './MilestoneCalendar';
 export type { MilestoneCalendarProps, MilestoneDay } from './MilestoneCalendar';
+export { GoalNotes, noteFor } from './GoalNotes';
+export type { GoalNotesProps } from './GoalNotes';
+export {
+  GoalsGreeting,
+  GrowthAreas,
+  MOMENTUM_DAYS,
+  MOVES,
+  Momentum,
+  NextMoves,
+  goalOf,
+  growthAreas,
+  momentum,
+  nextMoves,
+} from './NextMoves';
+export type { Area, MomentumReading, Move } from './NextMoves';
+export { Trajectory, reading } from './Trajectory';
 export { GoalStats } from './GoalStats';
 export type { GoalStatsProps } from './GoalStats';
 export { MilestonesPanel } from './MilestonesPanel';

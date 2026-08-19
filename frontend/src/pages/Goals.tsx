@@ -47,6 +47,12 @@ import {
   GoalInsights,
   GoalLadder,
   GoalModal,
+  GoalNotes,
+  GoalsGreeting,
+  GrowthAreas,
+  Momentum,
+  NextMoves,
+  Trajectory,
   GoalStats,
   GoalTimeline,
   GoalsCta,
@@ -65,9 +71,10 @@ import {
 } from '@/components/Goals';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
 import { useAuth, useDocumentTitle, useUserData } from '@/hooks';
-import { goals as goalService } from '@/services';
+import { goals as goalService, notes as noteService, tasks as taskService } from '@/services';
 import type { NewGoal } from '@/services/goals';
-import type { Goal, Milestone, MilestoneStatus } from '@/types';
+import type { Note } from '@/services/notes';
+import type { Goal, Milestone, MilestoneStatus, Task } from '@/types';
 import '@/styles/goals.css';
 
 /** How often to re-read while a focus goal is running. */
@@ -103,6 +110,8 @@ export default function Goals() {
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Goal | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  /** The margin notes. Read here so the band below can show them per goal. */
+  const [notes, setNotes] = useState<Note[]>([]);
 
   /** Bumped when a deadline passes, so the cards that just went overdue redraw. */
   const [, setTick] = useState(0);
@@ -130,6 +139,19 @@ export default function Goals() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /* The goal notes. Its own read rather than part of `load`: a note failing to
+     arrive must not stop the goals rendering, so this one is quiet about its
+     own failure and the band simply shows empty boxes. */
+  const loadNotes = useCallback(async () => {
+    if (!username) return;
+    const result = await noteService.list(username);
+    if (result.success) setNotes(result.notes.filter((note) => note.goal_id));
+  }, [username]);
+
+  useEffect(() => {
+    void loadNotes();
+  }, [loadNotes]);
 
   const hasRunningFocus = useMemo(
     () => list.some((goal) => measureOf(goal) === 'focus' && goal.status === 'active'),
@@ -169,6 +191,52 @@ export default function Goals() {
   );
 
   const tasks = useMemo(() => account.data?.tasks ?? [], [account.data]);
+
+  /**
+   * Tick off one of the next moves.
+   *
+   * Goes through the tasks service exactly as the dashboard does, so the XP,
+   * the streak and the goal's own progress all move the way they would have if
+   * it had been ticked off there — this is a second door onto the same act,
+   * not a second implementation of it. Both reads are refreshed after: the
+   * task list is the account's, and the goal's percentage is the server's.
+   */
+  const completeMove = useCallback(
+    async (task: Task) => {
+      if (!username || busy) return;
+      setBusy(true);
+      const result = await taskService.completeTask(username, task.id);
+      setBusy(false);
+      if (!result.success) {
+        setError(result.message ?? 'That task could not be completed.');
+        return;
+      }
+      await Promise.all([load(true), account.reload()]);
+    },
+    [account, busy, load, username],
+  );
+
+  /** Write one goal's margin note. An emptied box deletes it rather than saving ''. */
+  const saveNote = useCallback(
+    async (goal: Goal, body: string, existing?: Note) => {
+      if (!username) return;
+      if (!body && existing) {
+        await noteService.remove(username, existing.id);
+        await loadNotes();
+        return;
+      }
+      if (!body) return;
+      const result = await noteService.save(username, {
+        ...(existing ? { id: existing.id } : {}),
+        title: goal.title,
+        body,
+        goal_id: goal.id,
+      });
+      if (!result.success) setError(result.message);
+      await loadNotes();
+    },
+    [loadNotes, username],
+  );
 
   // ---- Goal writes --------------------------------------------------------
   const createGoal = useCallback(
@@ -357,6 +425,9 @@ export default function Goals() {
             </h1>
             <p className="gx-quiet">Turn long-term ambitions into measurable progress.</p>
             <VisionLine goals={list} />
+            {/* What you are carrying, before anything is described. The counts
+                come from the same `goalsOverview` the tiles below read. */}
+            <GoalsGreeting goals={list} tasks={tasks} />
           </div>
           <div className="gx-head-tools">
             <RefreshButton busy={busy} onRefresh={() => void load(true)} />
@@ -431,6 +502,34 @@ export default function Goals() {
           )}
         </Band>
 
+        {/* ---- 1b. What to actually do -----------------------------------
+            The page's answer to "so what now". Everything above describes the
+            plan; this is the list of real, open, goal-linked tasks that move
+            it, with the tick right here. It sits directly under the ladders
+            because the two are one thought — the checkpoint and the work that
+            reaches it — and everything below is commentary on both. */}
+        <div className="gx-two gx-two-wide">
+          <Band
+            title="Next moves"
+            hint="Open tasks that name one of your goals, soonest first. Ticking one here counts exactly as it would on the dashboard."
+          >
+            <NextMoves
+              goals={list}
+              tasks={tasks}
+              busy={busy}
+              onComplete={(task) => void completeMove(task)}
+              onOpen={(goal) => setOpenId(goal.id)}
+            />
+          </Band>
+
+          <Band
+            title="Momentum"
+            hint="The last seven days, counted off goal-linked work only."
+          >
+            <Momentum goals={list} tasks={tasks} />
+          </Band>
+        </div>
+
         {/* ---- 2. Where everything stands -------------------------------- */}
         <Band
           title="Where you stand"
@@ -443,6 +542,24 @@ export default function Goals() {
         {/* ---- 3. What comes next --------------------------------------- */}
         <Band title="Next Milestones" hint="The checkpoint each goal is on now.">
           <NextMilestones goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
+        </Band>
+
+        {/* ---- 3b. Where each one is going -------------------------------
+            A percentage says 88% and hides what 88% is of. The rail draws the
+            scale, marks the value on it and prints what is left — and a
+            checkpoint goal, which has no scale, gets its stops instead. */}
+        <Band
+          title="Your trajectory"
+          hint="Where each goal stands on its own scale, and what is still to cover."
+        >
+          <Trajectory goals={outcomes} onOpen={(goal) => setOpenId(goal.id)} />
+        </Band>
+
+        <Band
+          title="Growth areas"
+          hint="Your active goals grouped by field, with progress weighted by how much each matters."
+        >
+          <GrowthAreas goals={list} />
         </Band>
 
         {/* ---- 4. Why ---------------------------------------------------- */}
@@ -505,6 +622,23 @@ export default function Goals() {
             <RecentlyCompleted goals={list} />
           </Band>
         )}
+
+        {/* ---- 7b. Your own words ----------------------------------------
+            The one thing on the page that is not derived. See components/
+            Goals/GoalNotes for why a goals page needs somewhere to put the
+            reason a number cannot hold. */}
+        <Band
+          title="Goal notes"
+          hint="A line each, in your words. Saved when you click away, and readable from the notes page like any other note."
+        >
+          <GoalNotes
+            goals={outcomes}
+            notes={notes}
+            busy={busy}
+            onSave={(goal, body, existing) => void saveNote(goal, body, existing)}
+            onOpen={(goal) => setOpenId(goal.id)}
+          />
+        </Band>
 
         {/* ---- 8. The same checkpoints, as months --------------------------
             Last on the page because it is the widest view of the smallest

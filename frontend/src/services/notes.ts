@@ -31,6 +31,15 @@ export interface NoteDraft {
   body: string;
   note_date?: string;
   pinned?: boolean;
+  /**
+   * What the note is about, when it is about one of them.
+   *
+   * Both have been columns on `notes` and accepted by /api/notes/save since
+   * the table existed; they were missing from this type only because nothing
+   * had written one yet. The goals page writes `goal_id` for its margin notes.
+   */
+  goal_id?: string;
+  task_id?: string;
 }
 
 export function list(username: string): Promise<ApiResult<{ notes: Note[] }>> {
