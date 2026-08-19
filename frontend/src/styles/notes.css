@@ -7,12 +7,18 @@
    the browser's defaults.
 
    Colour is a token block on `.nt-page`, redeclared once for dark.
+
+   The layout is three columns inside two panels: an index, the note, and the
+   note's facts. It is sized to the window rather than to the content — a
+   workspace that grows a scrollbar on the page instead of inside its columns
+   loses the index the moment you scroll the writing.
    ========================================================================== */
 
 .nt-page {
     --nt-bg: #f4f6f8;
     --nt-card: #ffffff;
     --nt-card-2: #f7f8fb;
+    --nt-raised: #ffffff;
     --nt-line: #e6e9ef;
     --nt-line-soft: #eef0f5;
 
@@ -21,297 +27,691 @@
     --nt-faint: #98a1ae;
 
     --nt-accent: #6c5ce7;
+    --nt-accent-2: #8b7cf8;
+    --nt-on-accent: #ffffff;
+    --nt-good: #1f8a54;
+    --nt-warn: #b47b18;
     --nt-bad: #c0392b;
 
-    --nt-radius: 14px;
+    --nt-radius: 16px;
     --nt-gap: 16px;
     --nt-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
 
     background: var(--nt-bg);
     color: var(--nt-text);
     min-height: calc(100vh - var(--topnav-h, 0px));
-    padding: 26px 0 40px;
+    padding: 22px 0 26px;
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
+/* The navy the design is drawn against. Panels are lifted off the page rather
+   than outlined — at this contrast a border does the separating on its own and
+   a heavy one makes the grid look like a spreadsheet. */
 html[data-theme="dark"] .nt-page {
-    --nt-bg: #0d1117;
-    --nt-card: #151b24;
-    --nt-card-2: #1b222c;
-    --nt-line: #232b36;
-    --nt-line-soft: #1e2530;
+    --nt-bg: #171e2e;
+    --nt-card: #1c2436;
+    --nt-card-2: #222b40;
+    --nt-raised: #27314a;
+    --nt-line: #2b3550;
+    --nt-line-soft: #232c42;
 
-    --nt-text: #e6edf3;
-    --nt-muted: #8b949e;
-    --nt-faint: #6e7781;
+    --nt-text: #e7ecf6;
+    --nt-muted: #8f9bb3;
+    --nt-faint: #6d7a94;
 
-    --nt-accent: #8b7cf8;
-    --nt-bad: #f85149;
+    --nt-accent: #6d5ce7;
+    --nt-accent-2: #a78bfa;
+    --nt-on-accent: #ffffff;
+    --nt-good: #46c483;
+    --nt-warn: #e0b23c;
+    --nt-bad: #f0736d;
 
-    --nt-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --nt-shadow: 0 1px 2px rgba(0, 0, 0, .28), 0 10px 30px rgba(0, 0, 0, .22);
 }
 
 .nt-shell {
-    --shell-max: 1500px;
+    --shell-max: 1560px;
     --shell-fluid: 96%;
     display: flex;
     flex-direction: column;
-    gap: var(--nt-gap);
+    gap: 18px;
     position: relative;
     z-index: 1;
 }
 
-/* ---------- Head ---------------------------------------------------------- */
+/* ---------- The page's header --------------------------------------------- */
 .nt-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
+    gap: 20px;
     flex-wrap: wrap;
 }
-.nt-head h1 {
-    margin: 0 0 6px;
-    font-size: 27px;
+.nt-head-titles h1 {
+    margin: 0 0 4px;
+    font-size: 30px;
     font-weight: 700;
-    letter-spacing: -.02em;
+    letter-spacing: -.025em;
 }
-.nt-head p {
+.nt-head-titles p {
     margin: 0;
-    max-width: 74ch;
     font-size: 13.5px;
-    line-height: 1.6;
+    line-height: 1.5;
     color: var(--nt-muted);
 }
+.nt-head-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Search -------------------------------------------------------- */
+.nt-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 300px;
+}
+.nt-search-wrap > svg {
+    position: absolute;
+    left: 14px;
+    width: 17px; height: 17px;
+    color: var(--nt-faint);
+    pointer-events: none;
+}
+.nt-search {
+    width: 100%;
+    padding: 11px 52px 11px 40px;
+    border: 1px solid var(--nt-line);
+    border-radius: 11px;
+    background: var(--nt-card);
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.nt-search::placeholder { color: var(--nt-faint); }
+.nt-search:focus {
+    border-color: var(--nt-accent-2);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--nt-accent-2) 20%, transparent);
+}
+/* Safari draws its own clear button on top of the shortcut hint. */
+.nt-search::-webkit-search-cancel-button { display: none; }
+.nt-kbd {
+    position: absolute;
+    right: 10px;
+    padding: 3px 7px;
+    border: 1px solid var(--nt-line);
+    border-radius: 6px;
+    background: var(--nt-card-2);
+    color: var(--nt-faint);
+    font-family: inherit;
+    font-size: 11px;
+    pointer-events: none;
+}
+
+/* ---------- New note ------------------------------------------------------ */
+.nt-new-group { display: flex; align-items: stretch; }
+.nt-new, .nt-new-more {
+    border: 0;
+    background: linear-gradient(180deg, var(--nt-accent-2), var(--nt-accent));
+    color: var(--nt-on-accent);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter .15s ease, transform .12s ease;
+}
+.nt-new {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 17px;
+    border-radius: 11px 0 0 11px;
+}
+.nt-new svg { width: 16px; height: 16px; }
+.nt-new-more {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    border-radius: 0 11px 11px 0;
+    border-left: 1px solid rgba(255, 255, 255, .22);
+}
+.nt-new-more svg { width: 15px; height: 15px; }
+.nt-new:hover, .nt-new-more:not(:disabled):hover { filter: brightness(1.08); }
+.nt-new:active { transform: translateY(1px); }
+.nt-new-more:disabled { opacity: .55; cursor: not-allowed; }
 
 /* ---------- The two panels ------------------------------------------------
-   A fixed-width list beside an editor that takes the rest. The list is fixed
-   because it is an index — a column of titles that grows and shrinks with the
-   window is harder to scan than one that stays where it was. */
+   A fixed-width index beside an editor that takes the rest. The index is fixed
+   because it is exactly that — a column of titles that grows and shrinks with
+   the window is harder to scan than one that stays where it was. */
 .nt-body {
     display: grid;
     grid-template-columns: 320px minmax(0, 1fr);
     gap: var(--nt-gap);
     align-items: stretch;
-    /* Tall enough to write in, and bounded so the two panels scroll their own
-       contents rather than the page. */
-    min-height: 560px;
-    height: calc(100vh - var(--topnav-h, 0px) - 200px);
+    /* The panels scroll inside themselves, so the page does not. */
+    height: calc(100vh - var(--topnav-h, 0px) - 168px);
+    min-height: 520px;
 }
 
-.nt-list-panel,
-.nt-editor {
+.nt-list-panel, .nt-editor {
     display: flex;
     flex-direction: column;
-    min-width: 0;
     min-height: 0;
     background: var(--nt-card);
     border: 1px solid var(--nt-line);
     border-radius: var(--nt-radius);
     box-shadow: var(--nt-shadow);
+    overflow: hidden;
 }
 
-/* ---------- The list ------------------------------------------------------ */
+/* ---------- The index's own header ---------------------------------------- */
 .nt-list-head {
     display: flex;
-    gap: 8px;
-    padding: 12px;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 14px;
     border-bottom: 1px solid var(--nt-line-soft);
 }
-.nt-search {
-    flex: 1 1 auto;
+.nt-scope {
+    flex: 1;
     min-width: 0;
-    box-sizing: border-box;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nt-icon-btn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 30px; height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--nt-muted);
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.nt-icon-btn svg { width: 16px; height: 16px; }
+.nt-icon-btn:not(:disabled):hover {
+    background: var(--nt-card-2);
+    border-color: var(--nt-line);
+    color: var(--nt-text);
+}
+.nt-icon-btn.is-on { color: var(--nt-accent-2); }
+.nt-icon-btn:disabled { opacity: .4; cursor: default; }
+
+/* ---------- The index ----------------------------------------------------- */
+.nt-sections {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px 16px;
+}
+.nt-sec + .nt-sec { margin-top: 14px; }
+
+.nt-sec-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 4px;
+    border: 0;
+    background: transparent;
+    color: var(--nt-muted);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.nt-sec-head svg {
+    width: 13px; height: 13px;
+    transition: transform .16s ease;
+}
+.nt-sec-head.is-shut svg { transform: rotate(-90deg); }
+.nt-sec-head span { flex: 1; text-align: left; }
+.nt-sec-head em {
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+    color: var(--nt-faint);
+}
+
+.nt-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+
+.nt-item {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 13px;
+    border: 1px solid var(--nt-line-soft);
+    border-radius: 12px;
+    background: var(--nt-card-2);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .14s ease, background .14s ease, transform .12s ease;
+}
+.nt-item:hover { border-color: var(--nt-line); transform: translateX(2px); }
+/* The open note. A left bar rather than a fill: the index is read against the
+   editor beside it, and a whole tinted card competes with the thing it points
+   at. */
+.nt-item.is-open {
+    border-color: color-mix(in srgb, var(--nt-accent-2) 45%, transparent);
+    background: color-mix(in srgb, var(--nt-accent-2) 11%, var(--nt-card-2));
+    box-shadow: inset 3px 0 0 var(--nt-accent-2);
+}
+
+.nt-item-top { display: flex; align-items: flex-start; gap: 8px; }
+.nt-item-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.nt-pin { flex: none; color: var(--nt-accent-2); }
+.nt-pin svg { width: 13px; height: 13px; display: block; }
+
+.nt-item-meta { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.nt-chip {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--nt-accent-2) 18%, transparent);
+    color: var(--nt-accent-2);
+    font-size: 11px;
+    font-weight: 600;
+}
+.nt-item-when {
+    min-width: 0;
+    font-size: 11.5px;
+    color: var(--nt-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nt-list-empty {
+    margin: 18px 6px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--nt-muted);
+}
+
+/* ---------- The editor's header ------------------------------------------- */
+.nt-editor-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--nt-line-soft);
+}
+.nt-title {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    outline: none;
+}
+.nt-title::placeholder { color: var(--nt-faint); font-weight: 600; }
+
+/* Saved / unsaved, said out loud. The dot carries the state and the words
+   repeat it, because a colour alone is not a status for everybody. */
+.nt-state {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--nt-muted);
+    white-space: nowrap;
+}
+.nt-state i {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--nt-faint);
+}
+.nt-state.is-saved i { background: var(--nt-accent-2); }
+.nt-state.is-dirty i { background: var(--nt-warn); }
+.nt-state.is-busy i { background: var(--nt-good); animation: nt-pulse 1s ease-in-out infinite; }
+@keyframes nt-pulse { 50% { opacity: .3; } }
+
+.nt-editor-tools { flex: none; display: flex; align-items: center; gap: 4px; }
+
+/* ---------- The "..." menu ------------------------------------------------ */
+.nt-menu-wrap { position: relative; }
+.nt-menu {
+    position: absolute;
+    top: calc(100% + 7px);
+    right: 0;
+    z-index: 30;
+    min-width: 190px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--nt-line);
+    border-radius: 12px;
+    background: var(--nt-raised);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .3);
+}
+.nt-menu button {
+    padding: 9px 11px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+.nt-menu button:not(:disabled):hover { background: var(--nt-card-2); }
+.nt-menu button:disabled { opacity: .45; cursor: default; }
+.nt-menu button.is-bad { color: var(--nt-bad); }
+.nt-menu button.is-bad:not(:disabled):hover {
+    background: color-mix(in srgb, var(--nt-bad) 14%, transparent);
+}
+
+/* ---------- The toolbar --------------------------------------------------- */
+.nt-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--nt-line-soft);
+    overflow-x: auto;
+}
+.nt-tool-group { display: flex; align-items: center; gap: 2px; }
+/* Hairlines between the groups, so the toolbar reads as four kinds of button
+   rather than as thirteen. */
+.nt-tool-group + .nt-tool-group {
+    margin-left: 6px;
+    padding-left: 8px;
+    border-left: 1px solid var(--nt-line-soft);
+}
+.nt-tool-end { margin-left: auto; border-left: 0; }
+
+.nt-tool {
+    display: grid;
+    place-items: center;
+    min-width: 30px; height: 30px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--nt-muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .13s ease, color .13s ease;
+}
+.nt-tool:hover { background: var(--nt-card-2); color: var(--nt-text); }
+.nt-tool[data-tool="bold"] { font-weight: 800; }
+.nt-tool[data-tool="italic"] { font-style: italic; font-family: Georgia, serif; }
+.nt-tool[data-tool="under"] { text-decoration: underline; }
+.nt-tool[data-tool="code"] { font-size: 11.5px; }
+
+/* ---------- The note, and its facts --------------------------------------- */
+.nt-editor-body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 250px;
+}
+.nt-body-input {
+    min-height: 0;
+    padding: 20px 24px;
+    border: 0;
+    background: transparent;
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 14.5px;
+    line-height: 1.75;
+    resize: none;
+    outline: none;
+    overflow-y: auto;
+}
+.nt-body-input::placeholder { color: var(--nt-faint); }
+
+/* ---------- Write / Preview ----------------------------------------------- */
+.nt-mode {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    margin-right: 6px;
+    border-radius: 9px;
+    background: var(--nt-card-2);
+}
+.nt-mode button {
+    padding: 5px 11px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--nt-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease;
+}
+.nt-mode button.is-on {
+    background: var(--nt-raised);
+    color: var(--nt-text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
+}
+
+/* ---------- The rendered note ---------------------------------------------
+   The typography the page is actually for. Headings take the accent because a
+   note is scanned by its headings before it is read, and they are the only
+   thing here allowed to carry colour — a body in which four things are
+   coloured has nothing emphasised. */
+.nt-preview {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 24px 30px;
+    font-size: 14.5px;
+    line-height: 1.75;
+}
+.nt-preview > :first-child { margin-top: 0; }
+.nt-preview h1, .nt-preview h2, .nt-preview h3 {
+    margin: 26px 0 10px;
+    color: var(--nt-accent-2);
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -.01em;
+}
+.nt-preview h1 { font-size: 21px; }
+.nt-preview h2 { font-size: 17px; }
+.nt-preview h3 { font-size: 14.5px; }
+.nt-preview p { margin: 0 0 13px; }
+.nt-preview ul, .nt-preview ol { margin: 0 0 14px; padding-left: 22px; }
+.nt-preview li { margin-bottom: 5px; }
+.nt-preview li::marker { color: var(--nt-faint); }
+.nt-preview a { color: var(--nt-accent-2); text-decoration: underline; text-underline-offset: 2px; }
+.nt-preview strong { font-weight: 700; }
+.nt-preview code {
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: var(--nt-card-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .88em;
+}
+.nt-preview pre {
+    margin: 0 0 15px;
+    padding: 13px 15px;
+    border: 1px solid var(--nt-line-soft);
+    border-radius: 10px;
+    background: var(--nt-card-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+}
+/* A rule down the side rather than a tinted box: a quote inside a note is an
+   aside, and a filled panel makes it louder than the note it sits in. */
+.nt-preview blockquote {
+    margin: 0 0 13px;
+    padding: 2px 0 2px 15px;
+    border-left: 3px solid color-mix(in srgb, var(--nt-accent-2) 55%, transparent);
+    color: var(--nt-muted);
+}
+/* Checklists lose their bullet — the box is the marker. */
+.nt-preview li:has(.md-box) { list-style: none; margin-left: -20px; }
+.md-box {
+    display: inline-block;
+    width: 14px; height: 14px;
+    margin-right: 9px;
+    vertical-align: -2px;
+    border: 1.5px solid var(--nt-faint);
+    border-radius: 4px;
+}
+.md-box.is-on {
+    border-color: var(--nt-accent-2);
+    background: var(--nt-accent-2);
+    /* The tick, drawn rather than typed, so it sits on the box's own baseline. */
+    background-image: linear-gradient(45deg, transparent 45%, var(--nt-on-accent) 45%, var(--nt-on-accent) 55%, transparent 55%),
+                      linear-gradient(-45deg, transparent 45%, var(--nt-on-accent) 45%, var(--nt-on-accent) 55%, transparent 55%);
+    background-size: 60% 2px, 60% 2px;
+    background-position: 1px 8px, 5px 8px;
+    background-repeat: no-repeat;
+}
+.md-done { color: var(--nt-faint); text-decoration: line-through; }
+
+
+.nt-meta {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 18px;
+    border-left: 1px solid var(--nt-line-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.nt-meta-sec h3 {
+    margin: 0 0 9px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--nt-muted);
+}
+.nt-meta-value { margin: 0; font-size: 12.5px; line-height: 1.5; }
+.nt-meta-note { margin: 7px 0 0; font-size: 11px; color: var(--nt-faint); }
+
+.nt-add-tag, .nt-select {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 11px;
+    border: 1px dashed var(--nt-line);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--nt-muted);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+.nt-add-tag svg { width: 13px; height: 13px; }
+.nt-select {
+    width: 100%;
+    justify-content: space-between;
+    border-style: solid;
+    background: var(--nt-card-2);
+}
+.nt-select svg { width: 14px; height: 14px; }
+.nt-add-tag:disabled, .nt-select:disabled { opacity: .5; cursor: not-allowed; }
+
+.nt-date {
+    width: 100%;
     padding: 8px 11px;
     border: 1px solid var(--nt-line);
     border-radius: 9px;
     background: var(--nt-card-2);
     color: var(--nt-text);
-    font-family: inherit;
-    font-size: 13px;
+    font: inherit;
+    font-size: 12.5px;
+    outline: none;
 }
-.nt-search:focus { outline: none; border-color: var(--nt-accent); background: var(--nt-card); }
+.nt-date:focus { border-color: var(--nt-accent-2); }
 
-.nt-new {
-    flex: none;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 9px;
-    background: var(--nt-accent);
-    color: #fff;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 650;
-    cursor: pointer;
-}
-.nt-new:hover { filter: brightness(1.06); }
-
-.nt-list {
-    list-style: none;
-    margin: 0;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    overflow-y: auto;
-    min-height: 0;
-}
-.nt-list-empty {
-    margin: 0;
-    padding: 22px 16px;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--nt-muted);
-}
-
-.nt-item {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 11px;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: none;
-    color: inherit;
-    font-family: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-.nt-item:hover { background: var(--nt-card-2); }
-.nt-item.is-open {
-    background: var(--nt-card-2);
-    border-color: var(--nt-accent);
-}
-
-.nt-item-top { display: flex; align-items: center; gap: 8px; }
-.nt-item-title {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 13.5px;
-    font-weight: 650;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.nt-pin { flex: none; display: flex; color: var(--nt-accent); }
-.nt-pin svg { width: 13px; height: 13px; }
-
-.nt-item-preview,
-.nt-item-meta {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.nt-item-preview { font-size: 12.5px; color: var(--nt-muted); }
-.nt-item-meta { font-size: 11px; color: var(--nt-faint); }
-
-/* ---------- The editor ---------------------------------------------------- */
-.nt-editor-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--nt-line-soft);
-}
-.nt-title {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 6px 2px;
-    border: none;
-    background: none;
-    color: var(--nt-text);
-    font-family: inherit;
-    font-size: 19px;
-    font-weight: 700;
-    letter-spacing: -.015em;
-}
-.nt-title:focus { outline: none; }
-.nt-title::placeholder { color: var(--nt-faint); }
-
-.nt-pin-btn {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border: 1px solid var(--nt-line);
-    border-radius: 10px;
-    background: var(--nt-card);
-    color: var(--nt-faint);
-    cursor: pointer;
-}
-.nt-pin-btn:hover { color: var(--nt-text); }
-.nt-pin-btn.is-on {
-    background: color-mix(in srgb, var(--nt-accent) 12%, transparent);
-    border-color: var(--nt-accent);
-    color: var(--nt-accent);
-}
-.nt-pin-btn svg { width: 15px; height: 15px; }
-
-.nt-body-input {
-    flex: 1 1 auto;
-    min-height: 0;
-    resize: none;
-    padding: 16px;
-    border: none;
-    background: none;
-    color: var(--nt-text);
-    font-family: inherit;
-    font-size: 14.5px;
-    line-height: 1.7;
-}
-.nt-body-input:focus { outline: none; }
-.nt-body-input::placeholder { color: var(--nt-faint); }
-
+/* ---------- The editor's footer ------------------------------------------- */
 .nt-editor-foot {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 11px 14px;
+    justify-content: flex-end;
+    gap: 18px;
+    padding: 11px 16px;
     border-top: 1px solid var(--nt-line-soft);
 }
+.nt-message { margin-right: auto; font-size: 12.5px; color: var(--nt-bad); }
+.nt-count { font-size: 12px; color: var(--nt-faint); font-variant-numeric: tabular-nums; }
 
-.nt-date { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--nt-muted); }
-.nt-date input {
-    padding: 6px 9px;
-    border: 1px solid var(--nt-line);
-    border-radius: 8px;
-    background: var(--nt-card-2);
-    color: var(--nt-text);
-    font-family: inherit;
-    font-size: 12.5px;
-}
-
-.nt-actions { display: flex; align-items: center; gap: 8px; }
-.nt-message { font-size: 12px; color: var(--nt-muted); }
-
-.nt-save,
-.nt-delete {
-    padding: 8px 14px;
-    border-radius: 9px;
-    border: 1px solid var(--nt-line);
-    background: var(--nt-card-2);
-    color: var(--nt-text);
-    font-family: inherit;
+.nt-save {
+    padding: 9px 18px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--nt-accent-2), var(--nt-accent));
+    color: var(--nt-on-accent);
+    font: inherit;
     font-size: 13px;
-    font-weight: 650;
+    font-weight: 600;
     cursor: pointer;
+    transition: filter .15s ease;
 }
-.nt-delete { color: var(--nt-bad); }
-.nt-delete:hover { border-color: var(--nt-bad); }
-.nt-save { background: var(--nt-accent); border-color: var(--nt-accent); color: #fff; }
-.nt-save:hover:not(:disabled) { filter: brightness(1.06); }
-.nt-save:disabled { opacity: .5; cursor: default; }
+.nt-save:not(:disabled):hover { filter: brightness(1.08); }
+.nt-save:disabled { opacity: .45; cursor: default; }
 
-/* ---------- Narrow -------------------------------------------------------- */
+/* The page's own controls follow the theme, so a dark page does not open a
+   white date picker. */
+html[data-theme="dark"] .nt-page { color-scheme: dark; }
+.nt-page { color-scheme: light; }
+
+/* ---------- Narrower ------------------------------------------------------ */
+/* The facts rail goes first: it is the column you consult, and the two you
+   work in are the ones worth keeping side by side. */
+@media (max-width: 1180px) {
+    .nt-editor-body { grid-template-columns: minmax(0, 1fr); }
+    .nt-meta {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 18px 28px;
+        border-left: 0;
+        border-top: 1px solid var(--nt-line-soft);
+        padding: 14px 18px;
+    }
+    .nt-meta-sec { min-width: 140px; }
+}
 @media (max-width: 900px) {
-    /* The list stops being a column beside the editor and becomes a short
-       index above it. Height goes with it — an editor sized off the viewport
-       under a list that also scrolls gives two scrollbars and no room. */
-    .nt-body { grid-template-columns: 1fr; height: auto; min-height: 0; }
-    .nt-list { max-height: 320px; }
-    .nt-body-input { min-height: 340px; }
+    .nt-body {
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+    }
+    .nt-list-panel { max-height: 340px; }
+    .nt-editor { min-height: 560px; }
+    .nt-head-tools { width: 100%; }
+    .nt-search-wrap { flex: 1; min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .nt-item, .nt-sec-head svg, .nt-tool, .nt-icon-btn { transition: none; }
+    .nt-item:hover { transform: none; }
+    .nt-state.is-busy i { animation: none; }
 }
