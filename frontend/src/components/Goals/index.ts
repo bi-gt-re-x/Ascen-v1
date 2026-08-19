@@ -33,7 +33,7 @@ export {
 } from './NextMoves';
 export type { Area, MomentumReading, Move } from './NextMoves';
 export { Trajectory, reading } from './Trajectory';
-export { GoalTable, GoalTabs, TABS } from './GoalTable';
+export { GoalTable, GoalTabs, HealthBreakdown, TABS } from './GoalTable';
 export type { GoalTableProps, TabId } from './GoalTable';
 export { GoalStats } from './GoalStats';
 export type { GoalStatsProps } from './GoalStats';

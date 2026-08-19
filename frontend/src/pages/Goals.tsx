@@ -56,6 +56,7 @@ import {
   GoalStats,
   GoalTable,
   GoalTabs,
+  HealthBreakdown,
   GoalTimeline,
   GoalsCta,
   HealthRing,
@@ -598,6 +599,14 @@ export default function Goals() {
 
           <Band title="Goal Health" hint="How much of what you are carrying is going to happen.">
             <HealthRing goals={list} tasks={tasks} />
+            {/* Which goals those four numbers are. See the note in
+                components/Goals/GoalTable — it also fills the half-column the
+                ring left empty beside the taller card next to it. */}
+            <HealthBreakdown
+              goals={outcomes}
+              tasks={tasks}
+              onOpen={(goal) => setOpenId(goal.id)}
+            />
           </Band>
         </div>
         )}

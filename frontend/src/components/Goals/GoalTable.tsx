@@ -224,3 +224,69 @@ export function GoalTable({ goals, tasks, onOpen, onEdit, today = new Date() }: 
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+/**
+ * Which goals are in which state, and why.
+ *
+ * The ring above it says four numbers; this says which goals they are. It
+ * exists because the ring is a short card sitting in a two-column row beside a
+ * tall one, and the empty half-column under it was the page's largest patch of
+ * nothing — but a filler would have been worse than the gap. A reader who sees
+ * "3 off track" immediately wants to know which three, and `goalHealth`
+ * already computes the one-line reason for each, so the answer was sitting
+ * there uncollected.
+ *
+ * Worst first: a list of things needing attention that opens with the things
+ * that do not is a list nobody reads to the end of.
+ */
+const ORDER: Record<string, number> = {
+  'off-track': 0,
+  'at-risk': 1,
+  'not-started': 2,
+  'on-track': 3,
+};
+
+export function HealthBreakdown({
+  goals,
+  tasks,
+  onOpen,
+  today = new Date(),
+  limit = 6,
+}: {
+  goals: Goal[];
+  tasks: Task[];
+  onOpen: (goal: Goal) => void;
+  today?: Date;
+  limit?: number;
+}) {
+  const rows = useMemo(
+    () =>
+      goals
+        .filter((goal) => goal.status !== 'completed')
+        .map((goal) => ({ goal, health: goalHealth(goal, tasks, today) }))
+        .sort(
+          (a, b) =>
+            (ORDER[a.health.state] ?? 9) - (ORDER[b.health.state] ?? 9) ||
+            a.health.score - b.health.score,
+        )
+        .slice(0, limit),
+    [goals, limit, tasks, today],
+  );
+
+  if (rows.length === 0) return null;
+
+  return (
+    <ul className="gx-health-list">
+      {rows.map(({ goal, health }) => (
+        <li key={goal.id} className={`gx-health-row is-${health.state}`}>
+          <button type="button" onClick={() => onOpen(goal)}>
+            <i aria-hidden="true" />
+            <span className="gx-health-name">{goal.title}</span>
+            <span className="gx-health-why">{health.reason}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}

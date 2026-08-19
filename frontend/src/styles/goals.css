@@ -4268,3 +4268,71 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) {
     .gx-table-bar > i { transition: none; }
 }
+
+/* ---------- Which goals the ring is counting ------------------------------
+   The list under the health ring. See components/Goals/GoalTable — it answers
+   the question the ring provokes ("which three are off track?") and, in doing
+   so, fills the half-column the short card used to leave empty beside the
+   taller one next to it. */
+.gx-health-list {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--gx-line-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.gx-health-row > button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 9px minmax(0, auto) minmax(0, 1fr);
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background .14s ease;
+}
+.gx-health-row > button:hover { background: var(--gx-card-2); }
+.gx-health-row i {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--gx-faint);
+    align-self: center;
+}
+/* The same four colours the ring's arcs use, so a dot here and a slice there
+   are read as the same fact rather than as two colour schemes. */
+.gx-health-row.is-on-track i { background: var(--gx-good); }
+.gx-health-row.is-at-risk i { background: var(--gx-watch); }
+.gx-health-row.is-off-track i { background: var(--gx-bad); }
+.gx-health-row.is-not-started i { background: var(--gx-faint); }
+
+.gx-health-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-health-why {
+    min-width: 0;
+    font-size: 11.5px;
+    color: var(--gx-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A short card beside a tall one left a hole under it. Two things are needed,
+   not one: `stretch` makes the two sections equal height, and `flex: 1` makes
+   the card *inside* each one grow to fill it — the band is a flex column, so
+   its children stretch across, not down, and a section that grew around a card
+   that did not would have moved the empty space rather than removed it. */
+.gx-two { align-items: stretch; }
+.gx-two > .gx-band > :not(.gx-band-head) { flex: 1; }

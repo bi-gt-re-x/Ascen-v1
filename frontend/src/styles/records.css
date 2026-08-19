@@ -13,6 +13,15 @@
    the theme at all.
    ========================================================================== */
 
+/* body is a centred flex column (dashboard.css), so <main> is a flex item and
+   sizes to its content rather than stretching — which left this page in a
+   ~880px column with the rest of the window empty either side, and wrapped the
+   four figures onto two rows. The dashboard and the calendar opt out the same
+   way; this page never did. Scoped with :has so no other route is touched. */
+body:has(.rc-page) .app-main {
+    width: 100%;
+}
+
 .rc-page {
     --rc-bg: transparent;
     --rc-card: #ffffff;
