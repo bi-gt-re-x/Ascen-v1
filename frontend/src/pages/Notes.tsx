@@ -446,17 +446,33 @@ export default function Notes() {
     [draft.body, mode, setBody],
   );
 
+  /**
+   * Bumped every time the reader is put in front of a *different* note, which
+   * is what the editor's entrance animation is keyed to.
+   *
+   * A counter rather than the note's id, and set from the three handlers that
+   * swap the note rather than from an effect watching `draft.id`, because that
+   * id also changes the moment an unsaved note is first saved — and replaying
+   * the entrance mid-sentence, under a cursor that is still in the textarea,
+   * is not a note being opened. These three are the only places the answer to
+   * "what am I looking at" changes.
+   */
+  const [beat, setBeat] = useState(0);
+  const swap = useCallback(() => setBeat((count) => count + 1), []);
+
   const open = useCallback((note: Note) => {
+    swap();
     past.current = [];
     future.current = [];
     setDraft(asDraft(note));
     setMessage(null);
     setSavedAt(null);
     setMode(note.body.trim() ? 'read' : 'write');
-  }, []);
+  }, [swap]);
 
   /** Open a new note with a template's text already in it. */
   const fromTemplate = useCallback((template: (typeof TEMPLATES)[number]) => {
+    swap();
     past.current = [];
     future.current = [];
     setDraft({ ...BLANK, title: template.title, body: template.body });
@@ -465,9 +481,10 @@ export default function Notes() {
     setMode('write');
     setTplOpen(false);
     titleRef.current?.focus();
-  }, []);
+  }, [swap]);
 
   const blank = useCallback(() => {
+    swap();
     past.current = [];
     future.current = [];
     setDraft(BLANK);
@@ -475,7 +492,7 @@ export default function Notes() {
     setSavedAt(null);
     setMode('write');
     titleRef.current?.focus();
-  }, []);
+  }, [swap]);
 
   const submit = useCallback(async () => {
     if (!username || busy) return;
@@ -906,7 +923,7 @@ export default function Notes() {
             </div>
 
             {/* ---- The note, and what is true about it ---- */}
-            <div className="nt-editor-body">
+            <div className={`nt-editor-body is-beat-${beat % 2}`}>
               {mode === 'read' ? (
                 /* The rendered note. `render` escapes before it formats and
                    allows no tag it did not write itself — see

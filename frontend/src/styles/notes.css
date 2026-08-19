@@ -14,6 +14,23 @@
    loses the index the moment you scroll the writing.
    ========================================================================== */
 
+/* body is a centred flex column (dashboard.css), so its child sizes to its
+   content rather than stretching, and this page never opted out — which is why
+   a workspace built to fill the window arrived as a ~1050px strip with the
+   rest of the screen empty either side. `--shell-fluid: 98.5%` below was
+   taking 98.5% of that strip and doing exactly what it was told.
+
+   The child that shrinks is `#root`, not `<main>`: <main> is inside the React
+   mount point, and `width: 100%` of a shrink-to-fit parent is the shrink-to-fit
+   width, so naming only `.app-main` is a rule that does nothing. The calendar
+   and the records page both hit this; see calendar/month.css for the long
+   version. Scoped with :has so no other route is touched. */
+body:has(.nt-page) > #root,
+body:has(.nt-page) .app-main {
+    width: 100%;
+    min-width: 0;
+}
+
 .nt-page {
     /* Transparent, not a colour. The app paints its own backdrop behind every
        page — the grid and the ambient wash — and a page that fills a slab of
@@ -90,6 +107,73 @@ html[data-theme="dark"] .nt-page {
     position: relative;
     z-index: 1;
 }
+
+/* ---------- Motion --------------------------------------------------------
+   Two movements, and both are about the same thing: this page swaps what it is
+   showing without moving you anywhere, so nothing about the layout tells you a
+   change happened. The animation is the notice.
+
+   Everything below moves `opacity` and `transform` only — the panels have
+   fixed heights and their own scrollers, and animating a box's size would make
+   the index and the note reflow their contents for the length of the
+   animation. Every duration is short enough to read as a response to the click
+   rather than as something to wait for.
+
+   The whole block is switched off under `prefers-reduced-motion` at the foot
+   of this file, alongside the transitions that were already there. */
+
+/* 1. Arrival. The header, then the index, then the note — left to right, in
+      the order they are read, so the page assembles rather than appears. */
+@keyframes nt-rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+.nt-head        { animation: nt-rise .34s cubic-bezier(.22, 1, .36, 1) both; }
+.nt-list-panel  { animation: nt-rise .40s cubic-bezier(.22, 1, .36, 1) .06s both; }
+.nt-editor      { animation: nt-rise .40s cubic-bezier(.22, 1, .36, 1) .12s both; }
+
+/* 2. Opening a note. Keyed off a counter in the page that flips this class
+      between two identical keyframes — see the `beat` note in pages/Notes.
+      Two names rather than one because an animation only restarts when its
+      name changes, and the alternative is remounting the element, which would
+      take the caret out of the textarea inside it.
+
+      The note slides a little further than the meta column beside it: the
+      text is what was swapped, and the facts about it are a caption to that
+      rather than a second thing arriving. */
+@keyframes nt-swap-a {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes nt-swap-b {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+.nt-editor-body.is-beat-0 > .nt-preview,
+.nt-editor-body.is-beat-0 > .nt-body-input { animation: nt-swap-a .3s cubic-bezier(.22, 1, .36, 1) both; }
+.nt-editor-body.is-beat-1 > .nt-preview,
+.nt-editor-body.is-beat-1 > .nt-body-input { animation: nt-swap-b .3s cubic-bezier(.22, 1, .36, 1) both; }
+.nt-editor-body.is-beat-0 > .nt-meta { animation: nt-swap-a .3s cubic-bezier(.22, 1, .36, 1) .05s both; }
+.nt-editor-body.is-beat-1 > .nt-meta { animation: nt-swap-b .3s cubic-bezier(.22, 1, .36, 1) .05s both; }
+
+/* 3. The index's rows, on arrival and on every re-filter. Capped at ten:
+      past that the stagger stops being a flourish and becomes a wait, so the
+      eleventh row and everything after it arrive together with the tenth. */
+@keyframes nt-row {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+.nt-item { animation: nt-row .3s ease-out both; }
+.nt-list li:nth-child(1) .nt-item { animation-delay: .02s; }
+.nt-list li:nth-child(2) .nt-item { animation-delay: .04s; }
+.nt-list li:nth-child(3) .nt-item { animation-delay: .06s; }
+.nt-list li:nth-child(4) .nt-item { animation-delay: .08s; }
+.nt-list li:nth-child(5) .nt-item { animation-delay: .10s; }
+.nt-list li:nth-child(6) .nt-item { animation-delay: .12s; }
+.nt-list li:nth-child(7) .nt-item { animation-delay: .14s; }
+.nt-list li:nth-child(8) .nt-item { animation-delay: .16s; }
+.nt-list li:nth-child(9) .nt-item { animation-delay: .18s; }
+.nt-list li:nth-child(n+10) .nt-item { animation-delay: .20s; }
 
 /* ---------- The page's header --------------------------------------------- */
 .nt-head {
@@ -918,4 +1002,25 @@ html[data-theme="dark"] .nt-page { color-scheme: dark; }
     .nt-item, .nt-sec-head svg, .nt-tool, .nt-icon-btn { transition: none; }
     .nt-item:hover { transform: none; }
     .nt-state.is-busy i { animation: none; }
+    /* The entrance, the note swap and the index stagger, all off. `both` fill
+       means these elements would be stuck at the *from* keyframe — invisible —
+       if the animation were merely cancelled, so the transform and the opacity
+       are put back explicitly. */
+    .nt-head,
+    .nt-list-panel,
+    .nt-editor,
+    .nt-item,
+    /* `:is()` and not the bare `.nt-editor-body > .nt-preview` this said at
+       first: the rules being cancelled are `.nt-editor-body.is-beat-0 > …`,
+       which is one class more specific, and specificity settles this before
+       source order gets a say. The weaker selector lost, `animation-fill-mode:
+       both` held the note at its opening keyframe, and the note anyone with
+       reduced motion turned on was reading stayed at opacity 0. `:is()` takes
+       the specificity of its most specific argument, which puts this level
+       with them and lets it win on order. */
+    .nt-editor-body:is(.is-beat-0, .is-beat-1) > :is(.nt-preview, .nt-body-input, .nt-meta) {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
 }
