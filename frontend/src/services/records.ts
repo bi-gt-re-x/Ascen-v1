@@ -1,0 +1,66 @@
+/**
+ * Records and milestones — the hall of fame the account writes itself.
+ *
+ * Backend: backend/api/records.py, over the table in data/sql/records.sql.
+ *
+ * Three calls, and `save` is one of them rather than two: create and edit
+ * differ by whether an `id` is sent and the page has one dialog. The same
+ * shape notes.ts uses, for the same reason.
+ *
+ * Nothing here derives anything. What the personal best is, which entries are
+ * an improvement, what the evolution looks like — all of that is utils/records,
+ * because it is a view of rows the client already holds.
+ */
+import { get, post } from './api';
+import type { ApiResult } from '@/types';
+
+/** 'record' has a figure that can be beaten; 'milestone' either happened or has not. */
+export type RecordKind = 'record' | 'milestone';
+
+export interface RecordRow {
+  id: string;
+  user_id: string;
+  kind: RecordKind;
+  /** "AMC 8". Rows sharing this are the same record over time. */
+  name: string;
+  /** The reader's own heading — "Competitive Math". Free text, not a subject id. */
+  category: string;
+  value: number;
+  /** The "out of" for a capped score: 25 / 25. Zero means none. */
+  target: number;
+  /** What `value` counts: 'points', 'minutes', 'days', 'lines'. */
+  unit: string;
+  note: string;
+  /** ISO day. Empty on a milestone not reached yet. */
+  achieved_on: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** What a save sends. Everything but the id is written as given. */
+export interface RecordDraft {
+  id?: string;
+  kind: RecordKind;
+  name: string;
+  category?: string;
+  value?: number;
+  target?: number;
+  unit?: string;
+  note?: string;
+  achieved_on?: string;
+}
+
+export function list(username: string): Promise<ApiResult<{ records: RecordRow[] }>> {
+  return get<{ records: RecordRow[] }>('/api/records', { username });
+}
+
+export function save(
+  username: string,
+  draft: RecordDraft,
+): Promise<ApiResult<{ record: RecordRow }>> {
+  return post<{ record: RecordRow }>('/api/records/save', { username, ...draft });
+}
+
+export function remove(username: string, id: string): Promise<ApiResult<{ id: string }>> {
+  return post<{ id: string }>('/api/records/delete', { username, id });
+}

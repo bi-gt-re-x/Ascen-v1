@@ -32,6 +32,7 @@ API_MODULES = (
     'quote',
     'subjects',
     'notes',
+    'records',
 )
 
 SHARED_MODULES = (

@@ -1,259 +1,719 @@
-/* Records — see src/pages/Records.tsx.
- *
- * One page, two sections, and the difference between them is drawn rather than
- * only labelled: the records you hold are cards, laid out as a board of high
- * scores; the ones you are chasing are rows, because a row can carry a bar and
- * a bar is what "how close" looks like.
- *
- * Colours are the app's: #2C302E ink on #FFFFFF over the #F6F7F9 page, #EAEAEA
- * hairlines, and #A8845C — the same tan the rail marks the current page with —
- * for anything that means "this is yours".
- */
+/* ==========================================================================
+   records.css — the hall of fame. See src/pages/Records.tsx.
+
+   The page has two halves and the difference between them is drawn rather than
+   only labelled: what you logged is cards and colour, because it is meant to
+   be looked at with some pride; what Ascen counted for you sits below in the
+   quieter treatment it always had, so nobody has to wonder which numbers are
+   claims and which are counts.
+
+   Colour was hard-coded here — #2C302E on #FFFFFF — from when this page was
+   light-only. It is a token block now, declared once and redeclared for dark,
+   which is what every other page in the app does and what let this one follow
+   the theme at all.
+   ========================================================================== */
 
 .rc-page {
+    --rc-bg: transparent;
+    --rc-card: #ffffff;
+    --rc-card-2: #f7f8fb;
+    --rc-raised: #ffffff;
+    --rc-line: #e6e9ef;
+    --rc-line-soft: #eef0f5;
+
+    --rc-text: #1f2733;
+    --rc-muted: #6b7684;
+    --rc-faint: #98a1ae;
+
+    --rc-accent: #6c5ce7;
+    --rc-accent-2: #8b7cf8;
+    --rc-gold: #c08324;
+    --rc-good: #1f8a54;
+    --rc-bad: #c0392b;
+
+    --rc-violet: #6d5ae0;
+    --rc-amber: #c08324;
+    --rc-blue: #2f6fd0;
+    --rc-green: #1f8a54;
+
+    --rc-radius: 16px;
+    --rc-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+
     box-sizing: border-box;
-    width: min(95%, 1180px);
+    width: min(97%, 1500px);
     margin-inline: auto;
-    padding: 34px 0 64px;
+    padding: 26px 0 60px;
+    background: var(--rc-bg);
+    color: var(--rc-text);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
-/* --- The head ---------------------------------------------------------- */
-.rc-head { margin-bottom: 30px; }
+html[data-theme="dark"] .rc-page {
+    --rc-card: #161d2c;
+    --rc-card-2: #1b2334;
+    --rc-raised: #212a3e;
+    --rc-line: #28324a;
+    --rc-line-soft: #212a3e;
+
+    --rc-text: #e7ecf6;
+    --rc-muted: #8f9bb3;
+    --rc-faint: #6d7a94;
+
+    --rc-accent: #6d5ce7;
+    --rc-accent-2: #a78bfa;
+    --rc-gold: #e0b23c;
+    --rc-good: #46c483;
+    --rc-bad: #f0736d;
+
+    --rc-violet: #9b8bff;
+    --rc-amber: #e0b23c;
+    --rc-blue: #6a9bff;
+    --rc-green: #46c483;
+
+    --rc-shadow: 0 1px 2px rgba(0, 0, 0, .28), 0 10px 30px rgba(0, 0, 0, .2);
+}
+
+.rc-page { color-scheme: light; }
+html[data-theme="dark"] .rc-page { color-scheme: dark; }
+
+.tone-violet { --tone: var(--rc-violet); }
+.tone-amber  { --tone: var(--rc-amber); }
+.tone-blue   { --tone: var(--rc-blue); }
+.tone-green  { --tone: var(--rc-green); }
+
+/* ---------- Hero ---------------------------------------------------------- */
+.rc-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 26px;
+}
 .rc-title {
-    margin: 0 0 6px;
-    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    margin: 0 0 8px;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
     font-weight: 800;
-    letter-spacing: -0.02em;
-    color: #2c302e;
+    letter-spacing: -.03em;
+    line-height: 1.1;
 }
-.rc-sub { margin: 0; font-size: 14px; color: #6c757d; }
+.rc-hero-text { min-width: 0; }
+.rc-sub { margin: 0; max-width: 46ch; font-size: 14px; line-height: 1.55; color: var(--rc-muted); }
+.rc-hero-tools { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+/* Big enough to read as the page's own trophy rather than as an emoji that
+   wandered in. Hidden on narrow screens, where it is only taking the width. */
+.rc-hero-art { flex: none; font-size: 92px; line-height: 1; filter: saturate(1.15); }
 
-.rc-section { margin-bottom: 40px; }
+.rc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 16px;
+    border: 1px solid var(--rc-line);
+    border-radius: 11px;
+    background: var(--rc-card);
+    color: var(--rc-text);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .15s ease, filter .15s ease, transform .12s ease;
+}
+.rc-btn svg { width: 15px; height: 15px; }
+.rc-btn:hover:not(:disabled) { border-color: var(--rc-accent-2); }
+.rc-btn:active:not(:disabled) { transform: translateY(1px); }
+.rc-btn:disabled { opacity: .5; cursor: not-allowed; }
+.rc-btn.is-primary {
+    border-color: transparent;
+    background: linear-gradient(180deg, var(--rc-accent-2), var(--rc-accent));
+    color: #fff;
+}
+.rc-btn.is-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.rc-btn.is-bad { margin-right: auto; color: var(--rc-bad); }
+.rc-btn.is-bad:hover:not(:disabled) { border-color: var(--rc-bad); }
+
+.rc-link {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--rc-accent-2);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.rc-link:hover { text-decoration: underline; }
+
+.rc-error {
+    margin: 0 0 18px;
+    padding: 11px 14px;
+    border: 1px solid color-mix(in srgb, var(--rc-bad) 40%, transparent);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--rc-bad) 10%, transparent);
+    color: var(--rc-bad);
+    font-size: 13px;
+}
+
+/* ---------- The four figures ---------------------------------------------- */
+.rc-tiles {
+    list-style: none;
+    margin: 0 0 34px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+}
+.rc-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 16px 18px;
+    border: 1px solid var(--rc-line);
+    border-radius: var(--rc-radius);
+    background: var(--rc-card);
+    box-shadow: var(--rc-shadow);
+    /* A hairline of the tile's own colour, so four tiles read as four things
+       without four tinted boxes shouting at once. */
+    border-top: 2px solid var(--tone, var(--rc-accent-2));
+}
+.rc-tile-ico { font-size: 19px; line-height: 1; }
+.rc-tile .rc-figure { display: flex; align-items: baseline; gap: 5px; }
+.rc-tile .rc-num { font-size: 30px; font-weight: 800; letter-spacing: -.03em; }
+.rc-tile-label { font-size: 12px; color: var(--rc-muted); }
+
+/* ---------- Sections ------------------------------------------------------ */
+.rc-section { margin-bottom: 38px; }
+.rc-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
 .rc-section-title {
     margin: 0 0 16px;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
-    color: #9297a3;
+    color: var(--rc-muted);
 }
-
+.rc-section-head .rc-section-title { margin: 0; }
+.rc-sub-title {
+    margin: 26px 0 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--rc-faint);
+}
+.rc-note { margin: 0 0 16px; font-size: 12.5px; line-height: 1.6; color: var(--rc-faint); max-width: 78ch; }
 .rc-empty {
     margin: 0;
-    padding: 22px 24px;
-    border: 1px dashed #dfe3e8;
-    border-radius: 14px;
-    font-size: 14px;
+    padding: 20px 18px;
+    border: 1px dashed var(--rc-line);
+    border-radius: 12px;
+    background: var(--rc-card-2);
+    color: var(--rc-muted);
+    font-size: 13px;
     line-height: 1.6;
-    color: #6c757d;
-    background: #fff;
 }
 
-.rc-note {
-    margin: 14px 2px 0;
-    font-size: 12px;
-    line-height: 1.6;
-    color: #9297a3;
+/* ---------- Personal bests ------------------------------------------------ */
+.rc-bests {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 14px;
+}
+.rc-best > button {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 17px 18px 15px;
+    border: 1px solid var(--rc-line);
+    border-radius: var(--rc-radius);
+    background: var(--rc-card);
+    box-shadow: var(--rc-shadow);
+    color: var(--rc-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .15s ease, transform .14s ease;
+}
+.rc-best > button:hover { border-color: var(--rc-accent-2); transform: translateY(-2px); }
+.rc-best-cat {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--rc-accent-2);
+}
+.rc-best-name { margin-bottom: 8px; font-size: 13.5px; font-weight: 600; color: var(--rc-muted); }
+.rc-best-value { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+.rc-best-label { margin-bottom: 10px; font-size: 11.5px; color: var(--rc-faint); }
+.rc-best-gain { font-size: 12px; font-weight: 600; color: var(--rc-good); }
+.rc-best-gain.is-quiet { color: var(--rc-faint); font-weight: 500; }
+.rc-best-new { font-size: 12px; font-weight: 700; color: var(--rc-gold); }
+.rc-best-when {
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px solid var(--rc-line-soft);
+    font-size: 11.5px;
+    color: var(--rc-faint);
+}
+/* A record just broken. The one place on the page allowed to glow. */
+.rc-best.is-fresh > button {
+    border-color: color-mix(in srgb, var(--rc-gold) 55%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--rc-gold) 9%, var(--rc-card)), var(--rc-card));
 }
 
-/* --- The board of records ----------------------------------------------- */
+/* ---------- Category records ---------------------------------------------- */
+.rc-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.rc-chip {
+    padding: 6px 13px;
+    border: 1px solid var(--rc-line);
+    border-radius: 999px;
+    background: var(--rc-card);
+    color: var(--rc-muted);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.rc-chip:hover { border-color: var(--rc-accent-2); color: var(--rc-text); }
+.rc-chip.is-on {
+    border-color: transparent;
+    background: linear-gradient(180deg, var(--rc-accent-2), var(--rc-accent));
+    color: #fff;
+}
+
+.rc-cats {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+.rc-cat {
+    padding: 16px 18px;
+    border: 1px solid var(--rc-line);
+    border-radius: var(--rc-radius);
+    background: var(--rc-card);
+    box-shadow: var(--rc-shadow);
+}
+.rc-cat h3 { margin: 0 0 10px; font-size: 14.5px; font-weight: 700; color: var(--rc-accent-2); }
+.rc-cat ul { list-style: none; margin: 0; padding: 0; }
+.rc-cat ul button {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 0;
+    border: 0;
+    border-bottom: 1px solid var(--rc-line-soft);
+    background: transparent;
+    color: var(--rc-muted);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.rc-cat ul li:last-child button { border-bottom: 0; }
+.rc-cat ul button:hover { color: var(--rc-text); }
+.rc-cat ul strong { flex: none; color: var(--rc-text); font-variant-numeric: tabular-nums; }
+
+/* ---------- Timeline and milestones --------------------------------------- */
+.rc-two {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.rc-timeline { list-style: none; margin: 0; padding: 0; }
+.rc-timeline li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 62px 22px minmax(0, 1fr);
+    align-items: center;
+    gap: 4px;
+    padding: 9px 0;
+}
+/* The spine, on each row so it stops at the last one rather than running past. */
+.rc-timeline li::before {
+    content: '';
+    position: absolute;
+    left: 72px; top: 50%; bottom: -9px;
+    width: 2px;
+    background: var(--rc-line);
+}
+.rc-timeline li:last-child::before { display: none; }
+.rc-tl-when {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--rc-faint);
+    text-align: right;
+    padding-right: 8px;
+}
+.rc-tl-dot {
+    justify-self: center;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--rc-card);
+    border: 2px solid var(--rc-accent-2);
+    z-index: 1;
+}
+.rc-timeline li.is-milestone .rc-tl-dot { border-color: var(--rc-gold); background: var(--rc-gold); }
+.rc-tl-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 0 0 0 6px;
+    border: 0;
+    background: transparent;
+    color: var(--rc-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.rc-tl-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-tl-name em { font-style: normal; color: var(--rc-accent-2); }
+.rc-tl-cat { font-size: 11px; color: var(--rc-faint); }
+.rc-tl-body:hover .rc-tl-name { text-decoration: underline; }
+
+.rc-miles { list-style: none; margin: 0; padding: 0; }
+.rc-miles button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 8px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--rc-muted);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+.rc-miles button:hover { background: var(--rc-card-2); }
+.rc-mile-tick {
+    display: grid;
+    place-items: center;
+    width: 17px; height: 17px;
+    border: 1.5px solid var(--rc-line);
+    border-radius: 50%;
+    font-size: 10px;
+    color: transparent;
+}
+.rc-miles li.is-done .rc-mile-tick {
+    border-color: var(--rc-good);
+    background: var(--rc-good);
+    color: #fff;
+}
+.rc-miles li.is-done .rc-mile-name { color: var(--rc-text); }
+.rc-mile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-mile-when { font-size: 11.5px; color: var(--rc-faint); white-space: nowrap; }
+
+/* ---------- Record evolution ---------------------------------------------- */
+.rc-ev-wrap {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 20px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid var(--rc-line);
+    border-radius: var(--rc-radius);
+    background: var(--rc-card);
+    box-shadow: var(--rc-shadow);
+}
+.rc-ev-figs { margin: 0; display: flex; flex-direction: column; gap: 13px; }
+.rc-ev-figs div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rc-ev-figs dt { font-size: 12px; color: var(--rc-muted); }
+.rc-ev-figs dd { margin: 0; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rc-ev-figs dd.is-up { color: var(--rc-good); }
+
+.rc-ev { min-width: 0; color: var(--rc-accent-2); }
+.rc-ev-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.rc-ev-grid { stroke: var(--rc-line-soft); stroke-width: 1; }
+.rc-ev-axis { fill: var(--rc-faint); font-size: 10px; }
+/* Filled by the gradient in the markup; it must not also take the line stroke. */
+.rc-ev-area { stroke: none; }
+.rc-ev-line { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.rc-ev-dot { fill: var(--rc-card); stroke: currentColor; stroke-width: 2.5; }
+.rc-ev-dot.is-last { fill: currentColor; }
+.rc-ev-point { fill: var(--rc-text); font-size: 11px; font-weight: 700; }
+.rc-ev-when { fill: var(--rc-faint); font-size: 9.5px; }
+
+/* ---------- Search and sort ----------------------------------------------- */
+.rc-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 16px;
+    padding: 15px 18px;
+    border: 1px solid var(--rc-line);
+    border-radius: var(--rc-radius);
+    background: var(--rc-card);
+}
+.rc-bar-field { display: flex; flex-direction: column; gap: 7px; }
+.rc-bar-field > span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--rc-faint);
+}
+.rc-bar-field input[type="search"] {
+    min-width: 210px;
+    padding: 8px 11px;
+    border: 1px solid var(--rc-line);
+    border-radius: 9px;
+    background: var(--rc-card-2);
+    color: var(--rc-text);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+}
+.rc-bar-field input[type="search"]:focus { border-color: var(--rc-accent-2); }
+
+.rc-select {
+    padding: 8px 11px;
+    border: 1px solid var(--rc-line);
+    border-radius: 9px;
+    background: var(--rc-card-2);
+    color: var(--rc-text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+}
+.rc-select:focus, .rc-select:hover { border-color: var(--rc-accent-2); }
+
+.rc-rows { list-style: none; margin: 0; padding: 0; }
+.rc-rows button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 24px minmax(0, 2fr) minmax(0, 1fr) auto 96px;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--rc-line-soft);
+    background: transparent;
+    color: var(--rc-text);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+.rc-rows button:hover { background: var(--rc-card-2); }
+.rc-row-kind { font-size: 15px; line-height: 1; }
+.rc-row-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-row-cat, .rc-row-when { font-size: 11.5px; color: var(--rc-faint); }
+.rc-row-when { text-align: right; }
+.rc-row-value { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- The dialog ----------------------------------------------------- */
+.rc-modal-back {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(8, 11, 18, .58);
+    backdrop-filter: blur(3px);
+}
+.rc-modal {
+    width: min(620px, 100%);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--rc-line);
+    border-radius: 18px;
+    background: var(--rc-raised);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .4);
+    color: var(--rc-text);
+}
+.rc-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 17px 20px;
+    border-bottom: 1px solid var(--rc-line-soft);
+}
+.rc-modal-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.rc-modal-x {
+    display: grid;
+    place-items: center;
+    width: 30px; height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--rc-muted);
+    cursor: pointer;
+}
+.rc-modal-x:hover { background: var(--rc-card-2); color: var(--rc-text); }
+.rc-modal-x svg { width: 16px; height: 16px; }
+
+.rc-modal-body { padding: 18px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+
+.rc-kind { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.rc-kind button {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 11px 13px;
+    border: 1px solid var(--rc-line);
+    border-radius: 11px;
+    background: var(--rc-card-2);
+    color: var(--rc-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .14s ease, background .14s ease;
+}
+.rc-kind button em { font-style: normal; font-size: 11px; font-weight: 400; color: var(--rc-faint); }
+.rc-kind button.is-on {
+    border-color: var(--rc-accent-2);
+    background: color-mix(in srgb, var(--rc-accent-2) 12%, transparent);
+}
+
+.rc-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rc-field > span {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--rc-muted);
+}
+.rc-field input, .rc-field select, .rc-field textarea {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--rc-line);
+    border-radius: 9px;
+    background: var(--rc-card-2);
+    color: var(--rc-text);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .14s ease;
+}
+.rc-field textarea { resize: vertical; line-height: 1.55; }
+.rc-field input:focus, .rc-field select:focus, .rc-field textarea:focus { border-color: var(--rc-accent-2); }
+.rc-field-hint { font-style: normal; font-size: 11px; line-height: 1.5; color: var(--rc-faint); }
+.rc-field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+
+.rc-modal-preview {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: var(--rc-card-2);
+    font-size: 12.5px;
+    color: var(--rc-muted);
+}
+.rc-modal-preview strong { color: var(--rc-accent-2); font-size: 14px; }
+.rc-modal-error { margin: 0; font-size: 12.5px; color: var(--rc-bad); }
+
+.rc-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--rc-line-soft);
+}
+
+/* ==========================================================================
+   What Ascen counted itself — the page as it was.
+   Kept in its own quieter register so a count is never mistaken for a claim.
+   ========================================================================== */
+.rc-derived {
+    margin-top: 46px;
+    padding-top: 28px;
+    border-top: 1px solid var(--rc-line);
+}
+
 .rc-cards {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 12px;
 }
-
 .rc-card {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 20px;
-    background: #fff;
-    border: 1px solid #eaeaea;
-    border-radius: 16px;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, .03), 0 6px 16px rgba(16, 24, 40, .04);
-    /* The lift is the only motion here that is not a number moving. Small, and
-       on a page whose whole content is things worth being pleased about. */
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    gap: 3px;
+    padding: 15px 16px;
+    border: 1px solid var(--rc-line);
+    border-radius: 13px;
+    background: var(--rc-card);
 }
-.rc-card:hover {
-    transform: translateY(-2px);
-    border-color: #e0d9cd;
-    box-shadow: 0 2px 4px rgba(16, 24, 40, .04), 0 12px 26px rgba(16, 24, 40, .07);
-}
+.rc-card.is-unset { opacity: .62; }
+.rc-ico { color: var(--rc-faint); }
+.rc-ico svg { width: 17px; height: 17px; }
+.rc-label { font-size: 12px; color: var(--rc-muted); }
+.rc-figure { display: flex; align-items: baseline; gap: 5px; }
+.rc-num { font-size: 23px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.rc-unit { font-size: 12px; color: var(--rc-muted); }
+.rc-none { font-size: 14px; color: var(--rc-faint); }
+.rc-when { margin-top: 3px; font-size: 11px; color: var(--rc-faint); }
 
-/* A record nobody has set yet is quiet rather than absent: the card names the
-   thing so the reader knows it is on offer. */
-.rc-card.is-unset { background: #fbfbfc; box-shadow: none; }
-.rc-card.is-unset:hover { transform: none; border-color: #eaeaea; box-shadow: none; }
-
-.rc-ico {
-    display: inline-flex;
-    width: 30px;
-    height: 30px;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 8px;
-    border-radius: 9px;
-    background: #f4f1ec;
-    color: #a8845c;
-}
-.rc-card.is-unset .rc-ico { background: #f2f4f7; color: #b0b6c0; }
-
-.rc-label {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: #6c757d;
-}
-
-.rc-figure { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; }
-.rc-num {
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: #2c302e;
-    /* Fixed-width digits, so a figure travelling from 0 to 1,240 does not
-       shuffle its neighbours sideways on every frame. */
-    font-variant-numeric: tabular-nums;
-}
-.rc-unit { font-size: 13px; font-weight: 600; color: #9297a3; }
-
-.rc-none {
-    margin-top: 4px;
-    font-size: 17px;
-    font-weight: 600;
-    color: #b0b6c0;
-}
-
-.rc-when { margin-top: 4px; font-size: 11.5px; color: #9297a3; }
-
-/* --- What is being chased ------------------------------------------------ */
-.rc-chases {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 14px;
-}
-
+.rc-chases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
 .rc-chase {
-    padding: 18px 20px;
-    background: #fff;
-    border: 1px solid #eaeaea;
-    border-radius: 16px;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, .03), 0 6px 16px rgba(16, 24, 40, .04);
+    padding: 14px 16px;
+    border: 1px solid var(--rc-line);
+    border-radius: 13px;
+    background: var(--rc-card);
 }
-/* A record currently being held reads as won rather than as in progress. */
-.rc-chase.is-held { border-color: #cfe3d5; background: #fbfdfb; }
-
-.rc-chase-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
-.rc-chase-ico {
-    display: inline-flex; flex: none;
-    width: 24px; height: 24px;
-    align-items: center; justify-content: center;
-    border-radius: 7px; background: #f4f1ec; color: #a8845c;
-}
-.rc-chase.is-held .rc-chase-ico { background: #e7f3ea; color: #2d7148; }
-.rc-chase-label {
-    flex: 1 1 auto; min-width: 0;
-    font-size: 13.5px; font-weight: 600; color: #2c302e;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.rc-chase-target {
-    flex: none;
-    font-size: 12.5px; font-weight: 700; color: #9297a3;
-    font-variant-numeric: tabular-nums;
-}
-
-.rc-track {
-    height: 8px;
-    border-radius: 999px;
-    background: #eef0f3;
-    overflow: hidden;
-}
-.rc-track i {
+.rc-chase.is-held { border-color: color-mix(in srgb, var(--rc-good) 45%, transparent); }
+.rc-chase-head { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.rc-chase-ico { color: var(--rc-faint); display: grid; place-items: center; }
+.rc-chase-ico svg { width: 16px; height: 16px; }
+.rc-chase-label { flex: 1; font-size: 13px; font-weight: 600; }
+.rc-chase-target { font-size: 12.5px; color: var(--rc-muted); font-variant-numeric: tabular-nums; }
+.rc-track { height: 8px; border-radius: 999px; background: var(--rc-card-2); overflow: hidden; }
+.rc-track > i {
     display: block;
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #c4a882, #a8845c);
-    /* The width is already tweened by useCountUp, one frame at a time. The
-       transition is here for the frames it does not emit — the last one, and
-       any the browser drops — so the bar never steps. */
-    transition: width .18s linear;
+    background: linear-gradient(90deg, var(--rc-accent-2), var(--rc-accent));
+    transition: width .6s cubic-bezier(.22, 1, .36, 1);
 }
-.rc-chase.is-held .rc-track i { background: linear-gradient(90deg, #6fbf8d, #2d7148); }
+.rc-chase.is-held .rc-track > i { background: var(--rc-good); }
+.rc-chase-foot { margin: 9px 0 0; font-size: 12px; color: var(--rc-muted); }
+.rc-chase-foot strong { color: var(--rc-text); }
 
-.rc-chase-foot {
-    margin: 10px 0 0;
-    font-size: 12px;
-    line-height: 1.55;
-    color: #6c757d;
-    font-variant-numeric: tabular-nums;
+/* ---------- Narrower ------------------------------------------------------- */
+@media (max-width: 1080px) {
+    .rc-two { grid-template-columns: minmax(0, 1fr); }
+    .rc-ev-wrap { grid-template-columns: minmax(0, 1fr); }
+    .rc-ev-figs { flex-direction: row; flex-wrap: wrap; gap: 22px; }
+    .rc-ev-figs div { flex-direction: column; gap: 2px; }
 }
-.rc-chase-foot strong { color: #2c302e; font-weight: 700; }
-.rc-chase.is-held .rc-chase-foot strong { color: #2d7148; }
-
-/* --- Dark ---------------------------------------------------------------- */
-html[data-theme="dark"] .rc-title { color: #f0f2f5; }
-html[data-theme="dark"] .rc-sub,
-html[data-theme="dark"] .rc-empty,
-html[data-theme="dark"] .rc-chase-foot { color: #8b949e; }
-html[data-theme="dark"] .rc-section-title,
-html[data-theme="dark"] .rc-note,
-html[data-theme="dark"] .rc-when,
-html[data-theme="dark"] .rc-unit,
-html[data-theme="dark"] .rc-chase-target { color: #7d8492; }
-
-html[data-theme="dark"] .rc-empty { background: #161b22; border-color: #30363d; }
-
-html[data-theme="dark"] .rc-card,
-html[data-theme="dark"] .rc-chase {
-    background: #161b22;
-    border-color: #262c36;
-    box-shadow: none;
+@media (max-width: 720px) {
+    .rc-hero-art { display: none; }
+    .rc-rows button { grid-template-columns: 22px minmax(0, 1fr) auto; }
+    .rc-row-cat, .rc-row-when { display: none; }
 }
-html[data-theme="dark"] .rc-card:hover {
-    border-color: #3d3527;
-    box-shadow: 0 12px 26px rgba(0, 0, 0, .45);
-}
-html[data-theme="dark"] .rc-card.is-unset { background: #12161c; }
-html[data-theme="dark"] .rc-card.is-unset:hover { border-color: #262c36; }
-
-html[data-theme="dark"] .rc-ico,
-html[data-theme="dark"] .rc-chase-ico { background: #2a2118; color: #d8c3a5; }
-html[data-theme="dark"] .rc-card.is-unset .rc-ico { background: #1c222c; color: #4b525e; }
-
-html[data-theme="dark"] .rc-label { color: #8b949e; }
-html[data-theme="dark"] .rc-num,
-html[data-theme="dark"] .rc-chase-label,
-html[data-theme="dark"] .rc-chase-foot strong { color: #f0f2f5; }
-html[data-theme="dark"] .rc-none { color: #4b525e; }
-
-html[data-theme="dark"] .rc-track { background: #21262d; }
-html[data-theme="dark"] .rc-track i { background: linear-gradient(90deg, #d8c3a5, #a8845c); }
-
-html[data-theme="dark"] .rc-chase.is-held { background: #121a15; border-color: #24402e; }
-html[data-theme="dark"] .rc-chase.is-held .rc-chase-ico { background: #16261c; color: #6fbf8d; }
-html[data-theme="dark"] .rc-chase.is-held .rc-track i { background: linear-gradient(90deg, #6fbf8d, #3da064); }
-html[data-theme="dark"] .rc-chase.is-held .rc-chase-foot strong { color: #6fbf8d; }
-
-/* --- Motion off ---------------------------------------------------------- */
-/* The count-up already stops itself (hooks/useCountUp reads the same query).
-   This is the rest of it: the card lift and the bar's smoothing. */
 @media (prefers-reduced-motion: reduce) {
-    .rc-card, .rc-track i { transition: none; }
-    .rc-card:hover { transform: none; }
-}
-
-/* --- Narrow -------------------------------------------------------------- */
-@media (max-width: 640px) {
-    .rc-page { padding: 22px 0 48px; }
-    .rc-cards { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }
-    .rc-card { padding: 16px; }
-    .rc-num { font-size: 23px; }
-    .rc-chases { grid-template-columns: minmax(0, 1fr); }
+    .rc-best > button, .rc-track > i { transition: none; }
+    .rc-best > button:hover { transform: none; }
 }

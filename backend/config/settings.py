@@ -72,6 +72,7 @@ DB_PATH = os.environ.get('ASCEN_DB') or os.path.join(DATA_DIR, 'ascen.db')
 SCHEMA_FILES = [
     'users', 'tasks', 'goals', 'growth', 'focus', 'events', 'analytics',
     'achievements', 'history', 'library', 'notes', 'settings', 'subjects',
+    'records',
 ]
 
 # --- Behaviour -----------------------------------------------------------

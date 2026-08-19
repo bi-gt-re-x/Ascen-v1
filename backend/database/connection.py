@@ -152,6 +152,28 @@ ADDED_TABLES = ('''
 ''', '''
     CREATE INDEX IF NOT EXISTS user_subjects_user_idx
         ON user_subjects (user_id)
+''', '''
+    -- The hall of fame the account writes itself. Mirrors data/sql/records.sql,
+    -- which only ever reaches a database that does not exist yet.
+    CREATE TABLE IF NOT EXISTS records (
+        id           TEXT PRIMARY KEY,
+        user_id      TEXT NOT NULL REFERENCES users (username) ON DELETE CASCADE,
+        kind         TEXT NOT NULL DEFAULT 'record'
+                     CHECK (kind IN ('record', 'milestone')),
+        name         TEXT NOT NULL DEFAULT '',
+        category     TEXT NOT NULL DEFAULT '',
+        value        NUMERIC NOT NULL DEFAULT 0,
+        target       NUMERIC NOT NULL DEFAULT 0,
+        unit         TEXT NOT NULL DEFAULT '',
+        note         TEXT NOT NULL DEFAULT '',
+        achieved_on  TEXT NOT NULL DEFAULT '',
+        created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+''', '''
+    CREATE INDEX IF NOT EXISTS records_user_idx ON records (user_id, kind)
+''', '''
+    CREATE INDEX IF NOT EXISTS records_name_idx ON records (user_id, name, achieved_on)
 ''')
 
 
@@ -506,6 +528,14 @@ def notes():
 
 def save_notes(rows):
     write_table('notes', rows)
+
+
+def records():
+    return read_table('records')
+
+
+def save_records(rows):
+    write_table('records', rows)
 
 
 def user_settings():
