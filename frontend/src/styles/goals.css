@@ -4125,3 +4125,146 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) {
     .gx-mo-bar > span, .gx-traj-fill, .gx-traj-dot, .gx-area-bar > i { transition: none; }
 }
+
+/* ---------- The tab strip -------------------------------------------------
+   Five smaller pages rather than eleven bands down one. See
+   components/Goals/GoalTable for why the page grew these at all. */
+.gx-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--gx-line);
+    border-radius: 12px;
+    background: var(--gx-card);
+    align-self: flex-start;
+}
+.gx-tab {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--gx-muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease;
+}
+.gx-tab:hover { color: var(--gx-text); background: var(--gx-card-2); }
+.gx-tab.is-on {
+    background: linear-gradient(180deg, var(--gx-violet), color-mix(in srgb, var(--gx-violet) 76%, #000));
+    color: #fff;
+}
+
+/* ---------- Every goal, one row each -------------------------------------- */
+/* The table scrolls inside its own box rather than widening the page: seven
+   columns do not fit a phone and the page must not grow a horizontal bar. */
+.gx-table-wrap { overflow-x: auto; }
+.gx-table {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.gx-table thead th {
+    padding: 0 14px 10px;
+    border-bottom: 1px solid var(--gx-line);
+    color: var(--gx-faint);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    text-align: left;
+    white-space: nowrap;
+}
+.gx-table tbody tr { border-bottom: 1px solid var(--gx-line-soft); }
+.gx-table tbody tr:last-child { border-bottom: 0; }
+.gx-table tbody tr:hover { background: var(--gx-card-2); }
+.gx-table td { padding: 13px 14px; vertical-align: middle; }
+.gx-table td .gx-quiet { display: block; margin-top: 2px; font-size: 11px; }
+.gx-table td .gx-quiet.is-late { color: var(--gx-bad); }
+
+.gx-table-goal {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.gx-table-title { font-size: 13.5px; font-weight: 600; }
+.gx-table-goal:hover .gx-table-title { color: var(--tone); text-decoration: underline; }
+
+.gx-table-pct { display: flex; align-items: center; gap: 9px; }
+.gx-table-pct strong { min-width: 38px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.gx-table-bar {
+    flex: 1;
+    min-width: 70px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--gx-card-2);
+    overflow: hidden;
+}
+.gx-table-bar > i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--tone);
+    transition: width .5s cubic-bezier(.22, 1, .36, 1);
+}
+
+.gx-pill {
+    display: inline-block;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.gx-pill.is-on-track {
+    background: color-mix(in srgb, var(--gx-good) 16%, transparent);
+    color: var(--gx-good);
+}
+.gx-pill.is-at-risk {
+    background: color-mix(in srgb, var(--gx-watch) 18%, transparent);
+    color: var(--gx-watch);
+}
+.gx-pill.is-off-track {
+    background: color-mix(in srgb, var(--gx-bad) 16%, transparent);
+    color: var(--gx-bad);
+}
+.gx-pill.is-not-started {
+    background: var(--gx-card-2);
+    color: var(--gx-faint);
+}
+
+.gx-table-date, .gx-table-next { font-size: 12.5px; }
+.gx-table-next {
+    display: block;
+    max-width: 20ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-table-more {
+    display: grid;
+    place-items: center;
+    width: 28px; height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gx-faint);
+    cursor: pointer;
+}
+.gx-table-more:hover { background: var(--gx-card); color: var(--gx-text); }
+.gx-table-more svg { width: 15px; height: 15px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .gx-table-bar > i { transition: none; }
+}

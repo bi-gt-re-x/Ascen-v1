@@ -54,6 +54,8 @@ import {
   NextMoves,
   Trajectory,
   GoalStats,
+  GoalTable,
+  GoalTabs,
   GoalTimeline,
   GoalsCta,
   HealthRing,
@@ -75,6 +77,7 @@ import { goals as goalService, notes as noteService, tasks as taskService } from
 import type { NewGoal } from '@/services/goals';
 import type { Note } from '@/services/notes';
 import type { Goal, Milestone, MilestoneStatus, Task } from '@/types';
+import type { TabId } from '@/components/Goals';
 import '@/styles/goals.css';
 
 /** How often to re-read while a focus goal is running. */
@@ -402,6 +405,16 @@ export default function Goals() {
   /** Which of the rail's two tabs is showing. See components/Goals/GoalsSidebar. */
   const [railTab, setRailTab] = useState<'goals' | 'system'>('goals');
 
+  /**
+   * Which part of the page is showing.
+   *
+   * State rather than a route — see components/Goals/GoalTable for why. Every
+   * band below is still built on every tab; only which of them render moves,
+   * so switching tabs costs nothing and loses no scroll position within one.
+   */
+  const [tab, setTab] = useState<TabId>('overview');
+  const on = (...ids: TabId[]) => ids.includes(tab);
+
   const open = list.find((goal) => goal.id === openId) ?? null;
 
   if (loading) return <Loading label="Reading your goals" />;
@@ -444,6 +457,8 @@ export default function Goals() {
           </div>
         </header>
 
+        <GoalTabs tab={tab} onTab={setTab} />
+
         {error && <ErrorState message={error} onRetry={() => void load()} />}
 
         {/* The page and the rail beside it. Everything that was the page is
@@ -457,6 +472,7 @@ export default function Goals() {
             The top of the page is the plan: every goal you are working on,
             how far into it you are, and the five checkpoints between here and
             done. Everything below this is commentary on it. */}
+        {on('overview', 'goals') && (
         <Band
           title="Your Goals"
           hint="Each one broken into five checkpoints. Tick one off as you reach it, rewrite any that stop being true, or have them suggested."
@@ -501,6 +517,7 @@ export default function Goals() {
             </ul>
           )}
         </Band>
+        )}
 
         {/* ---- 1b. What to actually do -----------------------------------
             The page's answer to "so what now". Everything above describes the
@@ -508,6 +525,7 @@ export default function Goals() {
             it, with the tick right here. It sits directly under the ladders
             because the two are one thought — the checkpoint and the work that
             reaches it — and everything below is commentary on both. */}
+        {on('overview') && (
         <div className="gx-two gx-two-wide">
           <Band
             title="Next moves"
@@ -529,8 +547,10 @@ export default function Goals() {
             <Momentum goals={list} tasks={tasks} />
           </Band>
         </div>
+        )}
 
         {/* ---- 2. Where everything stands -------------------------------- */}
+        {on('overview') && (
         <Band
           title="Where you stand"
           hint="Counted off the goals above — a goal is complete when its own checkpoints say so."
@@ -538,31 +558,39 @@ export default function Goals() {
           <GoalStats goals={list} />
           <OverviewStrip goals={list} tasks={tasks} />
         </Band>
+        )}
 
         {/* ---- 3. What comes next --------------------------------------- */}
+        {on('overview', 'milestones') && (
         <Band title="Next Milestones" hint="The checkpoint each goal is on now.">
           <NextMilestones goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
         </Band>
+        )}
 
         {/* ---- 3b. Where each one is going -------------------------------
             A percentage says 88% and hides what 88% is of. The rail draws the
             scale, marks the value on it and prints what is left — and a
             checkpoint goal, which has no scale, gets its stops instead. */}
+        {on('overview', 'goals') && (
         <Band
           title="Your trajectory"
           hint="Where each goal stands on its own scale, and what is still to cover."
         >
           <Trajectory goals={outcomes} onOpen={(goal) => setOpenId(goal.id)} />
         </Band>
+        )}
 
+        {on('overview') && (
         <Band
           title="Growth areas"
           hint="Your active goals grouped by field, with progress weighted by how much each matters."
         >
           <GrowthAreas goals={list} />
         </Band>
+        )}
 
         {/* ---- 4. Why ---------------------------------------------------- */}
+        {on('overview') && (
         <div className="gx-two">
           <Band title="Goal Insights" hint="Counted off the work linked to each goal — never estimated.">
             <GoalInsights goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
@@ -572,6 +600,7 @@ export default function Goals() {
             <HealthRing goals={list} tasks={tasks} />
           </Band>
         </div>
+        )}
 
         {/* ---- 5. The counters ------------------------------------------
             Moved to the rail's System Goals tab. They were here under
@@ -579,6 +608,27 @@ export default function Goals() {
             `gx-legacy` wrapper whose only job was to hand those cards back the
             dark surface they were designed against — a stylesheet this page
             stopped using. See components/Goals/GoalsSidebar. */}
+
+        {/* ---- 5b. Every goal, one row each ------------------------------
+            The cards answer "how is this one going" and are right for four
+            goals; this answers "how are all of them going", which is what you
+            ask at ten. See components/Goals/GoalTable. */}
+        {on('goals') && (
+          <Band
+            title="All Goals"
+            hint="Progress, health, the date and what is next — the same columns for every goal, so they can be read against each other."
+          >
+            <GoalTable
+              goals={outcomes}
+              tasks={tasks}
+              onOpen={(goal) => setOpenId(goal.id)}
+              onEdit={(goal) => {
+                setEditing(goal);
+                setModalOpen(true);
+              }}
+            />
+          </Band>
+        )}
 
         {/* ---- 6. When, goal by goal -------------------------------------
             One rail each, rather than the single merged rail this page used
@@ -588,7 +638,7 @@ export default function Goals() {
             about one goal at a time. Ten rows each, for the same reason the
             ladder holds five: a rail long enough to scroll past is a rail
             nobody reads to the end of. */}
-        {shown.length > 0 && (
+        {on('timeline') && shown.length > 0 && (
           <Band
             title="Goal Timelines"
             hint="Each goal on its own rail — what you have reached, and what is queued."
@@ -617,7 +667,7 @@ export default function Goals() {
         )}
 
         {/* ---- 7. What has been reached ---------------------------------- */}
-        {showCompleted && (
+        {(showCompleted || on('completed')) && (
           <Band title="Recently Completed" hint="Goals and milestones already behind you.">
             <RecentlyCompleted goals={list} />
           </Band>
@@ -627,6 +677,7 @@ export default function Goals() {
             The one thing on the page that is not derived. See components/
             Goals/GoalNotes for why a goals page needs somewhere to put the
             reason a number cannot hold. */}
+        {on('overview', 'goals') && (
         <Band
           title="Goal notes"
           hint="A line each, in your words. Saved when you click away, and readable from the notes page like any other note."
@@ -639,6 +690,7 @@ export default function Goals() {
             onOpen={(goal) => setOpenId(goal.id)}
           />
         </Band>
+        )}
 
         {/* ---- 8. The same checkpoints, as months --------------------------
             Last on the page because it is the widest view of the smallest
@@ -646,12 +698,14 @@ export default function Goals() {
             them at once, on the days they actually land. It answers the
             question the lists cannot — which weeks are full — so it belongs
             after them rather than instead of them. */}
+        {on('milestones') && (
         <Band
           title="Milestone Calendar"
           hint="Every dated checkpoint on the day it lands. Darker days carry more; pick one to see what."
         >
           <MilestoneCalendar goals={list} onOpen={(goal) => setOpenId(goal.id)} />
         </Band>
+        )}
 
         <GoalsCta onNew={() => setWizardOpen(true)} />
         </div>
