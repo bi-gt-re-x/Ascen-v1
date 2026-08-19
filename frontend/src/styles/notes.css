@@ -100,7 +100,13 @@ html[data-theme="dark"] .nt-page {
        of a column that is already the narrowest thing on screen. The rail and
        the index are fixed, so every pixel the cap released goes to the note. */
     --shell-max: 100%;
-    --shell-fluid: 98.5%;
+    /* 98.5% put the panels within a few pixels of the content column's edges,
+       which is the right call for a workspace only if the workspace is the
+       whole window — and it is not: the rail is beside it and the top bar is
+       above it, so panels that run to the edge read as a page that overflowed
+       rather than one that fills. 95% is roughly a 40px gutter at 1600 and
+       still leaves the note column every pixel the index does not take. */
+    --shell-fluid: 95%;
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -249,7 +255,26 @@ html[data-theme="dark"] .nt-page {
 }
 
 /* ---------- New note ------------------------------------------------------ */
-.nt-new-group { display: flex; align-items: stretch; }
+/* The two halves are one control, so they lift, press and focus as one. The
+   ring is on the group for the same reason: a focus outline around half a
+   button looks like a rendering fault. */
+.nt-new-group {
+    display: flex;
+    align-items: stretch;
+    border-radius: 11px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .12), 0 6px 16px color-mix(in srgb, var(--nt-accent) 32%, transparent);
+    transition: box-shadow .16s ease, transform .12s ease;
+}
+.nt-new-group:hover { box-shadow: 0 1px 2px rgba(16, 24, 40, .14), 0 9px 22px color-mix(in srgb, var(--nt-accent) 42%, transparent); }
+.nt-new-group:active { transform: translateY(1px); }
+.nt-new-group:focus-within { outline: 2px solid var(--nt-accent-2); outline-offset: 2px; }
+.nt-new:focus-visible, .nt-new-more:focus-visible { outline: none; }
+/* The chevron half is wrapped in the `.nt-menu-wrap` its dropdown anchors to,
+   so the group's `align-items: stretch` reached the wrapper and stopped there
+   — the button inside stayed at its content height and the two halves of one
+   control ended up different heights, which on a split button is a visible
+   step in the seam. The wrapper passes the stretch through. */
+.nt-new-group > .nt-menu-wrap { display: flex; align-items: stretch; }
 .nt-new, .nt-new-more {
     border: 0;
     background: linear-gradient(180deg, var(--nt-accent-2), var(--nt-accent));
@@ -276,8 +301,12 @@ html[data-theme="dark"] .nt-page {
     border-left: 1px solid rgba(255, 255, 255, .22);
 }
 .nt-new-more svg { width: 15px; height: 15px; }
-.nt-new:hover, .nt-new-more:not(:disabled):hover { filter: brightness(1.08); }
-.nt-new:active { transform: translateY(1px); }
+.nt-new-group:hover .nt-new,
+.nt-new-group:hover .nt-new-more:not(:disabled) { filter: brightness(1.08); }
+/* The chevron turns over while its menu is open, so the button says which
+   state it is in rather than only what it does. */
+.nt-new-more svg { transition: transform .18s ease; }
+.nt-new-more[aria-expanded="true"] svg { transform: rotate(180deg); }
 .nt-new-more:disabled { opacity: .55; cursor: not-allowed; }
 
 /* ---------- The two panels ------------------------------------------------
@@ -297,6 +326,34 @@ html[data-theme="dark"] .nt-page {
     height: calc(100vh - var(--topnav-h, 0px) - 156px);
     min-height: 520px;
 }
+
+/* Shut, the index keeps only its toggle: a 54px rail down the left, wide
+   enough for the one button and nothing else.
+
+   The track itself is not transitioned. It could be — `grid-template-columns`
+   is animatable — but the width landing where it should is the part that has
+   to be right, and that is settled here by the rule alone rather than by an
+   interpolation between a `clamp()` and a plain length. The motion lives on
+   the contents instead, which is also where it reads better: what you notice
+   on reopening is the list coming back, not the column growing. */
+.nt-body.is-shut { grid-template-columns: 54px minmax(0, 1fr); }
+.nt-body.is-shut .nt-list-head { padding: 13px 0; justify-content: center; }
+/* Held rather than removed from the tree, so reopening does not re-run the
+   index's own entrance animation on every toggle. */
+.nt-body.is-shut .nt-scope,
+.nt-body.is-shut .nt-list-head .nt-menu-wrap,
+.nt-body.is-shut .nt-sections { display: none; }
+/* What the eye follows instead of the track: the list fades back in behind
+   the panel that has just reopened. */
+@keyframes nt-unfold {
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: none; }
+}
+.nt-body:not(.is-shut) .nt-sections,
+.nt-body:not(.is-shut) .nt-scope { animation: nt-unfold .26s ease-out both; }
+/* The arrow points the way it will move the panel. */
+.nt-collapse svg { transition: transform .28s cubic-bezier(.22, 1, .36, 1); }
+.nt-body.is-shut .nt-collapse svg { transform: rotate(180deg); }
 
 .nt-list-panel, .nt-editor {
     display: flex;
@@ -1019,6 +1076,18 @@ html[data-theme="dark"] .nt-page { color-scheme: dark; }
        the specificity of its most specific argument, which puts this level
        with them and lets it win on order. */
     .nt-editor-body:is(.is-beat-0, .is-beat-1) > :is(.nt-preview, .nt-body-input, .nt-meta) {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+    /* The index still collapses and the chevrons still turn — they just do it
+       in one step. The panel arriving at its width is the information; the
+       slide is only how it gets there. */
+    .nt-collapse svg,
+    .nt-new-more svg,
+    .nt-new-group { transition: none; }
+    .nt-body:not(.is-shut) .nt-sections,
+    .nt-body:not(.is-shut) .nt-scope {
         animation: none;
         opacity: 1;
         transform: none;

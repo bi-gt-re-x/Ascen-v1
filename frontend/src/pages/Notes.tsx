@@ -460,6 +460,16 @@ export default function Notes() {
   const [beat, setBeat] = useState(0);
   const swap = useCallback(() => setBeat((count) => count + 1), []);
 
+  /**
+   * Whether the index is folded away to its toggle.
+   *
+   * Worth having on a page whose middle column is the one being written in:
+   * the index is a column of titles, and once you are three paragraphs into a
+   * note it is a list of the notes you are not writing. Folding it hands the
+   * whole width to the note and is one click to get back.
+   */
+  const [indexShut, setIndexShut] = useState(false);
+
   const open = useCallback((note: Note) => {
     swap();
     past.current = [];
@@ -616,16 +626,17 @@ export default function Notes() {
           </div>
         </header>
 
-        <div className="nt-body">
+        <div className={`nt-body${indexShut ? ' is-shut' : ''}`}>
           {/* ---- The index ---- */}
           <aside className="nt-list-panel">
             <div className="nt-list-head">
               <button
                 type="button"
-                className="nt-icon-btn"
-                onClick={blank}
-                title="Start a new note"
-                aria-label="Start a new note"
+                className="nt-icon-btn nt-collapse"
+                onClick={() => setIndexShut((shut) => !shut)}
+                title={indexShut ? 'Show the note list' : 'Hide the note list'}
+                aria-label={indexShut ? 'Show the note list' : 'Hide the note list'}
+                aria-expanded={!indexShut}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <path d="M19 12H5m0 0 6-6m-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
