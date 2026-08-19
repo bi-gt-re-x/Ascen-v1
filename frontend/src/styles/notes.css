@@ -15,7 +15,12 @@
    ========================================================================== */
 
 .nt-page {
-    --nt-bg: #f4f6f8;
+    /* Transparent, not a colour. The app paints its own backdrop behind every
+       page — the grid and the ambient wash — and a page that fills a slab of
+       flat grey over it reads as a document floating on the app rather than as
+       the app's own surface. The goals page settled this the same way; the
+       panels below carry `--nt-card`, which is what makes them panels. */
+    --nt-bg: transparent;
     --nt-card: #ffffff;
     --nt-card-2: #f7f8fb;
     --nt-raised: #ffffff;
@@ -48,7 +53,6 @@
    than outlined — at this contrast a border does the separating on its own and
    a heavy one makes the grid look like a spreadsheet. */
 html[data-theme="dark"] .nt-page {
-    --nt-bg: #171e2e;
     --nt-card: #1c2436;
     --nt-card-2: #222b40;
     --nt-raised: #27314a;
@@ -70,8 +74,16 @@ html[data-theme="dark"] .nt-page {
 }
 
 .nt-shell {
-    --shell-max: 1560px;
-    --shell-fluid: 96%;
+    /* No ceiling. `--shell-max: 100%` takes the cap out of `min(fluid, max)`
+       so `--shell-fluid` is the only term and the page fills the same share of
+       the content column at every width — the tasks page carries the long note
+       on why a fixed cap and a `vw` share were both wrong.
+       This page wants it for a reason of its own: the middle column is where
+       the writing goes, and a cap spends the extra room on margins either side
+       of a column that is already the narrowest thing on screen. The rail and
+       the index are fixed, so every pixel the cap released goes to the note. */
+    --shell-max: 100%;
+    --shell-fluid: 97%;
     display: flex;
     flex-direction: column;
     gap: 18px;
