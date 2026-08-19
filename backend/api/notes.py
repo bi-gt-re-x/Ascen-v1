@@ -53,6 +53,10 @@ class SaveNote(BaseModel):
     note_date: str = ''
     task_id: str = ''
     goal_id: str = ''
+    #: Catalogue subject ids, comma-separated. See `_subjects`.
+    subject_ids: str = ''
+    #: One of the catalogue's group names, or '' for unfiled.
+    notebook: str = ''
     pinned: bool = False
 
 
@@ -98,6 +102,34 @@ def _mine(username):
     return rows
 
 
+#: How many subjects one note may carry. A tag list past this is not a tag
+#: list, and the rail that draws them has room for about this many.
+SUBJECT_MAX = 8
+
+#: The longest a single id or a notebook name may be. The catalogue's own are
+#: far shorter; this is a ceiling on what a caller can post, not a rule about
+#: the catalogue.
+NAME_MAX = 60
+
+
+def _subjects(raw):
+    """A comma-separated subject list, cleaned.
+
+    Trimmed, emptied of blanks, de-duplicated with the first mention winning,
+    and capped. Ids are not checked against the catalogue on the way in, which
+    is deliberate and the same choice user_subjects makes: the catalogue is
+    code, it gets edited and reverted, and a note that mentions a subject which
+    briefly stopped existing should not have that mention destroyed by a save.
+    The client ignores ids it cannot resolve when it draws them.
+    """
+    seen = []
+    for part in (raw or '').split(','):
+        name = part.strip()[:NAME_MAX]
+        if name and name not in seen:
+            seen.append(name)
+    return ','.join(seen[:SUBJECT_MAX])
+
+
 def _clean(note: SaveNote):
     """The writable fields, trimmed and capped. Nothing else is stored."""
     return {
@@ -109,6 +141,11 @@ def _clean(note: SaveNote):
         **({'note_date': note.note_date.strip()} if note.note_date.strip() else {}),
         **({'task_id': note.task_id.strip()} if note.task_id.strip() else {}),
         **({'goal_id': note.goal_id.strip()} if note.goal_id.strip() else {}),
+        # Written unconditionally rather than only when non-empty: unlike the
+        # anchors above, clearing every tag off a note is a thing somebody
+        # does on purpose, and an omitted key would silently keep the old ones.
+        'subject_ids': _subjects(note.subject_ids),
+        'notebook': note.notebook.strip()[:NAME_MAX],
         'pinned': bool(note.pinned),
     }
 

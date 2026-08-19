@@ -45,7 +45,7 @@
     background: var(--nt-bg);
     color: var(--nt-text);
     min-height: calc(100vh - var(--topnav-h, 0px));
-    padding: 22px 0 26px;
+    padding: 18px 0 22px;
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
@@ -83,7 +83,7 @@ html[data-theme="dark"] .nt-page {
        of a column that is already the narrowest thing on screen. The rail and
        the index are fixed, so every pixel the cap released goes to the note. */
     --shell-max: 100%;
-    --shell-fluid: 97%;
+    --shell-fluid: 98.5%;
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -202,11 +202,15 @@ html[data-theme="dark"] .nt-page {
    the window is harder to scan than one that stays where it was. */
 .nt-body {
     display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
+    /* The index grows a little with the window and then stops. A pure fixed
+       column wastes a wide screen on margins; a pure fraction turns the index
+       into a second reading column at 3440px, which is not what it is for.
+       `clamp` gives it the first and refuses the second. */
+    grid-template-columns: clamp(320px, 22%, 420px) minmax(0, 1fr);
     gap: var(--nt-gap);
     align-items: stretch;
     /* The panels scroll inside themselves, so the page does not. */
-    height: calc(100vh - var(--topnav-h, 0px) - 168px);
+    height: calc(100vh - var(--topnav-h, 0px) - 156px);
     min-height: 520px;
 }
 
@@ -363,6 +367,28 @@ html[data-theme="dark"] .nt-page {
     color: var(--nt-muted);
 }
 
+/* ---------- What a note is about, in the index --------------------------- */
+.nt-item-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+/* Smaller here than in the rail: the index is scanned, and a pill sized for
+   reading crowds out the title it is meant to be describing. */
+.nt-item-tags .nt-tag { padding: 2px 7px; font-size: 10.5px; border-radius: 6px; }
+.nt-item-more { font-size: 10.5px; color: var(--nt-faint); font-weight: 600; }
+
+/* A menu row with a hint under it, for the template list. */
+.nt-menu.is-wide { min-width: 232px; }
+.nt-menu.is-wide button { display: flex; flex-direction: column; gap: 1px; padding: 8px 11px; }
+.nt-menu.is-wide button em { font-style: normal; font-size: 11px; color: var(--nt-faint); }
+/* The filter menu: a label, and how many notes carry it. */
+.nt-menu button { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.nt-menu button em {
+    font-style: normal;
+    font-size: 11px;
+    color: var(--nt-faint);
+    font-variant-numeric: tabular-nums;
+}
+.nt-menu button.is-on { color: var(--nt-accent-2); font-weight: 600; }
+.nt-menu hr { margin: 5px 7px; border: 0; border-top: 1px solid var(--nt-line-soft); }
+
 /* ---------- The editor's header ------------------------------------------- */
 .nt-editor-head {
     display: flex;
@@ -489,7 +515,7 @@ html[data-theme="dark"] .nt-page {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 250px;
+    grid-template-columns: minmax(0, 1fr) clamp(250px, 19%, 330px);
 }
 .nt-body-input {
     min-height: 0;
@@ -629,11 +655,85 @@ html[data-theme="dark"] .nt-page {
 .nt-meta-value { margin: 0; font-size: 12.5px; line-height: 1.5; }
 .nt-meta-note { margin: 7px 0 0; font-size: 11px; color: var(--nt-faint); }
 
-.nt-add-tag, .nt-select {
-    display: flex;
+/* ---------- Subject tags -------------------------------------------------
+   A pill takes its two shades from the palette family the subject already
+   wears everywhere else — see components/Notes/SubjectTags. `data-family` is
+   the hook, so one rule per family covers every subject in the catalogue. */
+.nt-tags { position: relative; display: flex; flex-direction: column; gap: 9px; align-items: flex-start; }
+.nt-tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.nt-tag {
+    display: inline-flex;
     align-items: center;
-    gap: 7px;
-    padding: 8px 11px;
+    gap: 5px;
+    max-width: 100%;
+    padding: 3px 5px 3px 9px;
+    border-radius: 7px;
+    border: 1px solid color-mix(in srgb, var(--fam, var(--nt-accent-2)) 34%, transparent);
+    background: color-mix(in srgb, var(--fam, var(--nt-accent-2)) 15%, transparent);
+    color: var(--fam, var(--nt-accent-2));
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+/* A pill with no remove button is a label, not a control, and should not
+   reserve the space for one. */
+.nt-tag > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nt-tag:not(:has(button)) { padding-right: 9px; }
+.nt-tag > button {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 15px; height: 15px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: .65;
+    transition: opacity .13s ease, background .13s ease;
+}
+.nt-tag > button:hover { opacity: 1; background: color-mix(in srgb, var(--fam) 26%, transparent); }
+.nt-tag > button svg { width: 9px; height: 9px; }
+
+/* The twelve families, on the pill and on the picker's dot. The names are the
+   keys of PALETTE in utils/eventPalette — blue, indigo, purple, teal, green,
+   cyan, yellow, orange, red, rose, brown, gray — and a name not in that list
+   silently falls back to the accent, which is why they are generated from it
+   rather than typed. The 500 rung reads against a light card; dark lifts to
+   the 200, which is the pairing palette.css itself uses. */
+[data-family="blue"]   { --fam: var(--event-blue-500); }
+[data-family="indigo"] { --fam: var(--event-indigo-500); }
+[data-family="purple"] { --fam: var(--event-purple-500); }
+[data-family="teal"]   { --fam: var(--event-teal-500); }
+[data-family="green"]  { --fam: var(--event-green-500); }
+[data-family="cyan"]   { --fam: var(--event-cyan-500); }
+[data-family="yellow"] { --fam: var(--event-yellow-500); }
+[data-family="orange"] { --fam: var(--event-orange-500); }
+[data-family="red"]    { --fam: var(--event-red-500); }
+[data-family="rose"]   { --fam: var(--event-rose-500); }
+[data-family="brown"]  { --fam: var(--event-brown-500); }
+[data-family="gray"]   { --fam: var(--event-gray-500); }
+
+html[data-theme="dark"] [data-family="blue"]   { --fam: var(--event-blue-200); }
+html[data-theme="dark"] [data-family="indigo"] { --fam: var(--event-indigo-200); }
+html[data-theme="dark"] [data-family="purple"] { --fam: var(--event-purple-200); }
+html[data-theme="dark"] [data-family="teal"]   { --fam: var(--event-teal-200); }
+html[data-theme="dark"] [data-family="green"]  { --fam: var(--event-green-200); }
+html[data-theme="dark"] [data-family="cyan"]   { --fam: var(--event-cyan-200); }
+html[data-theme="dark"] [data-family="yellow"] { --fam: var(--event-yellow-200); }
+html[data-theme="dark"] [data-family="orange"] { --fam: var(--event-orange-200); }
+html[data-theme="dark"] [data-family="red"]    { --fam: var(--event-red-200); }
+html[data-theme="dark"] [data-family="rose"]   { --fam: var(--event-rose-200); }
+html[data-theme="dark"] [data-family="brown"]  { --fam: var(--event-brown-200); }
+html[data-theme="dark"] [data-family="gray"]   { --fam: var(--event-gray-200); }
+
+.nt-add-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
     border: 1px dashed var(--nt-line);
     border-radius: 9px;
     background: transparent;
@@ -641,16 +741,108 @@ html[data-theme="dark"] .nt-page {
     font: inherit;
     font-size: 12.5px;
     cursor: pointer;
+    transition: border-color .14s ease, color .14s ease, background .14s ease;
 }
 .nt-add-tag svg { width: 13px; height: 13px; }
+.nt-add-tag:not(:disabled):hover {
+    border-color: var(--nt-accent-2);
+    border-style: solid;
+    background: color-mix(in srgb, var(--nt-accent-2) 10%, transparent);
+    color: var(--nt-accent-2);
+}
+.nt-add-tag:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- The subject picker ------------------------------------------- */
+/* Opens in the flow, not over it.
+   The rail scrolls (`.nt-meta` is `overflow-y: auto`), and a scroll container
+   clips absolutely positioned descendants on both axes — setting overflow on
+   one axis computes the other from `visible` to `auto`, so a popover anchored
+   here lost its right-hand edge to the rail and then ran off the viewport.
+   Pushing the rail's content down instead cannot be clipped by definition, and
+   in a column this narrow it reads better than an overlay would. */
+.nt-picker {
+    width: 100%;
+    margin-top: 2px;
+    padding: 8px;
+    border: 1px solid var(--nt-line);
+    border-radius: 12px;
+    background: var(--nt-card-2);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--nt-accent-2) 22%, transparent);
+}
+.nt-picker-search {
+    width: 100%;
+    margin-bottom: 7px;
+    padding: 8px 10px;
+    border: 1px solid var(--nt-line);
+    border-radius: 8px;
+    background: var(--nt-card-2);
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 12.5px;
+    outline: none;
+}
+.nt-picker-search:focus { border-color: var(--nt-accent-2); }
+.nt-picker-search::-webkit-search-cancel-button { display: none; }
+.nt-picker-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 216px;
+    overflow-y: auto;
+}
+.nt-picker-list button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 9px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.nt-picker-list button:hover { background: var(--nt-card-2); }
+.nt-picker-list i {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--fam, var(--nt-faint));
+}
+.nt-picker-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nt-picker-group { font-size: 10.5px; color: var(--nt-faint); white-space: nowrap; }
+.nt-picker-none { margin: 10px 8px; font-size: 12px; color: var(--nt-faint); }
+
+/* ---------- The notebook select ------------------------------------------ */
+.nt-select-wrap { position: relative; display: block; }
 .nt-select {
     width: 100%;
-    justify-content: space-between;
-    border-style: solid;
+    padding: 8px 30px 8px 11px;
+    border: 1px solid var(--nt-line);
+    border-radius: 9px;
     background: var(--nt-card-2);
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    transition: border-color .14s ease;
 }
-.nt-select svg { width: 14px; height: 14px; }
-.nt-add-tag:disabled, .nt-select:disabled { opacity: .5; cursor: not-allowed; }
+.nt-select:hover:not(:disabled) { border-color: var(--nt-accent-2); }
+.nt-select:focus { border-color: var(--nt-accent-2); }
+.nt-select:disabled { opacity: .5; cursor: not-allowed; }
+.nt-select-wrap > svg {
+    position: absolute;
+    right: 10px; top: 50%;
+    width: 14px; height: 14px;
+    color: var(--nt-faint);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
 
 .nt-date {
     width: 100%;

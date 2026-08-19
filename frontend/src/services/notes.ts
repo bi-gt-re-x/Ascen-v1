@@ -19,6 +19,16 @@ export interface Note {
   note_date?: string;
   task_id?: string;
   goal_id?: string;
+  /**
+   * What the note is about — catalogue subject ids, comma-separated.
+   *
+   * Absent on every note written before the column existed, which is why every
+   * reader goes through `subjectIds` in pages/Notes rather than splitting this
+   * directly: `undefined.split` is the shape of that bug.
+   */
+  subject_ids?: string;
+  /** The shelf it is on: a catalogue group name, or absent for unfiled. */
+  notebook?: string;
   pinned: boolean;
   created_at: string;
   updated_at: string;
@@ -40,6 +50,9 @@ export interface NoteDraft {
    */
   goal_id?: string;
   task_id?: string;
+  /** Comma-separated catalogue ids. Sent even when empty — clearing is a write. */
+  subject_ids?: string;
+  notebook?: string;
 }
 
 export function list(username: string): Promise<ApiResult<{ notes: Note[] }>> {

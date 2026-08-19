@@ -99,6 +99,13 @@ ADDED_COLUMNS = (
     # carry. The range is enforced by the endpoint instead.
     ('tasks', 'difficulty', 'INTEGER'),
     ('tasks', 'execution', 'INTEGER'),
+
+    # What a note is about, and which shelf it is on. Both empty on every note
+    # written before the notes page could say either, which is the honest
+    # reading of a note nobody tagged. No NOT NULL and no DEFAULT: ALTER TABLE
+    # gives existing rows NULL, and every reader here treats NULL and '' alike.
+    ('notes', 'subject_ids', 'TEXT'),
+    ('notes', 'notebook', 'TEXT'),
 )
 
 # Tables added to the app after the database was first created.

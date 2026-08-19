@@ -40,15 +40,29 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ambient, ErrorState, Loading } from '@/components';
-import { useAuth, useDocumentTitle } from '@/hooks';
+import { useAuth, useDocumentTitle, useSubjects } from '@/hooks';
 import { notes as noteService } from '@/services';
+import {
+  NotebookPicker,
+  SubjectPill,
+  SubjectTags,
+  subjectOf,
+} from '@/components/Notes/SubjectTags';
 import type { Note } from '@/services/notes';
 import { isoDate } from '@/utils/dates';
 import { render } from '@/utils/markdown';
 import '@/styles/notes.css';
 
 /** A draft that has never been saved. Its id is empty, which is what `save` reads. */
-const BLANK = { id: '', title: '', body: '', note_date: '', pinned: false };
+const BLANK = {
+  id: '',
+  title: '',
+  body: '',
+  note_date: '',
+  subject_ids: '',
+  notebook: '',
+  pinned: false,
+};
 
 type Draft = typeof BLANK;
 
@@ -57,8 +71,21 @@ const asDraft = (note: Note): Draft => ({
   title: note.title,
   body: note.body,
   note_date: note.note_date ?? '',
+  subject_ids: note.subject_ids ?? '',
+  notebook: note.notebook ?? '',
   pinned: Boolean(note.pinned),
 });
+
+/**
+ * A note's subject ids, as a list.
+ *
+ * The column is absent on every note older than it, and null-ish on some rows
+ * ALTER TABLE filled in — so this is the only place the string is split, and
+ * everything else takes the array.
+ */
+export function subjectIds(value: string | undefined | null): string[] {
+  return (value ?? '').split(',').map((id) => id.trim()).filter(Boolean);
+}
 
 /** How many body edits back the toolbar's undo can reach. */
 const HISTORY = 60;
@@ -140,6 +167,51 @@ const TOOLS: Tool[][] = [
   ],
 ];
 
+/**
+ * What the New Note chevron offers.
+ *
+ * Four, and deliberately not more: a template list long enough to browse is a
+ * decision in front of the blank page, which is the thing this page exists to
+ * put you in front of. Each one is a heading and the prompts that go under it,
+ * in the Markdown the toolbar writes, so a template is a note like any other
+ * from the moment it opens.
+ */
+const TEMPLATES: Array<{ id: string; label: string; hint: string; title: string; body: string }> = [
+  {
+    id: 'blank',
+    label: 'Blank note',
+    hint: 'Nothing in it',
+    title: '',
+    body: '',
+  },
+  {
+    id: 'log',
+    label: 'Daily log',
+    hint: 'What happened, what is next',
+    title: '',
+    body: '## What I did\n\n- \n\n## What worked\n\n- \n\n## Tomorrow\n\n- [ ] ',
+  },
+  {
+    id: 'problem',
+    label: 'Problem log',
+    hint: 'A problem and what it taught you',
+    title: '',
+    body:
+      '## The problem\n\n\n## What I tried\n\n- \n\n## The idea I was missing\n\n\n' +
+      '## What to remember\n\n- ',
+  },
+  {
+    id: 'book',
+    label: 'Book notes',
+    hint: 'Chapter by chapter',
+    title: '',
+    body: '## Source\n\n\n## Key ideas\n\n- \n\n## Quotes\n\n> \n\n## What I disagree with\n\n- ',
+  },
+];
+
+/** How the index is narrowed. `subject` carries the id being filtered to. */
+type Filter = { kind: 'all' | 'pinned' | 'untagged' | 'subject'; id?: string };
+
 export default function Notes() {
   useDocumentTitle('Notes');
 
@@ -153,6 +225,9 @@ export default function Notes() {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [tplOpen, setTplOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filter, setFilter] = useState<Filter>({ kind: 'all' });
   /**
    * Whether the body is being written or read.
    *
@@ -163,6 +238,9 @@ export default function Notes() {
   const [mode, setMode] = useState<'write' | 'read'>('write');
   /** Collapsed index sections, by name. Both open until one is shut. */
   const [shut, setShut] = useState<Record<string, boolean>>({});
+
+  const catalogue = useSubjects(username);
+  const tags = useMemo(() => subjectIds(draft.subject_ids), [draft.subject_ids]);
 
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -207,11 +285,15 @@ export default function Notes() {
      in the app does — a menu that only closes on its own button is one the
      reader has to aim at twice. */
   useEffect(() => {
-    if (!menuOpen) return;
-    const close = () => setMenuOpen(false);
+    if (!menuOpen && !tplOpen && !filterOpen) return;
+    const close = () => {
+      setMenuOpen(false);
+      setTplOpen(false);
+      setFilterOpen(false);
+    };
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
-  }, [menuOpen]);
+  }, [filterOpen, menuOpen, tplOpen]);
 
   /*
    * The list is the server's ordering, filtered. Not re-sorted here: the API
@@ -220,14 +302,41 @@ export default function Notes() {
    * list stops agreeing with itself the moment one of the two changes.
    */
   const shown = useMemo(() => {
-    const needle = query.trim().toLowerCase();
     if (!rows) return [];
-    if (!needle) return rows;
-    return rows.filter(
-      (note) =>
-        note.title.toLowerCase().includes(needle) || note.body.toLowerCase().includes(needle),
-    );
-  }, [query, rows]);
+    const needle = query.trim().toLowerCase();
+    return rows
+      .filter((note) => {
+        if (filter.kind === 'pinned') return note.pinned;
+        if (filter.kind === 'untagged') return subjectIds(note.subject_ids).length === 0;
+        if (filter.kind === 'subject') return subjectIds(note.subject_ids).includes(filter.id ?? '');
+        return true;
+      })
+      .filter(
+        (note) =>
+          !needle ||
+          note.title.toLowerCase().includes(needle) ||
+          note.body.toLowerCase().includes(needle),
+      );
+  }, [filter, query, rows]);
+
+  /** The subjects actually in use, for the filter menu. Nothing else is offered. */
+  const inUse = useMemo(() => {
+    const seen = new Map<string, number>();
+    for (const note of rows ?? []) {
+      for (const id of subjectIds(note.subject_ids)) seen.set(id, (seen.get(id) ?? 0) + 1);
+    }
+    return [...seen.entries()].sort((a, b) => b[1] - a[1]);
+  }, [rows]);
+
+  /** What the index's header calls the current view. */
+  const scopeLabel =
+    filter.kind === 'pinned'
+      ? 'Pinned'
+      : filter.kind === 'untagged'
+        ? 'Untagged'
+        : filter.kind === 'subject'
+          ? subjectOf(filter.id ?? '', catalogue)?.name ?? filter.id ?? 'Tagged'
+          : 'All Notes';
 
   /** The index's two groups. Pinned notes are lifted out rather than marked. */
   const groups = useMemo(
@@ -246,6 +355,8 @@ export default function Notes() {
       original.title !== draft.title ||
       original.body !== draft.body ||
       (original.note_date ?? '') !== draft.note_date ||
+      (original.subject_ids ?? '') !== draft.subject_ids ||
+      (original.notebook ?? '') !== draft.notebook ||
       Boolean(original.pinned) !== draft.pinned
     );
   }, [draft, rows]);
@@ -344,6 +455,18 @@ export default function Notes() {
     setMode(note.body.trim() ? 'read' : 'write');
   }, []);
 
+  /** Open a new note with a template's text already in it. */
+  const fromTemplate = useCallback((template: (typeof TEMPLATES)[number]) => {
+    past.current = [];
+    future.current = [];
+    setDraft({ ...BLANK, title: template.title, body: template.body });
+    setMessage(null);
+    setSavedAt(null);
+    setMode('write');
+    setTplOpen(false);
+    titleRef.current?.focus();
+  }, []);
+
   const blank = useCallback(() => {
     past.current = [];
     future.current = [];
@@ -366,6 +489,8 @@ export default function Notes() {
       title: draft.title,
       body: draft.body,
       note_date: draft.note_date,
+      subject_ids: draft.subject_ids,
+      notebook: draft.notebook,
       pinned: draft.pinned,
     });
     setBusy(false);
@@ -442,21 +567,34 @@ export default function Notes() {
                 </svg>
                 New Note
               </button>
-              {/* The chevron's menu is the one piece of chrome with nothing
-                  behind it yet — templates are a feature, and this is the UI
-                  pass. Disabled rather than drawn live, because a control that
-                  opens nothing is worse than one that says it cannot. */}
-              <button
-                type="button"
-                className="nt-new-more"
-                disabled
-                title="Note templates are not built yet"
-                aria-label="Note templates (not available yet)"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                  <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
+              <div className="nt-menu-wrap">
+                <button
+                  type="button"
+                  className="nt-new-more"
+                  aria-label="Start from a template"
+                  aria-expanded={tplOpen}
+                  title="Start from a template"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setTplOpen((on) => !on);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {tplOpen && (
+                  <div className="nt-menu is-wide" onClick={(event) => event.stopPropagation()}>
+                    {TEMPLATES.map((template) => (
+                      <button key={template.id} type="button" onClick={() => fromTemplate(template)}>
+                        <span>{template.label}</span>
+                        <em>{template.hint}</em>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -478,21 +616,67 @@ export default function Notes() {
               </button>
 
               <span className="nt-scope">
-                {query.trim() ? `${shown.length} matching` : 'All Notes'}
+                {query.trim() ? `${shown.length} matching` : scopeLabel}
               </span>
 
-              <button
-                type="button"
-                className={`nt-icon-btn${query.trim() ? ' is-on' : ''}`}
-                onClick={() => setQuery('')}
-                disabled={!query.trim()}
-                title={query.trim() ? 'Clear the search' : 'Nothing is filtered'}
-                aria-label="Clear the search"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M3 6h18M6 12h12M10 18h4" strokeLinecap="round" />
-                </svg>
-              </button>
+              <div className="nt-menu-wrap">
+                <button
+                  type="button"
+                  className={`nt-icon-btn${filter.kind !== 'all' ? ' is-on' : ''}`}
+                  aria-label="Filter the index"
+                  aria-expanded={filterOpen}
+                  title="Filter the index"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setFilterOpen((on) => !on);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M3 6h18M6 12h12M10 18h4" strokeLinecap="round" />
+                  </svg>
+                </button>
+
+                {filterOpen && (
+                  <div className="nt-menu" onClick={(event) => event.stopPropagation()}>
+                    {([
+                      { kind: 'all', label: 'All notes' },
+                      { kind: 'pinned', label: 'Pinned only' },
+                      { kind: 'untagged', label: 'Untagged' },
+                    ] as const).map((entry) => (
+                      <button
+                        key={entry.kind}
+                        type="button"
+                        className={filter.kind === entry.kind ? 'is-on' : ''}
+                        onClick={() => {
+                          setFilter({ kind: entry.kind });
+                          setFilterOpen(false);
+                        }}
+                      >
+                        {entry.label}
+                      </button>
+                    ))}
+
+                    {/* Only the subjects actually on a note. A filter listing a
+                        hundred subjects, ninety of which match nothing, is a
+                        menu you scroll rather than a filter you use. */}
+                    {inUse.length > 0 && <hr />}
+                    {inUse.map(([id, count]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        className={filter.kind === 'subject' && filter.id === id ? 'is-on' : ''}
+                        onClick={() => {
+                          setFilter({ kind: 'subject', id });
+                          setFilterOpen(false);
+                        }}
+                      >
+                        <span>{subjectOf(id, catalogue)?.name ?? id}</span>
+                        <em>{count}</em>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="nt-sections">
@@ -537,9 +721,25 @@ export default function Notes() {
                                     </span>
                                   )}
                                 </span>
+                                {/* The subjects, so the index says what a note is
+                                    about before you open it — which is the
+                                    whole reason for tagging one. */}
+                                {subjectIds(note.subject_ids).length > 0 && (
+                                  <span className="nt-item-tags">
+                                    {subjectIds(note.subject_ids).slice(0, 3).map((id) => (
+                                      <SubjectPill key={id} id={id} catalogue={catalogue} />
+                                    ))}
+                                    {subjectIds(note.subject_ids).length > 3 && (
+                                      <span className="nt-item-more">
+                                        +{subjectIds(note.subject_ids).length - 3}
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
+
                                 <span className="nt-item-meta">
-                                  {note.note_date && (
-                                    <span className="nt-chip">{ago(note.note_date)}</span>
+                                  {note.notebook && (
+                                    <span className="nt-chip">{note.notebook}</span>
                                   )}
                                   <span className="nt-item-when">Updated {ago(note.updated_at)}</span>
                                 </span>
@@ -730,41 +930,29 @@ export default function Notes() {
               )}
 
               <aside className="nt-meta">
-                {/* Tags and Notebook are the two panels in the design with no
-                    column behind them — `notes` has title, body, note_date,
-                    task_id, goal_id and pinned, and nothing that holds a label.
-                    Drawn as what they are rather than filled with invented
-                    chips: this pass is the interface, and the migration that
-                    makes them real is the next one. */}
+                {/* Both are real columns now — see data/sql/notes.sql. Tags are
+                    ids from the subject catalogue rather than free text, which
+                    is what lets a note carry the same colour and the same name
+                    the rest of Ascen gives that subject. The reasoning is in
+                    components/Notes/SubjectTags. */}
                 <section className="nt-meta-sec">
                   <h3>Tags</h3>
-                  <button
-                    type="button"
-                    className="nt-add-tag"
-                    disabled
-                    title="Tags need a column on the notes table — not built yet"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                    </svg>
-                    Add tag
-                  </button>
-                  <p className="nt-meta-note">Not stored yet.</p>
+                  <SubjectTags
+                    ids={tags}
+                    catalogue={catalogue}
+                    disabled={busy}
+                    onChange={(next) => setDraft({ ...draft, subject_ids: next.join(',') })}
+                  />
                 </section>
 
                 <section className="nt-meta-sec">
                   <h3>Notebook</h3>
-                  <button
-                    type="button"
-                    className="nt-select"
-                    disabled
-                    title="Notebooks need a column on the notes table — not built yet"
-                  >
-                    <span>Unfiled</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
+                  <NotebookPicker
+                    value={draft.notebook}
+                    catalogue={catalogue}
+                    disabled={busy}
+                    onChange={(next) => setDraft({ ...draft, notebook: next })}
+                  />
                 </section>
 
                 {/* The one anchor the page does offer. The table also holds
