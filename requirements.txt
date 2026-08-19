@@ -23,6 +23,12 @@ werkzeug>=3.0
 python-multipart>=0.0.9
 
 # Breaking a goal into its five checkpoints — backend/tracking/planner.py.
-# Needs ANTHROPIC_API_KEY in the environment; without one the goals page shows
-# the suggestion button as unavailable and everything else works as before.
+# Needs a key in the environment; without one the goals page shows the
+# suggestion button as unavailable and everything else works as before.
+#
+# The Hugging Face path is one POST to an OpenAI-shaped endpoint and needs no
+# SDK — httpx is listed because planner.py imports it directly. It already
+# arrives as a dependency of anthropic; naming it here means the cheap path
+# does not quietly break if the paid one is ever dropped.
+httpx>=0.27
 anthropic>=0.121
