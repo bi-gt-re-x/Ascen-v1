@@ -29,7 +29,7 @@
  * moment it grows a second column of averages it has become a worse version of
  * the page next door.
  */
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useCountUp } from '@/hooks';
 import { fmtGoalNumber, formatGoalDate, goalNumbers } from './numbers';
 import { goalHealth, type GoalHealth, type HealthState } from '@/utils/goalHealth';
@@ -148,8 +148,20 @@ export function ProgressBar({ pct, tone }: { pct: number; tone?: string }) {
  */
 export function Ring({ pct, tone = 'violet', size = 46 }: { pct: number; tone?: string; size?: number }) {
   const value = useCountUp(Math.max(0, Math.min(100, pct)));
+  // Unique per instance because two gradients cannot share an id, and there is
+  // one of these per stat card. The stops are `currentColor` rather than the
+  // tone variable so the gradient needs no knowledge of which tone it is in:
+  // the stylesheet points `color` at `--tone` and both themes get their own
+  // hue out of the same two lines. See the `.gx-ring` note in goals.css.
+  const sweep = useId();
   return (
     <svg className={`gx-ring tone-${tone}`} width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+      <defs>
+        <linearGradient id={sweep} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="1" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity=".45" />
+        </linearGradient>
+      </defs>
       <circle className="gx-ring-track" cx="20" cy="20" r="16" pathLength={100} />
       <circle
         className="gx-ring-fill"
@@ -157,6 +169,7 @@ export function Ring({ pct, tone = 'violet', size = 46 }: { pct: number; tone?: 
         cy="20"
         r="16"
         pathLength={100}
+        stroke={`url(#${sweep})`}
         strokeDasharray={`${value} ${100 - value}`}
       />
     </svg>
@@ -178,9 +191,16 @@ function Spark({ values, tone }: { values: number[]; tone: string }) {
   const line = values
     .map((value, index) => `${index === 0 ? 'M' : 'L'}${(index * step).toFixed(1)},${(24 - (value / peak) * 22).toFixed(1)}`)
     .join(' ');
+  const wash = useId();
   return (
     <svg className={`gx-spark tone-${tone}`} viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true">
-      <path className="gx-spark-area" d={`${line} L100,26 L0,26 Z`} />
+      <defs>
+        <linearGradient id={wash} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity=".45" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path className="gx-spark-area" d={`${line} L100,26 L0,26 Z`} fill={`url(#${wash})`} />
       <path className="gx-spark-line" d={line} />
     </svg>
   );
@@ -272,10 +292,10 @@ export function OverviewStrip({
         <Spark values={opened} tone="violet" />
       </article>
 
-      <article className="gx-stat tone-violet">
+      <article className="gx-stat tone-indigo">
         <header>
           <span className="gx-stat-label">Overall Progress</span>
-          <Ring pct={overallTarget} tone="violet" />
+          <Ring pct={overallTarget} tone="indigo" />
         </header>
         <strong className="gx-stat-value">{overall}%</strong>
         <span className="gx-stat-foot">weighted by how much each matters</span>

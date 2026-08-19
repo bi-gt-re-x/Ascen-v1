@@ -1952,6 +1952,16 @@ html[data-theme="dark"] .goals-shell {
     --gx-watch: #b47b18;
     --gx-bad: #c0403c;
 
+    /* How hard a goal's own colour is allowed to tint the surfaces carrying
+       it. Variables rather than literals in twenty rules because light and
+       dark want genuinely different numbers, not a shared one that is a
+       compromise in both: a hue mixed toward a white card still reads as that
+       hue at 8%, while the same 8% toward a near-black card is the card. Dark
+       gets roughly double, and a stronger edge to go with it. */
+    --gx-wash: 8%;
+    --gx-wash-soft: 3%;
+    --gx-edge: 32%;
+
     /* The inset every card on this page uses, so the things inside two
        different cards in the same row line up with each other and not just
        their own borders. The masthead's buttons and the rail's contents share
@@ -1990,6 +2000,10 @@ html[data-theme="dark"] .gx-page {
     --gx-good: #46c483;
     --gx-watch: #e0b23c;
     --gx-bad: #f0736d;
+
+    --gx-wash: 16%;
+    --gx-wash-soft: 7%;
+    --gx-edge: 44%;
 
     --gx-shadow: none;
 }
@@ -2193,14 +2207,22 @@ html[data-theme="dark"] .gx-page {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
 }
+/* The strip carried five tones and painted none of them on the card itself.
+   Five identical boxes in a row is exactly the case where colour does the most
+   work: it turns "read five labels" into "the green one". */
 .gx-stat {
     position: relative;
     display: flex;
     flex-direction: column;
     gap: 3px;
     padding: 15px 17px 14px;
-    background: var(--gx-card);
-    border: 1px solid var(--gx-line);
+    background:
+        linear-gradient(
+            165deg,
+            color-mix(in srgb, var(--tone) var(--gx-wash), transparent),
+            transparent 72%),
+        var(--gx-card);
+    border: 1px solid color-mix(in srgb, var(--tone) var(--gx-edge), var(--gx-line));
     border-radius: var(--gx-radius);
     box-shadow: var(--gx-shadow);
     overflow: hidden;
@@ -2219,7 +2241,7 @@ html[data-theme="dark"] .gx-page {
     font-weight: 700;
     letter-spacing: -.03em;
     line-height: 1.05;
-    color: var(--gx-text);
+    color: var(--tone, var(--gx-text));
 }
 .gx-stat-foot {
     font-size: 11px;
@@ -2243,20 +2265,30 @@ html[data-theme="dark"] .gx-page {
     position: absolute;
     left: 0; right: 0; bottom: 0;
     width: 100%; height: 30px;
-    opacity: .8;
+    opacity: 1;
 }
 
-.gx-ring { flex: none; transform: rotate(-90deg); }
-.gx-ring circle { fill: none; stroke-width: 4; }
-.gx-ring-track { stroke: var(--gx-line); }
-.gx-ring-fill { stroke: var(--tone, var(--gx-violet)); stroke-linecap: round; }
+/* `color` is what the gradients inside these two are built on. Both draw their
+   stops with `currentColor` at different opacities, which is the one way an
+   SVG gradient can follow a CSS variable it does not name: point `color` at
+   the tone here, and every ring and every sparkline on the page grades itself
+   in its own hue, in whichever theme is on, with no per-tone gradient
+   definitions at all. See Ring and Spark in components/Goals/Outcome.
 
-.gx-spark { display: block; overflow: visible; }
-.gx-spark-area { fill: color-mix(in srgb, var(--tone, var(--gx-violet)) 16%, transparent); stroke: none; }
+   The paint itself has to come off these rules and onto the elements'
+   attributes, because a CSS `fill` beats a presentation attribute — leaving
+   `fill` declared here is what would silently throw the gradient away. */
+.gx-ring { flex: none; transform: rotate(-90deg); color: var(--tone, var(--gx-violet)); }
+.gx-ring circle { fill: none; stroke-width: 4; }
+.gx-ring-track { stroke: color-mix(in srgb, var(--tone, var(--gx-line)) 18%, var(--gx-line)); }
+.gx-ring-fill { stroke-linecap: round; }
+
+.gx-spark { display: block; overflow: visible; color: var(--tone, var(--gx-violet)); }
+.gx-spark-area { stroke: none; }
 .gx-spark-line {
     fill: none;
-    stroke: var(--tone, var(--gx-violet));
-    stroke-width: 1.6;
+    stroke: currentColor;
+    stroke-width: 2;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
 }
@@ -2360,14 +2392,32 @@ html[data-theme="dark"] .gx-page {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 14px;
 }
+/* Every card carried `--tone` already and spent it on a 34px tile, a hairline
+   sparkline and a hover border — so a screen of goals came out as a grid of
+   white boxes and the category you were looking at was a detail you had to go
+   find. The hue is the fastest thing on the card to read, and it is wasted if
+   only the icon is wearing it: the wash, the frame and the top edge now come
+   from the same variable, so Math is blue at a glance and Music is pink
+   without anyone reading a word.
+
+   The wash is a gradient rather than a flat tint because a card is tall and a
+   flat colour across all of it competes with the text; falling away by the
+   time it reaches the figures leaves the hue on the head, where the title and
+   the tile are, and the reading surface plain. */
 .gx-card {
     position: relative;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 17px 18px 34px;
-    background: var(--gx-card);
-    border: 1px solid var(--gx-line);
+    padding: 19px 18px 34px;
+    background:
+        linear-gradient(
+            165deg,
+            color-mix(in srgb, var(--tone) var(--gx-wash), transparent),
+            color-mix(in srgb, var(--tone) var(--gx-wash-soft), transparent) 52%,
+            transparent 80%),
+        var(--gx-card);
+    border: 1px solid color-mix(in srgb, var(--tone) var(--gx-edge), var(--gx-line));
     border-radius: var(--gx-radius);
     box-shadow: var(--gx-shadow);
     cursor: pointer;
@@ -2375,10 +2425,21 @@ html[data-theme="dark"] .gx-page {
     min-width: 0;
     transition: transform .16s ease, border-color .16s ease;
 }
-.gx-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tone) 48%, var(--gx-line)); }
+/* The edge, drawn inside the card's own rounded clip. Fading to a fraction of
+   itself across the width keeps it a marker rather than a second progress bar
+   — there is already one of those below it, and two full-width coloured lines
+   on one card read as a pair of readings. */
+.gx-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--tone), color-mix(in srgb, var(--tone) 22%, transparent));
+}
+.gx-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tone) 68%, var(--gx-line)); }
 .gx-card:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
 /* Same treatment as the strip: the line is the floor of the card. */
-.gx-card .gx-spark { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 40px; opacity: .75; }
+.gx-card .gx-spark { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 40px; opacity: 1; }
 
 .gx-card-head { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .gx-card-title { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
@@ -2394,12 +2455,15 @@ html[data-theme="dark"] .gx-page {
 }
 
 .gx-card-bar { display: flex; align-items: center; gap: 11px; }
+/* The biggest number on the card, and now in the card's colour rather than in
+   the text colour every other number on the page uses. It is the one figure a
+   reader is scanning the grid for, so it is the one worth making findable. */
 .gx-card-pct {
     font-size: 27px;
     font-weight: 700;
     letter-spacing: -.03em;
     line-height: 1;
-    color: var(--gx-text);
+    color: var(--tone, var(--gx-text));
     font-variant-numeric: tabular-nums;
 }
 .gx-card-bar .gx-track { flex: 1; }
@@ -2435,8 +2499,17 @@ html[data-theme="dark"] .gx-page {
     cursor: pointer;
     text-align: left;
 }
-.gx-rest button:hover { background: var(--gx-card-2); }
-.gx-rest-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-rest button:hover { background: color-mix(in srgb, var(--tone, var(--gx-card-2)) var(--gx-wash), var(--gx-card-2)); }
+/* A bullet in the goal's colour, so the list that carries the goals which did
+   not make the ladder is still sorted by eye. */
+.gx-rest button::before {
+    content: '';
+    flex: none;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--tone, var(--gx-faint));
+}
+.gx-rest-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- The ladder: a goal and its five checkpoints -------------------- */
 /* One card per goal, stacked rather than gridded. A grid would put two plans
@@ -2450,20 +2523,35 @@ html[data-theme="dark"] .gx-page {
     flex-direction: column;
     gap: 14px;
 }
+/* Same wash as the priority cards, and softer: a ladder is a tall card full of
+   checkpoint sentences, so the tint stops well before the reading starts. The
+   left edge does the identifying instead — stacked cards share a left margin,
+   which makes a coloured spine the one mark you can follow down a column
+   without reading any of them. */
 .gx-ladder {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 12px;
     padding: 17px 19px 16px;
-    background: var(--gx-card);
-    border: 1px solid var(--gx-line);
+    background:
+        linear-gradient(
+            170deg,
+            color-mix(in srgb, var(--tone) var(--gx-wash-soft), transparent),
+            transparent 46%),
+        var(--gx-card);
+    border: 1px solid color-mix(in srgb, var(--tone) var(--gx-edge), var(--gx-line));
+    border-left: 3px solid var(--tone, var(--gx-line));
     border-radius: var(--gx-radius);
     box-shadow: var(--gx-shadow);
     min-width: 0;
 }
 /* The one state worth colouring the frame for: a date that has passed is the
    only thing on this card the reader cannot work out from the numbers. */
-.gx-ladder.is-overdue { border-color: color-mix(in srgb, var(--gx-bad) 45%, var(--gx-line)); }
+.gx-ladder.is-overdue {
+    border-color: color-mix(in srgb, var(--gx-bad) 45%, var(--gx-line));
+    border-left-color: var(--gx-bad);
+}
 
 /* The plan assembles itself as it arrives: each goal rises a beat after the one
    above it, and the rails at the foot of the page do the same. Plays once, on
@@ -3930,6 +4018,7 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     min-width: 0;
     font-size: 13.5px;
     font-weight: 700;
+    color: color-mix(in srgb, var(--tone, var(--gx-text)) 72%, var(--gx-text));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3938,12 +4027,16 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 
 /* The scale. A track, the covered part of it, and a mark where the value is —
    the mark is what makes it a position rather than a bar. */
+/* The empty part of the rail is the goal's colour at its faintest rather than
+   a neutral grey, so the whole length reads as belonging to one goal and the
+   fill is a darker stretch of the same thing instead of a coloured bar sitting
+   in a grey one. */
 .gx-traj-rail {
     position: relative;
     height: 8px;
     margin: 0 0 14px;
     border-radius: 999px;
-    background: var(--gx-card-2);
+    background: color-mix(in srgb, var(--tone, var(--gx-card-2)) 15%, var(--gx-card-2));
 }
 .gx-traj-fill {
     position: absolute;
@@ -4178,9 +4271,18 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     text-align: left;
     white-space: nowrap;
 }
-.gx-table tbody tr { border-bottom: 1px solid var(--gx-line-soft); }
+/* Each row already knew its goal's tone and spent it only on a hover
+   underline. A table is the densest view on the page and the hardest to scan,
+   so the tone goes on a left stripe: it costs three pixels, it needs no
+   column, and it groups a category down the table the way a legend never
+   would. The hover tint is the same colour rather than the neutral grey, which
+   keeps the row you are pointing at attached to the goal it belongs to. */
+.gx-table tbody tr {
+    border-bottom: 1px solid var(--gx-line-soft);
+    box-shadow: inset 3px 0 0 var(--tone, transparent);
+}
 .gx-table tbody tr:last-child { border-bottom: 0; }
-.gx-table tbody tr:hover { background: var(--gx-card-2); }
+.gx-table tbody tr:hover { background: color-mix(in srgb, var(--tone, var(--gx-card-2)) var(--gx-wash), var(--gx-card-2)); }
 .gx-table td { padding: 13px 14px; vertical-align: middle; }
 .gx-table td .gx-quiet { display: block; margin-top: 2px; font-size: 11px; }
 .gx-table td .gx-quiet.is-late { color: var(--gx-bad); }
