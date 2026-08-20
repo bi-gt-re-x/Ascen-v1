@@ -139,7 +139,12 @@ function treeNodes(tree: SkillTree): GraphNode[] {
     category: tree.name,
     difficulty: 'foundation',
     status: tree.unlocked >= tree.total ? 'complete' : 'progress',
-    percent: tree.level.percent,
+    // Nodes open, not progress through the mastery level. The two are different
+    // readings of the same subject and the ring has to agree with the figure
+    // printed beside it: a maxed-out subject was drawing "Completed · 15 / 15
+    // nodes" against a 53% ring, because 53% was how far into level 60 it was.
+    // The level is the Subjects tab's job and it says so there.
+    percent: (tree.unlocked / Math.max(1, tree.total)) * 100,
     // The one real XP figure in the graph: filed, not offered.
     xp: tree.xp,
     have: tree.unlocked,

@@ -194,6 +194,21 @@ export function edgeState(target: GraphNode | undefined): EdgeState {
  * and choosing a primary parent is how the drawing stays readable when it
  * cannot.
  *
+ * **A forest is packed, not laid end to end.** A graph with several roots that
+ * never join is several drawings, and the first version ran them along one row:
+ * an account with nineteen subjects got a canvas 15,452px wide and 1,168 tall,
+ * which is eleven screens of sideways scrolling to see a tree that is seven
+ * rows deep. Each connected piece is now laid out on its own and the pieces are
+ * shelved into rows against a target width derived from their total area, so
+ * the canvas comes out roughly the shape of a screen however many roots arrive.
+ * A graph with one root — every generated goal tree — has one piece, and gets
+ * exactly the layout it got before.
+ *
+ * Pieces keep the order they arrived in rather than being sorted by height, which
+ * is the usual trick for packing them tightly. The order means something to the
+ * reader — the feed sends the biggest subject first — and a few hundred pixels
+ * of ragged edge is a cheaper price than a canvas that reorders itself.
+ *
  * Cycles cannot hang it: rank is computed with a seen-set per walk, and a node
  * reached again keeps the deeper of the two ranks.
  */
@@ -228,46 +243,108 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
   };
   for (const node of graph.nodes) rankOf(node.id, new Set());
 
-  // ---- position across ----------------------------------------------------
+  // ---- connected pieces ---------------------------------------------------
+  // Undirected: two nodes are in one piece if either requires the other, however
+  // far apart. Order follows `graph.nodes`, so the piece holding the feed's first
+  // node is shelved first.
+  const piece = new Map<string, number>();
+  const pieces: string[][] = [];
+  for (const node of graph.nodes) {
+    if (piece.has(node.id)) continue;
+    const group: string[] = [];
+    const queue = [node.id];
+    while (queue.length > 0) {
+      const id = queue.pop()!;
+      if (piece.has(id)) continue;
+      piece.set(id, pieces.length);
+      group.push(id);
+      queue.push(...(parents.get(id) ?? []), ...(kids.get(id) ?? []));
+    }
+    pieces.push(group);
+  }
+
+  // ---- position across, one piece at a time -------------------------------
   const step = GEOM.nodeW + GEOM.colGap;
   const centre = new Map<string, number>();
-  let slot = 0;
 
-  const walk = (id: string, seen: Set<string>): number => {
-    const cached = centre.get(id);
-    if (cached !== undefined) return cached;
-    if (seen.has(id)) return slot * step;
-    seen.add(id);
+  const layOut = (members: readonly string[]) => {
+    let slot = 0;
+    const walk = (id: string, seen: Set<string>): number => {
+      const cached = centre.get(id);
+      if (cached !== undefined) return cached;
+      if (seen.has(id)) return slot * step;
+      seen.add(id);
 
-    // Only the children this node is the *primary* parent of: a node under two
-    // prerequisites belongs to the first one, or it would be counted twice and
-    // both parents would centre on a span they do not own.
-    const mine = (kids.get(id) ?? []).filter((kid) => (parents.get(kid) ?? [])[0] === id);
+      // Only the children this node is the *primary* parent of: a node under two
+      // prerequisites belongs to the first one, or it would be counted twice and
+      // both parents would centre on a span they do not own.
+      const mine = (kids.get(id) ?? []).filter((kid) => (parents.get(kid) ?? [])[0] === id);
 
-    let x: number;
-    if (mine.length === 0) {
-      x = slot * step;
-      slot += 1;
-    } else {
-      const spans = mine.map((kid) => walk(kid, seen));
-      x = (Math.min(...spans) + Math.max(...spans)) / 2;
+      let x: number;
+      if (mine.length === 0) {
+        x = slot * step;
+        slot += 1;
+      } else {
+        const spans = mine.map((kid) => walk(kid, seen));
+        x = (Math.min(...spans) + Math.max(...spans)) / 2;
+      }
+      seen.delete(id);
+      centre.set(id, x);
+      return x;
+    };
+
+    for (const id of members) {
+      if ((parents.get(id) ?? []).length === 0) walk(id, new Set());
     }
-    seen.delete(id);
-    centre.set(id, x);
-    return x;
+    // Anything left is inside a cycle, or hangs off one. It still gets a slot.
+    for (const id of members) walk(id, new Set());
   };
+  for (const members of pieces) layOut(members);
 
-  const roots = graph.nodes.filter((node) => (parents.get(node.id) ?? []).length === 0);
-  for (const root of roots) walk(root.id, new Set());
-  // Anything left is inside a cycle, or hangs off one. It still gets a slot.
-  for (const node of graph.nodes) walk(node.id, new Set());
+  const rowStep = GEOM.nodeH + GEOM.rowGap;
 
-  const placed: PlacedNode[] = graph.nodes.map((node) => ({
-    node,
-    x: (centre.get(node.id) ?? 0) + GEOM.pad,
-    y: (rank.get(node.id) ?? 0) * (GEOM.nodeH + GEOM.rowGap) + GEOM.pad,
-    rank: rank.get(node.id) ?? 0,
-  }));
+  // ---- shelve the pieces --------------------------------------------------
+  const size = pieces.map((members) => {
+    const xs = members.map((id) => centre.get(id) ?? 0);
+    const ranks = members.map((id) => rank.get(id) ?? 0);
+    return {
+      width: Math.max(...xs) - Math.min(...xs) + GEOM.nodeW,
+      height: Math.max(...ranks) * rowStep + GEOM.nodeH,
+      left: Math.min(...xs),
+    };
+  });
+
+  // Aim for a canvas a bit wider than it is tall — the shape of the window it is
+  // read in. With one piece the target is that piece's own width, so nothing is
+  // wrapped that was never several drawings to begin with.
+  const area = size.reduce((sum, box) => sum + box.width * box.height, 0);
+  const widest = size.reduce((max, box) => Math.max(max, box.width), 0);
+  const target = Math.max(widest, Math.sqrt(area * 1.6));
+
+  const offset: { x: number; y: number }[] = [];
+  let shelfX = 0;
+  let shelfY = 0;
+  let shelfH = 0;
+  size.forEach((box, index) => {
+    if (shelfX > 0 && shelfX + box.width > target) {
+      shelfX = 0;
+      shelfY += shelfH + GEOM.rowGap * 2;
+      shelfH = 0;
+    }
+    offset[index] = { x: shelfX - box.left, y: shelfY };
+    shelfX += box.width + GEOM.colGap * 2;
+    shelfH = Math.max(shelfH, box.height);
+  });
+
+  const placed: PlacedNode[] = graph.nodes.map((node) => {
+    const shelf = offset[piece.get(node.id) ?? 0] ?? { x: 0, y: 0 };
+    return {
+      node,
+      x: (centre.get(node.id) ?? 0) + shelf.x + GEOM.pad,
+      y: (rank.get(node.id) ?? 0) * rowStep + shelf.y + GEOM.pad,
+      rank: rank.get(node.id) ?? 0,
+    };
+  });
 
   const at = new Map(placed.map((entry) => [entry.node.id, entry]));
 
