@@ -237,3 +237,96 @@ export function filterRows(
       return time(b.achieved_on) - time(a.achieved_on);
     });
 }
+
+// ---------------------------------------------------------------------------
+// Milestones, in two levels
+// ---------------------------------------------------------------------------
+/**
+ * A key milestone and the smaller ones it folds up.
+ *
+ * There is no parent column on the table and this does not want one. A
+ * milestone already carries a `category` — the reader's own heading, "Full-stack
+ * project", "Competitive Math" — and a heading with several things under it is
+ * exactly what a key milestone is. So the grouping is read out of what the
+ * account already typed rather than asked for a second time.
+ */
+export interface KeyMilestone {
+  /** The category, lowercased — the key the open/shut state is remembered by. */
+  key: string;
+  /** The category as it was typed, which is what the row is titled. */
+  name: string;
+  /** The smaller milestones, in the order the server sent them. */
+  children: RecordRow[];
+  /** How many of them have a date. `reached === children.length` draws the tick. */
+  reached: number;
+  /** The newest date among them, or '' while none has happened. */
+  on: string;
+}
+
+/**
+ * Split milestones into the key ones and the loose ones.
+ *
+ * **A category of one is not a key milestone.** It is a milestone, and it draws
+ * as one, at the top level beside the keys. Folding a single row behind a
+ * disclosure hides it and saves nothing; the point of the two levels is that
+ * eleven milestones read as three lines until you ask for more.
+ *
+ * Uncategorised milestones are loose for the same reason — they share no
+ * heading, so there is nothing to file them under but "Other", and a group
+ * called "Other" is a list with a lid on it.
+ *
+ * Keys sort by their newest achievement, so the thing you are furthest through
+ * is at the top; a key nobody has started yet has no date and sorts last, which
+ * is the ordering `_mine` already applies to rows in backend/api/records.py.
+ */
+export function keyMilestones(rows: RecordRow[]): {
+  keys: KeyMilestone[];
+  loose: RecordRow[];
+} {
+  const groups = new Map<string, { name: string; children: RecordRow[] }>();
+  const loose: RecordRow[] = [];
+
+  for (const row of rows) {
+    if (row.kind !== 'milestone') continue;
+    const heading = row.category.trim();
+    if (!heading) {
+      loose.push(row);
+      continue;
+    }
+    const key = heading.toLowerCase();
+    const group = groups.get(key) ?? { name: heading, children: [] };
+    group.children.push(row);
+    groups.set(key, group);
+  }
+
+  const keys: KeyMilestone[] = [];
+  for (const [key, group] of groups) {
+    if (group.children.length < 2) {
+      loose.push(...group.children);
+      continue;
+    }
+    keys.push({
+      key,
+      name: group.name,
+      children: group.children,
+      reached: group.children.filter((row) => Boolean(row.achieved_on)).length,
+      on: group.children.reduce(
+        (latest, row) => (time(row.achieved_on) > time(latest) ? row.achieved_on : latest),
+        '',
+      ),
+    });
+  }
+
+  // Both lists by the same rule, because the loose one is built in two passes
+  // — the uncategorised as they arrive, the categories of one after every
+  // group is known — and would otherwise print in the order it was assembled
+  // rather than in any order a reader could name.
+  const byRecency = (a: string, b: string, an: string, bn: string) => {
+    if (Boolean(a) !== Boolean(b)) return a ? -1 : 1;
+    return time(b) - time(a) || an.localeCompare(bn);
+  };
+  keys.sort((a, b) => byRecency(a.on, b.on, a.name, b.name));
+  loose.sort((a, b) => byRecency(a.achieved_on, b.achieved_on, a.name, b.name));
+
+  return { keys, loose };
+}

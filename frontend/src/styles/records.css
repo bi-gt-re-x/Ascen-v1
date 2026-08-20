@@ -437,14 +437,81 @@ html[data-theme="dark"] .rc-page { color-scheme: dark; }
     font-size: 10px;
     color: transparent;
 }
-.rc-miles li.is-done .rc-mile-tick {
+/* Scoped to the li's own button, not any button inside it: a key milestone
+   whose children are all reached is `is-done`, and a descendant selector would
+   tick every child from the parent rather than from the child's own date. */
+.rc-miles li.is-done > button .rc-mile-tick {
     border-color: var(--rc-good);
     background: var(--rc-good);
     color: #fff;
 }
-.rc-miles li.is-done .rc-mile-name { color: var(--rc-text); }
+.rc-miles li.is-done > button .rc-mile-name { color: var(--rc-text); }
 .rc-mile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rc-mile-when { font-size: 11.5px; color: var(--rc-faint); white-space: nowrap; }
+
+/* ---------- Folding ------------------------------------------------------- */
+/* One chevron, one rotation, used by the section head and by every key
+   milestone. It points right when shut and down when open, which is the only
+   thing that has to be read from across the page. */
+.rc-caret {
+    width: 14px; height: 14px;
+    flex: none;
+    color: var(--rc-faint);
+    transition: transform .16s ease;
+}
+[aria-expanded='true'] > .rc-caret { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) {
+    .rc-caret { transition: none; }
+}
+
+/* The section title, made clickable without being made to look like a button:
+   the heading keeps its own type and the chevron carries the affordance. */
+.rc-fold {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.rc-fold:hover .rc-caret,
+.rc-fold:hover .rc-section-title { color: var(--rc-text); }
+.rc-fold-n {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--rc-card-2);
+    color: var(--rc-faint);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* ---------- Key milestones ------------------------------------------------ */
+/* Qualified by .rc-miles so it outweighs the three-column `.rc-miles button`
+   above, which is otherwise the more specific of the two and wins the track
+   list — the head's four children then land in three columns and the count
+   wraps onto a line of its own. */
+.rc-miles .rc-key-head {
+    /* Four columns rather than the three a plain milestone uses: the caret
+       takes the tick's place at the left and the tick moves in beside it. */
+    grid-template-columns: 14px 20px minmax(0, 1fr) auto;
+    gap: 9px;
+}
+.rc-key.is-open > .rc-key-head .rc-mile-name { color: var(--rc-text); }
+.rc-key-n { font-size: 11.5px; font-weight: 600; color: var(--rc-faint); white-space: nowrap; }
+.rc-key.is-done > .rc-key-head .rc-key-n { color: var(--rc-good); }
+
+.rc-key-kids {
+    list-style: none;
+    /* Indented to the parent's name column, with the rule standing in for the
+       run of the fold — the child rows are the same rows, one level in. */
+    margin: 0 0 4px 16px;
+    padding: 0 0 0 15px;
+    border-left: 1.5px solid var(--rc-line);
+}
+.rc-key-kids button { font-size: 12.5px; padding: 7px 8px; }
 
 /* ---------- Record evolution ---------------------------------------------- */
 .rc-ev-wrap {

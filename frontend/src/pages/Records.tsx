@@ -30,6 +30,19 @@
  * utils/records. In short: beating your AMC 8 score writes a *new row* rather
  * than editing the old one, which is what makes the evolution drawable at all.
  *
+ * ## Milestones fold, and the category is what they fold into
+ *
+ * Eleven milestones is a scroll, and a scroll is not a summary. So the section
+ * draws *key* milestones — one per category with more than one thing in it —
+ * and each opens onto the smaller ones it is made of. Nothing new is stored to
+ * do it: the account already types a category, and a heading with several
+ * things under it is what a key milestone is. The rule, and why a category of
+ * one stays a plain row, is in utils/records — see `keyMilestones`.
+ *
+ * The whole section folds too, from its own title. Both start shut: the counts
+ * ride on the header and on every key row, so the closed state says how much
+ * is behind it rather than merely hiding it.
+ *
  * The figures count up from zero on arrival. Not decoration here in the way it
  * would be on a settings page: this is the one screen whose entire content is
  * numbers somebody is proud of, and a page of high scores that simply appears
@@ -55,10 +68,12 @@ import {
   filterRows,
   formatOn,
   formatValue,
+  keyMilestones,
   personalBests,
   tally,
   timeline,
   type Best,
+  type KeyMilestone,
   type Show,
   type Sort,
 } from '@/utils/records';
@@ -99,6 +114,68 @@ function Counted({ amount, decimals, unit }: { amount: number; decimals: number;
 // ---------------------------------------------------------------------------
 // Logged records
 // ---------------------------------------------------------------------------
+/** The one chevron this page folds things with, pointing right until open. */
+function Caret() {
+  return (
+    <svg className="rc-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         strokeWidth="2.4" aria-hidden="true">
+      <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * A key milestone, and the smaller ones underneath it once it is opened.
+ *
+ * The head is a row in its own right and not only a label: it carries the tick
+ * the children carry, filled only when every one of them is reached, and the
+ * "2 of 5" that makes the shut state worth reading. Which category becomes a
+ * key milestone is decided in utils/records — see `keyMilestones`.
+ */
+function KeyRow({
+  entry,
+  open,
+  onToggle,
+  onPick,
+}: {
+  entry: KeyMilestone;
+  open: boolean;
+  onToggle: () => void;
+  onPick: (row: RecordRow) => void;
+}) {
+  const total = entry.children.length;
+  const done = entry.reached === total;
+
+  return (
+    <li className={`rc-key${open ? ' is-open' : ''}${done ? ' is-done' : ''}`}>
+      <button type="button" className="rc-key-head" aria-expanded={open} onClick={onToggle}>
+        <Caret />
+        <span className="rc-mile-tick" aria-hidden="true">{done ? '✓' : ''}</span>
+        <span className="rc-mile-name">{entry.name}</span>
+        <span className="rc-key-n">
+          {entry.reached} of {total}
+        </span>
+      </button>
+
+      {open && (
+        <ul className="rc-key-kids">
+          {entry.children.map((row) => (
+            <li key={row.id} className={row.achieved_on ? 'is-done' : ''}>
+              <button type="button" onClick={() => onPick(row)}>
+                <span className="rc-mile-tick" aria-hidden="true">
+                  {row.achieved_on ? '✓' : ''}
+                </span>
+                <span className="rc-mile-name">{row.name}</span>
+                <span className="rc-mile-when">{formatOn(row.achieved_on)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
 function BestCard({ best, onOpen }: { best: Best; onOpen: () => void }) {
   const gain = best.value - best.first;
   return (
@@ -312,12 +389,24 @@ export default function Records() {
   const [show, setShow] = useState<Show>('all');
   const [sort, setSort] = useState<Sort>('newest');
 
+  /* The milestones section, and which key milestones inside it are open.
+     Both start shut. A key milestone that opened by default would put the page
+     back where it was — eleven rows — and the header and each key row carry
+     their own counts, so nothing is hidden without saying how much. */
+  const [milesShut, setMilesShut] = useState(false);
+  const [openKeys, setOpenKeys] = useState<Record<string, boolean>>({});
+  const toggleKey = useCallback(
+    (key: string) => setOpenKeys((open) => ({ ...open, [key]: !open[key] })),
+    [],
+  );
+
   const rows = useMemo(() => logged.data?.records ?? [], [logged.data]);
   const bests = useMemo(() => personalBests(rows), [rows]);
   const counts = useMemo(() => tally(rows), [rows]);
   const cats = useMemo(() => categoriesOf(rows), [rows]);
   const recent = useMemo(() => timeline(rows), [rows]);
   const milestones = useMemo(() => rows.filter((row) => row.kind === 'milestone'), [rows]);
+  const { keys: keyMiles, loose: looseMiles } = useMemo(() => keyMilestones(rows), [rows]);
 
   /** The record the evolution chart is drawing. Defaults to the richest one. */
   const evolving = useMemo(() => {
@@ -526,19 +615,39 @@ export default function Records() {
 
         <section className="rc-section">
           <div className="rc-section-head">
-            <h2 className="rc-section-title">🏅 Milestones</h2>
+            <button
+              type="button"
+              className="rc-fold"
+              aria-expanded={!milesShut}
+              title={milesShut ? 'Show the milestones' : 'Hide the milestones'}
+              onClick={() => setMilesShut((shut) => !shut)}
+            >
+              <Caret />
+              <h2 className="rc-section-title">🏅 Milestones</h2>
+              {milestones.length > 0 && <span className="rc-fold-n">{milestones.length}</span>}
+            </button>
             <button type="button" className="rc-link" onClick={() => open('milestone')}>
               + Add
             </button>
           </div>
-          {milestones.length === 0 ? (
+          {milesShut ? null : milestones.length === 0 ? (
             <p className="rc-empty">
               A milestone is a thing that happened once — first AIME problem solved, first
-              full-stack project. No figure, just the fact.
+              full-stack project. No figure, just the fact. Give two of them the same category
+              and that category becomes a key milestone they fold up into.
             </p>
           ) : (
             <ul className="rc-miles">
-              {milestones.map((row) => (
+              {keyMiles.map((key) => (
+                <KeyRow
+                  key={key.key}
+                  entry={key}
+                  open={Boolean(openKeys[key.key])}
+                  onToggle={() => toggleKey(key.key)}
+                  onPick={(row) => open('milestone', row)}
+                />
+              ))}
+              {looseMiles.map((row) => (
                 <li key={row.id} className={row.achieved_on ? 'is-done' : ''}>
                   <button type="button" onClick={() => open('milestone', row)}>
                     <span className="rc-mile-tick" aria-hidden="true">
