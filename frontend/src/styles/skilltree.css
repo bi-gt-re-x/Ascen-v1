@@ -1,5 +1,6 @@
 /* ==========================================================================
-   skilltree.css — the branching graph. See src/pages/SkillTrees.tsx.
+   skilltree.css — the skill tree. See src/pages/SkillTrees.tsx and
+   src/components/SkillTree/.
 
    Every class is prefixed `stx-`, for the same reason analytics.css prefixes
    `ax-`: styles/dashboard.css is loaded on every page and dresses a pile of
@@ -10,14 +11,25 @@
    Colour is a token block on `.stx-page`, redeclared once for dark. Nothing
    below the block names a colour, so the two themes are one layout.
 
-   ## The row geometry is a contract
+   ## Four states, four tokens, and shape carries them too
 
-   `--stx-row-h` is the height of one branch row, and three things agree about
-   it without measuring each other: the leaf column packs three leaves into
-   exactly that height, the trunk's spine is inset by half of it so the line
-   starts and ends on the first and last node's centre, and the `<Fan/>` SVG in
-   the page is drawn against a viewBox of the same height. Change it here and
-   the number in the component has to change with it.
+   Locked, available, in progress and complete are `--stx-locked`, `--stx-avail`,
+   `--stx-prog` and `--stx-done`. Each node sets `--state` to one of them once
+   and everything inside it — the badge, the pips, the bar, the border, the
+   selected ring — reads that single property. Adding a fifth state is a token
+   and one rule rather than a search for four hard-coded hues.
+
+   The states are never colour alone: the badge holds a different glyph in each,
+   the connections differ in weight and dash as well as hue, and every node
+   prints a different line. See the note in components/SkillTree/SkillNode.
+
+   ## The canvas geometry is owned by JavaScript
+
+   Node size, spacing and the connection paths are worked out in
+   utils/skillGraph (`GEOM`) because the layout does arithmetic with them and
+   the SVG is drawn in the same coordinate space. This file does not restate
+   those numbers: a node's width and position arrive as inline styles, and the
+   rules here only handle what a node looks like, never where it is or how big.
    ========================================================================== */
 
 .stx-page {
@@ -34,15 +46,19 @@
 
     --stx-violet: #6c5ce7;
     --stx-blue: #2f80ed;
-    --stx-green: #27ae60;
+    --stx-green: #1f8a54;
+
+    /* The four states. Every state-aware rule below reads `--state`, which one
+       rule per status sets to one of these. */
+    --stx-locked: #98a1ae;
+    --stx-avail: #2f80ed;
+    --stx-prog: #6c5ce7;
+    --stx-done: #1f8a54;
 
     --stx-radius: 16px;
     --stx-gap: 16px;
     --stx-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
-
-    /* See the note at the top: three separate things depend on this number. */
-    --stx-row-h: 176px;
-    --stx-leaf-h: 52px;
+    --stx-shadow-lift: 0 2px 6px rgba(16, 24, 40, .07), 0 14px 34px rgba(16, 24, 40, .09);
 
     background: var(--stx-bg);
     color: var(--stx-text);
@@ -67,7 +83,14 @@ html[data-theme="dark"] .stx-page {
     --stx-blue: #4da3ff;
     --stx-green: #3fb950;
 
+    --stx-locked: #6e7781;
+    --stx-avail: #4da3ff;
+    --stx-prog: #8b7cf8;
+    --stx-done: #3fb950;
+
     --stx-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --stx-shadow-lift: 0 6px 24px rgba(0, 0, 0, .45);
+    color-scheme: dark;
 }
 
 .stx-shell {
@@ -88,612 +111,609 @@ html[data-theme="dark"] .stx-page {
     white-space: nowrap; border: 0;
 }
 
-/* ---------- Head ---------------------------------------------------------- */
+/* ---------- Header --------------------------------------------------------
+   Compact by instruction, so it is one band rather than a hero: the title and
+   its line on the left, and the three figures on the right at the weight of a
+   caption. Nothing here is a card. */
 .stx-head {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: 16px;
     flex-wrap: wrap;
+    gap: 18px;
+    padding: 4px 2px 2px;
 }
 .stx-head h1 {
-    margin: 0 0 4px;
+    margin: 0;
     font-size: 27px;
+    font-weight: 800;
+    letter-spacing: -.03em;
+}
+.stx-head-text p {
+    margin: 5px 0 0;
+    font-size: 13.5px;
+    color: var(--stx-muted);
+    max-width: 62ch;
+}
+.stx-head-figures {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.stx-level { display: flex; align-items: center; gap: 11px; }
+.stx-level > div { display: flex; flex-direction: column; line-height: 1.15; }
+.stx-level span {
+    font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: -.02em;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--stx-faint);
 }
-.stx-head p { margin: 0; font-size: 14px; color: var(--stx-muted); }
+.stx-level strong { font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
 
-.stx-select {
-    appearance: none;
-    padding: 10px 34px 10px 15px;
-    border: 1px solid var(--stx-line);
-    border-radius: 11px;
-    background: var(--stx-card);
-    color: var(--stx-text);
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    /* The chevron, drawn rather than shipped — one selector, both themes,
-       because it paints with currentColor through a mask. */
-    background-image: none;
+.stx-milestone { display: flex; flex-direction: column; gap: 7px; min-width: 210px; }
+.stx-milestone-top { font-size: 12.5px; color: var(--stx-muted); }
+.stx-milestone-top b { color: var(--stx-text); font-weight: 700; }
+.stx-milestone-top em {
+    display: block;
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--stx-faint);
 }
-.stx-select-wrap { position: relative; display: inline-flex; }
-.stx-select-wrap::after {
-    content: "";
+.stx-head-xp { margin: 0; font-size: 12px; color: var(--stx-faint); max-width: 20ch; }
+
+/* ---------- Toolbar -------------------------------------------------------
+   One row at form-field weight. It sits above the canvas rather than inside a
+   panel of its own, because a filter bar in a card reads as a section and this
+   is a control strip. */
+.stx-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    padding: 10px 12px;
+    border: 1px solid var(--stx-line);
+    border-radius: 13px;
+    background: var(--stx-card);
+    box-shadow: var(--stx-shadow);
+}
+.stx-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1 1 200px;
+    max-width: 320px;
+}
+.stx-search svg {
     position: absolute;
-    right: 13px;
-    top: 50%;
-    width: 9px;
-    height: 9px;
-    transform: translateY(-65%) rotate(45deg);
-    border-right: 2px solid var(--stx-muted);
-    border-bottom: 2px solid var(--stx-muted);
+    left: 10px;
+    width: 15px; height: 15px;
+    color: var(--stx-faint);
     pointer-events: none;
 }
-.stx-select:focus { outline: 2px solid var(--stx-violet); outline-offset: 1px; }
+.stx-search input {
+    width: 100%;
+    padding: 8px 10px 8px 31px;
+    border: 1px solid var(--stx-line);
+    border-radius: 9px;
+    background: var(--stx-card-2);
+    color: var(--stx-text);
+    font: inherit;
+    font-size: 13px;
+}
+.stx-search input::placeholder { color: var(--stx-faint); }
+.stx-field select {
+    padding: 8px 26px 8px 10px;
+    border: 1px solid var(--stx-line);
+    border-radius: 9px;
+    background: var(--stx-card-2);
+    color: var(--stx-text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+.stx-search input:focus-visible,
+.stx-field select:focus-visible {
+    outline: 2px solid var(--stx-violet);
+    outline-offset: 1px;
+}
 
-/* ---------- The three-part layout ----------------------------------------
-   Stats above the canvas on the left, the detail panel down the right across
-   both rows. The detail panel is a fixed column because it is a reading pane:
-   a description and a list of nodes reflowing every time the window moves is
-   harder to come back to than one that stays where it was. */
+.stx-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.stx-chip {
+    padding: 6px 11px;
+    border: 1px solid var(--stx-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--stx-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .14s ease, color .14s ease, background .14s ease;
+}
+.stx-chip:hover { border-color: var(--stx-faint); color: var(--stx-text); }
+.stx-chip.is-locked { --state: var(--stx-locked); }
+.stx-chip.is-available { --state: var(--stx-avail); }
+.stx-chip.is-progress { --state: var(--stx-prog); }
+.stx-chip.is-complete { --state: var(--stx-done); }
+.stx-chip.is-on {
+    border-color: color-mix(in srgb, var(--state) 45%, transparent);
+    background: color-mix(in srgb, var(--state) 12%, transparent);
+    color: var(--state);
+}
+
+.stx-cleared {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12px;
+    color: var(--stx-faint);
+}
+.stx-cleared b { color: var(--stx-text); }
+.stx-clear {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--stx-violet);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.stx-clear:hover { text-decoration: underline; }
+
+/* ---------- Layout --------------------------------------------------------
+   Canvas and panel, side by side. The panel keeps its column when nothing is
+   selected rather than collapsing: a layout that reflowed the whole canvas on
+   every click would make choosing a node feel like navigating. */
 .stx-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 340px;
     gap: var(--stx-gap);
     align-items: start;
 }
-.stx-stats { grid-column: 1; grid-row: 1; }
-.stx-canvas { grid-column: 1; grid-row: 2; }
-.stx-detail { grid-column: 2; grid-row: 1 / span 2; }
 
-/* ---------- Stats --------------------------------------------------------- */
-.stx-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    background: var(--stx-card);
-    border: 1px solid var(--stx-line);
-    border-radius: var(--stx-radius);
-    box-shadow: var(--stx-shadow);
-    padding: 4px;
-}
-.stx-stat {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 18px;
-    min-width: 0;
-}
-/* Hairlines between the three rather than three cards: they are one reading of
-   one view, and three boxes would read as three unrelated figures. */
-.stx-stat + .stx-stat { border-left: 1px solid var(--stx-line-soft); }
-.stx-stat > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.stx-stat span {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--stx-muted);
-}
-.stx-stat strong {
-    font-size: 25px;
-    font-weight: 700;
-    letter-spacing: -.02em;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.15;
-}
-.stx-stat strong i { font-style: normal; font-size: 15px; color: var(--stx-faint); }
-.stx-stat em {
-    font-style: normal;
-    font-size: 11.5px;
-    color: var(--stx-faint);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.stx-ring { width: 46px; height: 46px; flex: none; }
-.stx-ring-track { fill: none; stroke: var(--stx-line); stroke-width: 5; }
-.stx-ring-arc {
-    fill: none;
-    stroke: var(--stx-violet);
-    stroke-width: 5;
-    stroke-linecap: round;
-}
-
-.stx-stat-icon {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 13px;
-    flex: none;
-}
-.stx-stat-icon svg { width: 21px; height: 21px; }
-.stx-stat-icon.is-green {
-    background: color-mix(in srgb, var(--stx-green) 13%, transparent);
-    color: var(--stx-green);
-}
-.stx-stat-icon.is-violet {
-    background: color-mix(in srgb, var(--stx-violet) 13%, transparent);
-    color: var(--stx-violet);
-}
-
-/* ---------- The canvas ---------------------------------------------------- */
+/* ---------- Canvas -------------------------------------------------------- */
 .stx-canvas {
     position: relative;
-    display: grid;
-    grid-template-columns: 156px minmax(0, 1fr);
-    min-height: 520px;
-    background: var(--stx-card);
     border: 1px solid var(--stx-line);
     border-radius: var(--stx-radius);
+    background: var(--stx-card);
     box-shadow: var(--stx-shadow);
     overflow: hidden;
 }
-/* Filling the window is a class rather than the Fullscreen API: the API takes
-   the element out of the document's stacking context, which drops the page's
-   own theme variables on some engines and cannot be left by clicking the
-   button that opened it. Escape closes this one — see the page. */
+/* Full screen is a fixed layer rather than a resize, so the scroll box keeps
+   its own scroll position and the drawing does not relayout on the way in. */
 .stx-canvas.is-full {
     position: fixed;
     inset: 0;
-    z-index: 950;
+    z-index: 60;
     border-radius: 0;
-    min-height: 0;
+    border: 0;
 }
 
-.stx-cats {
+.stx-scroll {
+    height: clamp(440px, 62vh, 760px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    cursor: grab;
+    /* The faintest possible grid. It is a depth cue for panning — something
+       has to move under the drag or the canvas reads as a still image — and at
+       this contrast it is invisible until the moment it is needed. */
+    background-image: radial-gradient(var(--stx-line) 1px, transparent 1px);
+    background-size: 26px 26px;
+}
+.stx-canvas.is-full .stx-scroll { height: 100vh; }
+.stx-scroll.is-dragging { cursor: grabbing; }
+/* Every node is a button, so a drag that starts on the background must not
+   leave the page with a text selection down it. */
+.stx-scroll.is-dragging * { user-select: none; }
+
+.stx-stage { position: relative; }
+.stx-scaled {
+    position: relative;
+    transform-origin: 0 0;
+}
+.stx-wires { position: absolute; inset: 0; overflow: visible; }
+
+.stx-canvas-empty {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 14px 10px;
-    border-right: 1px solid var(--stx-line-soft);
-    background: var(--stx-card-2);
-    overflow-y: auto;
-}
-.stx-cat {
-    display: flex;
+    gap: 5px;
     align-items: center;
-    gap: 8px;
-    padding: 9px 11px;
-    border: none;
-    border-radius: 10px;
-    background: none;
-    color: var(--stx-muted);
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
+    justify-content: center;
+    height: 100%;
+    padding: 30px;
+    text-align: center;
+}
+.stx-canvas-empty strong { font-size: 15px; }
+.stx-canvas-empty span { font-size: 13px; color: var(--stx-muted); max-width: 42ch; }
+
+/* ---------- Connections ---------------------------------------------------
+   Weight and dash as well as hue, so the route survives being looked at from
+   the far end of a zoomed-out canvas and does not rely on colour alone. */
+.stx-wire {
+    stroke: var(--stx-wire);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    transition: stroke .18s ease, stroke-width .18s ease, opacity .18s ease;
+}
+.stx-wire.is-locked { stroke-dasharray: 3 6; opacity: .7; }
+.stx-wire.is-available { stroke: color-mix(in srgb, var(--stx-avail) 55%, var(--stx-wire)); }
+.stx-wire.is-active {
+    stroke: color-mix(in srgb, var(--stx-prog) 70%, var(--stx-wire));
+    stroke-width: 2;
+}
+.stx-wire.is-complete {
+    stroke: color-mix(in srgb, var(--stx-done) 62%, var(--stx-wire));
+    stroke-width: 2.4;
+}
+.stx-wire.is-lit { stroke-width: 3; opacity: 1; }
+
+/* ---------- Node ----------------------------------------------------------
+   Position and width arrive inline from the layout; nothing here places one. */
+.stx-node {
+    --state: var(--stx-locked);
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border: 1px solid var(--stx-line);
+    border-radius: 13px;
+    background: var(--stx-card);
+    box-shadow: var(--stx-shadow);
+    color: var(--stx-text);
+    font: inherit;
     text-align: left;
     cursor: pointer;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
 }
-.stx-cat:hover { background: var(--stx-card); color: var(--stx-text); }
-.stx-cat.is-on {
-    background: color-mix(in srgb, var(--stx-violet) 12%, transparent);
-    color: var(--stx-violet);
-}
-.stx-cat-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.stx-cat-count { flex: none; font-size: 11.5px; color: var(--stx-faint); font-variant-numeric: tabular-nums; }
-.stx-cat.is-on .stx-cat-count { color: inherit; }
+.stx-node.is-available { --state: var(--stx-avail); }
+.stx-node.is-progress { --state: var(--stx-prog); }
+.stx-node.is-complete { --state: var(--stx-done); }
 
-.stx-canvas-scroll {
-    overflow: auto;
-    padding: 24px 16px 60px;
-}
-.stx-canvas-zoom { width: max-content; }
-
-/* ---------- The graph ------------------------------------------------------
-   Root on the left, a spine, then one row per subject. Every wire is either a
-   1fr-free absolute rule against `--stx-row-h` or the SVG fan in the page —
-   nothing here measures the DOM, which is what keeps the drawing correct while
-   the canvas is being zoomed. */
-.stx-graph { display: flex; align-items: center; gap: 0; }
-
-.stx-root-col {
-    display: flex;
-    align-items: center;
-    flex: none;
-}
-.stx-junction {
-    width: 24px;
+/* A hairline of the node's own state along the top. The whole card tinted
+   would give four coloured boxes shouting at once across a hundred nodes. */
+.stx-node::before {
+    content: '';
+    position: absolute;
+    left: 12px; right: 12px; top: -1px;
     height: 2px;
-    background: var(--stx-wire);
-    position: relative;
+    border-radius: 0 0 2px 2px;
+    background: var(--state);
 }
-.stx-junction::after {
-    content: "";
-    position: absolute;
-    right: -4px;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    margin-top: -4px;
-    border-radius: 50%;
-    background: var(--stx-card);
-    border: 2px solid var(--stx-wire);
+.stx-node.is-locked {
+    background: var(--stx-card-2);
+    color: var(--stx-muted);
+    box-shadow: none;
+}
+.stx-node.is-locked::before { background: var(--stx-line); }
+
+.stx-node:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--state) 45%, var(--stx-line));
+    box-shadow: var(--stx-shadow-lift);
+}
+.stx-node:focus-visible { outline: 2px solid var(--state); outline-offset: 2px; }
+.stx-node.is-selected {
+    border-color: var(--state);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--state) 30%, transparent), var(--stx-shadow-lift);
 }
 
-.stx-branch-col {
-    position: relative;
-    padding-left: 38px;
-    flex: none;
-}
-/* The spine. Inset by half a row at each end so it starts on the first node's
-   centre and stops on the last one's, rather than running past both. */
-.stx-branch-col::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: calc(var(--stx-row-h) / 2);
-    bottom: calc(var(--stx-row-h) / 2);
-    width: 2px;
-    background: var(--stx-wire);
-    border-radius: 2px;
-}
-/* A single row has no span for a spine to cover, and a 0-height line with two
-   rounded ends is a smudge. */
-.stx-branch-col:has(.stx-row:only-child)::before { display: none; }
-
-.stx-row {
-    position: relative;
-    display: flex;
-    align-items: center;
-    height: var(--stx-row-h);
-}
-/* The stub from the spine into this row's node. */
-.stx-row::before {
-    content: "";
-    position: absolute;
-    left: -38px;
-    top: 50%;
-    width: 38px;
-    height: 2px;
-    background: var(--stx-wire);
-}
-
-/* ---------- Nodes --------------------------------------------------------- */
-.stx-node {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    box-sizing: border-box;
-    padding: 11px 15px;
-    border: 1px solid var(--stx-line);
-    border-radius: 14px;
-    background: var(--stx-card);
-    box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
-    color: var(--stx-text);
-    font-family: inherit;
-    text-align: left;
-}
-button.stx-node { cursor: pointer; }
-button.stx-node:hover { border-color: var(--stx-violet); }
-button.stx-node:focus-visible { outline: 2px solid var(--stx-violet); outline-offset: 2px; }
-
-.stx-node-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.stx-node-body strong {
-    font-size: 13.5px;
+.stx-node-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.stx-node-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
     font-weight: 650;
-    letter-spacing: -.01em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.stx-node-body em {
-    font-style: normal;
-    font-size: 11.5px;
-    color: var(--stx-muted);
-}
-
-.stx-node-icon {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 11px;
+.stx-node-xp {
     flex: none;
-    background: color-mix(in srgb, var(--stx-violet) 12%, transparent);
-    color: var(--stx-violet);
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--stx-card-2);
+    color: var(--stx-muted);
+    font-size: 10.5px;
+    font-weight: 700;
 }
-.stx-node-icon .cal-ico { width: 17px; height: 17px; }
-.stx-initial { font-style: normal; font-size: 14px; font-weight: 700; }
+.stx-node.is-locked .stx-node-xp { background: var(--stx-line-soft); }
 
-/* The level bar along the bottom edge of a root or branch node — the same
-   figure the detail panel prints, at a glance and without a number. */
-.stx-node-bar {
-    position: absolute;
-    left: 15px;
-    right: 15px;
-    bottom: 8px;
-    height: 3px;
-    border-radius: 3px;
-    background: var(--stx-line-soft);
+.stx-node-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.stx-node-gate {
+    flex: 1;
+    min-width: 0;
+    font-size: 11.5px;
+    color: var(--stx-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.stx-node.is-complete .stx-node-gate { color: var(--stx-done); }
+
+/* Four pips, filled to the tier — the difficulty indicator, deliberately small
+   enough to be scenery until somebody goes looking for it. */
+.stx-pips { display: flex; gap: 2.5px; flex: none; }
+.stx-pips i {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--stx-line);
+}
+.stx-pips i.is-on { background: color-mix(in srgb, var(--state) 70%, transparent); }
+
+/* ---------- Badge ---------------------------------------------------------- */
+.stx-badge {
+    --state: var(--stx-locked);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px 3px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--state) 12%, transparent);
+    color: var(--state);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    white-space: nowrap;
+}
+.stx-badge.is-available { --state: var(--stx-avail); }
+.stx-badge.is-progress { --state: var(--stx-prog); }
+.stx-badge.is-complete { --state: var(--stx-done); }
+.stx-badge svg { width: 13px; height: 13px; flex: none; }
+.stx-badge.is-compact { padding: 3px; gap: 0; }
+
+/* ---------- Progress ------------------------------------------------------- */
+.stx-bar {
+    display: block;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--stx-line);
     overflow: hidden;
 }
-.stx-node-bar span { display: block; height: 100%; background: var(--stx-violet); border-radius: inherit; }
-
-/* Sized so root + spine + branch + fan + leaf clears the canvas at a laptop
-   width with the rail open — about 660px of graph in 660px of canvas. Past
-   that the canvas scrolls rather than the nodes shrinking: a node narrow
-   enough to always fit is a node that cannot hold "Machine Learning". */
-.stx-root,
-.stx-branch {
-    width: 206px;
-    padding-bottom: 17px;
+.stx-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--state, var(--stx-violet));
+    transition: width .3s ease;
 }
-.stx-root {
-    border-color: color-mix(in srgb, var(--stx-violet) 45%, var(--stx-line));
-    box-shadow: 0 6px 18px color-mix(in srgb, var(--stx-violet) 14%, transparent);
+.stx-ring-wrap { position: relative; display: inline-grid; place-items: center; flex: none; }
+.stx-ring { width: 100%; height: 100%; display: block; }
+.stx-ring-track { fill: none; stroke: var(--stx-line); }
+.stx-ring-arc {
+    fill: none;
+    stroke: var(--state, var(--stx-violet));
+    stroke-linecap: round;
+    transition: stroke-dasharray .35s ease;
 }
-.stx-root-icon {
-    background: var(--stx-violet);
-    color: #fff;
-}
-.stx-root-icon svg { width: 19px; height: 19px; }
-
-.stx-branch.is-chosen,
-.stx-leaf.is-chosen {
-    border-color: var(--stx-violet);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--stx-violet) 16%, transparent);
+.stx-ring-label {
+    position: absolute;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: -.02em;
 }
 
-/* ---------- Leaves -------------------------------------------------------- */
-.stx-fan { flex: none; width: 32px; height: var(--stx-row-h); }
-.stx-fan path { fill: none; stroke: var(--stx-wire); stroke-width: 2; }
-
-.stx-leaf-col {
+/* ---------- Detail panel --------------------------------------------------- */
+.stx-panel {
+    position: sticky;
+    top: 16px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    height: var(--stx-row-h);
-    flex: none;
+    gap: 10px;
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    padding: 16px;
+    border: 1px solid var(--stx-line);
+    border-radius: var(--stx-radius);
+    background: var(--stx-card);
+    box-shadow: var(--stx-shadow);
 }
-.stx-leaf {
-    width: 188px;
-    height: var(--stx-leaf-h);
-    padding: 0 14px;
-    border-radius: 13px;
+.stx-panel.is-empty { justify-content: center; min-height: 200px; }
+.stx-panel-hint {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--stx-faint);
+    text-align: center;
 }
-.stx-leaf-mark {
+.stx-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stx-panel-x {
     display: grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    flex: none;
-    background: var(--stx-line-soft);
+    width: 26px; height: 26px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--stx-faint);
+    cursor: pointer;
+}
+.stx-panel-x:hover { background: var(--stx-card-2); color: var(--stx-text); }
+.stx-panel-x svg { width: 14px; height: 14px; }
+
+.stx-panel-name {
+    margin: 2px 0 0;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.25;
+}
+.stx-panel-kind {
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
     color: var(--stx-faint);
 }
-.stx-leaf-mark svg { width: 14px; height: 14px; }
+.stx-panel-blurb { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--stx-muted); }
 
-/* Three states, and each is a different fact rather than three shades of one.
-   Complete is finished work, in-progress is a branch with a next node, locked
-   is a branch with nothing on it yet — and locked is grey rather than red
-   because it is the starting state of every branch on every account. */
-.stx-leaf.is-done .stx-leaf-mark { background: var(--stx-green); color: #fff; }
-.stx-leaf.is-part .stx-leaf-mark {
-    background: color-mix(in srgb, var(--tone) 16%, transparent);
-    color: var(--tone);
+.stx-panel-progress {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 13px;
+    border: 1px solid var(--stx-line);
+    border-radius: 12px;
+    background: var(--stx-card-2);
 }
-.stx-leaf.is-locked { background: var(--stx-card-2); }
-.stx-leaf.is-locked .stx-node-body strong { color: var(--stx-muted); }
+.stx-panel-progress dl { margin: 0; display: grid; gap: 5px; min-width: 0; flex: 1; }
+.stx-panel-progress div { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; }
+.stx-panel-progress dt { color: var(--stx-faint); }
+.stx-panel-progress dd { margin: 0; font-weight: 650; text-align: right; }
 
-/* ---------- Zoom ---------------------------------------------------------- */
+.stx-panel-title {
+    margin: 8px 0 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--stx-faint);
+}
+.stx-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.stx-links button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--stx-text);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.stx-links button:hover { background: var(--stx-card-2); }
+.stx-links span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Zoom controls and hint ----------------------------------------- */
 .stx-zoom {
     position: absolute;
-    left: 170px;
-    bottom: 16px;
+    right: 14px; bottom: 14px;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
     border: 1px solid var(--stx-line);
     border-radius: 11px;
-    overflow: hidden;
-    background: var(--stx-card);
+    background: color-mix(in srgb, var(--stx-card) 88%, transparent);
+    backdrop-filter: blur(6px);
     box-shadow: var(--stx-shadow);
 }
 .stx-zoom button {
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: var(--stx-card);
+    width: 28px; height: 28px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
     color: var(--stx-muted);
-    font-family: inherit;
-    font-size: 16px;
-    line-height: 1;
     cursor: pointer;
 }
-.stx-zoom button + button { border-top: 1px solid var(--stx-line-soft); }
 .stx-zoom button:hover:not(:disabled) { background: var(--stx-card-2); color: var(--stx-text); }
 .stx-zoom button:disabled { opacity: .4; cursor: default; }
-.stx-zoom svg { width: 15px; height: 15px; }
+.stx-zoom button[aria-pressed='true'] { background: var(--stx-card-2); color: var(--stx-violet); }
+.stx-zoom button svg { width: 15px; height: 15px; }
+.stx-zoom-read {
+    min-width: 38px;
+    text-align: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--stx-faint);
+    font-variant-numeric: tabular-nums;
+}
 
-/* ---------- The detail panel ---------------------------------------------- */
-.stx-detail {
+/* Floats over the drawing, so it needs the same backing the zoom control has —
+   without it the line lands on whatever node happens to be bottom-left and both
+   become unreadable. */
+.stx-hint {
+    position: absolute;
+    left: 14px; bottom: 14px;
+    margin: 0;
+    padding: 5px 10px;
+    border: 1px solid var(--stx-line);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--stx-card) 88%, transparent);
+    backdrop-filter: blur(6px);
+    font-size: 11px;
+    color: var(--stx-faint);
+    pointer-events: none;
+}
+
+/* ---------- Empty page and the one call to action -------------------------- */
+.stx-empty {
     display: flex;
     flex-direction: column;
-    background: var(--stx-card);
+    align-items: flex-start;
+    gap: 10px;
+    padding: 30px;
     border: 1px solid var(--stx-line);
     border-radius: var(--stx-radius);
+    background: var(--stx-card);
     box-shadow: var(--stx-shadow);
-    padding: 18px 18px 16px;
-    min-width: 0;
 }
-
-.stx-detail-head {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-}
-.stx-detail-icon {
-    display: grid;
-    place-items: center;
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
-    background: var(--stx-violet);
-    color: #fff;
-}
-.stx-detail-icon .cal-ico { width: 22px; height: 22px; }
-.stx-detail-icon .stx-initial { font-size: 18px; }
-.stx-detail-head h2 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -.02em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.stx-detail-level { font-size: 13px; color: var(--stx-muted); }
-.stx-detail-xp { font-size: 11.5px; color: var(--stx-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-.stx-detail-bar {
-    height: 5px;
-    margin: 12px 0 14px;
-    border-radius: 999px;
-    background: var(--stx-line-soft);
-    overflow: hidden;
-}
-.stx-detail-bar i { display: block; height: 100%; background: var(--stx-violet); border-radius: inherit; }
-
-.stx-detail-blurb {
-    margin: 0 0 18px;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--stx-muted);
-}
-
-.stx-detail-title {
-    margin: 0 0 10px;
-    font-size: 13.5px;
-    font-weight: 650;
-    letter-spacing: -.01em;
-}
-.stx-detail-title + * { margin-bottom: 18px; }
-
-.stx-detail-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-.stx-detail-facts li {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    font-size: 13px;
-    color: var(--stx-text);
-}
-.stx-tick {
-    flex: none;
-    width: 16px;
-    height: 16px;
-    background: var(--stx-green);
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center / contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-.stx-next {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 11px 13px;
-    border: 1px solid var(--stx-line);
-    border-radius: 12px;
-    background: var(--stx-card-2);
-}
-.stx-next > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
-.stx-next strong { font-size: 13px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stx-next span { font-size: 11.5px; color: var(--stx-muted); }
-.stx-next-pct { flex: none; font-size: 13px; font-weight: 700; color: var(--stx-violet); font-variant-numeric: tabular-nums; }
-.stx-next-mark {
-    position: relative;
-    flex: none;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: 2px solid var(--stx-violet);
-    overflow: hidden;
-}
-.stx-next-mark i {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    background: color-mix(in srgb, var(--stx-violet) 45%, transparent);
-}
-
-.stx-milestones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.stx-milestones li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 9px 0;
-    font-size: 12.5px;
-    border-bottom: 1px solid var(--stx-line-soft);
-}
-.stx-milestones li:last-child { border-bottom: none; }
-.stx-ms-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stx-ms-state { flex: none; font-size: 11.5px; font-weight: 600; color: var(--stx-faint); }
-.stx-milestones li.is-open .stx-ms-state { color: var(--stx-green); }
-.stx-milestones li.is-next .stx-ms-state { color: var(--stx-violet); }
-.stx-milestones li.is-far .stx-ms-name { color: var(--stx-muted); }
-
-.stx-detail-note {
-    margin: 0 0 18px;
-    font-size: 12.5px;
-    line-height: 1.6;
-    color: var(--stx-muted);
-}
+.stx-empty h2 { margin: 0; font-size: 17px; font-weight: 800; }
+.stx-empty p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--stx-muted); max-width: 68ch; }
 
 .stx-cta {
-    display: block;
-    margin-top: auto;
-    padding: 12px 16px;
-    border-radius: 11px;
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 9px 16px;
+    border-radius: 10px;
     background: var(--stx-violet);
     color: #fff;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 650;
-    text-align: center;
     text-decoration: none;
 }
-.stx-cta:hover { filter: brightness(1.07); }
+.stx-cta:hover { filter: brightness(1.08); }
 
-/* ---------- Empty --------------------------------------------------------- */
-.stx-empty {
-    background: var(--stx-card);
-    border: 1px solid var(--stx-line);
-    border-radius: var(--stx-radius);
-    box-shadow: var(--stx-shadow);
-    padding: 26px 26px 22px;
-}
-.stx-empty h2 { margin: 0 0 8px; font-size: 17px; font-weight: 650; }
-.stx-empty p { margin: 0 0 14px; max-width: 80ch; font-size: 13.5px; line-height: 1.62; color: var(--stx-muted); }
-.stx-empty .stx-cta { display: inline-block; margin-top: 0; }
-
-/* ---------- Responsive ---------------------------------------------------- */
-@media (max-width: 1180px) {
-    /* The detail panel goes under the canvas rather than beside it. It is a
-       reading pane, and a 240px-wide one is a column of orphans. */
+/* ---------- Narrow screens -------------------------------------------------
+   The brief's condition here is that the tree stay usable rather than shrink to
+   fit, so the canvas keeps its node size and scrolls both ways — the layout
+   above is already a scroll box, so nothing has to change for that to be true.
+   What does change is the panel: a 340px column beside a 360px screen is not a
+   column, so it becomes a sheet over the bottom of the canvas, and the empty
+   state that invites a click is dropped rather than occupying half the screen
+   saying nothing. */
+@media (max-width: 1080px) {
     .stx-layout { grid-template-columns: minmax(0, 1fr); }
-    .stx-stats { grid-column: 1; grid-row: 1; }
-    .stx-canvas { grid-column: 1; grid-row: 2; }
-    .stx-detail { grid-column: 1; grid-row: 3; }
-    .stx-cta { margin-top: 18px; }
-}
-@media (max-width: 820px) {
-    .stx-stats { grid-template-columns: 1fr; }
-    .stx-stat + .stx-stat { border-left: none; border-top: 1px solid var(--stx-line-soft); }
-    /* The category column becomes a scrolling row above the graph: 172px of a
-       narrow window spent on a list of nine names leaves no graph. */
-    .stx-canvas { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-    .stx-cats {
-        flex-direction: row;
-        border-right: none;
-        border-bottom: 1px solid var(--stx-line-soft);
-        overflow-x: auto;
-        padding: 10px;
+    .stx-panel {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        top: auto;
+        z-index: 70;
+        max-height: 68vh;
+        border-radius: 18px 18px 0 0;
+        border-bottom: 0;
+        box-shadow: 0 -8px 32px rgba(16, 24, 40, .16);
     }
-    .stx-cat { flex: none; }
-    .stx-zoom { left: auto; right: 16px; }
+    .stx-panel.is-empty { display: none; }
+    .stx-head { align-items: flex-start; }
+    .stx-hint { display: none; }
+}
+
+@media (max-width: 640px) {
+    .stx-head h1 { font-size: 23px; }
+    .stx-head-figures { gap: 14px; }
+    .stx-head-xp { display: none; }
+    .stx-search { max-width: none; }
+    .stx-scroll { height: clamp(360px, 56vh, 560px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stx-node,
+    .stx-wire,
+    .stx-bar i,
+    .stx-ring-arc,
+    .stx-chip { transition: none; }
+    .stx-node:hover { transform: none; }
 }

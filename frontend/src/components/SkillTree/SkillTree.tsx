@@ -1,0 +1,269 @@
+/**
+ * The canvas: connections underneath, nodes on top, and the means to move
+ * around both.
+ *
+ * ## Native scrolling, scaled content — not a transform matrix
+ *
+ * The obvious build is a single transformed layer and a pointer handler that
+ * owns pan and zoom outright. This one does not do that. The content sits in an
+ * ordinary `overflow: auto` box and scale is applied to the drawing inside it,
+ * with the box's scrollable area sized to the scaled drawing. Everything that
+ * makes scrolling feel right is then the platform's rather than ours: trackpad
+ * inertia, touch momentum and rubber-banding, shift-wheel for sideways, the
+ * scrollbars themselves, and the browser scrolling a focused node into view
+ * when it is tabbed to. A hand-rolled matrix has to reimplement all of that and
+ * usually reimplements the first two badly.
+ *
+ * Panning is then drag-to-scroll, and zoom is a number that changes the size of
+ * the scrollable area. Both are a handful of lines because the hard part is not
+ * being done here.
+ *
+ * ## Zoom holds the point under the cursor
+ *
+ * Scaling alone would keep the top-left pinned and slide whatever you were
+ * looking at off the screen. The content coordinate under the pointer is worked
+ * out before the scale changes and the scroll offset is set to put it back
+ * where it was after — the two lines in `zoomTo`. Buttons pass the middle of
+ * the viewport as the anchor, so keyboard and mouse zoom both hold what is in
+ * front of you.
+ *
+ * ## Wheel
+ *
+ * Ctrl or ⌘ with the wheel zooms and is the only case that calls
+ * `preventDefault`, so a plain wheel or a two-finger swipe still scrolls the
+ * box natively. That listener is attached by hand rather than with `onWheel`
+ * because React registers wheel handlers passively, and a passive listener is
+ * not allowed to prevent the browser's own pinch-zoom.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { GEOM, layoutGraph, type GraphNode, type SkillGraph } from '@/utils/skillGraph';
+import { SkillConnection } from './SkillConnection';
+import { SkillNode } from './SkillNode';
+
+/** How far the canvas will scale, and the step the buttons move in. */
+export const ZOOM = { min: 0.5, max: 1.6, step: 0.15, start: 1 };
+
+const clampZoom = (value: number) =>
+  Math.max(ZOOM.min, Math.min(ZOOM.max, Number(value.toFixed(3))));
+
+export interface SkillTreeProps {
+  graph: SkillGraph;
+  selectedId: string | null;
+  onSelect: (node: GraphNode | null) => void;
+  /** Shown in place of the drawing when a filter has emptied it. */
+  empty?: React.ReactNode;
+}
+
+export function SkillTree({ graph, selectedId, onSelect, empty }: SkillTreeProps) {
+  const layout = useMemo(() => layoutGraph(graph), [graph]);
+  const scroller = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(ZOOM.start);
+  const [full, setFull] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
+  /**
+   * Change scale while holding the content point at (ax, ay) — viewport px.
+   * Omit the anchor and the middle of the viewport is used.
+   *
+   * `next` is a function of the current scale rather than a number, and that is
+   * not a style choice: the buttons read `scale` from the render they were
+   * drawn in, so two clicks inside one frame both computed from the same
+   * starting value and the second quietly did nothing. Resolving inside the
+   * updater means every call starts from whatever the last one left.
+   */
+  const zoomTo = useCallback((next: (current: number) => number, ax?: number, ay?: number) => {
+    const box = scroller.current;
+    setScale((current) => {
+      const wanted = clampZoom(next(current));
+      if (!box || wanted === current) return wanted;
+      const px = ax ?? box.clientWidth / 2;
+      const py = ay ?? box.clientHeight / 2;
+      const cx = (box.scrollLeft + px) / current;
+      const cy = (box.scrollTop + py) / current;
+      // After React has painted the new size, put the same content point back
+      // under the same pixel. Queued rather than set now: the scrollable area
+      // is still the old size until the render lands, and a scroll offset past
+      // the old maximum would be clamped away.
+      requestAnimationFrame(() => {
+        box.scrollLeft = cx * wanted - px;
+        box.scrollTop = cy * wanted - py;
+      });
+      return wanted;
+    });
+  }, []);
+
+  useEffect(() => {
+    const box = scroller.current;
+    if (!box) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      const rect = box.getBoundingClientRect();
+      // deltaY is in whatever unit the device reports; only its sign and rough
+      // size matter, and the divisor is what makes a pinch feel like a pinch.
+      zoomTo(
+        (current) => current * (1 - event.deltaY / 320),
+        event.clientX - rect.left,
+        event.clientY - rect.top,
+      );
+    };
+    box.addEventListener('wheel', onWheel, { passive: false });
+    return () => box.removeEventListener('wheel', onWheel);
+  }, [zoomTo]);
+
+  // ---- drag to pan --------------------------------------------------------
+  const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+
+  const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const box = scroller.current;
+    // Only the background drags. A pointerdown that started on a node is that
+    // node's click, and stealing it would make every node need a steady hand.
+    if (!box || event.button !== 0 || (event.target as HTMLElement).closest('.stx-node')) return;
+    drag.current = { x: event.clientX, y: event.clientY, left: box.scrollLeft, top: box.scrollTop };
+    box.setPointerCapture(event.pointerId);
+    setDragging(true);
+  }, []);
+
+  const onPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const box = scroller.current;
+    const from = drag.current;
+    if (!box || !from) return;
+    box.scrollLeft = from.left - (event.clientX - from.x);
+    box.scrollTop = from.top - (event.clientY - from.y);
+  }, []);
+
+  const endDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    drag.current = null;
+    setDragging(false);
+    scroller.current?.releasePointerCapture(event.pointerId);
+  }, []);
+
+  // Escape leaves the expanded canvas. The button is still there, but a layer
+  // covering the window with no keyboard way out is a trap.
+  useEffect(() => {
+    if (!full) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFull(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [full]);
+
+  /** Every path touching the selection, so the run comes forward together. */
+  const lit = useMemo(() => {
+    if (!selectedId) return new Set<string>();
+    return new Set(
+      layout.edges
+        .filter((edge) => edge.from === selectedId || edge.to === selectedId)
+        .map((edge) => edge.id),
+    );
+  }, [layout.edges, selectedId]);
+
+  const bare = layout.nodes.length === 0;
+
+  return (
+    <section className={`stx-canvas${full ? ' is-full' : ''}`}>
+      <div
+        ref={scroller}
+        className={`stx-scroll${dragging ? ' is-dragging' : ''}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
+        {bare ? (
+          <div className="stx-canvas-empty">{empty}</div>
+        ) : (
+          <div
+            className="stx-stage"
+            style={{ width: layout.width * scale, height: layout.height * scale }}
+          >
+            <div
+              className="stx-scaled"
+              style={{
+                width: layout.width,
+                height: layout.height,
+                transform: `scale(${scale})`,
+                // @ts-expect-error -- a custom property, which React types as
+                // unknown on CSSProperties but passes straight through.
+                '--stx-node-w': `${GEOM.nodeW}px`,
+              }}
+            >
+              <svg
+                className="stx-wires"
+                width={layout.width}
+                height={layout.height}
+                viewBox={`0 0 ${layout.width} ${layout.height}`}
+                aria-hidden="true"
+              >
+                {layout.edges.map((edge) => (
+                  <SkillConnection key={edge.id} edge={edge} lit={lit.has(edge.id)} />
+                ))}
+              </svg>
+
+              {layout.nodes.map((placed) => (
+                <SkillNode
+                  key={placed.node.id}
+                  node={placed.node}
+                  x={placed.x}
+                  y={placed.y}
+                  selected={selectedId === placed.node.id}
+                  onSelect={onSelect}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="stx-zoom" role="group" aria-label="Canvas">
+        <button
+          type="button"
+          aria-label="Zoom in"
+          disabled={scale >= ZOOM.max}
+          onClick={() => zoomTo((current) => current + ZOOM.step)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true">
+            <path d="M12 6v12M6 12h12" />
+          </svg>
+        </button>
+        <span className="stx-zoom-read">{Math.round(scale * 100)}%</span>
+        <button
+          type="button"
+          aria-label="Zoom out"
+          disabled={scale <= ZOOM.min}
+          onClick={() => zoomTo((current) => current - ZOOM.step)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true">
+            <path d="M6 12h12" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          aria-label="Reset the view"
+          onClick={() => {
+            zoomTo(() => ZOOM.start);
+            requestAnimationFrame(() => scroller.current?.scrollTo({ top: 0, left: 0, behavior: 'smooth' }));
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 11A8 8 0 1 0 12 20M20 5v6h-6" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          aria-label={full ? 'Leave full screen' : 'Fill the window'}
+          aria-pressed={full}
+          onClick={() => setFull((value) => !value)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {full ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /> : <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />}
+          </svg>
+        </button>
+      </div>
+
+      <p className="stx-hint">Drag to pan · ⌘ or Ctrl + scroll to zoom</p>
+    </section>
+  );
+}
