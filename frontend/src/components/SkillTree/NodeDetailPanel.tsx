@@ -111,6 +111,14 @@ export function NodeDetailPanel({ graph, node, onSelect, onClose, action }: Node
       </p>
       <p className="stx-panel-blurb">{node.blurb}</p>
 
+      {node.tags && node.tags.length > 0 && (
+        <ul className="stx-tags">
+          {node.tags.map((tag) => (
+            <li key={tag}>{tag}</li>
+          ))}
+        </ul>
+      )}
+
       <div className="stx-panel-progress">
         <ProgressIndicator percent={node.percent} shape="ring" size={62} label />
         <dl>
@@ -139,6 +147,14 @@ export function NodeDetailPanel({ graph, node, onSelect, onClose, action }: Node
               <dd>{day(node.on)}</dd>
             </div>
           )}
+          {/* Whatever the feed wanted said, in its own words. Last, so the rows
+              the renderer guarantees are always in the same three places. */}
+          {node.facts?.map((fact) => (
+            <div key={fact.label}>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))}
         </dl>
       </div>
 

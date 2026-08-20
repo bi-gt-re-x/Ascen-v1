@@ -29,22 +29,19 @@
 /** Where a node stands. The four states everything visual keys off. */
 export type NodeStatus = 'locked' | 'available' | 'progress' | 'complete';
 
-/** The four tiers a tree flows through, foundation nearest the top. */
-export type Difficulty = 'foundation' | 'intermediate' | 'advanced' | 'mastery';
+/**
+ * The progression ladder, re-exported rather than redeclared.
+ *
+ * It is declared in skills/types, because how hard a skill is is a fact about
+ * the skill and not about the drawing of it, and two ladders that had to agree
+ * would eventually not. This file keeps the names so nothing downstream has to
+ * know where they came from; the import is one type and two constants, and
+ * skills/ depends on nothing in return — no React, no DOM, no renderer.
+ */
+import { DIFFICULTY_ORDER, DIFFICULTY_LABEL, type Difficulty } from '@/skills/types';
 
-export const DIFFICULTIES: Difficulty[] = [
-  'foundation',
-  'intermediate',
-  'advanced',
-  'mastery',
-];
-
-export const DIFFICULTY_LABEL: Record<Difficulty, string> = {
-  foundation: 'Foundation',
-  intermediate: 'Intermediate',
-  advanced: 'Advanced',
-  mastery: 'Mastery',
-};
+export { DIFFICULTY_ORDER as DIFFICULTIES, DIFFICULTY_LABEL };
+export type { Difficulty };
 
 export const STATUS_LABEL: Record<NodeStatus, string> = {
   locked: 'Locked',
@@ -78,6 +75,29 @@ export interface GraphNode {
   requires: string[];
   /** The requirement in words, printed on a locked node: "40 tasks". */
   gate: string;
+  /**
+   * Extra rows for the detail panel, in the feed's own vocabulary.
+   *
+   * Generic on purpose: the renderer has no idea what an estimated time or a
+   * skill type is, and adding a field for each would make this model the union
+   * of every feed that will ever exist. A feed states its own facts and they are
+   * printed in order.
+   */
+  facts?: { label: string; value: string }[];
+  /** Drawn as chips under the description. Absent draws nothing. */
+  tags?: string[];
+  /**
+   * Draw this one quieter than its neighbours.
+   *
+   * What "quieter" means is the renderer's business and what earns it is the
+   * feed's: the generated-tree feed marks a node secondary when the goal does not
+   * oblige you to do it — an option on a choice, or a branch off the path — and a
+   * different feed could mean something else entirely by it. Kept as one boolean
+   * rather than as an `optional` field for that reason: the model would otherwise
+   * be learning what a prerequisite rule is, which is exactly what it is arranged
+   * not to know.
+   */
+  secondary?: boolean;
 }
 
 export interface SkillGraph {
@@ -101,7 +121,10 @@ export type EdgeState = 'locked' | 'available' | 'active' | 'complete';
  * a node from these via custom properties rather than repeating them.
  */
 export const GEOM = {
-  nodeW: 216,
+  // Widened from 216 once the library feed arrived: "Time and Space Complexity"
+  // beside a difficulty badge and an XP chip had about nine characters to work
+  // with, and a canvas of ellipses is a canvas you have to click to read.
+  nodeW: 244,
   nodeH: 84,
   /** Gap between siblings, and between one rank and the next. */
   colGap: 26,

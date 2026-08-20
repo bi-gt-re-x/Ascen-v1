@@ -80,7 +80,7 @@ export function SkillNode({ node, x, y, selected, onSelect }: SkillNodeProps) {
   return (
     <button
       type="button"
-      className={`stx-node is-${node.status}${selected ? ' is-selected' : ''}`}
+      className={`stx-node is-${node.status}${node.secondary ? ' is-secondary' : ''}${selected ? ' is-selected' : ''}`}
       style={style}
       aria-pressed={selected}
       onClick={() => onSelect(node)}

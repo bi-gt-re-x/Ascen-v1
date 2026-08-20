@@ -163,6 +163,10 @@ html[data-theme="dark"] .stx-page {
 }
 .stx-head-xp { margin: 0; font-size: 12px; color: var(--stx-faint); max-width: 20ch; }
 
+/* The tree picker sits first in the figures row and is the one control in the
+   header, so it is allowed the weight of a control rather than of a caption. */
+.stx-source select { font-weight: 600; max-width: 15rem; }
+
 /* ---------- Toolbar -------------------------------------------------------
    One row at form-field weight. It sits above the canvas rather than inside a
    panel of its own, because a filter bar in a card reads as a section and this
@@ -393,6 +397,16 @@ html[data-theme="dark"] .stx-page {
 }
 .stx-node.is-locked::before { background: var(--stx-line); }
 
+/* Optional, in whatever sense the feed means by it. A dashed edge and a little
+   less ink: enough to read as "you could skip this" from across the canvas, not
+   so much that a whole branch of them looks broken. */
+.stx-node.is-secondary {
+    border-style: dashed;
+    box-shadow: none;
+}
+.stx-node.is-secondary::before { opacity: .5; }
+.stx-node.is-secondary .stx-node-name { font-weight: 550; }
+
 .stx-node:hover {
     transform: translateY(-1px);
     border-color: color-mix(in srgb, var(--state) 45%, var(--stx-line));
@@ -437,11 +451,13 @@ html[data-theme="dark"] .stx-page {
 }
 .stx-node.is-complete .stx-node-gate { color: var(--stx-done); }
 
-/* Four pips, filled to the tier — the difficulty indicator, deliberately small
-   enough to be scenery until somebody goes looking for it. */
-.stx-pips { display: flex; gap: 2.5px; flex: none; }
+/* Six pips, filled to the tier — the difficulty indicator, deliberately small
+   enough to be scenery until somebody goes looking for it. Sized down from four
+   pips at 4px: six of those took 39px of a 216px node and started competing with
+   the line beside them, which is the one that says what opens the node. */
+.stx-pips { display: flex; gap: 2px; flex: none; }
 .stx-pips i {
-    width: 4px; height: 4px;
+    width: 3.5px; height: 3.5px;
     border-radius: 50%;
     background: var(--stx-line);
 }
@@ -552,6 +568,23 @@ html[data-theme="dark"] .stx-page {
     color: var(--stx-faint);
 }
 .stx-panel-blurb { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--stx-muted); }
+
+.stx-tags {
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.stx-tags li {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--stx-card-2);
+    color: var(--stx-faint);
+    font-size: 11px;
+    font-weight: 600;
+}
 
 .stx-panel-progress {
     display: flex;

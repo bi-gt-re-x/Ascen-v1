@@ -50,16 +50,16 @@ import {
 import type { SkillTree, TreeBranch, TreeNode } from './skillTree';
 
 /**
- * Where each of a branch's five rungs sits on the four-tier flow.
+ * Where each of a branch's five rungs sits on the six-tier ladder.
  *
- * Five into four, with the doubling on Intermediate rather than at either end:
- * the first rung is the one you cross by turning up at all and the fifth is
- * further than most accounts reach in a year, so neither is a tier that should
- * be sharing.
+ * Five rungs onto six tiers, and Expert is the one left out rather than a tier
+ * being shared. A branch's fifth rung — a hundred finished tasks, a hundred and
+ * twenty separate days — is Mastery by any reading, and squeezing Expert in
+ * below it would put two named tiers on one step of a ladder that only has five.
  */
 const TIER_OF_STEP: Difficulty[] = [
   'foundation',
-  'intermediate',
+  'beginner',
   'intermediate',
   'advanced',
   'mastery',
