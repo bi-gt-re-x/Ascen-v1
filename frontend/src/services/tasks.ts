@@ -53,6 +53,17 @@ export interface NewTask {
   /** The week calendar's drag-to-create uses this to place the block. */
   created_at?: string;
   id?: string;
+  /**
+   * What this task is execution for.
+   *
+   * Everything that reads a goal link — goal health, Next Moves, a goal card's
+   * action list — has always read these two columns, and until now nothing
+   * could write one. The goals page's "Add new action" is the first caller.
+   * Both are checked against the account's own goals server-side and dropped if
+   * they do not hold up; see `_link` in backend/api/tasks.py.
+   */
+  goal_id?: string;
+  milestone_id?: string;
 }
 
 export function createTask(

@@ -202,11 +202,36 @@ export function msUntilNextDeadline(goals: Goal[], now: number = Date.now()): nu
   return Math.min(Math.min(...upcoming) - now, MAX_TIMEOUT);
 }
 
+/**
+ * A goal date as a local `Date`, or null.
+ *
+ * The whole of this function is the first branch. A deadline and a checkpoint's
+ * target date are stored as a bare `YYYY-MM-DD`, and `new Date('2024-01-01')`
+ * parses that as *UTC midnight* — which is the 31st of December anywhere west
+ * of Greenwich. Every goal date on the page was printing a day early for most
+ * of the world, and for the account this was found on, a goal starting on the
+ * 1st of January read "Dec 31, 2023".
+ *
+ * Built from the parts instead, which is what the goals calendar and the
+ * records page already do for the same reason. A full timestamp —
+ * `completed_at` is one — is left to the parser, because a timestamp carries
+ * its own offset and there is nothing to guess.
+ */
+export function goalDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  const bare = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (bare) {
+    return new Date(Number(bare[1]), Number(bare[2]) - 1, Number(bare[3]));
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 /** The date under a goal, in the format the original printed. */
 export function formatGoalDate(value: string): string {
   if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
+  const d = goalDate(value);
+  if (!d) return value;
   return d.toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',

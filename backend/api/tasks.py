@@ -43,6 +43,15 @@ class CreateTask(BaseModel):
     show_on_calendar: bool = True
     created_at: Optional[str] = None
     subject: Optional[str] = None
+    #: What this task is execution for. Both columns have existed since
+    #: data/sql/tasks.sql was written and everything that *reads* a link —
+    #: goal health, Next Moves, the goals page's per-goal action list — has
+    #: always read them; nothing could ever set one, so the only linked tasks
+    #: on any account arrived by another route. Accepted here so a task can be
+    #: created from the goal it belongs to. Verified against the caller's own
+    #: rows in `_link`, never trusted.
+    goal_id: Optional[str] = None
+    milestone_id: Optional[str] = None
 
 
 class UpdateTask(BaseModel):
@@ -162,10 +171,42 @@ def _subject(raw, username=None):
     return None
 
 
+def _link(goal_id, milestone_id, username):
+    """A goal and checkpoint this account actually owns, or a pair of Nones.
+
+    Both ids come from a request body, so neither is taken on the caller's word:
+    an id naming somebody else's goal, or a checkpoint that belongs to a
+    different goal than the one sent, is dropped rather than stored. Dropped and
+    not rejected, for the reason `_subject` gives — a task worth creating is
+    still worth creating without the link, and failing the whole write over a
+    stale id would lose the thing the person actually typed.
+    """
+    goals = {g['id']: g for g in db.goals() if g.get('user_id') == username}
+    goal = goals.get(goal_id) if goal_id else None
+    if not goal:
+        return None, None
+
+    if not milestone_id:
+        return goal['id'], None
+
+    stone = next(
+        (
+            m for m in db.goal_milestones()
+            if m.get('id') == milestone_id
+            and m.get('user_id') == username
+            and m.get('goal_id') == goal['id']
+        ),
+        None,
+    )
+    return goal['id'], (stone['id'] if stone else None)
+
+
 def _create(body: CreateTask):
     """Shared by POST /api/tasks and its older name, /api/add_task."""
     if not body.username:
         return fail('Username required')
+
+    goal_id, milestone_id = _link(body.goal_id, body.milestone_id, body.username)
 
     tasks = db.tasks()
     task_id = body.id or db.new_id('tasks')
@@ -183,6 +224,8 @@ def _create(body: CreateTask):
         # task uses it to place the block on the dragged slot); default to now.
         "created_at": body.created_at or datetime.now().isoformat(),
         "subject": _subject(body.subject, body.username),
+        "goal_id": goal_id,
+        "milestone_id": milestone_id,
     })
     db.save_tasks(tasks)
     return ok(task_id=task_id)

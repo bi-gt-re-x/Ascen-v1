@@ -4438,3 +4438,558 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
    that did not would have moved the empty space rather than removed it. */
 .gx-two { align-items: stretch; }
 .gx-two > .gx-band > :not(.gx-band-head) { flex: 1; }
+
+/* ==========================================================================
+   Active Goals — one full-width card per goal.
+   See src/components/Goals/ActiveGoalCard.tsx.
+
+   Prefixed `ag-` inside the page's `gx-` token block: it reads the same
+   `--gx-card`, `--gx-line`, `--gx-text` and the `--tone` the category sets, so
+   the card follows both themes without owning a colour of its own. Nothing
+   below names a hue that is not already a variable up top.
+
+   ## The card is one grid, three regions and a footer
+
+   Header, body, footer, and the body is two panels. The left panel is the
+   goal's history and its checkpoints; the right is what you are on now and
+   what to do next. They are `minmax(0, 1fr)` twice rather than a fixed split,
+   because a chart and a task list both want the room and neither wants it more.
+
+   ## `--tone` is the goal's own colour and it is spent, not sprayed
+
+   The tile, the ring's arc, the focus bar, the chart's line and fill and the
+   footer's category dot. Everything else is the page's greys. Nine goals in
+   nine colours down a page reads as a chart legend; the same nine with one
+   coloured mark each reads as nine goals.
+   ========================================================================== */
+/* The page had no screen-reader-only class of its own and the range picker's
+   label was rendering as the word "Range" beside the select. */
+.gx-sr {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0);
+    white-space: nowrap; border: 0;
+}
+
+.ag-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.ag-card {
+    --tone: var(--gx-violet);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    background: var(--gx-card);
+    box-shadow: var(--gx-shadow);
+    overflow: hidden;
+}
+
+/* ---------- Header -------------------------------------------------------- */
+.ag-top {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 14px;
+    padding: var(--gx-pad);
+    /* The faintest wash of the goal's colour, so the head reads as belonging to
+       this goal without the card becoming a coloured box. */
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--tone) var(--gx-wash-soft), transparent),
+            transparent);
+}
+.ag-top > .gx-tile { width: 44px; height: 44px; border-radius: 13px; }
+
+.ag-top-text { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ag-title-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.ag-title-row h3 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ag-badge {
+    flex: none;
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--tone) var(--gx-edge), transparent);
+    background: color-mix(in srgb, var(--tone) var(--gx-wash), transparent);
+    color: var(--tone);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.ag-why {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--gx-muted);
+    max-width: 74ch;
+}
+.ag-tags { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ag-tags li {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--gx-card-2);
+    color: var(--gx-faint);
+    font-size: 11px;
+    font-weight: 600;
+}
+/* A 4px dot before each tag, which is what separates a tag from a button at a
+   glance without an outline that would compete with the badge above it. */
+.ag-tags li::before {
+    content: '';
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .55;
+}
+.ag-tags li.is-hot { color: var(--gx-watch); }
+.ag-tags li.is-late { color: var(--gx-bad); background: color-mix(in srgb, var(--gx-bad) 10%, transparent); }
+
+.ag-top-right { display: flex; align-items: center; gap: 12px; }
+.ag-progress { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.ag-progress strong { font-size: 21px; font-weight: 800; letter-spacing: -.03em; }
+.ag-progress span { font-size: 11px; color: var(--gx-faint); }
+
+.ag-ring { width: 46px; height: 46px; flex: none; }
+.ag-ring-track { fill: none; stroke: var(--gx-line); }
+.ag-ring-arc { fill: none; stroke: var(--tone); transition: stroke-dasharray .4s ease; }
+
+.ag-kebab {
+    display: grid;
+    place-items: center;
+    width: 30px; height: 30px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--gx-faint);
+    cursor: pointer;
+}
+.ag-kebab:hover { background: var(--gx-card-2); color: var(--gx-text); }
+.ag-kebab svg { width: 16px; height: 16px; }
+
+.ag-menu-wrap { position: relative; }
+/* An invisible full-screen button behind the menu, so a click anywhere closes
+   it and the close is reachable from the keyboard. Cheaper and more reliable
+   than a document listener that has to be careful not to eat the opening click. */
+.ag-menu-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    background: transparent;
+    cursor: default;
+}
+.ag-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 41;
+    min-width: 148px;
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+    border: 1px solid var(--gx-line);
+    border-radius: 11px;
+    background: var(--gx-card);
+    box-shadow: 0 10px 30px rgba(16, 24, 40, .14);
+}
+.ag-menu button {
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+.ag-menu button:hover { background: var(--gx-card-2); }
+.ag-menu button.is-bad { color: var(--gx-bad); }
+
+/* ---------- Body ---------------------------------------------------------- */
+.ag-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1px;
+    /* One hairline between the panels, drawn by the gap over the card's line
+       colour, so there is no border to double up at the card's own edge. */
+    background: var(--gx-line-soft);
+    border-top: 1px solid var(--gx-line);
+    border-bottom: 1px solid var(--gx-line);
+}
+.ag-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    padding: 15px var(--gx-pad);
+    background: var(--gx-card);
+}
+
+.ag-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 24px;
+}
+.ag-panel-head-tight { margin-top: 4px; }
+.ag-panel-head h4 {
+    margin: 0;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--gx-faint);
+}
+.ag-quiet { font-size: 11.5px; color: var(--gx-faint); }
+.ag-quiet.is-late { color: var(--gx-bad); font-weight: 600; }
+
+.ag-range select {
+    padding: 3px 22px 3px 8px;
+    border: 1px solid var(--gx-line);
+    border-radius: 7px;
+    background: var(--gx-card-2);
+    color: var(--gx-muted);
+    font: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+}
+
+.ag-empty {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--gx-faint);
+    max-width: 56ch;
+}
+.ag-empty-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.ag-more {
+    align-self: flex-start;
+    padding: 6px 12px;
+    border: 1px solid var(--gx-line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gx-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ag-more:hover:not(:disabled) { border-color: var(--gx-faint); color: var(--gx-text); }
+.ag-more:disabled { opacity: .6; cursor: default; }
+.ag-more.is-primary {
+    border-color: color-mix(in srgb, var(--tone) var(--gx-edge), transparent);
+    background: color-mix(in srgb, var(--tone) var(--gx-wash), transparent);
+    color: var(--tone);
+}
+
+/* ---------- Progress over time -------------------------------------------- */
+.ag-chart {
+    position: relative;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-rows: 118px 16px;
+    column-gap: 6px;
+}
+.ag-chart-scale {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 9.5px;
+    color: var(--gx-faint);
+    text-align: right;
+    /* Half a line up, so each label sits on its gridline rather than under it. */
+    transform: translateY(-4px);
+}
+.ag-chart-plot { grid-column: 2; width: 100%; height: 118px; overflow: visible; }
+.ag-chart-grid { stroke: var(--gx-line-soft); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ag-chart-area { fill: color-mix(in srgb, var(--tone) 16%, transparent); }
+.ag-chart-line {
+    fill: none;
+    stroke: var(--tone);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    /* The plot is stretched by preserveAspectRatio="none", which would stretch
+       the stroke with it. This keeps the line one weight at any card width. */
+    vector-effect: non-scaling-stroke;
+}
+.ag-chart-dot { fill: var(--gx-card); stroke: var(--tone); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.ag-chart-months {
+    position: relative;
+    grid-column: 2;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    height: 16px;
+}
+.ag-chart-months li {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: var(--gx-faint);
+}
+.ag-chart-months li:first-child { transform: none; }
+.ag-chart-months li:last-child { transform: translateX(-100%); }
+
+/* ---------- Checkpoints --------------------------------------------------- */
+.ag-stones, .ag-roadmap, .ag-actions { list-style: none; margin: 0; padding: 0; }
+.ag-stones li button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 6px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gx-muted);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.ag-stones li button:hover, .ag-roadmap li button:hover { background: var(--gx-card-2); }
+.ag-stone-tick {
+    display: grid;
+    place-items: center;
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--gx-line);
+    border-radius: 50%;
+    font-size: 9px;
+    color: transparent;
+}
+.ag-stones li.is-done .ag-stone-tick {
+    border-color: var(--gx-good);
+    background: var(--gx-good);
+    color: #fff;
+}
+.ag-stones li.is-active .ag-stone-tick { border-color: var(--tone); border-width: 2.5px; }
+.ag-stones li.is-done .ag-stone-name { color: var(--gx-text); }
+.ag-stones li.is-active .ag-stone-name { color: var(--gx-text); font-weight: 600; }
+.ag-stone-name, .ag-road-name, .ag-action-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- Roadmap ------------------------------------------------------- */
+.ag-roadmap li button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44%;
+    align-items: center;
+    gap: 12px;
+    padding: 6px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gx-muted);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.ag-roadmap li.is-done .ag-road-name { color: var(--gx-text); }
+.ag-road-bar {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--gx-line);
+    overflow: hidden;
+}
+.ag-road-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tone);
+}
+.ag-roadmap li.is-done .ag-road-bar i { background: var(--gx-good); }
+
+/* ---------- Current focus ------------------------------------------------- */
+.ag-focus {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    padding: 12px 13px;
+    border: 1px solid color-mix(in srgb, var(--tone) var(--gx-edge), transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--tone) var(--gx-wash), transparent);
+}
+.ag-focus-ico .gx-tile { width: 30px; height: 30px; border-radius: 9px; }
+.ag-focus-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ag-focus-text strong {
+    font-size: 13.5px;
+    font-weight: 650;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ag-focus-text span { font-size: 11.5px; color: var(--gx-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-focus-pct { font-size: 14px; font-weight: 800; color: var(--tone); letter-spacing: -.02em; }
+.ag-focus-when { font-size: 11.5px; color: var(--gx-muted); white-space: nowrap; }
+.ag-focus-bar {
+    grid-column: 1 / -1;
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tone) 18%, transparent);
+    overflow: hidden;
+}
+.ag-focus-bar i { display: block; height: 100%; border-radius: inherit; background: var(--tone); }
+
+/* ---------- Next actions -------------------------------------------------- */
+.ag-actions li {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 6px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: var(--gx-muted);
+}
+.ag-actions li:hover { background: var(--gx-card-2); }
+.ag-check {
+    width: 17px; height: 17px;
+    padding: 0;
+    border: 1.6px solid var(--gx-line);
+    border-radius: 5px;
+    background: transparent;
+    cursor: pointer;
+    transition: border-color .14s ease, background .14s ease;
+}
+.ag-check:hover:not(:disabled) { border-color: var(--gx-good); background: color-mix(in srgb, var(--gx-good) 14%, transparent); }
+.ag-check:disabled { opacity: .5; cursor: default; }
+
+.ag-add-btn {
+    align-self: flex-start;
+    padding: 5px 2px;
+    border: 0;
+    background: transparent;
+    color: var(--tone);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ag-add-btn:hover:not(:disabled) { text-decoration: underline; }
+.ag-add-btn:disabled { opacity: .5; cursor: default; }
+.ag-add input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--tone) var(--gx-edge), transparent);
+    border-radius: 9px;
+    background: var(--gx-card-2);
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 12.5px;
+}
+.ag-add input:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
+
+/* ---------- Footer -------------------------------------------------------- */
+.ag-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 13px var(--gx-pad);
+    background: var(--gx-card-2);
+}
+.ag-details {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 13px;
+    border: 1px solid var(--gx-line);
+    border-radius: 9px;
+    background: var(--gx-card);
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ag-details:hover { border-color: var(--tone); color: var(--tone); }
+.ag-details svg { width: 14px; height: 14px; }
+
+.ag-facts {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 26px;
+}
+.ag-facts > div { display: flex; flex-direction: column; gap: 3px; }
+.ag-facts dt {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--gx-faint);
+}
+.ag-facts dd {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+.ag-facts dd.is-late { color: var(--gx-bad); }
+.ag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tone); }
+
+/* ---------- System goals grid --------------------------------------------- */
+.gx-sysgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+}
+
+/* ---------- Narrow -------------------------------------------------------- */
+/* One column below the width where a chart and a task list can share a row and
+   both still be legible. The header keeps its three columns longer, because a
+   title and a percentage side by side is the one thing that stays readable. */
+@media (max-width: 1080px) {
+    .ag-body { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+    .ag-top { grid-template-columns: auto minmax(0, 1fr); }
+    /* The figure and its ring stay a pair and the menu goes to the far edge.
+       `space-between` on all three put the ring adrift in the middle of the row,
+       reading as a third unrelated thing rather than as the picture of the
+       number beside it. */
+    .ag-top-right {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+        padding-top: 4px;
+        border-top: 1px solid var(--gx-line-soft);
+    }
+    .ag-top-right .ag-menu-wrap { margin-left: auto; }
+    .ag-title-row h3 { font-size: 17px; }
+    .ag-foot { flex-direction: column; align-items: stretch; }
+    .ag-facts { gap: 18px; justify-content: space-between; }
+    .ag-details { align-self: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ag-ring-arc, .ag-check { transition: none; }
+}

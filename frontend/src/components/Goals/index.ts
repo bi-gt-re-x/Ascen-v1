@@ -13,12 +13,8 @@ export { GoalsHeader, GoalsSummaryRow } from './GoalsSummary';
 export type { GoalsSummaryProps } from './GoalsSummary';
 export { GoalLadder, RUNGS } from './GoalLadder';
 export type { GoalLadderProps } from './GoalLadder';
-export { GoalsSidebar, RAIL_GOALS } from './GoalsSidebar';
-export type { GoalsSidebarProps } from './GoalsSidebar';
 export { MilestoneCalendar, milestoneDays } from './MilestoneCalendar';
 export type { MilestoneCalendarProps, MilestoneDay } from './MilestoneCalendar';
-export { GoalNotes, noteFor } from './GoalNotes';
-export type { GoalNotesProps } from './GoalNotes';
 export {
   GoalsGreeting,
   GrowthAreas,
@@ -77,3 +73,7 @@ export {
   overallProgress,
 } from './numbers';
 export type { GoalNumbers } from './numbers';
+export { ActiveGoalCard } from './ActiveGoalCard';
+export type { ActiveGoalCardProps } from './ActiveGoalCard';
+export { SystemGoals } from './SystemGoals';
+export type { SystemGoalsProps } from './SystemGoals';

@@ -31,12 +31,27 @@ import type { Goal, Task } from '@/types';
 
 const DAY = 86_400_000;
 
+/**
+ * The four the page is divided into.
+ *
+ * They are four questions rather than four groupings of the same content, which
+ * is what the previous five were not: Overview, All Goals and Milestones each
+ * drew a different arrangement of the same goals, so the tab strip was asking
+ * the reader to pick a layout rather than a subject.
+ *
+ *     Active Goals  what am I doing, one full card each
+ *     Timeline      when does it land — the rails and the calendar
+ *     System Goals  the counters the app keeps: XP, streak, tasks, focus
+ *     Stats         where I stand, what is next, and whether it is going to
+ *                   happen
+ *
+ * Completed went with them: it was a tab holding one band, and that band is a
+ * button in the header that reveals it wherever you are. */
 export const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'goals', label: 'All Goals' },
+  { id: 'active', label: 'Active Goals' },
   { id: 'timeline', label: 'Timeline' },
-  { id: 'milestones', label: 'Milestones' },
-  { id: 'completed', label: 'Completed' },
+  { id: 'system', label: 'System Goals' },
+  { id: 'stats', label: 'Stats' },
 ] as const;
 
 export type TabId = (typeof TABS)[number]['id'];
