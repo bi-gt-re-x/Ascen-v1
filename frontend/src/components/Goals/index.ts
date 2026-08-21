@@ -77,3 +77,5 @@ export { ActiveGoalCard } from './ActiveGoalCard';
 export type { ActiveGoalCardProps } from './ActiveGoalCard';
 export { SystemGoals } from './SystemGoals';
 export type { SystemGoalsProps } from './SystemGoals';
+export { GoalVisual } from './GoalVisual';
+export type { GoalVisualProps } from './GoalVisual';

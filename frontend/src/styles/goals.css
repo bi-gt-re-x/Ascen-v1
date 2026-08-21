@@ -4663,6 +4663,10 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     padding: 15px var(--gx-pad);
     background: var(--gx-card);
 }
+/* The two panels are independent columns of a grid, so they are already the same
+   height; this stops the shorter one's content from stretching to fill it and
+   lets the caption sit on the floor instead. */
+.ag-panel > * { flex: none; }
 
 .ag-panel-head {
     display: flex;
@@ -4820,7 +4824,7 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 .ag-roadmap li button {
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44%;
+    grid-template-columns: minmax(0, 1fr) 34% auto;
     align-items: center;
     gap: 12px;
     padding: 6px;
@@ -4847,6 +4851,132 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     background: var(--tone);
 }
 .ag-roadmap li.is-done .ag-road-bar i { background: var(--gx-good); }
+
+/* ---------- The chosen visual --------------------------------------------- */
+/* One per card, and which one is utils/goalVisuals' decision — so these rules
+   have to sit at the same weight as each other. A card whose goal earned the
+   heatmap must not look busier than one that earned the roadmap; they are the
+   same panel answering the same question with what each goal actually has.
+   Hence one height for all of them, one caption treatment, and `--tone` spent in
+   the same three places. */
+.ag-caption {
+    margin: auto 0 0;
+    padding-top: 2px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--gx-faint);
+}
+
+/* ---------- Labelled bars: difficulty, subjects, weekdays ----------------- */
+.ag-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.ag-bars li {
+    display: grid;
+    /* Wide enough for the longest label any of the three charts produces — a
+       subject name, which "Computer Science" was being cut in half by at 74px.
+       "Very hard" and "Mon" both fit inside it with room to spare. */
+    grid-template-columns: 92px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+}
+.ag-bar-label { color: var(--gx-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-bar-track {
+    height: 7px;
+    border-radius: 999px;
+    background: var(--gx-line);
+    overflow: hidden;
+}
+.ag-bar-track i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tone);
+    transition: width .3s ease;
+}
+.ag-bar-value {
+    color: var(--gx-text);
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+/* A row with nothing behind it keeps its place and says so. A difficulty nobody
+   has attempted is a gap in the middle of the range, and the gap is the finding
+   — dropping the row would hide it. */
+.ag-bars li.is-empty .ag-bar-label,
+.ag-bars li.is-empty .ag-bar-value { color: var(--gx-faint); }
+
+/* ---------- Consistency grid ---------------------------------------------- */
+/* Centred rather than stretched, and the cells capped. Left to fill the panel
+   the twelve columns came out at 38px each, which is a mosaic — a consistency
+   grid has to be small enough that the *pattern* is what you see rather than
+   the individual days. */
+.ag-heat {
+    display: grid;
+    grid-template-columns: 14px auto;
+    gap: 6px;
+    justify-content: center;
+    align-content: center;
+    padding: 6px 0;
+}
+.ag-heat-days {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-rows: repeat(7, 18px);
+    gap: 3px;
+    font-size: 8.5px;
+    line-height: 1;
+    color: var(--gx-faint);
+    align-items: center;
+}
+.ag-heat-grid {
+    display: grid;
+    /* Down each column, so one column is one week — the arrangement everybody
+       already knows from every other contribution grid. */
+    grid-template-rows: repeat(7, 1fr);
+    grid-auto-flow: column;
+    grid-auto-columns: 18px;
+    gap: 3px;
+}
+.ag-heat-grid i {
+    height: 18px;
+    border-radius: 3px;
+    background: var(--gx-line);
+}
+.ag-heat-grid i.is-l1 { background: color-mix(in srgb, var(--tone) 28%, var(--gx-line)); }
+.ag-heat-grid i.is-l2 { background: color-mix(in srgb, var(--tone) 52%, var(--gx-line)); }
+.ag-heat-grid i.is-l3 { background: color-mix(in srgb, var(--tone) 76%, var(--gx-line)); }
+.ag-heat-grid i.is-l4 { background: var(--tone); }
+
+/* ---------- Distance to target -------------------------------------------- */
+.ag-scale { display: flex; flex-direction: column; gap: 7px; padding-top: 14px; }
+.ag-scale-track {
+    position: relative;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--gx-line);
+}
+.ag-scale-track > i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tone);
+}
+/* The reading rides on the end of the fill rather than sitting at one end of
+   the row, so the number and the position it describes are the same place. */
+.ag-scale-track > b {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--tone);
+    white-space: nowrap;
+}
+.ag-scale-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--gx-faint); }
+.ag-scale-left { margin: 2px 0 0; font-size: 12.5px; font-weight: 600; }
 
 /* ---------- Current focus ------------------------------------------------- */
 .ag-focus {

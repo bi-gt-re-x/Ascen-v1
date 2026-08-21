@@ -15,14 +15,20 @@
  * three other bands further down the page. Putting them on the card is most of
  * why the page can now be four tabs instead of eleven stacked sections.
  *
- * ## The left panel draws what the goal actually has
+ * ## The left panel is one chart, and which one depends on the goal
  *
- * A goal with two or more dated checkpoints behind it has a shape over time, so
- * it gets a line. One with none has no line to draw — plotting a single point,
- * or a straight run from zero to today, would be a picture of nothing — so it
- * gets its checkpoints as a roadmap instead, which is what that goal's progress
- * genuinely looks like. The panel's heading says which of the two you are
- * looking at rather than leaving one to be mistaken for the other.
+ * Not a fixed chart with the numbers swapped. `pickVisual` in utils/goalVisuals
+ * runs goal type → subject → available data and returns exactly one: a
+ * competition maths goal with rated attempts behind it gets accuracy against
+ * difficulty, a violin goal gets the consistency grid, a project gets its
+ * roadmap, a goal measured by a number gets the distance to it. The same card,
+ * completely different analytics, which is the point — an app where every goal
+ * gets the same graph is telling you about its template.
+ *
+ * One, though. Not a stack and not tabs: two charts on a card are two things
+ * competing to be the thing you look at, and neither wins. The checkpoint list
+ * that used to sit under the chart is gone with it — the current one is named in
+ * the panel opposite and the rest are one click away.
  *
  * ## What is not invented
  *
@@ -34,9 +40,11 @@
  */
 import { useMemo, useState } from 'react';
 import { GoalTile, HealthChip, categoryOf } from './Outcome';
+import { GoalVisual } from './GoalVisual';
 import { formatGoalDate, goalDate, goalNumbers, goalWeight, isOverdue } from './numbers';
 import { goalHealth } from '@/utils/goalHealth';
-import type { Goal, Milestone, Task } from '@/types';
+import { pickVisual, visualContext } from '@/utils/goalVisuals';
+import type { Goal, Task } from '@/types';
 
 const DAY = 86_400_000;
 
@@ -49,9 +57,6 @@ const HIGH_PRIORITY = 7;
 /** Actions listed before the rest are left to the task page. */
 const ACTIONS = 4;
 
-/** Checkpoints listed before the rest are left to the detail panel. */
-const STONES = 6;
-
 const pct = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
 /** Milliseconds, or 0. Bare dates are read as local days — see `goalDate`. */
@@ -62,6 +67,13 @@ function shortDate(value?: string): string {
   const at = time(value);
   if (!at) return '';
   return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+/** "May 2024" — where the year is the point rather than the day. */
+function monthYear(value?: string): string {
+  const at = time(value);
+  if (!at) return '—';
+  return new Date(at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 }
 
 /** "320h 15m", the way the footer prints it. */
@@ -99,214 +111,6 @@ function Ring({ percent, tone }: { percent: number; tone: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Progress over time
-// ---------------------------------------------------------------------------
-type Range = 'year' | 'all';
-
-interface Point {
-  at: number;
-  percent: number;
-}
-
-/**
- * The goal's completion history, as a running percentage.
- *
- * Built from the days its checkpoints were actually reached, plus today's
- * standing as the last point — so the line ends where the ring says it is. Not
- * a series the account stores: a goal keeps no history of its own percentage,
- * and this is the honest reconstruction of one from the dates it does keep.
- */
-/** Checkpoints actually reached inside the window — what makes a line worth it. */
-function movement(goal: Goal, range: Range, today: number): number {
-  const floor = range === 'year' ? today - 365 * DAY : 0;
-  return (goal.milestones ?? []).filter(
-    (stone) => stone.status === 'done' && time(stone.completed_at) >= floor,
-  ).length;
-}
-
-function series(goal: Goal, range: Range, today: number): Point[] {
-  const stones = goal.milestones ?? [];
-  if (stones.length === 0) return [];
-
-  const floor = range === 'year' ? today - 365 * DAY : 0;
-  const done = stones
-    .filter((stone) => stone.status === 'done' && time(stone.completed_at))
-    .map((stone) => time(stone.completed_at))
-    .sort((a, b) => a - b);
-
-  if (done.length === 0) return [];
-
-  const out: Point[] = [];
-  done.forEach((at, index) => {
-    if (at < floor) return;
-    out.push({ at, percent: ((index + 1) / stones.length) * 100 });
-  });
-
-  // Everything reached happened before the window opened: the line would be
-  // empty even though the goal is well along, so the window's left edge carries
-  // the standing it started at.
-  if (out.length === 0) {
-    out.push({ at: floor, percent: (done.length / stones.length) * 100 });
-  } else if (done.length > out.length) {
-    out.unshift({ at: floor, percent: ((done.length - out.length) / stones.length) * 100 });
-  } else {
-    // Nothing had been reached before the first point, so the line starts at
-    // nothing — on the day the goal was set. Without it a goal with one
-    // checkpoint behind it draws a flat run at its current standing, which is
-    // arithmetically true and reads as "no progress ever". The rise from zero is
-    // the progress.
-    const began = time(goal.start_date || goal.created_at);
-    if (began && began < out[0]!.at && began >= floor) out.unshift({ at: began, percent: 0 });
-  }
-
-  out.push({ at: today, percent: goalNumbers(goal).progress });
-  return out;
-}
-
-function Sparkline({ points, tone }: { points: Point[]; tone: string }) {
-  const w = 300;
-  const h = 118;
-  const padX = 4;
-  const first = points[0]!.at;
-  const last = points[points.length - 1]!.at;
-  const span = Math.max(1, last - first);
-
-  const at = (point: Point) => ({
-    x: padX + ((point.at - first) / span) * (w - padX * 2),
-    y: h - (pct(point.percent) / 100) * (h - 8) - 4,
-  });
-
-  const placed = points.map(at);
-  const line = placed.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  const area = `${line} L${placed[placed.length - 1]!.x.toFixed(1)},${h} L${placed[0]!.x.toFixed(1)},${h} Z`;
-
-  // Four month labels across the span, evenly. Not one per point: the points
-  // land on the days checkpoints happened, which is not a scale.
-  const marks = [0, 1, 2, 3].map((i) => {
-    const stamp = first + (span * i) / 3;
-    return {
-      x: padX + (i / 3) * (w - padX * 2),
-      label: new Date(stamp).toLocaleDateString(undefined, { month: 'short' }),
-    };
-  });
-
-  return (
-    <div className={`ag-chart tone-${tone}`}>
-      <ul className="ag-chart-scale" aria-hidden="true">
-        {[100, 75, 50, 25, 0].map((value) => (
-          <li key={value}>{value}%</li>
-        ))}
-      </ul>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="ag-chart-plot" aria-hidden="true">
-        {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-          <line key={f} className="ag-chart-grid" x1={0} x2={w} y1={4 + f * (h - 8)} y2={4 + f * (h - 8)} />
-        ))}
-        <path className="ag-chart-area" d={area} />
-        <path className="ag-chart-line" d={line} />
-        {placed.map((p, i) => (
-          <circle key={i} className="ag-chart-dot" cx={p.x} cy={p.y} r={2.6} />
-        ))}
-      </svg>
-      <ul className="ag-chart-months" aria-hidden="true">
-        {marks.map((mark, i) => (
-          <li key={i} style={{ left: `${(mark.x / w) * 100}%` }}>
-            {mark.label}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Checkpoints
-// ---------------------------------------------------------------------------
-function Stones({
-  goal,
-  onOpen,
-}: {
-  goal: Goal;
-  onOpen: () => void;
-}) {
-  const stones = goal.milestones ?? [];
-  const done = stones.filter((stone) => stone.status === 'done').length;
-
-  return (
-    <>
-      <header className="ag-panel-head">
-        <h4>Milestones</h4>
-        <span className="ag-quiet">
-          {done} / {stones.length} completed
-        </span>
-      </header>
-      <ul className="ag-stones">
-        {stones.slice(0, STONES).map((stone) => (
-          <li key={stone.id} className={`is-${stone.status}`}>
-            <button type="button" onClick={onOpen}>
-              <span className="ag-stone-tick" aria-hidden="true">
-                {stone.status === 'done' ? '✓' : ''}
-              </span>
-              <span className="ag-stone-name">{stone.title}</span>
-              <span className="ag-quiet">
-                {shortDateWithYear(stone.status === 'done' ? stone.completed_at : stone.target_date)}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      {stones.length > STONES && (
-        <button type="button" className="ag-more" onClick={onOpen}>
-          {stones.length - STONES} more
-        </button>
-      )}
-    </>
-  );
-}
-
-/** "May 2024" — the checkpoint column, where the year is the point. */
-function shortDateWithYear(value?: string): string {
-  const at = time(value);
-  if (!at) return '—';
-  return new Date(at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-}
-
-/**
- * The checkpoints as a roadmap, for a goal with nothing dated behind it.
- *
- * Each row's bar is the checkpoint's own state rather than a figure — reached,
- * being worked on, not started — because a checkpoint has no percentage and
- * three lengths that mean three states is the most a bar can honestly say here.
- */
-function Roadmap({ goal, onOpen }: { goal: Goal; onOpen: () => void }) {
-  const stones = goal.milestones ?? [];
-  const share = (stone: Milestone) =>
-    stone.status === 'done' ? 100 : stone.status === 'active' ? 45 : 6;
-
-  return (
-    <>
-      <header className="ag-panel-head">
-        <h4>Roadmap</h4>
-        <span className="ag-quiet">
-          {stones.filter((stone) => stone.status === 'done').length} / {stones.length} completed
-        </span>
-      </header>
-      <ul className="ag-roadmap">
-        {stones.slice(0, STONES + 2).map((stone) => (
-          <li key={stone.id} className={`is-${stone.status}`}>
-            <button type="button" onClick={onOpen}>
-              <span className="ag-road-name">{stone.title}</span>
-              <span className="ag-road-bar">
-                <i style={{ width: `${share(stone)}%` }} />
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // The card
 // ---------------------------------------------------------------------------
 export interface ActiveGoalCardProps {
@@ -322,6 +126,8 @@ export interface ActiveGoalCardProps {
   onSuggest: (goal: Goal) => Promise<string[] | null>;
   /** Write a whole checkpoint list. Resolves false if the write failed. */
   onSaveStones: (goal: Goal, titles: string[]) => Promise<boolean>;
+  /** Turns a subject id into its name, for the charts that group by subject. */
+  nameOf: (id: string) => string;
 }
 
 export function ActiveGoalCard({
@@ -335,6 +141,7 @@ export function ActiveGoalCard({
   onAddAction,
   onSuggest,
   onSaveStones,
+  nameOf,
 }: ActiveGoalCardProps) {
   const today = Date.now();
   const category = categoryOf(goal);
@@ -342,14 +149,6 @@ export function ActiveGoalCard({
   const health = goalHealth(goal, tasks);
   const stones = goal.milestones ?? [];
 
-  /* Opens on the window that has something in it. A goal whose last checkpoint
-     landed eighteen months ago has nothing to draw inside a year, and the line
-     falls back to a flat run at its standing — true, and a picture of nothing.
-     Checked once on first render rather than watched, so a reader who picks a
-     range keeps it. */
-  const [range, setRange] = useState<Range>(() =>
-    movement(goal, 'year', Date.now()) > 0 ? 'year' : 'all',
-  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
@@ -359,15 +158,14 @@ export function ActiveGoalCard({
      spinner for the same reason. */
   const [thinking, setThinking] = useState(false);
 
-  const line = useMemo(() => series(goal, range, today), [goal, range, today]);
+  /* The goal, its linked work, and the one chart that work can support. Both
+     memoised on the same inputs, so a card only re-picks when something it is
+     drawn from actually changed. */
+  const context = useMemo(() => visualContext(goal, tasks), [goal, tasks]);
+  const visual = useMemo(() => pickVisual(context), [context]);
 
   /** Every task that is work toward this goal, by either route. */
-  const mine = useMemo(() => {
-    const ids = new Set(stones.map((stone) => stone.id));
-    return tasks.filter(
-      (task) => task.goal_id === goal.id || (task.milestone_id && ids.has(task.milestone_id)),
-    );
-  }, [goal.id, stones, tasks]);
+  const mine = context.linked;
 
   /** The checkpoint being worked on: the active one, else the first unfinished. */
   const focus = useMemo(
@@ -493,31 +291,26 @@ export function ActiveGoalCard({
       {/* ---- body ------------------------------------------------------ */}
       <div className="ag-body">
         <section className="ag-panel">
-          {line.length > 1 ? (
-            <>
-              <header className="ag-panel-head">
-                <h4>Progress over time</h4>
-                <label className="ag-range">
-                  <span className="gx-sr">Range</span>
-                  <select value={range} onChange={(event) => setRange(event.target.value as Range)}>
-                    <option value="year">This Year</option>
-                    <option value="all">All Time</option>
-                  </select>
-                </label>
-              </header>
-              <Sparkline points={line} tone={category.tone} />
-              <Stones goal={goal} onOpen={() => onOpen(goal)} />
-            </>
-          ) : stones.length > 0 ? (
-            <Roadmap goal={goal} onOpen={() => onOpen(goal)} />
+          {visual ? (
+            <GoalVisual
+              goal={goal}
+              context={context}
+              pick={visual}
+              nameOf={nameOf}
+              onOpen={() => onOpen(goal)}
+            />
           ) : (
+            /* Nothing fits, which on this page means one thing: no checkpoints
+               and no work recorded against the goal. There is no chart to draw
+               and pretending otherwise would be the one dishonest panel here, so
+               the space asks for the thing that would fill it. */
             <>
               <header className="ag-panel-head">
-                <h4>Milestones</h4>
+                <h4>Nothing to chart yet</h4>
               </header>
               <p className="ag-empty">
-                No checkpoints yet. A goal without them is a wish with a percentage — break it into
-                the states it passes through and the percentage starts meaning something.
+                A goal without checkpoints is a wish with a percentage — break it into the states it
+                passes through and both the percentage and this panel start meaning something.
               </p>
               <div className="ag-empty-tools">
                 <button
@@ -557,7 +350,7 @@ export function ActiveGoalCard({
                 <span>{focus.note || health.reason}</span>
               </div>
               {focusShare === null ? (
-                <span className="ag-focus-when">{shortDateWithYear(focus.target_date)}</span>
+                <span className="ag-focus-when">{monthYear(focus.target_date)}</span>
               ) : (
                 <span className="ag-focus-pct">{pct(focusShare)}%</span>
               )}

@@ -72,7 +72,7 @@ import {
   msUntilNextDeadline,
 } from '@/components/Goals';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
-import { useAuth, useDocumentTitle, useUserData } from '@/hooks';
+import { useAuth, useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
 import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewGoal } from '@/services/goals';
 import type { Goal, Milestone, MilestoneStatus, Task } from '@/types';
@@ -178,6 +178,15 @@ export default function Goals() {
   );
 
   const tasks = useMemo(() => account.data?.tasks ?? [], [account.data]);
+
+  /* The catalogue, so a chart that groups by subject can print "Competitive
+     Math" rather than `competitive_math`. Falls back to a tidied id when a task
+     names a subject the catalogue no longer has. */
+  const subjects = useSubjectIndex(username);
+  const subjectName = useCallback(
+    (id: string) => subjects.get(id)?.name ?? id.replace(/_/g, ' '),
+    [subjects],
+  );
 
   /**
    * Tick off one of the next moves.
@@ -486,6 +495,7 @@ export default function Goals() {
                     }
                     onSuggest={suggestMilestones}
                     onSaveStones={saveMilestones}
+                    nameOf={subjectName}
                   />
                 ))}
               </div>
