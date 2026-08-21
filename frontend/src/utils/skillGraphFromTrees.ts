@@ -135,7 +135,7 @@ function treeNodes(tree: SkillTree): GraphNode[] {
   const root: GraphNode = {
     id: tree.key,
     name: tree.name,
-    blurb: `Level ${tree.level.tier} in ${tree.name}, read on the same mastery ladder the Subjects tab uses. Everything below is a threshold on the work already filed under it.`,
+    blurb: `Level ${tree.level.tier} in ${tree.name}, on the same ladder the Subjects tab uses.`,
     category: tree.name,
     difficulty: 'foundation',
     status: tree.unlocked >= tree.total ? 'complete' : 'progress',

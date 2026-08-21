@@ -56,11 +56,10 @@ export function GradeCard({ ratings }: GradeCardProps) {
       </table>
 
       <div className="grade-calc">
-        <h3 className="grade-calc-title">How it&apos;s Calculated</h3>
+        <h3 className="grade-calc-title">How it is worked out</h3>
         <p className="grade-calc-intro">
-          Each metric is scored 0–100 from your real activity and given a letter
-          grade. Your Unified Grade Score is the average of the five metric
-          scores.
+          Each metric is scored 0–100 and given a letter. The Unified Grade Score is
+          the average of the five.
         </p>
         <ul className="grade-calc-list">
           <li>

@@ -191,11 +191,11 @@ export interface Measure {
  */
 const UNMEASURED: Record<string, string> = {
   rebalance:
-    'No measure — this one asks you to decide whether the shape of your week is deliberate, and either answer can be the right one.',
+    'No measure — this one asks whether the shape of your week is deliberate. Either answer can be right.',
   'stretch-harder':
-    'No measure — the difficulty of your work is your own rating of it, and a page that scored you on rating it harder would be asking for the rating rather than the work.',
+    'No measure — difficulty is your own rating, and scoring you on it would be asking for the rating rather than the work.',
   'difficulty-is-the-half':
-    'No measure — the difficulty of your work is your own rating of it, and a page that scored you on rating it harder would be asking for the rating rather than the work.',
+    'No measure — difficulty is your own rating, and scoring you on it would be asking for the rating rather than the work.',
 };
 
 /** The bottom quarter of working days, averaged. What `raise-the-floor` is about. */

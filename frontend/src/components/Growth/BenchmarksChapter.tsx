@@ -325,19 +325,19 @@ export function BenchmarksChapter({
               tone: 'note',
               icon: 'info',
               head: 'Nothing here compares you to another person.',
-              hint: 'This app stores one account. The only percentile on the page is against your own thirty-day windows, and it appears only once there are enough of them.',
+              hint: 'One account, so the only percentile here is against your own thirty-day windows.',
             },
             {
               tone: 'watch',
               icon: 'alert',
               head: 'External standards are not tracked.',
-              hint: 'A Codeforces rating, a LeetCode count, an RCM level — none of them are recorded anywhere in this app. Set one as a goal with a deadline and it becomes a row above, paced against what you are actually doing.',
+              hint: 'A Codeforces rating, a LeetCode count, an RCM level — none are recorded here. Set one as a goal and it becomes a row above.',
             },
             {
               tone: 'good',
               icon: 'check',
               head: 'A full bar means you are equalling your own best.',
-              hint: 'Not that you have finished. The bar is the present against the record, which is the only benchmark that cannot be gamed and cannot be lost.',
+              hint: 'Not that you have finished. The bar is the present against your record.',
             },
           ]}
         />

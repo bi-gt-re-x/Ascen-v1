@@ -53,9 +53,8 @@ function QualityEmpty({ title, shows }: { title: string; shows: string }) {
           <strong>Nothing rated in this window.</strong> {shows}
         </p>
         <p className="ax-muted">
-          The two star rows appear once, after you finish a task, and can be skipped — they are
-          the only thing in Ascen that is asked rather than measured, which is exactly why they
-          cannot be filled in for you. Nothing else on this page depends on them.
+          The two star rows appear once, after you finish a task, and can be skipped. Nothing
+          else on this page depends on them.
         </p>
         <Link to="/tasks" className="ax-btn">
           Open Tasks

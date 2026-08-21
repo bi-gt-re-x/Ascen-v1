@@ -103,6 +103,19 @@ export default function Goals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* The arrival cascade, which runs once. Held as state rather than left to
+     CSS because the bands remount when the tab changes, and a class still on
+     the shell would replay the whole page every time somebody switched tab.
+     The timer is the animation's own length plus the last band's delay. */
+  const [entering, setEntering] = useState(true);
+  /* Started when the goals arrive rather than when the component mounts: the
+     shell is not on the page until `loading` clears, and a timer begun behind
+     the spinner would be half spent before the first band existed. */
+  useEffect(() => {
+    if (loading) return;
+    const done = window.setTimeout(() => setEntering(false), 900);
+    return () => window.clearTimeout(done);
+  }, [loading]);
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -417,7 +430,7 @@ export default function Goals() {
   return (
     <div className="gx-page">
       <Ambient />
-      <div className="gx-shell page-shell">
+      <div className={`gx-shell page-shell${entering ? ' is-entering' : ''}`}>
         <header className="gx-head">
           <div>
             <h1>
@@ -466,9 +479,8 @@ export default function Goals() {
           <>
             {shown.length === 0 ? (
               <p className="gx-empty">
-                No outcome goals yet. An outcome is something you either got to or did not — reach
-                USACO Gold, ship Ascen v2, read 24 books — as opposed to a system goal, which is a
-                target on something the app already counts for you.
+                No outcome goals yet. Something you either reached or did not — reach USACO
+                Gold, ship Ascen v2, read 24 books.
                 <button type="button" className="gx-link" onClick={() => setWizardOpen(true)}>
                   Set your first
                 </button>

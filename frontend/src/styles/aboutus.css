@@ -3,7 +3,7 @@
  * The shell it sits in (the card, the headings, the dark theme) is shared with
  * the Privacy Policy and the Terms of Service: see src/styles/content-page.css,
  * which the component imports alongside this file. What is left is the four
- * belief cards under "What We Believe".
+ * belief cards under "What it is built on".
  */
 
 .values-grid {

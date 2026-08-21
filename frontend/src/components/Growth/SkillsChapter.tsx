@@ -403,7 +403,7 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
               tone: 'note',
               icon: 'info',
               head: 'A skill is a subject with finished work in it.',
-              hint: `Every level, rank and track above is counted off your own tasks. The mastery ladder runs 1 to ${MAX_LEVEL} across ${TIERS.length} bands — ${TIERS[0]!.name} to ${TIERS[TIERS.length - 1]!.name} — and gets steeper as it climbs: level 1 costs ${costOf(1)} XP and level 99 costs ${costOf(99).toLocaleString()}. It is not the ladder your account level follows, which is a straight line with no cap; the card above says which is which.`,
+              hint: `Counted off your own tasks. The ladder runs 1 to ${MAX_LEVEL} across ${TIERS.length} bands and steepens as it climbs — level 1 costs ${costOf(1)} XP, level 99 costs ${costOf(99).toLocaleString()}. Not the ladder your account level follows.`,
             },
             {
               tone: unfiled.xp > lifetime ? 'watch' : 'note',
@@ -411,14 +411,14 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
               head: `${Math.round(unfiled.xp).toLocaleString()} XP is filed under no subject.`,
               hint:
                 unfiled.count === 0
-                  ? 'Everything you have finished is filed, which is why these levels are the whole picture.'
-                  : `${unfiled.count} finished tasks carry no subject, so they count towards your account level and towards nothing on this page. Giving a task a subject is what moves a skill.`,
+                  ? 'Everything you have finished is filed, so these levels are the whole picture.'
+                  : `${unfiled.count} finished tasks carry no subject, so they count towards your account level and nothing here. A subject is what moves a skill.`,
             },
             {
               tone: 'watch',
               icon: 'alert',
               head: 'There are no prerequisites, because nothing records them.',
-              hint: 'A branching tree — Python before Data Science before PyTorch — needs a graph somebody wrote down, and backend/tracking/tree.py is still a stub. The track above is the real ladder: the levels ahead of the one you are on.',
+              hint: 'A branching tree — Python before Data Science before PyTorch — needs a graph nobody has written yet. The track above is the real ladder.',
             },
             {
               tone: 'good',

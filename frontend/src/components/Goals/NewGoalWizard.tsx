@@ -40,11 +40,11 @@ const STEPS = [
  * to scroll past.
  */
 const TIPS: Record<number, string> = {
-  0: 'Name the finish line, not the effort — "Reach USACO Gold", not "practise more". You want to be able to tell, on a given day, whether you got there.',
-  1: 'Write the reason you would still want this in three months. It is the thing you will read back on the week you do not feel like it.',
-  2: 'A date you half-believe beats no date: with one the app can say whether you are on pace, and without one it can only say you are still going.',
-  3: 'Pick milestones when finishing is a state you arrive at, and a number when it is something that accumulates. Most real goals are milestones.',
-  4: 'Three to six is the range that works. Each one should be a state the goal reaches, not a task you do — and dates get filled in for you.',
+  0: 'Name the finish line, not the effort — "Reach USACO Gold", not "practise more".',
+  1: 'The reason you would still want this in three months. You will read it back on a bad week.',
+  2: 'A date you half-believe beats no date. With one, the app can say whether you are on pace.',
+  3: 'Milestones when finishing is a state you arrive at, a number when it accumulates.',
+  4: 'Three to six works. Each should be a state the goal reaches, not a task you do.',
 };
 
 /** How far out a goal's date starts, when the reader has not moved it. */

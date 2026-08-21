@@ -67,6 +67,13 @@ class UpdateTask(BaseModel):
     due_date: Optional[str] = None
     completed: Optional[bool] = None
     subject: Optional[str] = None
+    #: What this task is execution for. Same pair as CreateTask, and the reason
+    #: a task can be linked after the fact: the row on the tasks page is where
+    #: somebody notices that what they just wrote down is work toward a goal.
+    #: Sending `goal_id: null` clears the link — `_link` returns a pair of Nones
+    #: for a missing goal, which is the same answer it gives for a bad one.
+    goal_id: Optional[str] = None
+    milestone_id: Optional[str] = None
 
 
 class DeleteTask(BaseModel):
@@ -272,6 +279,14 @@ def update_task(task_id: str, body: UpdateTask):
         task['due_date'] = body.due_date
     if 'subject' in sent:
         task['subject'] = _subject(body.subject, body.username)
+    # Resolved as a pair even when only one of them is sent, because a
+    # checkpoint is only meaningful against its own goal: re-running both
+    # through `_link` is what stops a task keeping a milestone belonging to the
+    # goal it was just moved off.
+    if 'goal_id' in sent or 'milestone_id' in sent:
+        wanted_goal = body.goal_id if 'goal_id' in sent else task.get('goal_id')
+        wanted_stone = body.milestone_id if 'milestone_id' in sent else task.get('milestone_id')
+        task['goal_id'], task['milestone_id'] = _link(wanted_goal, wanted_stone, body.username)
     if 'completed' in sent:
         task['status'] = 'done' if body.completed else 'todo'
         # Record the completion time (the task's "end") when finishing; clear it

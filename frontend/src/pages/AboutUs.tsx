@@ -17,7 +17,7 @@ import { useDocumentTitle } from '@/hooks';
 import '@/styles/content-page.css';
 import '@/styles/aboutus.css';
 
-/** The four cards under "What We Believe", in the order the original had them. */
+/** The four cards under "What it is built on", in the order the original had them. */
 const VALUES = [
   {
     title: '⚖ Consistency over Intensity',
@@ -45,21 +45,19 @@ export default function AboutUs() {
       <h1>About Us</h1>
 
       <p>
-        Ascen is a study and productivity tracker built around a simple idea:{' '}
-        <strong>progress you can see is progress you&apos;ll keep making.</strong>
+        A study tracker built around one idea:{' '}
+        <strong>progress you can see is progress you keep making.</strong>
       </p>
 
-      <h2>Our Story</h2>
+      <h2>Where it came from</h2>
       <p>
-        Ascen started as a personal project — a student&apos;s answer to the feeling of
-        working hard all day and still wondering, &quot;did I actually get anything
-        done?&quot; Spreadsheets were tedious, big productivity suites were bloated, and
-        nothing made consistency feel rewarding. So we built the tool we wanted: tasks, a
-        calendar, focus sessions, and goals, all feeding into streaks, XP, and growth
-        ratings that turn effort into something you can watch climb.
+        A student&apos;s answer to working hard all day and still wondering whether anything
+        got done. Spreadsheets were tedious and the big suites were bloated, so this is the
+        smaller thing: tasks, a calendar, focus sessions and goals, feeding streaks, XP and
+        a growth rating.
       </p>
 
-      <h2>What We Believe</h2>
+      <h2>What it is built on</h2>
       <div className="values-grid">
         {VALUES.map((value) => (
           <div className="value-card" key={value.title}>
@@ -69,24 +67,20 @@ export default function AboutUs() {
         ))}
       </div>
 
-      <h2>How It&apos;s Built</h2>
+      <h2>How it is built</h2>
       <p>
-        Ascen runs on a clean, dependable stack — Python and Flask on the backend,
-        hand-written HTML, CSS and JavaScript on the frontend, and charts drawn with Canvas
-        and SVG. Your data stays local, in plain JSON, where you can always see it. No
-        accounts on distant servers, no subscriptions, no ads.
+        Python and FastAPI on the backend, React and TypeScript on the front, SQLite
+        underneath, and every chart drawn by hand in SVG. Your data stays on the machine
+        running the app. No accounts on distant servers, no subscriptions, no ads.
       </p>
 
-      <h2>Where We&apos;re Headed</h2>
+      <h2>Where it is going</h2>
       <p>
-        Ascen is under active development, and every feature is tested the same way it was
-        born: in real study sessions. If it doesn&apos;t help you focus, finish, and level
-        up, it doesn&apos;t ship.
+        Still being built, and tested the way it was written — in real study sessions.
       </p>
 
       <p>
-        Ready to start your ascent? <Link to="/dashboard">Head to the dashboard</Link> and
-        turn today&apos;s effort into tomorrow&apos;s momentum.
+        <Link to="/dashboard">Head to the dashboard</Link> and get started.
       </p>
     </div>
   );

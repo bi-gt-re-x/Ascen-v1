@@ -606,8 +606,8 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
     'rel-planning',
     'Tasks scheduled → tasks finished',
     [...byWeek.values()].map((entry) => [entry.dated, entry.done] as [number, number]),
-    'Weeks in which you schedule more are weeks in which you finish more. Whether the planning causes it or simply marks the weeks you were already going to have is not something this page can tell you.',
-    'Scheduling more in a week does not go with finishing more of it, so the dates on your tasks are currently decoration rather than a plan.',
+    'Weeks you schedule more are weeks you finish more. Which causes which, this page cannot say.',
+    'Scheduling more does not go with finishing more — the dates on your tasks are decoration, not a plan.',
     'pink',
   );
 

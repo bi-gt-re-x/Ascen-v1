@@ -253,8 +253,8 @@ export function ScorePanel({ score, factors, series, marks, percentile }: ScoreP
         />
       ) : (
         <p className="ax-score-nohistory">
-          No line yet — your score is recorded each time you open this page, and two readings are
-          the fewest that can be drawn between. Come back tomorrow and this becomes a history.
+          No line yet. Your score is recorded each time you open this page, and two readings
+          are the fewest a line can be drawn between.
         </p>
       )}
 

@@ -70,10 +70,11 @@ import {
   type TaskQuery,
 } from '@/components/Tasks';
 import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
+import { measureOf } from '@/components/Goals';
 import { useDocumentTitle, useSubjects, useUserData } from '@/hooks';
-import { tasks as taskService } from '@/services';
+import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewTask } from '@/services/tasks';
-import type { Task } from '@/types';
+import type { Goal, Task } from '@/types';
 import { isoStamp } from '@/utils/calendarGrid';
 import '@/styles/tasks.css';
 
@@ -145,6 +146,27 @@ export default function Tasks() {
 
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const subjects = useSubjects(username);
+
+  /* The account's outcome goals, for the link control on each row. Read once
+     rather than through useApi: nothing on this page writes a goal, and a
+     failed read means the row offers no goals rather than the page failing. */
+  const [goals, setGoals] = useState<Goal[]>([]);
+  useEffect(() => {
+    if (!username) return;
+    let live = true;
+    void goalService.getGoals(username).then((result) => {
+      if (live && result.success) setGoals(result.goals ?? []);
+    });
+    return () => {
+      live = false;
+    };
+  }, [username]);
+
+  /** Only outcome goals: a counter goal advances itself and has no work to name. */
+  const linkable = useMemo(
+    () => goals.filter((goal) => ['number', 'milestones'].includes(measureOf(goal))),
+    [goals],
+  );
 
   const [query, setQuery] = useState<TaskQuery>(EMPTY_QUERY);
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -362,6 +384,35 @@ export default function Tasks() {
       });
     },
     [username, mutate, run],
+  );
+
+  /* Linking a task to a goal after the fact. `null` unlinks. The milestone is
+     cleared alongside it: a checkpoint only means anything against its own
+     goal, and the backend would drop a mismatched one anyway. */
+  const link = useCallback(
+    (task: Task, goalId: string | null) => {
+      if (!username) return;
+      void run(task.id, async () => {
+        const result = await taskService.updateTask(username, task.id, {
+          goal_id: goalId,
+          milestone_id: null,
+        });
+        if (!result.success) {
+          setFailure(result.message);
+          return false;
+        }
+        mutate((current) => ({
+          ...current,
+          tasks: current.tasks.map((entry) =>
+            String(entry.id) === String(task.id)
+              ? { ...entry, goal_id: goalId ?? undefined, milestone_id: undefined }
+              : entry,
+          ),
+        }));
+        return true;
+      });
+    },
+    [mutate, run, username],
   );
 
   const drop = useCallback(
@@ -719,6 +770,8 @@ export default function Tasks() {
                             key={task.id}
                             task={task}
                             subject={subjectName(task.subject)}
+                            goals={linkable}
+                            onLink={link}
                             estimate={plannedSeconds(task)}
                             selected={picked.has(task.id)}
                             starred={starred.has(task.id)}

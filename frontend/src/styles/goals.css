@@ -5147,3 +5147,42 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) {
     .ag-ring-arc, .ag-check { transition: none; }
 }
+
+/* ==========================================================================
+   Arriving on the page
+   ==========================================================================
+   The page builds itself in one pass: the header, then the tab strip, then
+   each band down the page, each a beat behind the one above it. It runs on the
+   first render only — `is-entering` is dropped once the last band has landed,
+   so switching tabs afterwards swaps content without replaying the cascade.
+
+   The stagger is nth-child rather than a per-element delay written into the
+   JSX, for the same reason the ladders do it that way: which band is third is
+   a fact about the layout, and the layout is here.
+
+   Only opacity and transform animate, both compositor properties, and both on
+   elements that are already in flow — nothing here changes the height of
+   anything, so the page does not reflow while it arrives. */
+.gx-shell.is-entering > .gx-head,
+.gx-shell.is-entering > .gx-tabs,
+.gx-shell.is-entering > .gx-main > * {
+    animation: gx-arrive .44s cubic-bezier(.22, 1, .36, 1) both;
+}
+.gx-shell.is-entering > .gx-head { animation-delay: 0s; }
+.gx-shell.is-entering > .gx-tabs { animation-delay: .07s; }
+.gx-shell.is-entering > .gx-main > :nth-child(1) { animation-delay: .14s; }
+.gx-shell.is-entering > .gx-main > :nth-child(2) { animation-delay: .2s; }
+.gx-shell.is-entering > .gx-main > :nth-child(3) { animation-delay: .26s; }
+.gx-shell.is-entering > .gx-main > :nth-child(4) { animation-delay: .32s; }
+/* Past the fifth the delays stop growing: a band nine deep is below the fold,
+   and waiting half a second to start would only be visible as a gap on the
+   way down. */
+.gx-shell.is-entering > .gx-main > :nth-child(n+5) { animation-delay: .38s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .gx-shell.is-entering > .gx-head,
+    .gx-shell.is-entering > .gx-tabs,
+    .gx-shell.is-entering > .gx-main > * {
+        animation: none;
+    }
+}

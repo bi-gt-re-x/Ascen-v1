@@ -246,7 +246,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       category: 'Consistency',
       title: 'Fill the three-day gaps',
       because: `${rhythm.gapCount} breaks of three days or more. A gap costs the days plus the streak.`,
-      action: 'On a day you would skip, do the smallest thing that counts — fifteen minutes, one problem, one page. The run never breaks, so there is no restart.',
+      action: 'On a day you would skip, do the smallest thing that counts — fifteen minutes, one problem, one page.',
       evidence: `${rhythm.gapCount} breaks of 3+ days across ${rhythm.span.toLocaleString()} days${
         rhythm.longestGap ? `, the longest running ${rhythm.longestGap.days} days` : ''
       }.`,
@@ -288,7 +288,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       category: 'Focus Time',
       title: 'Add 15 minutes to each sitting',
       because: `Your sittings run ${Math.round(rhythm.typicalSession)} minutes — short enough that much of one goes on starting.`,
-      action: 'Add the time to the end of a sitting you were having anyway. Starting costs more than continuing, and you have already paid it.',
+      action: 'Add it to the end of a sitting you were having anyway. Starting costs more than continuing.',
       evidence: `Typical sitting ${Math.round(rhythm.typicalSession)} minutes${
         rhythm.longestSession ? `, against a best of ${Math.round(rhythm.longestSession.minutes)}` : ''
       }, across the ${Math.round(rhythm.activeRate)}% of days you work.`,
@@ -311,7 +311,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       because: `${clock.lateShare}% of your work lands after 10 PM. Late work is the first thing a bad day loses.`,
       action: clock.coreWindow
         ? `Move the day's most important task into ${hourText(clock.coreWindow.from)}–${hourText(clock.coreWindow.to)}, your reliable window. Leave the late slot for work that can be missed.`
-        : "Put the day's most important task in the hour you are most reliably free, not at the end of the day.",
+        : "Put the day's most important task in the hour you are most reliably free.",
       evidence: `${clock.lateShare}% of completions land after 10 PM or before 5 AM${
         clock.coreWindow
           ? `, against a reliable window of ${hourText(clock.coreWindow.from)}–${hourText(
@@ -354,7 +354,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       category: 'Productivity',
       title: `${balance.leader} is ${balance.concentration}% of your week`,
       because: 'More than everything else combined. Depth is not a fault, but it should be a choice.',
-      action: 'If it is deliberate, protect it. If it is drift, book one recurring session on the subject you would rather be building.',
+      action: 'If it is deliberate, protect it. If it is drift, book one recurring session.',
       evidence: `${balance.leader} holds ${balance.concentration}% of your XP across ${balance.carrying} subjects with real weight behind them.`,
       impact: 0,
       workings: 'No XP claim: the total does not change, only what it is made of.',
@@ -399,7 +399,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       category: 'Burnout',
       title: 'Plan the light day before you need it',
       because: `${load.longestRun} days running with work on every one of them, and no let-up you chose.`,
-      action: 'Pick one day a week and set its target at the smallest thing that counts. The streak survives, and the day stops being decided for you by how tired you are.',
+      action: 'Pick one day a week and set its target at the smallest thing that counts. The streak survives.',
       evidence: `Longest unbroken run in this range: ${load.longestRun} days, across ${rhythm.span.toLocaleString()} days at ${Math.round(rhythm.activeRate)}% active.`,
       impact: 0,
       workings: 'No XP claim: this is about the pace being one you can hold, not about the total.',
@@ -415,7 +415,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       category: 'Burnout',
       title: 'Your output is piled into your biggest days',
       because: `A tenth of your working days — ${load.topDays} of them — carry ${load.topShare}% of everything in this range.`,
-      action: 'Cap the big days rather than lifting the small ones. Move the last hour of a heavy day onto the next quiet one — the total is the same and the recovery is not.',
+      action: 'Cap the big days rather than lifting the small ones. Move the last hour onto the next quiet day.',
       evidence: `${load.topDays} of your working days hold ${load.topShare}% of the window's XP.`,
       impact: 0,
       workings: 'No XP claim: spreading the same work over more days does not add any of it.',
@@ -432,7 +432,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       category: 'Execution',
       title: 'The work is getting done, not going well',
       because: `You rate execution ${value.toFixed(1)} out of 5 — most of what you finish, you finish unhappy with.`,
-      action: 'Take one task a day and give it the whole sitting instead of a share of it. Execution is what suffers first when a session is split, and it is the half of quality you control on the day.',
+      action: 'Give one task a whole sitting instead of a share of it. Execution suffers first when a session is split.',
       evidence: `Execution averages ${value.toFixed(1)}/5 across the ${quality.rated} tasks you rated, against a difficulty of ${(quality.difficulty ?? 0).toFixed(1)}/5.`,
       impact: 0,
       workings: 'No XP claim: this is your own rating of the work, and XP does not read it.',
@@ -448,7 +448,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       category: 'Quality',
       title: 'Rate what you finish',
       because: `${quality.coverage}% of your finished tasks carry a rating, so most of the quality picture is missing rather than bad.`,
-      action: 'Answer the two star rows when they appear instead of closing them. It is the one number here the app cannot measure for you, and ten rated tasks is enough for the panel to say something.',
+      action: 'Answer the two star rows instead of closing them. Ten rated tasks is enough to say something.',
       evidence: `${quality.rated} of ${quality.finished} finished tasks in this range were rated on both rows.`,
       impact: 0,
       workings: 'No XP claim: rating a task does not change what it was worth.',
@@ -465,7 +465,7 @@ export function recommendations(input: AdviceInput): Advice[] {
       category: 'Quality',
       title: 'Nothing you finish is hard',
       because: `Difficulty averages ${(quality.difficulty ?? 0).toFixed(1)}/5 while execution runs ${(quality.execution ?? 0).toFixed(1)}/5 — comfortable work, done well.`,
-      action: 'Put one task on the list you are not sure you can finish. Comfortable work still earns XP, which is exactly why an account can sit here for months without noticing.',
+      action: 'Put one task on the list you are not sure you can finish. Comfortable work still earns XP.',
       evidence: `Across ${quality.rated} rated tasks: difficulty ${(quality.difficulty ?? 0).toFixed(1)}/5, execution ${(quality.execution ?? 0).toFixed(1)}/5, quality ${(quality.quality ?? 0).toFixed(1)}/25.`,
       impact: 0,
       workings: 'No XP claim: harder work is not worth more XP, it is worth more.',
@@ -548,7 +548,7 @@ function fallbacks(
       category: 'Consistency',
       title: 'Add one day a week',
       because: `You work ${Math.round(rhythm.activeRate)}% of days. The week has room without any day getting longer.`,
-      action: 'Take the day you most often skip — usually the same one — and give it the smallest session that counts. Being on the board is the target, not the size.',
+      action: 'Take the day you most often skip and give it the smallest session that counts.',
       evidence: `${Math.round(rhythm.activeRate)}% of the ${rhythm.span.toLocaleString()} days in
         this range carried work.`,
       impact: Math.round(52 * perDay),
@@ -642,7 +642,7 @@ function fallbacks(
       category: 'Scheduling',
       title: `${quietest.label} goes missing`,
       because: `${Math.round(quietest.avgXp).toLocaleString()} XP against ${Math.round(busiest.avgXp).toLocaleString()} on a ${busiest.label} — the same day every week, not bad luck.`,
-      action: 'Something else owns that slot. Find out what before calling it discipline, then give the day one session at an hour that is actually free.',
+      action: 'Something else owns that slot. Find out what, then move the session to an hour that is free.',
       evidence: `${quietest.label} averages ${Math.round(quietest.avgXp).toLocaleString()} XP across
         ${quietest.days} of them, ${Math.round(quietest.activeRate)}% of which carried any work.`,
       impact: Math.round(lift * 52),
@@ -670,7 +670,7 @@ function fallbacks(
         category: 'Consistency',
         title: 'Raise the floor, not the ceiling',
         because: `Your quietest working days average ${Math.round(quietAvg).toLocaleString()} XP against a typical ${Math.round(median).toLocaleString()}.`,
-        action: 'Set a minimum for any day you have decided to work, and hold it. Quiet days are recoverable; best days are not repeatable on demand.',
+        action: 'Set a minimum for any day you work, and hold it. Quiet days are recoverable; best days are not.',
         evidence: `The quietest ${quiet.length} of ${worked.length} working days average
           ${Math.round(quietAvg).toLocaleString()} XP, against a median of
           ${Math.round(median).toLocaleString()}.`,
@@ -699,8 +699,8 @@ function fallbacks(
         ? `Execution ${quality.execution.toFixed(1)} against difficulty ${quality.difficulty.toFixed(1)} — quality is the product, and this is the smaller number.`
         : `Difficulty ${quality.difficulty.toFixed(1)} against execution ${quality.execution.toFixed(1)} — you finish well what you take on, and what you take on is the smaller number.`,
       action: behind
-        ? 'Finish one task properly before starting the next. A point of execution is worth as much to the product as a point of difficulty and costs far less to find.'
-        : 'Take on one task a week you would normally leave off the list. You already finish what you start well enough for that to be the cheaper half.',
+        ? 'Finish one task properly before starting the next. A point of execution costs less than a point of difficulty.'
+        : 'Take on one task a week you would normally leave off. You already finish what you start.',
       evidence: `Across ${quality.rated} rated tasks: difficulty ${quality.difficulty.toFixed(1)}/5, execution ${quality.execution.toFixed(1)}/5, quality ${(quality.quality ?? 0).toFixed(1)}/25.`,
       impact: 0,
       workings: 'No XP claim: these are your own ratings of the work, and XP does not read them.',
@@ -720,7 +720,7 @@ function fallbacks(
       category: 'Burnout',
       title: 'Your big days cost you the next one',
       because: `The day after a heavy one runs ${drop}% below your ordinary day. The push is being paid for, just not on the day you notice.`,
-      action: 'Stop a heavy day one task early. The task moves to tomorrow, which is a day you were going to lose anyway — that is the whole trade.',
+      action: 'Stop a heavy day one task early. It moves to tomorrow, a day you were going to lose anyway.',
       evidence: `Days following your heaviest ${load.topDays} average ${Math.round(load.afterHeavy).toLocaleString()} XP against ${Math.round(load.ordinary).toLocaleString()} on every other day.`,
       impact: 0,
       workings: 'No XP claim: this moves work between days rather than adding any.',
@@ -743,7 +743,7 @@ function fallbacks(
       category: 'Focus Time',
       title: 'Most of your work goes unlogged',
       because: `${share}% of the days you finished something have any focus time on them, so the focus score is grading the timer rather than the work.`,
-      action: 'Start the timer before the first task rather than remembering it afterwards. It is the only input on the report card that has to be running to count.',
+      action: 'Start the timer before the first task. It is the only input that has to be running to count.',
       evidence: `${focusDays} of ${workedDays} working days in this range carry any focus minutes.`,
       impact: 0,
       workings: 'No XP claim: logging a session does not add XP to it.',

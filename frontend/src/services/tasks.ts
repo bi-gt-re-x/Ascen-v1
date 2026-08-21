@@ -89,6 +89,13 @@ export interface TaskEdit {
   completed?: boolean;
   /** `null` clears it; leaving it out leaves whatever is stored alone. */
   subject?: string | null;
+  /**
+   * The goal this task is execution for. `null` unlinks it; leaving it out
+   * leaves the stored link alone. Checked against the account's own goals
+   * server-side, so a stale id unlinks rather than failing the write.
+   */
+  goal_id?: string | null;
+  milestone_id?: string | null;
 }
 
 export function updateTask(

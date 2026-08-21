@@ -240,7 +240,7 @@ export function LongTermChapter({ all, streak }: LongTermChapterProps) {
           <h2 className="gr-panel-title">
             Where this is heading
             <Hint
-              text={`The recorded curve, continued at ${rate} XP a day — the average of the last ${PACE_DAYS} days, quiet days included. It is a straight line and nothing more.`}
+              text={`The recorded curve, continued at ${rate} XP a day — your last ${PACE_DAYS} days, quiet ones included. A straight line, nothing more.`}
             />
           </h2>
           <span className="gr-panel-note">
