@@ -382,7 +382,7 @@ export function ActiveGoalCard({
 
           {actions.length === 0 ? (
             <p className="ag-empty">
-              Nothing open against this goal. Add one below and it pays the same XP.
+              Nothing open. Add one below — it pays the same XP.
             </p>
           ) : (
             <ul className="ag-actions">

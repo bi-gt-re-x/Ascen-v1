@@ -2947,16 +2947,32 @@ html[data-theme="dark"] .gx-page {
 .gx-dist-key strong { font-weight: 650; color: var(--gx-text); font-variant-numeric: tabular-nums; }
 .gx-dist-key strong .gx-quiet { font-weight: 400; font-size: 11.5px; }
 
-/* ---------- Insight rows -------------------------------------------------- */
+/* ---------- Insight rows --------------------------------------------------
+   Three columns on every row — mark, reading, way in — so the icons line up
+   down the left and the links down the right, and each row is the same shape
+   as the one above it. The middle column is the only one that flexes; both
+   others size to their content and then hold that width for every row, which
+   is what stops three readings of different lengths from arriving as three
+   different layouts.
+
+   `.gx-notes` and `.gx-note` used to be declared twice in this file: once
+   here, and again for a per-goal margin-notes panel that no longer exists.
+   The dead half came later and won, turning this grid into a column flex —
+   the icon stacked over the text and every row measured itself. It is gone,
+   and these names belong to this component alone. */
 .gx-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 .gx-note {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
-    padding: 12px;
+    padding: 12px 14px;
     border-radius: 12px;
+    text-align: left;
 }
+/* One width for every row's link, so the arrows sit on a line rather than
+   wherever each label happens to end. */
+.gx-note > .gx-link { justify-self: end; white-space: nowrap; }
 .gx-note:hover { background: var(--gx-card-2); }
 .gx-note-ico {
     flex: none;
@@ -4191,48 +4207,6 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     font-weight: 700;
     text-align: right;
     font-variant-numeric: tabular-nums;
-}
-
-/* ---------- The margin notes ---------------------------------------------- */
-.gx-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
-.gx-note { position: relative; display: flex; flex-direction: column; gap: 5px; }
-.gx-note-goal {
-    align-self: flex-start;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--tone);
-    font: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
-.gx-note-goal:hover { text-decoration: underline; }
-.gx-note-body {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--gx-line);
-    border-radius: 10px;
-    background: var(--gx-card-2);
-    color: var(--gx-text);
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.6;
-    resize: vertical;
-    outline: none;
-    transition: border-color .15s ease;
-}
-.gx-note-body::placeholder { color: var(--gx-faint); }
-.gx-note-body:focus { border-color: color-mix(in srgb, var(--tone) 55%, transparent); }
-/* On the title row, not the box. Bottom-right put it under the textarea's own
-   resize grip, where it was both unreadable and in the way of the drag. */
-.gx-note-when {
-    position: absolute;
-    top: 0; right: 2px;
-    font-size: 10.5px;
-    line-height: 1.5;
-    color: var(--gx-faint);
-    pointer-events: none;
 }
 
 @media (max-width: 1080px) {
