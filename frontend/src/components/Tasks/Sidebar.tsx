@@ -179,7 +179,7 @@ function Streaks({ rows, onAll }: { rows: Streak[]; onAll: () => void }) {
       </header>
       {rows.length === 0 ? (
         <p className="tk-side-empty">
-          Nothing on a run yet. A task done two days together starts one.
+          Nothing on a run yet. Two days together starts one.
         </p>
       ) : (
         <ul className="tk-streaks">

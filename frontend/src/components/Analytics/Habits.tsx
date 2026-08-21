@@ -190,8 +190,7 @@ export function HabitCards({ habits, todayIso }: { habits: Habit[]; todayIso: st
   if (habits.length === 0) {
     return (
       <p className="ax-empty">
-        Nothing in this range recurs often enough to call a habit. Four separate days is the floor —
-        three is a coincidence, and a page of coincidences is a page nobody reads twice.
+        Nothing here repeats often enough to call a habit yet.
       </p>
     );
   }
@@ -373,8 +372,7 @@ export function PatternsPanel({ patterns }: { patterns: HabitPattern[] }) {
     >
       {patterns.length === 0 ? (
         <p className="ax-empty">
-          No behaviour in this range repeats often enough to state as a pattern yet. These need
-          twenty days or so before they say anything that will still be true next week.
+          Nothing repeats often enough to call a pattern yet.
         </p>
       ) : (
         <ul className="ax-patterns">
@@ -480,8 +478,7 @@ export function TimelinePanel({
     >
       {withPhases.length === 0 ? (
         <p className="ax-empty">
-          The range is too short to split into phases. A habit needs a couple of months before its
-          history is a shape rather than a point.
+          Too short a range to split into phases.
         </p>
       ) : (
         <ul className="ax-phases">

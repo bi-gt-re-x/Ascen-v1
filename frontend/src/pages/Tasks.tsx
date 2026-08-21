@@ -576,7 +576,7 @@ export default function Tasks() {
               </span>
               Tasks
             </h1>
-            <p className="tk-quiet">Organize your work. Focus on what matters.</p>
+            <p className="tk-quiet">What is on your plate.</p>
           </div>
           <div className="tk-head-tools">
             <button
@@ -684,7 +684,7 @@ export default function Tasks() {
               <p className="tk-empty">
                 {list.length === 0
                   ? 'Nothing here yet. Quick Add is the fastest way to change that.'
-                  : 'No task matches what you are looking for. Clear the filters to see the rest.'}
+                  : 'No task matches. Clear the filters to see the rest.'}
               </p>
             ) : (
               groups.map((group) => {

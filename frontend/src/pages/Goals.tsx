@@ -49,8 +49,6 @@ import {
   GoalModal,
   GoalsGreeting,
   GrowthAreas,
-  Momentum,
-  NextMoves,
   Trajectory,
   GoalStats,
   GoalTable,
@@ -432,7 +430,7 @@ export default function Goals() {
               </span>
               Goals
             </h1>
-            <p className="gx-quiet">Turn long-term ambitions into measurable progress.</p>
+            <p className="gx-quiet">What you are working toward.</p>
             <VisionLine goals={list} />
             {/* What you are carrying, before anything is described. The counts
                 come from the same `goalsOverview` the tiles below read. */}
@@ -506,7 +504,7 @@ export default function Goals() {
             {outcomes.length > LIST_GOALS && (
               <Band
                 title="Also carrying"
-                hint="Past ten, a goals page stops being a plan. These are still counted everywhere; they are just not drawn as cards."
+                hint="Still counted, not drawn as cards"
               >
                 <ul className="gx-rest">
                   {outcomes.slice(LIST_GOALS).map((goal) => {
@@ -535,14 +533,14 @@ export default function Goals() {
             widest view of the smallest thing, so it goes last. */}
         {on('timeline') && (
           <>
-            <Band title="Next Milestones" hint="The checkpoint each goal is on now.">
+            <Band title="Next Milestones" hint="What each goal is on now">
               <NextMilestones goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
             </Band>
 
             {shown.length > 0 && (
               <Band
                 title="Goal Timelines"
-                hint="Each goal on its own rail — what you have reached, and what is queued."
+                hint="Reached, and queued"
               >
                 <div className="gx-rails">
                   {shown.map((goal) => (
@@ -569,7 +567,7 @@ export default function Goals() {
 
             <Band
               title="Milestone Calendar"
-              hint="Every dated checkpoint on the day it lands. Darker days carry more; pick one to see what."
+              hint="Darker days carry more"
             >
               <MilestoneCalendar goals={list} onOpen={(goal) => setOpenId(goal.id)} />
             </Band>
@@ -583,7 +581,7 @@ export default function Goals() {
         {on('system') && (
           <Band
             title="System Goals"
-            hint="Targets on figures the app already counts for you. You choose the number; the reading underneath is whatever your record says."
+            hint="You set the target, Ascen keeps the count"
           >
             <SystemGoals
               counters={counters}
@@ -606,44 +604,25 @@ export default function Goals() {
           <>
             <Band
               title="Where you stand"
-              hint="Counted off your goals — a goal is complete when its own checkpoints say so."
+              hint="Counted off your goals"
             >
               <GoalStats goals={list} />
               <OverviewStrip goals={list} tasks={tasks} />
             </Band>
 
-            <div className="gx-two gx-two-wide">
-              <Band
-                title="Next moves"
-                hint="Open tasks that name one of your goals, soonest first. Ticking one here counts exactly as it would on the dashboard."
-              >
-                <NextMoves
-                  goals={list}
-                  tasks={tasks}
-                  busy={busy}
-                  onComplete={(task) => void completeMove(task)}
-                  onOpen={(goal) => setOpenId(goal.id)}
-                />
-              </Band>
-
-              <Band title="Momentum" hint="The last seven days, counted off goal-linked work only.">
-                <Momentum goals={list} tasks={tasks} />
-              </Band>
-            </div>
-
             <Band
               title="Your trajectory"
-              hint="Where each goal stands on its own scale, and what is still to cover."
+              hint="How far each one has to go"
             >
               <Trajectory goals={outcomes} onOpen={(goal) => setOpenId(goal.id)} />
             </Band>
 
             <div className="gx-two">
-              <Band title="Goal Insights" hint="Counted off the work linked to each goal — never estimated.">
+              <Band title="Goal Insights" hint="From linked work only">
                 <GoalInsights goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
               </Band>
 
-              <Band title="Goal Health" hint="How much of what you are carrying is going to happen.">
+              <Band title="Goal Health" hint="What is going to happen">
                 <HealthRing goals={list} tasks={tasks} />
                 <HealthBreakdown
                   goals={outcomes}
@@ -655,14 +634,14 @@ export default function Goals() {
 
             <Band
               title="Growth areas"
-              hint="Your active goals grouped by field, with progress weighted by how much each matters."
+              hint="Grouped by field, weighted by priority"
             >
               <GrowthAreas goals={list} />
             </Band>
 
             <Band
               title="All Goals"
-              hint="Progress, health, the date and what is next — the same columns for every goal, so they can be read against each other."
+              hint="Same columns for every goal"
             >
               <GoalTable
                 goals={outcomes}
@@ -681,7 +660,7 @@ export default function Goals() {
             Not a tab of its own: it is one band, and the header button that
             reveals it works from wherever you are. */}
         {showCompleted && (
-          <Band title="Recently Completed" hint="Goals and milestones already behind you.">
+          <Band title="Recently Completed" hint="Already behind you">
             <RecentlyCompleted goals={list} />
           </Band>
         )}

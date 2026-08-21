@@ -485,7 +485,7 @@ export default function Records() {
       <header className="rc-hero">
         <div className="rc-hero-text">
           <h1 className="rc-title">Your Records</h1>
-          <p className="rc-sub">A history of your best performances and biggest milestones.</p>
+          <p className="rc-sub">Your best, and the day you hit it.</p>
           <div className="rc-hero-tools">
             <button type="button" className="rc-btn is-primary" onClick={() => open('record')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
@@ -530,9 +530,7 @@ export default function Records() {
 
         {bests.length === 0 ? (
           <p className="rc-empty">
-            Nothing logged yet. “Add record” takes a name, a figure and a date — AMC 8, 25 out of
-            25, August 12th — and beating it later is another entry under the same name, which is
-            what draws the line further down.
+            Nothing logged yet. “Add record” takes a name, a figure and a date.
           </p>
         ) : (
           <ul className="rc-bests">
@@ -632,9 +630,7 @@ export default function Records() {
           </div>
           {milesShut ? null : milestones.length === 0 ? (
             <p className="rc-empty">
-              A milestone is a thing that happened once — first AIME problem solved, first
-              full-stack project. No figure, just the fact. Give two of them the same category
-              and that category becomes a key milestone they fold up into.
+              Something that happened once — no figure, just the fact.
             </p>
           ) : (
             <ul className="rc-miles">
@@ -778,14 +774,12 @@ export default function Records() {
       <section className="rc-section rc-derived">
         <h2 className="rc-section-title">⚙️ Tracked automatically</h2>
         <p className="rc-note">
-          These are Ascen's own count of your work — nothing here is logged by hand, and nothing
-          above is counted from it.
+          Ascen's own count. Nothing here is logged by hand.
         </p>
 
         {all.length < NEED_DAYS ? (
           <p className="rc-empty">
-            There is nothing to beat yet. Finish some work over the next few days and this fills
-            itself in.
+            Nothing to beat yet. Finish some work and this fills in.
           </p>
         ) : (
           <>

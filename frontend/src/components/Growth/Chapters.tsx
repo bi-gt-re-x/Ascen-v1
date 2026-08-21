@@ -279,7 +279,7 @@ export function LongTermChapter({ all, streak }: LongTermChapterProps) {
         <PanelHead
           title="When the next ones land"
           icon="award"
-          hint="The XP and focus ladders can be forecast, because both accumulate at a rate this page can measure. A streak cannot — it is survived rather than accumulated — so its row carries the days remaining and nothing more."
+          hint="XP and focus can be projected. A streak only counts down"
         />
         <ul className="gr-miles">
           {etas.map((row) => (

@@ -106,8 +106,7 @@ export function WhyPanel({
         <Waiting notice={notice} />
       ) : findings.length === 0 ? (
         <p className="ax-empty">
-          Nothing moved far enough between the last two periods to have a cause worth naming. A flat
-          stretch is a real answer — it means the routine is doing the work rather than a push.
+          Nothing moved far enough to have a cause worth naming.
         </p>
       ) : (
         <ul className="ax-findings">
@@ -139,8 +138,7 @@ export function HowPanel({
         <Waiting notice={notice} />
       ) : findings.length === 0 ? (
         <p className="ax-empty">
-          Your record does not yet separate into conditions that produce different results. That
-          needs both a spread of session lengths and a few dozen finished tasks to compare.
+          Not enough spread yet to separate conditions that produce different results.
         </p>
       ) : (
         <ul className="ax-findings">
@@ -174,9 +172,7 @@ export function WorkingPanel({ wins }: { wins: Win[] }) {
     >
       {wins.length === 0 ? (
         <p className="ax-empty">
-          Nothing has improved measurably against the previous period. That is not a failure — a
-          steady account produces an empty panel here, and the alternative would be inventing
-          encouragement, which is worth nothing once you notice it.
+          Nothing improved measurably against the previous period.
         </p>
       ) : (
         <ul className="ax-wins">

@@ -167,7 +167,7 @@ export default function SkillTrees() {
             <p>
               {goal
                 ? goal.blurb
-                : 'Build your skills, unlock new abilities, and see how far you have come.'}
+                : 'What you have worked on, and how far it goes.'}
             </p>
           </div>
 

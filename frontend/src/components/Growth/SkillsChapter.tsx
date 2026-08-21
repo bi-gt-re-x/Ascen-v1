@@ -149,7 +149,7 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
         <PanelHead
           title="Skills"
           icon="spark"
-          hint="One card per subject you have finished work in. The level is the app's own ladder — level N costs N × 100 XP — read continuously, so a week of work shows on it."
+          hint="One card per subject you have worked in"
           note={`${cards.length} in play · choose one to inspect`}
         />
         <div className="gr-skillcards">
@@ -228,8 +228,8 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
           title={chosen ? `${chosen.name} — growth` : 'Growth'}
           hint={
             thin
-              ? 'Not enough finished work in this subject to draw its own line yet.'
-              : "Level over time, counted from the account's first day rather than the window's — the line is where you stand, not what you earned lately. Each mark is a level reached."
+              ? 'Not enough work here to draw a line yet.'
+              : 'Level over time. Each mark is a level reached'
           }
         >
           <Seg
@@ -247,9 +247,7 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
         {thin ? (
           <p className="gr-plot-empty">
             {chosen?.label ?? 'This skill'} has {chosen?.tasks ?? 0} finished{' '}
-            {chosen?.tasks === 1 ? 'task' : 'tasks'} behind it, and a line needs at least{' '}
-            {CURVE_FLOOR} points to have a shape. Finish a few more in this subject and its climb
-            appears here.
+            {chosen?.tasks === 1 ? 'task' : 'tasks'} behind it. A line needs {CURVE_FLOOR}.
           </p>
         ) : (
           <LevelPlot curve={curve!} />
@@ -287,7 +285,7 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
       <section className="gr-panel gr-balance">
         <PanelHead
           title="Balance"
-          hint="Five readings of one subject, each against the best of your own subjects. Knowledge and Practice are volume; the other three are what separate time spent from ground gained."
+          hint="Five readings, each against your best subject"
           note={chosen?.label}
         />
         {balance.length === 0 ? (
@@ -312,7 +310,7 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
         <PanelHead
           title={chosen ? `${chosen.label} — mastery track` : 'Mastery track'}
           icon="award"
-          hint="The levels behind and ahead. A locked rung carries what it costs and roughly when it lands at this subject's own pace over the last 30 days — nothing here is a prerequisite graph, because the account does not have one."
+          hint="The levels behind and ahead, with what each costs"
           note={
             chosen && chosen.xp30 > 0
               ? `${Math.round(chosen.xp30 / 30)} XP a day lately`
@@ -354,7 +352,7 @@ export function SkillsChapter({ all, tasks, subjects }: SkillsChapterProps) {
         <PanelHead
           title="Moving and waiting"
           icon="trend"
-          hint="The last 30 days against the 30 before, per subject. Nothing here is a verdict — a subject at the bottom is one you have not been near lately, which is a fact about a month."
+          hint="The last 30 days against the 30 before"
         />
         <div className="gr-movers">
           <div>

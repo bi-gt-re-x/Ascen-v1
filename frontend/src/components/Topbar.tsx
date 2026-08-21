@@ -243,8 +243,7 @@ export function Topbar() {
               />
               {query.trim() === '' ? (
                 <p className="topbar-empty">
-                  Type to find a task by name. This searches the tasks on your account and
-                  nothing else.
+                  Find a task by name.
                 </p>
               ) : matches.length === 0 ? (
                 <p className="topbar-empty">No task matches “{query.trim()}”.</p>
@@ -291,8 +290,7 @@ export function Topbar() {
               <div className="topbar-panel-head">Needs you</div>
               {alerts.length === 0 ? (
                 <p className="topbar-empty">
-                  Nothing is late, nothing is due today, and your streak is safe. This is
-                  empty because the record is clear, not because it is switched off.
+                  Nothing late, nothing due today, streak safe.
                 </p>
               ) : (
                 <ul className="topbar-alert-list">

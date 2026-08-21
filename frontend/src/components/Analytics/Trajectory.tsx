@@ -73,7 +73,7 @@ export function Trajectory({
   return (
     <Panel
       title="Productivity, consistency and quality over time"
-      note="This period against the one before it, day for day. The three rates first; the running totals underneath them."
+      note="This period against the last, day for day"
       aside={
         <label className="ax-select-wrap">
           <span className="ax-sr">Chart grain</span>
@@ -259,9 +259,8 @@ export function ScorePanel({ score, factors, series, marks, percentile }: ScoreP
       )}
 
       <p className="ax-panel-note ax-panel-note-foot">
-        The mean of the five report-card metrics — productivity, quality, consistency, efficiency
-        and focus — each worth up to 2.0 of the ten.
-        {series.length >= 2 && ' Every point on the line is a reading taken when you opened this page.'}
+        The mean of the five report-card metrics, each worth up to 2.0 of the ten.
+        {series.length >= 2 && ' Each point is a reading taken when you opened this page.'}
       </p>
     </Panel>
   );

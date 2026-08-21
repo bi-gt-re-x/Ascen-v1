@@ -567,7 +567,7 @@ export default function Notes() {
         <header className="nt-head">
           <div className="nt-head-titles">
             <h1>Notes</h1>
-            <p>Capture ideas. Organize knowledge. Fuel growth.</p>
+            <p>Somewhere to think.</p>
           </div>
 
           <div className="nt-head-tools">
@@ -711,7 +711,7 @@ export default function Notes() {
               {shown.length === 0 ? (
                 <p className="nt-list-empty">
                   {rows.length === 0
-                    ? 'Nothing written yet. The panel beside this one is already a blank note — start there.'
+                    ? 'Nothing written yet. The panel beside this one is a blank note.'
                     : `No note matches “${query.trim()}”.`}
                 </p>
               ) : (

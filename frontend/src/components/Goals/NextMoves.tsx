@@ -185,8 +185,7 @@ export function NextMoves({
   if (moves.length === 0) {
     return (
       <p className="gx-empty">
-        No open task names a goal. Link work to one from the tasks page and it turns up here as the
-        next thing to do — which is the whole point of writing the goal down.
+        No open task names a goal. Link one from the tasks page.
       </p>
     );
   }
@@ -300,8 +299,7 @@ export function Momentum({
   if (reading.total === 0) {
     return (
       <p className="gx-empty">
-        Nothing was due and nothing was finished toward a goal this week, so there is no reading to
-        give. An empty week is not a bad score — it is no score.
+        Nothing was due or finished toward a goal this week.
       </p>
     );
   }

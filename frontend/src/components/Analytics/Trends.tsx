@@ -199,7 +199,7 @@ export function TrendChart({
   return (
     <Panel
       title="The shape of the window"
-      note={`${metricLabel}, one point a week across ${weeks.length} whole weeks.`}
+      note={`${metricLabel}, one point a week`}
       aside={
         <div className="ax-chips ax-chips-sm" role="group" aria-label="Metric">
           {options.map((option) => (
@@ -220,8 +220,7 @@ export function TrendChart({
         /* The chart's own height, so the panel is the same panel whether or
            not the window has three weeks in it. See `.ax-empty-chart`. */
         <p className="ax-empty ax-empty-chart">
-          Three whole weeks is the floor for a line worth drawing. Widen the window, or come back
-          once the account has a month of history in it.
+          Needs three whole weeks. Widen the window, or come back later.
         </p>
       ) : (
         <AreaChart

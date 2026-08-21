@@ -151,7 +151,7 @@ export function BenchmarksChapter({
         <PanelHead
           title="The XP ladder"
           icon="trend"
-          hint="Round numbers, with the day each was cleared. The rungs ahead carry an estimate at the pace of your last 30 days — a straight line, and nothing more."
+          hint="Cleared rungs, and what is next at your pace"
           note={`${Math.round(Number(all[all.length - 1]?.cumulative_xp) || 0).toLocaleString()} XP lifetime`}
         />
         <ol className="gr-ladder">
@@ -179,7 +179,7 @@ export function BenchmarksChapter({
       <section className="gr-panel gr-span-2">
         <PanelHead
           title="Against your own record"
-          hint="Every row is the last 30 days, the 30 before it, and the best 30 you have ever had. The bar is now against that best — a full bar means you are equalling your record."
+          hint="Now against your best 30 days"
           note="30-day windows"
         />
         <div className="gr-cats">
@@ -223,7 +223,7 @@ export function BenchmarksChapter({
         <PanelHead
           title="Personal records"
           icon="trophy"
-          hint="The best each of these has ever been, and the day it happened."
+          hint="Your best, and the day it happened"
         />
         <ul className="gr-records">
           {records.map((record) => (
@@ -244,7 +244,7 @@ export function BenchmarksChapter({
         <PanelHead
           title="Goal benchmarks"
           icon="target"
-          hint="Your own goals, with the pace each needs against the pace you are going. The pace comes from your last 30 days, because a goal set yesterday has no history of its own. The panel shows the three with the most left to do."
+          hint="The pace each needs against the pace you are going"
           note={
             goalRows.length > GOAL_ROWS
               ? `${GOAL_ROWS} of ${goalRows.length}`

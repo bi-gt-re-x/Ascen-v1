@@ -31,7 +31,7 @@ export function ComparisonPanel({ bars }: { bars: ComparisonBar[] }) {
   return (
     <Panel
       title="This period against the last"
-      note="The three rates first — they hold still when the window changes length, and the totals below them do not."
+      note="The three rates first, totals underneath"
       footer={<PanelLink to="/trends">See which way each measure is heading</PanelLink>}
       aside={
         <div className="ax-legend ax-legend-tight">
@@ -331,10 +331,8 @@ export function StandingPanel({ standing }: StandingPanelProps) {
         footer={STANDING_NOTE}
       >
         <p className="ax-empty">
-          There are not enough accounts with a comparable record yet to place you against — this
-          needs {standing.floor} others and there {standing.cohort - 1 === 1 ? 'is' : 'are'}{' '}
-          {standing.cohort - 1}. A rank out of two or three is arithmetic rather than a comparison,
-          and you would be reading it as one.
+          Not enough comparable accounts yet — this needs {standing.floor} others and there{' '}
+          {standing.cohort - 1 === 1 ? 'is' : 'are'} {standing.cohort - 1}.
         </p>
       </Panel>
     );

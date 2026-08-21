@@ -497,8 +497,7 @@ export function GoalTimeline({
   if (past.length === 0 && ahead.length === 0) {
     return (
       <p className="gx-empty">
-        Nothing on the rail yet. Break a goal into milestones and they line up here in the order
-        you will reach them.
+        Nothing on the rail yet. Break a goal into milestones.
       </p>
     );
   }
@@ -757,8 +756,7 @@ export function GoalInsights({
   if (notes.length === 0) {
     return (
       <p className="gx-empty">
-        Nothing to read yet. These fill in from the tasks you link to a goal — which is what makes
-        a goal something the app can see you working on rather than something you told it about.
+        Nothing to read yet. These fill in from tasks you link to a goal.
       </p>
     );
   }

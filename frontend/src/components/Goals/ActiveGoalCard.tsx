@@ -309,8 +309,7 @@ export function ActiveGoalCard({
                 <h4>Nothing to chart yet</h4>
               </header>
               <p className="ag-empty">
-                A goal without checkpoints is a wish with a percentage — break it into the states it
-                passes through and both the percentage and this panel start meaning something.
+                Break this into checkpoints and the percentage starts to mean something.
               </p>
               <div className="ag-empty-tools">
                 <button
@@ -367,7 +366,7 @@ export function ActiveGoalCard({
                   checkpoint, and a goal that never had any. The second was
                   being congratulated for it. */}
               {stones.length === 0
-                ? 'Nothing to focus on yet — this goal has no checkpoints. The panel on the left is where they start.'
+                ? 'No checkpoints yet. The panel on the left is where they start.'
                 : 'Every checkpoint is behind you. What is left is the goal itself.'}
             </p>
           )}
@@ -383,8 +382,7 @@ export function ActiveGoalCard({
 
           {actions.length === 0 ? (
             <p className="ag-empty">
-              Nothing open against this goal. Add one below and it is a real task — it shows on the
-              dashboard and pays the same XP.
+              Nothing open against this goal. Add one below and it pays the same XP.
             </p>
           ) : (
             <ul className="ag-actions">

@@ -299,8 +299,7 @@ export function SubjectLibrary({ subjects, username, onClose }: SubjectLibraryPr
 
         {mine.length === 0 ? (
           <p className="sl-empty">
-            Nothing yet. Anything you name here sits at the top of every subject picker in
-            the app.
+            Nothing yet. What you add here leads every subject picker.
           </p>
         ) : (
           <ul className="sl-list">{mine.map((subject) => row(subject, true))}</ul>
@@ -325,9 +324,7 @@ export function SubjectLibrary({ subjects, username, onClose }: SubjectLibraryPr
       </section>
 
       <p className="sl-note">
-        A colour set here is what a subject prefers. When one week has more things on it
-        than the palette has families, the calendar still moves some of them apart so no
-        two blocks side by side look alike.
+        A colour set here is what the subject prefers. Busy weeks may shift some apart.
       </p>
     </aside>
   );

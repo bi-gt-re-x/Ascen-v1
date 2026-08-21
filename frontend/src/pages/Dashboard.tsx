@@ -269,7 +269,7 @@ export default function Dashboard() {
           <h1 className="dash-hello">
             {dates.greeting(now)}, {username}! <span aria-hidden="true">👋</span>
           </h1>
-          <p className="dash-sub">Ready to crush your goals today?</p>
+          <p className="dash-sub">Here is your day.</p>
         </div>
         <div className="dash-datebar">
           <p className="dash-date">

@@ -85,7 +85,7 @@ export function NodeDetailPanel({ graph, node, onSelect, onClose, action }: Node
     return (
       <aside className="stx-panel is-empty">
         <p className="stx-panel-hint">
-          Pick a node to see what it needs, what it opens, and how far along it is.
+          Pick a node to see where it stands.
         </p>
       </aside>
     );

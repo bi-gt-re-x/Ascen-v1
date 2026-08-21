@@ -112,7 +112,7 @@ export function unlock(have: number, need: number, what: string): Unlock {
   const short = need - have;
   return {
     ready: false,
-    message: `Keep using Ascen for ${short} more ${short === 1 ? 'day' : 'days'} to unlock ${what}. There is not enough here yet to say anything about it that would still be true next week.`,
+    message: `${short} more ${short === 1 ? 'day' : 'days'} of use and this shows ${what}.`,
   };
 }
 

@@ -312,8 +312,7 @@ export function GoalDetail(props: GoalDetailProps) {
 
           <p className="gx-quiet gx-caveat">
             Counted from the {linked.length} task{linked.length === 1 ? '' : 's'} linked to this
-            goal, not estimated. Hours are not shown because this app records focus time per day
-            rather than per task, so there is no honest per-goal figure to give.
+            goal, not estimated.
           </p>
         </section>
 
@@ -333,8 +332,7 @@ export function GoalDetail(props: GoalDetailProps) {
               ))}
             </ul>
             <p className="gx-quiet gx-caveat">
-              Nothing here changes on its own. Moving a target date or cutting a target is a
-              decision about what you are trying to do, and the app does not get to make it.
+              Nothing here changes on its own. Moving a target is your call.
             </p>
           </section>
         )}

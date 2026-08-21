@@ -95,7 +95,7 @@ export function QualityPanel({ summary, findings, bands, span }: QualityPanelPro
     return (
       <QualityEmpty
         title="Quality of finished work"
-        shows="This would show how hard your work has been and how well it went — the two together, out of 25."
+        shows="How hard your work has been, and how well it went."
       />
     );
   }
@@ -109,7 +109,7 @@ export function QualityPanel({ summary, findings, bands, span }: QualityPanelPro
   return (
     <Panel
       title="Quality of finished work"
-      note={`Difficulty × execution over the ${summary.rated} task${summary.rated === 1 ? '' : 's'} you rated in ${span}.`}
+      note={`${summary.rated} rated task${summary.rated === 1 ? '' : 's'} in ${span}`}
       footer={
         <PanelNote label="What this measures">
           How hard you said the work was, multiplied by how well you said it went, averaged over
@@ -212,7 +212,7 @@ export function QualityGridPanel({ cells, summary }: QualityGridPanelProps) {
     return (
       <QualityEmpty
         title="Difficulty against execution"
-        shows="This would show where your rated tasks land — whether the hard ones are the ones going badly, or the easy ones."
+        shows="Where your rated tasks land."
       />
     );
   }
@@ -222,7 +222,7 @@ export function QualityGridPanel({ cells, summary }: QualityGridPanelProps) {
   return (
     <Panel
       title="Difficulty against execution"
-      note="Every rated task placed by how hard it was and how well it went. Darker is more tasks."
+      note="Darker is more tasks"
       footer={
         <PanelNote label="How to read this">
           Difficulty runs left to right, execution bottom to top, so the bottom-right corner is
@@ -296,7 +296,7 @@ export function RatedTasksPanel({ rated, summary }: RatedTasksPanelProps) {
     return (
       <QualityEmpty
         title="Your best and worst rated work"
-        shows="This would name the tasks that scored highest and lowest, so a finding points at something you remember doing."
+        shows="Which tasks scored highest and lowest."
       />
     );
   }
@@ -338,7 +338,7 @@ export function RatedTasksPanel({ rated, summary }: RatedTasksPanelProps) {
   return (
     <Panel
       title="Your best and worst rated work"
-      note={`Scored out of ${QUALITY_MAX}. Only tasks you rated on both rows appear.`}
+      note={`Out of ${QUALITY_MAX}, rated on both rows`}
       footer={<PanelLink to="/tasks">Open Tasks</PanelLink>}
     >
       <div className="ax-rated">
