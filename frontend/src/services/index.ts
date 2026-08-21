@@ -8,6 +8,7 @@
  *   import { tasks, goals } from '@/services';
  *   const result = await tasks.getUserData(username);
  */
+export * as achievements from './achievements';
 export * as analytics from './analytics';
 export * as api from './api';
 export * as auth from './auth';
@@ -19,6 +20,7 @@ export * as growth from './growth';
 export * as notes from './notes';
 export * as quote from './quote';
 export * as records from './records';
+export * as settings from './settings';
 export * as subjects from './subjects';
 export * as tasks from './tasks';
 export * from './constants';

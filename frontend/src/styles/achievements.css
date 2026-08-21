@@ -1,0 +1,199 @@
+/* ==========================================================================
+   achievements.css — the badge wall. See src/pages/Achievements.tsx.
+
+   Four shelves down the page, each a grid of badges at the same difficulty.
+   An earned badge and a locked one are the same size and sit in the same
+   rows: the wall is meant to be read as one thing with gaps in it, not as a
+   list of wins followed by a list of losses.
+
+   The difference between them is carried by the mark and by what fills the
+   third column — a date on an earned badge, a progress bar on a locked one —
+   rather than by hiding anything. Tone follows the tier, so the rarer shelves
+   read warmer as they go down.
+
+   Tokens are declared here and redeclared for dark, the same shape
+   records.css uses.
+   ========================================================================== */
+
+/* body is a centred flex column (dashboard.css), so its child shrinks to its
+   content unless told otherwise. Same fix, and the same reason, as .rc-page. */
+body:has(.ac-page) > #root,
+body:has(.ac-page) .app-main {
+    width: 100%;
+    min-width: 0;
+}
+
+.ac-page {
+    --ac-card: #ffffff;
+    --ac-card-2: #f7f8fb;
+    --ac-line: #e6e9ef;
+
+    --ac-text: #1f2733;
+    --ac-muted: #6b7684;
+    --ac-faint: #98a1ae;
+
+    --ac-violet: #6d5ae0;
+    --ac-blue: #2f6fd0;
+    --ac-green: #1f8a54;
+    --ac-gold: #c08324;
+
+    --ac-radius: 16px;
+    --ac-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1500px;
+    margin-inline: auto;
+    padding: 26px 24px 60px;
+    color: var(--ac-text);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+html[data-theme="dark"] .ac-page {
+    --ac-card: #161d2c;
+    --ac-card-2: #1b2334;
+    --ac-line: #28324a;
+
+    --ac-text: #e7ecf6;
+    --ac-muted: #8f9bb3;
+    --ac-faint: #6d7a94;
+
+    --ac-violet: #9b8bff;
+    --ac-blue: #6a9bff;
+    --ac-green: #46c483;
+    --ac-gold: #e0b23c;
+
+    --ac-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 8px 24px rgba(0, 0, 0, .26);
+    color-scheme: dark;
+}
+
+.ac-shell { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.ac-quiet { color: var(--ac-muted); }
+
+/* ---------- Head ---------------------------------------------------------- */
+.ac-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+}
+.ac-head h1 { margin: 0; font-size: 25px; font-weight: 700; letter-spacing: -.02em; }
+.ac-head p { margin: 4px 0 0; font-size: 13.5px; }
+.ac-head-tools { display: flex; align-items: center; gap: 9px; }
+
+/* ---------- The count across the top --------------------------------------
+   One figure and one bar. The wall below says which badges; this says how
+   much of it there is, which is the only thing a reader cannot get by
+   looking. */
+.ac-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 22px;
+    padding: 18px 20px;
+    border: 1px solid var(--ac-line);
+    border-radius: var(--ac-radius);
+    background: var(--ac-card);
+    box-shadow: var(--ac-shadow);
+}
+.ac-count { display: flex; align-items: baseline; gap: 8px; }
+.ac-count strong {
+    font-size: 30px; font-weight: 700; line-height: 1;
+    color: var(--ac-violet);
+    font-variant-numeric: tabular-nums;
+}
+.ac-count span { font-size: 13px; }
+.ac-summary-bar { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.ac-summary-bar span { font-size: 11.5px; }
+
+/* ---------- Bars ---------------------------------------------------------- */
+.ac-bar {
+    height: 6px;
+    border-radius: 99px;
+    background: var(--ac-card-2);
+    overflow: hidden;
+}
+html[data-theme="dark"] .ac-bar { background: #0f1523; }
+.ac-bar.is-lg { height: 9px; }
+.ac-bar > i {
+    display: block; height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--ac-violet), var(--ac-blue));
+    transition: width .5s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ---------- Shelves ------------------------------------------------------- */
+.ac-shelf { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ac-shelf-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+}
+.ac-shelf-head h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+.ac-shelf-head span { font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* auto-fill rather than auto-fit: a shelf with one badge on it keeps that
+   badge card-width instead of stretching it across the whole page. */
+.ac-grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+    gap: 12px;
+}
+
+/* ---------- One badge -----------------------------------------------------
+   Three rows in a fixed order — mark and title, then the third row that is
+   either a date or a bar. Both states are the same height, so a shelf where
+   some are earned does not come out ragged. */
+.ac-badge {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 4px 13px;
+    min-height: 92px;
+    padding: 15px 16px;
+    border: 1px solid var(--ac-line);
+    border-radius: 14px;
+    background: var(--ac-card);
+    transition: border-color .15s ease, transform .15s ease;
+}
+.ac-badge:hover { transform: translateY(-1px); }
+.ac-badge.is-earned { border-color: color-mix(in srgb, var(--ac-violet) 34%, var(--ac-line)); }
+
+.ac-badge-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ac-badge-text strong { font-size: 13.5px; font-weight: 650; line-height: 1.35; }
+.ac-badge-text .ac-quiet { font-size: 11.5px; line-height: 1.5; }
+
+/* The mark spans both rows so the text and the progress under it share one
+   left edge. */
+.ac-mark {
+    grid-row: 1 / span 2;
+    display: grid; place-items: center;
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: var(--ac-card-2);
+    color: var(--ac-faint);
+}
+.ac-mark svg { width: 18px; height: 18px; }
+.ac-badge.is-earned .ac-mark { color: #fff; background: var(--ac-violet); }
+.ac-badge.is-earned .ac-mark.tier-2 { background: var(--ac-blue); }
+.ac-badge.is-earned .ac-mark.tier-3 { background: var(--ac-green); }
+.ac-badge.is-earned .ac-mark.tier-4 { background: var(--ac-gold); }
+
+/* Both live in the same cell, so neither can shift the other's row. */
+.ac-progress { grid-column: 2; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ac-figures { font-size: 11px; font-variant-numeric: tabular-nums; }
+.ac-earned-on {
+    grid-column: 2;
+    font-size: 11px; font-weight: 600;
+    color: var(--ac-violet);
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+    .ac-page { padding: 20px 15px 48px; }
+    .ac-summary { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .ac-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ac-bar > i { transition: none; }
+    .ac-badge, .ac-badge:hover { transition: none; transform: none; }
+}

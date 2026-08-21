@@ -29,6 +29,8 @@ const Analytics = lazy(() => import('@/pages/Analytics'));
 const SkillTrees = lazy(() => import('@/pages/SkillTrees'));
 const Notes = lazy(() => import('@/pages/Notes'));
 const Records = lazy(() => import('@/pages/Records'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const Achievements = lazy(() => import('@/pages/Achievements'));
 const AboutUs = lazy(() => import('@/pages/AboutUs'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
@@ -174,6 +176,8 @@ export default function App() {
               <Route path="/skill-trees" element={<SkillTrees />} />
               <Route path="/notes" element={<Notes />} />
               <Route path="/records" element={<Records />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/achievements" element={<Achievements />} />
               <Route path="/growth-tree" element={<Navigate to="/skill-trees" replace />} />
               <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
               <Route path="/calendar/day" element={<CalendarDay />} />
