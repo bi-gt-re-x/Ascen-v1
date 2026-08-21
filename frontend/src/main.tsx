@@ -15,9 +15,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
-import { AuthProvider, ThemeProvider } from '@/context';
+import { AuthProvider, SettingsProvider, ThemeProvider } from '@/context';
 
 import '@/styles/layout.css';
+import '@/styles/preferences.css';
 import '@/styles/rail.css';
 
 const container = document.getElementById('root');
@@ -30,7 +31,9 @@ createRoot(container).render(
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <App />
+          <SettingsProvider>
+            <App />
+          </SettingsProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

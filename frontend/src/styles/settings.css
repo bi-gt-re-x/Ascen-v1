@@ -1,16 +1,19 @@
 /* ==========================================================================
    settings.css — account preferences. See src/pages/Settings.tsx.
 
-   Four cards down one narrow column. Narrow on purpose: every row here is a
-   label and one small control, and a row stretched across 1500px puts the
-   label and the thing it names at opposite ends of the screen. The column is
-   capped at a readable measure and centred, which is the one place in this app
-   where centring is right — there is no second column for it to be centred
-   against.
+   Two columns on desktop: the section list on the left, the section itself on
+   the right. The nav is sticky, because the point of a nav is to be reachable
+   without scrolling back to it.
 
-   Each row is label-and-hint on the left, control on the right, and the
-   control column is a fixed width so every control on the page lines up
-   whatever its label says.
+   The page fills the window rather than sitting in a centred column. The
+   content half is capped instead — a row is a label and one small control, and
+   stretching that across 1900px puts the label and the thing it names at
+   opposite ends of the screen. So: full width, and the reading measure
+   protected where it actually matters.
+
+   Under 900px the two columns become one: the nav stacks above the content as
+   a scrolling row of chips, which is the same information without asking a
+   phone for a sidebar.
    ========================================================================== */
 
 body:has(.st-page) > #root,
@@ -35,14 +38,12 @@ body:has(.st-page) .app-main {
     --st-radius: 16px;
     --st-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
 
-    /* One width for every control, so the right edge is a line. */
-    --st-control: 210px;
+    /* One width for every control, so the right edge of the page is a line. */
+    --st-control: 232px;
 
     box-sizing: border-box;
     width: 100%;
-    max-width: 780px;
-    margin-inline: auto;
-    padding: 26px 24px 60px;
+    padding: 26px 28px 60px;
     color: var(--st-text);
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
@@ -64,7 +65,7 @@ html[data-theme="dark"] .st-page {
     color-scheme: dark;
 }
 
-.st-shell { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.st-shell { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .st-quiet { color: var(--st-muted); }
 
 /* ---------- Head ---------------------------------------------------------- */
@@ -79,7 +80,7 @@ html[data-theme="dark"] .st-page {
    move the heading beside it. */
 .st-status {
     min-height: 18px;
-    font-size: 12px;
+    font-size: 12px; font-weight: 600;
     color: var(--st-good);
     opacity: 0;
     transition: opacity .18s ease;
@@ -87,17 +88,73 @@ html[data-theme="dark"] .st-page {
 .st-status.is-on { opacity: 1; }
 .st-status .st-bad { color: var(--st-bad); font-style: normal; }
 
+/* ---------- The two columns ----------------------------------------------- */
+.st-body {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    align-items: start;
+    gap: 26px;
+    min-width: 0;
+}
+
+.st-nav {
+    position: sticky;
+    top: 18px;
+    display: flex; flex-direction: column; gap: 16px;
+    min-width: 0;
+}
+.st-search {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--st-line);
+    border-radius: 10px;
+    background: var(--st-card);
+    color: var(--st-text);
+    font: inherit; font-size: 13px;
+    outline: none;
+    transition: border-color .15s ease;
+}
+.st-search:focus { border-color: color-mix(in srgb, var(--st-violet) 60%, transparent); }
+
+.st-nav-group { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.st-nav-group h2 {
+    margin: 0 0 4px 10px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--st-faint);
+}
+.st-nav-link {
+    padding: 7px 10px;
+    border: 0; border-radius: 8px;
+    background: none; color: var(--st-muted);
+    font: inherit; font-size: 13px; font-weight: 500; text-align: left;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease;
+}
+.st-nav-link:hover { background: var(--st-card-2); color: var(--st-text); }
+.st-nav-link.is-on {
+    background: color-mix(in srgb, var(--st-violet) 12%, transparent);
+    color: var(--st-violet);
+    font-weight: 650;
+}
+
+.st-content { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.st-empty { margin: 0; padding: 22px; font-size: 13.5px; color: var(--st-muted); }
+
 /* ---------- Cards --------------------------------------------------------- */
 .st-card {
     display: flex; flex-direction: column;
-    padding: 6px 20px 8px;
+    /* The reading measure, protected here rather than on the page, so the nav
+       still sits at the far left of a wide window. */
+    width: 100%;
+    max-width: 820px;
+    padding: 6px 22px 10px;
     border: 1px solid var(--st-line);
     border-radius: var(--st-radius);
     background: var(--st-card);
     box-shadow: var(--st-shadow);
 }
 .st-card h2 {
-    margin: 14px 0 4px;
+    margin: 15px 0 4px;
     font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
     color: var(--st-faint);
 }
@@ -107,17 +164,29 @@ html[data-theme="dark"] .st-page {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--st-control);
     align-items: center;
-    gap: 18px;
+    gap: 20px;
     padding: 14px 0;
     border-top: 1px solid var(--st-line);
 }
-/* The first row sits directly under the card's heading, which is separator
-   enough. */
 .st-card h2 + .st-row { border-top: 0; }
 .st-row-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.st-row-text label { font-size: 13.5px; font-weight: 600; }
+.st-label { font-size: 13.5px; font-weight: 600; }
 .st-row-text .st-quiet { font-size: 11.5px; line-height: 1.5; }
 .st-row-control { display: flex; justify-content: flex-end; min-width: 0; }
+
+/* Anything that changes or removes data, kept apart from the rest of the card
+   so a destructive control is never the next one down from a harmless one. */
+.st-risky {
+    /* Pulled out by exactly its own padding, so the rows inside keep the same
+       left and right edges as the rows above them. Without this the tinted box
+       insets its row and the page's control column stops being a line. */
+    margin: 6px -14px 2px;
+    padding: 0 14px;
+    border: 1px solid color-mix(in srgb, var(--st-bad) 28%, var(--st-line));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--st-bad) 4%, transparent);
+}
+.st-risky .st-row:first-child { border-top: 0; }
 
 /* ---------- Controls ------------------------------------------------------ */
 .st-input {
@@ -127,8 +196,7 @@ html[data-theme="dark"] .st-page {
     border-radius: 9px;
     background: var(--st-card-2);
     color: var(--st-text);
-    font: inherit;
-    font-size: 13px;
+    font: inherit; font-size: 13px;
     outline: none;
     transition: border-color .15s ease;
 }
@@ -136,17 +204,21 @@ html[data-theme="dark"] .st-page {
 .st-input:disabled { opacity: .6; }
 .st-input.is-num { font-variant-numeric: tabular-nums; }
 
-/* A value the page shows but cannot change. Deliberately not an input: a
-   disabled field invites a click and then refuses it. */
+/* A value the page shows but cannot change. Deliberately not a disabled
+   input: a disabled field invites a click and then refuses it. */
 .st-fixed {
-    font-size: 13px;
-    color: var(--st-muted);
-    text-align: right;
-    word-break: break-word;
+    font-size: 13px; color: var(--st-muted);
+    text-align: right; word-break: break-word;
+}
+.st-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--st-card-2);
+    object-fit: cover;
 }
 
-.st-choice {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+.st-seg {
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
     width: 100%;
     padding: 3px;
     border: 1px solid var(--st-line);
@@ -154,7 +226,7 @@ html[data-theme="dark"] .st-page {
     background: var(--st-card-2);
 }
 .st-pick {
-    padding: 6px 10px;
+    padding: 6px 8px;
     border: 0; border-radius: 7px;
     background: none; color: var(--st-muted);
     font: inherit; font-size: 12.5px; font-weight: 600;
@@ -163,6 +235,25 @@ html[data-theme="dark"] .st-page {
 }
 .st-pick.is-on { background: var(--st-card); color: var(--st-text); box-shadow: var(--st-shadow); }
 .st-pick:disabled { cursor: default; }
+
+.st-swatches { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.st-swatch {
+    width: 26px; height: 26px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: var(--swatch);
+    cursor: pointer;
+    /* The ring is drawn outside the swatch, so choosing one does not change
+       the size of the dot and shuffle the row. */
+    box-shadow: 0 0 0 1px var(--st-line);
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+.st-swatch:hover { transform: scale(1.08); }
+.st-swatch.is-on {
+    box-shadow: 0 0 0 2px var(--st-card), 0 0 0 4px var(--swatch);
+}
+.st-swatch:disabled { cursor: default; }
 
 .st-toggle {
     position: relative;
@@ -186,33 +277,44 @@ html[data-theme="dark"] .st-page {
 .st-toggle.is-on > i { transform: translateX(18px); }
 .st-toggle:disabled { opacity: .6; cursor: default; }
 
-/* ---------- The read-only facts ------------------------------------------- */
-.st-facts {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 14px;
-    margin: 0;
-    padding: 14px 0 10px;
-    border-top: 1px solid var(--st-line);
+.st-links { display: flex; gap: 7px; justify-content: flex-end; flex-wrap: wrap; }
+.st-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 7px 13px;
+    border: 1px solid var(--st-line);
+    border-radius: 9px;
+    background: var(--st-card-2);
+    color: var(--st-text);
+    font: inherit; font-size: 12.5px; font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
 }
-.st-facts > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.st-facts dt { font-size: 11.5px; color: var(--st-muted); }
-.st-facts dd {
-    margin: 0;
-    font-size: 17px; font-weight: 650;
-    font-variant-numeric: tabular-nums;
+.st-btn:hover { border-color: color-mix(in srgb, var(--st-violet) 50%, var(--st-line)); }
+.st-btn.is-small { padding: 5px 10px; font-size: 12px; text-transform: capitalize; }
+
+/* ---------- Narrow -------------------------------------------------------- */
+@media (max-width: 900px) {
+    .st-body { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .st-nav { position: static; }
+    /* The groups become one scrolling row of chips rather than a sidebar
+       lying on its side down the page. */
+    .st-nav-group { flex-direction: row; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+    .st-nav-group h2 { display: none; }
+    .st-nav-link { flex: none; border: 1px solid var(--st-line); border-radius: 99px; }
+    .st-card { max-width: none; }
 }
 
 @media (max-width: 560px) {
     .st-page { padding: 20px 15px 48px; }
-    /* Under this width the control cannot keep its own column without
-       squeezing the label into two words a line. */
-    .st-row { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+    .st-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
     .st-row-control { justify-content: flex-start; }
-    .st-fixed { text-align: left; }
-    .st-choice, .st-input { width: min(100%, var(--st-control)); }
+    .st-fixed, .st-links, .st-swatches { text-align: left; justify-content: flex-start; }
+    .st-seg, .st-input { width: min(100%, var(--st-control)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .st-status, .st-input, .st-pick, .st-toggle, .st-toggle > i { transition: none; }
+    .st-status, .st-input, .st-pick, .st-toggle, .st-toggle > i,
+    .st-swatch, .st-nav-link, .st-btn { transition: none; }
+    .st-swatch:hover { transform: none; }
 }

@@ -49,7 +49,7 @@ import {
   topPriorities,
   weekSummary,
 } from '@/components/Dashboard/summary';
-import { useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
+import { useDocumentTitle, useSettings, useSubjectIndex, useUserData } from '@/hooks';
 import { useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
 import { dates } from '@/utils';
@@ -66,6 +66,7 @@ export default function Dashboard() {
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const session = useFocusSession(username);
   const subjects = useSubjectIndex(username);
+  const { prefs } = useSettings();
 
   const [tab, setTab] = useState<TaskTab>('today');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -290,12 +291,17 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="dash-stats">
-        <TodayCard day={day} />
-        <XpCard stats={data.stats} xpToday={day.xp} />
-        <FocusCard session={session} />
-        <StreakCard stats={data.stats} />
-      </div>
+      {/* Both rows are preferences. A reader who does not want the figures
+          gets the task list at the top of the page rather than a gap where
+          they were — see Settings, Dashboard. */}
+      {prefs.show_stats && (
+        <div className="dash-stats">
+          <TodayCard day={day} />
+          <XpCard stats={data.stats} xpToday={day.xp} />
+          <FocusCard session={session} />
+          <StreakCard stats={data.stats} />
+        </div>
+      )}
 
       {/* Whichever went wrong last: the write the reader just asked for, or the
           re-read behind it. Both are shown here, over the page they failed to
@@ -315,11 +321,13 @@ export default function Dashboard() {
         <FocusPanel session={session} />
       </div>
 
-      <div className="dash-insights">
-        <WeeklyOverview week={week} />
-        <TopPriorities tasks={priorities} />
-        <RecentActivity entries={activity} />
-      </div>
+      {prefs.show_insights && (
+        <div className="dash-insights">
+          <WeeklyOverview week={week} />
+          <TopPriorities tasks={priorities} />
+          <RecentActivity entries={activity} />
+        </div>
+      )}
 
       <DailyQuote />
 

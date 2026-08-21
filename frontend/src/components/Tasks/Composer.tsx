@@ -15,20 +15,24 @@ import { useRef, useState } from 'react';
 import { SubjectPicker } from '@/components';
 import type { Subject } from '@/services/subjects';
 import type { NewTask } from '@/services/tasks';
+import type { Task } from '@/types';
 import { MAX_TASK_XP, MIN_TASK_XP, XP_BANDS, xpToBand, xpToPriority } from '@/utils/priority';
 
 export interface ComposerProps {
   subjects: Subject[];
   busy: boolean;
   onAdd: (task: NewTask) => void;
+  /** What a new task is worth before the reader changes it. From Settings. */
+  defaultXp: number;
+  /** Only used when the reader has not moved the XP field off its default:
+      priority is otherwise derived from what the task is worth, and a stored
+      preference should not override a number the reader just typed. */
+  defaultPriority: Task['priority'];
 }
 
-/** What a task is worth when the reader does not say. Matches the backend's. */
-const DEFAULT_XP = MIN_TASK_XP;
-
-export function Composer({ subjects, busy, onAdd }: ComposerProps) {
+export function Composer({ subjects, busy, onAdd, defaultXp, defaultPriority }: ComposerProps) {
   const [name, setName] = useState('');
-  const [xp, setXp] = useState(DEFAULT_XP);
+  const [xp, setXp] = useState(defaultXp);
   const [due, setDue] = useState('');
   const [subject, setSubject] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -41,10 +45,12 @@ export function Composer({ subjects, busy, onAdd }: ComposerProps) {
     // Clamped on the way out, the way both task dialogs do it. `min` and `max`
     // on a number input are advice to the spinner, not a limit on what can be
     // typed into it.
-    const worth = Math.max(MIN_TASK_XP, Math.min(MAX_TASK_XP, Number(xp) || DEFAULT_XP));
+    const worth = Math.max(MIN_TASK_XP, Math.min(MAX_TASK_XP, Number(xp) || defaultXp));
     onAdd({
       name: title,
-      priority: xpToPriority(worth),
+      // The preference stands while the XP field is untouched; past that the
+      // number the reader typed is the better answer and decides it.
+      priority: worth === defaultXp ? defaultPriority : xpToPriority(worth),
       xp_reward: worth,
       due_date: due || null,
       subject,

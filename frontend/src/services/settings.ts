@@ -3,30 +3,44 @@
  *
  * Backend: backend/api/settings.py.
  *
- * Two calls over what are really three stores — the user row, the theme
- * cookie, and the key/value table — because the page setting three
- * preferences should make one request. The server flattens them; nothing here
- * needs to know which value lives where.
+ * The keyed preferences travel under `values` as one object, so adding a
+ * preference is a line in `Prefs` here and a line in `FIELDS` there — not a
+ * new field threaded through a request model, a service function and a page.
  *
- * `save` sends only the fields it is given, and the server writes only the
- * fields it is sent. That is what makes a page of independent controls safe:
- * changing the theme cannot overwrite a name the reader was midway through
- * typing in another field.
+ * `save` sends only what it is given and the server writes only what it is
+ * sent, which is what lets a page of independent controls be safe: changing
+ * the accent cannot write back a stale copy of every other preference.
  */
 import { get, post } from './api';
 import type { ApiResult } from '@/types';
 
-export type Theme = 'light' | 'dark';
-export type WeekStart = 'monday' | 'sunday';
+export type ThemeMode = 'system' | 'light' | 'dark';
+export type Accent = 'violet' | 'blue' | 'green' | 'amber' | 'rose' | 'slate';
+export type Priority = 'low' | 'medium' | 'high';
+export type CalendarView = 'day' | 'week' | 'month';
+export type AnalyticsWindow = '7d' | '30d' | '90d' | '1y' | '2y' | 'all';
 
-export interface Settings {
-  /** Editable. */
-  name: string;
-  theme: Theme;
-  daily_goal: number;
-  week_start: WeekStart;
+/** The preferences kept as key/value. Mirrors FIELDS in the backend. */
+export interface Prefs {
+  theme_mode: ThemeMode;
+  accent: Accent;
+  reduce_motion: boolean;
+  show_stats: boolean;
+  show_insights: boolean;
+  default_priority: Priority;
+  default_xp: number;
+  ask_rating: boolean;
   confirm_delete: boolean;
-  /** Read-only, so the page can show whose account it is editing. */
+  calendar_view: CalendarView;
+  analytics_window: AnalyticsWindow;
+}
+
+export interface Settings extends Prefs {
+  /** On the user row rather than in user_settings. Historical; see the API. */
+  name: string;
+  theme: 'light' | 'dark';
+  daily_goal: number;
+  /** Read-only. */
   username: string;
   email: string;
   created_at: string;
@@ -35,10 +49,28 @@ export interface Settings {
   avatar: string;
 }
 
-/** The subset a save may carry. Anything left out is left alone. */
-export type SettingsEdit = Partial<
-  Pick<Settings, 'name' | 'theme' | 'daily_goal' | 'week_start' | 'confirm_delete'>
->;
+/** What a save may carry. Anything left out is left alone. */
+export interface SettingsEdit {
+  name?: string;
+  theme?: 'light' | 'dark';
+  daily_goal?: number;
+  values?: Partial<Prefs>;
+}
+
+/** What the app assumes before the account's own answer has arrived. */
+export const DEFAULTS: Prefs = {
+  theme_mode: 'system',
+  accent: 'violet',
+  reduce_motion: false,
+  show_stats: true,
+  show_insights: true,
+  default_priority: 'medium',
+  default_xp: 30,
+  ask_rating: true,
+  confirm_delete: true,
+  calendar_view: 'week',
+  analytics_window: '1y',
+};
 
 export function getSettings(username: string): Promise<ApiResult<{ settings: Settings }>> {
   return get<{ settings: Settings }>('/api/settings', { username });
@@ -49,4 +81,10 @@ export function saveSettings(
   edit: SettingsEdit,
 ): Promise<ApiResult<{ settings: Settings }>> {
   return post<{ settings: Settings }>('/api/settings', { username, ...edit });
+}
+
+/** Where the browser should be pointed to download an export. */
+export function exportUrl(username: string, table: string, format: 'json' | 'csv'): string {
+  const query = new URLSearchParams({ username, table, format });
+  return `/api/settings/export?${query.toString()}`;
 }

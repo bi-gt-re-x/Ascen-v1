@@ -1,0 +1,82 @@
+/* ==========================================================================
+   preferences.css — the two settings that are applied to the document.
+
+   Most preferences are read by the component they affect. These two are not:
+   they are attributes on <html>, written by context/SettingsProvider, and
+   everything else follows from the rules here.
+
+   That is deliberate. An accent colour threaded through components would mean
+   every card, bar and link taking a prop it does not otherwise need; and the
+   pages ported from the older stylesheets have no components to thread it
+   through at all. One attribute and a token override reaches all of them.
+   ========================================================================== */
+
+/* ---------- Accent --------------------------------------------------------
+   Each page declares its own accent token — .gx-page has --gx-violet, .rc-page
+   has --rc-accent, and so on — because each was written as a self-contained
+   sheet. That is a finite list, so an accent choice is one block per colour
+   that redefines every name in it.
+
+   `violet` is the built-in and has no block: SettingsProvider removes the
+   attribute at that value, so the pages' own defaults stand and the selectors
+   below never match. Nothing is overridden to what it already was. */
+:root[data-accent] {
+    /* One source colour per theme, so the sixteen names below are written
+       once each rather than sixteen times per accent. */
+    --accent: var(--accent-mid);
+}
+
+:root[data-accent="blue"]  { --accent-mid: #2f6fd0; --accent-soft: #6a9bff; }
+:root[data-accent="green"] { --accent-mid: #1f8a54; --accent-soft: #46c483; }
+:root[data-accent="amber"] { --accent-mid: #b8791f; --accent-soft: #e0b23c; }
+:root[data-accent="rose"]  { --accent-mid: #c0395f; --accent-soft: #f2778f; }
+:root[data-accent="slate"] { --accent-mid: #4a5568; --accent-soft: #8b97ab; }
+
+/* Dark wants the lighter of the pair as its mid, for the same reason every
+   page's dark block lifts its own accent: a mid-tone that reads as colour on
+   white reads as mud on near-black. */
+html[data-theme="dark"]:root[data-accent="blue"]  { --accent-mid: #6a9bff; }
+html[data-theme="dark"]:root[data-accent="green"] { --accent-mid: #46c483; }
+html[data-theme="dark"]:root[data-accent="amber"] { --accent-mid: #e0b23c; }
+html[data-theme="dark"]:root[data-accent="rose"]  { --accent-mid: #f2778f; }
+html[data-theme="dark"]:root[data-accent="slate"] { --accent-mid: #8b97ab; }
+
+/* Every page's own name for "the accent", pointed at the chosen one. Listed
+   rather than globbed because CSS cannot glob a custom property, and because
+   the list being explicit is what makes it checkable: a page added later
+   without a line here keeps its own colour, which is a visible miss rather
+   than a silent one. */
+:root[data-accent] {
+    --gx-violet: var(--accent-mid);
+    --ax-violet: var(--accent-mid);
+    --ac-violet: var(--accent-mid);
+    --st-violet: var(--accent-mid);
+    --tk-violet: var(--accent-mid);
+    --rc-violet: var(--accent-mid);
+    --stx-violet: var(--accent-mid);
+    --rc-accent: var(--accent-mid);
+    --rc-accent-2: var(--accent-soft);
+    --nt-accent: var(--accent-mid);
+    --nt-accent-2: var(--accent-soft);
+    --rt-accent: var(--accent-mid);
+    --sp-accent: var(--accent-mid);
+    --lp-accent: var(--accent-mid);
+    --lp-accent-2: var(--accent-soft);
+}
+
+/* ---------- Reduce motion -------------------------------------------------
+   The same thing the OS-level setting does, from inside the app, for a reader
+   whose device is not set that way but whose eyes are.
+
+   Not `animation: none`: an animation that never runs also never fires its
+   `animationend`, and anything waiting on one would hang. A duration near
+   zero ends immediately and still fires, which is the standard shape of this
+   rule for exactly that reason. */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+}

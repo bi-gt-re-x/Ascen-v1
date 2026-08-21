@@ -12,6 +12,7 @@
  */
 import { createContext } from 'react';
 import type { Theme } from '@/types';
+import type { Prefs } from '@/services/settings';
 
 // --------------------------------------------------------------------------
 // Theme
@@ -44,3 +45,27 @@ export interface AuthValue {
 }
 
 export const AuthContext = createContext<AuthValue | null>(null);
+
+// --------------------------------------------------------------------------
+// Preferences
+// --------------------------------------------------------------------------
+/**
+ * What the account has chosen, available to every page.
+ *
+ * Read once near the root rather than per page, because the preferences are
+ * read in many more places than they are written: the tasks composer wants
+ * the default XP, the calendar redirect wants the default view, analytics
+ * wants the window to open on. A page fetching them itself would be a request
+ * per page and a flash of the wrong default on each one.
+ */
+export interface SettingsValue {
+  prefs: Prefs;
+  /** False until the account's own answer has replaced the defaults. */
+  ready: boolean;
+  /** Write some preferences. Applied locally first, then persisted. */
+  update: (values: Partial<Prefs>) => Promise<string | null>;
+  /** Re-read from the server. */
+  refresh: () => Promise<void>;
+}
+
+export const SettingsContext = createContext<SettingsValue | null>(null);

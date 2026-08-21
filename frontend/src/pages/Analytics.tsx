@@ -155,7 +155,7 @@ import {
   type WindowKey,
 } from '@/components/Analytics/data';
 import { growthScore, type ScoreFactor } from '@/components/Analytics/score';
-import { useApi, useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
+import { useApi, useDocumentTitle, useSettings, useSubjectIndex, useUserData } from '@/hooks';
 import {
   analytics as analyticsService,
   goals as goalsService,
@@ -442,7 +442,11 @@ export default function Analytics() {
     [adopted, username],
   );
 
-  const [span, setSpan] = useState<WindowKey>('1y');
+  /* Opens on the account's chosen period. Not kept in step with it after
+     that: the control on this page is the reader changing their mind for one
+     visit, and writing that back would make every glance a preference. */
+  const { prefs } = useSettings();
+  const [span, setSpan] = useState<WindowKey>(prefs.analytics_window);
   // Productivity rather than total XP, and weekly rather than daily. The pair
   // is one decision: the chart opens on a rate, and a rate at daily grain over
   // a year is scatter. See METRICS in components/Analytics/data.

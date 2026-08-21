@@ -14,7 +14,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Loading, Rail, Topbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
-import { useAuth, usePinnedViewport } from '@/hooks';
+import { useAuth, usePinnedViewport, useSettings } from '@/hooks';
 import Dashboard from '@/pages/Dashboard';
 // Not lazy, unlike every other page here: the routes below are generated from
 // `UNBUILT_PATHS`, so the module has to be loaded to build the routing table at
@@ -48,6 +48,18 @@ const CalendarMonth = lazy(() => import('@/pages/Calendar/Month'));
  * does in RequireAccount: treating "still asking" as signed out would flash the
  * landing page at an account on its way to the dashboard.
  */
+/**
+ * `/calendar` itself, which is a redirect to whichever view the account
+ * prefers. It waits for `ready` rather than redirecting on the default and
+ * correcting: a navigation cannot be taken back, and a reader who chose Month
+ * would watch the week open and then jump.
+ */
+function CalendarHome() {
+  const { prefs, ready } = useSettings();
+  if (!ready) return <Loading />;
+  return <Navigate to={`/calendar/${prefs.calendar_view}`} replace />;
+}
+
 function FrontDoor() {
   const { status } = useAuth();
   if (status === 'loading') return <Loading />;
@@ -177,9 +189,10 @@ export default function App() {
               <Route path="/notes" element={<Notes />} />
               <Route path="/records" element={<Records />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/:section" element={<Settings />} />
               <Route path="/achievements" element={<Achievements />} />
               <Route path="/growth-tree" element={<Navigate to="/skill-trees" replace />} />
-              <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
+              <Route path="/calendar" element={<CalendarHome />} />
               <Route path="/calendar/day" element={<CalendarDay />} />
               <Route path="/calendar/week" element={<CalendarWeek />} />
               <Route path="/calendar/month" element={<CalendarMonth />} />

@@ -71,7 +71,7 @@ import {
 } from '@/components/Tasks';
 import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
 import { measureOf } from '@/components/Goals';
-import { useDocumentTitle, useSubjects, useUserData } from '@/hooks';
+import { useDocumentTitle, useSettings, useSubjects, useUserData } from '@/hooks';
 import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewTask } from '@/services/tasks';
 import type { Goal, Task } from '@/types';
@@ -146,6 +146,7 @@ export default function Tasks() {
 
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const subjects = useSubjects(username);
+  const { prefs } = useSettings();
 
   /* The account's outcome goals, for the link control on each row. Read once
      rather than through useApi: nothing on this page writes a goal, and a
@@ -296,12 +297,13 @@ export default function Tasks() {
         // The rail carries the level and the XP total and never re-reads on its
         // own. This is what moves them.
         window.dispatchEvent(new Event(STATS_CHANGED));
-        // Ask, now that the work is banked and nothing depends on the answer.
-        setRating({ id: String(task.id), name: task.title });
+        // Ask, now that the work is banked and nothing depends on the answer —
+        // unless the reader has turned the two star rows off in Settings.
+        if (prefs.ask_rating) setRating({ id: String(task.id), name: task.title });
         return true;
       });
     },
-    [username, mutate, run],
+    [username, mutate, run, prefs.ask_rating],
   );
 
   // ---- Rating a finished task ---------------------------------------------
@@ -418,6 +420,8 @@ export default function Tasks() {
   const drop = useCallback(
     (task: Task) => {
       if (!username) return;
+      // The confirmation is a preference; off means the click is the decision.
+      if (prefs.confirm_delete && !window.confirm(`Delete “${task.title}”?`)) return;
       void run(task.id, async () => {
         const result = await taskService.deleteTask(username, task.id);
         if (!result.success) {
@@ -436,7 +440,7 @@ export default function Tasks() {
         return true;
       });
     },
-    [username, mutate, run],
+    [username, mutate, run, prefs.confirm_delete],
   );
 
   const add = useCallback(
@@ -710,7 +714,13 @@ export default function Tasks() {
             <StatCards counts={counts} series={series} />
 
             {composing && (
-              <Composer subjects={subjects} busy={saving} onAdd={add} />
+              <Composer
+                subjects={subjects}
+                busy={saving}
+                onAdd={add}
+                defaultXp={prefs.default_xp}
+                defaultPriority={prefs.default_priority}
+              />
             )}
 
             <Toolbar

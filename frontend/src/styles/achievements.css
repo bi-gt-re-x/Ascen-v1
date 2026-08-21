@@ -42,9 +42,11 @@ body:has(.ac-page) .app-main {
 
     box-sizing: border-box;
     width: 100%;
-    max-width: 1500px;
-    margin-inline: auto;
-    padding: 26px 24px 60px;
+    /* No column cap: the wall is a grid that takes whatever it is given, and
+       auto-fill turns extra width into more badges a row rather than wider
+       ones. A max-width here would leave the right of a large screen empty
+       for no gain. */
+    padding: 26px 28px 60px;
     color: var(--ac-text);
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }

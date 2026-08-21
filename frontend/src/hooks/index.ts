@@ -15,5 +15,6 @@ export { usePinnedViewport } from './usePinnedViewport';
 export { fmtHM, focusedSeconds, useFocusSession } from './useFocusSession';
 export type { FocusState, UseFocusSession } from './useFocusSession';
 export { subjectOf, useSubjectIndex, useSubjects } from './useSubjects';
+export { useSettings } from './useSettings';
 export { useTheme } from './useTheme';
 export { useUserData } from './useUserData';

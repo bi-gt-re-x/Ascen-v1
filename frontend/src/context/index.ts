@@ -3,5 +3,6 @@
  * objects in ./contexts.ts — see the note there for why they are apart.
  */
 export { AuthProvider } from './AuthContext';
+export { SettingsProvider } from './SettingsProvider';
 export { ThemeProvider } from './ThemeContext';
-export type { AuthStatus, AuthValue, ThemeValue } from './contexts';
+export type { AuthStatus, AuthValue, SettingsValue, ThemeValue } from './contexts';
