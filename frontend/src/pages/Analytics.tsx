@@ -124,9 +124,7 @@ import {
 } from '@/components/Insights';
 import {
   AdviceCard,
-  AlsoPanel,
   CategoryFilter,
-  Caveat,
   FollowupPanel,
   OutlookPanel,
 } from '@/components/Recommendations';
@@ -1111,10 +1109,6 @@ export default function Analytics() {
                   ))}
                 </div>
               )}
-            </section>
-            <section className="ax-section ax-grid ax-grid-halves-even">
-              <AlsoPanel items={shown.slice(HEADLINE_ADVICE)} />
-              <Caveat />
             </section>
           </>
         )}

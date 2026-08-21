@@ -108,10 +108,8 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
       title="Consistency Over Time"
       footer={
         <PanelNote label="What moves this">
-          The share of days in the window with any work recorded on them. Nothing else feeds
-          it — not how much, not how long, not what it was for. A fifteen-minute day and a
-          six-hour day count the same, which is the point: this measures showing up, and the
-          panels beside it measure everything you did once you had.
+          The share of days with <strong>any</strong> work on them. A fifteen-minute day and a
+          six-hour day count the same — this measures showing up, nothing else.
         </PanelNote>
       }
     >

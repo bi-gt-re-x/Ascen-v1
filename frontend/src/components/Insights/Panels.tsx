@@ -85,24 +85,18 @@ export function Summary({ week, clock, rhythm, span }: SummaryProps) {
     <Panel title="What your record says" note={span}>
       <p className="ax-prose ax-prose-lead">{sentence}</p>
       <p className="ax-prose">
+        You worked <strong>{Math.round(rhythm.activeRate)}%</strong> of the days here.{' '}
         {rhythm.activeRate >= 80
-          ? `You showed up on ${Math.round(rhythm.activeRate)}% of the days in this range, which is a
-             genuinely high rate — the kind that makes totals climb on their own without any single
-             day having to be heroic.`
+          ? 'At that rate the totals climb on their own.'
           : rhythm.activeRate >= 55
-            ? `You showed up on ${Math.round(rhythm.activeRate)}% of the days in this range. That is a
-               working habit with real holes in it: the days you do turn up are productive, and the
-               totals are being held back by the ones you skip rather than by how much you do.`
-            : `You showed up on ${Math.round(rhythm.activeRate)}% of the days in this range. Most of
-               the calendar is empty, so what happens on the days you do work matters far less right
-               now than how often those days come round.`}
+            ? 'A real habit with holes in it. What is missing is frequency, not effort.'
+            : 'Most of the calendar is empty. How often you turn up matters more than what you do.'}
       </p>
       {rhythm.longestGap && (
         <p className="ax-prose">
-          The longest quiet stretch ran {rhythm.longestGap.days} days, ending {pretty(rhythm.longestGap.to)}
-          {rhythm.gapCount > 1
-            ? `, and there have been ${rhythm.gapCount} breaks of three days or more in this range altogether.`
-            : '.'}
+          Longest quiet stretch: <strong>{rhythm.longestGap.days} days</strong>, ending{' '}
+          {pretty(rhythm.longestGap.to)}
+          {rhythm.gapCount > 1 ? `. ${rhythm.gapCount} breaks of three days or more in all.` : '.'}
         </p>
       )}
     </Panel>
@@ -200,27 +194,32 @@ export function WeekPanel({ week }: { week: WeekShape }) {
                 : 'a wide margin'}
             </strong>
             . {week.spread > 1.6
-              ? 'That is a lopsided week — one day is doing a disproportionate share of the work, which makes the whole week fragile: lose that day to something else and the week is lost with it.'
-              : 'That is a reasonably even week. No single day is load-bearing, so one bad day does not take the week down with it.'}
+              ? 'A lopsided week. Lose that day and you lose the week.'
+              : 'An even week. No single day is load-bearing.'}
           </>
         ) : (
-          'Not enough of the week has been worked to compare its days yet.'
+          'Not enough of the week worked to compare days yet.'
         )}
       </p>
       {week.weekendGap !== null && (
         <p className="ax-prose">
-          {week.weekendGap <= -20
-            ? `Your weekends run ${Math.abs(week.weekendGap)}% lighter than your weekdays. That is
-               normal and not automatically a problem — but it does mean two of every seven days are
-               close to unavailable, and any plan that assumes a flat week will not survive contact
-               with yours.`
-            : week.weekendGap >= 20
-              ? `Your weekends run ${week.weekendGap}% heavier than your weekdays — you are catching
-                 up at the end of the week rather than keeping pace through it. That works until a
-                 weekend is taken by something else.`
-              : `Weekends and weekdays are within ${Math.abs(week.weekendGap)}% of each other, so you
-                 are keeping a genuinely flat week. That is rarer than it sounds and it is the thing
-                 that makes long streaks possible.`}
+          {week.weekendGap <= -20 ? (
+            <>
+              Weekends run <strong>{Math.abs(week.weekendGap)}% lighter</strong>. Two of every seven
+              days are close to unavailable — plan around it.
+            </>
+          ) : week.weekendGap >= 20 ? (
+            <>
+              Weekends run <strong>{week.weekendGap}% heavier</strong>. You are catching up at the
+              end of the week rather than keeping pace through it.
+            </>
+          ) : (
+            <>
+              Weekends and weekdays are within{' '}
+              <strong>{Math.abs(week.weekendGap)}%</strong> of each other. A flat week is what makes
+              long streaks possible.
+            </>
+          )}
         </p>
       )}
     </Panel>
@@ -253,21 +252,19 @@ export function ClockPanel({ clock }: { clock: ClockShape }) {
               {hourLabel(clock.coreWindow.from)} and {hourLabel(clock.coreWindow.to)}
             </strong>
             . {clock.coreWindow.share >= 60
-              ? 'That is a tight, well-established working window — the most valuable thing you can do with it is defend it, because everything else you try to schedule will be competing with your best hours.'
-              : 'That is a fairly loose window. Your work is spread across the day rather than anchored to a particular part of it, which is flexible but makes it easy for a day to slip away without a session in it.'}
+              ? 'A tight window. Worth defending.'
+              : 'A loose window. Your work is spread across the day rather than anchored to it.'}
           </>
         ) : (
-          'None of your finished tasks carry a completion time, so there is no clock to read here yet.'
+          'No finished task carries a completion time yet.'
         )}
       </p>
       {clock.lateShare > 0 && (
         <p className="ax-prose">
+          <strong>{clock.lateShare}%</strong> of your work lands after 10 PM or before 5 AM.{' '}
           {clock.lateShare >= 25
-            ? `${clock.lateShare}% of your work is finished after 10 PM or before 5 AM. That is a
-               substantial share of a habit running on late nights, and late work is the first thing
-               to disappear when you are tired or busy — it is the least durable part of your week.`
-            : `${clock.lateShare}% of your work lands late at night. That is a small enough share to
-               be occasional rather than structural.`}
+            ? 'Late work is the first thing to go when you are tired or busy.'
+            : 'Occasional rather than structural.'}
         </p>
       )}
     </Panel>
@@ -299,20 +296,17 @@ export function RhythmPanel({ rhythm }: { rhythm: RhythmShape }) {
       </div>
       <p className="ax-prose">
         {rhythm.gapCount === 0
-          ? 'You have not gone three days without working once in this range. That is the single hardest thing to do in a productivity habit, and it is worth knowing that you are already doing it.'
-          : `Those ${rhythm.gapCount} breaks are where your totals actually leak. A three-day gap costs
-             you roughly what three of your average days would have earned — and unlike a slow day,
-             a gap also resets the streak and the momentum that comes with it.`}
+          ? 'Not one three-day break in this range. That is the hard part, and you are doing it.'
+          : `Those ${rhythm.gapCount} breaks are where the totals leak. A gap costs three average days and resets the streak.`}
       </p>
       {rhythm.longestSession && (
         <p className="ax-prose">
-          Your longest single day of focus was {hm(rhythm.longestSession.minutes)} on{' '}
-          {pretty(rhythm.longestSession.date)}. Compared with your typical{' '}
-          {hm(rhythm.typicalSession)}, that is{' '}
+          Your longest day of focus was <strong>{hm(rhythm.longestSession.minutes)}</strong> on{' '}
+          {pretty(rhythm.longestSession.date)} —{' '}
           {rhythm.typicalSession > 0
             ? `${(rhythm.longestSession.minutes / rhythm.typicalSession).toFixed(1)}× a normal day`
-            : 'well beyond a normal day'}{' '}
-          — useful as proof of what you can do, and a poor model for what to plan around.
+            : 'well beyond a normal day'}
+          . Proof of what you can do, not a plan.
         </p>
       )}
     </Panel>
@@ -351,15 +345,15 @@ export function MomentumPanel({ rows, window }: { rows: Momentum[]; window: numb
           const rising = rows.filter((row) => (row.delta ?? 0) > 5).length;
           const falling = rows.filter((row) => (row.delta ?? 0) < -5).length;
           if (rows.every((row) => row.delta === null)) {
-            return 'There is no earlier window of the same length to compare against yet, so nothing here is a trend — come back once the account is twice this old.';
+            return 'No earlier window of the same length to compare against yet.';
           }
           if (rising >= 3) {
-            return 'Three or more of these are up together, which is the signal worth trusting — a single measure rising can be noise, but XP, tasks and focus moving in the same direction is a real change in how much you are doing.';
+            return 'Three or more up together. One measure can be noise; three is a real change.';
           }
           if (falling >= 3) {
-            return 'Most of these are down together. That is worth taking at face value rather than explaining away: something about the last stretch has been harder than the one before it, and the fix is usually about frequency rather than intensity.';
+            return 'Most of these are down together. The fix is usually frequency, not intensity.';
           }
-          return 'These are pulling in different directions, which usually means the shape of the work changed rather than the amount — fewer, larger sessions, or more, smaller ones.';
+          return 'These pull in different directions — the shape of the work changed, not the amount.';
         })()}
       </p>
     </Panel>
@@ -414,23 +408,26 @@ export function BalancePanel({ balance }: { balance: BalanceShape }) {
         </div>
         <div>
           <p className="ax-prose">
-            {balance.leader === null
-              ? 'None of your finished tasks carry a subject, so there is nothing to break down. Filing tasks under a subject is what turns this panel on.'
-              : balance.concentration >= 45
-                ? `Nearly half your effort goes to ${balance.leader}. Depth like that is how anything
-                   is actually mastered, and it is also a single point of failure — if that one
-                   subject stalls, most of your week stalls with it.`
-                : `${balance.leader} leads at ${balance.concentration}%, but nothing dominates. Your
-                   effort is spread across ${balance.carrying} subjects with real weight behind them,
-                   which is a balanced week and a slower route to depth in any one of them.`}
+            {balance.leader === null ? (
+              'No finished task carries a subject yet. File one and this panel turns on.'
+            ) : balance.concentration >= 45 ? (
+              <>
+                Nearly half your effort goes to <strong>{balance.leader}</strong>. That is depth,
+                and a single point of failure.
+              </>
+            ) : (
+              <>
+                <strong>{balance.leader}</strong> leads, but nothing dominates — your effort is
+                spread across <strong>{balance.carrying} subjects</strong>. Balanced, and a slower
+                route to depth.
+              </>
+            )}
           </p>
           {balance.fading.length > 0 && (
             <p className="ax-prose">
-              <strong>{balance.fading.join(', ')}</strong>{' '}
-              {balance.fading.length === 1 ? 'had' : 'had'} real work behind{' '}
-              {balance.fading.length === 1 ? 'it' : 'them'} earlier in this range and{' '}
-              {balance.fading.length === 1 ? 'has' : 'have'} had none in the second half. That is the
-              kind of thing a total will never show you, because the total still remembers it.
+              <strong>{balance.fading.join(', ')}</strong> had real work early in this range and{' '}
+              {balance.fading.length === 1 ? 'has' : 'have'} had none since. A total would still
+              count it.
             </p>
           )}
         </div>

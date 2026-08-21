@@ -229,8 +229,8 @@ export function whyFindings(days: GrowthDay[], window = 30): Finding[] {
         steadier ? 'narrowed' : 'widened'
       } from ${spreadWas.toFixed(2)} to ${spreadNow.toFixed(2)} (standard deviation over the mean). ${
         steadier
-          ? 'A narrower spread tends to go with a routine that is running rather than being decided each morning.'
-          : 'A wider spread usually means the work is being done in bursts, which is more fragile than the same total spread evenly.'
+          ? 'A routine that is running, rather than decided each morning.'
+          : 'Work in bursts. More fragile than the same total spread evenly.'
       }`,
       strength: 'likely',
       tone: steadier ? 'green' : 'amber',
@@ -333,8 +333,8 @@ export function howFindings(
           easy,
         )}% of low-priority ones. ${
           hard >= easy
-            ? 'The work that matters is getting through; the small stuff is what silently accumulates.'
-            : 'The important work is what slips, which usually means it is being scheduled last rather than first.'
+            ? 'What matters is getting through. The small stuff piles up.'
+            : 'The important work slips — it is being scheduled last.'
         }`,
         strength: strengthOf(0.4, Math.min(high.length, low.length)),
         tone: 'amber',
@@ -351,8 +351,8 @@ export function howFindings(
       )} and ${hourLabel(clock.coreWindow.to)}`,
       detail: `${clock.coreWindow.share}% of your completions fall inside that run of hours. ${
         clock.coreWindow.share >= 60
-          ? 'That is a well-established working window rather than a preference, and anything you schedule elsewhere is competing with your worst hours.'
-          : 'That is a loose window — your work is spread across the day rather than anchored to a part of it.'
+          ? 'A working window, not a preference. Anything scheduled elsewhere competes with your worst hours.'
+          : 'A loose window — spread across the day rather than anchored to it.'
       }`,
       strength: clock.coreWindow.share >= 60 ? 'strong' : 'likely',
       tone: 'blue',
@@ -515,7 +515,7 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
       strength,
       reading:
         strength === 'weak'
-          ? `Too loose to lean on — r = ${r.toFixed(2)} over ${n} observations is not a pattern you should plan around yet.`
+          ? `Too loose to lean on — r = ${r.toFixed(2)} over ${n} observations.`
           : r >= 0
             ? positive
             : negative,
@@ -532,8 +532,8 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
     active
       .filter((day) => num(day.focus_minutes) > 0)
       .map((day) => [num(day.focus_minutes), num(day.xp_earned)] as [number, number]),
-    'Longer focus days tend to be higher-XP days. That is the least surprising relationship on this page and the most useful, because focus time is the half of it you can decide.',
-    'Your longer focus days are not your higher-XP days, which usually means focus time is being logged against work that does not produce tasks.',
+    'Longer focus days are higher-XP days. Focus time is the half you decide.',
+    'Your longer focus days are not your higher-XP days — focus is being logged against work that produces no tasks.',
     'green',
   );
 
@@ -541,8 +541,8 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
     'rel-tasks-xp',
     'Tasks finished → XP earned',
     active.map((day) => [num(day.tasks_completed), num(day.xp_earned)] as [number, number]),
-    'Your XP tracks the number of tasks you close rather than which ones — so the size of a day is mostly decided by how many things you finish, not how big they were.',
-    'Your XP does not follow your task count, which means a few large tasks are carrying your totals.',
+    'Your XP tracks how many tasks you close, not which ones.',
+    'Your XP does not follow your task count — a few large tasks carry your totals.',
     'violet',
   );
 
@@ -553,7 +553,7 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
       .filter((day) => num(day.focus_minutes) > 0 && num(day.avg_task_xp) > 0)
       .map((day) => [num(day.focus_minutes), num(day.avg_task_xp)] as [number, number]),
     'Longer sittings appear to go with larger individual tasks — depth rather than volume.',
-    'Longer sittings tend to go with smaller individual tasks, which can be a sign of a long session spent on many small things.',
+    'Longer sittings go with smaller tasks — a long session spent on many small things.',
     'blue',
   );
 
@@ -581,8 +581,8 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
         top > 0 && bottom / top <= 0.5
           ? `Your best weekday carries ${(top / Math.max(bottom, 1)).toFixed(
               1,
-            )}× your worst. The week is not flat, so any plan that treats every day as interchangeable will not survive contact with yours.`
-          : 'Your weekdays carry roughly comparable loads. A flat week is rarer than it sounds and it is what makes long streaks possible.',
+            )}× your worst. The week is not flat — do not plan as though it were.`
+          : 'Your weekdays carry comparable loads. A flat week is what makes long streaks possible.',
       points: normalise(weekPairs),
       tone: 'amber',
     });

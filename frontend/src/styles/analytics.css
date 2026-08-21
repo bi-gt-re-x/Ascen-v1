@@ -2111,11 +2111,9 @@ html[data-theme="dark"] .ax-page {
    "Fewer words, bigger type" (de6b1bb) set these cards at display sizes — a
    22px title over a 26px XP figure over 16px body — on the reasoning that the
    tab leads the page. At three across it made each card a poster: one
-   recommendation filled a screen, and the compact list at the foot of the same
-   tab, "Also worth doing", read the same information at half the size without
-   losing any of it. These are back at that scale. The card keeps everything it
-   gained in that pass — the labels gone, the instruction leading, the
-   arithmetic folded behind "Show the numbers" — and only the type comes down. */
+   recommendation filled a screen. These are back at that scale. The card keeps
+   everything it gained in that pass — the labels gone, the instruction leading,
+   the arithmetic folded behind "Show the numbers" — and only the type comes down. */
 .ax-advice h2 {
     margin: 0;
     font-size: 14.5px;
@@ -2169,32 +2167,6 @@ html[data-theme="dark"] .ax-page {
     background: var(--ax-line);
 }
 .ax-effort i.is-on { background: var(--ax-faint); }
-
-/* ---------- Also worth doing ---------------------------------------------- */
-.ax-also {
-    list-style: none;
-    margin: 10px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.ax-also li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: start;
-}
-.ax-also li > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.ax-also strong { font-size: 12.5px; font-weight: 600; }
-.ax-also .ax-muted { font-size: 11.5px; line-height: 1.5; }
-.ax-also li .ax-dot { margin-top: 5px; }
-.ax-also-impact {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--ax-good);
-    white-space: nowrap;
-}
 
 /* Each tab's own header mark. `.ax-head-icon` supplies the box and the colour;
    these swap the drawing inside it, so a reader can tell which tab they are on

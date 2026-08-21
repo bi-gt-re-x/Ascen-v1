@@ -559,25 +559,20 @@ export function HabitOpening({ summary, span }: { summary: HabitSummary; span: s
       <p className="ax-prose ax-prose-lead">
         {parts.length
           ? `${parts.join(', ')}.`
-          : 'Nothing in this range repeats often enough to be called a habit yet — which is a fact about the range as much as about the routine.'}
+          : 'Nothing here repeats often enough to call a habit yet.'}
       </p>
       <p className="ax-prose">
+        You worked <strong>{summary.activeRate}%</strong> of the days here.{' '}
         {summary.activeRate >= 80
-          ? `You put work on ${summary.activeRate}% of the days here. At that rate the totals climb
-             on their own without any single day having to be remarkable, which is the whole game.`
+          ? 'At that rate the totals climb on their own.'
           : summary.activeRate >= 50
-            ? `You put work on ${summary.activeRate}% of the days here — a real routine with real
-               holes in it. What is missing is frequency rather than effort: the days you do turn up
-               are productive ones.`
-            : `You put work on ${summary.activeRate}% of the days here. Most of the calendar is
-               empty, so how often those days come round matters far more right now than what
-               happens on them.`}
+            ? 'A real routine with holes in it. What is missing is frequency, not effort.'
+            : 'Most of the calendar is empty. How often you turn up matters more than what you do.'}
       </p>
       {summary.slipping && summary.slipping.trend !== null && (
         <p className="ax-prose">
-          <strong>{summary.slipping.name}</strong> is the one moving the wrong way — down{' '}
-          {Math.abs(summary.slipping.trend)}% against its own rate earlier in this range. That is
-          stated here as a count, not a diagnosis; the Insights tab is where it gets one.
+          <strong>{summary.slipping.name}</strong> is moving the wrong way — down{' '}
+          <strong>{Math.abs(summary.slipping.trend)}%</strong> against its own earlier rate.
         </p>
       )}
     </Panel>

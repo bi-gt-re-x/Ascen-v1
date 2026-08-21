@@ -224,7 +224,7 @@ export function RelationshipsPanel({
               ? {
                   ready: false,
                   message:
-                    'There are not enough paired observations to look for relationships yet. These need a couple of months of days with both focus time and finished tasks on them.',
+                    'Not enough paired days yet — these need both focus time and finished tasks.',
                 }
               : notice
           }
@@ -299,10 +299,6 @@ export function CurrentStatePanel({ state, span }: { state: CurrentState; span: 
     >
       <p className="ax-prose ax-prose-lead">{state.sentence}</p>
       <p className="ax-prose">{state.weakness}</p>
-      <p className="ax-prose ax-muted ax-small">
-        This is a description of the record, not a judgement of it. What to do about it is the
-        Recommendations tab — this one only claims to say where you are.
-      </p>
     </Panel>
   );
 }

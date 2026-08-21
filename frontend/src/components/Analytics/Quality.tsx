@@ -112,14 +112,12 @@ export function QualityPanel({ summary, findings, bands, span }: QualityPanelPro
       note={`${summary.rated} rated task${summary.rated === 1 ? '' : 's'} in ${span}`}
       footer={
         <PanelNote label="What this measures">
-          How hard you said the work was, multiplied by how well you said it went, averaged over
-          the tasks you rated. The product rather than the average of the two: a trivial task done
-          perfectly and a brutal one botched both average to the middle and are not the same week.
-          25 is a brutal task done excellently and there is no other route to it.
+          Difficulty <strong>×</strong> execution, averaged over the tasks you rated. The product,
+          not the average — <strong>25</strong> is a brutal task done excellently, and there is no
+          other route to it.
           <br />
           <br />
-          Rating is optional. Tasks you skipped are not counted as zero and are not in the
-          denominator — they are simply absent, which is why the coverage is printed above.
+          Rating is optional. Skipped tasks are absent, not zero.
         </PanelNote>
       }
     >
@@ -225,14 +223,12 @@ export function QualityGridPanel({ cells, summary }: QualityGridPanelProps) {
       note="Darker is more tasks"
       footer={
         <PanelNote label="How to read this">
-          Difficulty runs left to right, execution bottom to top, so the bottom-right corner is
-          hard work going badly and the top-right is hard work going well. The top-left corner —
-          easy work, done well — is the one worth watching: it is comfortable, it earns XP, and an
-          account whose cloud sits there has stopped being stretched by its own task list.
+          Difficulty runs left to right, execution bottom to top. Bottom-right is hard work going
+          badly; top-right is hard work going well. Watch the <strong>top-left</strong> — easy work
+          done well, comfortable and no longer stretching you.
           <br />
           <br />
-          Only the {summary.rated} tasks you rated appear. The {summary.finished - summary.rated}{' '}
-          you finished without rating are not plotted anywhere, at any value.
+          Only your {summary.rated} rated tasks appear.
         </PanelNote>
       }
     >

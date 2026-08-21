@@ -272,7 +272,7 @@ export function ratingFindings(summary: RatingSummary, rated: RatedTask[]): Rati
       {
         tone: 'note',
         headline: `${summary.rated} rated ${summary.rated === 1 ? 'task' : 'tasks'} in this window.`,
-        hint: `Findings here need ${FLOOR}. Rating is optional and always will be — this panel simply has nothing to work with until there are a few more.`,
+        hint: `Findings need ${FLOOR}. Rating is optional.`,
       },
     ];
   }
@@ -290,12 +290,12 @@ export function ratingFindings(summary: RatingSummary, rated: RatedTask[]): Rati
         ? {
             tone: 'watch',
             headline: 'You are executing well above the difficulty you take on.',
-            hint: `Execution averages ${execution.toFixed(1)} against difficulty ${difficulty.toFixed(1)}. That is the signature of work that is no longer stretching you — the fix is harder tasks, not better ones.`,
+            hint: `Execution ${execution.toFixed(1)} against difficulty ${difficulty.toFixed(1)}. The work has stopped stretching you — take harder tasks, not better ones.`,
           }
         : {
             tone: 'watch',
             headline: 'You are taking on more than is going well.',
-            hint: `Difficulty averages ${difficulty.toFixed(1)} against execution ${execution.toFixed(1)}. Nothing is wrong with that as a phase; it is worth watching whether it is a phase.`,
+            hint: `Difficulty ${difficulty.toFixed(1)} against execution ${execution.toFixed(1)}. Fine as a phase — worth watching that it stays one.`,
           },
     );
   } else {
@@ -345,7 +345,7 @@ export function ratingFindings(summary: RatingSummary, rated: RatedTask[]): Rati
     hint:
       summary.coverage >= 60
         ? 'A high enough share that the sample is unlikely to be flattering you.'
-        : 'A minority of your finished work, and one you chose — worth reading as an impression rather than a measurement.',
+        : 'A minority of your work, and one you chose. An impression, not a measurement.',
   });
 
   return out;

@@ -57,7 +57,7 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       delta: figures.xpPerDay.delta,
       series: sparks.xp,
       tone: 'violet',
-      hint: 'XP per day of the window, not per day something happened — a fortnight off pulls this down, which is the point.',
+      hint: 'XP per day of the window, not per day worked. Time off pulls it down.',
     },
     {
       key: 'consistency',
@@ -67,7 +67,7 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       delta: figures.consistency.delta,
       series: sparks.consistency,
       tone: 'amber',
-      hint: 'The share of days in the window with any work on them. A fifteen-minute day counts the same as a six-hour one — this measures showing up.',
+      hint: 'Share of days with any work on them. This measures showing up.',
     },
     {
       key: 'quality',
@@ -84,8 +84,8 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       tone: 'pink',
       hint:
         figures.ratedTasks === 0
-          ? 'How hard your tasks were times how well they went, from the star rows after a completed task. Optional — nothing here is filled in until you rate something.'
-          : `How hard each task was times how well it went, out of 25, over the ${figures.ratedTasks} of ${figures.finishedTasks} finished tasks you rated in this window.`,
+          ? 'Difficulty × execution, from the star rows after a task. Optional.'
+          : `Difficulty × execution out of 25, over the ${figures.ratedTasks} of ${figures.finishedTasks} tasks you rated.`,
     },
     {
       key: 'tasks',

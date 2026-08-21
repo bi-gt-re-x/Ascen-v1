@@ -136,11 +136,8 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
       note="Small actions, compounded"
       footer={
         <PanelNote label="How this is projected">
-          Your daily average across the window, multiplied by the days ahead. Nothing here
-          assumes the pace compounds, improves, or that a good month repeats — it is the
-          arithmetic of doing exactly what you already do, for longer. The line stops at
-          twelve months because a flat multiplication drawn over five years is a straight
-          diagonal that says nothing the three figures above do not.
+          Your daily average, multiplied by the days ahead. Nothing compounds and nothing
+          improves — this is <strong>doing what you already do, for longer</strong>.
         </PanelNote>
       }
     >
@@ -374,11 +371,8 @@ export function StandingPanel({ standing }: StandingPanelProps) {
 /** One note, three states — the panel says the same thing however it renders. */
 const STANDING_NOTE = (
   <PanelNote label="How this is worked out">
-    A plain rank, not a model. Each bar counts how many other accounts you are ahead of on
-    that measure, with ties split down the middle. Only accounts with at least three days of
-    work on them are counted — an account that signed up and never came back is not somebody
-    to be measured against, and a cohort made mostly of those would put everybody in the top
-    1% of nothing. Below three comparable accounts no percentages are shown at all.
+    A <strong>plain rank</strong>, not a model — how many accounts you are ahead of on that
+    measure, ties split down the middle. Only accounts with three or more days of work count.
   </PanelNote>
 );
 

@@ -355,7 +355,7 @@ export function directions(days: GrowthDay[]): Direction[] {
       heading === 'flat'
         ? `Holding level. ${
             r2 < 0.2
-              ? 'The line through this window explains almost none of the variation, so week-to-week movement here is noise rather than direction.'
+              ? 'Week-to-week movement here is noise, not direction.'
               : 'The slope is real but too small to matter over this window.'
           }`
         : `${heading === 'rising' ? 'Climbing' : 'Falling'} by about ${metric.format(
@@ -381,7 +381,7 @@ export function directions(days: GrowthDay[]): Direction[] {
 /** One sentence over the whole set, for the panel that opens the tab. */
 export function trendVerdict(list: Direction[]): string {
   if (list.length === 0) {
-    return 'There are not enough days in this window to fit a line through anything yet. Two weeks is the floor, and a month is where these start being worth reading.';
+    return 'Not enough days in this window to fit a line. Two weeks is the floor.';
   }
   const up = list.filter((entry) => entry.heading === 'rising');
   const down = list.filter((entry) => entry.heading === 'falling');
@@ -399,24 +399,24 @@ export function trendVerdict(list: Direction[]): string {
   // an account showing up less often while the work it does gets harder is not
   // an account in decline, and the old wording told it that it was.
   if (up.length > 0 && down.length > 0) {
-    return `${names(up)} ${up.length === 1 ? 'is' : 'are'} climbing while ${names(down)} ${down.length === 1 ? 'is' : 'are'} falling. That disagreement is the finding: productivity up against consistency down means fewer, bigger days; quality up against consistency down means the work got harder rather than more frequent. Read the split, not the average of it.`;
+    return `${names(up)} ${up.length === 1 ? 'is' : 'are'} climbing while ${names(down)} ${down.length === 1 ? 'is' : 'are'} falling. The split is the finding — read it, not the average.`;
   }
   if (up.length >= 3) {
-    return 'Three or more measures are climbing together, which is the signal worth trusting. A single line rising can be a good fortnight; productivity, consistency and quality moving the same way is a change in how you work rather than a change in the calendar.';
+    return 'Three or more climbing together. One line can be a good fortnight; three is a change in how you work.';
   }
   if (down.length >= 3) {
-    return 'Most of these are falling together, and none is climbing against them. That is worth taking at face value rather than explaining away — and the fix is almost always consistency rather than intensity, because showing up on more days lifts the other two and grinding harder on the same days does not.';
+    return 'Most of these are falling together, none climbing against them. The fix is consistency, not intensity.';
   }
   // One or two moving and the rest flat. Naming them matters: the sentence used
   // to fall through to "nothing has a slope worth reporting" here, which
   // directly contradicted the row above it saying XP was climbing at 82% fit.
   if (up.length > 0) {
-    return `${names(up)} ${up.length === 1 ? 'is' : 'are'} climbing while the rest hold level — a change in one measure rather than across the board, which usually means the work got bigger rather than more frequent.`;
+    return `${names(up)} ${up.length === 1 ? 'is' : 'are'} climbing while the rest hold level — the work got bigger, not more frequent.`;
   }
   if (down.length > 0) {
-    return `${names(down)} ${down.length === 1 ? 'is' : 'are'} falling while the rest hold level. One measure sliding on its own is worth catching early, because it is the stage at which it is still about one habit rather than the whole routine.`;
+    return `${names(down)} ${down.length === 1 ? 'is' : 'are'} falling while the rest hold level. Worth catching while it is still one habit.`;
   }
-  return 'Nothing here has a slope worth reporting. That is a steady window rather than an empty one: your totals are being held up by a routine that is running, not by a push.';
+  return 'Nothing here has a slope worth reporting. A steady window, not an empty one.';
 }
 
 // --------------------------------------------------------------------------
