@@ -1,0 +1,174 @@
+/**
+ * "What should I do next?" — the plan, and the time it has to fit in.
+ *
+ * The panel that opens the Recommendations tab, and the one thing on this page
+ * that is about the next hour rather than the last fortnight. Everything else
+ * here reports; this decides.
+ *
+ * ## The budget is the interface
+ *
+ * The row of minute buttons is not a filter. It is the question the panel is
+ * answering — *given this much time, what do I do* — and changing it produces a
+ * genuinely different plan rather than a longer or shorter version of the same
+ * one. Fifteen minutes gets the overdue thing and nothing else; ninety gets the
+ * overdue thing, the weak subject and a review block. That is the behaviour a
+ * reader should be able to feel after two presses.
+ *
+ * The chosen budget is remembered for the session but not saved: how long you
+ * have is a fact about this morning, not a preference.
+ *
+ * ## What each row shows, and in what order
+ *
+ * The action, the reason, and the minutes. The reason is not decoration — it is
+ * what separates this from a to-do list, and it is always the reader's own
+ * figures rather than an adjective. "Due today" and "you rate Geometry 2.4 out
+ * of 5 against 3.6 elsewhere" are both reasons; "high priority" is not, because
+ * the reader is the one who typed that.
+ *
+ * Rows that name a real task carry a link to it. Rows that name a subject do
+ * not, because there is no page that means "practise this for half an hour" —
+ * and a link that goes somewhere unrelated is worse than no link.
+ */
+import { Link } from 'react-router-dom';
+import { Panel, PanelNote } from './charts';
+import { BUDGETS, type ActionKind, type NextAction, type Plan } from '@/utils/nextActions';
+
+/** The word beside each row, and the colour it carries. */
+const KIND_LABEL: Record<ActionKind, string> = {
+  overdue: 'Overdue',
+  due: 'Due today',
+  goal: 'Goal',
+  'weak-subject': 'Weakest',
+  neglected: 'Dropped',
+  review: 'Review',
+  stale: 'Stale',
+  streak: 'Streak',
+};
+
+const KIND_TONE: Record<ActionKind, string> = {
+  overdue: 'pink',
+  due: 'amber',
+  goal: 'violet',
+  'weak-subject': 'blue',
+  neglected: 'blue',
+  review: 'green',
+  stale: 'amber',
+  streak: 'green',
+};
+
+function ActionRow({ item }: { item: NextAction }) {
+  return (
+    <li className="ax-plan-row">
+      <span className={`ax-plan-tag is-${KIND_TONE[item.kind]}`}>{KIND_LABEL[item.kind]}</span>
+      <div className="ax-plan-body">
+        <p className="ax-plan-title">
+          {item.taskId ? (
+            /* Straight to the list the task lives on. There is no per-task
+               route, so this is as close as an honest link gets. */
+            <Link to="/tasks" className="ax-plan-link">
+              {item.title}
+            </Link>
+          ) : (
+            item.title
+          )}
+        </p>
+        <p className="ax-plan-why">{item.because}</p>
+      </div>
+      <span className="ax-plan-mins">{item.minutes}m</span>
+    </li>
+  );
+}
+
+export interface NextActionsProps {
+  plan: Plan;
+  onBudget: (minutes: number) => void;
+  /** Days until this week's advice is replaced. */
+  weekLeft: number;
+  onRefresh: () => void;
+}
+
+export function NextActions({ plan, onBudget, weekLeft, onRefresh }: NextActionsProps) {
+  const { actions, more, spare, budget, planned } = plan;
+
+  return (
+    <Panel
+      title="What to do next"
+      note={
+        actions.length > 0
+          ? `${planned} minutes of the ${budget} you have, from your goals, your deadlines and the last fortnight of your own record.`
+          : undefined
+      }
+      className="ax-plan"
+      aside={
+        <div className="ax-plan-budget" role="group" aria-label="Time available">
+          {BUDGETS.map((minutes) => (
+            <button
+              key={minutes}
+              type="button"
+              className={`ax-plan-budget-btn${minutes === budget ? ' is-on' : ''}`}
+              aria-pressed={minutes === budget}
+              onClick={() => onBudget(minutes)}
+            >
+              {minutes}m
+            </button>
+          ))}
+        </div>
+      }
+      footer={
+        <PanelNote label="How this is chosen">
+          <p>
+            Eight sources, in this order of precedence: work already overdue, work due today, the
+            goal furthest behind its own deadline, the subject you rate worst, work you rated
+            badly and have not been back to, a subject that has gone quiet, a task old enough to
+            be a decision rather than a task, and — only when nothing at all is logged today — the
+            streak.
+          </p>
+          <p>
+            The streak is last deliberately. It is the cheapest reason to do anything, and a page
+            that leads with it every morning has taught you that the number is the point.
+          </p>
+          <p>
+            Minutes are the median time your own finished tasks have actually taken, not an
+            estimate of how long something ought to take. The plan is rebuilt when you finish
+            something and the whole set is re-derived weekly — {weekLeft}{' '}
+            {weekLeft === 1 ? 'day' : 'days'} until the next one.
+          </p>
+        </PanelNote>
+      }
+    >
+      {actions.length === 0 ? (
+        <p className="ax-empty">
+          Nothing is overdue, no goal is behind its deadline, and no subject is far enough off its
+          own average to name. There is no plan here because the record does not support one —
+          which is a better answer than a made-up suggestion sitting where the real ones go.
+        </p>
+      ) : (
+        <>
+          <ul className="ax-plan-list">
+            {actions.map((item) => (
+              <ActionRow key={item.id} item={item} />
+            ))}
+          </ul>
+          {spare >= 10 && (
+            <p className="ax-plan-spare">
+              {spare} minutes spare. {more.length > 0 ? 'The next one needs longer than that.' : 'Nothing else the record supports suggesting.'}
+            </p>
+          )}
+          {more.length > 0 && (
+            <details className="ax-plan-more">
+              <summary>{more.length} more that did not fit</summary>
+              <ul className="ax-plan-list">
+                {more.map((item) => (
+                  <ActionRow key={item.id} item={item} />
+                ))}
+              </ul>
+            </details>
+          )}
+          <button type="button" className="ax-plan-refresh" onClick={onRefresh}>
+            Re-read against what I have finished
+          </button>
+        </>
+      )}
+    </Panel>
+  );
+}

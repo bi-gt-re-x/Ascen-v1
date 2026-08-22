@@ -24,11 +24,26 @@
  * gets easier, or improves anything it does not directly touch.
  */
 import type { GrowthDay } from '@/types';
-import type { BalanceShape, ClockShape, RhythmShape, WeekShape } from './behaviour';
+import type {
+  BalanceShape,
+  ClockShape,
+  RhythmShape,
+  SubjectQualityShape,
+  WeekShape,
+} from './behaviour';
 import { REASON_FLOOR, type RatingSummary, type ReasonSummary } from './ratings';
 import type { Ratings } from '@/types';
 
 export type AdviceKind = 'frequency' | 'timing' | 'depth' | 'balance' | 'quality' | 'load';
+
+/**
+ * Fewest rated tasks in a subject before a rule will act on its rating.
+ *
+ * Higher than `SUBJECT_FLOOR` in utils/behaviour, which is the floor for
+ * *reporting* a subject's numbers. Telling somebody to change how they study
+ * is a bigger claim than printing a figure, and it should need more behind it.
+ */
+const SUBJECT_RULE_FLOOR = 6;
 
 /**
  * What area of the habit a suggestion is about.
@@ -37,9 +52,16 @@ export type AdviceKind = 'frequency' | 'timing' | 'depth' | 'balance' | 'quality
  * how long). A reader filters by category — "show me the scheduling ones" — and
  * groups by kind without ever being told the word.
  *
- * Seven, and each one is reachable: every category here has at least one strict
+ * Eight, and each one is reachable: every category here has at least one strict
  * rule that can produce it and at least one fallback, so a chip never appears
- * for a taxonomy the rules cannot fill. The set replaced an eight-name list
+ * for a taxonomy the rules cannot fill.
+ *
+ * `Subjects` is the newest and answers the question the other seven cannot:
+ * they are all about *how* the week is worked — how often, when, how long, how
+ * hard — and none of them can say which subject the effort is going into or
+ * whether it is working there. A reader whose consistency is perfect and whose
+ * Geometry has been sliding for a month gets nothing at all from the other
+ * seven, which is precisely the case where advice is worth most. The set replaced an eight-name list
  * that had grown apart from the rules — "Habit Building" and "Task Management"
  * were never emitted by anything, "Time Management" and "Scheduling" were the
  * same question asked twice, and there was no home at all for the two things
@@ -53,7 +75,8 @@ export type AdviceCategory =
   | 'Execution'
   | 'Focus Time'
   | 'Scheduling'
-  | 'Burnout';
+  | 'Burnout'
+  | 'Subjects';
 
 /**
  * How much this is likely to be worth, as three bands rather than a number.
@@ -131,6 +154,14 @@ export interface AdviceInput {
   clock: ClockShape;
   rhythm: RhythmShape;
   balance: BalanceShape;
+  /**
+   * Each subject as a quality reading — see `subjectQuality` in utils/behaviour.
+   *
+   * `balance` above says where the effort went; this says whether it worked.
+   * The Subjects rules read only this, and every one of them checks `execution`
+   * against null first: a subject nobody rated is not a subject going badly.
+   */
+  subjects: SubjectQualityShape;
   ratings: Ratings | null;
   /**
    * What the reader said about their finished work, over the same window.
@@ -271,7 +302,7 @@ function loadShape(days: GrowthDay[]): LoadShape {
  * without a second pass over the same thresholds.
  */
 export function recommendations(input: AdviceInput): Advice[] {
-  const { days, week, clock, rhythm, balance, ratings, quality, reasons } = input;
+  const { days, week, clock, rhythm, balance, subjects, ratings, quality, reasons } = input;
   const out: Rule[] = [];
   const perDay = xpPerActiveDay(days);
   const yearScale = days.length > 0 ? 365 / days.length : 0;
@@ -403,6 +434,113 @@ export function recommendations(input: AdviceInput): Advice[] {
       evidence: `${balance.leader} holds ${balance.concentration}% of your XP across ${balance.carrying} subjects with real weight behind them.`,
       impact: 0,
       workings: 'No XP claim: the total does not change, only what it is made of.',
+      effort: 1,
+    });
+  }
+
+  // ---- subjects: where the effort is going least far ----------------------
+  /* Everything above is about the shape of the week. These four are about what
+     is in it. They read `subjects` — the per-subject quality reading — and each
+     one checks for a null execution first, because a subject nobody rated must
+     never be reported as a subject going badly. */
+  const readable = subjects.rows.filter(
+    (row) => row.execution !== null && row.rated >= SUBJECT_RULE_FLOOR,
+  );
+
+  if (readable.length >= 2) {
+    const worst = [...readable].sort((a, b) => a.execution! - b.execution!)[0]!;
+    /* Against the *other* subjects, not against an average that includes this
+       one. With two subjects, comparing Physics at 4.0 to the mean of both at
+       4.5 understates a gap that is really a whole point — and the fewer
+       subjects an account has, the more the subject drags its own baseline
+       toward itself. */
+    const others = readable.filter((row) => row.id !== worst.id);
+    const elsewhere =
+      others.reduce((sum, row) => sum + row.execution!, 0) / others.length;
+    const behind = elsewhere - worst.execution!;
+    if (behind >= 0.4) {
+      out.push({
+        // Keyed on the subject id, for the same reason `restart-fading` is: the
+        // follow-up has to find the same subject a month later, by which time
+        // it may have been renamed. See `measureFor` in utils/followup.
+        id: `subject-weak:${worst.id}`,
+        kind: 'quality',
+        category: 'Subjects',
+        title: `Change how you practise ${worst.name}`,
+        because: `You rate ${worst.name} ${worst.execution!.toFixed(1)} out of 5 against ${elsewhere.toFixed(1)} across your other subjects. The hours are going in; the rating is not following them.`,
+        action: `Next ${worst.name} session, change one thing about the method — worked examples before problems, or out loud instead of on paper. More of the same is the one option the record has already tested.`,
+        evidence: `${worst.rated} rated ${worst.name} tasks at ${worst.execution!.toFixed(1)}/5, ${behind.toFixed(1)} below the ${others.length} other subject${others.length === 1 ? '' : 's'} you rated.`,
+        impact: 0,
+        workings: 'No XP claim: this changes what an hour is worth, which the XP total cannot see.',
+        effort: 3,
+      });
+    }
+  }
+
+  /* Reaching too far, which looks identical to going badly on any single
+     number and is the opposite problem. Hard work rated poorly is not a subject
+     you are bad at, it is a step size you have not earned yet. */
+  const overreaching = readable
+    .filter((row) => row.difficulty !== null && row.difficulty >= 3.8 && row.execution! <= 2.6)
+    .sort((a, b) => a.execution! - b.execution!)[0];
+  if (overreaching) {
+    out.push({
+      id: `subject-overreach:${overreaching.id}`,
+      kind: 'load',
+      category: 'Subjects',
+      title: `Drop a step in ${overreaching.name}`,
+      because: `You are rating ${overreaching.name} ${overreaching.difficulty!.toFixed(1)}/5 for difficulty and ${overreaching.execution!.toFixed(1)}/5 for how it went. That is not a subject going badly, it is a step size you have not earned yet.`,
+      action: `Spend one session on the level below and finish it cleanly. The point is one session that goes well, not one that is easy.`,
+      evidence: `${overreaching.rated} rated ${overreaching.name} tasks: difficulty ${overreaching.difficulty!.toFixed(1)}, execution ${overreaching.execution!.toFixed(1)}.`,
+      impact: 0,
+      workings: 'No XP claim: the work already pays; this is about whether it lands.',
+      effort: 2,
+    });
+  }
+
+  /* A subject that is moving. The only rule on this page that asks the reader
+     to do more of something rather than to change it — and it fires rarely,
+     which is what makes it worth reading when it does. */
+  const rising = readable
+    .filter((row) => row.movement !== null && row.movement >= 0.5)
+    .sort((a, b) => b.movement! - a.movement!)[0];
+  if (rising) {
+    out.push({
+      id: `subject-rising:${rising.id}`,
+      kind: 'balance',
+      category: 'Subjects',
+      title: `Push ${rising.name} while it is moving`,
+      because: `${rising.name} ratings rose ${rising.movement!.toFixed(1)} points across this window — the clearest improvement on the page.`,
+      action: `Add one ${rising.name} session this week and make it the harder kind. Whatever changed is working, and the window for compounding it is now.`,
+      evidence: `${rising.rated} rated ${rising.name} tasks, execution up ${rising.movement!.toFixed(1)} between the halves of this window.`,
+      impact: Math.round(perDay * 0.5 * 52),
+      workings: `Half a working day's XP a week for a year, at ${Math.round(perDay).toLocaleString()} XP a working day.`,
+      effort: 1,
+    });
+  }
+
+  /* Dropped rather than fading. `balance.fading` catches a subject that stopped
+     inside the window; this catches one whose last session is far enough back
+     that the window may not contain it at all. */
+  /* Lifetime count, not the window's: a subject last touched five weeks ago
+     has nothing inside a fortnight to be missing from. See `lifetimeDone`. */
+  const dropped = subjects.rows
+    .filter(
+      (row) =>
+        row.lifetimeDone >= SUBJECT_RULE_FLOOR && row.sinceDays !== null && row.sinceDays >= 21,
+    )
+    .sort((a, b) => b.lifetimeDone - a.lifetimeDone)[0];
+  if (dropped && !balance.fadingIds.includes(dropped.id)) {
+    out.push({
+      id: `subject-dropped:${dropped.id}`,
+      kind: 'balance',
+      category: 'Subjects',
+      title: `${dropped.name} has been quiet ${dropped.sinceDays} days`,
+      because: `${dropped.lifetimeDone} finished tasks behind it and nothing for three weeks. A subject with that much history does not usually stop on purpose without you noticing.`,
+      action: 'Book one short session, or take it off the list on purpose. Either is better than the current arrangement, which is neither.',
+      evidence: `Last ${dropped.name} task ${dropped.sinceDays} days ago, after ${dropped.lifetimeDone} on the record.`,
+      impact: 0,
+      workings: 'No XP claim: this is about what is missing from the week, not about the total.',
       effort: 1,
     });
   }

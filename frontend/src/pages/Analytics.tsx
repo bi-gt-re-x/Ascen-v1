@@ -86,10 +86,14 @@ import {
   HabitOpening,
   HabitTiles,
   DepthPicker,
+  DiagnosisCards,
+  DiagnosisEmpty,
+  DiscoveredPatterns,
   Header,
   InsightsPanel,
   Locked,
   MilestonePanel,
+  NextActions,
   PatternsPanel,
   QualityGridPanel,
   QualityPanel,
@@ -157,7 +161,7 @@ import {
   type WindowKey,
 } from '@/components/Analytics/data';
 import { growthScore, type ScoreFactor } from '@/components/Analytics/score';
-import { useApi, useDocumentTitle, usePageEntrance, useSettings, useSubjectIndex, useUserData } from '@/hooks';
+import { useApi, useDocumentTitle, useSettings, useSubjectIndex, useUserData } from '@/hooks';
 import {
   analytics as analyticsService,
   goals as goalsService,
@@ -179,7 +183,14 @@ import {
   tileSeries,
 } from '@/utils/growthSummary';
 import { subjectXp } from '@/utils/subjectXp';
-import { balanceShape, clockShape, momentum, rhythmShape, weekShape } from '@/utils/behaviour';
+import {
+  balanceShape,
+  clockShape,
+  momentum,
+  rhythmShape,
+  subjectQuality,
+  weekShape,
+} from '@/utils/behaviour';
 import {
   buildHabits,
   habitDays,
@@ -214,6 +225,10 @@ import {
   summariseReasons,
 } from '@/utils/ratings';
 import { outlook, recommendations, type Advice } from '@/utils/advice';
+import { PATTERN_DAYS, RECENT_DAYS, daysUntilNextWeek, recentWindow, weekStamp } from '@/utils/recent';
+import { diagnose, vitals } from '@/utils/diagnosis';
+import { discoverPatterns } from '@/utils/patterns';
+import { DEFAULT_BUDGET, buildPlan } from '@/utils/nextActions';
 import type { Prefs } from '@/services/settings';
 import { SETTLE, reviewAdopted, summarise } from '@/utils/followup';
 import type { Ratings } from '@/types';
@@ -617,6 +632,135 @@ export default function Analytics() {
     [fromIso, nameOf, tasks, toIso],
   );
 
+  // ---- The recent window, which advice reads instead of the picker --------
+  /**
+   * Everything below this line ignores the window picker on purpose.
+   *
+   * The picker answers "how far back do I want to look", and for a total or a
+   * trajectory that is the reader's call. Advice is a different kind of claim:
+   * a recommendation drawn from a year of record describes a person who may not
+   * exist any more — the term ended, the instrument changed, the timetable
+   * moved. What to do this week has to come from the weeks either side of it.
+   *
+   * So Next Actions, the diagnosis, the patterns and the recommendations all
+   * read a fixed recent window from utils/recent — a fortnight for the things
+   * that say what to do, a month for the things that claim a pattern, because
+   * splitting a fortnight in two leaves a week on each side and a week is not
+   * enough to tell a real difference from a good Tuesday.
+   */
+  const recent = useMemo(() => recentWindow(all, RECENT_DAYS), [all]);
+  const patternWindow = useMemo(() => recentWindow(all, PATTERN_DAYS), [all]);
+
+  /**
+   * The week this advice belongs to, and the button that re-reads it.
+   *
+   * `stamp` is the ISO week. Anything keyed on it holds still for seven days
+   * and then moves on its own — which is the point: advice that reshuffles on
+   * every page load cannot be acted on, because the thing you decided to do
+   * this morning is gone by lunchtime.
+   *
+   * `nudge` is what the plan's own refresh button bumps, and it exists for the
+   * half of the problem a re-fetch does not solve. Re-fetching brings in tasks
+   * finished since the page opened, and the memos below recompute on their own
+   * when it lands. But the plan also reads the *clock* — what is overdue, what
+   * is due today, whether anything is logged yet — and none of that changes
+   * just because the data did. Bumping the nudge is what re-asks the clock.
+   *
+   * Neither is a re-roll. Within one week the same record gives the same
+   * answer, because the answer is derived rather than shuffled.
+   */
+  const [nudge, setNudge] = useState(0);
+  const stamp = useMemo(() => weekStamp(new Date()), []);
+  const weekLeft = useMemo(() => daysUntilNextWeek(new Date()), []);
+
+  /* Tasks finished inside the recent window, and inside the pattern window.
+     Unfiltered by subject, unlike `finished` above: advice about which subject
+     to change cannot be computed from one subject. */
+  const recentFinished = useMemo(
+    () =>
+      tasks.filter((task) => {
+        const at = String(task.completed_at || '').slice(0, 10);
+        return Boolean(at) && at >= recent.fromIso && at <= recent.toIso;
+      }),
+    [recent, tasks],
+  );
+  const patternFinished = useMemo(
+    () =>
+      tasks.filter((task) => {
+        const at = String(task.completed_at || '').slice(0, 10);
+        return Boolean(at) && at >= patternWindow.fromIso && at <= patternWindow.toIso;
+      }),
+    [patternWindow, tasks],
+  );
+
+  /* The same behavioural shapes the picker-scoped tabs read, taken over the
+     fortnight instead. Recommendations reads these; Habits and Insights keep
+     the picker-scoped ones above, because those tabs report rather than
+     advise. */
+  const recentWeek = useMemo(() => weekShape(recent.current), [recent]);
+  const recentClock = useMemo(() => clockShape(recentFinished), [recentFinished]);
+  const recentRhythm = useMemo(() => rhythmShape(recent.current), [recent]);
+  const recentBalance = useMemo(
+    () => balanceShape(tasks, nameOf, recent.fromIso, recent.toIso),
+    [nameOf, recent, tasks],
+  );
+  const recentSubjects = useMemo(
+    () => subjectQuality(tasks, nameOf, recent.fromIso, recent.toIso),
+    [nameOf, recent, tasks],
+  );
+  const recentQuality = useMemo(
+    () => summariseRatings(tasks, recent.fromIso, recent.toIso),
+    [recent, tasks],
+  );
+  const recentReasons = useMemo(
+    () => summariseReasons(tasks, recent.fromIso, recent.toIso),
+    [recent, tasks],
+  );
+
+  // ---- Growth diagnosis ---------------------------------------------------
+  /**
+   * The fortnight against the one before it, as tensions rather than scores.
+   *
+   * Both halves read the same task list so every comparison is like against
+   * like, and both recompute on their own when a re-read brings new tasks in —
+   * nothing here reads the clock, so unlike the plan below it needs no nudge.
+   */
+  const nowVitals = useMemo(() => vitals(recent.current, tasks), [recent, tasks]);
+  const beforeVitals = useMemo(() => vitals(recent.previous, tasks), [recent, tasks]);
+  const diagnoses = useMemo(
+    () => diagnose(nowVitals, beforeVitals),
+    [beforeVitals, nowVitals],
+  );
+
+  // ---- Discovered patterns ------------------------------------------------
+  const discovered = useMemo(
+    () =>
+      discoverPatterns({
+        days: patternWindow.current,
+        finished: patternFinished,
+        nameOf,
+      }),
+    [nameOf, patternFinished, patternWindow],
+  );
+
+  // ---- What to do next ----------------------------------------------------
+  const [budget, setBudget] = useState<number>(DEFAULT_BUDGET);
+  const plan = useMemo(
+    () =>
+      buildPlan({
+        tasks,
+        goals: goals.data?.goals ?? [],
+        days: recent.current,
+        nameOf,
+        budget,
+        stamp,
+      }),
+    // `nudge` re-reads the plan against the clock: a task finished since the
+    // page opened should leave it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [budget, goals.data, nameOf, recent, stamp, tasks, nudge],
+  );
+
   // ---- Habits -------------------------------------------------------------
   const habits = useMemo(
     () => buildHabits(bySubject, nameOf, fromIso, toIso),
@@ -667,26 +811,47 @@ export default function Analytics() {
   const advice = useMemo(
     () =>
       recommendations({
-        days: slice.current,
-        week,
-        clock,
-        rhythm,
-        balance,
+        // The fortnight, not the picker — see "The recent window" above.
+        days: recent.current,
+        week: recentWeek,
+        clock: recentClock,
+        rhythm: recentRhythm,
+        balance: recentBalance,
+        subjects: recentSubjects,
         ratings: ratings.data ?? null,
         // The same summary the Overview's quality panels draw, so the Execution
         // and Quality cards cannot say something the picture beside them
         // contradicts. Safe on an account that has never rated anything: every
         // rule reading it checks `rated` first.
-        quality: qualitySummary,
+        quality: recentQuality,
         // Empty on the two shallower depths, because the question is never put
         // — the one rule that reads it produces nothing rather than guessing.
-        reasons,
+        reasons: recentReasons,
       }),
-    [balance, clock, qualitySummary, ratings.data, reasons, rhythm, slice, week],
+    [
+      ratings.data,
+      recent,
+      recentBalance,
+      recentClock,
+      recentQuality,
+      recentReasons,
+      recentRhythm,
+      recentSubjects,
+      recentWeek,
+    ],
   );
 
   const banked = Number(all[all.length - 1]?.cumulative_xp) || 0;
-  const projection = useMemo(() => outlook(slice.current, advice, banked), [advice, banked, slice]);
+  /* The same fortnight the advice came from, not the picker's window. Both
+     halves of this chart have to describe one stretch of time: the baseline is
+     "XP a year at the pace you are going" and the gain is the impacts of the
+     items below, each of which was already scaled to a year *from the
+     fortnight*. Feeding a 90-day baseline into a fortnight's gains draws a gap
+     between two different accounts. */
+  const projection = useMemo(
+    () => outlook(recent.current, advice, banked),
+    [advice, banked, recent],
+  );
 
   const shown = useMemo(
     () => (category ? advice.filter((item) => item.category === category) : advice),
@@ -790,10 +955,6 @@ export default function Analytics() {
     historyDays < NEED_DAYS.recommendations;
   const showSetup = editingBaseline ?? firstRun;
 
-  /* The arrival cascade. Bound to the read rather than to mount, so it
-     starts when there is something to animate — see hooks/usePageEntrance. */
-  const entering = usePageEntrance(!series.loading);
-
   if (series.loading) return <Loading label="Reading your history" />;
   if (!series.data) {
     return (
@@ -810,7 +971,14 @@ export default function Analytics() {
   return (
     <div className="ax-page">
       <Ambient />
-      <div className={`ax-shell page-shell${entering ? ' pg-enter' : ''}`}>
+      {/* No `pg-enter` here, unlike every other page. This one has its own
+          arrival and always did — `.ax-panel` and the tiles carry `ax-enter`,
+          which is the same fade and the same ten pixels, and the charts inside
+          them wipe on after it (styles/analytics.css, "Arriving"). Adding the
+          shared cascade on top ran both at once: the panel would reach half
+          opacity behind a section at half opacity and travel the distance
+          twice. One entrance per page, and this page already had a richer one. */}
+      <div className="ax-shell page-shell">
         <Header
           view={view}
           span={spanText}
@@ -1067,6 +1235,15 @@ export default function Analytics() {
                 notice={unlock(slice.current.length, NEED_DAYS.insights, 'how you tend to work')}
               />
             </section>
+            {/* Above the relationship panel rather than below it: this is the
+                one panel on the tab that answers "why am I improving" with a
+                condition rather than a correlation, and it is what a reader
+                opening Insights is actually looking for. It reads its own
+                month-long window rather than the picker — see "The recent
+                window" in the data section. */}
+            <section className="ax-section">
+              <DiscoveredPatterns items={discovered} window={PATTERN_DAYS} />
+            </section>
             <section className="ax-section">
               <RelationshipsPanel
                 relationships={links}
@@ -1125,6 +1302,41 @@ export default function Analytics() {
             hiding those behind the same gate would mean the one thing this tab
             promised to come back and tell you disappears exactly when it
             finally has something to say. */}
+        {/* The plan comes first, above even the follow-ups, and it is the only
+            panel on this page about the next hour rather than the last
+            fortnight. It is gated on nothing: an account three days old still
+            has overdue work and a goal with a deadline, and those are exactly
+            the days when being told what to do is worth most. */}
+        {view.key === 'recommendations' && (
+          <section className="ax-section">
+            <NextActions
+              plan={plan}
+              onBudget={setBudget}
+              weekLeft={weekLeft}
+              /* Both halves: `refresh` re-reads the account so a task finished
+                 elsewhere leaves the plan, and the nudge re-asks the clock so
+                 what counts as overdue is worked out again. */
+              onRefresh={() => {
+                refresh();
+                setNudge((at) => at + 1);
+              }}
+            />
+          </section>
+        )}
+
+        {/* Then the diagnosis: what the fortnight means, before what to change
+            about it. A reader who understands why the numbers are moving reads
+            the recommendations below as reasons rather than as chores. */}
+        {view.key === 'recommendations' && (
+          <section className="ax-section">
+            {diagnoses.length > 0 ? (
+              <DiagnosisCards items={diagnoses} />
+            ) : (
+              <DiagnosisEmpty enoughRecord={recent.previous.length >= 7} />
+            )}
+          </section>
+        )}
+
         {view.key === 'recommendations' && (
           <section className="ax-section">
             <FollowupPanel

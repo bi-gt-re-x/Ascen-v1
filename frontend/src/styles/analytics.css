@@ -73,6 +73,26 @@ html[data-theme="dark"] .ax-page {
     --ax-shadow: 0 1px 2px rgba(0, 0, 0, .3);
 }
 
+/* body is a centred flex column (dashboard.css), so its child sizes to its
+   content rather than stretching, and this page never opted out — which is why
+   every tab arrived as an 800px strip in the middle of a 1440px window with a
+   third of the screen empty on the right. `--shell-fluid: 96%` below was taking
+   96% of that strip and doing exactly what it was told; the Subjects tab showed
+   it worst, because a row of four skill cards and a chart beside a radar is the
+   widest thing the page draws.
+
+   The child that shrinks is `#root`, not `<main>`: <main> is inside the React
+   mount point, and `width: 100%` of a shrink-to-fit parent is the shrink-to-fit
+   width, so naming only `.app-main` is a rule that does nothing. Goals, Notes,
+   Records, Settings and Achievements all hit this and are all fixed the same
+   way; see notes.css for the long version. Scoped with :has so no other route
+   is touched. */
+body:has(.ax-page) > #root,
+body:has(.ax-page) .app-main {
+    width: 100%;
+    min-width: 0;
+}
+
 .ax-shell {
     --shell-max: 1500px;
     --shell-fluid: 96%;
@@ -3603,4 +3623,331 @@ html[data-theme="dark"] .ax-page {
 @media (max-width: 640px) {
     .ax-rated { grid-template-columns: 1fr; }
     .ax-quality-halves li { grid-template-columns: 66px minmax(0, 1fr) auto; }
+}
+
+/* ==========================================================================
+   What to do next — the plan, and the budget it fits into
+   ==========================================================================
+   The panel that opens Recommendations. Everything else on this page reports
+   on a fortnight that has already happened; this one is about the next hour,
+   and it is laid out to be read standing up: a tag saying why, the action, the
+   reason underneath in the reader's own figures, and the minutes on the right
+   where the eye can add them up. */
+
+.ax-plan-budget {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.ax-plan-budget-btn {
+    padding: 5px 10px;
+    border: 1px solid var(--ax-line);
+    border-radius: 999px;
+    background: var(--ax-card-2);
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .16s ease, color .16s ease, border-color .16s ease;
+}
+.ax-plan-budget-btn:hover { color: var(--ax-text); border-color: var(--ax-violet); }
+.ax-plan-budget-btn.is-on {
+    background: var(--ax-violet);
+    border-color: var(--ax-violet);
+    color: #fff;
+}
+
+.ax-plan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ax-plan-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 11px 4px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-plan-row:first-child { border-top: 0; }
+
+/* The tag is the "why" in one word, and it is the first thing read. Fixed
+   width so the actions below it line up as a column rather than stepping in
+   and out with the length of the word. */
+.ax-plan-tag {
+    flex: none;
+    min-width: 74px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.5;
+}
+.ax-plan-tag.is-pink   { background: color-mix(in srgb, var(--ax-pink) 14%, transparent);   color: var(--ax-pink); }
+.ax-plan-tag.is-amber  { background: color-mix(in srgb, var(--ax-amber) 16%, transparent);  color: var(--ax-amber); }
+.ax-plan-tag.is-violet { background: color-mix(in srgb, var(--ax-violet) 14%, transparent); color: var(--ax-violet); }
+.ax-plan-tag.is-blue   { background: color-mix(in srgb, var(--ax-blue) 14%, transparent);   color: var(--ax-blue); }
+.ax-plan-tag.is-green  { background: color-mix(in srgb, var(--ax-green) 15%, transparent);  color: var(--ax-green); }
+
+.ax-plan-body { min-width: 0; }
+.ax-plan-title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ax-text);
+    line-height: 1.45;
+}
+.ax-plan-link { color: inherit; text-decoration: none; }
+.ax-plan-link:hover { color: var(--ax-violet); text-decoration: underline; }
+
+/* The reason, and the whole point of the panel — without it this is a to-do
+   list with extra steps. Quiet, but never hidden behind a click. */
+.ax-plan-why {
+    margin: 3px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+}
+
+.ax-plan-mins {
+    flex: none;
+    padding-top: 1px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-plan-spare {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--ax-faint);
+}
+
+.ax-plan-more { margin-top: 10px; }
+.ax-plan-more > summary {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-muted);
+    cursor: pointer;
+}
+.ax-plan-more > summary:hover { color: var(--ax-violet); }
+
+.ax-plan-refresh {
+    /* `align-self` and the explicit width because the panel is a flex column:
+       a button left to stretch fills the row and centres its own label, which
+       put this in the middle of the card looking like a primary action. */
+    align-self: flex-start;
+    width: auto;
+    margin-top: 12px;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ax-plan-refresh:hover { color: var(--ax-violet); }
+
+/* ==========================================================================
+   Growth diagnosis — the tension, the figures, the action
+   ==========================================================================
+   Three cards at most, side by side. Each is a `.ax-panel` so it inherits the
+   page's card and its entrance; everything below only arranges the inside.
+
+   The left edge carries the tone. A colour band rather than an icon, because
+   there are exactly three tones and a reader learns three colours faster than
+   they learn three glyphs — and it survives being read at a glance from the
+   other side of a desk, which an icon at this size does not. */
+
+.ax-diag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: var(--ax-gap);
+}
+
+.ax-diag {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 20px;
+}
+.ax-diag::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--ax-diag-tone, var(--ax-violet));
+}
+.ax-diag.is-good    { --ax-diag-tone: var(--ax-green); }
+.ax-diag.is-tension { --ax-diag-tone: var(--ax-amber); }
+.ax-diag.is-warning { --ax-diag-tone: var(--ax-pink); }
+
+.ax-diag-tone {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ax-diag-tone, var(--ax-violet));
+}
+
+.ax-diag-head {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -.01em;
+    color: var(--ax-text);
+}
+
+/* The evidence. Middle of the card on purpose: a reader who accepts the
+   headline skips to the action, and one who does not checks the claim here. */
+.ax-diag-detail {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ax-muted);
+}
+
+.ax-diag-action {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--ax-card-2);
+}
+.ax-diag-action p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ax-text);
+}
+.ax-diag-arrow {
+    flex: none;
+    font-weight: 700;
+    color: var(--ax-diag-tone, var(--ax-violet));
+}
+
+/* What settles the experiment. An action with no measure attached is a
+   suggestion; with one it is something the next fortnight can answer. */
+.ax-diag-watch {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ax-faint);
+}
+.ax-diag-watch strong { color: var(--ax-muted); font-weight: 700; }
+
+/* ==========================================================================
+   Discovered patterns
+   ==========================================================================
+   A list rather than cards: these are sentences, they vary a lot in length,
+   and a grid of them would be a grid of mostly empty boxes. The strength chip
+   is the load-bearing part — see the note at the top of Patterns.tsx. */
+
+.ax-pat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ax-pat-row {
+    padding: 12px 4px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-pat-row:first-child { border-top: 0; }
+
+.ax-pat-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.ax-pat-kind {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
+/* How much weight the finding can take. Deliberately legible rather than
+   subtle: a reader should be able to dismiss a weak one at a glance. */
+.ax-pat-strength {
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+.ax-pat-row.is-strong .ax-pat-strength { background: color-mix(in srgb, var(--ax-green) 15%, transparent); color: var(--ax-green); }
+.ax-pat-row.is-likely .ax-pat-strength { background: color-mix(in srgb, var(--ax-blue) 14%, transparent);  color: var(--ax-blue); }
+.ax-pat-row.is-weak   .ax-pat-strength { background: var(--ax-card-2); color: var(--ax-faint); }
+
+.ax-pat-lift {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ax-text);
+}
+
+.ax-pat-text {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--ax-text);
+}
+
+/* The counts on both sides of the split. This is what stops the sentence above
+   from being typography rather than evidence. */
+.ax-pat-basis {
+    margin: 3px 0 0;
+    font-size: 11.5px;
+    color: var(--ax-faint);
+}
+
+.ax-pat-so {
+    margin: 7px 0 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ax-muted);
+}
+.ax-pat-so strong { color: var(--ax-text); font-weight: 700; }
+
+/* ---- Narrow ------------------------------------------------------------- */
+@media (max-width: 640px) {
+    /* The tag drops above the action rather than beside it: at this width a
+       74px column and a sentence leave about twelve characters a line. */
+    .ax-plan-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .ax-plan-tag {
+        grid-column: 1 / -1;
+        justify-self: start;
+        min-width: 0;
+    }
 }
