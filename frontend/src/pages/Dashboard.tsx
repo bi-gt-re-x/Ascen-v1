@@ -31,6 +31,7 @@ import {
   DailyQuote,
   FocusCard,
   FocusPanel,
+  GoalReached,
   LevelUp,
   RecentActivity,
   StreakCard,
@@ -40,6 +41,7 @@ import {
   TopPriorities,
   WeeklyOverview,
   XpCard,
+  useCrossing,
 } from '@/components/Dashboard';
 import { RatePrompt } from '@/components/Tasks';
 import {
@@ -50,12 +52,12 @@ import {
   weekSummary,
 } from '@/components/Dashboard/summary';
 import { useDocumentTitle, useSettings, useSubjectIndex, useUserData } from '@/hooks';
-import { useFocusSession } from '@/hooks/useFocusSession';
+import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
 import { weekStartDay } from '@/services/settings';
-import { dates } from '@/utils';
+import { dates, format } from '@/utils';
 import { isoStamp } from '@/utils/calendarGrid';
-import type { TaskTab } from '@/components/Dashboard';
+import type { GoalNews, TaskTab } from '@/components/Dashboard';
 import type { NewTask } from '@/services/tasks';
 import type { Task } from '@/types';
 import '@/styles/dashboard.css';
@@ -76,6 +78,8 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false);
   /** The level to celebrate, set when a completion crosses a level boundary. */
   const [levelled, setLevelled] = useState<number | null>(null);
+  /** The daily goal just reached, if one has been. See GoalReached. */
+  const [news, setNews] = useState<GoalNews | null>(null);
 
   // Today is read once per render rather than per panel, so a page left open
   // across midnight moves all of its cards over on the same tick.
@@ -95,6 +99,51 @@ export default function Dashboard() {
   );
   const priorities = useMemo(() => topPriorities(buckets.today), [buckets.today]);
   const activity = useMemo(() => recentActivity(tasks), [tasks]);
+
+  // ---- Reaching a goal ----------------------------------------------------
+  /* The two figures the dashboard already draws against a target, watched for
+     the moment they arrive at it. Whichever gets there first has the screen:
+     `current ?? next` keeps a second crossing in the same breath — a task
+     finished while the timer runs past the hour — from stacking a card on top
+     of the one already up. See components/Dashboard/GoalReached. */
+  const announce = useCallback((next: GoalNews) => {
+    setNews((current) => current ?? next);
+  }, []);
+
+  const xpGoal = Math.max(1, Math.round(dailyGoal));
+  const focusGoal = Math.max(1, Math.round(session.goalHours * 3600));
+
+  useCrossing(
+    day.xp,
+    xpGoal,
+    // Not before the account's tasks are on the page: today's XP reads as zero
+    // until then, and the jump off that placeholder is not a day being won.
+    data !== null,
+    useCallback(
+      () =>
+        announce({
+          kind: 'xp',
+          target: `${format.number(xpGoal)} XP`,
+          reached: `${format.number(day.xp)} XP`,
+        }),
+      [announce, day.xp, xpGoal],
+    ),
+  );
+
+  useCrossing(
+    Math.round(session.focused),
+    focusGoal,
+    true,
+    useCallback(
+      () =>
+        announce({
+          kind: 'focus',
+          target: fmtHM(focusGoal),
+          reached: fmtHM(session.focused),
+        }),
+      [announce, focusGoal, session.focused],
+    ),
+  );
 
   const complete = useCallback(
     async (task: Task) => {
@@ -348,12 +397,25 @@ export default function Dashboard() {
 
       {levelled !== null && <LevelUp level={levelled} onDone={() => setLevelled(null)} />}
 
+      {/* Behind the level-up for the same reason the rating prompt is behind
+          both: one completion can set off all three, and a day's goal being
+          reached is worth its own beat rather than a card appearing over a
+          badge that is still bursting. */}
+      {news && levelled === null && (
+        <GoalReached
+          kind={news.kind}
+          target={news.target}
+          reached={news.reached}
+          onClose={() => setNews(null)}
+        />
+      )}
+
       {/* Held behind the level-up, not raced against it. Both are triggered by
           the same completion, and a dialog that lands on top of the
           celebration would cover the one moment the app is allowed to be
           pleased with somebody. `levelled` clears itself when the animation
           finishes, and this appears then. */}
-      {rating && levelled === null && (
+      {rating && levelled === null && news === null && (
         <RatePrompt
           taskName={rating.name}
           onSubmit={saveRating}

@@ -461,6 +461,131 @@ html.focus-mode .focus-progress { height: 10px; margin: 0; }
     100% { transform: scale(9); opacity: 0; border-width: 1px; }
 }
 
+/* ==========================================================================
+   Reaching a daily goal — see components/Dashboard/GoalReached.tsx.
+
+   Two layers over the page: the confetti, which owns the whole viewport and
+   takes no clicks, and the card, which is the only part with a hit area. The
+   backdrop between them is deliberately not dimmed — the dashboard is what
+   was just won, and hiding it behind a scrim to announce that is backwards.
+   ========================================================================== */
+.goalfx {
+    position: fixed;
+    inset: 0;
+    z-index: 99997;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.goalfx-sky {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* One piece. The column it falls down is an inline `left`, and how far it
+   slides sideways and how much it turns on the way are custom properties the
+   keyframes below read — the same contract the level-up sparks use. */
+.goalfx-bit {
+    position: absolute;
+    top: -24px;
+    border-radius: 2px;
+    opacity: 0;
+    animation-name: goalfxFall;
+    animation-timing-function: cubic-bezier(.32, .12, .58, 1);
+    animation-fill-mode: forwards;
+}
+.goalfx-bit.is-round { border-radius: 50%; }
+
+@keyframes goalfxFall {
+    0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+    8%   { opacity: 1; }
+    85%  { opacity: 1; }
+    100% {
+        transform: translate3d(var(--drift, 0), 102vh, 0) rotate(var(--spin, 180deg));
+        opacity: 0;
+    }
+}
+
+.goalfx-card {
+    position: relative;
+    width: min(100%, 360px);
+    padding: 24px 26px 20px;
+    border-radius: 18px;
+    background: #fff;
+    text-align: center;
+    box-shadow: 0 24px 70px rgba(16, 24, 40, .28), 0 0 0 1px rgba(16, 24, 40, .06);
+    animation: goalfxIn .42s cubic-bezier(.22, 1.3, .38, 1) both;
+}
+
+@keyframes goalfxIn {
+    0%   { transform: scale(.86) translateY(14px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.goalfx-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 12px;
+    border-radius: 50%;
+    background: rgba(34, 160, 107, .12);
+    color: #22a06b;
+}
+.goalfx-mark svg { width: 26px; height: 26px; }
+
+.goalfx-title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    color: #1f2733;
+}
+.goalfx-line {
+    margin: 6px 0 18px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #6b7684;
+}
+
+.goalfx-go {
+    width: 100%;
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 10px;
+    background: #2C302E;
+    color: #fff;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+.goalfx-go:hover { background: #43483f; }
+
+html[data-theme="dark"] .goalfx-card {
+    background: #161d2c;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .07);
+}
+html[data-theme="dark"] .goalfx-title { color: #e7ecf6; }
+html[data-theme="dark"] .goalfx-line { color: #8f9bb3; }
+html[data-theme="dark"] .goalfx-mark { background: rgba(70, 196, 131, .16); color: #46c483; }
+html[data-theme="dark"] .goalfx-go { background: #2f3a52; }
+html[data-theme="dark"] .goalfx-go:hover { background: #3b4967; }
+
+/* The pieces are not rendered at all when less motion is asked for — see the
+   note in GoalReached.tsx — so there is nothing here to quieten but the card's
+   own entrance. */
+@media (prefers-reduced-motion: reduce) {
+    .goalfx-card { animation: none; }
+    .goalfx-go { transition: none; }
+}
+
 .stats-footer {
     display: flex;
     justify-content: space-between;
