@@ -251,6 +251,31 @@ export default function Goals() {
     [account, load, username],
   );
 
+  /**
+   * Point a task that already exists at this goal.
+   *
+   * The other half of "Add new action": work is often written down before the
+   * goal it turns out to serve is, and retyping it would leave two tasks where
+   * there is one piece of work. It is the same link `addAction` writes, through
+   * the edit the tasks page already uses — so the task keeps its due date, its
+   * subject and its history, and simply starts counting here.
+   */
+  const linkTask = useCallback(
+    async (goal: Goal, task: Task, milestoneId?: string) => {
+      if (!username) return;
+      const result = await taskService.updateTask(username, task.id, {
+        goal_id: goal.id,
+        milestone_id: milestoneId ?? null,
+      });
+      if (!result.success) {
+        setError(result.message ?? 'That task could not be linked.');
+        return;
+      }
+      await Promise.all([load(true), account.reload()]);
+    },
+    [account, load, username],
+  );
+
   // ---- Goal writes --------------------------------------------------------
   const createGoal = useCallback(
     async (draft: NewGoal) => {
@@ -502,6 +527,9 @@ export default function Goals() {
                     onComplete={(task) => void completeMove(task)}
                     onAddAction={(entry, title, milestoneId) =>
                       void addAction(entry, title, milestoneId)
+                    }
+                    onLinkTask={(entry, task, milestoneId) =>
+                      void linkTask(entry, task, milestoneId)
                     }
                     onSuggest={suggestMilestones}
                     onSaveStones={saveMilestones}

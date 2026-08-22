@@ -5033,6 +5033,42 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 }
 .ag-add input:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
 
+/* The existing-task search under the box. Sits in the flow rather than floating:
+   the card is tall and the list is short, so there is nothing to overlap. */
+.ag-found {
+    margin: 6px 0 0;
+    padding: 4px;
+    list-style: none;
+    border: 1px solid var(--gx-line);
+    border-radius: 9px;
+    background: var(--gx-card-2);
+}
+.ag-found-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.ag-found-row.is-on,
+.ag-found-row:hover {
+    background: color-mix(in srgb, var(--tone) 12%, transparent);
+}
+.ag-found-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ---------- Footer -------------------------------------------------------- */
 .ag-foot {
     display: flex;

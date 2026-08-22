@@ -57,6 +57,9 @@ const HIGH_PRIORITY = 7;
 /** Actions listed before the rest are left to the task page. */
 const ACTIONS = 4;
 
+/** Search results offered when linking an existing task. A shortlist, not a list. */
+const MATCHES = 6;
+
 const pct = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
 /** Milliseconds, or 0. Bare dates are read as local days — see `goalDate`. */
@@ -122,6 +125,8 @@ export interface ActiveGoalCardProps {
   onDelete: (goal: Goal) => void;
   onComplete: (task: Task) => void;
   onAddAction: (goal: Goal, title: string, milestoneId?: string) => void;
+  /** Point a task that already exists at this goal, rather than making a new one. */
+  onLinkTask: (goal: Goal, task: Task, milestoneId?: string) => void;
   /** Ask for a checkpoint list. Resolves null when the model could not answer. */
   onSuggest: (goal: Goal) => Promise<string[] | null>;
   /** Write a whole checkpoint list. Resolves false if the write failed. */
@@ -139,6 +144,7 @@ export function ActiveGoalCard({
   onDelete,
   onComplete,
   onAddAction,
+  onLinkTask,
   onSuggest,
   onSaveStones,
   nameOf,
@@ -152,6 +158,10 @@ export function ActiveGoalCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
+  /* Which search result the keyboard is on. -1 is the box itself, and it is the
+     resting position: Enter on a typed title makes a new task, which is what the
+     box did before it could also search. You arrow into the list deliberately. */
+  const [pick, setPick] = useState(-1);
   /* The suggestion round trip is a model call and can take several seconds, so
      it carries its own busy state rather than the page's — the rest of the card
      stays usable while one goal is thinking. The ladder this replaced owned its
@@ -193,6 +203,37 @@ export function ActiveGoalCard({
     [mine],
   );
 
+  /**
+   * The tasks already on the account that the draft could be naming.
+   *
+   * Only open ones, and only ones that are not already this goal's work —
+   * offering a task that is already linked is a row that does nothing when you
+   * click it. An empty box offers the first few rather than nothing, so the
+   * list is a way in rather than something you have to guess the opening
+   * letters of, and a title that starts with what was typed sorts above one
+   * that merely contains it.
+   */
+  const matches = useMemo(() => {
+    if (!adding) return [];
+    const query = draft.trim().toLowerCase();
+    const linked = new Set(mine.map((task) => task.id));
+    return tasks
+      .filter(
+        (task) =>
+          task.status !== 'done' &&
+          !linked.has(task.id) &&
+          (!query || task.title.toLowerCase().includes(query)),
+      )
+      .sort((a, b) => {
+        if (!query) return 0;
+        return (
+          Number(b.title.toLowerCase().startsWith(query)) -
+          Number(a.title.toLowerCase().startsWith(query))
+        );
+      })
+      .slice(0, MATCHES);
+  }, [adding, draft, mine, tasks]);
+
   /** What the goal has cost, off the clock its finished tasks recorded. */
   const invested = useMemo(
     () =>
@@ -209,15 +250,31 @@ export function ActiveGoalCard({
   const priority = goalWeight(goal);
   const overdue = isOverdue(goal);
 
+  const closeAdd = () => {
+    setDraft('');
+    setAdding(false);
+    setPick(-1);
+  };
+
+  /** Point an existing task at this goal, and at the checkpoint being worked on. */
+  const link = (task: Task) => {
+    onLinkTask(goal, task, focus?.id);
+    closeAdd();
+  };
+
   const submit = () => {
+    const chosen = pick >= 0 ? matches[pick] : undefined;
+    if (chosen) {
+      link(chosen);
+      return;
+    }
     const title = draft.trim();
     if (!title) {
-      setAdding(false);
+      closeAdd();
       return;
     }
     onAddAction(goal, title, focus?.id);
-    setDraft('');
-    setAdding(false);
+    closeAdd();
   };
 
   return (
@@ -419,16 +476,62 @@ export function ActiveGoalCard({
               <input
                 autoFocus
                 value={draft}
-                placeholder="What is the next action?"
-                onChange={(event) => setDraft(event.target.value)}
+                placeholder="Name a new action, or search for an existing task"
+                role="combobox"
+                aria-expanded={matches.length > 0}
+                aria-autocomplete="list"
+                aria-controls={`ag-found-${goal.id}`}
+                aria-activedescendant={
+                  pick >= 0 && matches[pick] ? `ag-found-${goal.id}-${matches[pick].id}` : undefined
+                }
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  setPick(-1);
+                }}
                 onBlur={submit}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') {
-                    setDraft('');
-                    setAdding(false);
+                    closeAdd();
+                  } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    setPick((at) => Math.min(at + 1, matches.length - 1));
+                  } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    setPick((at) => Math.max(at - 1, -1));
                   }
                 }}
               />
+              {matches.length > 0 && (
+                /* The box searches as well as creates, so the work you already
+                   wrote down on the tasks page can become this goal's work
+                   without being typed a second time. Linking moves the task —
+                   there is one of it, and now it counts here. */
+                <ul className="ag-found" id={`ag-found-${goal.id}`} role="listbox">
+                  {matches.map((task, at) => (
+                    <li key={task.id}>
+                      <button
+                        type="button"
+                        id={`ag-found-${goal.id}-${task.id}`}
+                        role="option"
+                        aria-selected={at === pick}
+                        className={`ag-found-row${at === pick ? ' is-on' : ''}`}
+                        /* Keeps the click from blurring the box first, which
+                           would submit the draft as a new task instead. */
+                        onMouseDown={(event) => event.preventDefault()}
+                        onMouseEnter={() => setPick(at)}
+                        onClick={() => link(task)}
+                      >
+                        <span className="ag-found-name" title={task.title}>
+                          {task.title}
+                        </span>
+                        <span className="ag-quiet">
+                          {task.goal_id || task.milestone_id ? 'Linked elsewhere' : shortDate(task.due_date)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </form>
           ) : (
             <button type="button" className="ag-add-btn" disabled={busy} onClick={() => setAdding(true)}>
