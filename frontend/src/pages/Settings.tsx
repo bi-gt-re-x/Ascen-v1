@@ -57,7 +57,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Ambient, ErrorState, Loading, STATS_CHANGED } from '@/components';
 import { GROUPS, SORTS } from '@/components/Tasks';
-import { useApi, useAuth, useDocumentTitle, useSettings, useTheme, useUserData } from '@/hooks';
+import { useApi, useAuth, useDocumentTitle, usePageEntrance, useSettings, useTheme, useUserData } from '@/hooks';
 import { settings as service } from '@/services';
 import type {
   Accent,
@@ -1233,6 +1233,10 @@ export default function Settings() {
     return out;
   }, [sections]);
 
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!loading);
+
   if (loading) return <Loading label="Reading your settings" />;
   if (error && !sheet) return <ErrorState message={error} onRetry={reload} />;
   if (!sheet) return <ErrorState message="No settings to show." onRetry={reload} />;
@@ -1242,7 +1246,7 @@ export default function Settings() {
   return (
     <div className="st-page">
       <Ambient />
-      <div className="st-shell page-shell">
+      <div className={`st-shell page-shell${entering ? ' pg-enter' : ''}`}>
         <header className="st-head">
           <div>
             <h1>Settings</h1>

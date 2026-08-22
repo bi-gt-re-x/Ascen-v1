@@ -58,7 +58,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ErrorState, Loading } from '@/components';
 import { Glyph } from '@/components/Growth/GrowthPanels';
 import { RecordModal } from '@/components/Records/RecordModal';
-import { useApi, useCountUp, useDocumentTitle, useUserData } from '@/hooks';
+import { useApi, useCountUp, useDocumentTitle, usePageEntrance, useUserData } from '@/hooks';
 import { growth as growthService, records as recordService } from '@/services';
 import type { GrowthSeries } from '@/services/growth';
 import type { RecordDraft, RecordKind, RecordRow } from '@/services/records';
@@ -470,6 +470,12 @@ export default function Records() {
   const derived = useMemo(() => personalRecords(all, tasks, streak), [all, streak, tasks]);
   const chase = useMemo(() => recordChase(all, streak), [all, streak]);
 
+  /* The arrival cascade. All three reads have to land before there is a page
+     to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(
+    !series.loading && !account.loading && !logged.loading,
+  );
+
   if (series.loading || account.loading || logged.loading) {
     return <Loading label="Reading your record" />;
   }
@@ -480,7 +486,7 @@ export default function Records() {
   const open = (kind: RecordKind, entry?: RecordRow) => setModal({ open: true, kind, entry });
 
   return (
-    <div className="rc-page">
+    <div className={`rc-page${entering ? ' pg-enter' : ''}`}>
       {/* ---- 1. Hero ------------------------------------------------------ */}
       <header className="rc-hero">
         <div className="rc-hero-text">

@@ -40,7 +40,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ambient, ErrorState, Loading } from '@/components';
-import { useAuth, useDocumentTitle, useSubjects } from '@/hooks';
+import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
 import { notes as noteService } from '@/services';
 import {
   NotebookPicker,
@@ -544,6 +544,10 @@ export default function Notes() {
     await load();
   }, [blank, busy, draft.id, load, username]);
 
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!loading);
+
   if (loading) return <Loading label="Reading your notes" />;
   if (rows === null) {
     return <ErrorState message={error ?? 'Could not read your notes.'} onRetry={load} />;
@@ -562,7 +566,7 @@ export default function Notes() {
   return (
     <div className="nt-page">
       <Ambient />
-      <div className="nt-shell page-shell">
+      <div className={`nt-shell page-shell${entering ? ' pg-enter' : ''}`}>
         {/* ---- The page's own header ---- */}
         <header className="nt-head">
           <div className="nt-head-titles">

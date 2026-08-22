@@ -71,7 +71,7 @@ import {
 } from '@/components/Tasks';
 import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
 import { measureOf } from '@/components/Goals';
-import { useDocumentTitle, useSettings, useSubjects, useUserData } from '@/hooks';
+import { useDocumentTitle, usePageEntrance, useSettings, useSubjects, useUserData } from '@/hooks';
 import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewTask } from '@/services/tasks';
 import type { Goal, Task } from '@/types';
@@ -671,6 +671,10 @@ export default function Tasks() {
   );
 
   // ---- The shell ----------------------------------------------------------
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!loading);
+
   if (loading) return <Loading label="Reading your tasks" />;
   if (!data) {
     return <ErrorState message={error ?? 'No tasks yet.'} onRetry={username ? reload : undefined} />;
@@ -679,7 +683,7 @@ export default function Tasks() {
   return (
     <div className="tk-page">
       <Ambient />
-      <div className="tk-shell page-shell">
+      <div className={`tk-shell page-shell${entering ? ' pg-enter' : ''}`}>
         <header className="tk-head">
           <div className="tk-head-title">
             <h1>

@@ -51,7 +51,7 @@ import {
   topPriorities,
   weekSummary,
 } from '@/components/Dashboard/summary';
-import { useDocumentTitle, useSettings, useSubjectIndex, useUserData } from '@/hooks';
+import { useDocumentTitle, usePageEntrance, useSettings, useSubjectIndex, useUserData } from '@/hooks';
 import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
 import { weekStartDay } from '@/services/settings';
@@ -311,11 +311,16 @@ export default function Dashboard() {
   // re-read, and their figures travel to the new values instead of being
   // rebuilt from zero (hooks/useCountUp.ts). A reload that fails keeps the page
   // and says so in the banner below rather than replacing it.
+  /* The arrival cascade. Bound to the data rather than to `loading`, which is
+     true again on every re-read — the page arrives once, when it first has
+     something to show. See hooks/usePageEntrance. */
+  const entering = usePageEntrance(Boolean(data));
+
   if (loading && !data) return <Loading label="Loading your dashboard" />;
   if (!data) return <ErrorState message={error ?? 'No data came back.'} onRetry={reload} />;
 
   return (
-    <div className="dash">
+    <div className={`dash${entering ? ' pg-enter' : ''}`}>
       {/* The same background the landing page has, minus the glow that follows
           the pointer — see components/Ambient.tsx. */}
       <Ambient />
@@ -358,7 +363,7 @@ export default function Dashboard() {
           gets the task list at the top of the page rather than a gap where
           they were — see Settings, Dashboard. */}
       {prefs.show_stats && (
-        <div className="dash-stats">
+        <div className="dash-stats pg-stagger">
           <TodayCard day={day} />
           <XpCard stats={data.stats} xpToday={day.xp} dailyGoal={dailyGoal} />
           <FocusCard session={session} />

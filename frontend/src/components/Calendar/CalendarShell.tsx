@@ -13,6 +13,7 @@
  */
 import { NavLink } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { usePageEntrance } from '@/hooks';
 
 const VIEWS = [
   { to: '/calendar/week', label: 'Week' },
@@ -51,9 +52,15 @@ export interface CalendarShellProps {
 }
 
 export function CalendarShell({ paneId, ownSwitcher, children }: CalendarShellProps) {
+  /* The arrival cascade. `true` rather than a loading flag because all three
+     views return their spinner *before* they render this shell — the shell
+     being mounted at all is already the answer to "is there a calendar to
+     show". See hooks/usePageEntrance. */
+  const entering = usePageEntrance(true);
+
   return (
     <div className="calendar-container">
-      <div className="calendar-card page-shell">
+      <div className={`calendar-card page-shell${entering ? ' pg-enter' : ''}`}>
         {!ownSwitcher && (
           <div className="calendar-topbar">
             <ViewSwitcher />

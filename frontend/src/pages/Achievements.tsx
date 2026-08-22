@@ -23,7 +23,7 @@
  */
 import { useCallback, useMemo } from 'react';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
-import { useApi, useDocumentTitle, useUserData } from '@/hooks';
+import { useApi, useDocumentTitle, usePageEntrance, useUserData } from '@/hooks';
 import { achievements as service } from '@/services';
 import type { Badge } from '@/services/achievements';
 import '@/styles/achievements.css';
@@ -119,6 +119,10 @@ export default function Achievements() {
     return [...by.entries()].sort((a, b) => a[0] - b[0]);
   }, [badges]);
 
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!loading);
+
   if (loading) return <Loading label="Reading your record" />;
   if (error && !badges.length) return <ErrorState message={error} onRetry={reload} />;
 
@@ -129,7 +133,7 @@ export default function Achievements() {
   return (
     <div className="ac-page">
       <Ambient />
-      <div className="ac-shell page-shell">
+      <div className={`ac-shell page-shell${entering ? ' pg-enter' : ''}`}>
         <header className="ac-head">
           <div>
             <h1>Achievements</h1>

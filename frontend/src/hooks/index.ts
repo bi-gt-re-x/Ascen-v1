@@ -11,6 +11,7 @@ export type { UseDayFocus } from './useDayFocus';
 export { useDocumentTitle } from './useDocumentTitle';
 export { useNow } from './useNow';
 export { useNowScroll } from './useNowScroll';
+export { usePageEntrance } from './usePageEntrance';
 export { usePinnedViewport } from './usePinnedViewport';
 export { fmtHM, focusedSeconds, useFocusSession } from './useFocusSession';
 export type { FocusState, UseFocusSession } from './useFocusSession';

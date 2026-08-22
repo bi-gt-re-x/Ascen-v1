@@ -1,11 +1,13 @@
 /**
  * Where the app starts.
  *
- * The two stylesheets imported here are the ones every page depends on:
+ * The stylesheets imported here are the ones every page depends on:
  * `layout.css` is the shared responsive foundation (`.page-shell`, the
- * 1024/768/480 breakpoints) and `navbar.css` dresses the top bar, which is
- * rendered outside the router and so belongs to no page. Everything else is
- * imported by the page that needs it, so a route nobody visits costs nothing.
+ * 1024/768/480 breakpoints), `page-enter.css` is the arrival cascade every
+ * page shares (hooks/usePageEntrance), and `navbar.css` dresses the top bar,
+ * which is rendered outside the router and so belongs to no page. Everything
+ * else is imported by the page that needs it, so a route nobody visits costs
+ * nothing.
  *
  * StrictMode double-invokes effects in development on purpose. That is a
  * feature here rather than a nuisance: it is what catches a fetch that sets
@@ -18,6 +20,7 @@ import App from './App';
 import { AuthProvider, SettingsProvider, ThemeProvider } from '@/context';
 
 import '@/styles/layout.css';
+import '@/styles/page-enter.css';
 import '@/styles/preferences.css';
 import '@/styles/rail.css';
 

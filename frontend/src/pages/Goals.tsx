@@ -70,7 +70,7 @@ import {
   msUntilNextDeadline,
 } from '@/components/Goals';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
-import { useAuth, useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
+import { useAuth, useDocumentTitle, usePageEntrance, useSubjectIndex, useUserData } from '@/hooks';
 import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewGoal } from '@/services/goals';
 import type { Goal, Milestone, MilestoneStatus, Task } from '@/types';
@@ -103,19 +103,11 @@ export default function Goals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  /* The arrival cascade, which runs once. Held as state rather than left to
-     CSS because the bands remount when the tab changes, and a class still on
-     the shell would replay the whole page every time somebody switched tab.
-     The timer is the animation's own length plus the last band's delay. */
-  const [entering, setEntering] = useState(true);
-  /* Started when the goals arrive rather than when the component mounts: the
-     shell is not on the page until `loading` clears, and a timer begun behind
-     the spinner would be half spent before the first band existed. */
-  useEffect(() => {
-    if (loading) return;
-    const done = window.setTimeout(() => setEntering(false), 900);
-    return () => window.clearTimeout(done);
-  }, [loading]);
+  /* The arrival cascade, which runs once — the shared one every page uses now.
+     It has to stop: the bands remount when the tab changes, and a class still
+     on the shell would replay the whole page every time somebody switched tab.
+     See hooks/usePageEntrance for why it is bound to the read. */
+  const entering = usePageEntrance(!loading);
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -455,7 +447,7 @@ export default function Goals() {
   return (
     <div className="gx-page">
       <Ambient />
-      <div className={`gx-shell page-shell${entering ? ' is-entering' : ''}`}>
+      <div className={`gx-shell page-shell${entering ? ' pg-enter' : ''}`}>
         <header className="gx-head">
           <div>
             <h1>
@@ -493,7 +485,7 @@ export default function Goals() {
 
         {error && <ErrorState message={error} onRetry={() => void load()} />}
 
-        <div className="gx-main">
+        <div className="gx-main pg-stagger">
 
         {/* ---- Active Goals ---------------------------------------------
             One card per goal, at full width, and the card carries what used

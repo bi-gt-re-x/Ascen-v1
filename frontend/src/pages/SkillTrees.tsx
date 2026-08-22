@@ -42,7 +42,7 @@ import {
   SkillTree as SkillTreeCanvas,
   SkillTreeToolbar,
 } from '@/components/SkillTree';
-import { useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
+import { useDocumentTitle, usePageEntrance, useSubjectIndex, useUserData } from '@/hooks';
 import { GOALS, generateTree, goalById, skillLibrary } from '@/skills';
 import { format } from '@/utils';
 import {
@@ -150,6 +150,10 @@ export default function SkillTrees() {
     setSelectedId(null);
   }, [source]);
 
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!loading);
+
   if (loading) return <Loading label="Growing your trees" />;
   if (!data) {
     return <ErrorState message={error ?? 'No account data yet.'} onRetry={username ? reload : undefined} />;
@@ -160,7 +164,7 @@ export default function SkillTrees() {
   return (
     <div className="stx-page">
       <Ambient />
-      <div className="stx-shell page-shell">
+      <div className={`stx-shell page-shell${entering ? ' pg-enter' : ''}`}>
         <header className="stx-head">
           <div className="stx-head-text">
             <h1>Skill Tree</h1>

@@ -13,7 +13,7 @@
  * (styles/aboutus.css); the card around it is shared (styles/content-page.css).
  */
 import { Link } from 'react-router-dom';
-import { useDocumentTitle } from '@/hooks';
+import { useDocumentTitle, usePageEntrance } from '@/hooks';
 import '@/styles/content-page.css';
 import '@/styles/aboutus.css';
 
@@ -40,8 +40,12 @@ const VALUES = [
 export default function AboutUs() {
   useDocumentTitle('About Us');
 
+  /* The arrival cascade. Nothing is fetched here, so the page is ready the
+     moment it mounts — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(true);
+
   return (
-    <div className="content-container">
+    <div className={`content-container${entering ? ' pg-enter' : ''}`}>
       <h1>About Us</h1>
 
       <p>

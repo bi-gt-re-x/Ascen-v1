@@ -157,7 +157,7 @@ import {
   type WindowKey,
 } from '@/components/Analytics/data';
 import { growthScore, type ScoreFactor } from '@/components/Analytics/score';
-import { useApi, useDocumentTitle, useSettings, useSubjectIndex, useUserData } from '@/hooks';
+import { useApi, useDocumentTitle, usePageEntrance, useSettings, useSubjectIndex, useUserData } from '@/hooks';
 import {
   analytics as analyticsService,
   goals as goalsService,
@@ -790,6 +790,10 @@ export default function Analytics() {
     historyDays < NEED_DAYS.recommendations;
   const showSetup = editingBaseline ?? firstRun;
 
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!series.loading);
+
   if (series.loading) return <Loading label="Reading your history" />;
   if (!series.data) {
     return (
@@ -806,7 +810,7 @@ export default function Analytics() {
   return (
     <div className="ax-page">
       <Ambient />
-      <div className="ax-shell page-shell">
+      <div className={`ax-shell page-shell${entering ? ' pg-enter' : ''}`}>
         <Header
           view={view}
           span={spanText}
