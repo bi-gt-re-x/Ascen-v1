@@ -16,7 +16,6 @@ import {
   PRIORITY_LABEL,
   PRIORITY_TONE,
   difficultyLabel,
-  kindLabel,
   type Advice,
   type Outlook,
 } from '@/utils/advice';
@@ -103,8 +102,12 @@ export function AdviceCard({
           {rank}
         </span>
         <div>
+          {/* The category alone. It used to read "Consistency · How often",
+              and the second half was a word from this file's taxonomy rather
+              than anything the reader needed — the title underneath already
+              says what kind of change it is. */}
           <span className="ax-advice-kind" style={{ color: toneVar(tone) }}>
-            {item.category} · {kindLabel(item.kind)}
+            {item.category}
           </span>
           <h2>{item.title}</h2>
         </div>
@@ -123,12 +126,11 @@ export function AdviceCard({
         >
           {PRIORITY_LABEL[item.priority]}
         </span>
+        {/* One reading of effort, not two. The five dots beside this said
+            exactly what the word says, in a scale nobody had been shown the
+            key to — and being decorative they were aria-hidden, so the word is
+            also the only one of the pair a screen reader ever had. */}
         <span className="ax-advice-chip">{difficultyLabel(item.effort)}</span>
-        <span className="ax-effort" title={`Effort: ${item.effort} of 5`} aria-hidden="true">
-          {[1, 2, 3, 4, 5].map((step) => (
-            <i key={step} className={step <= item.effort ? 'is-on' : ''} />
-          ))}
-        </span>
       </div>
 
       {/* Two lines, unlabelled. The card used to run three tagged paragraphs —
@@ -232,10 +234,10 @@ export function OutlookPanel({ outlook }: { outlook: Outlook }) {
   for (let step = 4; step >= 0; step--) ticks.push(compact((peak / 4) * step));
 
   return (
-    <Panel
-      title="Five years, both ways"
-      note="Your pace now, and with every change made"
-    >
+    /* No note: it read "Your pace now, and with every change made", which is
+       what the three figures immediately below it already say, in the same
+       words, with the numbers attached. */
+    <Panel title="Five years, both ways">
       <div className="ax-figures">
         <div className="ax-figure">
           <span className="ax-muted">At today&rsquo;s pace</span>
@@ -272,12 +274,12 @@ export function OutlookPanel({ outlook }: { outlook: Outlook }) {
         </span>
         <span className="ax-legend-item">
           <i className="ax-legend-line ax-legend-muted" />
-          Current pace
+          At today&rsquo;s pace
         </span>
       </div>
 
       <p className="ax-prose">
-        Both lines start from what you have banked. The gap is the whole claim.
+        Both lines start from what you have banked. The gap is the claim.
       </p>
     </Panel>
   );

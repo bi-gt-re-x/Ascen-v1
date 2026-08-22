@@ -93,11 +93,11 @@ export function NextActions({ plan, onBudget, weekLeft, onRefresh }: NextActions
   return (
     <Panel
       title="What to do next"
-      note={
-        actions.length > 0
-          ? `${planned} minutes of the ${budget} you have, from your goals, your deadlines and the last fortnight of your own record.`
-          : undefined
-      }
+      /* Just the arithmetic. It used to carry the whole provenance — "from
+         your goals, your deadlines and the last fortnight of your own record"
+         — which is a sentence the reader needs once, not on every visit above
+         a plan they came here to read. It is in the footer note instead. */
+      note={actions.length > 0 ? `${planned} of ${budget} minutes planned` : undefined}
       className="ax-plan"
       aside={
         <div className="ax-plan-budget" role="group" aria-label="Time available">
@@ -138,9 +138,8 @@ export function NextActions({ plan, onBudget, weekLeft, onRefresh }: NextActions
     >
       {actions.length === 0 ? (
         <p className="ax-empty">
-          Nothing is overdue, no goal is behind its deadline, and no subject is far enough off its
-          own average to name. There is no plan here because the record does not support one —
-          which is a better answer than a made-up suggestion sitting where the real ones go.
+          Nothing overdue, no goal behind its deadline, no subject far enough off its own average
+          to name. No plan, rather than an invented one.
         </p>
       ) : (
         <>
@@ -149,14 +148,32 @@ export function NextActions({ plan, onBudget, weekLeft, onRefresh }: NextActions
               <ActionRow key={item.id} item={item} />
             ))}
           </ul>
-          {spare >= 10 && (
-            <p className="ax-plan-spare">
-              {spare} minutes spare. {more.length > 0 ? 'The next one needs longer than that.' : 'Nothing else the record supports suggesting.'}
-            </p>
-          )}
+          {/* One line under the rule rather than three stacked ones. The spare
+              minutes are a fact about the plan and Re-read is what you do about
+              it, so they belong on the same line at opposite ends — as a stack
+              they read as one paragraph of small grey text with a link lost in
+              the middle of it. */}
+          <div className="ax-plan-foot">
+            {/* Only when there is something left over. A plan that fills its
+                budget has nothing to say here that the heading did not already
+                say in the same two numbers. */}
+            {spare >= 10 ? (
+              <p className="ax-plan-spare">
+                {spare} min spare —{' '}
+                {more.length > 0 ? 'nothing shorter to add' : 'nothing else worth suggesting'}
+              </p>
+            ) : (
+              <span />
+            )}
+            <button type="button" className="ax-plan-refresh" onClick={onRefresh}>
+              Re-read
+            </button>
+          </div>
           {more.length > 0 && (
             <details className="ax-plan-more">
-              <summary>{more.length} more that did not fit</summary>
+              <summary>
+                {more.length} more, too long for {budget} minutes
+              </summary>
               <ul className="ax-plan-list">
                 {more.map((item) => (
                   <ActionRow key={item.id} item={item} />
@@ -164,9 +181,6 @@ export function NextActions({ plan, onBudget, weekLeft, onRefresh }: NextActions
               </ul>
             </details>
           )}
-          <button type="button" className="ax-plan-refresh" onClick={onRefresh}>
-            Re-read against what I have finished
-          </button>
         </>
       )}
     </Panel>

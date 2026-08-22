@@ -978,7 +978,12 @@ export default function Analytics() {
           shared cascade on top ran both at once: the panel would reach half
           opacity behind a section at half opacity and travel the distance
           twice. One entrance per page, and this page already had a richer one. */}
-      <div className="ax-shell page-shell">
+      {/* The view rides on the shell so a tab can tune its own rhythm without
+          reaching for the other six. Recommendations is the one that needs it:
+          it is the only tab whose panels are read rather than scanned, and at
+          the shared 18px the plan, the diagnosis and the cards ran together as
+          one wall. */}
+      <div className={`ax-shell page-shell ax-view-${view.key}`}>
         <Header
           view={view}
           span={spanText}

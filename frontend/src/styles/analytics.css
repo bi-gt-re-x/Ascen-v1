@@ -2180,13 +2180,6 @@ body:has(.ax-page) .app-main {
 }
 .ax-advice-foot .ax-muted { line-height: 1.5; }
 
-.ax-effort { display: inline-flex; gap: 3px; flex: none; padding-bottom: 2px; }
-.ax-effort i {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: var(--ax-line);
-}
-.ax-effort i.is-on { background: var(--ax-faint); }
 
 /* Each tab's own header mark. `.ax-head-icon` supplies the box and the colour;
    these swap the drawing inside it, so a reader can tell which tab they are on
@@ -3144,8 +3137,6 @@ body:has(.ax-page) .app-main {
     font-weight: 600;
 }
 
-.ax-advice-chips .ax-effort { margin-left: auto; padding-bottom: 0; }
-
 .ax-advice-foot { align-items: center; }
 
 .ax-advice-evidence { min-width: 0; }
@@ -3727,8 +3718,18 @@ body:has(.ax-page) .app-main {
     font-variant-numeric: tabular-nums;
 }
 
+/* The plan's own footer: what is left of the budget on the left, the re-read
+   on the right. A row rather than a stack — see the note in NextActions. */
+.ax-plan-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
 .ax-plan-spare {
-    margin: 12px 0 0;
+    margin: 0;
     font-size: 12px;
     color: var(--ax-faint);
 }
@@ -3743,12 +3744,11 @@ body:has(.ax-page) .app-main {
 .ax-plan-more > summary:hover { color: var(--ax-violet); }
 
 .ax-plan-refresh {
-    /* `align-self` and the explicit width because the panel is a flex column:
-       a button left to stretch fills the row and centres its own label, which
-       put this in the middle of the card looking like a primary action. */
-    align-self: flex-start;
+    /* The explicit width because a button left to stretch fills its row and
+       centres its own label, which put this in the middle of the card looking
+       like a primary action. */
+    align-self: baseline;
     width: auto;
-    margin-top: 12px;
     padding: 0;
     border: 0;
     background: none;
@@ -3950,4 +3950,74 @@ body:has(.ax-page) .app-main {
         justify-self: start;
         min-width: 0;
     }
+}
+
+/* ==========================================================================
+   Recommendations, spaced to be read
+   ==========================================================================
+   The other six tabs are scanned: a reader sweeps a row of tiles, finds the
+   figure they came for, and leaves. This one is read, top to bottom, and every
+   panel on it is prose with a number in it — the plan, the diagnosis, the
+   follow-up, the cards. At the shared 18px section gap and the shared 16px
+   panel padding, four panels of sentences stack into a single wall of type
+   with no way in.
+
+   Everything here is scoped to `.ax-view-recommendations`, set on the shell by
+   pages/Analytics. Nothing below changes any other tab. */
+
+.ax-view-recommendations {
+    gap: 30px;
+}
+
+/* The cards on this tab carry three or four paragraphs each. The extra room is
+   mostly at the bottom, where the footer control sits: a button hard against
+   the last line of body text reads as part of the sentence above it. */
+.ax-view-recommendations .ax-panel {
+    padding: 20px 22px 18px;
+}
+
+/* ---- The plan ------------------------------------------------------------ */
+/* Rows were 11px apart with a hairline between them, which at three or four
+   rows is a table. They are decisions, and each one wants to be a thing you
+   look at rather than a line you run down. */
+.ax-view-recommendations .ax-plan-row {
+    padding: 15px 4px;
+    gap: 14px;
+}
+.ax-view-recommendations .ax-plan-why { margin-top: 5px; }
+
+/* The three trailing controls — spare, more, re-read — used to sit 10px apart
+   in a stack that read as one paragraph of small grey text. The rule separates
+   the plan from the things you can do about it. */
+.ax-view-recommendations .ax-plan-foot {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-view-recommendations .ax-plan-more { margin-top: 14px; }
+
+/* ---- The diagnosis ------------------------------------------------------- */
+.ax-view-recommendations .ax-diag-grid { gap: 20px; }
+.ax-view-recommendations .ax-diag {
+    gap: 11px;
+    padding-left: 22px;
+}
+.ax-view-recommendations .ax-diag-action { padding: 12px 14px; }
+
+/* ---- The cards ----------------------------------------------------------- */
+/* The instruction is the card. It gets the room, and the finding under it gets
+   enough of a gap to read as a second thought rather than a runover line. */
+.ax-view-recommendations .ax-advice-chips { margin: 12px 0 2px; }
+.ax-view-recommendations .ax-advice-do { margin-top: 14px; }
+.ax-view-recommendations .ax-advice-why { margin-top: 10px; }
+.ax-view-recommendations .ax-advice-foot { padding-top: 18px; }
+
+/* The category row is a control for the grid under it, not a caption on the
+   panel above — so it sits nearer the thing it filters. */
+.ax-view-recommendations .ax-chips-inline { margin-bottom: 18px; }
+
+/* ---- Narrow -------------------------------------------------------------- */
+@media (max-width: 640px) {
+    .ax-view-recommendations { gap: 22px; }
+    .ax-view-recommendations .ax-panel { padding: 16px 16px 14px; }
 }
