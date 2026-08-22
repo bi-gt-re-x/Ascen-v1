@@ -28,7 +28,7 @@ import { SettingsContext } from './contexts';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { settings as service } from '@/services';
-import { DEFAULTS, type Prefs } from '@/services/settings';
+import { DEFAULT_DAILY_GOAL, DEFAULTS, type Prefs } from '@/services/settings';
 
 /** Pull just the keyed preferences out of the wider settings object. */
 function prefsOf(all: Record<string, unknown>): Prefs {
@@ -45,18 +45,47 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const { username, status } = useAuth();
   const { setTheme } = useTheme();
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
-  const [ready, setReady] = useState(false);
+  /* The same default the API applies to an account that has never set one. */
+  const [dailyGoal, setDailyGoal] = useState(DEFAULT_DAILY_GOAL);
+  const [displayName, setDisplayName] = useState('');
+  /**
+   * Who the values on screen belong to: a username, or null for signed out.
+   *
+   * `ready` is derived from it rather than being a flag of its own, and that
+   * is the fix for a race that made the whole idea of "opens on" unreliable. A
+   * boolean set to true when the signed-out pass finished stayed true through
+   * the sign-in that followed — so for the moment between the account arriving
+   * and its settings landing, the app was confidently reporting the built-in
+   * defaults as the account's answer. FrontDoor reads `ready` and then
+   * redirects, and a redirect cannot be taken back: somebody who had chosen to
+   * open on Tasks was sent to the dashboard, every time, by a page that
+   * believed it had waited.
+   *
+   * Comparing names rather than counting requests means the answer is only
+   * ever "yes" about the account actually signed in.
+   */
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const ready = loadedFor === (username ?? null);
 
   const refresh = useCallback(async () => {
     if (!username) {
       setPrefs(DEFAULTS);
+      setDailyGoal(DEFAULT_DAILY_GOAL);
+      setDisplayName('');
       // Signed out is a finished answer, not a pending one.
-      setReady(true);
+      setLoadedFor(null);
       return;
     }
     const result = await service.getSettings(username);
-    if (result.success) setPrefs(prefsOf(result.settings as unknown as Record<string, unknown>));
-    setReady(true);
+    if (result.success) {
+      setPrefs(prefsOf(result.settings as unknown as Record<string, unknown>));
+      setDailyGoal(Number(result.settings.daily_goal) || DEFAULT_DAILY_GOAL);
+      setDisplayName(String(result.settings.name || '').trim());
+    }
+    // Marked loaded even when the read failed. The defaults are then the best
+    // answer there is, and leaving `ready` false forever would hang every
+    // caller that waits on it behind a spinner with nothing coming.
+    setLoadedFor(username);
   }, [username]);
 
   useEffect(() => {
@@ -116,8 +145,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ prefs, ready, update, refresh }),
-    [prefs, ready, update, refresh],
+    () => ({ prefs, dailyGoal, displayName, ready, update, refresh }),
+    [prefs, dailyGoal, displayName, ready, update, refresh],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

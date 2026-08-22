@@ -320,7 +320,7 @@ def export_data(username: str = '', table: str = 'all', format: str = 'json'):
         )
 
     names = EXPORTS.keys() if table == 'all' else (table,)
-    return ok(export={
+    body = ok(export={
         'account': name,
         'tables': {
             key: [{column: row.get(column) for column in EXPORTS[key]}
@@ -328,6 +328,12 @@ def export_data(username: str = '', table: str = 'all', format: str = 'json'):
             for key in names
         },
     })
+    # Named on the way out, the way the CSV branch above is. The link that
+    # asks for this carries `download`, so the browser saves it either way —
+    # but without this it saves it as "export", with no extension.
+    return JSONResponse(body, headers={
+        'Content-Disposition':
+            'attachment; filename="ascen-{}.json"'.format(table)})
 
 
 # --------------------------------------------------------------------------

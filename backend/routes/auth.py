@@ -229,7 +229,9 @@ def verify_link(request: Request, token: str):
         return _home(auth='login', verify='invalid')
     auth.sign_in(request, user)
     if auth.profile_complete(user):
-        return RedirectResponse('/dashboard', status_code=303)
+        # The front door rather than the dashboard: '/' is the route that reads
+        # the account's chosen start page. See FrontDoor in frontend/src/App.tsx.
+        return RedirectResponse('/', status_code=303)
     return _home(auth='profile', verify='ok')
 
 
@@ -342,4 +344,5 @@ def google_callback(request: Request, state: str = '', code: str = ''):
         return _home(auth='profile', next=nxt)
     if nxt.startswith('/'):
         return RedirectResponse(nxt, status_code=303)
-    return RedirectResponse('/dashboard', status_code=303)
+    # As above: the front door decides where an account opens.
+    return RedirectResponse('/', status_code=303)

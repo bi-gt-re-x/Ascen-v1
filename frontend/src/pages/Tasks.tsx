@@ -459,10 +459,14 @@ export default function Tasks() {
   );
 
   const drop = useCallback(
-    (task: Task) => {
+    (task: Task, ask = true) => {
       if (!username) return;
       // The confirmation is a preference; off means the click is the decision.
-      if (prefs.confirm_delete && !window.confirm(`Delete “${task.title}”?`)) return;
+      // `ask` is how the bulk bar opts out of it: twelve selected rows used to
+      // mean twelve separate confirm dialogs, one per task, which is not asking
+      // a question — it is charging for the answer. It asks once, up there,
+      // for all of them.
+      if (ask && prefs.confirm_delete && !window.confirm(`Delete “${task.title}”?`)) return;
       void run(task.id, async () => {
         const result = await taskService.deleteTask(username, task.id);
         if (!result.success) {
@@ -790,7 +794,19 @@ export default function Tasks() {
               count={chosen.length}
               busy={saving}
               onComplete={() => void bulk((task) => (task.status === 'done' ? Promise.resolve() : complete(task)))}
-              onDelete={() => void bulk((task) => Promise.resolve(drop(task)))}
+              onDelete={() => {
+                if (
+                  prefs.confirm_delete
+                  && !window.confirm(
+                    chosen.length === 1
+                      ? `Delete “${chosen[0]?.title}”?`
+                      : `Delete ${chosen.length} tasks?`,
+                  )
+                ) {
+                  return;
+                }
+                void bulk((task) => Promise.resolve(drop(task, false)));
+              }}
               onClear={() => setPicked(new Set())}
             />
 

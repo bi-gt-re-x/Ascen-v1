@@ -110,6 +110,9 @@ export const DEFAULTS: Prefs = {
   analytics_window: '1y',
 };
 
+/** What the API gives an account that has never set one. */
+export const DEFAULT_DAILY_GOAL = 100;
+
 /** `startOfWeek` takes a day number; the preference is a word. */
 export function weekStartDay(prefs: Pick<Prefs, 'week_starts_on'>): 0 | 1 {
   return prefs.week_starts_on === 'sunday' ? 0 : 1;

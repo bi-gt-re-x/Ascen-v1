@@ -281,6 +281,16 @@ body:has(.dash) .app-main {
 .dash-xp-today strong { color: #22A06B; font-weight: 700; }
 .dash-xp-today svg { color: #22A06B; flex: none; }
 
+/* Today's XP against the goal the account chose. Pushed to the far end of the
+   line so the figure and the target it is measured against are the two things
+   on it, one at each edge. */
+.dash-xp-goal {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: #98a1ae;
+    white-space: nowrap;
+}
+
 /* ---- The bars ----------------------------------------------------------- */
 .dash-bar {
     height: 8px;
@@ -856,6 +866,7 @@ html[data-theme="dark"] .dash-tab {
 html[data-theme="dark"] .dash-task-head,
 html[data-theme="dark"] .dash-task-empty,
 html[data-theme="dark"] .dash-task-nodue,
+html[data-theme="dark"] .dash-xp-goal,
 html[data-theme="dark"] .dash-priority-rank {
     color: #6e7681;
 }

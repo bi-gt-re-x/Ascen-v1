@@ -67,7 +67,7 @@ export default function Dashboard() {
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const session = useFocusSession(username);
   const subjects = useSubjectIndex(username);
-  const { prefs } = useSettings();
+  const { prefs, dailyGoal, displayName } = useSettings();
 
   const [tab, setTab] = useState<TaskTab>('today');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -158,9 +158,13 @@ export default function Dashboard() {
         // moves those numbers.
         window.dispatchEvent(new Event(STATS_CHANGED));
 
-        // Ask how it went, now that the work is banked. Nothing waits on the
-        // answer — see `rating` below and components/Tasks/RatePrompt.
-        setRating({ id: String(task.id), name: task.title });
+        // Ask how it went, now that the work is banked — unless the reader
+        // has turned the two star rows off in Settings, which this used to
+        // ignore while the tasks page honoured it. One preference, two places
+        // a task is finished, and it has to mean the same thing in both.
+        // Nothing waits on the answer — see `rating` below and
+        // components/Tasks/RatePrompt.
+        if (prefs.ask_rating) setRating({ id: String(task.id), name: task.title });
       } catch (cause) {
         setFailure(
           cause instanceof Error ? cause.message : 'Could not complete that task.',
@@ -170,7 +174,7 @@ export default function Dashboard() {
         setBusyId(null);
       }
     },
-    [username, mutate, reload, data],
+    [username, mutate, reload, data, prefs.ask_rating],
   );
 
   // ---- Rating a finished task ---------------------------------------------
@@ -270,7 +274,13 @@ export default function Dashboard() {
       <header className="dash-greeting">
         <div>
           <h1 className="dash-hello">
-            {dates.greeting(now)}, {username}! <span aria-hidden="true">👋</span>
+            {/* The display name if the account has set one, the username if
+                not — the rule public_user applies in backend/tracking/auth.py.
+                This greeted people by their username whatever they had typed
+                into Settings, which made "Display name" a field that stored a
+                value and changed nothing. */}
+            {dates.greeting(now)}, {displayName || username}!{' '}
+            <span aria-hidden="true">👋</span>
           </h1>
           <p className="dash-sub">Here is your day.</p>
         </div>
@@ -299,7 +309,7 @@ export default function Dashboard() {
       {prefs.show_stats && (
         <div className="dash-stats">
           <TodayCard day={day} />
-          <XpCard stats={data.stats} xpToday={day.xp} />
+          <XpCard stats={data.stats} xpToday={day.xp} dailyGoal={dailyGoal} />
           <FocusCard session={session} />
           <StreakCard stats={data.stats} />
         </div>

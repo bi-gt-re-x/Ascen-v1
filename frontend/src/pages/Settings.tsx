@@ -438,9 +438,13 @@ export default function Settings() {
         return;
       }
       mutate((current) => ({ ...current, settings: result.settings }));
+      // The name, the theme and the daily goal live on the user row rather
+      // than in the keyed half, so the provider's copy — which the dashboard
+      // reads the goal from — does not hear about this save on its own.
+      void refresh();
       flash(`${label} saved`);
     },
-    [busy, flash, mutate, sheet, username],
+    [busy, flash, mutate, refresh, sheet, username],
   );
 
   /** The keyed half. Goes through the provider so every page sees it at once. */
@@ -703,7 +707,7 @@ export default function Settings() {
           {
             id: 'goal',
             label: 'Daily XP goal',
-            hint: `What the dashboard ring fills against. ${GOAL_MIN}–${GOAL_MAX}.`,
+            hint: `The XP you are aiming at each day. Today's total is shown against it on the dashboard. ${GOAL_MIN}–${GOAL_MAX}.`,
             control: (
               <input
                 className="st-input is-num"
@@ -1123,11 +1127,14 @@ export default function Settings() {
             id: 'legal',
             label: 'Terms and privacy',
             hint: 'What the app does with what it holds.',
+            /* The routes are the long spellings. /terms, /privacy and /about
+               are not routed at all, so all three of these used to fall through
+               to the catch-all and land on the home page. See App.tsx. */
             control: (
               <div className="st-links">
-                <Link className="st-btn is-small" to="/terms">Terms</Link>
-                <Link className="st-btn is-small" to="/privacy">Privacy</Link>
-                <Link className="st-btn is-small" to="/about">About</Link>
+                <Link className="st-btn is-small" to="/terms-of-service">Terms</Link>
+                <Link className="st-btn is-small" to="/privacy-policy">Privacy</Link>
+                <Link className="st-btn is-small" to="/about-us">About</Link>
               </div>
             ),
           },

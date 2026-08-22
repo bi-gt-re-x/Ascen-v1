@@ -60,6 +60,24 @@ export const AuthContext = createContext<AuthValue | null>(null);
  */
 export interface SettingsValue {
   prefs: Prefs;
+  /**
+   * The daily XP goal.
+   *
+   * Beside `prefs` rather than in it because it is stored on the user row and
+   * not in the key/value table — a historical split the API explains. It is
+   * carried here anyway because it comes back in the same response the
+   * preferences do, and the dashboard needs it: read on its own it would be a
+   * second request for one number.
+   */
+  dailyGoal: number;
+  /**
+   * What the account calls itself, or '' when it has never said.
+   *
+   * Here for the same reason `dailyGoal` is: it lives on the user row, it
+   * arrives in the same response, and the page that shows it — the dashboard's
+   * greeting — would otherwise have to ask for it separately.
+   */
+  displayName: string;
   /** False until the account's own answer has replaced the defaults. */
   ready: boolean;
   /** Write some preferences. Applied locally first, then persisted. */
