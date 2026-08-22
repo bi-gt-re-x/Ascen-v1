@@ -279,7 +279,14 @@ export interface GrowthDay {
 // --------------------------------------------------------------------------
 // The report card
 // --------------------------------------------------------------------------
-export type Grade = 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
+/**
+ * The letter grades, best first.
+ *
+ * `S` is a perfect hundred and `A+` the band below it; everything under that is
+ * the conventional school scale in tens. Mirrors GRADE_BANDS in
+ * backend/tracking/analytics.py, which is where the boundaries live.
+ */
+export type Grade = 'S' | 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
 
 export interface Trend {
   direction: 'up' | 'down' | 'flat';

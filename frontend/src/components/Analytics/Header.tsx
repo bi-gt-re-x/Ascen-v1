@@ -11,9 +11,7 @@
  * order than the sections they named. Overview is one continuous argument and
  * scrolls like one.
  */
-import { type ReactNode } from 'react';
 import { WINDOWS, type WindowKey } from './data';
-import type { GrowthDay } from '@/types';
 
 // --------------------------------------------------------------------------
 // The major tabs
@@ -176,42 +174,46 @@ export function ViewTabs({ active, onView }: ViewTabsProps) {
 
 export interface HeaderProps {
   span: string;
-  /** The days the window covers — what Export writes out. */
-  rows: GrowthDay[];
   /** Which tab is open. Its title and blurb are the header's. */
   view?: View;
-  /** Pushed in beside Export — a refresh control, usually. */
-  actions?: ReactNode;
+  /**
+   * Builds the report to download, or null when there is nothing to write.
+   *
+   * The page owns this rather than the header, because the report is made of
+   * every tab's findings and the header knows about none of them. Returning
+   * null disables the button — which is the honest state for an account with
+   * no report card yet, rather than a file with dashes in it.
+   */
+  onExport?: (() => string | null) | undefined;
+  /** What the downloaded file is called. */
+  exportName?: string;
 }
 
 /**
- * The title row, and the window as a file.
+ * The title row, and the page as a document.
  *
- * Export is the same CSV the growth page offers (components/Growth's
- * `ExportReport`): exactly the rows the page is drawn from, built here rather
- * than asked of the server, because an export that re-fetched could hand back a
- * different window than the one on screen. The columns are the series' own
- * fields, unrounded — the panels round for display and a spreadsheet should not
- * inherit that.
+ * Export used to write the day series out as a CSV — the rows the charts were
+ * drawn from, one line per day. That is the right export for somebody who wants
+ * to redo the arithmetic and the wrong one for everybody else: it hands back
+ * the page's *input* to a reader who just finished reading its findings. It
+ * writes the findings now, as prose, from utils/report.
+ *
+ * There is no refresh control beside it any more. It was the only button on the
+ * page that did nothing a reader could see — every panel here is derived from
+ * two reads that happen on mount, the figures do not move while you look at
+ * them, and pressing it returned the same page half a second later. The plan on
+ * Recommendations has its own re-read, which is a different thing: that one is
+ * about the clock, and it says what it does.
  */
-export function Header({ span, rows, view, actions }: HeaderProps) {
+export function Header({ span, view, onExport, exportName }: HeaderProps) {
   const shown = view ?? VIEWS[0]!;
   const save = () => {
-    if (rows.length === 0) return;
-    const columns = Object.keys(rows[0]!) as Array<keyof GrowthDay>;
-    const escape = (value: string | number) => {
-      const text = String(value);
-      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-    };
-    const csv = [
-      columns.join(','),
-      ...rows.map((row) => columns.map((column) => escape(row[column] ?? '')).join(',')),
-    ].join('\n');
-
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const text = onExport?.();
+    if (!text) return;
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ascen-${shown.key} ${span.replace(/[^\w\s–-]/g, '')}.csv`;
+    link.download = exportName ?? 'ascen-report.txt';
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -230,16 +232,15 @@ export function Header({ span, rows, view, actions }: HeaderProps) {
           <span className="ax-pill-icon" aria-hidden="true" />
           {span}
         </span>
-        {actions}
         <button
           type="button"
           className="ax-btn"
           onClick={save}
-          disabled={rows.length === 0}
-          title="Download these days as a CSV"
+          disabled={!onExport}
+          title="Download a written report — your score, what the window holds, and what to change"
         >
           <span className="ax-btn-icon" aria-hidden="true" />
-          Export
+          Export report
         </button>
       </div>
     </header>

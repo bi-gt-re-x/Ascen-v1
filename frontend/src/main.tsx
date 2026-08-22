@@ -2,6 +2,7 @@
  * Where the app starts.
  *
  * The stylesheets imported here are the ones every page depends on:
+ * `grades.css` is the letter-grade palette every page that shows one reads,
  * `layout.css` is the shared responsive foundation (`.page-shell`, the
  * 1024/768/480 breakpoints), `page-enter.css` is the arrival cascade every
  * page shares (hooks/usePageEntrance), and `navbar.css` dresses the top bar,
@@ -19,6 +20,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider, SettingsProvider, ThemeProvider } from '@/context';
 
+import '@/styles/grades.css';
 import '@/styles/layout.css';
 import '@/styles/page-enter.css';
 import '@/styles/preferences.css';

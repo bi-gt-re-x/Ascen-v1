@@ -51,18 +51,38 @@ METRICS = ('productivity', 'quality', 'consistency', 'efficiency', 'focus')
 # --------------------------------------------------------------------------
 # Grading
 # --------------------------------------------------------------------------
+#: The letter bands, high to low, as (floor, letter).
+#:
+#: The conventional school scale — ninety is an A, eighty a B, and so on down in
+#: tens — with two exceptions at the top. A+ is the narrow band below a perfect
+#: hundred, and S is the hundred itself: a grade you cannot reach by being very
+#: good at four of the five metrics and adequate at the last, only by topping
+#: all five. That is what makes it worth having.
+#:
+#: The bands were 95/85/72/65/40, which was neither the school scale nor any
+#: other one: a 41 and a 64 shared a letter across twenty-four points while A
+#: and S sat nine apart. One scale now, and it is the one a reader already knows
+#: how to read. Note that it is stricter in the middle — a 73 was a B and is now
+#: a C — so grades on existing accounts move down when this lands.
+#:
+#: frontend/src/utils/analyticalScore.ts mirrors this table. If a band moves
+#: here it moves there, and `sameBandsAsBackend` is what notices if it does not.
+GRADE_BANDS = (
+    (100, 'S'),
+    (96, 'A+'),
+    (90, 'A'),
+    (80, 'B'),
+    (70, 'C'),
+    (60, 'D'),
+    (0, 'F'),
+)
+
+
 def grade_for_score(score):
     """Map a 0-100 score to the global letter grade."""
-    if score >= 95:
-        return 'S'
-    if score >= 85:
-        return 'A'
-    if score >= 72:
-        return 'B'
-    if score >= 65:
-        return 'C'
-    if score >= 40:
-        return 'D'
+    for floor, letter in GRADE_BANDS:
+        if score >= floor:
+            return letter
     return 'F'
 
 

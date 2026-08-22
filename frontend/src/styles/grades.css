@@ -1,0 +1,30 @@
+/* grades.css — the letter-grade colour system, app-wide.
+ *
+ * Every `.grade-*` class sets `--grade-color` (and a matching shadow), and the
+ * components that show a grade read that variable rather than naming a hex:
+ * the Analytical Score banner's accent rule and badge, the growth page's grade
+ * card, the metric rows. One palette, so a letter is the same colour wherever
+ * it appears.
+ *
+ * These lived in growth.css, which was fine while the growth page was the only
+ * thing that showed a grade. It is not any more — the analytics Overview leads
+ * with one — and a page-specific stylesheet is the wrong home for a token three
+ * pages read. Analytics happened to import growth.css already, so this was
+ * working by luck rather than by arrangement; loaded from main.tsx it works
+ * because it is loaded.
+ *
+ * `.grade-Aplus` rather than `.grade-A+`: the plus cannot go into a selector
+ * unescaped, so `gradeClass` in components/Analytics/metrics spells it out.
+ * The colour sits between S's gold and A's green — a richer green — so A+ and A
+ * read as neighbours rather than as one grade wearing a decoration.
+ */
+
+/* S gold, A+ deep green, A green, B blue, C yellow, D orange, F red. */
+.grade-S { --grade-color: #cf9a12; --grade-shadow: rgba(207, 154, 18, 0.38); }
+.grade-Aplus { --grade-color: #0f8f45; --grade-shadow: rgba(15, 143, 69, 0.32); }
+.grade-A { --grade-color: #16a34a; --grade-shadow: rgba(22, 163, 74, 0.30); }
+.grade-B { --grade-color: #2563eb; --grade-shadow: rgba(37, 99, 235, 0.30); }
+.grade-C { --grade-color: #eab308; --grade-shadow: rgba(234, 179, 8, 0.30); }
+.grade-D { --grade-color: #ed7014; --grade-shadow: rgba(237, 112, 20, 0.30); }
+.grade-F { --grade-color: #dc2626; --grade-shadow: rgba(220, 38, 38, 0.30); }
+.grade-none { --grade-color: #9ca3af; --grade-shadow: rgba(156, 163, 175, 0.22); }

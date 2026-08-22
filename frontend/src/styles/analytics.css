@@ -4021,3 +4021,166 @@ body:has(.ax-page) .app-main {
     .ax-view-recommendations { gap: 22px; }
     .ax-view-recommendations .ax-panel { padding: 16px 16px 14px; }
 }
+
+/* ==========================================================================
+   The Analytical Score banner
+   ==========================================================================
+   The first thing on the Overview, and the only thing on its row. Three parts
+   across the top — the number, the letter, the explanation — and the five
+   measures it is the average of underneath.
+
+   The letter's colour comes from `--grade-color`, which the `.grade-*` classes
+   in growth.css set; the banner carries one of those, so the accent rule, the
+   badge and the bar fills are all one colour without this file knowing which. */
+
+.ax-scoreband {
+    gap: 0;
+    border-top: 3px solid var(--grade-color, var(--ax-violet));
+}
+.ax-scoreband.is-empty { border-top-color: var(--ax-line); }
+
+.ax-scoreband-main {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+}
+
+.ax-scoreband-figure { display: flex; flex-direction: column; gap: 2px; }
+
+.ax-scoreband-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
+.ax-scoreband-value {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.03em;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-scoreband-value em {
+    font-size: 15px;
+    font-weight: 600;
+    font-style: normal;
+    color: var(--ax-faint);
+    margin-left: 2px;
+}
+
+/* The letter, as a badge in the grade's own colour. Sized off the number
+   beside it so the two read as one statement rather than as a figure with a
+   sticker next to it. */
+.ax-scoreband-grade {
+    display: grid;
+    place-items: center;
+    min-width: 62px;
+    height: 62px;
+    padding: 0 12px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--grade-color, var(--ax-violet)) 14%, transparent);
+    color: var(--grade-color, var(--ax-violet));
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.02em;
+}
+
+.ax-scoreband-said { min-width: 0; }
+
+.ax-scoreband-meaning {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--ax-text);
+}
+
+/* The derivation. Never hidden behind a disclosure — see the note at the top
+   of ScoreBanner for why a grade without one is worth very little. */
+.ax-scoreband-how {
+    margin: 5px 0 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ax-muted);
+}
+
+.ax-scoreband-parts {
+    display: grid;
+    /* 175px so all five fit on one row on a full-width shell. At 210 the fifth
+       wrapped alone under four, which reads as a sixth thing that failed to
+       load rather than as the last of five. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 175px), 1fr));
+    gap: 10px 22px;
+    margin: 20px 0 0;
+    padding: 18px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+    list-style: none;
+}
+.ax-scoreband-parts li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 10px;
+}
+
+.ax-scoreband-part-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-text);
+}
+.ax-scoreband-part-score {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ax-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-scoreband-track {
+    grid-column: 1 / -1;
+    order: 3;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--ax-card-2);
+    overflow: hidden;
+}
+.ax-scoreband-track i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--grade-color, var(--ax-violet));
+}
+
+/* The measured quantity, which is the part a reader can actually act on —
+   "22 of 30 days worked" rather than "Consistency 73". */
+.ax-scoreband-part-raw {
+    grid-column: 1 / -1;
+    order: 4;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ax-faint);
+}
+
+.ax-sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 640px) {
+    .ax-scoreband-main {
+        grid-template-columns: auto auto;
+        gap: 14px 18px;
+    }
+    .ax-scoreband-said { grid-column: 1 / -1; }
+    .ax-scoreband-value { font-size: 34px; }
+    .ax-scoreband-grade { min-width: 52px; height: 52px; font-size: 24px; }
+}

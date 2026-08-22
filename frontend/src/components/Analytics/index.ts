@@ -14,6 +14,8 @@
  * the only thing that explains how a score is arrived at, and the new page
  * links to that explanation in more than one place without owning it yet.
  */
+export { ScoreBanner } from './ScoreBanner';
+export type { ScoreBannerProps } from './ScoreBanner';
 export { NextActions } from './NextActions';
 export type { NextActionsProps } from './NextActions';
 export { DiagnosisCards, DiagnosisEmpty } from './Diagnosis';

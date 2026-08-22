@@ -20,7 +20,10 @@ import { format } from '@/utils';
  * the original used before any data had arrived. See styles/growth.css.
  */
 export function gradeClass(grade: Grade | null | undefined): string {
-  return grade ? `grade-${grade}` : 'grade-none';
+  // `A+` cannot go into a class name as it stands — `.grade-A+` is not a
+  // selector — so the one grade with a symbol in it spells the symbol out.
+  if (!grade) return 'grade-none';
+  return `grade-${grade === 'A+' ? 'Aplus' : grade}`;
 }
 
 export interface MetricLine {

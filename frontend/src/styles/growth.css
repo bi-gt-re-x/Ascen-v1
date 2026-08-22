@@ -971,14 +971,10 @@ body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
 /* Week-over-week % chip on each card */
 
 
-/* --- Grade colour system: S gold, A green, B blue, C yellow, D orange, F red --- */
-.grade-S { --grade-color: #cf9a12; --grade-shadow: rgba(207, 154, 18, 0.38); }
-.grade-A { --grade-color: #16a34a; --grade-shadow: rgba(22, 163, 74, 0.30); }
-.grade-B { --grade-color: #2563eb; --grade-shadow: rgba(37, 99, 235, 0.30); }
-.grade-C { --grade-color: #eab308; --grade-shadow: rgba(234, 179, 8, 0.30); }
-.grade-D { --grade-color: #ed7014; --grade-shadow: rgba(237, 112, 20, 0.30); }
-.grade-F { --grade-color: #dc2626; --grade-shadow: rgba(220, 38, 38, 0.30); }
-.grade-none { --grade-color: #9ca3af; --grade-shadow: rgba(156, 163, 175, 0.22); }
+/* The grade colour tokens moved to styles/grades.css, which main.tsx loads for
+   every page — the analytics Overview shows a grade now and this was the wrong
+   place for a token three pages read. The badge rules below stay: they dress a
+   growth-page component, and they read the tokens rather than defining them. */
 /* S is special: a gold gradient with dark text. C/none use dark text on their
    lighter fills so the letter stays readable. */
 .grade-badge.grade-S {

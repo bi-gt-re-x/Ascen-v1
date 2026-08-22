@@ -70,7 +70,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
+import { Ambient, ErrorState, Loading } from '@/components';
 import {
   BaselinePanel,
   BaselineSetup,
@@ -99,6 +99,7 @@ import {
   QualityPanel,
   RatedTasksPanel,
   ReasonsPanel,
+  ScoreBanner,
   ScorePanel,
   SinceLast,
   StandingPanel,
@@ -227,6 +228,8 @@ import {
 import { outlook, recommendations, type Advice } from '@/utils/advice';
 import { PATTERN_DAYS, RECENT_DAYS, daysUntilNextWeek, recentWindow, weekStamp } from '@/utils/recent';
 import { diagnose, vitals } from '@/utils/diagnosis';
+import { analyticalScore } from '@/utils/analyticalScore';
+import { buildReport, reportFilename } from '@/utils/report';
 import { discoverPatterns } from '@/utils/patterns';
 import { DEFAULT_BUDGET, buildPlan } from '@/utils/nextActions';
 import type { Prefs } from '@/services/settings';
@@ -546,6 +549,15 @@ export default function Analytics() {
   // card rather than read off `overall` — see components/Analytics/score.
   const card = useMemo(() => growthScore(ratings.data ?? null), [ratings.data]);
   const score = card.value;
+
+  /**
+   * The same five metrics, out of a hundred, with a letter on them.
+   *
+   * Not a second score. `growthScore` above and this are one calculation shown
+   * at two scales — the tile prints the mean over ten, this prints it over a
+   * hundred — so they cannot disagree. See utils/analyticalScore.
+   */
+  const analytical = useMemo(() => analyticalScore(ratings.data ?? null), [ratings.data]);
   /**
    * The score's line: its own recorded readings, and nothing else.
    *
@@ -897,6 +909,58 @@ export default function Analytics() {
   /** The streak, which three of the chapters read and none of them fetch. */
   const streak = account.data?.stats?.current_streak ?? 0;
 
+  /**
+   * The written report the Export button downloads.
+   *
+   * A callback rather than a value: building it costs a few milliseconds of
+   * string work and there is no reason to pay that on every render of a page
+   * whose export most visits never touch. Returns null when there is no report
+   * card yet, which is what disables the button — a file full of dashes is
+   * worse than no file.
+   *
+   * Everything below is already derived by the module that owns it. This only
+   * gathers, so a figure in the export and the same figure on screen are the
+   * same figure by construction rather than by two people remembering to keep
+   * them in step.
+   */
+  const report = useCallback((): string | null => {
+    if (!ratings.data) return null;
+    return buildReport({
+      username: username ?? 'account',
+      generatedAt: new Date(),
+      span: spanText,
+      adviceDays: RECENT_DAYS,
+      patternDays: PATTERN_DAYS,
+      score: analytical,
+      figures,
+      insights,
+      streak,
+      bankedXp: banked,
+      subjectRows: breakdown.rows,
+      subjectQuality: recentSubjects.rows,
+      patterns: discovered,
+      diagnoses,
+      advice,
+      plan: plan.actions,
+      planBudget: plan.budget,
+    });
+  }, [
+    advice,
+    analytical,
+    banked,
+    breakdown.rows,
+    diagnoses,
+    discovered,
+    figures,
+    insights,
+    plan,
+    ratings.data,
+    recentSubjects.rows,
+    spanText,
+    streak,
+    username,
+  ]);
+
   const openView = useCallback((next: View) => navigate(next.path), [navigate]);
 
   // ---- The baseline -------------------------------------------------------
@@ -987,8 +1051,8 @@ export default function Analytics() {
         <Header
           view={view}
           span={spanText}
-          rows={slice.current}
-          actions={<RefreshButton onRefresh={refresh} busy={series.loading} />}
+          onExport={report}
+          exportName={reportFilename(username ?? 'account', new Date())}
         />
         <ViewTabs active={view.key} onView={openView} />
 
@@ -1017,6 +1081,7 @@ export default function Analytics() {
 
         {view.key === 'overview' && (
           <OverviewView
+            analytical={analytical}
             figures={figures}
             sparks={sparks}
             score={score}
@@ -1437,6 +1502,8 @@ export default function Analytics() {
 // Overview
 // --------------------------------------------------------------------------
 interface OverviewProps {
+  /** The score, its letter and its five parts. See ScoreBanner. */
+  analytical: ReturnType<typeof analyticalScore>;
   figures: ReturnType<typeof summaryFigures>;
   sparks: ReturnType<typeof tileSeries>;
   score: number | null;
@@ -1489,6 +1556,12 @@ interface OverviewProps {
 function OverviewView(props: OverviewProps) {
   return (
     <>
+      {/* The score and its letter, above everything — including what moved.
+          A reader who opens this tab and reads one thing should read this one:
+          it is the whole account in a number, and the sentence under it names
+          the measure holding that number down. */}
+      <ScoreBanner score={props.analytical} />
+
       {/* What moved, before anything that merely *is*. See `SinceLast`. */}
       {props.sinceLast}
 
