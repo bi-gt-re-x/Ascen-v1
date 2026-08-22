@@ -65,10 +65,11 @@ export function Hero({
           </span>
         </span>
         <h1 className="lp-hero-title">
-          Make your study time <em>add up</em>
+          Ascen: The <em>“Only”</em> App for Unstoppable Growth and Productivity
         </h1>
         <p className="lp-hero-sub hm-rise">
-          Tasks, streaks, analytics and goals in one place.
+          Master every hour. Crush every goal. Ascen turns your study sessions into
+          measurable momentum — tasks, streaks, growth analytics and goals in one place.
         </p>
         {/* Every call to action on this page is a pitch to a visitor who has no
             account yet. Someone already signed in has nothing left to be sold,
@@ -85,7 +86,7 @@ export function Hero({
               className="lp-btn lp-btn-primary"
               onClick={onGetStarted}
             >
-              Get started <span className="lp-chevd">▾</span>
+              Claim Your Productivity Breakthrough <span className="lp-chevd">▾</span>
             </button>
           )}
           <Link to="/calendar" className="lp-btn lp-btn-ghost" id="calendarBtn">
@@ -157,24 +158,24 @@ const FEATURES = [
   {
     ico: 'lp-ico-teal',
     glyph: '📋',
-    title: 'Tasks',
-    body: 'Set priorities, add notes, and see what is done.',
+    title: 'Task Management',
+    body: 'Organize your schedule with an intuitive task manager. Set priorities, add descriptions, and track progress effortlessly.',
     to: '/dashboard',
     label: 'Go to Dashboard',
   },
   {
     ico: 'lp-ico-green',
     glyph: '🌱',
-    title: 'Growth',
-    body: 'Your streaks, your finished work, your best stretches.',
+    title: 'Growth & Progress',
+    body: 'View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.',
     to: '/growth',
     label: 'Go to Growth',
   },
   {
     ico: 'lp-ico-gold',
     glyph: '🎯',
-    title: 'Goals',
-    body: 'Set a target. It moves as you finish work.',
+    title: 'Strategic Goal Tracking',
+    body: 'Set XP, streak and task goals, then watch them auto-advance as you complete work on the dashboard.',
     to: '/goals',
     label: 'Go to Goals',
   },
@@ -216,11 +217,11 @@ export function FeatureStrip() {
 }
 
 /** The heading above each demonstration section. */
-export function SectionHead({ title, blurb }: { title: string; blurb?: string }) {
+export function SectionHead({ title, blurb }: { title: string; blurb: string }) {
   return (
     <header className="lp-head">
       <h2>{title}</h2>
-      {blurb && <p>{blurb}</p>}
+      <p>{blurb}</p>
     </header>
   );
 }
@@ -274,21 +275,27 @@ export function TaskStats() {
           <span className="lp-list-ico">⭐</span>
           <div>
             <h4>Prioritization</h4>
-            <p>Flag a task and it rises to the top.</p>
+            <p>
+              Flag high-priority tasks so the most important work rises to the top and never
+              slips through.
+            </p>
           </div>
         </li>
         <li>
           <span className="lp-list-ico">✅</span>
           <div>
             <h4>Sub-tasks</h4>
-            <p>Break a big task into steps you can tick off.</p>
+            <p>
+              Break big tasks into smaller checkable steps and watch each one add to your
+              momentum.
+            </p>
           </div>
         </li>
         <li>
           <span className="lp-list-ico">🔔</span>
           <div>
             <h4>Reminders</h4>
-            <p>Due dates and timers, so nothing slips.</p>
+            <p>Due dates and timers keep you accountable and on schedule for every session.</p>
           </div>
         </li>
       </ul>
@@ -338,8 +345,8 @@ export function Philosophy() {
   return (
     <section className="lp-section">
       <SectionHead
-        title="Design"
-        blurb="Calm tools and plain analytics. Nothing to fiddle with."
+        title="Design Philosophy"
+        blurb="Clean, calm focus tools and minimalist analytics — built to keep you moving, not fiddling."
       />
       {/* Line icons rather than emoji, so each one can draw itself in. */}
       <div className="lp-philo" id="philoGrid">
@@ -405,8 +412,8 @@ export function Pricing({
   return (
     <section className="lp-section">
       <SectionHead
-        title="Features and pricing"
-        blurb="All of it, free."
+        title="Features Comparison and Pricing"
+        blurb="Everything is included, free. Pick your look and get to work."
       />
       <div className="lp-split">
         <div className="lp-card lp-themes">
@@ -465,7 +472,7 @@ const TECH = [
 export function TechStack() {
   return (
     <section className="lp-section">
-      <SectionHead title="Built with" />
+      <SectionHead title="Technology Stack" blurb="Built on a clean, dependable stack." />
       {/* The copy here describes the stack this port is replacing — it says
           Vanilla JS and Flask, and both are on their way out. It is carried
           across unchanged for the same reason About Us was: what the page

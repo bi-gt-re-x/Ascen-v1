@@ -200,16 +200,16 @@ export default function Homepage() {
           {/* Not a screenshot: a working mock the reader watches fill in. */}
           <section className="lp-section">
             <SectionHead
-              title="Your dashboard"
-              blurb="Finish work, and the numbers move. This one is live."
+              title="Your dashboard, as you would use it"
+              blurb="Finish work, and the numbers move. Nothing here is a picture — this is the real thing, running."
             />
             <DashboardDemo />
           </section>
 
           <section className="lp-section">
             <SectionHead
-              title="Tasks"
-              blurb="Priorities, due dates, and what is done."
+              title="Deep Dive on Task Management"
+              blurb="Organize your study schedule with an intuitive task manager, set priorities, and track progress effortlessly."
             />
             {/* The workflow, played out: a task gets checked off, the list
                 closes over it, and the XP it earned lands on the bar. */}
@@ -219,24 +219,24 @@ export default function Homepage() {
 
           <section className="lp-section">
             <SectionHead
-              title="Metrics"
-              blurb="Hours logged, completion rates, daily XP."
+              title="Performance Metrics"
+              blurb="See your growth and achievements — hours logged, completion rates, and daily XP visualized."
             />
             <Performance />
           </section>
 
           <section className="lp-section">
             <SectionHead
-              title="Calendar"
-              blurb="Drag a task onto the day you will do it."
+              title="A calendar that works with you"
+              blurb="Organize your study schedule with simple drag-and-drop. Tasks sync onto the day you plan them."
             />
             <CalendarDemo />
           </section>
 
           <section className="lp-section">
             <SectionHead
-              title="Streaks and levels"
-              blurb="Big goals, broken into steps. Each one earns XP."
+              title="Streak & Level System"
+              blurb="Break large goals into achievable steps. Every completed task earns XP toward your next level."
             />
             <StreakLevel />
           </section>
