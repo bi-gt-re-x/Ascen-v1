@@ -85,6 +85,7 @@ import {
   HabitConsistencyPanel,
   HabitOpening,
   HabitTiles,
+  DepthPicker,
   Header,
   InsightsPanel,
   Locked,
@@ -93,6 +94,7 @@ import {
   QualityGridPanel,
   QualityPanel,
   RatedTasksPanel,
+  ReasonsPanel,
   ScorePanel,
   SinceLast,
   StandingPanel,
@@ -207,9 +209,12 @@ import {
   qualityGrid,
   ratedTasks,
   ratingFindings,
+  reasonFindings,
   summariseRatings,
+  summariseReasons,
 } from '@/utils/ratings';
 import { outlook, recommendations, type Advice } from '@/utils/advice';
+import type { Prefs } from '@/services/settings';
 import { SETTLE, reviewAdopted, summarise } from '@/utils/followup';
 import type { Ratings } from '@/types';
 import '@/styles/analytics.css';
@@ -452,7 +457,7 @@ export default function Analytics() {
      not — the page opened on a year for somebody who had chosen thirty days.
      Following the preference until the reader touches the control fixes that
      without going back on the paragraph above. */
-  const { prefs, ready } = useSettings();
+  const { prefs, ready, update } = useSettings();
   const [span, setSpan] = useState<WindowKey>(prefs.analytics_window);
   const spanChosen = useRef(false);
   useEffect(() => {
@@ -578,6 +583,30 @@ export default function Analytics() {
   const ratingBands = useMemo(() => qualityBands(rated), [rated]);
   const ratingGrid = useMemo(() => qualityGrid(rated), [rated]);
 
+  /* The third question's answers, at rating_depth 'reasons'. Counted from the
+     same tasks as everything above — an account on the other two levels has
+     none, and the panel that reads these draws nothing rather than a row of
+     zeroes. */
+  const reasons = useMemo(
+    () => summariseReasons(bySubject, fromIso, toIso),
+    [bySubject, fromIso, toIso],
+  );
+  const reasonRows = useMemo(() => reasonFindings(reasons), [reasons]);
+
+  /* How much the prompt asks, changeable from here. It is the same preference
+     the settings page owns; this is the surface where the difference between
+     the three levels is actually visible, so it is the second place that owns
+     it — the arrangement the rail's collapse button already has. */
+  const setDepth = useCallback(
+    (next: Prefs['rating_depth']) => {
+      void update({ rating_depth: next });
+    },
+    [update],
+  );
+  const depthPicker = (
+    <DepthPicker value={prefs.rating_depth} onPick={setDepth} />
+  );
+
   // ---- The behavioural shapes, shared by three tabs -----------------------
   const week = useMemo(() => weekShape(slice.current), [slice]);
   const clock = useMemo(() => clockShape(finished), [finished]);
@@ -649,8 +678,11 @@ export default function Analytics() {
         // contradicts. Safe on an account that has never rated anything: every
         // rule reading it checks `rated` first.
         quality: qualitySummary,
+        // Empty on the two shallower depths, because the question is never put
+        // — the one rule that reads it produces nothing rather than guessing.
+        reasons,
       }),
-    [balance, clock, qualitySummary, ratings.data, rhythm, slice, week],
+    [balance, clock, qualitySummary, ratings.data, reasons, rhythm, slice, week],
   );
 
   const banked = Number(all[all.length - 1]?.cumulative_xp) || 0;
@@ -841,8 +873,14 @@ export default function Analytics() {
                   findings={ratingRows}
                   bands={ratingBands}
                   span={spanText}
+                  depth={prefs.rating_depth}
+                  aside={depthPicker}
                 />
-                <QualityGridPanel cells={ratingGrid} summary={qualitySummary} />
+                <QualityGridPanel
+                  cells={ratingGrid}
+                  summary={qualitySummary}
+                  depth={prefs.rating_depth}
+                />
               </>
             }
             baseline={
@@ -1056,6 +1094,19 @@ export default function Analytics() {
               <RatedTasksPanel rated={rated} summary={qualitySummary} />
               <InsightsPanel insights={insights} />
             </section>
+            {/* The only panel on the page that answers *why*, and the only one
+                that exists at one of the three depths and not the others. It
+                sits on this tab rather than the Overview for the reason the
+                rated-task list above it does: "why did this window go like
+                that" is this tab's question, and a count of causes is the
+                closest thing the app has to an answer. It draws nothing at all
+                unless the account has asked to be asked — see ReasonsPanel. */}
+            <ReasonsPanel
+              reasons={reasons}
+              findings={reasonRows}
+              depth={prefs.rating_depth}
+              span={spanText}
+            />
           </>
         )}
 

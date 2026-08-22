@@ -129,7 +129,11 @@ FIELDS: Dict[str, Any] = {
     # stays on: the controls above the list still change the view for a visit.
     'default_priority':  ('medium', _one_of('low', 'medium', 'high')),
     'default_xp':        (30, _whole(5, 500)),
-    'ask_rating':        (True, _boolean),
+    #: How much the app asks after a task is finished, and therefore how much
+    #: the report card has to go on. See REASONS in backend/api/tasks.py and
+    #: the note in backend/tracking/analytics.py on what quality is measured
+    #: from. 'ratings' is the default and is what the app has always done.
+    'rating_depth':      ('ratings', _one_of('none', 'ratings', 'reasons')),
     'confirm_delete':    (True, _boolean),
     'task_status':       ('open', _one_of('open', 'done', 'all')),
     'task_sort':         ('due', _one_of('due', 'priority', 'xp', 'created', 'title')),
@@ -165,6 +169,24 @@ class UpdateSettings(BaseModel):
     values: Optional[Dict[str, Any]] = None
 
 
+def _inherited(username, key):
+    """An older preference's answer, where a newer key replaced it.
+
+    `rating_depth` replaced `ask_rating`, and the old switch's "off" is exactly
+    what the new key calls 'none'. An account that turned the prompt off before
+    the three levels existed should not have it come back because the key it
+    said so under is no longer read.
+
+    Returns None when there is nothing to inherit, which is the usual answer.
+    """
+    if key != 'rating_depth':
+        return None
+    old = db.user_setting(username, 'ask_rating')
+    if old is None:
+        return None
+    return 'none' if str(old).lower() in ('0', 'false', '') else 'ratings'
+
+
 def _keyed(username):
     """The user_settings half, defaults filled in and types made honest.
 
@@ -178,7 +200,7 @@ def _keyed(username):
     for key, (fallback, _) in FIELDS.items():
         stored = db.user_setting(username, key)
         if stored is None:
-            out[key] = fallback
+            out[key] = _inherited(username, key) or fallback
         elif isinstance(fallback, bool):
             out[key] = str(stored).lower() not in ('0', 'false', '')
         else:
@@ -439,6 +461,12 @@ def _task_ids(username, done_only=False):
 #: their starting line with it, neither of which is on this page at all.
 PROFILE_KEYS = ('avatar',)
 
+#: Keys FIELDS no longer holds but that are still read — see `_inherited`.
+#: Listed so "reset every preference" clears them too: leaving `ask_rating`
+#: behind would have an account inherit its own superseded answer back the
+#: moment the key that replaced it was cleared.
+RETIRED_KEYS = ('ask_rating',)
+
 
 def _settings_of(username, keys):
     """Drop this account's user_settings rows for `keys`."""
@@ -448,7 +476,8 @@ def _settings_of(username, keys):
 
 
 def _reset_preferences(user):
-    return {'preferences': _settings_of(user['username'], set(FIELDS))}
+    return {'preferences': _settings_of(
+        user['username'], set(FIELDS) | set(RETIRED_KEYS))}
 
 
 def _reset_completed(user):
@@ -502,7 +531,7 @@ def _reset_content(user):
 
     # The two keyed rows that *are* content: where the account was measured
     # from, and the advice it has taken up.
-    kept = set(FIELDS) | set(PROFILE_KEYS)
+    kept = set(FIELDS) | set(PROFILE_KEYS) | set(RETIRED_KEYS)
     gone = _drop('user_settings',
                  lambda row: not (row.get('user_id') == username
                                   and row.get('key') not in kept))

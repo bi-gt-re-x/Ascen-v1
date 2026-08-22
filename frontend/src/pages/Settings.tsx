@@ -94,6 +94,25 @@ function goalOptions(current: number): number[] {
   return [...FOCUS_GOALS, current].sort((a, b) => a - b);
 }
 
+/** What each of the three levels actually does, said in full under the seg. */
+const RATING_DEPTHS: Record<Prefs['rating_depth'], string> = {
+  none: 'Finishing a task finishes it. Nothing is asked, and Quality on Analytics falls back to '
+    + 'the average XP per task — a measure of how ambitiously you fill in the form, which is why '
+    + 'it is the fallback rather than the measure.',
+  ratings: 'Two star rows after a finished task: how hard it was, and how well it went. Quality '
+    + 'is the two multiplied, and the grid, the bands and the best-and-worst list all come from '
+    + 'them.',
+  reasons: 'The two star rows, and then one more question — the main thing that made the '
+    + 'difference, from six words. It is the only input on Analytics that can say *why* a window '
+    + 'went the way it did rather than what it came to.',
+};
+
+const RATING_DEPTH_NAMES: Record<Prefs['rating_depth'], string> = {
+  none: 'No questions',
+  ratings: 'Two questions',
+  reasons: 'Three questions',
+};
+
 function hoursLabel(hours: number): string {
   const whole = Math.floor(hours);
   const minutes = Math.round((hours - whole) * 60);
@@ -831,15 +850,27 @@ export default function Settings() {
           {
             id: 'rating',
             label: 'Ask how it went',
-            hint: 'The two star rows after you finish a task. They feed Quality on Analytics.',
+            hint:
+              'What the prompt after a finished task asks — and, because it is the only thing on '
+              + 'Analytics the app cannot measure for itself, how much Quality there has to go on.',
             control: (
-              <Toggle
-                on={prefs.ask_rating}
+              <Seg
+                value={prefs.rating_depth}
                 busy={busy}
-                label="Ask how it went"
-                onFlip={() => void savePref({ ask_rating: !prefs.ask_rating }, 'Rating prompt')}
+                onPick={(next) => void savePref({ rating_depth: next }, 'Questions')}
+                options={[
+                  { key: 'none', label: 'Nothing' },
+                  { key: 'ratings', label: 'Ratings' },
+                  { key: 'reasons', label: '+ Reasons' },
+                ]}
               />
             ),
+          },
+          {
+            id: 'rating-what',
+            label: 'What each level asks',
+            hint: RATING_DEPTHS[prefs.rating_depth],
+            control: <span className="st-fixed">{RATING_DEPTH_NAMES[prefs.rating_depth]}</span>,
           },
           {
             id: 'task-status',

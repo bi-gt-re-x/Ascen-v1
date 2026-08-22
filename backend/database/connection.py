@@ -63,6 +63,10 @@ _built = False
 # migration this list can carry.
 ADDED_COLUMNS = (
     ('tasks', 'subject', 'TEXT'),
+    # The third rating question's answer. Existing rows get NULL, which reads
+    # as "not asked" — which is exactly what it was, since the question did not
+    # exist. See data/sql/tasks.sql and REASONS in backend/api/tasks.py.
+    ('tasks', 'reason', 'TEXT'),
     # The ISO week a colour was claimed in, so the reservation can expire —
     # see backend/tracking/event.py. Existing rows get NULL, which reads as
     # "claimed before anyone was counting" and therefore as long expired.

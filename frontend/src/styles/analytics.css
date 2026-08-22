@@ -3319,6 +3319,120 @@ html[data-theme="dark"] .ax-page {
 .ax-quality-empty p { margin: 0; font-size: 13.5px; line-height: 1.62; }
 .ax-quality-empty strong { color: var(--ax-text); }
 
+/* ---- How much is asked ---------------------------------------------------
+   The three levels, in the quality panel's title row. It is a preference and
+   it lives in Settings too; it is here as well because this is the page where
+   the difference between the three is visible, and a reader looking at an
+   empty panel should be able to fix it without going to find a switch
+   elsewhere. See DepthPicker in components/Analytics/Quality. */
+.ax-depth {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    border: 1px solid var(--ax-line);
+    border-radius: 9px;
+    background: var(--ax-card-2);
+}
+.ax-depth-pick {
+    padding: 4px 9px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease;
+}
+.ax-depth-pick:hover:not(:disabled) { color: var(--ax-text); }
+.ax-depth-pick.is-on {
+    background: var(--ax-card);
+    color: var(--ax-violet);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
+}
+.ax-depth-pick:disabled { cursor: default; opacity: .6; }
+
+/* ---- What made the difference --------------------------------------------
+   Two columns, one per side of the question, and they are never merged: the
+   words on the left are answers about tasks that went badly and the ones on
+   the right about tasks that went well, so a single ranked list across both
+   would be comparing answers to two different questions. See ReasonsPanel. */
+.ax-reasons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 20px 26px;
+    margin-bottom: 4px;
+}
+.ax-reasons-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-text);
+}
+.ax-reasons-title .ax-muted {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+}
+.ax-reasons-none { margin: 0; font-size: 12.5px; }
+
+.ax-reasons-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 9px;
+}
+/* The word and its count on one line, the bar under both — so the six rows
+   read as a ranked list first and a chart second. */
+.ax-reasons-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "label count"
+        "track track";
+    align-items: baseline;
+    gap: 5px 10px;
+}
+.ax-reasons-label {
+    grid-area: label;
+    font-size: 12.5px;
+    color: var(--ax-text);
+}
+.ax-reasons-list .ax-factor-track { grid-area: track; }
+.ax-reasons-count {
+    grid-area: count;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-reasons-count .ax-tile-unit { font-weight: 500; }
+
+/* The findings under the two columns get a rule above them, so the sentences
+   read as conclusions drawn from the counts rather than as a third column. */
+.ax-reasons + .ax-insights {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-depth-pick { transition: none; }
+}
+
 .ax-quality-head {
     display: flex;
     align-items: baseline;

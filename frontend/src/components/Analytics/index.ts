@@ -44,10 +44,12 @@ export { Tiles } from './Tiles';
 export type { TilesProps } from './Tiles';
 
 /** The panels drawn from the one optional thing in the app. See ./Quality. */
-export { QualityPanel, QualityGridPanel, RatedTasksPanel } from './Quality';
+export { DepthPicker, QualityPanel, QualityGridPanel, RatedTasksPanel, ReasonsPanel } from './Quality';
 export type {
+  DepthPickerProps,
   QualityPanelProps,
   QualityGridPanelProps,
+  ReasonsPanelProps,
   RatedTasksPanelProps,
 } from './Quality';
 

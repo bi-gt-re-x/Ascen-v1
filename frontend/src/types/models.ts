@@ -82,6 +82,15 @@ export interface Task {
    */
   difficulty?: number;
   execution?: number;
+  /**
+   * The one thing that made the difference, from a fixed vocabulary of twelve
+   * — six for a task that went badly, six for one that went well. See REASONS
+   * in utils/ratings.
+   *
+   * Only asked at rating_depth 'reasons', so absent is the ordinary state and
+   * means the question was not put rather than that there was no reason.
+   */
+  reason?: string;
   timer_duration?: number;
   timer_expired?: boolean;
 }

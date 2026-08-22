@@ -25,7 +25,7 @@
  */
 import type { GrowthDay } from '@/types';
 import type { BalanceShape, ClockShape, RhythmShape, WeekShape } from './behaviour';
-import type { RatingSummary } from './ratings';
+import { REASON_FLOOR, type RatingSummary, type ReasonSummary } from './ratings';
 import type { Ratings } from '@/types';
 
 export type AdviceKind = 'frequency' | 'timing' | 'depth' | 'balance' | 'quality' | 'load';
@@ -142,7 +142,52 @@ export interface AdviceInput {
    * utils/ratings.
    */
   quality: RatingSummary | null;
+  /**
+   * The causes behind the work, at rating_depth 'reasons'.
+   *
+   * The only input on this page that carries a *why* rather than a what, and
+   * the only one an account can be without entirely: on the other two depths
+   * the question is never put, so this arrives empty and the rule reading it
+   * produces nothing. That is the intended behaviour rather than a gap — see
+   * `summariseReasons` in utils/ratings.
+   */
+  reasons: ReasonSummary | null;
 }
+
+/**
+ * What to actually do about the cause somebody names most often.
+ *
+ * One line per reason, in the imperative, and each is a change to how the work
+ * is *arranged* rather than an instruction to try harder. That is the whole
+ * value of the third question: "execution is low" is a reading, and "you keep
+ * getting interrupted" is something a person can act on this afternoon.
+ */
+const REASON_ACTIONS: Record<string, { action: string; effort: number }> = {
+  distracted: {
+    action: 'Put the next hard task in a block with the phone in another room. Start it before you open anything else.',
+    effort: 2,
+  },
+  unclear: {
+    action: 'Write the first step as its own task. Not knowing where to start is a planning problem and it is solved at the list, not at the desk.',
+    effort: 1,
+  },
+  underestimated: {
+    action: 'Split anything you would rate 4 or 5 for difficulty into two tasks before you start it, not after it goes wrong.',
+    effort: 2,
+  },
+  'no-time': {
+    action: 'Put the hard one first in the day rather than last. Running out of time is a queue-order problem before it is a time problem.',
+    effort: 2,
+  },
+  'low-energy': {
+    action: 'Move the hardest task to your best hour — the Habits tab knows which one that is for you.',
+    effort: 2,
+  },
+  interrupted: {
+    action: 'Book one uninterrupted block a day and defend it. Of the six causes this is the one you can arrange against directly.',
+    effort: 3,
+  },
+};
 
 /** XP on a day this account actually worked — the unit every projection uses. */
 function xpPerActiveDay(days: GrowthDay[]): number {
@@ -226,7 +271,7 @@ function loadShape(days: GrowthDay[]): LoadShape {
  * without a second pass over the same thresholds.
  */
 export function recommendations(input: AdviceInput): Advice[] {
-  const { days, week, clock, rhythm, balance, ratings, quality } = input;
+  const { days, week, clock, rhythm, balance, ratings, quality, reasons } = input;
   const out: Rule[] = [];
   const perDay = xpPerActiveDay(days);
   const yearScale = days.length > 0 ? 365 / days.length : 0;
@@ -471,6 +516,30 @@ export function recommendations(input: AdviceInput): Advice[] {
       workings: 'No XP claim: harder work is not worth more XP, it is worth more.',
       effort: 4,
     });
+  }
+
+  // ---- the cause, where the account has asked to be asked for one ---------
+  // Nothing here exists at rating_depth 'none' or 'ratings': `reasons` comes
+  // back empty and the guard below is never passed. That is the point of the
+  // third question — it is the only thing in the app that turns a reading into
+  // a cause, and this is the rule that spends it.
+  const worstReason = reasons?.struggle[0] ?? null;
+  if (reasons && worstReason && reasons.struggled >= REASON_FLOOR) {
+    const how = REASON_ACTIONS[worstReason.key];
+    if (how) {
+      out.push({
+        id: `reason-${worstReason.key}`,
+        kind: 'quality',
+        category: 'Execution',
+        title: `Your work goes wrong the same way every time`,
+        because: `Of the ${reasons.struggled} tasks you rated below 3 for execution, ${worstReason.count} came back the same: it ${worstReason.phrase}.`,
+        action: how.action,
+        evidence: `${worstReason.share}% of your badly-rated work names one cause out of six offered. The next most common accounts for ${reasons.struggle[1]?.share ?? 0}%.`,
+        impact: 0,
+        workings: 'No XP claim: this is your own account of why the work went the way it did, and XP does not read it.',
+        effort: how.effort,
+      });
+    }
   }
 
   // ---- the floor ----------------------------------------------------------

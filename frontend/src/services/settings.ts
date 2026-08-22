@@ -34,6 +34,20 @@ export type TaskSort = 'due' | 'priority' | 'xp' | 'created' | 'title';
 export type TaskGroup = 'due' | 'priority' | 'band' | 'subject' | 'status' | 'none';
 export type TaskHorizon = 'week' | 'all';
 
+/**
+ * How much the app asks after a task is finished.
+ *
+ * Three levels, and each one changes what analytics is able to say:
+ *
+ *   none      nothing is asked. Quality is scored from the XP-per-task proxy
+ *             rather than from ratings, and the quality panels say so.
+ *   ratings   the two star rows — difficulty and execution. The default, and
+ *             what the app has always done.
+ *   reasons   the two rows plus one more: what made the difference. Adds the
+ *             reasons panel, which nothing else on the page can produce.
+ */
+export type RatingDepth = 'none' | 'ratings' | 'reasons';
+
 /** The preferences kept as key/value. Mirrors FIELDS in the backend. */
 export interface Prefs {
   theme_mode: ThemeMode;
@@ -48,7 +62,7 @@ export interface Prefs {
   show_quote: boolean;
   default_priority: Priority;
   default_xp: number;
-  ask_rating: boolean;
+  rating_depth: RatingDepth;
   confirm_delete: boolean;
   task_status: TaskStatus;
   task_sort: TaskSort;
@@ -97,7 +111,7 @@ export const DEFAULTS: Prefs = {
   show_quote: true,
   default_priority: 'medium',
   default_xp: 30,
-  ask_rating: true,
+  rating_depth: 'ratings',
   confirm_delete: true,
   task_status: 'open',
   task_sort: 'due',

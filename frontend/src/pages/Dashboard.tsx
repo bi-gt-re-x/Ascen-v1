@@ -208,12 +208,14 @@ export default function Dashboard() {
         window.dispatchEvent(new Event(STATS_CHANGED));
 
         // Ask how it went, now that the work is banked — unless the reader
-        // has turned the two star rows off in Settings, which this used to
-        // ignore while the tasks page honoured it. One preference, two places
-        // a task is finished, and it has to mean the same thing in both.
-        // Nothing waits on the answer — see `rating` below and
+        // has turned the questions off in Settings, which this used to ignore
+        // while the tasks page honoured it. One preference, two places a task
+        // is finished, and it has to mean the same thing in both. Nothing
+        // waits on the answer — see `rating` below and
         // components/Tasks/RatePrompt.
-        if (prefs.ask_rating) setRating({ id: String(task.id), name: task.title });
+        if (prefs.rating_depth !== 'none') {
+          setRating({ id: String(task.id), name: task.title });
+        }
       } catch (cause) {
         setFailure(
           cause instanceof Error ? cause.message : 'Could not complete that task.',
@@ -223,7 +225,7 @@ export default function Dashboard() {
         setBusyId(null);
       }
     },
-    [username, mutate, reload, data, prefs.ask_rating],
+    [username, mutate, reload, data, prefs.rating_depth],
   );
 
   // ---- Rating a finished task ---------------------------------------------
@@ -237,7 +239,7 @@ export default function Dashboard() {
   const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
 
   const saveRating = useCallback(
-    (values: { difficulty?: number; execution?: number }) => {
+    (values: { difficulty?: number; execution?: number; reason?: string }) => {
       const target = rating;
       setRating(null);
       if (!username || !target) return;
@@ -418,6 +420,7 @@ export default function Dashboard() {
       {rating && levelled === null && news === null && (
         <RatePrompt
           taskName={rating.name}
+          depth={prefs.rating_depth}
           onSubmit={saveRating}
           onClose={() => setRating(null)}
         />

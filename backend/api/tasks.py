@@ -99,8 +99,9 @@ class CompleteTask(BaseModel):
 class RateTask(BaseModel):
     """What the person thought of a task they just finished.
 
-    Both ratings are optional and independent: the prompt asks two questions
-    and a reader is allowed to answer one of them. See `rate_task`.
+    Every field is optional and independent: the prompt asks two or three
+    questions depending on the account's `rating_depth`, and a reader is
+    allowed to answer one of them. See `rate_task`.
     """
 
     username: Optional[str] = None
@@ -109,10 +110,36 @@ class RateTask(BaseModel):
     difficulty: Optional[int] = None
     #: How well it went, 1-5. Null means not answered.
     execution: Optional[int] = None
+    #: The one thing that made the difference, from REASONS below. Only asked
+    #: at rating_depth 'reasons'.
+    reason: Optional[str] = None
 
 
 #: What a star rating is allowed to be, both ends inclusive.
 RATING_RANGE = (1, 5)
+
+#: The third question's answers, and the only ones that may be stored.
+#:
+#: A fixed vocabulary rather than a text box, and that is the whole point of
+#: it. "Why did that go the way it did" is only worth asking if the answers can
+#: be counted afterwards — twelve spellings of "I got distracted" are twelve
+#: findings of one task each, which is no finding at all. Six on each side is
+#: enough to cover the usual causes and short enough to read at the moment
+#: somebody has just finished something and wants to move on.
+#:
+#: Which side is asked follows the execution star: a task that went badly is
+#: asked what made it hard, one that went well is asked what made it go well.
+#: See components/Tasks/RatePrompt.
+REASONS = {
+    'struggle': ('distracted', 'unclear', 'underestimated',
+                 'no-time', 'low-energy', 'interrupted'),
+    'went-well': ('prepared', 'deep-focus', 'momentum',
+                  'broken-down', 'fresh', 'familiar'),
+}
+
+#: Every valid answer, flat. Which side a reason belongs to is recoverable from
+#: REASONS, so the stored value is the reason alone.
+ALL_REASONS = REASONS['struggle'] + REASONS['went-well']
 
 
 # --------------------------------------------------------------------------
@@ -456,7 +483,11 @@ def rate_task(body: RateTask):
     if not body.username or not body.task_id:
         return fail('Username and task_id required')
 
-    if body.difficulty is None and body.execution is None:
+    # `is None` rather than falsiness, and the difference matters for exactly
+    # one case: `reason: ""` is not an empty request, it is the answer being
+    # taken back. Treating it as nothing to record made the clear below
+    # unreachable.
+    if body.difficulty is None and body.execution is None and body.reason is None:
         return fail('Nothing to record.')
 
     for name, value in (('Difficulty', body.difficulty), ('Execution', body.execution)):
@@ -472,6 +503,18 @@ def rate_task(body: RateTask):
         task['difficulty'] = int(body.difficulty)
     if body.execution is not None:
         task['execution'] = int(body.execution)
+    if body.reason is not None:
+        if not body.reason:
+            # An empty string is the answer being taken back — the prompt sends
+            # one when the chosen chip is clicked again.
+            task['reason'] = None
+        elif body.reason in ALL_REASONS:
+            task['reason'] = body.reason
+        # A word this build has never heard of is ignored, not stored and not
+        # treated as a clear. Dropped rather than rejected for the reason
+        # `_subject` gives — the stars the reader did answer are worth keeping
+        # — but it must not erase an answer that is already there, which is
+        # what filing it as None would do.
 
     db.save_tasks(tasks)
 
@@ -479,6 +522,7 @@ def rate_task(body: RateTask):
         task_id=body.task_id,
         difficulty=task.get('difficulty'),
         execution=task.get('execution'),
+        reason=task.get('reason'),
     )
 
 

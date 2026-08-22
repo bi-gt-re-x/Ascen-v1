@@ -339,12 +339,15 @@ export default function Tasks() {
         // own. This is what moves them.
         window.dispatchEvent(new Event(STATS_CHANGED));
         // Ask, now that the work is banked and nothing depends on the answer —
-        // unless the reader has turned the two star rows off in Settings.
-        if (prefs.ask_rating) setRating({ id: String(task.id), name: task.title });
+        // unless the reader has turned the questions off in Settings. How many
+        // are asked is that same preference: see components/Tasks/RatePrompt.
+        if (prefs.rating_depth !== 'none') {
+          setRating({ id: String(task.id), name: task.title });
+        }
         return true;
       });
     },
-    [username, mutate, run, prefs.ask_rating],
+    [username, mutate, run, prefs.rating_depth],
   );
 
   // ---- Rating a finished task ---------------------------------------------
@@ -359,7 +362,7 @@ export default function Tasks() {
   const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
 
   const saveRating = useCallback(
-    (values: { difficulty?: number; execution?: number }) => {
+    (values: { difficulty?: number; execution?: number; reason?: string }) => {
       const target = rating;
       setRating(null);
       if (!username || !target) return;
@@ -917,6 +920,7 @@ export default function Tasks() {
       {rating && (
         <RatePrompt
           taskName={rating.name}
+          depth={prefs.rating_depth}
           onSubmit={saveRating}
           onClose={() => setRating(null)}
         />

@@ -182,6 +182,8 @@ export interface TaskRating {
   task_id: string;
   difficulty?: number;
   execution?: number;
+  /** Null when the answer was taken back, absent when it was never asked. */
+  reason?: string | null;
 }
 
 /**
@@ -192,13 +194,15 @@ export interface TaskRating {
  * prompt that follows is answered, dismissed, or fails to reach the server —
  * nobody's XP sits behind a dialog.
  *
- * Either rating may be omitted. A reader who answers one row and closes the
- * dialog keeps the answer they gave.
+ * Any of the three may be omitted. A reader who answers one row and closes the
+ * dialog keeps the answer they gave. `reason` is only ever sent by an account
+ * whose rating_depth is 'reasons'; the server drops a word it does not know
+ * rather than failing the whole call over it.
  */
 export function rateTask(
   username: string,
   taskId: string,
-  ratings: { difficulty?: number; execution?: number },
+  ratings: { difficulty?: number; execution?: number; reason?: string },
 ): Promise<ApiResult<TaskRating>> {
   return post<TaskRating>('/api/rate_task', {
     username,

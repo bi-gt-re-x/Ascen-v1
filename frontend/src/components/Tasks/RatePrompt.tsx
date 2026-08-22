@@ -13,6 +13,21 @@
  * easy task done badly and a brutal one done well both land on three stars, and
  * they are not the same week. Asked apart, they stay apart in the record.
  *
+ * ## How much is asked is the account's to choose
+ *
+ * Three depths, set in Settings (or on Analytics, beside the panels that read
+ * them). At `none` this dialog never opens at all — the caller does not raise
+ * it. At `ratings` it is the two rows above. At `reasons` a third question
+ * follows them: the one thing that made the difference, from a closed list of
+ * six.
+ *
+ * **The third question depends on the second.** It cannot be asked until the
+ * execution star is answered, because which six words are offered follows from
+ * it — a task rated 1 is asked what made it hard, a task rated 4 what made it
+ * go well. So the row appears when execution is answered and changes sides if
+ * that answer changes, which also clears an answer that no longer belongs to
+ * the list it came from.
+ *
  * ## Nothing here is required
  *
  * The task is already done and its XP is already banked before this appears —
@@ -24,6 +39,8 @@
  * without reading, which would poison the very data it exists to collect.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { reasonOf, reasonsFor } from '@/utils/ratings';
+import type { RatingDepth } from '@/services/settings';
 import '@/styles/rate-prompt.css';
 
 /** The five stars, and what each one means. Hover and focus print the word. */
@@ -35,8 +52,15 @@ const EXECUTION_WORDS = ['Poor', 'Patchy', 'Solid', 'Strong', 'Excellent'];
 export interface RatePromptProps {
   /** What was finished, so the dialog names the thing it is asking about. */
   taskName: string;
-  /** Sends whatever was answered. Only the answered halves are passed. */
-  onSubmit: (ratings: { difficulty?: number; execution?: number }) => void;
+  /**
+   * How much to ask. 'reasons' adds the third row; anything else is the two
+   * star rows. 'none' never reaches here — the caller does not open the
+   * dialog at all — so it is accepted only so the account's preference can be
+   * passed straight through without a translation at every call site.
+   */
+  depth?: RatingDepth;
+  /** Sends whatever was answered. Only the answered parts are passed. */
+  onSubmit: (ratings: { difficulty?: number; execution?: number; reason?: string }) => void;
   /** Dismissal, by any of its three routes. */
   onClose: () => void;
 }
@@ -108,9 +132,68 @@ function Stars({ label, hint, words, value, onChange }: StarsProps) {
   );
 }
 
-export function RatePrompt({ taskName, onSubmit, onClose }: RatePromptProps) {
+/**
+ * The third row: six words, one choice, and clicking the chosen one clears it.
+ *
+ * Chips rather than a select, for the same reason the stars are stars: this is
+ * asked at the moment somebody has just finished something and wants to move
+ * on, and a dropdown is two clicks and a scan of a list that is not on screen
+ * until you open it.
+ */
+function Reasons({
+  side,
+  value,
+  onChange,
+}: {
+  side: 'struggle' | 'went-well';
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const options = reasonsFor(side === 'went-well' ? 5 : 1);
+
+  return (
+    <fieldset className="tk-rate-row">
+      <legend className="tk-rate-label">
+        {side === 'went-well' ? 'What made it go well?' : 'What made it hard?'}
+        <span>The main one. Optional, like the stars.</span>
+      </legend>
+
+      <div className="tk-rate-reasons">
+        {options.map((option) => {
+          const on = value === option.key;
+          return (
+            <label key={option.key} className={`tk-rate-reason${on ? ' is-on' : ''}`}>
+              <input
+                type="radio"
+                name="reason"
+                checked={on}
+                onChange={() => onChange(option.key)}
+                onClick={() => {
+                  if (on) onChange('');
+                }}
+              />
+              <span>{option.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+export function RatePrompt({ taskName, depth = 'ratings', onSubmit, onClose }: RatePromptProps) {
   const [difficulty, setDifficulty] = useState(0);
   const [execution, setExecution] = useState(0);
+  const [reason, setReason] = useState('');
+
+  /* Which six are on offer, or null while there is nothing to ask them about.
+     The word already chosen has to belong to the list showing: rating a task 2
+     and picking "ran out of time", then changing the star to 4, would otherwise
+     save a struggle reason against work the reader has just called strong. */
+  const side = execution === 0 ? null : execution >= 3 ? 'went-well' : 'struggle';
+  const asking = depth === 'reasons' ? side : null;
+  const chosen = asking && reasonOf(reason);
+  const keeps = chosen && (asking === 'went-well') === (chosen.side === 'went-well');
 
   // Escape closes, like every other dialog in the app.
   useEffect(() => {
@@ -123,12 +206,14 @@ export function RatePrompt({ taskName, onSubmit, onClose }: RatePromptProps) {
 
   const save = useCallback(() => {
     // Only what was answered. A zero here means "not answered" and must not
-    // reach the server, which would reject it anyway — see `RATING_RANGE`.
+    // reach the server, which would reject it anyway — see `RATING_RANGE`. The
+    // reason goes only when it still belongs to the side being asked.
     onSubmit({
       ...(difficulty > 0 ? { difficulty } : {}),
       ...(execution > 0 ? { execution } : {}),
+      ...(keeps ? { reason } : {}),
     });
-  }, [difficulty, execution, onSubmit]);
+  }, [difficulty, execution, keeps, onSubmit, reason]);
 
   const answered = difficulty > 0 || execution > 0;
 
@@ -161,6 +246,14 @@ export function RatePrompt({ taskName, onSubmit, onClose }: RatePromptProps) {
           value={execution}
           onChange={setExecution}
         />
+
+        {asking && (
+          <Reasons
+            side={asking}
+            value={keeps ? reason : ''}
+            onChange={setReason}
+          />
+        )}
 
         <div className="tk-rate-actions">
           <button type="button" className="tk-rate-skip" onClick={onClose}>
