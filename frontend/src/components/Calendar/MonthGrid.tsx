@@ -30,13 +30,17 @@ import { dates } from '@/utils';
 /** Six rows of seven — the grid never changes height between months. */
 const CELLS = 42;
 
-const DAY_NAMES = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+/** Sunday first, and rotated to the week's opening day before it is drawn. */
+const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export interface MonthGridProps {
   year: number;
   month: number;
   /** The store key of the chosen day, "2026-8-6". */
   selectedKey: string | null;
+  /** 1 for a Monday-first grid (the default), 0 for Sunday-first. From the
+      account's preferences — see MiniMonth, which takes the same. */
+  weekStart?: 0 | 1;
   intensity: IntensityIndex;
   /** Every day of the month, counted — see utils/monthSummary. */
   days: MonthDay[];
@@ -56,15 +60,20 @@ export interface MonthGridProps {
   children?: React.ReactNode;
 }
 
-/** Monday-first, so `getDay()` has to be rotated before it means a column. */
-function leadingBlanks(year: number, month: number): number {
-  return (new Date(year, month, 1).getDay() + 6) % 7;
+/** How many cells of the previous month the grid opens with.
+ *
+ * `getDay()` counts from Sunday, so it has to be rotated by the day the week
+ * opens on before it means a column. `+ 7` keeps the modulo positive.
+ */
+function leadingBlanks(year: number, month: number, weekStart: 0 | 1): number {
+  return (new Date(year, month, 1).getDay() - weekStart + 7) % 7;
 }
 
 export function MonthGrid({
   year,
   month,
   selectedKey,
+  weekStart = 1,
   intensity,
   days,
   onStep,
@@ -81,7 +90,7 @@ export function MonthGrid({
   // The 42 dates the grid draws, whichever months they belong to. Built from
   // one running Date so the month boundaries take care of themselves.
   const cells = useMemo(() => {
-    const first = new Date(year, month, 1 - leadingBlanks(year, month));
+    const first = new Date(year, month, 1 - leadingBlanks(year, month, weekStart));
     return Array.from({ length: CELLS }, (_, index) => {
       const date = dates.addDays(first, index);
       return {
@@ -90,7 +99,13 @@ export function MonthGrid({
         inMonth: date.getMonth() === month && date.getFullYear() === year,
       };
     });
-  }, [month, year]);
+  }, [month, weekStart, year]);
+
+  /** The seven headings, opening on the same day the cells do. */
+  const names = useMemo(
+    () => (weekStart === 1 ? [...DAY_NAMES.slice(1), DAY_NAMES[0]!] : DAY_NAMES),
+    [weekStart],
+  );
 
   const byKey = useMemo(
     () => new Map(days.map((day) => [day.key, day])),
@@ -134,7 +149,7 @@ export function MonthGrid({
       </div>
 
       <div className="mv-daynames" aria-hidden="true">
-        {DAY_NAMES.map((name) => (
+        {names.map((name) => (
           <div className="mv-dayname" key={name}>
             {name}
           </div>

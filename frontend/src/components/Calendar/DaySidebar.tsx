@@ -27,6 +27,8 @@ export interface DaySidebarProps {
   miniYear: number;
   miniMonth: number;
   selectedIso: string;
+  /** The day the account's weeks open on — see MiniMonth. */
+  weekStart: 0 | 1;
   onMiniStep: (delta: number) => void;
   onPickDate: (iso: string) => void;
 
@@ -64,6 +66,7 @@ export function DaySidebar({
   miniYear,
   miniMonth,
   selectedIso,
+  weekStart,
   onMiniStep,
   onPickDate,
   focus,
@@ -90,6 +93,7 @@ export function DaySidebar({
         year={miniYear}
         month={miniMonth}
         selectedIso={selectedIso}
+        weekStart={weekStart}
         onStep={onMiniStep}
         onPick={onPickDate}
       />

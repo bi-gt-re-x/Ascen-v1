@@ -52,6 +52,7 @@ import {
 import { useDocumentTitle, useSettings, useSubjectIndex, useUserData } from '@/hooks';
 import { useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
+import { weekStartDay } from '@/services/settings';
 import { dates } from '@/utils';
 import { isoStamp } from '@/utils/calendarGrid';
 import type { TaskTab } from '@/components/Dashboard';
@@ -80,9 +81,10 @@ export default function Dashboard() {
   // across midnight moves all of its cards over on the same tick.
   const now = new Date();
   const todayIso = dates.isoDate(now);
-  const monday = dates.startOfWeek(now);
-  const mondayIso = dates.isoDate(monday);
-  const sundayIso = dates.isoDate(dates.addDays(monday, 6));
+  // The week the account counts in — Monday unless they have said Sunday.
+  const opens = dates.startOfWeek(now, weekStartDay(prefs));
+  const mondayIso = dates.isoDate(opens);
+  const sundayIso = dates.isoDate(dates.addDays(opens, 6));
 
   const tasks = useMemo(() => data?.tasks ?? [], [data]);
   const buckets = useMemo(() => bucketTasks(tasks, todayIso), [tasks, todayIso]);
@@ -308,7 +310,10 @@ export default function Dashboard() {
           change, rather than in place of it. */}
       {(failure ?? error) && <ErrorState message={failure ?? error ?? ''} />}
 
-      <div className="dash-main">
+      {/* The focus panel is a preference too, and hiding it widens the task
+          list rather than leaving a hole where it was — see `.is-solo` in
+          styles/dashboard-home.css. */}
+      <div className={`dash-main${prefs.show_focus ? '' : ' is-solo'}`}>
         <TaskPanel
           buckets={buckets}
           tab={tab}
@@ -318,7 +323,7 @@ export default function Dashboard() {
           onComplete={(task) => void complete(task)}
           onAdd={() => setAdding(true)}
         />
-        <FocusPanel session={session} />
+        {prefs.show_focus && <FocusPanel session={session} />}
       </div>
 
       {prefs.show_insights && (
@@ -329,7 +334,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <DailyQuote />
+      {prefs.show_quote && <DailyQuote />}
 
       {levelled !== null && <LevelUp level={levelled} onDone={() => setLevelled(null)} />}
 
@@ -346,10 +351,16 @@ export default function Dashboard() {
         />
       )}
 
+      {/* The same two defaults the tasks page's composer opens on. This dialog
+          used to start every task at the floor of the XP scale, which made
+          "Default XP" a preference one of the app's two Add Task forms had
+          never heard of. */}
       <TaskModal
         open={adding}
         busy={saving}
         username={username}
+        defaultXp={prefs.default_xp}
+        defaultPriority={prefs.default_priority}
         onClose={() => setAdding(false)}
         onAdd={(task) => void addTask(task)}
       />

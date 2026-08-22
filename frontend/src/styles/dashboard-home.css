@@ -329,6 +329,10 @@ body:has(.dash) .app-main {
     min-height: 0;
 }
 
+/* The focus panel turned off in Settings. The list takes the width back rather
+   than keeping a 508px column of nothing beside it. */
+.dash-main.is-solo { grid-template-columns: minmax(0, 1fr); }
+
 /* ---- The card shell the three panels share ------------------------------ */
 .dash-panel {
     display: flex;

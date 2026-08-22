@@ -12,6 +12,12 @@
  *
  * A due date is assembled from four controls (date, hour, minute, AM/PM) and
  * sent as one ISO-ish local string, the way `addTaskFromModal` did it.
+ *
+ * It opens on the account's default XP and priority (Settings, Tasks), which
+ * the tasks page's composer has always honoured and this dialog never did — it
+ * started every task at the floor of the scale, so a reader who had set their
+ * default to 60 got 10 from one of the app's two Add Task forms and 60 from
+ * the other.
  */
 import { useEffect, useState } from 'react';
 import { SubjectPicker } from '@/components/SubjectPicker';
@@ -24,6 +30,10 @@ export interface TaskModalProps {
   busy?: boolean;
   /** Whose subjects to offer — the list is ordered by what they use most. */
   username?: string | null;
+  /** What a new task is worth before the reader changes it. From Settings. */
+  defaultXp?: number;
+  /** Used only while the XP slider is untouched — see `submit`. */
+  defaultPriority?: NewTask['priority'];
   onClose: () => void;
   onAdd: (task: NewTask & { timer_duration?: number }) => void;
 }
@@ -42,13 +52,19 @@ export function TaskModal({
   open,
   busy = false,
   username,
+  defaultXp = MIN_TASK_XP,
+  defaultPriority = 'medium',
   onClose,
   onAdd,
 }: TaskModalProps) {
   const subjects = useSubjects(username ?? null);
+  /* Clamped here rather than trusted: the preference is validated on the way
+     into the database, but this dialog's slider has its own floor and ceiling
+     and a value outside them would render a thumb off the end of the track. */
+  const opening = Math.max(MIN_XP, Math.min(MAX_XP, Math.round(defaultXp)));
   const [name, setName] = useState('');
   const [subject, setSubject] = useState<string | null>(null);
-  const [xp, setXp] = useState(MIN_XP);
+  const [xp, setXp] = useState(opening);
   const [panel, setPanel] = useState<Panel>('none');
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
@@ -63,7 +79,7 @@ export function TaskModal({
     if (!open) return;
     setName('');
     setSubject(null);
-    setXp(MIN_XP);
+    setXp(opening);
     setPanel('none');
     setHours(0);
     setMinutes(0);
@@ -72,7 +88,7 @@ export function TaskModal({
     setMinute('');
     setAmpm('');
     setInvalid(false);
-  }, [open]);
+  }, [open, opening]);
 
   if (!open) return null;
 
@@ -108,8 +124,11 @@ export function TaskModal({
       // This dialog used to send no priority at all, so the backend stored
       // "medium" for every task made here — a 90 XP task then drew on the
       // grid in the medium colour and read as Medium on its card. The band
-      // follows the XP, the way it does everywhere else.
-      priority: xpToPriority(xp),
+      // follows the XP, the way it does everywhere else — except while the XP
+      // is still sitting on the account's default, where the account's default
+      // priority is the better answer. The composer on the tasks page draws the
+      // same line, in the same words.
+      priority: xp === opening ? defaultPriority : xpToPriority(xp),
       xp_reward: xp,
       due_date: dueDate(),
       // A to-do, and said so out loud. This dialog asks for a name, an XP

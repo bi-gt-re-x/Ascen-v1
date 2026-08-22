@@ -68,7 +68,7 @@
  * for and when it opens — see `Locked` — and a new account is offered the one
  * thing it can actually do here, which is `BaselineSetup`.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
 import {
@@ -444,9 +444,25 @@ export default function Analytics() {
 
   /* Opens on the account's chosen period. Not kept in step with it after
      that: the control on this page is the reader changing their mind for one
-     visit, and writing that back would make every glance a preference. */
-  const { prefs } = useSettings();
+     visit, and writing that back would make every glance a preference.
+
+     `ready` is what makes "opens on" true. The preferences are read near the
+     root and arrive a moment after this page mounts, so the initial state
+     below is the built-in default rather than the account's answer as often as
+     not — the page opened on a year for somebody who had chosen thirty days.
+     Following the preference until the reader touches the control fixes that
+     without going back on the paragraph above. */
+  const { prefs, ready } = useSettings();
   const [span, setSpan] = useState<WindowKey>(prefs.analytics_window);
+  const spanChosen = useRef(false);
+  useEffect(() => {
+    if (ready && !spanChosen.current) setSpan(prefs.analytics_window);
+  }, [prefs.analytics_window, ready]);
+
+  const chooseSpan = useCallback((next: WindowKey) => {
+    spanChosen.current = true;
+    setSpan(next);
+  }, []);
   // Productivity rather than total XP, and weekly rather than daily. The pair
   // is one decision: the chart opens on a rate, and a rate at daily grain over
   // a year is scatter. See METRICS in components/Analytics/data.
@@ -783,7 +799,7 @@ export default function Analytics() {
           <>
         <Controls
           chosen={span}
-          onWindow={setSpan}
+          onWindow={chooseSpan}
           subject={subject}
           onSubject={setSubject}
           subjects={subjectOptions}

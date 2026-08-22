@@ -11,7 +11,7 @@
  * have applied anyway, and asking for five fields to write down "email Mr Chen"
  * is how a task list stops being used.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SubjectPicker } from '@/components';
 import type { Subject } from '@/services/subjects';
 import type { NewTask } from '@/services/tasks';
@@ -37,6 +37,21 @@ export function Composer({ subjects, busy, onAdd, defaultXp, defaultPriority }: 
   const [subject, setSubject] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const field = useRef<HTMLInputElement>(null);
+
+  /* The preferences are read near the root and land a moment after the page
+     does, so the form is often built before the account's default XP is known.
+     Following it until the reader touches the field is what makes the
+     preference true here rather than true-if-you-reload — and stopping there
+     is what stops it from resetting a number they just typed. */
+  const touched = useRef(false);
+  useEffect(() => {
+    if (!touched.current) setXp(defaultXp);
+  }, [defaultXp]);
+
+  const chooseXp = (value: number) => {
+    touched.current = true;
+    setXp(value);
+  };
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -109,7 +124,7 @@ export function Composer({ subjects, busy, onAdd, defaultXp, defaultPriority }: 
               value={xpToBand(xp)}
               onChange={(event) => {
                 const band = XP_BANDS.find((entry) => entry.label === event.target.value);
-                if (band) setXp(band.from);
+                if (band) chooseXp(band.from);
               }}
             >
               {XP_BANDS.map((band) => (
@@ -132,7 +147,7 @@ export function Composer({ subjects, busy, onAdd, defaultXp, defaultPriority }: 
               min={MIN_TASK_XP}
               max={MAX_TASK_XP}
               value={xp}
-              onChange={(event) => setXp(Number(event.target.value))}
+              onChange={(event) => chooseXp(Number(event.target.value))}
             />
           </label>
 

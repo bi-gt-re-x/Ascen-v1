@@ -277,6 +277,16 @@ html[data-theme="dark"] .st-page {
 .st-toggle.is-on > i { transform: translateX(18px); }
 .st-toggle:disabled { opacity: .6; cursor: default; }
 
+/* A line under a section heading. One section has one — the danger zone, which
+   is the only place on this page where a row cannot be undone by setting it
+   back. */
+.st-note {
+    margin: 2px 0 6px;
+    font-size: 12px; line-height: 1.55;
+    color: var(--st-muted);
+    max-width: 62ch;
+}
+
 .st-links { display: flex; gap: 7px; justify-content: flex-end; flex-wrap: wrap; }
 .st-btn {
     display: inline-flex; align-items: center; justify-content: center;
@@ -292,6 +302,79 @@ html[data-theme="dark"] .st-page {
 }
 .st-btn:hover { border-color: color-mix(in srgb, var(--st-violet) 50%, var(--st-line)); }
 .st-btn.is-small { padding: 5px 10px; font-size: 12px; text-transform: capitalize; }
+
+/* The destructive one. Outlined rather than filled: a row of solid red buttons
+   down the danger zone reads as an alarm, and the reader is here on purpose.
+   It fills on hover, which is the moment it is about to be pressed. */
+.st-btn.is-danger {
+    border-color: color-mix(in srgb, var(--st-bad) 45%, var(--st-line));
+    background: color-mix(in srgb, var(--st-bad) 7%, transparent);
+    color: var(--st-bad);
+}
+.st-btn.is-danger:hover:not(:disabled) {
+    border-color: var(--st-bad);
+    background: var(--st-bad);
+    color: #fff;
+}
+.st-btn:disabled { opacity: .55; cursor: default; }
+
+/* ---------- The confirmation dialog ---------------------------------------
+   The only modal on the page. Everything else here writes on change and can be
+   set straight back; these six cannot, so they are the one place worth
+   stopping somebody. */
+.st-ask {
+    position: fixed; inset: 0; z-index: 60;
+    display: grid; place-items: center;
+    padding: 20px;
+    background: rgba(16, 24, 40, .45);
+    backdrop-filter: blur(2px);
+    animation: st-ask-in .16s ease;
+}
+.st-ask-card {
+    width: min(100%, 470px);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    padding: 22px 22px 18px;
+    border: 1px solid var(--st-line);
+    border-radius: 16px;
+    background: var(--st-card);
+    box-shadow: 0 20px 60px rgba(16, 24, 40, .28);
+}
+.st-ask-card h2 {
+    margin: 0 0 12px;
+    font-size: 17px; font-weight: 700; letter-spacing: -.01em;
+    color: var(--st-text);
+    text-transform: none;
+}
+.st-ask-line {
+    margin: 0 0 9px;
+    font-size: 12.8px; line-height: 1.6;
+    color: var(--st-muted);
+}
+.st-ask-line b { color: var(--st-bad); font-weight: 700; }
+/* The reassuring half, marked as such — the difference between the six is
+   mostly here, and it should not read in the same colour as the warning. */
+.st-ask-line.is-kept b { color: var(--st-good); }
+
+.st-ask-type { display: block; margin: 16px 0 4px; }
+.st-ask-type > span {
+    display: block; margin-bottom: 6px;
+    font-size: 12.5px; color: var(--st-text);
+}
+.st-ask-type b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.st-ask-bad {
+    margin: 12px 0 0;
+    font-size: 12.5px; font-weight: 600;
+    color: var(--st-bad);
+}
+
+.st-ask-row {
+    display: flex; justify-content: flex-end; gap: 8px;
+    margin-top: 18px;
+}
+
+@keyframes st-ask-in { from { opacity: 0 } to { opacity: 1 } }
 
 /* ---------- Narrow -------------------------------------------------------- */
 @media (max-width: 900px) {
@@ -313,8 +396,14 @@ html[data-theme="dark"] .st-page {
     .st-seg, .st-input { width: min(100%, var(--st-control)); }
 }
 
+@media (max-width: 560px) {
+    .st-ask-row { flex-direction: column-reverse; }
+    .st-ask-row .st-btn { width: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .st-status, .st-input, .st-pick, .st-toggle, .st-toggle > i,
     .st-swatch, .st-nav-link, .st-btn { transition: none; }
     .st-swatch:hover { transform: none; }
+    .st-ask { animation: none; }
 }

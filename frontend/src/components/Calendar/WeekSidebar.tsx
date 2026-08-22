@@ -102,9 +102,11 @@ export interface UpcomingEntry {
 export interface WeekMini {
   year: number;
   month: number;
-  /** Monday and Sunday of the week on screen. */
+  /** The first and last day of the week on screen. */
   from: string;
   to: string;
+  /** The day the week opens on, so the band lands on one row. See MiniMonth. */
+  weekStart: 0 | 1;
   onStep: (delta: number) => void;
   /** Moves the week to the one the picked day falls in. */
   onPick: (iso: string) => void;
@@ -450,14 +452,16 @@ export function WeekSidebar({
       </button>
 
       {/* --- The month, with this week on it -------------------------------
-          Monday-first, so the seven days band one row instead of wrapping
-          across two. The Day view's copy stays Sunday-first — see MiniMonth. */}
+          Laid out from the same day the week opens on, so the seven days band
+          one row instead of wrapping across two — which is the whole reason
+          this grid takes the day rather than assuming one. The Day view's copy
+          stays Sunday-first: nothing there depends on it. See MiniMonth. */}
       <MiniMonth
         year={mini.year}
         month={mini.month}
         fromIso={mini.from}
         toIso={mini.to}
-        weekStart={1}
+        weekStart={mini.weekStart}
         onStep={mini.onStep}
         onPick={mini.onPick}
       />

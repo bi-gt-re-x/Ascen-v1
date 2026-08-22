@@ -31,6 +31,7 @@ import {
   useDocumentTitle,
   useNow,
   useNowScroll,
+  useSettings,
   useSubjectIndex,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
@@ -47,6 +48,7 @@ import {
   joinFocuses,
 } from '@/hooks/useDayFocus';
 import { events as eventService } from '@/services';
+import { weekStartDay } from '@/services/settings';
 import { dates } from '@/utils';
 import { iconUrlFor } from '@/utils/calendarIcons';
 import {
@@ -99,6 +101,7 @@ export default function Day() {
   const session = useFocusSession(username);
   const subjects = useSubjectIndex(username);
   const now = useNow();
+  const { prefs } = useSettings();
 
   const [cursor, setCursor] = useState(() => {
     const today = new Date();
@@ -508,6 +511,7 @@ export default function Day() {
           miniYear={mini.year}
           miniMonth={mini.month}
           selectedIso={iso}
+          weekStart={weekStartDay(prefs)}
           onMiniStep={(delta) =>
             setMini((current) => {
               const stepped = new Date(current.year, current.month + delta, 1);

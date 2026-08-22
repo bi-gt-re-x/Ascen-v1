@@ -22,6 +22,16 @@
  * and the status line says which preference was written. The server writes
  * only the fields it is sent, so two controls can never overwrite each other.
  *
+ * ## Every switch here does something
+ *
+ * That is the rule the page is held to, and it is why the list is the length it
+ * is rather than longer. A preference exists here only once something reads it:
+ * `week_starts_on` arrived with the calendar and the dashboard's week summary
+ * both counting from it, `show_ambient` with the background layer that returns
+ * nothing when it is off, the four `task_*` keys with the tasks page opening on
+ * them. A control that stores a value nothing looks at is worse than no control
+ * — it is a promise the app quietly breaks.
+ *
  * ## What is not here, and why
  *
  * No integrations, API keys, webhooks, notification schedules, leaderboards or
@@ -29,17 +39,68 @@
  * account to rank against and no change-password endpoint — every one of those
  * would be a control that stores a value nothing reads. They are worth
  * building; they are not worth faking.
+ *
+ * ## The danger zone
+ *
+ * The last section is the only one whose controls remove things, and it is a
+ * section of its own at the end of its own group for that reason: nothing
+ * destructive is ever the next row down from a harmless one.
+ *
+ * Each of them asks first, in a dialog that says what will go and what will
+ * survive — and the four that cannot be undone ask for the account's username
+ * to be typed out. That is not theatre. The server refuses those four without
+ * it (TYPED in backend/api/settings.py), so the typing is the confirmation
+ * rather than a dialog's opinion of one, and a stray POST cannot delete an
+ * account by arriving.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Ambient, ErrorState, Loading } from '@/components';
-import { useApi, useDocumentTitle, useSettings, useTheme, useUserData } from '@/hooks';
+import { Ambient, ErrorState, Loading, STATS_CHANGED } from '@/components';
+import { GROUPS, SORTS } from '@/components/Tasks';
+import { useApi, useAuth, useDocumentTitle, useSettings, useTheme, useUserData } from '@/hooks';
 import { settings as service } from '@/services';
-import type { Accent, Prefs, Settings as Prefsheet, ThemeMode } from '@/services/settings';
+import type {
+  Accent,
+  Prefs,
+  ResetScope,
+  Settings as Prefsheet,
+  ThemeMode,
+} from '@/services/settings';
 import '@/styles/settings.css';
 
 const GOAL_MIN = 10;
 const GOAL_MAX = 2000;
+
+/** The pages an account may open on, and what each one is for. */
+const HOME_PAGES: { key: Prefs['home_page']; label: string }[] = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'tasks', label: 'Tasks' },
+  { key: 'calendar', label: 'Calendar' },
+  { key: 'goals', label: 'Goals' },
+  { key: 'analytics', label: 'Analytics' },
+  { key: 'notes', label: 'Notes' },
+];
+
+/** The daily focus goal, in hours. Quarter-hour steps, which is the grain the
+    backend snaps to — see `_fraction` in backend/api/settings.py. */
+const FOCUS_GOALS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12];
+
+/** The list above, plus whatever is actually stored if it is not on it.
+ *  The backend accepts any quarter hour, so a value set by hand — or by a
+ *  build with a different list — would otherwise leave this select showing
+ *  nothing at all, which reads as "no goal" rather than "a goal I cannot draw". */
+function goalOptions(current: number): number[] {
+  if (FOCUS_GOALS.includes(current)) return FOCUS_GOALS;
+  return [...FOCUS_GOALS, current].sort((a, b) => a - b);
+}
+
+function hoursLabel(hours: number): string {
+  const whole = Math.floor(hours);
+  const minutes = Math.round((hours - whole) * 60);
+  if (!whole) return `${minutes} minutes`;
+  if (!minutes) return whole === 1 ? '1 hour' : `${whole} hours`;
+  return `${whole}h ${minutes}m`;
+}
 
 const ACCENTS: { key: Accent; label: string; swatch: string }[] = [
   { key: 'violet', label: 'Violet', swatch: '#6d5ae0' },
@@ -65,6 +126,8 @@ interface Section {
   label: string;
   group: string;
   items: Item[];
+  /** A line under the heading, for a section that needs one. Only one does. */
+  note?: string;
 }
 
 function joined(iso: string): string {
@@ -130,14 +193,203 @@ function Toggle({
   );
 }
 
+/**
+ * One of the six things the danger zone can do.
+ *
+ * `loses` and `keeps` are both required, and that is the point of the shape:
+ * the six differ from each other mostly in what they leave behind, and a
+ * dialog that only says what it destroys leaves the reader to guess whether
+ * "reset progress" also means "lose my tasks". It does not, and it says so.
+ */
+interface Ask {
+  scope: ResetScope;
+  label: string;
+  hint: string;
+  /** The dialog's heading, and the word on the button that does it. */
+  title: string;
+  action: string;
+  loses: string;
+  keeps: string;
+  /** Mirrors TYPED in backend/api/settings.py — the server refuses these
+      without the account's username, whatever this dialog decides to ask. */
+  typed?: boolean;
+}
+
+const ASKS: Ask[] = [
+  {
+    scope: 'preferences',
+    label: 'Reset every preference',
+    hint: 'Puts this whole page back to how it arrived.',
+    title: 'Reset every preference?',
+    action: 'Reset preferences',
+    loses: 'Every choice on this page goes back to its default — theme, accent, the pages the app opens on, the tasks view, the focus goal.',
+    keeps: 'Your work is untouched: tasks, goals, notes, records and progress all stay exactly as they are. So does your profile picture.',
+  },
+  {
+    scope: 'completed',
+    label: 'Clear finished tasks',
+    hint: 'Removes the tasks already ticked off. The XP they earned stays.',
+    title: 'Clear finished tasks?',
+    action: 'Clear them',
+    loses: 'Every task marked done, and its place on the calendar.',
+    keeps: 'The XP, the level and the streak they earned you — those are banked and are not undone by tidying the list. Open tasks stay.',
+  },
+  {
+    scope: 'tasks',
+    label: 'Delete every task',
+    hint: 'The whole list, open and finished alike.',
+    title: 'Delete every task?',
+    action: 'Delete all tasks',
+    loses: 'Every task this account has, whether it is open or done, and every calendar block made from one.',
+    keeps: 'Goals, notes, records, and your level and XP. Analytics will still know what you did; it will no longer be able to name it.',
+    typed: true,
+  },
+  {
+    scope: 'progress',
+    label: 'Reset level and XP',
+    hint: 'Back to level 1 with nothing behind it. The work itself stays.',
+    title: 'Reset your progress?',
+    action: 'Reset progress',
+    loses: 'Your level, XP, streaks, the XP ledger behind them, the analytics readings taken from it, and any achievements earned.',
+    keeps: 'Every task, goal, note and record. The work is still there — this only forgets what it added up to.',
+    typed: true,
+  },
+  {
+    scope: 'content',
+    label: 'Erase everything you have made',
+    hint: 'Tasks, goals, notes, records, calendar and focus history. The account stays.',
+    title: 'Erase everything you have made?',
+    action: 'Erase it all',
+    loses: 'Tasks, goals, notes, records, calendar entries, focus history, subjects and your whole progression.',
+    keeps: 'The account itself — you stay signed in, and every preference on this page survives. It is the app on its first day, with your settings.',
+    typed: true,
+  },
+  {
+    scope: 'account',
+    label: 'Delete this account',
+    hint: 'The account and everything in it, permanently. You will be signed out.',
+    title: 'Delete this account?',
+    action: 'Delete my account',
+    loses: 'Everything above, the preferences, and the account itself. Your username is released and nothing is recoverable.',
+    keeps: 'Nothing. Export your data first if any of it matters — the two buttons for that are one section up.',
+    typed: true,
+  },
+];
+
+/**
+ * The dialog the danger zone asks through.
+ *
+ * Modal on purpose, and it is the only modal on this page: everything else
+ * here writes on change and can be changed straight back, and this is the one
+ * place where "are you sure" is a real question rather than a speed bump.
+ *
+ * The typed confirmation is the account's own username, matched
+ * case-insensitively — asking someone to reproduce their own capitalisation
+ * under a red button is a test of typing, not of intent.
+ */
+function Confirm({
+  ask,
+  username,
+  busy,
+  failure,
+  onClose,
+  onGo,
+}: {
+  ask: Ask;
+  username: string;
+  busy: boolean;
+  failure: string | null;
+  onClose: () => void;
+  onGo: (typed: string) => void;
+}) {
+  const [typed, setTyped] = useState('');
+  const field = useRef<HTMLInputElement>(null);
+  const go = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    // The field when there is one, the button when there is not — either way
+    // the keyboard lands somewhere useful rather than behind the dialog.
+    (ask.typed ? field.current : go.current)?.focus();
+  }, [ask.typed]);
+
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
+  }, [onClose]);
+
+  const ready = !ask.typed || typed.trim().toLowerCase() === username.toLowerCase();
+
+  return (
+    <div className="st-ask" role="presentation" onMouseDown={onClose}>
+      <div
+        className="st-ask-card"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="st-ask-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h2 id="st-ask-title">{ask.title}</h2>
+
+        <p className="st-ask-line">
+          <b>What goes.</b> {ask.loses}
+        </p>
+        <p className="st-ask-line is-kept">
+          <b>What stays.</b> {ask.keeps}
+        </p>
+
+        {ask.typed && (
+          <label className="st-ask-type">
+            <span>
+              Type <b>{username}</b> to confirm.
+            </span>
+            <input
+              ref={field}
+              className="st-input"
+              value={typed}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={busy}
+              onChange={(event) => setTyped(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && ready && !busy) onGo(typed);
+              }}
+            />
+          </label>
+        )}
+
+        {failure && <p className="st-ask-bad">{failure}</p>}
+
+        <div className="st-ask-row">
+          <button type="button" className="st-btn" disabled={busy} onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            ref={go}
+            type="button"
+            className="st-btn is-danger"
+            disabled={busy || !ready}
+            onClick={() => onGo(typed)}
+          >
+            {busy ? 'Working…' : ask.action}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Settings() {
   useDocumentTitle('Settings');
 
   const { section: routeSection } = useParams();
   const navigate = useNavigate();
   const { username } = useUserData();
-  const { prefs, update } = useSettings();
+  const { prefs, update, refresh } = useSettings();
   const { setTheme } = useTheme();
+  const { signOut } = useAuth();
 
   const call = useCallback(
     () =>
@@ -154,14 +406,22 @@ export default function Settings() {
   const [failure, setFailure] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  /** The destructive action being asked about, or null. */
+  const [ask, setAsk] = useState<Ask | null>(null);
+  const [asking, setAsking] = useState(false);
+  /** Kept apart from `failure`: one belongs in the dialog, one to the page. */
+  const [askFailure, setAskFailure] = useState<string | null>(null);
 
   useEffect(() => {
     if (sheet) setName(sheet.name);
   }, [sheet]);
 
-  const flash = useCallback((label: string) => {
-    setSaved(label);
-    window.setTimeout(() => setSaved(null), 1800);
+  /** The line beside the heading. Takes the whole sentence, not a noun: the
+      danger zone reports what it did, and "Every task removed. saved" is not
+      something anybody meant to write. */
+  const flash = useCallback((message: string) => {
+    setSaved(message);
+    window.setTimeout(() => setSaved(null), 2600);
   }, []);
 
   /** The account-row half — name, theme, daily goal. */
@@ -178,7 +438,7 @@ export default function Settings() {
         return;
       }
       mutate((current) => ({ ...current, settings: result.settings }));
-      flash(label);
+      flash(`${label} saved`);
     },
     [busy, flash, mutate, sheet, username],
   );
@@ -195,9 +455,50 @@ export default function Settings() {
         setFailure(message);
         return;
       }
-      flash(label);
+      flash(`${label} saved`);
     },
     [busy, flash, update],
+  );
+
+  /**
+   * Running one of the six. See ASKS above for what each of them means.
+   *
+   * Everything the app is holding has to be told, and each in a different way:
+   * the settings sheet on this page is re-read, the preferences the whole app
+   * shares are re-read through the provider (a preferences reset changes them
+   * all, and every page is reading them), and the rail is sent the same event a
+   * completed task sends, because it carries the level and never re-reads on
+   * its own — after a progress reset it would otherwise go on showing Level 12
+   * over an account back at 1.
+   *
+   * Deleting the account is the one that does not come back here at all: the
+   * server has already cleared the session, so the only honest next step is to
+   * drop the local copy of who is signed in and leave for the landing page.
+   */
+  const runAsk = useCallback(
+    async (scope: ResetScope, typed: string) => {
+      if (!username || asking) return;
+      setAsking(true);
+      setAskFailure(null);
+      const result = await service.resetData(username, scope, typed);
+      if (!result.success) {
+        setAsking(false);
+        setAskFailure(result.message);
+        return;
+      }
+      if (scope === 'account') {
+        await signOut();
+        navigate('/home', { replace: true });
+        return;
+      }
+      setAsking(false);
+      setAsk(null);
+      await refresh();
+      reload();
+      window.dispatchEvent(new Event(STATS_CHANGED));
+      flash(result.message);
+    },
+    [asking, flash, navigate, refresh, reload, signOut, username],
   );
 
   /* Light and dark are stored on the account and drive the cookie; 'system'
@@ -335,6 +636,63 @@ export default function Settings() {
               />
             ),
           },
+          {
+            id: 'ambient',
+            label: 'Animated background',
+            hint: 'The grid, the drifting particles and the slow gradient behind every page.',
+            control: (
+              <Toggle
+                on={prefs.show_ambient}
+                busy={busy}
+                label="Animated background"
+                onFlip={() => void savePref({ show_ambient: !prefs.show_ambient }, 'Background')}
+              />
+            ),
+          },
+          {
+            id: 'rail',
+            label: 'Collapsed navigation',
+            hint: 'Keeps the rail down the left as a strip of icons. The button on it does the same thing.',
+            control: (
+              <Toggle
+                on={prefs.nav_collapsed}
+                busy={busy}
+                label="Collapsed navigation"
+                onFlip={() => void savePref({ nav_collapsed: !prefs.nav_collapsed }, 'Navigation')}
+              />
+            ),
+          },
+        ],
+      },
+      {
+        id: 'general',
+        label: 'Startup',
+        group: 'Account',
+        items: [
+          {
+            id: 'home',
+            label: 'Open on',
+            hint: 'Where signing in lands, and what the app opens on next time.',
+            control: (
+              <select
+                className="st-input"
+                value={prefs.home_page}
+                disabled={busy}
+                onChange={(event) =>
+                  void savePref(
+                    { home_page: event.target.value as Prefs['home_page'] },
+                    'Start page',
+                  )
+                }
+              >
+                {HOME_PAGES.map((page) => (
+                  <option key={page.key} value={page.key}>
+                    {page.label}
+                  </option>
+                ))}
+              </select>
+            ),
+          },
         ],
       },
       {
@@ -392,6 +750,32 @@ export default function Settings() {
               />
             ),
           },
+          {
+            id: 'focus-panel',
+            label: 'Show the focus panel',
+            hint: 'The timer beside your tasks. Off, the list takes the full width.',
+            control: (
+              <Toggle
+                on={prefs.show_focus}
+                busy={busy}
+                label="Show the focus panel"
+                onFlip={() => void savePref({ show_focus: !prefs.show_focus }, 'Dashboard')}
+              />
+            ),
+          },
+          {
+            id: 'quote',
+            label: 'Show the daily quote',
+            hint: 'The line at the foot of the dashboard.',
+            control: (
+              <Toggle
+                on={prefs.show_quote}
+                busy={busy}
+                label="Show the daily quote"
+                onFlip={() => void savePref({ show_quote: !prefs.show_quote }, 'Dashboard')}
+              />
+            ),
+          },
         ],
       },
       {
@@ -402,7 +786,7 @@ export default function Settings() {
           {
             id: 'priority',
             label: 'Default priority',
-            hint: 'What Quick Add starts a new task at.',
+            hint: 'Where Quick Add opens, and what a new task is filed as until its XP says otherwise.',
             control: (
               <Seg
                 value={prefs.default_priority}
@@ -419,7 +803,7 @@ export default function Settings() {
           {
             id: 'xp',
             label: 'Default XP',
-            hint: 'What a new task is worth before you change it.',
+            hint: 'What a new task is worth before you change it — Quick Add, the composer and both dialogs.',
             control: (
               <input
                 className="st-input is-num"
@@ -451,6 +835,87 @@ export default function Settings() {
                 label="Ask how it went"
                 onFlip={() => void savePref({ ask_rating: !prefs.ask_rating }, 'Rating prompt')}
               />
+            ),
+          },
+          {
+            id: 'task-status',
+            label: 'Tasks page opens on',
+            hint: 'Which tasks are on the page when you arrive. The controls there still change it for a visit.',
+            control: (
+              <Seg
+                value={prefs.task_status}
+                busy={busy}
+                onPick={(next) => void savePref({ task_status: next }, 'Opening view')}
+                options={[
+                  { key: 'open', label: 'Open' },
+                  { key: 'done', label: 'Done' },
+                  { key: 'all', label: 'All' },
+                ]}
+              />
+            ),
+          },
+          {
+            id: 'task-horizon',
+            label: 'How far ahead it reaches',
+            hint: 'A week keeps the list to what you can act on. Everything is the whole backlog.',
+            control: (
+              <Seg
+                value={prefs.task_horizon}
+                busy={busy}
+                onPick={(next) => void savePref({ task_horizon: next }, 'Opening view')}
+                options={[
+                  { key: 'week', label: 'This week' },
+                  { key: 'all', label: 'Everything' },
+                ]}
+              />
+            ),
+          },
+          {
+            id: 'task-sort',
+            label: 'Default order',
+            hint: 'How the list inside each heading is sorted.',
+            control: (
+              <select
+                className="st-input"
+                value={prefs.task_sort}
+                disabled={busy}
+                onChange={(event) =>
+                  void savePref(
+                    { task_sort: event.target.value as Prefs['task_sort'] },
+                    'Default order',
+                  )
+                }
+              >
+                {SORTS.map((sort) => (
+                  <option key={sort.key} value={sort.key}>
+                    {sort.label}
+                  </option>
+                ))}
+              </select>
+            ),
+          },
+          {
+            id: 'task-group',
+            label: 'Default headings',
+            hint: 'What the list is cut into. No headings is one flat list.',
+            control: (
+              <select
+                className="st-input"
+                value={prefs.task_group}
+                disabled={busy}
+                onChange={(event) =>
+                  void savePref(
+                    { task_group: event.target.value as Prefs['task_group'] },
+                    'Default headings',
+                  )
+                }
+              >
+                {GROUPS.map((group) => (
+                  <option key={group.key} value={group.key}>
+                    {group.label}
+                  </option>
+                ))}
+              </select>
             ),
           },
           {
@@ -490,6 +955,66 @@ export default function Settings() {
                   { key: 'week', label: 'Week' },
                   { key: 'month', label: 'Month' },
                 ]}
+              />
+            ),
+          },
+          {
+            id: 'week-start',
+            label: 'Weeks start on',
+            hint: 'The calendar grid, the month, and the week your dashboard counts.',
+            control: (
+              <Seg
+                value={prefs.week_starts_on}
+                busy={busy}
+                onPick={(next) => void savePref({ week_starts_on: next }, 'Week start')}
+                options={[
+                  { key: 'monday', label: 'Monday' },
+                  { key: 'sunday', label: 'Sunday' },
+                ]}
+              />
+            ),
+          },
+        ],
+      },
+      {
+        id: 'focus',
+        label: 'Focus',
+        group: 'Productivity',
+        items: [
+          {
+            id: 'focus-goal',
+            label: 'Daily focus goal',
+            hint: 'What the focus ring fills against. A day you have given its own goal keeps it.',
+            control: (
+              <select
+                className="st-input"
+                value={String(prefs.focus_goal_hours)}
+                disabled={busy}
+                onChange={(event) =>
+                  void savePref(
+                    { focus_goal_hours: Number(event.target.value) },
+                    'Focus goal',
+                  )
+                }
+              >
+                {goalOptions(prefs.focus_goal_hours).map((hours) => (
+                  <option key={hours} value={hours}>
+                    {hoursLabel(hours)}
+                  </option>
+                ))}
+              </select>
+            ),
+          },
+          {
+            id: 'focus-dim',
+            label: 'Clear the page while focusing',
+            hint: 'A running session folds the greeting, the figures and the quote away and leaves the work.',
+            control: (
+              <Toggle
+                on={prefs.focus_dim}
+                busy={busy}
+                label="Clear the page while focusing"
+                onFlip={() => void savePref({ focus_dim: !prefs.focus_dim }, 'Focus mode')}
               />
             ),
           },
@@ -608,6 +1133,34 @@ export default function Settings() {
           },
         ],
       },
+      {
+        id: 'danger',
+        label: 'Reset and delete',
+        group: 'Danger zone',
+        note:
+          'Each of these asks first and says what it takes. None of them can be '
+          + 'undone, and there is no backup — take an export from Data first if '
+          + 'any of it matters.',
+        items: ASKS.map((entry) => ({
+          id: entry.scope,
+          label: entry.label,
+          hint: entry.hint,
+          danger: true,
+          control: (
+            <button
+              type="button"
+              className="st-btn is-danger"
+              disabled={busy}
+              onClick={() => {
+                setAskFailure(null);
+                setAsk(entry);
+              }}
+            >
+              {entry.action}
+            </button>
+          ),
+        })),
+      },
     ];
   }, [busy, name, pickThemeMode, prefs, savePref, saveSheet, sheet]);
 
@@ -658,7 +1211,7 @@ export default function Settings() {
             <p className="st-quiet">What this account has chosen.</p>
           </div>
           <span className={`st-status${saved || failure ? ' is-on' : ''}`} role="status">
-            {failure ? <em className="st-bad">{failure}</em> : saved ? `${saved} saved` : ''}
+            {failure ? <em className="st-bad">{failure}</em> : (saved ?? '')}
           </span>
         </header>
 
@@ -705,6 +1258,7 @@ export default function Settings() {
               return (
                 <section className="st-card" key={entry.id}>
                   <h2>{entry.label}</h2>
+                  {entry.note && <p className="st-note">{entry.note}</p>}
                   {plain.map((item) => (
                     <div className="st-row" key={item.id}>
                       <div className="st-row-text">
@@ -733,6 +1287,23 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Over the page rather than in the row, because the six differ in what
+          they leave behind and a row has one line to say it in. */}
+      {ask && sheet && (
+        <Confirm
+          ask={ask}
+          username={sheet.username}
+          busy={asking}
+          failure={askFailure}
+          onClose={() => {
+            if (asking) return;
+            setAsk(null);
+            setAskFailure(null);
+          }}
+          onGo={(typed) => void runAsk(ask.scope, typed)}
+        />
+      )}
     </div>
   );
 }

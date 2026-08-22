@@ -169,9 +169,50 @@ export default function Tasks() {
     [goals],
   );
 
-  const [query, setQuery] = useState<TaskQuery>(EMPTY_QUERY);
+  /**
+   * The view this page opens on, from the account's preferences.
+   *
+   * Four of the controls above the list have a preference behind them
+   * (Settings, Tasks) and this is where the two meet. It is what the page
+   * starts on and what "Reset the view" goes back to — not what the page stays
+   * on: every control still changes the view for this visit, and none of them
+   * writes a preference. Somebody narrowing to one subject for a minute has
+   * not changed their mind about how the page should open.
+   *
+   * `EMPTY_QUERY` still supplies the rest — the search, the subject and
+   * priority filters, the direction — because those are about one list at one
+   * moment and there is nothing to remember.
+   */
+  const opening = useMemo<TaskQuery>(
+    () => ({
+      ...EMPTY_QUERY,
+      status: prefs.task_status,
+      sort: prefs.task_sort,
+      horizon: prefs.task_horizon,
+    }),
+    [prefs.task_horizon, prefs.task_sort, prefs.task_status],
+  );
+
+  const [query, setQuery] = useState<TaskQuery>(opening);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [group, setGroup] = useState<GroupKey>('due');
+  const [group, setGroup] = useState<GroupKey>(prefs.task_group);
+
+  /* The preferences arrive a moment after the page does, so what it opened on
+     may have been the built-in defaults rather than the account's. This
+     corrects that — and stops the moment the reader touches a control, because
+     from then on what is on screen is their answer and not a stale guess. */
+  const viewChosen = useRef(false);
+  useEffect(() => {
+    if (viewChosen.current) return;
+    setQuery(opening);
+    setGroup(prefs.task_group);
+  }, [opening, prefs.task_group]);
+
+  const changeQuery = useCallback((next: TaskQuery) => {
+    viewChosen.current = true;
+    setQuery(next);
+  }, []);
+
   const [shut, setShut] = useState<Set<string>>(new Set());
   /** Per heading, how many rows it has been asked to draw. See `PAGE`. */
   const [drawn, setDrawn] = useState<Record<string, number>>({});
@@ -598,16 +639,28 @@ export default function Tasks() {
    * never touched arrived shut. New headings are new sections; they open.
    */
   const chooseGroup = useCallback((key: GroupKey) => {
+    viewChosen.current = true;
     setGroup(key);
     setShut(new Set());
   }, []);
 
-  /** Quick Add's three fields, through the same create the full form uses. */
+  /** Back to the view the account opens on, not to the app's built-in one. */
+  const resetView = useCallback(() => {
+    viewChosen.current = false;
+    setQuery(opening);
+    setGroup(prefs.task_group);
+    setShut(new Set());
+  }, [opening, prefs.task_group]);
+
+  /** Quick Add's three fields, through the same create the full form uses.
+   *  The XP is the account's default rather than a number picked here: this
+   *  form does not ask for one, and 25 was a third answer to a question the
+   *  composer and both task dialogs already agreed on. */
   const quickAdd = useCallback(
     (name: string, due: string | null, priority: 'high' | 'medium' | 'low') => {
-      add({ name, priority, due_date: due, xp_reward: 25 });
+      add({ name, priority, due_date: due, xp_reward: prefs.default_xp });
     },
-    [add],
+    [add, prefs.default_xp],
   );
 
   // ---- The shell ----------------------------------------------------------
@@ -671,7 +724,7 @@ export default function Tasks() {
                   <button
                     type="button"
                     className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); setQuery({ ...query, status: query.status === 'all' ? 'open' : 'all' }); }}
+                    onClick={() => { setPageMenu(false); changeQuery({ ...query, status: query.status === 'all' ? 'open' : 'all' }); }}
                   >
                     {query.status === 'all' ? 'Hide completed' : 'Show completed'}
                   </button>
@@ -685,7 +738,7 @@ export default function Tasks() {
                   <button
                     type="button"
                     className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); setQuery(EMPTY_QUERY); setGroup('due'); setShut(new Set()); }}
+                    onClick={() => { setPageMenu(false); resetView(); }}
                   >
                     Reset the view
                   </button>
@@ -725,7 +778,7 @@ export default function Tasks() {
 
             <Toolbar
               query={query}
-              onQuery={setQuery}
+              onQuery={changeQuery}
               subjects={used}
               showing={showing}
               total={list.length}
@@ -817,7 +870,7 @@ export default function Tasks() {
             {query.horizon === 'week' && beyond > 0 && (
               <p className="tk-horizon">
                 {beyond.toLocaleString()} more outside this week.{' '}
-                <button type="button" onClick={() => setQuery({ ...query, horizon: 'all' })}>
+                <button type="button" onClick={() => changeQuery({ ...query, horizon: 'all' })}>
                   Show everything
                 </button>
               </p>
@@ -829,14 +882,17 @@ export default function Tasks() {
             upcoming={nextUp}
             streaks={runs}
             busy={saving}
+            defaultPriority={prefs.default_priority}
             subjectName={subjectName}
             onAdd={quickAdd}
             onOpenFull={() => setComposing(true)}
             onShowUpcoming={() => {
-              setQuery({ ...EMPTY_QUERY, sort: 'due' });
-              setGroup('due');
+              changeQuery({ ...EMPTY_QUERY, sort: 'due' });
+              chooseGroup('due');
             }}
-            onShowStreaks={() => setQuery({ ...EMPTY_QUERY, status: 'done', sort: 'created', descending: true })}
+            onShowStreaks={() =>
+              changeQuery({ ...EMPTY_QUERY, status: 'done', sort: 'created', descending: true })
+            }
           />
         </div>
       </div>

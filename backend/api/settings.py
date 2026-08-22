@@ -27,6 +27,23 @@ No integrations, API keys, webhooks, notification schedules or leaderboards.
 This app has no OAuth broker, no job runner and no second account to compare
 against, so each of those would be a control that stores a value nothing reads.
 A settings page whose switches do nothing is worse than a shorter one.
+
+## Undoing things
+
+The other half of this module is `/api/settings/reset`, which is the only
+endpoint in the app that removes data on purpose. Everything it can do is
+declared in `RESETS`, one entry per scope, and the ones that cannot be taken
+back are listed in `TYPED` — those refuse to run unless the request repeats the
+account's own username back, which is the server holding the line rather than
+trusting a dialog to have asked.
+
+Deleting rows is not as simple as filtering a table, because `write_table`
+turns foreign keys off while it swaps the rows in (it has to — see the note on
+it) and so no ON DELETE cascade ever fires. A task removed without also
+clearing the notes that point at it leaves a reference to a row that no longer
+exists, and the *next* write of the notes table fails its integrity check. So
+`_forget_tasks` and `_forget_goals` below unpick the references first, in
+order, and the delete is the last step rather than the only one.
 """
 from typing import Any, Dict, Optional
 
@@ -69,6 +86,24 @@ def _whole(low, high):
     return check
 
 
+def _fraction(low, high, step=0.25):
+    """A number that is allowed a fractional part — the focus goal, in hours.
+
+    Snapped to `step` as well as clamped, so the stored value is one a control
+    can actually return to: 2.4 hours is not a thing the page can draw on a
+    quarter-hour scale, and storing it would leave a select showing nothing
+    selected.
+    """
+    def check(value):
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        snapped = round(round(number / step) * step, 2)
+        return max(low, min(high, snapped))
+    return check
+
+
 #: Every preference kept in user_settings: default, and what a valid value is.
 #: A key absent from the table is a real state — see `db.user_setting` — so the
 #: default is applied on read rather than written at signup.
@@ -77,19 +112,41 @@ FIELDS: Dict[str, Any] = {
     'theme_mode':        ('system', _one_of('system', 'light', 'dark')),
     'accent':            ('violet', _one_of('violet', 'blue', 'green', 'amber', 'rose', 'slate')),
     'reduce_motion':     (False, _boolean),
+    'show_ambient':      (True, _boolean),
+    'nav_collapsed':     (False, _boolean),
+
+    # Where the app opens. Signing in lands here, and so does '/'.
+    'home_page':         ('dashboard', _one_of('dashboard', 'tasks', 'calendar',
+                                               'goals', 'analytics', 'notes')),
 
     # Dashboard.
     'show_stats':        (True, _boolean),
     'show_insights':     (True, _boolean),
+    'show_focus':        (True, _boolean),
+    'show_quote':        (True, _boolean),
 
-    # Tasks.
+    # Tasks. The four `task_*` keys are what the page opens on, not what it
+    # stays on: the controls above the list still change the view for a visit.
     'default_priority':  ('medium', _one_of('low', 'medium', 'high')),
     'default_xp':        (30, _whole(5, 500)),
     'ask_rating':        (True, _boolean),
     'confirm_delete':    (True, _boolean),
+    'task_status':       ('open', _one_of('open', 'done', 'all')),
+    'task_sort':         ('due', _one_of('due', 'priority', 'xp', 'created', 'title')),
+    'task_group':        ('due', _one_of('due', 'priority', 'band', 'subject',
+                                         'status', 'none')),
+    'task_horizon':      ('week', _one_of('week', 'all')),
 
-    # Calendar and analytics.
+    # Calendar.
     'calendar_view':     ('week', _one_of('day', 'week', 'month')),
+    'week_starts_on':    ('monday', _one_of('monday', 'sunday')),
+
+    # Focus. The goal is per day and kept in the browser; this is what a day
+    # that has not been given one of its own starts from.
+    'focus_goal_hours':  (2.0, _fraction(0.5, 12)),
+    'focus_dim':         (True, _boolean),
+
+    # Analytics.
     'analytics_window':  ('1y', _one_of('7d', '30d', '90d', '1y', '2y', 'all')),
 }
 
@@ -271,3 +328,245 @@ def export_data(username: str = '', table: str = 'all', format: str = 'json'):
             for key in names
         },
     })
+
+
+# --------------------------------------------------------------------------
+# Undoing things
+# --------------------------------------------------------------------------
+#: Every table that belongs to an account, keyed on `user_id`. Deleting an
+#: account means clearing each of these by hand: `write_table` swaps rows with
+#: foreign keys off, so the ON DELETE CASCADE each of them declares never
+#: fires, and dropping the user row alone would leave every one of them behind
+#: pointing at a username that no longer exists.
+ACCOUNT_TABLES = (
+    'tasks', 'goals', 'goal_milestones', 'xp_events', 'focus_days',
+    'day_focus_notes', 'calendar_entries', 'calendar_events', 'notes',
+    'records', 'metric_snapshots', 'user_achievements', 'activity_log',
+    'library_items', 'user_subjects', 'user_settings',
+)
+
+#: What `progress` puts an account's counters back to. The XP ledger and the
+#: metric snapshots are cleared alongside these, because a level of 1 over a
+#: ledger holding six thousand XP is two answers to the same question.
+FRESH = {
+    'xp': 0, 'level': 1, 'tasks_completed': 0,
+    'current_streak': 0, 'best_streak': 0,
+    'last_task_date': None, 'day_state': None, 'charge': 0,
+}
+
+
+def _drop(table, keep):
+    """Rewrite `table` with only the rows `keep` accepts. Returns how many went."""
+    rows = db.read_table(table)
+    left = [row for row in rows if keep(row)]
+    gone = len(rows) - len(left)
+    if gone:
+        db.write_table(table, left)
+    return gone
+
+
+def _clear_column(table, column, ids):
+    """Blank `column` on every row of `table` whose value is in `ids`.
+
+    For the two references that are ON DELETE SET NULL rather than CASCADE: a
+    note about a task outlives the task, but it cannot go on naming it.
+    """
+    rows = db.read_table(table)
+    touched = False
+    for row in rows:
+        if str(row.get(column) or '') in ids:
+            row.pop(column, None)
+            touched = True
+    if touched:
+        db.write_table(table, rows)
+
+
+def _forget_tasks(doomed):
+    """Remove some tasks, and unpick everything that points at them first.
+
+    Order matters and is the whole reason this is a function. See the note at
+    the top of the module: a reference left behind does not fail this write, it
+    fails the next write to the table holding it.
+    """
+    if not doomed:
+        return 0
+    _drop('library_task_links', lambda row: str(row.get('task_id') or '') not in doomed)
+    _drop('calendar_entries', lambda row: str(row.get('task_id') or '') not in doomed)
+    _clear_column('notes', 'task_id', doomed)
+    return _drop('tasks', lambda row: str(row.get('id') or '') not in doomed)
+
+
+def _forget_goals(doomed):
+    """The same for goals: checkpoints and links first, the goals last.
+
+    The tasks stay, and lose the link — the rule DELETE /api/goals applies, for
+    the reason given there: work done for a goal was still done.
+    """
+    if not doomed:
+        return 0
+    _drop('goal_milestones', lambda row: str(row.get('goal_id') or '') not in doomed)
+    _clear_column('notes', 'goal_id', doomed)
+    rows = db.tasks()
+    touched = False
+    for task in rows:
+        if str(task.get('goal_id') or '') in doomed:
+            task['goal_id'] = None
+            task['milestone_id'] = None
+            touched = True
+    if touched:
+        db.save_tasks(rows)
+    return _drop('goals', lambda row: str(row.get('id') or '') not in doomed)
+
+
+def _task_ids(username, done_only=False):
+    return {str(row.get('id')) for row in _mine('tasks', username)
+            if not done_only or row.get('status') == 'done'}
+
+
+#: Rows in user_settings that are not preferences, and what each is.
+#:
+#: The table is the app's general key/value store, not this page's — the
+#: profile picture lives in it (backend/tracking/avatar.py) and so does the
+#: analytics baseline and the advice an account has adopted
+#: (backend/api/analytics.py). "Put every preference back" therefore cannot be
+#: "empty this table for me": doing that would take the reader's avatar and
+#: their starting line with it, neither of which is on this page at all.
+PROFILE_KEYS = ('avatar',)
+
+
+def _settings_of(username, keys):
+    """Drop this account's user_settings rows for `keys`."""
+    return _drop('user_settings',
+                 lambda row: not (row.get('user_id') == username
+                                  and row.get('key') in keys))
+
+
+def _reset_preferences(user):
+    return {'preferences': _settings_of(user['username'], set(FIELDS))}
+
+
+def _reset_completed(user):
+    return {'tasks': _forget_tasks(_task_ids(user['username'], done_only=True))}
+
+
+def _reset_tasks(user):
+    return {'tasks': _forget_tasks(_task_ids(user['username']))}
+
+
+def _reset_progress(user):
+    """Back to level 1 with nothing behind it. The work itself is left alone.
+
+    Deliberately not a delete of the tasks: an account that wants to start the
+    ladder again usually still wants its list. Clearing the ledger and the
+    snapshots as well is what stops analytics from redrawing the history the
+    level no longer has.
+    """
+    username = user['username']
+    user.update(FRESH)
+    return {
+        'xp_events': _drop('xp_events', lambda row: row.get('user_id') != username),
+        'snapshots': _drop('metric_snapshots', lambda row: row.get('user_id') != username),
+        'achievements': _drop('user_achievements', lambda row: row.get('user_id') != username),
+    }
+
+
+def _reset_content(user):
+    """Everything the account has made, and its progression with it.
+
+    What survives: the account, its e-mail and password, and its preferences.
+    Signing back in lands on an app that works and has nothing in it.
+    """
+    username = user['username']
+    counts = {'tasks': _forget_tasks(_task_ids(username)),
+              'goals': _forget_goals({str(row.get('id')) for row in _mine('goals', username)})}
+    # A saved resource can be linked to a task; the tasks are gone, so any link
+    # left is a reference to a row that is not there.
+    mine = {str(row.get('id')) for row in _mine('library_items', username)}
+    _drop('library_task_links', lambda row: str(row.get('item_id') or '') not in mine)
+
+    for table in ACCOUNT_TABLES:
+        # The two already handled are done, and user_settings is not content —
+        # it holds the preferences, which a reader clearing their work has not
+        # asked to lose, and the avatar, which is not on this page at all.
+        if table in ('user_settings', 'tasks', 'goals', 'goal_milestones'):
+            continue
+        gone = _drop(table, lambda row: row.get('user_id') != username)
+        if gone:
+            counts[table] = gone
+
+    # The two keyed rows that *are* content: where the account was measured
+    # from, and the advice it has taken up.
+    kept = set(FIELDS) | set(PROFILE_KEYS)
+    gone = _drop('user_settings',
+                 lambda row: not (row.get('user_id') == username
+                                  and row.get('key') not in kept))
+    if gone:
+        counts['analytics'] = gone
+
+    user.update(FRESH)
+    return counts
+
+
+def _reset_account(user):
+    """The account itself. Nothing about it is left anywhere."""
+    username = user['username']
+    counts = _reset_content(user)
+    counts['preferences'] = _drop(
+        'user_settings', lambda row: row.get('user_id') != username)
+    counts['account'] = 1
+    return counts
+
+
+#: Every scope `/api/settings/reset` accepts: what it does, and what it says it
+#: did. One entry per row in the danger zone on the settings page.
+RESETS = {
+    'preferences': (_reset_preferences, 'Every preference is back to its default.'),
+    'completed': (_reset_completed, 'Finished tasks removed.'),
+    'tasks': (_reset_tasks, 'Every task removed.'),
+    'progress': (_reset_progress, 'Level, XP and streak reset.'),
+    'content': (_reset_content, 'Everything you had made has been removed.'),
+    'account': (_reset_account, 'The account and everything in it is gone.'),
+}
+
+#: The scopes that will not run on a click alone. The request has to carry the
+#: account's own username back, which is the server insisting rather than the
+#: dialog — an endpoint that deletes an account on an empty POST is one stray
+#: fetch away from doing it by accident.
+TYPED = ('tasks', 'progress', 'content', 'account')
+
+
+class ResetRequest(BaseModel):
+    username: Optional[str] = None
+    scope: Optional[str] = None
+    #: The username, typed again, for the scopes in TYPED.
+    confirm: Optional[str] = None
+
+
+@router.post('/api/settings/reset')
+def reset_data(request: Request, body: ResetRequest):
+    users, user = load_user((body.username or '').strip())
+    if not user:
+        return fail('Account not found')
+
+    scope = (body.scope or '').strip()
+    if scope not in RESETS:
+        return fail('There is nothing called {}.'.format(scope or 'that'), status=400)
+
+    if scope in TYPED:
+        typed = (body.confirm or '').strip()
+        if typed.lower() != str(user['username']).lower():
+            return fail('Type {} to confirm.'.format(user['username']), status=400)
+
+    run, said = RESETS[scope]
+    removed = run(user)
+
+    if scope == 'account':
+        users = [row for row in users if row is not user]
+        db.save_users(users)
+        # The session names an account that no longer exists; leaving it set
+        # would send the next request into the gate as a signed-in nobody.
+        request.session.clear()
+        return ok(message=said, removed=removed, signed_out=True)
+
+    db.save_users(users)
+    return ok(message=said, removed=removed, settings=_shape(user))

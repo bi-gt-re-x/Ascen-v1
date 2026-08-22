@@ -17,9 +17,14 @@
  * degrees without a single page's height arithmetic changing. `Topbar` gave it
  * a height again and those same pages gave the height back, untouched.
  *
- * Collapsing works the same way it always did, through the same class and the
- * same localStorage key: `html.nav-collapsed` drops `--rail-w` to a strip wide
- * enough for the icons, and every page widens into it without knowing why.
+ * Collapsing works the same way it always did, through the same class:
+ * `html.nav-collapsed` drops `--rail-w` to a strip wide enough for the icons,
+ * and every page widens into it without knowing why. What changed is where the
+ * answer is kept. It is a preference on the account now (Settings, Appearance),
+ * so a rail folded on the laptop is folded on the tablet — and the localStorage
+ * key it used to live in alone is still written, as a cache: the account's
+ * answer arrives a moment after the first paint, and without something to open
+ * on, a collapsed rail would swing open and shut on every load.
  *
  * The rank and XP in the foot are the one thing here that reads account data.
  * The rail is mounted outside the router, so that is one call for the session
@@ -37,9 +42,9 @@
  * to the top bar's account menu, which is also where the avatar picker went
  * when the plate that used to open it stopped existing.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { useAuth, useUserData } from '@/hooks';
+import { useAuth, useSettings, useUserData } from '@/hooks';
 import { format } from '@/utils';
 import { rankFor } from '@/utils/mastery';
 import '@/styles/rail.css';
@@ -237,6 +242,7 @@ export function Rail() {
   // Only for `Tab.also` — NavLink handles its own path on every other entry.
   const { pathname } = useLocation();
 
+  const { prefs, ready, update } = useSettings();
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(COLLAPSE_KEY) === '1';
@@ -244,6 +250,14 @@ export function Rail() {
       return false; // private mode: the rail just starts open
     }
   });
+
+  // The account's answer, once it has arrived, is the one that counts — the
+  // cache above was only ever a guess at it. This is also what makes the switch
+  // on the settings page move the rail: the preference changes, and this hears.
+  useEffect(() => {
+    if (ready) setCollapsed(prefs.nav_collapsed);
+  }, [prefs.nav_collapsed, ready]);
+
   // `nav-collapsed` on <html> is what shrinks --rail-w; every page sizes itself
   // off that variable, so the page grows into the space on its own.
   useEffect(() => {
@@ -254,6 +268,16 @@ export function Rail() {
       /* see above */
     }
   }, [collapsed]);
+
+  /* Applied here and stored in the background. A rail that waited for a round
+     trip before folding would feel broken on a slow connection, and there is
+     nothing to roll back to if the write fails — the class is already right,
+     and the next load reads the cache. */
+  const flip = useCallback(() => {
+    const next = !collapsed;
+    setCollapsed(next);
+    void update({ nav_collapsed: next });
+  }, [collapsed, update]);
 
   // The level below is read once for the session; this is how it hears that
   // finishing something has moved it.
@@ -317,7 +341,7 @@ export function Rail() {
           aria-expanded={!collapsed}
           aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
           title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-          onClick={() => setCollapsed((value) => !value)}
+          onClick={flip}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />

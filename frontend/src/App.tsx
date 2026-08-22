@@ -21,6 +21,7 @@ import Dashboard from '@/pages/Dashboard';
 // all. Splitting it would put the same few hundred bytes of strings in a second
 // chunk that is always already fetched.
 import Unbuilt, { PATHS as UNBUILT_PATHS } from '@/pages/Unbuilt';
+import type { Prefs } from '@/services/settings';
 
 const Homepage = lazy(() => import('@/pages/Homepage'));
 const Goals = lazy(() => import('@/pages/Goals'));
@@ -42,12 +43,24 @@ const CalendarMonth = lazy(() => import('@/pages/Calendar/Month'));
 /**
  * The front door.
  *
- * Signed in goes to the dashboard, everyone else lands on the home page — the
- * rule the server route at '/' used to apply before React owned that path too
- * (backend/routes/spa.py). Waiting on `status` matters for the same reason it
- * does in RequireAccount: treating "still asking" as signed out would flash the
- * landing page at an account on its way to the dashboard.
+ * Signed in goes to whichever page the account opens on — the dashboard unless
+ * they have said otherwise (Settings, General) — and everyone else lands on the
+ * home page, the rule the server route at '/' used to apply before React owned
+ * that path too (backend/routes/spa.py). Waiting on `status` matters for the
+ * same reason it does in RequireAccount: treating "still asking" as signed out
+ * would flash the landing page at an account on its way in. It waits on the
+ * preferences too, and for the reason CalendarHome does: a redirect cannot be
+ * taken back, so opening on the default and correcting a moment later would
+ * make somebody who chose Tasks watch the dashboard load first.
  */
+const HOME_PATHS: Record<Prefs['home_page'], string> = {
+  dashboard: '/dashboard',
+  tasks: '/tasks',
+  calendar: '/calendar',
+  goals: '/goals',
+  analytics: '/analytics',
+  notes: '/notes',
+};
 /**
  * `/calendar` itself, which is a redirect to whichever view the account
  * prefers. It waits for `ready` rather than redirecting on the default and
@@ -62,8 +75,11 @@ function CalendarHome() {
 
 function FrontDoor() {
   const { status } = useAuth();
+  const { prefs, ready } = useSettings();
   if (status === 'loading') return <Loading />;
-  return <Navigate to={status === 'signed-in' ? '/dashboard' : '/home'} replace />;
+  if (status !== 'signed-in') return <Navigate to="/home" replace />;
+  if (!ready) return <Loading />;
+  return <Navigate to={HOME_PATHS[prefs.home_page] ?? '/dashboard'} replace />;
 }
 
 /**

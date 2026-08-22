@@ -40,10 +40,12 @@ import {
   useCalendarTasks,
   useDayFocus,
   useDocumentTitle,
+  useSettings,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import { useFocusSession } from '@/hooks/useFocusSession';
 import { focus as focusService } from '@/services';
+import { weekStartDay } from '@/services/settings';
 import { dates } from '@/utils';
 import { buildIntensityIndex } from '@/utils/calendarIntensity';
 import { isoOf } from '@/utils/calendarStore';
@@ -72,6 +74,7 @@ export default function Month() {
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
   const navigate = useNavigate();
+  const { prefs } = useSettings();
 
   const [cursor, setCursor] = useState(() => new Date());
   // The day the panel is showing. Today, until another is picked.
@@ -255,6 +258,7 @@ export default function Month() {
           year={year}
           month={month}
           selectedKey={selectedKey}
+          weekStart={weekStartDay(prefs)}
           intensity={intensity}
           days={figures.days}
           onStep={(delta) => setCursor(new Date(year, month + delta, 1))}
