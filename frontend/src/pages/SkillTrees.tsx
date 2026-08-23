@@ -47,7 +47,14 @@ import {
   siblingsOf,
   subjectTreeById,
 } from '@/skills/subjectTrees';
-import { LATTICE_GEOM, tallyGraph, type GraphNode, type GraphTally } from '@/utils/skillGraph';
+import {
+  DIFFICULTIES,
+  DIFFICULTY_LABEL,
+  LATTICE_GEOM,
+  tallyGraph,
+  type GraphNode,
+  type GraphTally,
+} from '@/utils/skillGraph';
 import {
   applyProgress,
   loadProgress,
@@ -313,6 +320,7 @@ export default function SkillTrees() {
             selectedId={selectedId}
             onSelect={select}
             geom={LATTICE_GEOM}
+            fit
             renderNode={(placed, ctx) => {
               const to = nav.get(placed.node.id);
               return (
@@ -348,17 +356,15 @@ export default function SkillTrees() {
         </div>
 
         {/* ---- legend ---- */}
+        {/* The tiles are coloured by difficulty, so that is what the legend has
+            to explain. Status is on every tile already, in the percentage badge
+            beside the tier and in the fill of a finished one. */}
         <footer className="stx-legend">
           <ul className="stx-legend-keys">
-            {[
-              ['done', 'Mastered'],
-              ['prog', 'In Progress'],
-              ['open', 'Available'],
-              ['lock', 'Locked'],
-            ].map(([key, label]) => (
-              <li key={key}>
-                <i className={`stx-legend-dot is-${key}`} aria-hidden="true" />
-                {label}
+            {DIFFICULTIES.map((tier) => (
+              <li key={tier}>
+                <i className={`stx-legend-dot tier-${tier}`} aria-hidden="true" />
+                {DIFFICULTY_LABEL[tier]}
               </li>
             ))}
             <li className="stx-legend-line">

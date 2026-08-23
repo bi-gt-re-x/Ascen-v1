@@ -35,7 +35,7 @@
  * because React registers wheel handlers passively, and a passive listener is
  * not allowed to prevent the browser's own pinch-zoom.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   GEOM,
   layoutGraph,
@@ -75,6 +75,9 @@ export interface SkillTreeProps {
     placed: PlacedNode,
     ctx: { selected: boolean; onSelect: (node: GraphNode | null) => void },
   ) => React.ReactNode;
+  /** Open each graph at a scale that fits its width. Off by default, so the
+   *  card feeds keep opening at 100% exactly as they did. */
+  fit?: boolean;
 }
 
 export function SkillTree({
@@ -84,12 +87,61 @@ export function SkillTree({
   empty,
   geom = GEOM,
   renderNode,
+  fit = false,
 }: SkillTreeProps) {
   const layout = useMemo(() => layoutGraph(graph, geom), [graph, geom]);
   const scroller = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(ZOOM.start);
   const [full, setFull] = useState(false);
   const [dragging, setDragging] = useState(false);
+
+  /**
+   * Open a tree at a scale that fits its width.
+   *
+   * A lattice of twenty-five nodes is wider than any panel it shares a row
+   * with, and arriving on a tree cut off at the right edge reads as breakage
+   * rather than as something to scroll. So the first paint of each graph picks
+   * the scale that brings the whole width into view — never magnifying, only
+   * ever shrinking, and never below the zoom floor.
+   *
+   * Keyed on the graph so it re-fits when you walk into another tree, and it is
+   * a *starting* value, not a constraint: the zoom controls and the wheel
+   * override it immediately and are never fought.
+   *
+   * `clientWidth` read once in a layout effect rather than a ResizeObserver.
+   * The observer does not fire in a tab that is not being rendered, which is
+   * exactly when a mis-fit would be baked in; a direct read after layout always
+   * has a real number.
+   */
+  useLayoutEffect(() => {
+    if (!fit || layout.width === 0) return;
+    // Measured after the browser has settled the surrounding grid, not during
+    // this render. The canvas shares its row with a fixed-width panel, and read
+    // synchronously here the box is briefly its full width — which fitted the
+    // tree to a canvas 225px wider than the one it ended up in, and left every
+    // large tree overflowing by exactly that much. Two frames: one for the
+    // layout to land, one to be sure of it.
+    const measure = () => {
+      const box = scroller.current;
+      if (!box) return;
+      const room = box.clientWidth - 8;
+      if (room <= 0) return;
+      setScale(clampZoom(Math.min(ZOOM.start, room / layout.width)));
+      box.scrollTo({ top: 0, left: 0 });
+    };
+    // Timers rather than requestAnimationFrame: a frame callback does not run
+    // at all in a tab the browser is not currently rendering, so the fit would
+    // silently never happen there and the tree would open overflowing. Timers
+    // fire regardless, and reading `clientWidth` forces the layout we need.
+    // Twice, because the stylesheet can land after the first paint — the second
+    // pass is what catches a canvas that was briefly full width.
+    const soon = window.setTimeout(measure, 0);
+    const later = window.setTimeout(measure, 220);
+    return () => {
+      window.clearTimeout(soon);
+      window.clearTimeout(later);
+    };
+  }, [fit, layout.width, graph.id]);
 
 
   /**

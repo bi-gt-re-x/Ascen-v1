@@ -453,6 +453,428 @@ export const IMPROVE: Record<string, string[]> = {
     'Work out what one point mutation changes.',
     'Explain replication as a series of steps, in order.',
   ],
+
+  // ---- Added with the expanded trees ------------------------------------
+  'c.ops': [
+    'Predict the value of five mixed expressions, then run them.',
+    'Find one bug caused by precedence and add the brackets you meant.',
+    'Use integer and floating division on the same numbers and compare.',
+  ],
+  'c.lists': [
+    'Build, filter and transform a list three different ways.',
+    'Walk two lists together in one pass.',
+    'Remove items while iterating, get it wrong, then fix it properly.',
+  ],
+  'c.strings': [
+    'Slice, search and split one paragraph five ways.',
+    'Build a string in a loop, then rewrite it with a join and time both.',
+    'Handle a name with an accent and one with a trailing space.',
+  ],
+  'c.style': [
+    'Rename every unclear name in one file you wrote last month.',
+    'Delete a comment by making the code say the same thing.',
+    'Split a function that needs a comment in the middle.',
+  ],
+  'c.modules': [
+    'Split a single-file program into three with deliberate boundaries.',
+    'Install a package and read the part of its docs you actually need.',
+    'Make one thing private and see what breaks.',
+  ],
+  'c.files': [
+    'Read and write a file without loading it all into memory.',
+    'Handle the file being missing, empty and locked.',
+    'Write to a temporary file and rename it into place.',
+  ],
+  'c.test': [
+    'Write a test that fails, then make it pass.',
+    'Test one edge case and one error path, not just the happy one.',
+    'Break something on purpose and confirm a test catches it.',
+  ],
+  'c.refactor': [
+    'Extract one long function into three, running tests after each step.',
+    'Remove a duplicated block that exists in two files.',
+    'Rename one concept consistently across the whole project.',
+  ],
+  'c.async': [
+    'Fetch two things at once and wait for both.',
+    'Handle an operation that fails halfway through.',
+    'Find code that awaits in a loop and make it run in parallel.',
+  ],
+  'c.perf': [
+    'Measure before changing anything, and write the number down.',
+    'Find the one line taking most of the time with a profiler.',
+    'Cut the work in half rather than making the work faster.',
+  ],
+  'c.design': [
+    'Draw the pieces of a system and the arrows between them before coding.',
+    'Find a dependency pointing the wrong way and turn it round.',
+    'Write down what each module is not allowed to know.',
+  ],
+  'w.responsive': [
+    'Build one layout that works at 320px and 1600px with no media query.',
+    'Test with the developer tools set to a real phone size.',
+    'Replace three fixed widths with flexible units.',
+  ],
+  'w.forms': [
+    'Build a form with labels that actually connect to their inputs.',
+    'Validate in the browser, then prove the server still checks.',
+    'Show one error message that says how to fix it.',
+  ],
+  'w.json': [
+    'Write down the exact shape you expect before you fetch it.',
+    'Handle a field being null, missing and the wrong type.',
+    'Parse something malformed and fail usefully.',
+  ],
+  'w.a11y': [
+    'Navigate your own page using only the keyboard.',
+    'Run one screen through an accessibility checker and fix what it names.',
+    'Turn on a screen reader and listen to one form.',
+  ],
+  'w.props': [
+    'Split a component that takes eight props into two that take four.',
+    'Lift one piece of state up until exactly one component owns it.',
+    'Pass a component as a prop instead of a boolean flag.',
+  ],
+  'w.build': [
+    'Read your build config line by line and delete what you cannot explain.',
+    'Look at what is actually in the output bundle.',
+    'Break the build on purpose and read the error properly.',
+  ],
+  'w.effects': [
+    'Write an effect that cleans up after itself, and prove it does.',
+    'Find one effect that runs more often than it should and fix the deps.',
+    'Replace an effect with a derived value.',
+  ],
+  'w.perf': [
+    'Measure a real page on a throttled connection.',
+    'Find the largest thing being downloaded and make it smaller.',
+    'Defer something that is not needed for the first paint.',
+  ],
+  'w.test': [
+    'Write one test that clicks through a real flow.',
+    'Test what the user sees, not what the component stores.',
+    'Change an implementation detail and confirm the test still passes.',
+  ],
+  'w.security': [
+    'Render untrusted text and confirm it cannot become script.',
+    'Read about one real attack and check whether your app is open to it.',
+    'Move one secret out of the client entirely.',
+  ],
+  'a.bigo': [
+    'Give the big-O of five functions you have already written.',
+    'Time one at 10, 100 and 1000 inputs and see if it matches.',
+    'Find a nested loop and say what makes it quadratic.',
+  ],
+  'a.sets': [
+    'Replace a nested search with a set and time both.',
+    'Deduplicate a list two ways.',
+    'Compute an intersection and a difference by hand.',
+  ],
+  'a.twopointer': [
+    'Solve three problems on sorted arrays with two indices.',
+    'Reverse something in place.',
+    'Find a pair summing to a target without a hash map.',
+  ],
+  'a.sliding': [
+    'Solve longest-substring-without-repeats with a window.',
+    'Compute a rolling sum without recomputing the whole window.',
+    'Say exactly when the window should shrink.',
+  ],
+  'a.bitwise': [
+    'Convert five numbers between binary and decimal by hand.',
+    'Set, clear and test one bit.',
+    'Use a bitmask to hold a small set of flags.',
+  ],
+  'a.heaps': [
+    'Implement one and use it for top-k.',
+    'Solve the same problem by sorting and compare the cost.',
+    'Use one as the queue inside Dijkstra.',
+  ],
+  'a.bst': [
+    'Insert, search and delete by hand on paper.',
+    'Build one from sorted input and watch it degenerate to a list.',
+    'Validate whether a tree is actually a BST.',
+  ],
+  'a.tries': [
+    'Build one from a word list and add prefix search.',
+    'Compare its memory against a plain set.',
+    'Implement autocomplete for ten words.',
+  ],
+  'a.unionfind': [
+    'Implement it with path compression and union by rank.',
+    'Use it to count connected components.',
+    'Use it inside Kruskal\'s algorithm.',
+  ],
+  'a.backtracking': [
+    'Generate all permutations of four items.',
+    'Solve n-queens for n=6.',
+    'Add one pruning rule and measure how much it saves.',
+  ],
+  'g.components': [
+    'Count islands in a grid.',
+    'Do it once with DFS and once with union-find.',
+    'Handle a graph with isolated single nodes.',
+  ],
+  'g.cycles': [
+    'Detect a cycle in an undirected graph, then a directed one.',
+    'Explain why the two need different methods.',
+    'Find the cycle itself, not just whether one exists.',
+  ],
+  'g.bellman': [
+    'Implement it and compare its cost against Dijkstra.',
+    'Build a graph with a negative edge where Dijkstra is wrong.',
+    'Detect a negative cycle.',
+  ],
+  'g.astar': [
+    'Implement it on a grid with a Manhattan heuristic.',
+    'Count nodes visited against plain Dijkstra.',
+    'Break optimality by using a heuristic that overestimates.',
+  ],
+  'g.bipartite': [
+    'Check whether a graph is bipartite by two-colouring it.',
+    'Model one scheduling problem as a matching.',
+    'Find a maximum matching by augmenting paths.',
+  ],
+  's.stackheap': [
+    'Draw both for a small program with a recursive call.',
+    'Cause a stack overflow on purpose.',
+    'Find where a large object actually lives.',
+  ],
+  's.locks': [
+    'Cause a deadlock with two locks, then fix it by ordering them.',
+    'Measure what a lock costs under contention.',
+    'Replace a lock with a queue and compare.',
+  ],
+  's.io': [
+    'Read one file byte by byte and again in blocks; time both.',
+    'Find where your language buffers by default.',
+    'Flush explicitly and confirm the bytes hit disk.',
+  ],
+  's.sockets': [
+    'Open a socket and speak HTTP by hand.',
+    'Write a server that echoes what it receives.',
+    'Handle the other side disconnecting mid-message.',
+  ],
+  's.server': [
+    'Write one that handles two requests at the same time.',
+    'Watch what happens when you send it fifty at once.',
+    'Log one request end to end with timings.',
+  ],
+  's.indexes': [
+    'Read the query plan for a slow query.',
+    'Add one index and measure the difference.',
+    'Find an index that is never used and drop it.',
+  ],
+  's.caching': [
+    'Cache one expensive result and measure the saving.',
+    'Decide and write down when the cached copy stops being true.',
+    'Cause a stale read on purpose.',
+  ],
+  's.scaling': [
+    'Load-test one endpoint until it degrades.',
+    'Find the actual bottleneck rather than guessing.',
+    'Explain what breaks when there are two copies of the data.',
+  ],
+  'm.order': [
+    'Evaluate ten mixed expressions and check every one.',
+    'Find an expression where brackets change the answer.',
+    'Write one that needs no brackets at all.',
+  ],
+  'm.decimals': [
+    'Convert twenty values between fractions, decimals and percents.',
+    'Compute a percentage increase and then reverse it.',
+    'Explain why a 50% rise then a 50% fall is not where you started.',
+  ],
+  'm.negatives': [
+    'Do thirty signed arithmetic questions and check each.',
+    'Subtract a negative and explain out loud why it adds.',
+    'Find one algebra mistake of your own that was a sign error.',
+  ],
+  'm.linear': [
+    'Solve ten equations and substitute back every time.',
+    'Read slope and intercept off a graph and off an equation.',
+    'Solve a pair of simultaneous equations two ways.',
+  ],
+  'm.inequalities': [
+    'Solve ten and graph each solution on a number line.',
+    'Multiply by a negative and flip the sign correctly.',
+    'Solve one with a variable on both sides.',
+  ],
+  'm.coords': [
+    'Find the distance and midpoint between two points.',
+    'Write the equation of a line through two points.',
+    'Find where a line and a circle meet.',
+  ],
+  'm.quadratics': [
+    'Solve the same quadratic by factoring, completing the square and the formula.',
+    'Sketch one from its equation without plotting points.',
+    'Use the discriminant to predict the number of roots.',
+  ],
+  'm.exponents': [
+    'Simplify twenty expressions using the index laws.',
+    'Convert between exponential and logarithmic form both ways.',
+    'Solve one equation where the unknown is an exponent.',
+  ],
+  'm.combinatorics': [
+    'Decide for five problems whether order matters.',
+    'Count arrangements with and without repetition.',
+    'Compute one binomial coefficient by hand.',
+  ],
+  'm.sequences': [
+    'Find the nth term of five sequences.',
+    'Sum an arithmetic and a geometric series by hand.',
+    'Decide whether one infinite geometric series converges.',
+  ],
+  'm.proof': [
+    'Prove one statement by induction, fully written out.',
+    'Prove something by contradiction.',
+    'Find a false proof and locate the exact wrong step.',
+  ],
+  'k.continuity': [
+    'Find three functions that fail continuity, each differently.',
+    'State the definition using limits, from memory.',
+    'Use the intermediate value theorem to prove a root exists.',
+  ],
+  'k.implicit': [
+    'Differentiate a circle and find its tangent at a point.',
+    'Do five where y appears more than once.',
+    'Explain why dy/dx appears every time y is differentiated.',
+  ],
+  'k.related': [
+    'Solve the classic ladder and the filling-cone problems.',
+    'Write the relationship before differentiating, every time.',
+    'Check the units of your answer.',
+  ],
+  'k.techniques': [
+    'Do ten by substitution, then ten by parts.',
+    'Integrate one rational function by partial fractions.',
+    'Given ten integrals, name the technique before solving any.',
+  ],
+  'k.applications': [
+    'Find the area between two curves.',
+    'Compute a volume by discs and again by shells.',
+    'Sketch the region and the slice before writing the integral.',
+  ],
+  'k.taylor': [
+    'Build the series for e^x, sine and cosine from their derivatives.',
+    'Approximate a value and measure the error.',
+    'Find the radius of convergence for one series.',
+  ],
+  'k.diffeq': [
+    'Solve one separable equation fully.',
+    'Model exponential growth and check it against real data.',
+    'Sketch a slope field and read a solution off it.',
+  ],
+  'mu.pulse': [
+    'Play with a metronome at 60, 90 and 140 bpm.',
+    'Set the click on beats two and four only.',
+    'Record yourself and find where you drifted.',
+  ],
+  'mu.dynamics': [
+    'Play one phrase at three different volumes on purpose.',
+    'Practise the same passage staccato and legato.',
+    'Find every dynamic marking in a piece before playing it.',
+  ],
+  'mu.inversions': [
+    'Play one triad in root position, first and second inversion.',
+    'Connect two chords moving each voice as little as possible.',
+    'Identify inversions by which note is in the bass.',
+  ],
+  'mu.sightread': [
+    'Read something new every day and never stop to correct.',
+    'Scan the key, time signature and hardest bar before starting.',
+    'Read one line slightly below your level, perfectly in time.',
+  ],
+  'mu.modes': [
+    'Play all seven modes from the same starting note.',
+    'Find a piece that uses dorian or mixolydian.',
+    'Name what one note changed between two modes.',
+  ],
+  'mu.harmony': [
+    'Harmonise a simple melody in four parts.',
+    'Find and fix parallel fifths in your own writing.',
+    'Analyse eight bars and label every chord.',
+  ],
+  'mu.form': [
+    'Map the structure of three pieces you know well by ear.',
+    'Find where the main idea returns and what changed.',
+    'Write out one piece as a letter diagram.',
+  ],
+  'mu.improv': [
+    'Improvise four bars over one chord, every day for a week.',
+    'Learn three phrases by ear and use them in your own playing.',
+    'Improvise using only three notes and make it musical.',
+  ],
+  'mu.composition': [
+    'Write eight bars and then develop them rather than adding new ideas.',
+    'Set yourself one constraint and finish something inside it.',
+    'Rewrite a piece you abandoned, differently.',
+  ],
+  'mu.performance': [
+    'Play one piece for another person, all the way through.',
+    'Practise recovering from a mistake without stopping.',
+    'Record a performance and watch it back.',
+  ],
+  'sc.units': [
+    'Carry units through five calculations and check they survive.',
+    'Convert between three unit systems without a calculator.',
+    'Catch one wrong answer purely from its units.',
+  ],
+  'sc.data': [
+    'Plot one dataset of your own and choose the axes deliberately.',
+    'Draw a line of best fit and say why it is justified.',
+    'Find a published chart that misleads and say exactly how.',
+  ],
+  'sc.motion': [
+    'Sketch position, velocity and acceleration graphs for one journey.',
+    'Solve three problems with the constant-acceleration equations.',
+    'Explain how something can accelerate while slowing down.',
+  ],
+  'sc.forces': [
+    'Draw a free-body diagram for five different situations.',
+    'Solve one problem on an inclined plane.',
+    'Find the action-reaction pair in three everyday events.',
+  ],
+  'sc.waves': [
+    'Measure the wavelength and frequency of something real.',
+    'Explain reflection, refraction and diffraction with one diagram each.',
+    'Work out why the pitch changes as an ambulance passes.',
+  ],
+  'sc.electricity': [
+    'Build a circuit and predict the current before measuring it.',
+    'Compare series and parallel with the same components.',
+    'Use Ohm\'s law in all three arrangements.',
+  ],
+  'sc.atoms': [
+    'Work out protons, neutrons and electrons for ten elements.',
+    'Write the electron configuration for the first twenty.',
+    'Explain one group of the periodic table from its outer electrons.',
+  ],
+  'sc.bonding': [
+    'Draw dot-and-cross diagrams for five compounds.',
+    'Predict which compounds conduct when dissolved and check.',
+    'Explain a melting point from the bonding.',
+  ],
+  'sc.reactions': [
+    'Balance ten equations.',
+    'Do one mole calculation end to end.',
+    'Predict a reaction, then look up whether you were right.',
+  ],
+  'sc.genetics': [
+    'Transcribe and translate a short sequence by hand.',
+    'Work out one Punnett square and check the ratios.',
+    'Say what one point mutation actually changes.',
+  ],
+  'sc.evolution': [
+    'Explain natural selection without using the word wants.',
+    'Trace one adaptation back to a selection pressure.',
+    'Find and correct a common misstatement about it.',
+  ],
+  'sc.ecology': [
+    'Draw a food web for one habitat.',
+    'Explain why energy thins out at each trophic level.',
+    'Predict what removing one species would do.',
+  ],
 };
 
 /**

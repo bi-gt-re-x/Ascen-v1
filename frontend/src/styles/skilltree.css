@@ -795,6 +795,13 @@ html[data-theme="dark"] .stx-page {
     --lat-blue-soft: #e8f0fe;
     --lat-grey: #94a0b0;
     --lat-grey-soft: #f2f4f7;
+    /* The two the difficulty ladder needed at its warm end. */
+    --lat-teal: #0d9488;
+    --lat-teal-soft: #dcf5f2;
+    --lat-amber: #c2740b;
+    --lat-amber-soft: #fdf1dc;
+    --lat-rose: #d4386c;
+    --lat-rose-soft: #fdeaf1;
 
     --lat-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 28px rgba(16, 24, 40, .06);
     --lat-shadow-lift: 0 4px 10px rgba(16, 24, 40, .08), 0 18px 40px rgba(16, 24, 40, .1);
@@ -824,16 +831,47 @@ html[data-theme="dark"] .stx-page--lattice {
     --lat-blue-soft: #12263f;
     --lat-grey: #6e7781;
     --lat-grey-soft: #1b222c;
+    --lat-teal: #2dd4bf;
+    --lat-teal-soft: #0f2e2b;
+    --lat-amber: #e8a33d;
+    --lat-amber-soft: #33260f;
+    --lat-rose: #f472a0;
+    --lat-rose-soft: #351623;
 
     --lat-shadow: 0 1px 2px rgba(0, 0, 0, .35);
     --lat-shadow-lift: 0 8px 28px rgba(0, 0, 0, .5);
 }
 
-/* One rule per status, read by everything inside the tile and the panel. */
-.stx-page--lattice .is-complete { --tone: var(--lat-green); --tone-soft: var(--lat-green-soft); }
-.stx-page--lattice .is-progress { --tone: var(--lat-blue); --tone-soft: var(--lat-blue-soft); }
-.stx-page--lattice .is-available { --tone: var(--lat-violet); --tone-soft: var(--lat-violet-soft); }
-.stx-page--lattice .is-locked { --tone: var(--lat-grey); --tone-soft: var(--lat-grey-soft); }
+/* ---- two palettes, two questions -----------------------------------------
+
+   `--tone` is **difficulty**: how hard the skill is, which is a fact about the
+   skill and does not change as you learn it. Six tiers, and they run warm as
+   they climb — teal, green, blue, violet, amber, rose — so the depth of a tree
+   is legible as colour temperature from across the canvas, and one glance at a
+   subject says how far it goes.
+
+   `--state` is **status**: where the reader stands, which changes constantly.
+   It stays on the small marks that are about progress — the percentage badge,
+   the progress bar, the state pill, the figures in the band — and never takes
+   over the tile.
+
+   Colouring the tile by status was the earlier arrangement and made four
+   colours mean four things a reader already knew from the percentage under it.
+   Difficulty is the information the canvas was not carrying, so it gets the
+   large surface, and status keeps the small ones. Locked is the single
+   exception below: an unreachable node is drained of its tier colour, because
+   at that point "how hard" is not yet the reader's question. */
+.stx-page--lattice .tier-foundation { --tone: var(--lat-teal); --tone-soft: var(--lat-teal-soft); }
+.stx-page--lattice .tier-beginner { --tone: var(--lat-green); --tone-soft: var(--lat-green-soft); }
+.stx-page--lattice .tier-intermediate { --tone: var(--lat-blue); --tone-soft: var(--lat-blue-soft); }
+.stx-page--lattice .tier-advanced { --tone: var(--lat-violet); --tone-soft: var(--lat-violet-soft); }
+.stx-page--lattice .tier-expert { --tone: var(--lat-amber); --tone-soft: var(--lat-amber-soft); }
+.stx-page--lattice .tier-mastery { --tone: var(--lat-rose); --tone-soft: var(--lat-rose-soft); }
+
+.stx-page--lattice .is-complete { --state: var(--lat-green); --state-soft: var(--lat-green-soft); }
+.stx-page--lattice .is-progress { --state: var(--lat-blue); --state-soft: var(--lat-blue-soft); }
+.stx-page--lattice .is-available { --state: var(--lat-violet); --state-soft: var(--lat-violet-soft); }
+.stx-page--lattice .is-locked { --state: var(--lat-grey); --state-soft: var(--lat-grey-soft); }
 
 /* ---- the page fills the width it is given -------------------------------
    `body` lays its one child out centred with `align-items: center`, so #root is
@@ -954,7 +992,8 @@ body:has(.stx-page--lattice) > #root { align-self: stretch; width: 100%; }
 .stx-figure.is-done { --tone: var(--lat-green); --tone-soft: var(--lat-green-soft); }
 .stx-figure.is-prog { --tone: var(--lat-blue); --tone-soft: var(--lat-blue-soft); }
 .stx-figure.is-lock { --tone: var(--lat-grey); --tone-soft: var(--lat-grey-soft); }
-.stx-figure.is-level { --tone: var(--lat-violet); --tone-soft: var(--lat-violet-soft); }
+.stx-figure.is-level { --tone: var(--lat-amber); --tone-soft: var(--lat-amber-soft); }
+.stx-figure.is-level .stx-figure-value { color: var(--lat-amber); }
 .stx-figure-badge {
     display: grid;
     place-items: center;
@@ -1072,11 +1111,31 @@ body:has(.stx-page--lattice) > #root { align-self: stretch; width: 100%; }
     transition: transform .16s ease, box-shadow .16s ease;
 }
 .stx-tile .stx-ico { width: 46%; height: 46%; }
+/* Locked keeps its tier colour and loses its confidence: a dashed border, a
+   paler face and a dimmed icon. Draining it to grey was the first attempt and
+   it made a tree nobody has started yet — Calculus, Graph Algorithms — open as
+   a page of identical grey squares, which threw away the one thing the colour
+   was there to say. Locked is legible from the dash and the dimming; how hard
+   the node is stays readable while you are deciding whether to go there. */
 .stx-tile.is-locked .stx-tile-face {
-    border-color: var(--lat-line);
-    background: var(--lat-grey-soft);
-    color: var(--lat-grey);
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--tone) 45%, var(--lat-line));
+    background: color-mix(in srgb, var(--tone-soft) 55%, var(--lat-panel));
+    color: color-mix(in srgb, var(--tone) 62%, var(--lat-faint));
     box-shadow: none;
+}
+.stx-tile.is-locked .stx-ico { opacity: .75; }
+/* Complete fills solid in its own tier colour — the one place the tile is a
+   block of colour rather than an outline, so a finished run reads as a path. */
+.stx-tile.is-complete .stx-tile-face {
+    background: var(--tone);
+    border-color: var(--tone);
+    color: #fff;
+}
+html[data-theme="dark"] .stx-tile.is-complete .stx-tile-face { color: #0d1117; }
+/* In progress keeps the outline but earns a ring in the status colour. */
+.stx-tile.is-progress .stx-tile-face {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--state) 22%, transparent), var(--lat-shadow);
 }
 .stx-tile:hover .stx-tile-face { transform: translateY(-2px); box-shadow: var(--lat-shadow-lift); }
 .stx-tile:focus-visible { outline: none; }
@@ -1122,21 +1181,45 @@ body:has(.stx-page--lattice) > #root { align-self: stretch; width: 100%; }
 .stx-tile.is-locked .stx-tile-name { color: var(--lat-faint); }
 .stx-tile:hover .stx-tile-name { color: var(--tone); }
 
-.stx-tile-pct {
+/* The row under the name: the tier always, the percentage where there is
+   progress to report. Absolute so neither can push the lattice apart. */
+.stx-tile-meta {
     position: absolute;
     top: calc(100% + 7px + 2.5em);
     left: 50%;
     transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: none;
+}
+.stx-tile-tier {
     padding: 1px 7px;
     border-radius: 999px;
-    background: var(--tone);
+    border: 1px solid var(--tone);
+    color: var(--tone);
+    background: var(--lat-panel);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+.stx-tile.is-locked .stx-tile-tier {
+    border-color: color-mix(in srgb, var(--tone) 40%, var(--lat-line));
+    color: color-mix(in srgb, var(--tone) 70%, var(--lat-faint));
+}
+.stx-tile-pct {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--state);
     color: #fff;
     font-size: 10.5px;
     font-weight: 700;
     line-height: 1.5;
-    pointer-events: none;
+    white-space: nowrap;
 }
-.stx-tile.is-locked .stx-tile-pct { background: var(--lat-grey); }
 html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
 
 /* ---- the detail panel ---- */
@@ -1187,7 +1270,10 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
     font-weight: 700;
 }
 .stx-lp-badge.is-kind { background: var(--lat-violet-soft); color: var(--lat-violet); }
-.stx-lp-badge.is-state { background: var(--tone-soft); color: var(--tone); }
+/* The tier badge wears the same colour the tile did, so the panel confirms the
+   canvas rather than introducing a second scheme. */
+.stx-lp-badge.is-tier { background: var(--tone-soft); color: var(--tone); }
+.stx-lp-badge.is-state { background: var(--state-soft); color: var(--state); }
 .stx-lp-blurb { margin: 0; font-size: 13px; line-height: 1.55; color: var(--lat-muted); }
 
 .stx-lp-progress {
@@ -1209,7 +1295,7 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
 .stx-lp-line b { color: var(--lat-text); font-weight: 700; }
 .stx-lp-xp { padding-top: 6px; }
 .stx-page--lattice .stx-bar { background: var(--lat-line-soft); }
-.stx-page--lattice .stx-bar i { background: var(--tone, var(--lat-violet)); }
+.stx-page--lattice .stx-bar i { background: var(--state, var(--lat-violet)); }
 
 .stx-lp-section { display: flex; flex-direction: column; gap: 7px; padding-top: 14px; border-top: 1px solid var(--lat-line-soft); }
 .stx-lp-section h3 {
@@ -1237,10 +1323,10 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
     cursor: pointer;
     transition: background .14s ease, border-color .14s ease;
 }
-.stx-lp-row:hover { background: var(--tone-soft); border-color: var(--tone); }
-.stx-lp-row-ico { flex: none; width: 15px; height: 15px; color: var(--tone); }
+.stx-lp-row:hover { background: var(--state-soft); border-color: var(--state); }
+.stx-lp-row-ico { flex: none; width: 15px; height: 15px; color: var(--state); }
 .stx-lp-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stx-lp-row-pct { flex: none; font-size: 11.5px; font-weight: 700; color: var(--tone); }
+.stx-lp-row-pct { flex: none; font-size: 11.5px; font-weight: 700; color: var(--state); }
 .stx-lp-row-tick { flex: none; font-size: 13px; font-weight: 800; color: var(--lat-green); }
 
 .stx-lp-cta {
@@ -1289,11 +1375,7 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
     color: var(--lat-muted);
 }
 .stx-legend-keys li { display: flex; align-items: center; gap: 7px; }
-.stx-legend-dot { width: 9px; height: 9px; border-radius: 50%; }
-.stx-legend-dot.is-done { background: var(--lat-green); }
-.stx-legend-dot.is-prog { background: var(--lat-blue); }
-.stx-legend-dot.is-open { background: var(--lat-violet); }
-.stx-legend-dot.is-lock { background: var(--lat-grey); }
+.stx-legend-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tone); }
 .stx-legend-line svg {
     width: 28px; height: 6px;
     stroke: var(--lat-muted);
@@ -1413,7 +1495,7 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
     margin: 0;
     font-size: 12.5px;
     font-weight: 650;
-    color: var(--tone, var(--lat-violet));
+    color: var(--state, var(--lat-violet));
 }
 .stx-lp-improve .stx-lp-headline.is-locked { color: var(--lat-grey); }
 .stx-lp-steps {

@@ -22,6 +22,7 @@
 import { improveHeadline, improveSteps } from '@/skills/improve';
 import { iconUrl } from '@/skills/subjectTrees';
 import {
+  DIFFICULTY_LABEL,
   STATUS_LABEL,
   requirementsOf,
   unlockedBy,
@@ -120,7 +121,7 @@ export function LatticePanel({
   ];
 
   return (
-    <aside className="stx-lp">
+    <aside className={`stx-lp tier-${node.difficulty}`}>
       <header className="stx-lp-head">
         <span className={`stx-lp-avatar is-${node.status}`}>
           <Ico icon={node.icon} className="stx-ico stx-lp-avatar-ico" />
@@ -128,6 +129,9 @@ export function LatticePanel({
         <div>
           <h2>{node.name}</h2>
           <p className="stx-lp-badges">
+            {/* Difficulty first: it is the thing the tile was coloured by, so
+                the panel should confirm rather than reintroduce it. */}
+            <span className="stx-lp-badge is-tier">{DIFFICULTY_LABEL[node.difficulty]}</span>
             {node.tags?.map((tag) => (
               <span key={tag} className="stx-lp-badge is-kind">
                 {tag}

@@ -171,8 +171,12 @@ export const LATTICE_GEOM: Geometry = {
   // room for a label to stand between them and each rank needs room for one to
   // hang below it. The column gap is also what stops the drawing outgrowing a
   // canvas that now shares its row with a 340px detail panel.
-  colGap: 70,
-  rowGap: 104,
+  // Room for what hangs off a tile: a name of up to two lines, then a row
+  // holding the difficulty chip and the percentage. The column gap has to clear
+  // that row, which is wider than the 64px tile, or two neighbours' chips
+  // collide before their tiles come close.
+  colGap: 96,
+  rowGap: 118,
   pad: 56,
 };
 

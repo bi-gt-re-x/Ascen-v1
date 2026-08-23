@@ -21,7 +21,7 @@
  */
 import type { CSSProperties } from 'react';
 import { iconUrl } from '@/skills/subjectTrees';
-import type { GraphNode, PlacedNode } from '@/utils/skillGraph';
+import { DIFFICULTY_LABEL, type GraphNode, type PlacedNode } from '@/utils/skillGraph';
 
 export interface LatticeNodeProps {
   placed: PlacedNode;
@@ -50,7 +50,7 @@ export function LatticeNode({ placed, size, selected, onSelect, onNavigate }: La
   return (
     <button
       type="button"
-      className={`stx-tile is-${node.status}${nav ? ' is-nav' : ''}${selected ? ' is-selected' : ''}`}
+      className={`stx-tile is-${node.status} tier-${node.difficulty}${nav ? ' is-nav' : ''}${selected ? ' is-selected' : ''}`}
       style={style}
       aria-pressed={nav ? undefined : selected}
       aria-label={nav ? `Open ${node.name}` : node.name}
@@ -66,11 +66,14 @@ export function LatticeNode({ placed, size, selected, onSelect, onNavigate }: La
       <span className="stx-tile-name" aria-hidden="true">
         {node.name}
       </span>
-      {!nav && (
-        <span className="stx-tile-pct" aria-hidden="true">
-          {Math.round(node.percent)}%
-        </span>
-      )}
+      {/* The tier is a fact about the skill, so every tile carries it —
+          including the diamonds, where it says how deep the subject behind it
+          goes. The percentage is about the reader and only appears where there
+          is progress to report. */}
+      <span className="stx-tile-meta" aria-hidden="true">
+        <span className="stx-tile-tier">{DIFFICULTY_LABEL[node.difficulty]}</span>
+        {!nav && <span className="stx-tile-pct">{Math.round(node.percent)}%</span>}
+      </span>
     </button>
   );
 }
