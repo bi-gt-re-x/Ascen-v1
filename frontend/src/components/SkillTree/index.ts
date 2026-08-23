@@ -11,6 +11,8 @@ export { SkillTree, ZOOM } from './SkillTree';
 export type { SkillTreeProps } from './SkillTree';
 export { SkillNode } from './SkillNode';
 export type { SkillNodeProps } from './SkillNode';
+export { LatticeNode } from './LatticeNode';
+export type { LatticeNodeProps } from './LatticeNode';
 export { SkillConnection } from './SkillConnection';
 export type { SkillConnectionProps } from './SkillConnection';
 export { NodeDetailPanel } from './NodeDetailPanel';

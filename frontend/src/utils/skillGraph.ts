@@ -133,6 +133,23 @@ export const GEOM = {
   pad: 44,
 };
 
+/** The shape of a geometry `layoutGraph` can be handed. */
+export type Geometry = typeof GEOM;
+
+/**
+ * A tight, icon-sized geometry — square nodes packed close, the way a talent
+ * lattice reads rather than a wall of labelled cards. The subject-tree feed
+ * lays out with this; the card feeds keep {@link GEOM}. Same algorithm, same
+ * coordinate space — only the numbers the arithmetic runs on change.
+ */
+export const LATTICE_GEOM: Geometry = {
+  nodeW: 64,
+  nodeH: 64,
+  colGap: 30,
+  rowGap: 52,
+  pad: 60,
+};
+
 export interface PlacedNode {
   node: GraphNode;
   /** Top-left of the node box, in canvas units. */
@@ -212,7 +229,7 @@ export function edgeState(target: GraphNode | undefined): EdgeState {
  * Cycles cannot hang it: rank is computed with a seen-set per walk, and a node
  * reached again keeps the deeper of the two ranks.
  */
-export function layoutGraph(graph: SkillGraph): GraphLayout {
+export function layoutGraph(graph: SkillGraph, geom: Geometry = GEOM): GraphLayout {
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
   const kids = new Map<string, string[]>();
   const parents = new Map<string, string[]>();
@@ -264,7 +281,7 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
   }
 
   // ---- position across, one piece at a time -------------------------------
-  const step = GEOM.nodeW + GEOM.colGap;
+  const step = geom.nodeW + geom.colGap;
   const centre = new Map<string, number>();
 
   const layOut = (members: readonly string[]) => {
@@ -301,15 +318,15 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
   };
   for (const members of pieces) layOut(members);
 
-  const rowStep = GEOM.nodeH + GEOM.rowGap;
+  const rowStep = geom.nodeH + geom.rowGap;
 
   // ---- shelve the pieces --------------------------------------------------
   const size = pieces.map((members) => {
     const xs = members.map((id) => centre.get(id) ?? 0);
     const ranks = members.map((id) => rank.get(id) ?? 0);
     return {
-      width: Math.max(...xs) - Math.min(...xs) + GEOM.nodeW,
-      height: Math.max(...ranks) * rowStep + GEOM.nodeH,
+      width: Math.max(...xs) - Math.min(...xs) + geom.nodeW,
+      height: Math.max(...ranks) * rowStep + geom.nodeH,
       left: Math.min(...xs),
     };
   });
@@ -328,11 +345,11 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
   size.forEach((box, index) => {
     if (shelfX > 0 && shelfX + box.width > target) {
       shelfX = 0;
-      shelfY += shelfH + GEOM.rowGap * 2;
+      shelfY += shelfH + geom.rowGap * 2;
       shelfH = 0;
     }
     offset[index] = { x: shelfX - box.left, y: shelfY };
-    shelfX += box.width + GEOM.colGap * 2;
+    shelfX += box.width + geom.colGap * 2;
     shelfH = Math.max(shelfH, box.height);
   });
 
@@ -340,8 +357,8 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
     const shelf = offset[piece.get(node.id) ?? 0] ?? { x: 0, y: 0 };
     return {
       node,
-      x: (centre.get(node.id) ?? 0) + shelf.x + GEOM.pad,
-      y: (rank.get(node.id) ?? 0) * rowStep + shelf.y + GEOM.pad,
+      x: (centre.get(node.id) ?? 0) + shelf.x + geom.pad,
+      y: (rank.get(node.id) ?? 0) * rowStep + shelf.y + geom.pad,
       rank: rank.get(node.id) ?? 0,
     };
   });
@@ -354,9 +371,9 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
       const from = at.get(id);
       const to = at.get(node.id);
       if (!from || !to) continue;
-      const x1 = from.x + GEOM.nodeW / 2;
-      const y1 = from.y + GEOM.nodeH;
-      const x2 = to.x + GEOM.nodeW / 2;
+      const x1 = from.x + geom.nodeW / 2;
+      const y1 = from.y + geom.nodeH;
+      const x2 = to.x + geom.nodeW / 2;
       const y2 = to.y;
       // Control points pulled vertically by half the gap, so the line leaves the
       // node it comes from going down and arrives at the next one going down —
@@ -372,10 +389,10 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
     }
   }
 
-  const right = placed.reduce((max, entry) => Math.max(max, entry.x + GEOM.nodeW), 0);
-  const bottom = placed.reduce((max, entry) => Math.max(max, entry.y + GEOM.nodeH), 0);
+  const right = placed.reduce((max, entry) => Math.max(max, entry.x + geom.nodeW), 0);
+  const bottom = placed.reduce((max, entry) => Math.max(max, entry.y + geom.nodeH), 0);
 
-  return { nodes: placed, edges, width: right + GEOM.pad, height: bottom + GEOM.pad };
+  return { nodes: placed, edges, width: right + geom.pad, height: bottom + geom.pad };
 }
 
 // ---------------------------------------------------------------------------

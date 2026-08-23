@@ -36,7 +36,14 @@
  * not allowed to prevent the browser's own pinch-zoom.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GEOM, layoutGraph, type GraphNode, type SkillGraph } from '@/utils/skillGraph';
+import {
+  GEOM,
+  layoutGraph,
+  type Geometry,
+  type GraphNode,
+  type PlacedNode,
+  type SkillGraph,
+} from '@/utils/skillGraph';
 import { SkillConnection } from './SkillConnection';
 import { SkillNode } from './SkillNode';
 
@@ -52,10 +59,33 @@ export interface SkillTreeProps {
   onSelect: (node: GraphNode | null) => void;
   /** Shown in place of the drawing when a filter has emptied it. */
   empty?: React.ReactNode;
+  /**
+   * The node size and spacing the layout runs on. Defaults to the wide labelled
+   * card geometry; the subject-tree feed hands in {@link LATTICE_GEOM} to pack
+   * a tight lattice of square nodes instead. Same algorithm either way.
+   */
+  geom?: Geometry;
+  /**
+   * How one placed node is drawn. Defaults to the labelled {@link SkillNode}
+   * card. A feed that wants a different node — the compact lattice tile, say —
+   * supplies its own here, and the canvas keeps owning the pan, zoom and
+   * placement around it.
+   */
+  renderNode?: (
+    placed: PlacedNode,
+    ctx: { selected: boolean; onSelect: (node: GraphNode | null) => void },
+  ) => React.ReactNode;
 }
 
-export function SkillTree({ graph, selectedId, onSelect, empty }: SkillTreeProps) {
-  const layout = useMemo(() => layoutGraph(graph), [graph]);
+export function SkillTree({
+  graph,
+  selectedId,
+  onSelect,
+  empty,
+  geom = GEOM,
+  renderNode,
+}: SkillTreeProps) {
+  const layout = useMemo(() => layoutGraph(graph, geom), [graph, geom]);
   const scroller = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(ZOOM.start);
   const [full, setFull] = useState(false);
@@ -187,7 +217,8 @@ export function SkillTree({ graph, selectedId, onSelect, empty }: SkillTreeProps
                 transform: `scale(${scale})`,
                 // @ts-expect-error -- a custom property, which React types as
                 // unknown on CSSProperties but passes straight through.
-                '--stx-node-w': `${GEOM.nodeW}px`,
+                '--stx-node-w': `${geom.nodeW}px`,
+                '--stx-node-h': `${geom.nodeH}px`,
               }}
             >
               <svg
@@ -202,16 +233,25 @@ export function SkillTree({ graph, selectedId, onSelect, empty }: SkillTreeProps
                 ))}
               </svg>
 
-              {layout.nodes.map((placed) => (
-                <SkillNode
-                  key={placed.node.id}
-                  node={placed.node}
-                  x={placed.x}
-                  y={placed.y}
-                  selected={selectedId === placed.node.id}
-                  onSelect={onSelect}
-                />
-              ))}
+              {layout.nodes.map((placed) =>
+                renderNode ? (
+                  <div key={placed.node.id}>
+                    {renderNode(placed, {
+                      selected: selectedId === placed.node.id,
+                      onSelect,
+                    })}
+                  </div>
+                ) : (
+                  <SkillNode
+                    key={placed.node.id}
+                    node={placed.node}
+                    x={placed.x}
+                    y={placed.y}
+                    selected={selectedId === placed.node.id}
+                    onSelect={onSelect}
+                  />
+                ),
+              )}
             </div>
           </div>
         )}
