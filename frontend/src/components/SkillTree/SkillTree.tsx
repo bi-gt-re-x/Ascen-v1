@@ -147,9 +147,24 @@ export function SkillTree({
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const box = scroller.current;
-    // Only the background drags. A pointerdown that started on a node is that
-    // node's click, and stealing it would make every node need a steady hand.
-    if (!box || event.button !== 0 || (event.target as HTMLElement).closest('.stx-node')) return;
+    // Only the background drags. A pointerdown that started on something
+    // clickable is that thing's click, and stealing it does not merely make the
+    // click need a steady hand — `setPointerCapture` below moves every
+    // subsequent pointer event to the scroller, so the button never sees the
+    // pointerup and no click is ever dispatched at all.
+    //
+    // Matched on the elements rather than on a class list, which is what this
+    // was and what broke: it named `.stx-node`, so when the lattice arrived
+    // with tiles called `.stx-tile` every one of them became un-clickable. Both
+    // are buttons, as is anything else worth putting on a canvas, so ask that
+    // question instead and a third kind of node cannot reintroduce this.
+    if (
+      !box ||
+      event.button !== 0 ||
+      (event.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"]')
+    ) {
+      return;
+    }
     drag.current = { x: event.clientX, y: event.clientY, left: box.scrollLeft, top: box.scrollTop };
     box.setPointerCapture(event.pointerId);
     setDragging(true);
