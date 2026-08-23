@@ -29,12 +29,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ambient } from '@/components';
 import {
+  FocusTopics,
   LatticeNode,
   LatticePanel,
   ProgressIndicator,
   SkillTree as SkillTreeCanvas,
+  SubjectRail,
 } from '@/components/SkillTree';
-import { useAuth, useDocumentTitle, usePageEntrance } from '@/hooks';
+import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
+import { treeForSubject } from '@/skills/subjectMap';
 import {
   DEFAULT_TREE,
   childrenOf,
@@ -43,7 +46,6 @@ import {
   navTargets,
   parentChain,
   parentOf,
-  rootsByGroup,
   siblingsOf,
   subjectTreeById,
 } from '@/skills/subjectTrees';
@@ -55,6 +57,7 @@ import {
   type GraphNode,
   type GraphTally,
 } from '@/utils/skillGraph';
+import { FOCUS_COUNT, loadFocus, resolveFocus, saveFocus } from '@/utils/focusTopics';
 import {
   applyProgress,
   loadProgress,
@@ -122,9 +125,10 @@ export default function SkillTrees() {
   useDocumentTitle('Skill Tree');
 
   const { username } = useAuth();
-  // The switcher's shape. Constant for the life of the app — the trees are a
-  // module, not a fetch — so it is built once rather than on every render.
-  const groups = useMemo(() => rootsByGroup(), []);
+  // The account's own catalogue, usage-ordered by the endpoint. Everything at
+  // the top of this page is drawn from it: the five focus cards, the rail, and
+  // half of what the search can find.
+  const subjects = useSubjects(username);
   const [treeId, setTreeId] = useState<string>(DEFAULT_TREE.id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -135,6 +139,19 @@ export default function SkillTrees() {
   useEffect(() => {
     setProgress(loadProgress(username));
   }, [username]);
+
+  /* The five across the top. Null until this account has chosen, which is what
+     lets the band follow the subjects they actually use until the moment they
+     say otherwise — see utils/focusTopics. */
+  const [chosenFocus, setChosenFocus] = useState<string[] | null>(null);
+  useEffect(() => {
+    setChosenFocus(loadFocus(username));
+  }, [username]);
+
+  const focus = useMemo(
+    () => resolveFocus(chosenFocus, subjects.map((subject) => subject.id)),
+    [chosenFocus, subjects],
+  );
 
   const tree = subjectTreeById(treeId) ?? DEFAULT_TREE;
 
@@ -153,14 +170,52 @@ export default function SkillTrees() {
   const into = useMemo(() => childrenOf(tree.id), [tree.id]);
   const beside = useMemo(() => siblingsOf(tree.id), [tree.id]);
 
-  // The root ancestor of whatever tree is open, so the switcher highlights the
-  // subject you are inside even three forks deep.
-  const rootId = chain[0]?.id ?? tree.id;
+  // Everything the reader is currently inside, root first. The focus cards and
+  // the rail light from this, so walking three forks down does not put every
+  // pill out — see the note on `openTrail` in SubjectRail.
+  const trail = useMemo(() => chain.map((entry) => entry.id), [chain]);
 
   const goTo = useCallback((id: string) => {
     setTreeId(id);
     setSelectedId(null);
   }, []);
+
+  /* Opening a tree *at* a node — what the search and the subject rail do.
+     Every route into a different tree passes through here or through `goTo`,
+     and both say what the selection becomes, which is why there is no effect
+     watching the tree id to clear it: one would run after this and wipe the
+     node the reader just searched for. */
+  const openTree = useCallback((id: string, node?: string) => {
+    setTreeId(id);
+    setSelectedId(node ?? null);
+  }, []);
+
+  /** A catalogue subject — Mandarin, Gym, Taxes — routed to its lattice. */
+  const openSubject = useCallback(
+    (subjectId: string) => {
+      const subject = subjects.find((row) => row.id === subjectId);
+      const target = treeForSubject(subjectId, subject?.group);
+      openTree(target.tree, target.node);
+    },
+    [openTree, subjects],
+  );
+
+  /* Changing one slot stores all five, including the ones that were still
+     derived — otherwise the four the reader did not touch would keep moving as
+     their task counts changed. */
+  const setFocusAt = useCallback(
+    (index: number, subjectId: string) => {
+      setChosenFocus((current) => {
+        const base = resolveFocus(current, subjects.map((subject) => subject.id));
+        const next = Array.from({ length: FOCUS_COUNT }, (_, slot) => base[slot] ?? '')
+          .map((id, slot) => (slot === index ? subjectId : id))
+          .filter(Boolean);
+        saveFocus(username, next);
+        return next;
+      });
+    },
+    [subjects, username],
+  );
 
   const selected = useMemo(
     () => graph.nodes.find((node) => node.id === selectedId) ?? null,
@@ -173,10 +228,6 @@ export default function SkillTrees() {
       setSelectedId((current) => (node && current !== node.id ? node.id : null)),
     [],
   );
-
-  useEffect(() => {
-    setSelectedId(null);
-  }, [treeId]);
 
   /* The "+250 XP" that appears for a moment after a click. Held with its node
      id so switching selection mid-flash cannot show one node's gain on
@@ -209,30 +260,15 @@ export default function SkillTrees() {
     <div className="stx-page stx-page--lattice">
       <Ambient />
       <div className={`stx-shell page-shell${entering ? ' pg-enter' : ''}`}>
-        {/* Eleven subjects is past what one row of pills can be read as, so they
-            are offered under the catalogue's own headings — the same nine
-            groups the subject picker uses, taken from what each root carries
-            rather than from a second list written here. */}
-        <nav className="stx-subjects" aria-label="Subjects">
-          {groups.map(({ group, trees }) => (
-            <span key={group} className="stx-subject-group">
-              <span className="stx-subject-heading">{group}</span>
-              <span className="stx-subject-row">
-                {trees.map((subject) => (
-                  <button
-                    key={subject.id}
-                    type="button"
-                    className={`stx-subject${subject.id === rootId ? ' is-on' : ''}`}
-                    aria-current={subject.id === rootId ? 'true' : undefined}
-                    onClick={() => goTo(subject.id)}
-                  >
-                    {subject.title}
-                  </button>
-                ))}
-              </span>
-            </span>
-          ))}
-        </nav>
+        <FocusTopics
+          subjects={subjects}
+          focus={focus}
+          openTrail={trail}
+          onOpen={openSubject}
+          onChange={setFocusAt}
+        />
+
+        <SubjectRail subjects={subjects} openTrail={trail} onOpen={openTree} />
 
         <header className="stx-lead">
           {chain.length > 1 && (

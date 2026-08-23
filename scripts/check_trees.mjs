@@ -19,6 +19,9 @@
  *     nowhere, or goes somewhere with no way back.
  *   - an icon name with no file behind it. `iconUrl` falls back to `core-skill`,
  *     so the tile still draws — with the wrong drawing, indefinitely.
+ *   - a subject in the task catalogue that no lattice claims. The rail across
+ *     the top of the page offers all hundred; one with no route silently falls
+ *     back to its group's root, which is a reasonable guess and not an answer.
  *
  * None of these can be caught by TypeScript: every one of them is a string that
  * is correctly typed and wrong. So they are checked here instead, against the
@@ -36,7 +39,7 @@
  * library if nothing is.
  */
 import { build } from 'esbuild';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -44,6 +47,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ICON_DIR = join(root, 'utils', 'icons', 'tree_icons');
 const ENTRY = join(root, 'frontend', 'src', 'skills', 'trees', 'index.ts');
+const MAP_ENTRY = join(root, 'frontend', 'src', 'skills', 'subjectMap.ts');
+const CATALOGUE = join(root, 'backend', 'config', 'subjects.py');
 
 /* How small a tree is allowed to be before it stops being a lattice and starts
    being a list. Nothing enforces an upper bound: a subject is as big as it is. */
@@ -63,13 +68,39 @@ const warn = (where, message) => warnings.push(`${where}: ${message}`);
 // ---------------------------------------------------------------------------
 const dir = await mkdtemp(join(tmpdir(), 'ascen-trees-'));
 const outfile = join(dir, 'trees.mjs');
+const mapfile = join(dir, 'map.mjs');
 let TREES;
+let SUBJECT_TARGETS;
 try {
   await build({ entryPoints: [ENTRY], bundle: true, format: 'esm', outfile, logLevel: 'warning' });
+  // The map imports skills/subjectTrees, which imports @/utils/skillGraph for a
+  // type only — the alias is declared so esbuild can resolve the path it never
+  // ends up emitting anything for.
+  await build({
+    entryPoints: [MAP_ENTRY],
+    bundle: true,
+    format: 'esm',
+    outfile: mapfile,
+    logLevel: 'warning',
+    alias: { '@': join(root, 'frontend', 'src') },
+  });
   ({ TREES } = await import(pathToFileURL(outfile).href));
+  ({ SUBJECT_TARGETS } = await import(pathToFileURL(mapfile).href));
 } finally {
   await rm(dir, { recursive: true, force: true });
 }
+
+/* The hundred, read from the catalogue itself rather than copied here. The
+   table in backend/config/subjects.py is one `('id', 'Name', abbr, 'icon')` per
+   line inside `_GROUPS`, which is regular enough to read and regular enough to
+   notice if it ever stops being — an id count that moves without this check
+   moving is the thing the count assertion at the bottom of that file protects. */
+const catalogueSource = await readFile(CATALOGUE, 'utf8');
+const groupBlock = catalogueSource.slice(
+  catalogueSource.indexOf('_GROUPS = ('),
+  catalogueSource.indexOf('#: The length past which'),
+);
+const catalogueIds = [...groupBlock.matchAll(/^\s{8}\('([a-z_]+)',/gm)].map((match) => match[1]);
 
 const icons = new Set(
   (await readdir(ICON_DIR)).filter((name) => name.endsWith('.svg')).map((name) => name.slice(0, -4)),
@@ -215,6 +246,30 @@ for (const tree of TREES) {
   if (!reached.has(tree.id)) fail(`tree ${tree.id}`, 'cannot be walked to from any root');
 }
 
+// ---------------------------------------------------------------------------
+// Every subject a task can carry has somewhere to go
+// ---------------------------------------------------------------------------
+if (catalogueIds.length < 50) {
+  fail('catalogue', `only read ${catalogueIds.length} subjects out of backend/config/subjects.py — the table has changed shape and this check is no longer reading it`);
+}
+for (const id of catalogueIds) {
+  const target = SUBJECT_TARGETS[id];
+  if (!target) {
+    fail('subjects', `"${id}" is a subject a task can carry and no lattice claims it`);
+    continue;
+  }
+  const tree = byTreeId.get(target.tree);
+  if (!tree) fail('subjects', `"${id}" opens tree "${target.tree}", which does not exist`);
+  else if (target.node && !tree.nodes.some((node) => node.id === target.node)) {
+    fail('subjects', `"${id}" opens ${target.tree} at "${target.node}", which is not a node on it`);
+  }
+}
+for (const id of Object.keys(SUBJECT_TARGETS)) {
+  if (!catalogueIds.includes(id)) {
+    fail('subjects', `"${id}" is routed in skills/subjectMap and is not in the catalogue`);
+  }
+}
+
 const unused = [...icons].filter((name) => !iconsUsed.has(name)).sort();
 
 // ---------------------------------------------------------------------------
@@ -230,7 +285,10 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log(`\n${TREES.length} trees · ${roots.length} roots · ${nodeCount} nodes · ${iconsUsed.size} icons in use`);
+console.log(
+  `\n${TREES.length} trees · ${roots.length} roots · ${nodeCount} nodes · ` +
+  `${iconsUsed.size} icons in use · ${catalogueIds.length} task subjects routed`,
+);
 for (const { group, trees } of groupRoots(roots)) {
   console.log(`  ${group}: ${trees.map((tree) => tree.title).join(', ')}`);
 }
@@ -239,7 +297,10 @@ if (warnings.length > 0) {
   for (const warning of warnings) console.log(`  · ${warning}`);
 }
 if (unused.length > 0) console.log(`\n${unused.length} icon(s) drawn but unused: ${unused.join(', ')}`);
-console.log('\nEvery prerequisite resolves, every branch reaches a tree, every node has a drawing.\n');
+console.log(
+  '\nEvery prerequisite resolves, every branch reaches a tree, every node has a\n' +
+  'drawing, and every subject a task can carry opens one.\n',
+);
 
 function groupRoots(list) {
   const order = [];

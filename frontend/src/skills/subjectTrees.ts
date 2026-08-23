@@ -74,29 +74,6 @@ export function subjectTreeById(id: string): SubjectTree | null {
 /** The top-level subjects — the ones the switcher across the page offers. */
 export const ROOT_SUBJECTS: readonly SubjectTree[] = SUBJECT_TREES.filter((tree) => !tree.parent);
 
-/**
- * The roots grouped under the catalogue's headings, in catalogue order.
- *
- * Eleven subjects is more than a single row of buttons can carry legibly, and
- * the headings already exist: `group` on a root names one of the nine groups in
- * backend/config/subjects.py. Roots that name no group are collected under a
- * final heading rather than dropped, so a new tree is visible the moment it is
- * added and its grouping can be decided afterwards.
- */
-export function rootsByGroup(): { group: string; trees: SubjectTree[] }[] {
-  const order: string[] = [];
-  const byGroup = new Map<string, SubjectTree[]>();
-  for (const tree of ROOT_SUBJECTS) {
-    const group = tree.group ?? 'Other';
-    if (!byGroup.has(group)) {
-      byGroup.set(group, []);
-      order.push(group);
-    }
-    byGroup.get(group)!.push(tree);
-  }
-  return order.map((group) => ({ group, trees: byGroup.get(group)! }));
-}
-
 /** The trees that branch off this one — the other end of `parent`. */
 export function childrenOf(id: string): SubjectTree[] {
   return SUBJECT_TREES.filter((tree) => tree.parent === id);
