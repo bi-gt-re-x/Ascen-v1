@@ -360,6 +360,27 @@ export const ROOT_SUBJECTS: SubjectTree[] = SUBJECT_TREES.filter((tree) => !tree
  *  reason about an empty hierarchy. */
 export const DEFAULT_TREE: SubjectTree = CODING;
 
+/** The trees that branch off this one — the other end of `parent`. */
+export function childrenOf(id: string): SubjectTree[] {
+  return SUBJECT_TREES.filter((tree) => tree.parent === id);
+}
+
+/** The tree this one branched off, if it is not a root. */
+export function parentOf(id: string): SubjectTree | null {
+  const tree = BY_ID.get(id);
+  return tree?.parent ? BY_ID.get(tree.parent) ?? null : null;
+}
+
+/**
+ * Every tree that branches off the same parent as this one — its siblings,
+ * itself excluded. Web Development, Algorithms and Systems are each other's.
+ */
+export function siblingsOf(id: string): SubjectTree[] {
+  const tree = BY_ID.get(id);
+  if (!tree?.parent) return [];
+  return SUBJECT_TREES.filter((entry) => entry.parent === tree.parent && entry.id !== id);
+}
+
 /**
  * The chain from a root down to this tree, in reading order, so the header can
  * draw it as a breadcrumb. `[Coding, Web Development]` for the web tree.

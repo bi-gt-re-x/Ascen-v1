@@ -38,10 +38,13 @@ import { useAuth, useDocumentTitle, usePageEntrance } from '@/hooks';
 import {
   DEFAULT_TREE,
   ROOT_SUBJECTS,
+  childrenOf,
   graphFromSubjectTree,
   iconUrl,
   navTargets,
   parentChain,
+  parentOf,
+  siblingsOf,
   subjectTreeById,
 } from '@/skills/subjectTrees';
 import { LATTICE_GEOM, tallyGraph, type GraphNode, type GraphTally } from '@/utils/skillGraph';
@@ -134,6 +137,11 @@ export default function SkillTrees() {
   const nav = useMemo(() => navTargets(tree), [tree]);
   const totals = useMemo(() => tallyGraph(graph), [graph]);
   const chain = useMemo(() => parentChain(tree.id), [tree.id]);
+  // The three ways out of this tree, so walking the hierarchy never depends on
+  // finding the right diamond on the canvas.
+  const up = useMemo(() => parentOf(tree.id), [tree.id]);
+  const into = useMemo(() => childrenOf(tree.id), [tree.id]);
+  const beside = useMemo(() => siblingsOf(tree.id), [tree.id]);
 
   // The root ancestor of whatever tree is open, so the switcher highlights the
   // subject you are inside even three forks deep.
@@ -228,6 +236,56 @@ export default function SkillTrees() {
           <h1>{tree.title}</h1>
           <p className="stx-lead-sub">{tree.blurb}</p>
         </header>
+
+        {/* ---- moving between trees ----
+            The diamonds on the canvas walk downward and the breadcrumb walks
+            up, but both mean hunting for a control. This says every tree
+            adjacent to this one outright: the one above, the ones below, and
+            the ones beside it. */}
+        {(up || into.length > 0 || beside.length > 0) && (
+          <nav className="stx-treenav" aria-label="Move between trees">
+            {up && (
+              <span className="stx-treenav-group">
+                <span className="stx-treenav-label">Up</span>
+                <button type="button" className="stx-treenav-link is-up" onClick={() => goTo(up.id)}>
+                  <Ico icon="branch" className="stx-ico stx-treenav-ico" />
+                  {up.title}
+                </button>
+              </span>
+            )}
+            {into.length > 0 && (
+              <span className="stx-treenav-group">
+                <span className="stx-treenav-label">Branches into</span>
+                {into.map((child) => (
+                  <button
+                    key={child.id}
+                    type="button"
+                    className="stx-treenav-link is-into"
+                    onClick={() => goTo(child.id)}
+                  >
+                    {child.title}
+                    <i aria-hidden="true">›</i>
+                  </button>
+                ))}
+              </span>
+            )}
+            {beside.length > 0 && (
+              <span className="stx-treenav-group">
+                <span className="stx-treenav-label">Beside</span>
+                {beside.map((peer) => (
+                  <button
+                    key={peer.id}
+                    type="button"
+                    className="stx-treenav-link"
+                    onClick={() => goTo(peer.id)}
+                  >
+                    {peer.title}
+                  </button>
+                ))}
+              </span>
+            )}
+          </nav>
+        )}
 
         {/* ---- the band of figures ---- */}
         <section className="stx-band" aria-label="Where this tree stands">

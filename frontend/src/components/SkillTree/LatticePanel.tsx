@@ -19,6 +19,7 @@
  * A list with no rows, an XP line on a node worth zero: each is absent rather
  * than drawn as a dash. A panel of dashes reads as a form that failed to load.
  */
+import { improveHeadline, improveSteps } from '@/skills/improve';
 import { iconUrl } from '@/skills/subjectTrees';
 import {
   STATUS_LABEL,
@@ -105,10 +106,14 @@ export function LatticePanel({
   }
 
   const opens = unlockedBy(graph, node.id);
+  const needs = requirementsOf(graph, node);
+  // What is actually in the way, which on a locked node is the only part of
+  // `needs` worth naming — the rest are already done.
+  const blockers = needs.filter((entry) => entry.status !== 'complete');
   // Its own prerequisites first, then anything it suggests — the nodes a reader
   // would look at next in either direction.
   const near = [
-    ...requirementsOf(graph, node),
+    ...needs,
     ...(node.recommends ?? [])
       .map((id) => graph.nodes.find((entry) => entry.id === id))
       .filter((entry): entry is GraphNode => Boolean(entry)),
@@ -156,6 +161,19 @@ export function LatticePanel({
             </b>
           </p>
         )}
+      </section>
+
+      {/* How to improve — the part a reader came for once they have decided to
+          work on this. The headline is about where *they* stand; the steps are
+          about the skill. See skills/improve. */}
+      <section className="stx-lp-section stx-lp-improve">
+        <h3>How to improve</h3>
+        <p className={`stx-lp-headline is-${node.status}`}>{improveHeadline(node, blockers)}</p>
+        <ol className="stx-lp-steps">
+          {improveSteps(node, opens).map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
       </section>
 
       <Rows title="Unlocks" nodes={opens} onSelect={onSelect} />

@@ -1352,3 +1352,82 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
 @media (prefers-reduced-motion: reduce) {
     .stx-lp-flash { animation: none; }
 }
+
+/* ---- moving between trees ------------------------------------------------
+   One strip naming every tree adjacent to this one. The diamonds on the canvas
+   still work and still walk downward; this is the version you do not have to
+   scroll the canvas to find, and the only way to reach a sibling directly. */
+.stx-treenav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 18px;
+    padding: 9px 14px;
+    border: 1px solid var(--lat-line);
+    border-radius: 999px;
+    background: var(--lat-panel);
+    box-shadow: var(--lat-shadow);
+    align-self: center;
+    max-width: 100%;
+}
+.stx-treenav-group { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.stx-treenav-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--lat-faint);
+}
+.stx-treenav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid var(--lat-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--lat-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+.stx-treenav-link:hover {
+    background: var(--lat-violet-soft);
+    border-color: var(--lat-violet);
+    color: var(--lat-violet);
+}
+.stx-treenav-link i { font-style: normal; color: var(--lat-faint); }
+.stx-treenav-link:hover i { color: var(--lat-violet); }
+.stx-treenav-ico { width: 14px; height: 14px; color: var(--lat-faint); }
+.stx-treenav-link:hover .stx-treenav-ico { color: var(--lat-violet); }
+.stx-treenav-link.is-into { border-style: dashed; }
+
+/* ---- how to improve ------------------------------------------------------
+   The steps are the point of the panel once a skill has been chosen, so they
+   are set at reading weight rather than as caption text, and numbered: they are
+   an order to work through, not a list of attributes. */
+.stx-lp-headline {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--tone, var(--lat-violet));
+}
+.stx-lp-improve .stx-lp-headline.is-locked { color: var(--lat-grey); }
+.stx-lp-steps {
+    margin: 2px 0 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--lat-muted);
+}
+.stx-lp-steps li::marker { color: var(--lat-faint); font-weight: 700; }
+
+@media (max-width: 640px) {
+    .stx-treenav { border-radius: var(--lat-radius); }
+}
