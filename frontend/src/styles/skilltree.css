@@ -1331,3 +1331,24 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
     .stx-tile.is-nav .stx-tile-face,
     .stx-tile.is-nav:hover .stx-tile-face { transform: rotate(45deg); }
 }
+
+/* The "+250 XP" after a session — the acknowledgement that the click landed.
+   Beside the percentage rather than over the canvas, because that is the number
+   it just changed and the eye is already there. */
+.stx-lp-flash {
+    margin-left: 8px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--lat-green-soft);
+    color: var(--lat-green);
+    font-size: 11px;
+    font-weight: 700;
+    animation: stx-flash-in .22s ease both;
+}
+@keyframes stx-flash-in {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .stx-lp-flash { animation: none; }
+}

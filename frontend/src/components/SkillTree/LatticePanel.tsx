@@ -79,9 +79,23 @@ export interface LatticePanelProps {
   onSelect: (node: GraphNode | null) => void;
   /** Shown when nothing is picked yet. */
   placeholder?: React.ReactNode;
+  /** Put a session's work into this node. Absent makes the button inert. */
+  onPractice?: (node: GraphNode) => void;
+  /** What one session on the selected node is worth, for the button's label. */
+  gain?: number;
+  /** Just-added XP, shown for a moment so a click is visibly a change. */
+  flash?: number | null;
 }
 
-export function LatticePanel({ graph, node, onSelect, placeholder }: LatticePanelProps) {
+export function LatticePanel({
+  graph,
+  node,
+  onSelect,
+  placeholder,
+  onPractice,
+  gain = 0,
+  flash = null,
+}: LatticePanelProps) {
   if (!node) {
     return (
       <aside className="stx-lp is-empty">
@@ -124,7 +138,14 @@ export function LatticePanel({ graph, node, onSelect, placeholder }: LatticePane
       <section className={`stx-lp-progress is-${node.status}`}>
         <p className="stx-lp-line">
           <span>Progress</span>
-          <b>{Math.round(node.percent)}%</b>
+          <b>
+            {Math.round(node.percent)}%
+            {flash != null && (
+              <span className="stx-lp-flash" role="status">
+                +{number(flash)} XP
+              </span>
+            )}
+          </b>
         </p>
         <ProgressIndicator percent={node.percent} shape="bar" />
         {node.need > 0 && (
@@ -140,9 +161,21 @@ export function LatticePanel({ graph, node, onSelect, placeholder }: LatticePane
       <Rows title="Unlocks" nodes={opens} onSelect={onSelect} />
       <Rows title="Related Skills" nodes={near} onSelect={onSelect} showPercent />
 
-      <button type="button" className="stx-lp-cta" disabled={node.status === 'locked'}>
-        <Ico icon="practice" className="stx-ico stx-lp-cta-ico" />
-        {node.status === 'locked' ? 'Locked' : 'Practice This Skill'}
+      {/* Three states, and each says what it actually is: a locked node names
+          what is in the way, a finished one has nothing left to add, and the
+          rest say what a session is worth rather than just "Practice". */}
+      <button
+        type="button"
+        className="stx-lp-cta"
+        disabled={!onPractice || node.status === 'locked' || node.status === 'complete'}
+        onClick={() => onPractice?.(node)}
+      >
+        <Ico icon={node.status === 'complete' ? 'mastered' : 'practice'} className="stx-ico stx-lp-cta-ico" />
+        {node.status === 'locked'
+          ? 'Locked — finish what it needs first'
+          : node.status === 'complete'
+            ? 'Mastered'
+            : `Practice This Skill · +${number(gain)} XP`}
       </button>
     </aside>
   );

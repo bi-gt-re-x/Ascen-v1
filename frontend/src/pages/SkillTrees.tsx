@@ -26,7 +26,7 @@
  * level is the one derived thing, and it is derived here rather than in the
  * data because it is a reading of the tally rather than a fact about a subject.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ambient } from '@/components';
 import {
   LatticeNode,
@@ -34,7 +34,7 @@ import {
   ProgressIndicator,
   SkillTree as SkillTreeCanvas,
 } from '@/components/SkillTree';
-import { useDocumentTitle, usePageEntrance } from '@/hooks';
+import { useAuth, useDocumentTitle, usePageEntrance } from '@/hooks';
 import {
   DEFAULT_TREE,
   ROOT_SUBJECTS,
@@ -45,6 +45,13 @@ import {
   subjectTreeById,
 } from '@/skills/subjectTrees';
 import { LATTICE_GEOM, tallyGraph, type GraphNode, type GraphTally } from '@/utils/skillGraph';
+import {
+  applyProgress,
+  loadProgress,
+  practiceGain,
+  saveProgress,
+  type SkillProgress,
+} from '@/utils/skillProgress';
 import '@/styles/skilltree.css';
 
 /** The drawing, painted through the shared mask. */
@@ -104,12 +111,26 @@ function Figure({
 export default function SkillTrees() {
   useDocumentTitle('Skill Tree');
 
+  const { username } = useAuth();
   const [treeId, setTreeId] = useState<string>(DEFAULT_TREE.id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  /* Practice done on top of what the trees seed — see utils/skillProgress for
+     why it lives in the browser. Loaded once per account, and written back on
+     every change rather than on unmount, so a click survives a closed tab. */
+  const [progress, setProgress] = useState<SkillProgress>({});
+  useEffect(() => {
+    setProgress(loadProgress(username));
+  }, [username]);
+
   const tree = subjectTreeById(treeId) ?? DEFAULT_TREE;
 
-  const graph = useMemo(() => graphFromSubjectTree(tree), [tree]);
+  const designed = useMemo(() => graphFromSubjectTree(tree), [tree]);
+  // What is actually drawn: the designed tree with the account's practice added
+  // and every status re-derived from the result. Everything downstream — the
+  // canvas, the panel, the figures — reads this one graph, so a click cannot
+  // move the tiles and leave the band behind.
+  const graph = useMemo(() => applyProgress(designed, progress), [designed, progress]);
   const nav = useMemo(() => navTargets(tree), [tree]);
   const totals = useMemo(() => tallyGraph(graph), [graph]);
   const chain = useMemo(() => parentChain(tree.id), [tree.id]);
@@ -138,6 +159,30 @@ export default function SkillTrees() {
   useEffect(() => {
     setSelectedId(null);
   }, [treeId]);
+
+  /* The "+250 XP" that appears for a moment after a click. Held with its node
+     id so switching selection mid-flash cannot show one node's gain on
+     another, and the timer is cleared on unmount and on every new click. */
+  const [flash, setFlash] = useState<{ id: string; gain: number } | null>(null);
+  const flashTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (flashTimer.current) window.clearTimeout(flashTimer.current);
+  }, []);
+
+  const practise = useCallback(
+    (node: GraphNode) => {
+      const gain = practiceGain(node);
+      setProgress((current) => {
+        const next = { ...current, [node.id]: (current[node.id] ?? 0) + gain };
+        saveProgress(username, next);
+        return next;
+      });
+      setFlash({ id: node.id, gain });
+      if (flashTimer.current) window.clearTimeout(flashTimer.current);
+      flashTimer.current = window.setTimeout(() => setFlash(null), 1600);
+    },
+    [username],
+  );
 
   const entering = usePageEntrance(true);
   const unlocked = totals.total - totals.locked;
@@ -228,6 +273,9 @@ export default function SkillTrees() {
             graph={graph}
             node={selected}
             onSelect={select}
+            onPractice={practise}
+            gain={selected ? practiceGain(selected) : 0}
+            flash={flash && selected && flash.id === selected.id ? flash.gain : null}
             placeholder={
               <>
                 <Ico icon="target" className="stx-ico stx-lp-blank-ico" />
