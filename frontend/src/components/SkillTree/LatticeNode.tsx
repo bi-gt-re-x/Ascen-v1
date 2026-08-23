@@ -2,22 +2,25 @@
  * One tile on a subject lattice.
  *
  * The compact counterpart to {@link SkillNode}: where that draws a labelled
- * card, this draws a square the size of an icon with the skill's name under it.
- * The square itself stays empty — that is where the icon lands in a later part —
- * so the name is what identifies a tile until then, and it sits *outside* the
- * square rather than inside it: a 64px box cannot hold "Algorithms & Data
- * Structures" at a readable size, and the lattice's shape is the tiles, which
- * the label must not be allowed to push apart.
+ * card, this draws a rounded square holding the skill's icon, with the name
+ * under it and the percentage under that. Three pieces of a fixed size, so a
+ * lattice of ninety of them still reads as a shape rather than as a paragraph.
+ *
+ * The icon is painted as a **CSS mask** rather than loaded as an image — see
+ * utils/icons/tree_icons/README.md. That is what lets one file be grey on a
+ * locked tile and green on a mastered one without a second copy of the drawing:
+ * the alpha is the shape, and the colour is whatever the tile has decided.
  *
  * A **navigation** tile is the one exception to "a node is a skill": it is a
  * diamond rather than a square, and clicking it walks into the child subject it
- * names rather than selecting anything. The page hands that behaviour in through
- * `onNavigate`; the tile only knows to draw itself differently and call it.
+ * names rather than selecting anything. The page hands that behaviour in
+ * through `onNavigate`; the tile only knows to draw itself differently.
  *
  * Placement, size and state come from the layout and the graph exactly as they
  * do for the card node — this component owns none of it.
  */
 import type { CSSProperties } from 'react';
+import { iconUrl } from '@/skills/subjectTrees';
 import type { GraphNode, PlacedNode } from '@/utils/skillGraph';
 
 export interface LatticeNodeProps {
@@ -28,11 +31,9 @@ export interface LatticeNodeProps {
   onSelect: (node: GraphNode | null) => void;
   /** Present when the tile opens a child subject rather than a skill. */
   onNavigate?: () => void;
-  /** The small corner figure, as in the reference lattice. */
-  rank?: number;
 }
 
-export function LatticeNode({ placed, size, selected, onSelect, onNavigate, rank }: LatticeNodeProps) {
+export function LatticeNode({ placed, size, selected, onSelect, onNavigate }: LatticeNodeProps) {
   const { node, x, y } = placed;
   const nav = Boolean(onNavigate);
 
@@ -41,6 +42,9 @@ export function LatticeNode({ placed, size, selected, onSelect, onNavigate, rank
     top: y,
     width: size,
     height: size,
+    // Read by the mask rule in the stylesheet. A custom property rather than an
+    // inline background, so the stylesheet keeps deciding how it is painted.
+    ['--ico' as string]: `url(${iconUrl(node.icon)})`,
   } as CSSProperties;
 
   return (
@@ -53,19 +57,20 @@ export function LatticeNode({ placed, size, selected, onSelect, onNavigate, rank
       title={nav ? `${node.name} →` : node.name}
       onClick={() => (nav ? onNavigate?.() : onSelect(node))}
     >
-      {/* The face. Empty for now — the icon lands here later. */}
-      <span className="stx-tile-face" aria-hidden="true" />
-      {rank ? (
-        <span className="stx-tile-rank" aria-hidden="true">
-          {rank}
-        </span>
-      ) : null}
-      {/* Hidden from the accessibility tree because the button already carries
-          the name in `aria-label`; announcing it twice is worse than not
-          drawing it at all. */}
+      <span className="stx-tile-face" aria-hidden="true">
+        <i className="stx-ico" />
+      </span>
+      {/* Both are hidden from the accessibility tree: the button already
+          carries the name in `aria-label`, and a percentage read out twice —
+          once here, once in the panel — is noise rather than information. */}
       <span className="stx-tile-name" aria-hidden="true">
         {node.name}
       </span>
+      {!nav && (
+        <span className="stx-tile-pct" aria-hidden="true">
+          {Math.round(node.percent)}%
+        </span>
+      )}
     </button>
   );
 }

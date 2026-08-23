@@ -28,7 +28,7 @@ export interface SkillConnectionProps {
 export function SkillConnection({ edge, lit = false }: SkillConnectionProps) {
   return (
     <path
-      className={`stx-wire is-${edge.state}${lit ? ' is-lit' : ''}`}
+      className={`stx-wire is-${edge.state} is-${edge.kind}${lit ? ' is-lit' : ''}`}
       d={edge.d}
       fill="none"
     />

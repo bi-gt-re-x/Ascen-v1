@@ -13,6 +13,8 @@ export { SkillNode } from './SkillNode';
 export type { SkillNodeProps } from './SkillNode';
 export { LatticeNode } from './LatticeNode';
 export type { LatticeNodeProps } from './LatticeNode';
+export { LatticePanel } from './LatticePanel';
+export type { LatticePanelProps } from './LatticePanel';
 export { SkillConnection } from './SkillConnection';
 export type { SkillConnectionProps } from './SkillConnection';
 export { NodeDetailPanel } from './NodeDetailPanel';

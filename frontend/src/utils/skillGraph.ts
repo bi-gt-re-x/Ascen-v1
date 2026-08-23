@@ -98,6 +98,23 @@ export interface GraphNode {
    * not to know.
    */
   secondary?: boolean;
+  /**
+   * The drawing on the node, named by filename without the extension — the
+   * files in utils/icons/tree_icons, served at `/static/icons/tree_icons`.
+   *
+   * A name rather than a component or a URL: the model stays free of both React
+   * and of where the assets happen to be mounted, and a feed that has no icons
+   * simply omits it. What a missing one falls back to is the renderer's
+   * business, not the model's.
+   */
+  icon?: string;
+  /**
+   * Nodes worth doing first without being required to. Drawn as a second kind
+   * of edge — dashed, and reading "recommended" rather than "prerequisite" —
+   * and deliberately *not* part of `requires`: these must not gate a node or
+   * move it down a rank, or a suggestion would silently become a rule.
+   */
+  recommends?: string[];
 }
 
 export interface SkillGraph {
@@ -149,9 +166,14 @@ export const LATTICE_GEOM: Geometry = {
   // each square, so siblings need room for one to stand between them and each
   // rank needs room for one to hang below it. Tighter than this and the names
   // touch, which is the one thing that makes a lattice unreadable.
-  colGap: 140,
-  rowGap: 96,
-  pad: 64,
+  // Both gaps are set by what hangs off a tile rather than by the tile: a name
+  // of up to two lines and a percentage sit under each one, so siblings need
+  // room for a label to stand between them and each rank needs room for one to
+  // hang below it. The column gap is also what stops the drawing outgrowing a
+  // canvas that now shares its row with a 340px detail panel.
+  colGap: 70,
+  rowGap: 104,
+  pad: 56,
 };
 
 export interface PlacedNode {
@@ -170,6 +192,9 @@ export interface PlacedEdge {
   state: EdgeState;
   /** The cubic path, ready for a `d` attribute. */
   d: string;
+  /** What the line means: something you must do first, or something worth
+   *  doing first. The renderer draws the second one dashed. */
+  kind: 'requires' | 'recommends';
 }
 
 export interface GraphLayout {
@@ -370,26 +395,36 @@ export function layoutGraph(graph: SkillGraph, geom: Geometry = GEOM): GraphLayo
   const at = new Map(placed.map((entry) => [entry.node.id, entry]));
 
   const edges: PlacedEdge[] = [];
+
+  /** One curve between two placed nodes, however the two are related. */
+  const join = (fromId: string, toId: string, kind: PlacedEdge['kind']) => {
+    const from = at.get(fromId);
+    const to = at.get(toId);
+    if (!from || !to) return;
+    const x1 = from.x + geom.nodeW / 2;
+    const y1 = from.y + geom.nodeH;
+    const x2 = to.x + geom.nodeW / 2;
+    const y2 = to.y;
+    // Control points pulled vertically by half the gap, so the line leaves the
+    // node it comes from going down and arrives at the next one going down —
+    // a curve that reads as a route rather than as a diagonal.
+    const bend = Math.max(24, (y2 - y1) / 2);
+    edges.push({
+      id: `${fromId}-${kind}->${toId}`,
+      from: fromId,
+      to: toId,
+      state: edgeState(byId.get(toId)),
+      d: `M${x1},${y1} C${x1},${y1 + bend} ${x2},${y2 - bend} ${x2},${y2}`,
+      kind,
+    });
+  };
+
   for (const node of graph.nodes) {
-    for (const id of parents.get(node.id) ?? []) {
-      const from = at.get(id);
-      const to = at.get(node.id);
-      if (!from || !to) continue;
-      const x1 = from.x + geom.nodeW / 2;
-      const y1 = from.y + geom.nodeH;
-      const x2 = to.x + geom.nodeW / 2;
-      const y2 = to.y;
-      // Control points pulled vertically by half the gap, so the line leaves the
-      // node it comes from going down and arrives at the next one going down —
-      // a curve that reads as a route rather than as a diagonal.
-      const bend = Math.max(24, (y2 - y1) / 2);
-      edges.push({
-        id: `${id}->${node.id}`,
-        from: id,
-        to: node.id,
-        state: edgeState(node),
-        d: `M${x1},${y1} C${x1},${y1 + bend} ${x2},${y2 - bend} ${x2},${y2}`,
-      });
+    for (const id of parents.get(node.id) ?? []) join(id, node.id, 'requires');
+    // Suggestions are drawn but were never ranked, so one can point upward or
+    // sideways. The curve handles it; the layout above never saw it.
+    for (const id of node.recommends ?? []) {
+      if (byId.has(id)) join(id, node.id, 'recommends');
     }
   }
 
