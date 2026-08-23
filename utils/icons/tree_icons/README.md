@@ -1,8 +1,8 @@
 # tree_icons
 
-The skill tree's own icons, kept apart from the 134 drawings in `utils/icons/`
-above it. Those are the calendar's vocabulary — *gym*, *coffee*, *birthday* —
-guessed from the name of a block a person typed. These are a curriculum's
+The skill tree's own icons — 856 of them — kept apart from the 134 drawings in
+`utils/icons/` above it. Those are the calendar's vocabulary — *gym*, *coffee*,
+*birthday* — guessed from the name of a block a person typed. These are a curriculum's
 vocabulary: *recursion*, *hash-map*, *integrals*, *ear-training*. A skill tree
 that reached into the calendar's set would be picking `code.svg` for eleven
 different programming nodes, which is how a lattice ends up looking like one
@@ -36,24 +36,40 @@ colour decision.
 
 ## What is in here
 
-| Group | Icons |
+856 drawings, one per idea rather than one per node: a node names its icon by
+filename without the extension, and two nodes on different trees are welcome to
+name the same one where they mean the same thing. Broadly:
+
+| Group | What it covers |
 | --- | --- |
-| Language | variables, types, conditionals, loops, functions, objects, arrays, strings, recursion, debugging, version-control, terminal, memory, pointers, compile, syntax |
-| Data structures | linked-list, stack, queue, hash-map, tree-structure, graph-nodes, sorting, searching, binary-search, traversal, dynamic-programming, greedy, complexity |
-| Web | html, css, layout, dom, http, api, client-state, components, routing, auth, deploy, responsive, browser, form |
-| Systems | process, threads, concurrency, filesystem, network, database, server, cache, security, kernel, cloud, package |
-| Mathematics | arithmetic, fractions, algebra-x, geometry, functions-graph, trigonometry, statistics, probability, calculus, derivatives, integrals, limits, matrices, vectors, series, equations |
-| Music | rhythm, music-note, scales, intervals, chords, key-signature, progressions, ear-training, metronome, staff |
-| Science | scientific-method, measurement, physics, chemistry, biology, energy, cells, atoms, forces, experiment, microscope, dna |
-| State & chrome | locked, unlocked, mastered, in-progress, available, star, trophy, target, milestone, branch, path-route, map, compass, book, idea, brain, rocket, flag, gem, shield, spark, layers, puzzle, checklist, timer, streak, graduation, practice, xp-bolt, core-skill |
+| Language | variables, types, conditionals, loops, functions, objects, arrays, strings, recursion, debugging, version control, terminal, memory, pointers, compile, syntax |
+| Data structures | linked list, stack, queue, hash map, tree, graph, sorting, searching, binary search, traversal, dynamic programming, greedy, complexity |
+| Web | html, css, layout, dom, http, api, client state, components, routing, auth, deploy, responsive, browser, form |
+| Systems & networks | process, threads, concurrency, filesystem, network, database, server, cache, security, kernel, cloud, package, packets, routing, dns, tls, proxies, load balancing, latency |
+| Data & machine learning | datasets, cleaning, distributions, sampling, correlation, regression, features, pipelines, models, overfitting, gradients, neural nets, attention, fairness |
+| Mathematics | arithmetic, fractions, algebra, geometry, functions, trigonometry, statistics, probability, calculus, derivatives, integrals, limits, matrices, vectors, series, equations, logic, sets, proof, induction |
+| Science | scientific method, measurement, uncertainty, physics, chemistry, biology, energy, cells, atoms, forces, orbits, plate tectonics, climate, telescopes |
+| Music | rhythm, notes, scales, intervals, chords, key signatures, progressions, ear training, metronome, staff, fretboards, keys, breath, mixing desks, waveforms |
+| Language & humanities | sentences, punctuation, paragraphs, citation, translation, sources, timelines, arguments, fallacies, minds, emotions, societies |
+| Business & work | ledgers, cash flow, interest, portfolios, supply and demand, funnels, brands, meetings, delegation, hiring, feedback, negotiation |
+| Creative | shapes, value, perspective, composition, colour, brushes, typography, grids, wireframes, apertures, shutters, lenses, storyboards, clappers |
+| Health & home | warm-ups, barbells, running, recovery, macros, sleep, meditation, tidying, cooking, knives, pans, packing, passports, routes |
+| State & chrome | locked, unlocked, mastered, in-progress, available, star, trophy, target, milestone, branch, path, map, compass, book, idea, brain, rocket, flag, gem, shield, spark, layers, puzzle, checklist, timer, streak, graduation, practice, xp-bolt, core-skill |
 
 The last group is the one to reach into when a tree needs a node that is about
 progress rather than about a subject — a milestone, a capstone, a review — and
-the first seven are the subjects themselves. A node names its icon by filename
-without the extension; `frontend/src/skills/subjectTrees.ts` is where those
-names are attached, and anything it asks for that is missing falls back to
-`core-skill`.
+the rest are the subjects themselves.
 
-Adding one: drop a 24×24 stroke SVG in here and name it after the idea rather
+## Nothing here is optional
+
+`frontend/src/skills/trees` is the only thing that names these files, and
+`scripts/check_trees.mjs` fails if a tree names one that is not here. That is
+deliberate: `iconUrl` falls back to `core-skill` for a missing name, so without
+the check a typo would ship as a tile with the wrong drawing on it and nothing
+would ever say so.
+
+    npm run check:trees
+
+Adding one: drop a 24x24 stroke SVG in here and name it after the idea rather
 than the drawing (`recursion`, not `nested-squares`), so the tree that wants it
 can be read without opening the file.

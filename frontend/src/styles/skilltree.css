@@ -1513,3 +1513,26 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
 @media (max-width: 640px) {
     .stx-treenav { border-radius: var(--lat-radius); }
 }
+
+/* ---- the subject switcher, grouped ----
+   Eleven roots do not read as one row of pills, so they sit under the
+   catalogue's nine headings. The heading is deliberately quiet: it is a label
+   for a cluster rather than a control, and the eye should land on the subject
+   names. The groups wrap as a whole, so a subject never separates from the
+   heading it belongs to. */
+.stx-subject-group {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 0 4px;
+}
+.stx-subject-heading {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--lat-faint);
+}
+.stx-subject-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.stx-subjects { align-items: flex-start; gap: 8px 14px; }

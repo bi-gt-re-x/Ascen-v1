@@ -37,13 +37,13 @@ import {
 import { useAuth, useDocumentTitle, usePageEntrance } from '@/hooks';
 import {
   DEFAULT_TREE,
-  ROOT_SUBJECTS,
   childrenOf,
   graphFromSubjectTree,
   iconUrl,
   navTargets,
   parentChain,
   parentOf,
+  rootsByGroup,
   siblingsOf,
   subjectTreeById,
 } from '@/skills/subjectTrees';
@@ -122,6 +122,9 @@ export default function SkillTrees() {
   useDocumentTitle('Skill Tree');
 
   const { username } = useAuth();
+  // The switcher's shape. Constant for the life of the app — the trees are a
+  // module, not a fetch — so it is built once rather than on every render.
+  const groups = useMemo(() => rootsByGroup(), []);
   const [treeId, setTreeId] = useState<string>(DEFAULT_TREE.id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -206,17 +209,28 @@ export default function SkillTrees() {
     <div className="stx-page stx-page--lattice">
       <Ambient />
       <div className={`stx-shell page-shell${entering ? ' pg-enter' : ''}`}>
+        {/* Eleven subjects is past what one row of pills can be read as, so they
+            are offered under the catalogue's own headings — the same nine
+            groups the subject picker uses, taken from what each root carries
+            rather than from a second list written here. */}
         <nav className="stx-subjects" aria-label="Subjects">
-          {ROOT_SUBJECTS.map((subject) => (
-            <button
-              key={subject.id}
-              type="button"
-              className={`stx-subject${subject.id === rootId ? ' is-on' : ''}`}
-              aria-current={subject.id === rootId ? 'true' : undefined}
-              onClick={() => goTo(subject.id)}
-            >
-              {subject.title}
-            </button>
+          {groups.map(({ group, trees }) => (
+            <span key={group} className="stx-subject-group">
+              <span className="stx-subject-heading">{group}</span>
+              <span className="stx-subject-row">
+                {trees.map((subject) => (
+                  <button
+                    key={subject.id}
+                    type="button"
+                    className={`stx-subject${subject.id === rootId ? ' is-on' : ''}`}
+                    aria-current={subject.id === rootId ? 'true' : undefined}
+                    onClick={() => goTo(subject.id)}
+                  >
+                    {subject.title}
+                  </button>
+                ))}
+              </span>
+            </span>
           ))}
         </nav>
 

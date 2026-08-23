@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && vite build",
+    "build": "npm run typecheck && npm run check:trees && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:trees": "node scripts/check_trees.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",
