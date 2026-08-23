@@ -91,6 +91,7 @@ export function SkillTree({
   const [full, setFull] = useState(false);
   const [dragging, setDragging] = useState(false);
 
+
   /**
    * Change scale while holding the content point at (ax, ay) — viewport px.
    * Omit the anchor and the middle of the viewport is used.
@@ -192,6 +193,24 @@ export function SkillTree({
 
   const bare = layout.nodes.length === 0;
 
+  /**
+   * The drawing at its current scale — and, below, how it is centred without
+   * anything measuring anything.
+   *
+   * A drawing narrower than its box used to sit against the left edge with the
+   * field empty beside it, which reads as a page that failed to fill rather
+   * than as a tree. The fix is two lines of arithmetic the browser does for us:
+   * the stage takes `max(drawn, 100%)`, so it is never narrower than the scroll
+   * box, and the scaled layer is pushed to `left: 50%` and pulled back by half
+   * its own drawn width. When the stage is the box, that centres the drawing in
+   * it; when the stage is the drawing — anything wider than the box — the two
+   * halves cancel to zero and it sits flush left, which is what a canvas you
+   * pan around wants. No ResizeObserver, so it is also right on the first paint
+   * and inside a tab that is not currently being rendered.
+   */
+  const drawnWidth = layout.width * scale;
+  const drawnHeight = layout.height * scale;
+
   return (
     <section className={`stx-canvas${full ? ' is-full' : ''}`}>
       <div
@@ -207,13 +226,15 @@ export function SkillTree({
         ) : (
           <div
             className="stx-stage"
-            style={{ width: layout.width * scale, height: layout.height * scale }}
+            style={{ width: `max(${drawnWidth}px, 100%)`, height: drawnHeight }}
           >
             <div
               className="stx-scaled"
               style={{
                 width: layout.width,
                 height: layout.height,
+                left: '50%',
+                marginLeft: -drawnWidth / 2,
                 transform: `scale(${scale})`,
                 // @ts-expect-error -- a custom property, which React types as
                 // unknown on CSSProperties but passes straight through.

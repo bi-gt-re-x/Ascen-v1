@@ -751,27 +751,92 @@ html[data-theme="dark"] .stx-page {
     .stx-node:hover { transform: none; }
 }
 
+
 /* ==========================================================================
    Lattice variant — the subject trees.
 
-   A different reading of the same canvas: not labelled cards but a tight grid
-   of icon-sized tiles, lit gold along the routes that are earned or open and
-   left grey where they are locked, on a deep field. Scoped to
-   `.stx-page--lattice` so it overrides the light card palette above outright
-   and looks the same whichever theme the app is in — the look *is* the dark
-   field and the gold, the way the reference is.
+   The same canvas read a different way: not labelled cards but a grid of
+   icon-sized tiles with their names under them, joined by lines that are lit
+   along the routes you have taken and quiet where they are locked.
+
+   ## It follows the app's theme
+
+   Every colour below comes from a `--lat-*` token, declared twice — once here
+   for the light theme and once under `html[data-theme="dark"]`. Nothing in the
+   rules themselves is a literal colour, so the lattice is the app's own light
+   or dark page rather than a dark island inside a light one. The accent stays
+   gold in both because gold is what "earned" means here; it is simply a deeper
+   gold on white, where a bright one would vanish.
    ========================================================================== */
 .stx-page--lattice {
-    --stx-gold: #e8b04b;
-    --stx-gold-lit: #ffd777;
-    --stx-nav: #e07b39;
-    --stx-field: #10141b;
-    --stx-field-2: #161c25;
-    --stx-tile-line: #39424f;
-    --stx-tile-lock: #262d38;
+    --lat-field: #fbfaf8;
+    --lat-grid: #e7eaf0;
+    --lat-panel: #ffffff;
 
-    background: radial-gradient(1200px 600px at 50% -8%, #1a212c 0%, #0d1117 60%);
-    color: #e6edf3;
+    --lat-tile: #ffffff;
+    --lat-tile-line: #d7dce5;
+    --lat-lock-tile: #f2f4f7;
+    --lat-lock-line: #e2e6ed;
+
+    --lat-gold: #b3801f;
+    --lat-gold-lit: #d29a2b;
+    --lat-gold-soft: #fdf3dd;
+    --lat-gold-glow: rgba(179, 128, 31, .18);
+    --lat-nav: #c2631f;
+    --lat-nav-soft: #fdeee1;
+    --lat-nav-glow: rgba(194, 99, 31, .2);
+
+    --lat-text: #1f2733;
+    --lat-muted: #6b7684;
+    --lat-faint: #98a1ae;
+    --lat-wire: #c4cbd7;
+    --lat-wire-lock: #dfe4eb;
+}
+
+html[data-theme="dark"] .stx-page--lattice {
+    --lat-field: #10141b;
+    --lat-grid: #20272f;
+    --lat-panel: #161c25;
+
+    --lat-tile: linear-gradient(180deg, #1b222c 0%, #141a22 100%);
+    --lat-tile-line: #39424f;
+    --lat-lock-tile: #161c24;
+    --lat-lock-line: #2b3340;
+
+    --lat-gold: #e8b04b;
+    --lat-gold-lit: #ffd777;
+    --lat-gold-soft: linear-gradient(180deg, #4a3a1a 0%, #2c2210 100%);
+    --lat-gold-glow: rgba(232, 176, 75, .3);
+    --lat-nav: #e07b39;
+    --lat-nav-soft: linear-gradient(180deg, #3a2413 0%, #241407 100%);
+    --lat-nav-glow: rgba(224, 123, 57, .32);
+
+    --lat-text: #e6edf3;
+    --lat-muted: #8b949e;
+    --lat-faint: #6e7781;
+    --lat-wire: #4a5563;
+    --lat-wire-lock: #272f3b;
+}
+
+/* ---- the page fills the width it is given -------------------------------
+   `body` lays its one child out centred with `align-items: center`, so #root is
+   shrink-to-fit and a page as narrow as this drawing used to pull the whole
+   column in around it — a ribbon of lattice down the middle of an empty screen.
+   Stretching #root while this page is mounted is the one line that fixes it,
+   and `:has` keeps it scoped to this page rather than changing the app's
+   layout for everything. The rail and the top bar are already paid for by
+   `body.has-rail`'s padding, so there is nothing further to offset here. */
+body:has(.stx-page--lattice) > #root { align-self: stretch; width: 100%; }
+
+.stx-page--lattice {
+    background: var(--lat-field);
+    color: var(--lat-text);
+}
+/* Wider than the card pages' 1520px cap: a lattice is mostly air between tiles
+   and reads better the more of the screen it is allowed. */
+.stx-page--lattice .stx-shell {
+    --shell-max: 2200px;
+    --shell-fluid: 97%;
 }
 
 /* ---- subject switcher ---- */
@@ -784,21 +849,25 @@ html[data-theme="dark"] .stx-page {
 .stx-subject {
     padding: 7px 15px;
     border-radius: 999px;
-    border: 1px solid var(--stx-tile-line);
-    background: rgba(255, 255, 255, .02);
-    color: #aeb7c4;
+    border: 1px solid var(--lat-tile-line);
+    background: var(--lat-panel);
+    color: var(--lat-muted);
     font: inherit;
     font-size: 13px;
     font-weight: 650;
     cursor: pointer;
     transition: color .16s ease, border-color .16s ease, background .16s ease;
 }
-.stx-subject:hover { color: #e6edf3; border-color: color-mix(in srgb, var(--stx-gold) 45%, var(--stx-tile-line)); }
-.stx-subject.is-on {
-    color: #1a1206;
-    background: linear-gradient(180deg, var(--stx-gold-lit), var(--stx-gold));
-    border-color: var(--stx-gold);
+.stx-subject:hover {
+    color: var(--lat-text);
+    border-color: color-mix(in srgb, var(--lat-gold) 45%, var(--lat-tile-line));
 }
+.stx-subject.is-on {
+    color: #fff;
+    background: var(--lat-gold);
+    border-color: var(--lat-gold);
+}
+html[data-theme="dark"] .stx-subject.is-on { color: #1a1206; }
 
 /* ---- title at the top ---- */
 .stx-lead {
@@ -809,67 +878,95 @@ html[data-theme="dark"] .stx-page {
     text-align: center;
     padding: 4px 0 2px;
 }
-.stx-crumbs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12.5px; }
-.stx-crumb { display: inline-flex; align-items: center; gap: 6px; color: #7b8494; }
+.stx-crumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 12.5px;
+}
+.stx-crumb { display: inline-flex; align-items: center; gap: 6px; color: var(--lat-faint); }
 .stx-crumb button {
     border: 0;
     background: none;
-    color: #aeb7c4;
+    color: var(--lat-muted);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
     padding: 0;
 }
-.stx-crumb button:hover { color: var(--stx-gold-lit); text-decoration: underline; }
-.stx-crumb [aria-current="page"] { color: #e6edf3; font-weight: 700; }
-.stx-crumb i { color: #4b5563; font-style: normal; }
+.stx-crumb button:hover { color: var(--lat-gold); text-decoration: underline; }
+.stx-crumb [aria-current="page"] { color: var(--lat-text); font-weight: 700; }
+.stx-crumb i { color: var(--lat-faint); font-style: normal; }
 
 .stx-lead-label {
     text-transform: uppercase;
     letter-spacing: .18em;
     font-size: 13px;
     font-weight: 700;
-    color: #9aa4b2;
+    color: var(--lat-muted);
 }
 .stx-lead-figure {
     font-size: 46px;
     font-weight: 800;
     line-height: 1;
-    color: var(--stx-gold-lit);
-    text-shadow: 0 0 22px rgba(232, 176, 75, .35);
+    color: var(--lat-gold);
 }
-.stx-lead-sub { font-size: 13px; color: #7b8494; max-width: 52ch; }
+html[data-theme="dark"] .stx-lead-figure { text-shadow: 0 0 22px var(--lat-gold-glow); }
+.stx-lead-sub { font-size: 13px; color: var(--lat-muted); max-width: 52ch; }
 
-/* ---- canvas, on a deep field ---- */
+/* ---- canvas ---- */
 .stx-page--lattice .stx-canvas {
-    border-color: #232b36;
-    background: var(--stx-field-2);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 18px 50px rgba(0, 0, 0, .4);
+    border-color: var(--lat-tile-line);
+    background: var(--lat-panel);
 }
 .stx-page--lattice .stx-scroll {
-    background-color: var(--stx-field);
-    background-image: radial-gradient(#20272f 1px, transparent 1px);
+    background-color: var(--lat-field);
+    background-image: radial-gradient(var(--lat-grid) 1px, transparent 1px);
     background-size: 26px 26px;
+    /* Taller than the card feeds': the tiles are small, so a lattice fits far
+       more of itself on a screen and is worth giving the room to. */
+    height: clamp(520px, 70vh, 900px);
 }
-.stx-page--lattice .stx-hint { color: #6e7781; }
+/* Above the rail and the top bar, which are fixed at 900 — a full screen that
+   something else is painted over is not one.
+
+   The z-index alone did not do it. `.stx-shell` is `position: relative` with
+   `z-index: 1`, which makes it a stacking context, and a child of one cannot
+   climb out of it however large its own z-index is — 1000 inside a context at
+   1 still lands under the rail at 900. So the shell gives up being a stacking
+   context for exactly as long as a canvas inside it is full screen. Written
+   against `.stx-shell` rather than the lattice page because both feeds use this
+   same pair and were both stuck under the rail. */
+.stx-shell:has(.stx-canvas.is-full) { z-index: auto; }
+.stx-page--lattice .stx-canvas.is-full { z-index: 1000; background: var(--lat-field); }
+.stx-page--lattice .stx-canvas.is-full .stx-scroll { height: 100vh; }
+.stx-page--lattice .stx-hint { color: var(--lat-faint); }
 .stx-page--lattice .stx-zoom {
-    background: rgba(18, 22, 29, .82);
-    border-color: #2b3442;
-    color: #cbd3dd;
+    background: color-mix(in srgb, var(--lat-panel) 88%, transparent);
+    border-color: var(--lat-tile-line);
+    color: var(--lat-muted);
 }
 
-/* ---- connections: gold on the routes, grey where locked ---- */
-.stx-page--lattice .stx-wire { stroke: #4a5563; stroke-width: 2.4; }
-.stx-page--lattice .stx-wire.is-locked { stroke: var(--stx-tile-lock); stroke-dasharray: 4 7; opacity: .8; }
-.stx-page--lattice .stx-wire.is-available { stroke: color-mix(in srgb, var(--stx-gold) 60%, #4a5563); }
+/* ---- connections ---- */
+.stx-page--lattice .stx-wire { stroke: var(--lat-wire); stroke-width: 2.4; }
+.stx-page--lattice .stx-wire.is-locked {
+    stroke: var(--lat-wire-lock);
+    stroke-dasharray: 4 7;
+    opacity: .9;
+}
+.stx-page--lattice .stx-wire.is-available {
+    stroke: color-mix(in srgb, var(--lat-gold) 55%, var(--lat-wire));
+}
 .stx-page--lattice .stx-wire.is-active,
-.stx-page--lattice .stx-wire.is-complete { stroke: var(--stx-gold); stroke-width: 2.8; }
-.stx-page--lattice .stx-wire.is-lit { stroke: var(--stx-gold-lit); stroke-width: 3.6; opacity: 1; }
+.stx-page--lattice .stx-wire.is-complete { stroke: var(--lat-gold); stroke-width: 2.8; }
+.stx-page--lattice .stx-wire.is-lit { stroke: var(--lat-gold-lit); stroke-width: 3.6; opacity: 1; }
 
 /* ---- tile ----
-   The button is only the hitbox and the corner figure; the visible square is
-   `.stx-tile-face`, so a navigation tile can rotate its face into a diamond
-   without the number turning with it. */
+   The button is the hitbox, the corner figure and the name; the visible square
+   is `.stx-tile-face`, so a navigation tile can rotate its face into a diamond
+   without the number or the label turning with it. */
 .stx-tile {
     position: absolute;
     box-sizing: border-box;
@@ -884,36 +981,36 @@ html[data-theme="dark"] .stx-page {
     width: 100%;
     height: 100%;
     border-radius: 12px;
-    border: 2px solid var(--stx-tile-line);
-    background: linear-gradient(180deg, #1b222c 0%, #141a22 100%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03);
+    border: 2px solid var(--lat-tile-line);
+    background: var(--lat-tile);
     transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 .stx-tile.is-available .stx-tile-face {
-    border-color: color-mix(in srgb, var(--stx-gold) 75%, var(--stx-tile-line));
-    box-shadow: inset 0 0 12px rgba(232, 176, 75, .1), 0 0 0 1px rgba(232, 176, 75, .12);
+    border-color: color-mix(in srgb, var(--lat-gold) 70%, var(--lat-tile-line));
 }
 .stx-tile.is-progress .stx-tile-face {
-    border-color: var(--stx-gold);
-    background: linear-gradient(180deg, #2a2214 0%, #1b1710 100%);
-    box-shadow: 0 0 0 1px rgba(232, 176, 75, .2), 0 0 14px rgba(232, 176, 75, .22);
+    border-color: var(--lat-gold);
+    background: var(--lat-gold-soft);
+    box-shadow: 0 0 0 1px var(--lat-gold-glow), 0 0 14px var(--lat-gold-glow);
 }
 .stx-tile.is-complete .stx-tile-face {
-    border-color: var(--stx-gold-lit);
-    background: linear-gradient(180deg, #4a3a1a 0%, #2c2210 100%);
-    box-shadow: 0 0 0 1px rgba(232, 176, 75, .3), 0 0 16px rgba(232, 176, 75, .3);
+    border-color: var(--lat-gold);
+    background: var(--lat-gold-soft);
+    box-shadow: 0 0 0 1px var(--lat-gold-glow), 0 0 16px var(--lat-gold-glow);
 }
 .stx-tile.is-locked .stx-tile-face {
-    border-color: var(--stx-tile-line);
-    background: #161c24;
-    opacity: .8;
+    border-color: var(--lat-lock-line);
+    background: var(--lat-lock-tile);
 }
 .stx-tile:hover .stx-tile-face { transform: translateY(-2px); }
 .stx-tile:focus-visible { outline: none; }
-.stx-tile:focus-visible .stx-tile-face { border-color: var(--stx-gold-lit); box-shadow: 0 0 0 3px rgba(232, 176, 75, .35); }
+.stx-tile:focus-visible .stx-tile-face {
+    border-color: var(--lat-gold);
+    box-shadow: 0 0 0 3px var(--lat-gold-glow);
+}
 .stx-tile.is-selected .stx-tile-face {
-    border-color: var(--stx-gold-lit);
-    box-shadow: 0 0 0 2px var(--stx-gold), 0 0 20px rgba(232, 176, 75, .45);
+    border-color: var(--lat-gold-lit);
+    box-shadow: 0 0 0 2px var(--lat-gold), 0 0 20px var(--lat-gold-glow);
 }
 
 /* navigation tile — a diamond that opens a child subject */
@@ -922,16 +1019,18 @@ html[data-theme="dark"] .stx-page {
     height: 74%;
     border-radius: 9px;
     transform: rotate(45deg);
-    border-color: var(--stx-nav);
-    background: linear-gradient(180deg, #3a2413 0%, #241407 100%);
-    box-shadow: 0 0 0 1px rgba(224, 123, 57, .3), 0 0 16px rgba(224, 123, 57, .32);
+    border-color: var(--lat-nav);
+    background: var(--lat-nav-soft);
+    box-shadow: 0 0 0 1px var(--lat-nav-glow), 0 0 16px var(--lat-nav-glow);
 }
 .stx-tile.is-nav:hover .stx-tile-face { transform: rotate(45deg) scale(1.07); }
 .stx-tile.is-nav.is-selected .stx-tile-face,
 .stx-tile.is-nav:focus-visible .stx-tile-face {
-    border-color: #ffb27a;
-    box-shadow: 0 0 0 2px var(--stx-nav), 0 0 20px rgba(224, 123, 57, .5);
+    box-shadow: 0 0 0 2px var(--lat-nav), 0 0 20px var(--lat-nav-glow);
 }
+.stx-tile.is-nav .stx-tile-name { color: var(--lat-nav); font-weight: 700; }
+/* The affordance that says a diamond goes somewhere rather than being held. */
+.stx-tile.is-nav .stx-tile-name::after { content: ' ›'; }
 
 /* the corner figure */
 .stx-tile-rank {
@@ -942,9 +1041,9 @@ html[data-theme="dark"] .stx-page {
     height: 16px;
     padding: 0 4px;
     border-radius: 8px;
-    background: #0e1218;
-    border: 1px solid var(--stx-tile-line);
-    color: #e6edf3;
+    background: var(--lat-panel);
+    border: 1px solid var(--lat-tile-line);
+    color: var(--lat-text);
     font-size: 10.5px;
     font-weight: 800;
     line-height: 1;
@@ -952,12 +1051,48 @@ html[data-theme="dark"] .stx-page {
     place-items: center;
 }
 .stx-tile.is-complete .stx-tile-rank,
-.stx-tile.is-progress .stx-tile-rank { color: var(--stx-gold-lit); border-color: color-mix(in srgb, var(--stx-gold) 50%, var(--stx-tile-line)); }
+.stx-tile.is-progress .stx-tile-rank {
+    color: var(--lat-gold);
+    border-color: color-mix(in srgb, var(--lat-gold) 50%, var(--lat-tile-line));
+}
+
+/* ---- the name under the tile ----
+   Absolute and centred on the tile, in a box wider than the tile itself, so the
+   label is free to be longer than 64px without any part of the lattice moving
+   to accommodate it. Two lines at most, then an ellipsis — the full name is on
+   the button's `title` and in its `aria-label`. */
+.stx-tile-name {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(var(--stx-node-w, 64px) + 72px);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: center;
+    color: var(--lat-muted);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    pointer-events: none;
+}
+.stx-tile.is-complete .stx-tile-name,
+.stx-tile.is-progress .stx-tile-name { color: var(--lat-text); font-weight: 700; }
+.stx-tile.is-available .stx-tile-name { color: var(--lat-text); }
+.stx-tile.is-locked .stx-tile-name { color: var(--lat-faint); }
+.stx-tile:hover .stx-tile-name { color: var(--lat-gold); }
+
+@media (max-width: 640px) {
+    .stx-lead-figure { font-size: 38px; }
+    .stx-page--lattice .stx-scroll { height: clamp(420px, 62vh, 640px); }
+}
 
 @media (prefers-reduced-motion: reduce) {
     .stx-tile-face { transition: none; }
-    .stx-tile:hover .stx-tile-face,
-    .stx-tile.is-nav:hover .stx-tile-face { transform: rotate(0deg); }
+    .stx-tile:hover .stx-tile-face { transform: none; }
     .stx-tile.is-nav .stx-tile-face,
     .stx-tile.is-nav:hover .stx-tile-face { transform: rotate(45deg); }
 }

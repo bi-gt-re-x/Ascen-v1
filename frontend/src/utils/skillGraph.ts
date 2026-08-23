@@ -145,9 +145,13 @@ export type Geometry = typeof GEOM;
 export const LATTICE_GEOM: Geometry = {
   nodeW: 64,
   nodeH: 64,
-  colGap: 30,
-  rowGap: 52,
-  pad: 60,
+  // Both gaps are set by the label rather than by the tile: a name sits under
+  // each square, so siblings need room for one to stand between them and each
+  // rank needs room for one to hang below it. Tighter than this and the names
+  // touch, which is the one thing that makes a lattice unreadable.
+  colGap: 140,
+  rowGap: 96,
+  pad: 64,
 };
 
 export interface PlacedNode {
