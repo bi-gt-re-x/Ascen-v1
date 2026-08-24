@@ -11,6 +11,7 @@
  * order than the sections they named. Overview is one continuous argument and
  * scrolls like one.
  */
+import type { ReactNode } from 'react';
 import { WINDOWS, type WindowKey } from './data';
 
 // --------------------------------------------------------------------------
@@ -30,10 +31,18 @@ export interface View {
   label: string;
   /** Its own URL, so a tab can be linked to and the back button works. */
   path: string;
-  /** The one-line statement of what this tab is for and what it is not. */
+  /**
+   * The one-line statement of what this tab is for and what it is not.
+   *
+   * Printed under the page title, so it is on screen for the tab that is open
+   * rather than only in a tooltip on the six that are not. Each view used to
+   * carry a second, shorter `blurb` for that slot — "Where you stand." against
+   * "The long view: totals, trajectory and where the account stands" — two
+   * sentences saying one thing at two lengths, and the longer, more useful one
+   * was the one nobody saw. It took the slot; the short one went.
+   */
   purpose: string;
   title: string;
-  blurb: string;
 }
 
 /**
@@ -77,7 +86,6 @@ export const VIEWS: View[] = [
     path: '/recommendations',
     purpose: 'What to change, ranked by what it would actually be worth.',
     title: 'Recommendations',
-    blurb: 'What to change, and what it is worth.',
   },
   {
     key: 'overview',
@@ -85,7 +93,6 @@ export const VIEWS: View[] = [
     path: '/analytics',
     purpose: 'The long view — totals, trajectory and where the account stands.',
     title: 'Overview',
-    blurb: 'Where you stand.',
   },
   {
     key: 'trends',
@@ -93,7 +100,6 @@ export const VIEWS: View[] = [
     path: '/trends',
     purpose: 'Which way each measure is heading, and whether the movement is real.',
     title: 'Trends',
-    blurb: 'What is moving, and how fast.',
   },
   {
     key: 'habits',
@@ -101,7 +107,6 @@ export const VIEWS: View[] = [
     path: '/habits',
     purpose: 'What you do — the routines, streaks and rhythms in your own record.',
     title: 'Habits',
-    blurb: 'What you repeat.',
   },
   {
     key: 'insights',
@@ -109,7 +114,6 @@ export const VIEWS: View[] = [
     path: '/insights',
     purpose: 'Why and how you work — what conditions your better work shows up under.',
     title: 'Insights',
-    blurb: 'Why it looks like this.',
   },
   {
     key: 'subjects',
@@ -117,7 +121,6 @@ export const VIEWS: View[] = [
     path: '/subjects',
     purpose: 'What you are getting good at — every subject as a level, counted off your own tasks.',
     title: 'Subjects',
-    blurb: 'What you are getting good at.',
   },
   {
     key: 'records',
@@ -129,7 +132,6 @@ export const VIEWS: View[] = [
     path: '/analytics/records',
     purpose: 'How far along you are, against your own record and the goals you set.',
     title: 'Records',
-    blurb: 'Your own best, and the ladder ahead.',
   },
 ];
 
@@ -145,11 +147,14 @@ export interface ViewTabsProps {
 /**
  * The seven major tabs — the page's only tab bar.
  *
- * A line of prose under the bar used to say what the open tab was for. It is a
- * `title` on each button now. The sentence was doing real work when the tabs
- * were five unfamiliar words, and it was still a paragraph of explanation
- * sitting above every screen on the page forever — the labels carry it once a
- * reader has been here twice, and hover carries it for the once they have not.
+ * A line of prose under the bar used to say what the open tab was for. That was
+ * removed because it read as a paragraph of explanation sitting above every
+ * screen forever, and the sentence became a `title` on each button — which put
+ * it behind a hover, on the six tabs the reader is not looking at.
+ *
+ * It is under the page title now: one sentence, for the tab that is actually
+ * open, in a slot that already existed. The `title` stays, because on the other
+ * six it is still the only thing that says where a label goes.
  */
 export function ViewTabs({ active, onView }: ViewTabsProps) {
   return (
@@ -174,7 +179,7 @@ export function ViewTabs({ active, onView }: ViewTabsProps) {
 
 export interface HeaderProps {
   span: string;
-  /** Which tab is open. Its title and blurb are the header's. */
+  /** Which tab is open. Its title and purpose are the header's. */
   view?: View;
   /**
    * Builds the report to download, or null when there is nothing to write.
@@ -225,7 +230,7 @@ export function Header({ span, view, onExport, exportName }: HeaderProps) {
           <span className={`ax-head-icon ax-head-icon-${shown.key}`} aria-hidden="true" />
           {shown.title}
         </h1>
-        <p className="ax-muted">{shown.blurb}</p>
+        <p className="ax-muted ax-head-purpose">{shown.purpose}</p>
       </div>
       <div className="ax-head-actions">
         <span className="ax-pill">
@@ -310,6 +315,43 @@ export function Controls({
 
 
 // --------------------------------------------------------------------------
+// The opening line
+// --------------------------------------------------------------------------
+/**
+ * The first thing under the controls, on every tab.
+ *
+ * Three tabs used to open with a sentence and four opened with a wall — and the
+ * three did it three different ways, in three different places. Overview had a
+ * bordered strip directly under the controls; Habits had a titled panel halfway
+ * down a two-up row; Insights had a different titled panel in a different
+ * two-up row. So the one habit worth teaching a reader — *there is a sentence
+ * at the top that tells you where you stand* — was not learnable, because it
+ * was true a third of the time and never twice in the same place.
+ *
+ * One component, one slot, filled by all seven. The sentences are not new: each
+ * was already being assembled on its own tab from that tab's own figures. What
+ * changed is that they moved into the same position, and the panels they came
+ * from stopped printing them — so nothing is said twice.
+ *
+ * ## The tone is a finding, not decoration
+ *
+ * `up` and `down` tint the strip green and amber. A tab with nothing to be up
+ * or down about — how many subjects are live, how long the streak is — passes
+ * neither and gets the plain card. That is the honest answer, and it also stops
+ * the colour drifting into meaning "this tab matters".
+ */
+export function TabOpening({
+  tone = 'flat',
+  children,
+}: {
+  tone?: 'up' | 'down' | 'flat';
+  children?: ReactNode;
+}) {
+  if (!children) return null;
+  return <p className={`ax-opening is-${tone}`}>{children}</p>;
+}
+
+// --------------------------------------------------------------------------
 // What changed since last time
 // --------------------------------------------------------------------------
 export interface SinceLastProps {
@@ -363,9 +405,9 @@ export function SinceLast({ points }: SinceLastProps) {
     const held = days(points[0]!.date);
     if (held < 2) return null;
     return (
-      <p className="ax-since is-flat">
+      <TabOpening>
         Your growth score has held at <strong>{now.toFixed(1)}</strong> for {held} days.
-      </p>
+      </TabOpening>
     );
   }
 
@@ -375,9 +417,9 @@ export function SinceLast({ points }: SinceLastProps) {
   const up = move > 0;
 
   return (
-    <p className={`ax-since is-${up ? 'up' : 'down'}`}>
+    <TabOpening tone={up ? 'up' : 'down'}>
       Your growth score is <strong>{now.toFixed(1)}</strong>, {up ? 'up' : 'down'} from{' '}
       {(earlier.score / 10).toFixed(1)} {gap === 1 ? 'yesterday' : `${gap} days ago`}.
-    </p>
+    </TabOpening>
   );
 }

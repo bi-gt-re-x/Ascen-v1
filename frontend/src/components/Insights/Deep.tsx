@@ -297,8 +297,9 @@ export function CurrentStatePanel({ state, span }: { state: CurrentState; span: 
         </span>
       }
     >
-      <p className="ax-prose ax-prose-lead">{state.sentence}</p>
-      <p className="ax-prose">{state.weakness}</p>
+      {/* `state.sentence` is not here: it is the tab's opening line, in the
+          slot above the first section. This panel is what follows from it. */}
+      <p className="ax-prose ax-prose-lead">{state.weakness}</p>
     </Panel>
   );
 }

@@ -83,6 +83,7 @@ import {
   HabitCards,
   HabitConsistencyPanel,
   HabitOpening,
+  habitLead,
   HabitTiles,
   DepthPicker,
   DiagnosisCards,
@@ -93,6 +94,7 @@ import {
   Locked,
   MilestonePanel,
   NextActions,
+  PanelGroup,
   PatternsPanel,
   QualityGridPanel,
   QualityPanel,
@@ -101,6 +103,7 @@ import {
   ScoreBanner,
   ScorePanel,
   SinceLast,
+  TabOpening,
   StandingPanel,
   StreaksPanel,
   SubjectPanel,
@@ -1018,6 +1021,59 @@ export default function Analytics() {
     );
   }
 
+  /*
+   * The tab's opening line — one sentence, one slot, all seven tabs.
+   *
+   * None of these sentences is written here. Each is assembled somewhere that
+   * already knew how, from that tab's own figures, and three of them used to be
+   * the lead paragraph of a panel further down their own tab. Those panels gave
+   * them up rather than printing them twice.
+   *
+   * Guarded by the same conditions the tab bodies use, so a tab still waiting
+   * for record does not open with a confident sentence sitting above a notice
+   * saying it has nothing to say yet.
+   */
+  const opening = ((): React.ReactNode => {
+    switch (view.key) {
+      case 'overview':
+        return <SinceLast points={recorded} />;
+      case 'trends':
+        return waitFor('trends') === 0 && heading.length > 0 ? (
+          <TabOpening>{verdict}</TabOpening>
+        ) : null;
+      case 'habits':
+        return waitFor('habits') === 0 && habits.length > 0 ? (
+          <TabOpening>{habitLead(summary, spanText)}</TabOpening>
+        ) : null;
+      case 'insights':
+        return waitFor('insights') === 0 ? <TabOpening>{state.sentence}</TabOpening> : null;
+      case 'recommendations':
+        return advice.length > 0 ? (
+          <TabOpening>
+            {advice.length} {advice.length === 1 ? 'change is' : 'changes are'} worth making here.
+            The first is <strong>{advice[0]!.title.toLowerCase()}</strong>.
+          </TabOpening>
+        ) : null;
+      case 'subjects':
+        return breakdown.rows.length > 0 ? (
+          <TabOpening>
+            <strong>{breakdown.rows.length}</strong>{' '}
+            {breakdown.rows.length === 1 ? 'subject has' : 'subjects have'} XP in {spanText}, and{' '}
+            <strong>{breakdown.rows[0]!.label}</strong> is the furthest along.
+          </TabOpening>
+        ) : null;
+      case 'records':
+        return streak > 0 ? (
+          <TabOpening tone="up">
+            You are <strong>{streak}</strong> {streak === 1 ? 'day' : 'days'} into the current
+            streak.
+          </TabOpening>
+        ) : null;
+      default:
+        return null;
+    }
+  })();
+
   const compareLabel = `vs ${option.compare.toLowerCase()}`;
   const comparisonWord = comparison === 'week' ? 'last week' : comparison === 'month' ? 'last month' : 'previous 30';
 
@@ -1068,6 +1124,9 @@ export default function Analytics() {
           compareLabel={option.compare}
         />
 
+        {/* One sentence, same place, every tab. See `TabOpening`. */}
+        {opening}
+
         {view.key === 'overview' && (
           <OverviewView
             analytical={analytical}
@@ -1078,7 +1137,6 @@ export default function Analytics() {
             standing={standing.data ?? null}
             scoreLine={scoreLine}
             scoreMarks={scoreMarks}
-            sinceLast={<SinceLast points={recorded} />}
             compareLabel={compareLabel}
             slice={slice}
             spanText={spanText}
@@ -1277,81 +1335,92 @@ export default function Analytics() {
             <section className="ax-section">
               <HeadlineTiles week={week} clock={clock} rhythm={rhythm} balance={balance} />
             </section>
-            <section className="ax-section ax-grid ax-grid-halves-even">
-              <CurrentStatePanel state={state} span={spanText} />
-              <WorkingPanel wins={wins} />
-            </section>
-            <section className="ax-section ax-grid ax-grid-halves-even">
-              <WhyPanel
-                findings={why}
-                notice={unlock(slice.current.length, NEED_DAYS.insights, 'the “why” behind your last stretch')}
-              />
-              <HowPanel
-                findings={how}
-                notice={unlock(slice.current.length, NEED_DAYS.insights, 'how you tend to work')}
-              />
-            </section>
-            {/* Above the relationship panel rather than below it: this is the
-                one panel on the tab that answers "why am I improving" with a
-                condition rather than a correlation, and it is what a reader
-                opening Insights is actually looking for. It reads its own
-                month-long window rather than the picker — see "The recent
-                window" in the data section. */}
+
+            {/* Three groups, and the grouping is the point.
+
+                This tab carried fifteen panels in eight rows of equal weight,
+                and a reader scrolling it had to work out for themselves which
+                of the tab's three questions each one was answering. It answers
+                three: what is true now, why it is true, and when and on what
+                you work. So the three are named, and each panel lives in the
+                one it belongs to. The first is open because a tab of three
+                shut headings looks broken; the other two are a click, which is
+                the whole of what "fifteen cards" cost. See `PanelGroup`. */}
             <section className="ax-section">
-              <DiscoveredPatterns items={discovered} window={PATTERN_DAYS} />
+              <PanelGroup
+                title="What is true now"
+                note="Where the account stands, and what is working"
+                defaultOpen
+              >
+                <div className="ax-grid ax-grid-halves-even">
+                  <CurrentStatePanel state={state} span={spanText} />
+                  <WorkingPanel wins={wins} />
+                </div>
+                {/* The one panel on this tab that names individual tasks. Every
+                    other finding here is an aggregate, and an aggregate cannot
+                    answer the question a reader has straight after reading one
+                    — which tasks were those. */}
+                <div className="ax-grid ax-grid-halves-even ax-compact">
+                  <RatedTasksPanel rated={rated} summary={qualitySummary} />
+                  <InsightsPanel insights={insights} />
+                </div>
+              </PanelGroup>
+
+              <PanelGroup title="Why it happens" note="Conditions, correlations and causes">
+                {/* Patterns lead: this is the one panel on the tab that answers
+                    "why am I improving" with a condition rather than a
+                    correlation, and it is what a reader opening Insights is
+                    actually looking for. It reads its own month-long window
+                    rather than the picker — see "The recent window". */}
+                <DiscoveredPatterns items={discovered} window={PATTERN_DAYS} />
+                <div className="ax-grid ax-grid-halves-even">
+                  <WhyPanel
+                    findings={why}
+                    notice={unlock(slice.current.length, NEED_DAYS.insights, 'the “why” behind your last stretch')}
+                  />
+                  <HowPanel
+                    findings={how}
+                    notice={unlock(slice.current.length, NEED_DAYS.insights, 'how you tend to work')}
+                  />
+                </div>
+                {/* The tab's one hero: the only panel here that draws raw
+                    observations rather than an aggregate over them. */}
+                <div className="ax-hero">
+                  <RelationshipsPanel
+                    relationships={links}
+                    notice={unlock(slice.current.length, NEED_DAYS.insights, 'behavioural relationships')}
+                  />
+                </div>
+                {/* The only panel on the page that answers *why* from what the
+                    reader said rather than from what they did, and the only one
+                    that exists at one rating depth and not the others. It draws
+                    nothing at all unless the account has asked to be asked. */}
+                <ReasonsPanel
+                  reasons={reasons}
+                  findings={reasonRows}
+                  depth={prefs.rating_depth}
+                  span={spanText}
+                />
+              </PanelGroup>
+
+              <PanelGroup title="When and what you work on" note="The shape of the week, and where the effort goes">
+                <div className="ax-grid ax-grid-halves-even">
+                  <ClockPanel clock={clock} />
+                  <WeekPanel week={week} />
+                </div>
+                {/* The web, its legend and the concentration reading in one
+                    panel across the full width — see `SubjectPanel`, which
+                    absorbed the half of the balance panel that was not already
+                    here. */}
+                <div className="ax-hero">
+                  <SubjectPanel
+                    rows={breakdown.rows}
+                    previous={previousBySubject}
+                    balance={balance}
+                  />
+                </div>
+              </PanelGroup>
             </section>
-            <section className="ax-section ax-hero">
-              <RelationshipsPanel
-                relationships={links}
-                notice={unlock(slice.current.length, NEED_DAYS.insights, 'behavioural relationships')}
-              />
-            </section>
-            {/* When the work happens. `Summary` used to lead this row with a
-                paragraph assembled from these same figures — which is what
-                `CurrentStatePanel` does at the top of the tab, from the same
-                figures again. One opening paragraph per tab is enough. */}
-            <section className="ax-section ax-grid ax-grid-halves-even">
-              <ClockPanel clock={clock} />
-              <WeekPanel week={week} />
-            </section>
-            {/* The radar came off the Overview to sit beside the panel that
-                explains it: one draws the shape of the week by subject, the
-                other says whether that shape is drifting. */}
-            {/* The web, its legend and the concentration reading, in one
-                panel across the full width. They were two panels side by side,
-                both enumerating the same subjects in the same order from the
-                same figures — see `SubjectPanel`, which absorbed the half of
-                the other that was not already here. */}
-            <section className="ax-section ax-hero">
-              <SubjectPanel
-                rows={breakdown.rows}
-                previous={previousBySubject}
-                balance={balance}
-              />
-            </section>
-            {/* The one panel on this tab that names individual tasks. Every
-                other finding here is an aggregate, and an aggregate cannot
-                answer the question a reader has straight after reading one —
-                which tasks were those. It sits on Insights rather than the
-                Overview because "why did this window go like that" is exactly
-                the question a list of your best and worst work answers. */}
-            <section className="ax-section ax-grid ax-grid-halves-even ax-compact">
-              <RatedTasksPanel rated={rated} summary={qualitySummary} />
-              <InsightsPanel insights={insights} />
-            </section>
-            {/* The only panel on the page that answers *why*, and the only one
-                that exists at one of the three depths and not the others. It
-                sits on this tab rather than the Overview for the reason the
-                rated-task list above it does: "why did this window go like
-                that" is this tab's question, and a count of causes is the
-                closest thing the app has to an answer. It draws nothing at all
-                unless the account has asked to be asked — see ReasonsPanel. */}
-            <ReasonsPanel
-              reasons={reasons}
-              findings={reasonRows}
-              depth={prefs.rating_depth}
-              span={spanText}
-            />
           </>
         )}
 
@@ -1504,7 +1573,6 @@ interface OverviewProps {
   scoreFactors: ScoreFactor[];
   standing: Standing | null;
   /** The "what changed" strip. Null when there is not enough history. */
-  sinceLast: React.ReactNode;
   scoreLine: number[];
   scoreMarks: string[];
   compareLabel: string;
@@ -1551,7 +1619,6 @@ function OverviewView(props: OverviewProps) {
       <ScoreBanner score={props.analytical} />
 
       {/* What moved, before anything that merely *is*. See `SinceLast`. */}
-      {props.sinceLast}
 
       <section id="overview" className="ax-section">
         <Tiles

@@ -18,9 +18,7 @@
  * cannot disagree. A window with no period before it says so rather than
  * printing a rise from nothing as an infinite one.
  */
-import type { CSSProperties } from 'react';
-import { Delta, Sparkline, type Tone } from './charts';
-import { GLYPHS, type GlyphName } from './glyphs';
+import { StatRow, type Stat } from './StatRow';
 import type { GrowthSummaryFigures, TileSeries } from '@/utils/growthSummary';
 
 export interface TilesProps {
@@ -33,21 +31,8 @@ export interface TilesProps {
   compareLabel: string;
 }
 
-interface TileSpec {
-  key: string;
-  label: string;
-  value: string;
-  /** The small trailing unit — "XP/day", "/10". Not every tile carries one. */
-  unit?: string;
-  delta: number | null;
-  series: number[];
-  tone: Tone;
-  glyph: GlyphName;
-  hint: string;
-}
-
 export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: TilesProps) {
-  const tiles: TileSpec[] = [
+  const stats: Stat[] = [
     {
       key: 'productivity',
       glyph: 'trend',
@@ -102,6 +87,7 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       glyph: 'sparkle',
       label: 'Growth Score',
       value: score === null ? '—' : score.toFixed(1),
+      unit: score === null ? undefined : '/10',
       // The score has no recorded history to compare against — see SAMPLE in
       // ./data. A tile with no baseline says so rather than inventing one.
       delta: null,
@@ -111,30 +97,5 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
     },
   ];
 
-  return (
-    <div className="ax-tiles">
-      {tiles.map((tile) => (
-        <article className="ax-tile" key={tile.key}>
-          <header>
-            <span
-              className={`ax-tile-icon ax-tone-${tile.tone}`}
-              style={{ '--ico': GLYPHS[tile.glyph] } as CSSProperties}
-              aria-hidden="true"
-            />
-            <span className="ax-tile-label">{tile.label}</span>
-            <span className="ax-info" title={tile.hint} aria-label={tile.hint}>
-              ?
-            </span>
-          </header>
-          <strong className="ax-tile-value">
-            {tile.value}
-            {tile.key === 'score' && score !== null && <em className="ax-tile-unit">/10</em>}
-            {tile.unit && <em className="ax-tile-unit">{tile.unit}</em>}
-          </strong>
-          <Delta value={tile.delta} suffix={compareLabel} />
-          <Sparkline values={tile.series} tone={tile.tone} />
-        </article>
-      ))}
-    </div>
-  );
+  return <StatRow stats={stats} compare={compareLabel} />;
 }

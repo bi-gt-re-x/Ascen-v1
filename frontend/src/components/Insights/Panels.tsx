@@ -11,7 +11,7 @@
  * The layout is the analytics page's, deliberately: same `Panel`, same grid,
  * same tiles, so moving between the two pages is not a change of scenery.
  */
-import { Columns, Panel, Sparkline, type Column } from '@/components/Analytics';
+import { Columns, Panel, StatRow, type Column, type Stat } from '@/components/Analytics';
 import { hourLabel, WEEKDAYS_SHORT } from '@/utils/behaviour';
 import type { BalanceShape, ClockShape, RhythmShape, WeekShape } from '@/utils/behaviour';
 
@@ -36,7 +36,7 @@ export interface HeadlineTilesProps {
 }
 
 export function HeadlineTiles({ week, clock, rhythm, balance }: HeadlineTilesProps) {
-  const tiles = [
+  const stats: Stat[] = [
     {
       key: 'day',
       label: 'Strongest day',
@@ -75,21 +75,7 @@ export function HeadlineTiles({ week, clock, rhythm, balance }: HeadlineTilesPro
     },
   ];
 
-  return (
-    <div className="ax-tiles ax-tiles-four">
-      {tiles.map((tile) => (
-        <article className="ax-tile" key={tile.key}>
-          <header>
-            <span className={`ax-tile-dot ax-tone-${tile.tone}`} aria-hidden="true" />
-            <span className="ax-tile-label">{tile.label}</span>
-          </header>
-          <strong className="ax-tile-value ax-tile-value-sm">{tile.value}</strong>
-          <span className="ax-muted ax-small">{tile.note}</span>
-          {tile.series.length > 1 && <Sparkline values={tile.series} tone={tile.tone} />}
-        </article>
-      ))}
-    </div>
-  );
+  return <StatRow stats={stats} />;
 }
 
 // --------------------------------------------------------------------------

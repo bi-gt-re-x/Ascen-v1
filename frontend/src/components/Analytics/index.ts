@@ -25,7 +25,7 @@ export type { PatternsProps as DiscoveredPatternsProps } from './Patterns';
 
 export { SinceLast } from './Header';
 export type { SinceLastProps } from './Header';
-export { Header, ViewTabs, Controls, VIEWS, viewFor } from './Header';
+export { Header, ViewTabs, Controls, TabOpening, VIEWS, viewFor } from './Header';
 export type { HeaderProps, ViewTabsProps, ControlsProps, View, ViewKey } from './Header';
 
 export {
@@ -37,6 +37,7 @@ export {
   ConsistencyPanel as HabitConsistencyPanel,
   TimelinePanel,
   HabitOpening,
+  habitLead,
 } from './Habits';
 
 export { ComparePanel, DirectionPanel, TrendChart, TrendTiles } from './Trends';
@@ -49,6 +50,8 @@ export type { LockedProps } from './Locked';
 export { BaselinePanel, BaselineSetup } from './Baseline';
 export type { BaselinePanelProps, BaselineSetupProps, BaselineValues } from './Baseline';
 
+export { StatRow } from './StatRow';
+export type { Stat, StatRowProps } from './StatRow';
 export { Tiles } from './Tiles';
 export type { TilesProps } from './Tiles';
 
@@ -80,6 +83,7 @@ export {
   AreaChart,
   Columns,
   Panel,
+  PanelGroup,
   Radar,
   Scatter,
   Sparkline,

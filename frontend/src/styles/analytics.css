@@ -811,6 +811,10 @@ body:has(.ax-page) .app-main {
     gap: 9px;
 }
 
+/* The open tab's own sentence. Longer than the two words it replaced, so it
+   gets a measure rather than running the width of the header. */
+.ax-head-purpose { max-width: 62ch; }
+
 .ax-head p { margin: 0; font-size: 15px; color: var(--ax-muted); }
 
 .ax-head-icon {
@@ -1020,6 +1024,113 @@ body:has(.ax-page) .app-main {
 .ax-grid-three { grid-template-columns: repeat(3, 1fr); }
 .ax-grid-halves { grid-template-columns: 1fr 1.25fr; }
 
+/* ---------- Named groups of panels ----------------------------------------
+   The level above a panel: a heading, a line saying what the group answers,
+   and every panel that answers it folded underneath. Same collapse as the
+   claim below and as `.ax-finding-body` — one grid row, 0fr to 1fr, one inner
+   wrapper because a second child lands in an implicit auto row.
+
+   The heading is not a `.ax-panel`: a group that looked like a card would read
+   as a fourth panel that happened to contain the others. It is a rule and a
+   label, which is what a section heading is. */
+.ax-group { display: flex; flex-direction: column; }
+.ax-group + .ax-group { margin-top: 4px; }
+.ax-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 2px;
+    border: 0;
+    border-top: 1px solid var(--ax-line);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.ax-group-head:hover strong { color: var(--ax-violet); }
+.ax-group-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-group-title strong { font-size: 15px; font-weight: 700; letter-spacing: -.015em; }
+.ax-group-head .ax-finding-mark { margin-top: 0; flex: none; }
+.ax-group.is-open .ax-finding-mark { transform: rotate(180deg); }
+
+.ax-group-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .24s ease;
+}
+.ax-group.is-open .ax-group-body { grid-template-rows: 1fr; }
+.ax-group-body > div { overflow: hidden; min-height: 0; }
+/* The sections inside a group keep their own rhythm; the group only adds the
+   space between its heading and the first of them. */
+.ax-group.is-open .ax-group-body > div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ax-gap);
+    padding: 4px 0 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-group-body { transition: none; }
+}
+
+/* ---------- The claim, and the workings behind it -------------------------
+   A panel given a `claim` states its finding in a sentence and folds the chart,
+   grid or table underneath it away. The reader meets one line per panel instead
+   of one picture per panel, and opens the ones they want to argue with.
+
+   The collapse is the same grid-rows trick `.ax-finding-body` uses, and for the
+   same reason: it animates without anybody measuring the content, and it needs
+   exactly one child wrapper or the row it collapses is not the row the content
+   is in.
+
+   No `content-visibility: auto` on the inner wrapper, tempting as it is for a
+   folded chart: it brings size containment with it, and a size-contained box
+   inside a `1fr` row measures zero, so the panel opens onto nothing. */
+.ax-claim {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--ax-text);
+}
+.ax-claim strong { font-weight: 700; }
+
+.ax-workings-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    align-self: flex-start;
+    margin-top: 10px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ax-violet);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.ax-workings-toggle:hover { text-decoration: underline; }
+.ax-workings-toggle .ax-finding-mark { background: currentColor; margin-top: 0; width: 12px; height: 12px; }
+.ax-panel-claimed.is-open .ax-workings-toggle .ax-finding-mark { transform: rotate(180deg); }
+
+.ax-workings {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .22s ease;
+}
+.ax-panel-claimed.is-open .ax-workings { grid-template-rows: 1fr; margin-top: 12px; }
+.ax-workings > div { overflow: hidden; min-height: 0; }
+/* A claimed panel is a column of its own parts, and the workings take the
+   slack rather than the gap above the footer. */
+.ax-panel-claimed.is-open .ax-workings > div { display: flex; flex-direction: column; }
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-workings { transition: none; }
+}
+
 /* ---------- Three panel weights -------------------------------------------
    Every panel on this page used to be the same size, the same padding and the
    same 17px heading, in rows of two. Nine near-identical cards down a tab give
@@ -1103,10 +1214,28 @@ body:has(.ax-page) .app-main {
 }
 
 /* ---------- KPI tiles ----------------------------------------------------- */
+/* One grid for every row of figures on the page.
+   There were three of these — `.ax-tiles` at five columns, `.ax-tiles-four`,
+   `.ax-tiles-five` — which is a column count expressed as a class name, and so
+   a row that gained a figure needed a new class. The count comes from the row
+   itself now: `StatRow` sets `--ax-stat-n` from how many stats it was given. */
 .ax-tiles {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(var(--ax-stat-n, 4), minmax(0, 1fr));
     gap: var(--ax-gap);
+}
+
+/* One ladder, and it does not care how many figures the row has.
+   The three old grid classes each carried their own breakpoints — six rules
+   between them, two of which fought over 1280px and the later one won by
+   accident. Below full width the count stops being the point and the width of
+   a legible tile starts being it, so `auto-fit` takes over: a five-up row goes
+   to three and then two, a four-up row to two, without either being told. */
+@media (max-width: 1280px) {
+    .ax-tiles { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+}
+@media (max-width: 480px) {
+    .ax-tiles { grid-template-columns: 1fr; }
 }
 
 .ax-tile {
@@ -1855,10 +1984,11 @@ body:has(.ax-page) .app-main {
 }
 
 .ax-grid-halves-even { grid-template-columns: 1fr 1fr; }
-.ax-tiles-four { grid-template-columns: repeat(4, 1fr); }
 
-/* The insights tiles state a word, not a number, so they need a smaller face
-   than the analytics ones — "Wednesday" at 27px wraps in a quarter row. */
+/* Some rows state a word rather than a number — "Wednesday", "Mathematics" —
+   and a word at 36px wraps in a quarter of a row. `StatRow` decides this from
+   the longest value it was given, and applies it to the whole row rather than
+   to the one stat, because a row of mixed faces reads as a mistake. */
 .ax-tile-value-sm { font-size: 26px; }
 .ax-tile-dot {
     width: 9px; height: 9px;
@@ -2050,15 +2180,11 @@ body:has(.ax-page) .app-main {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4'/%3E%3Cpath d='M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z'/%3E%3C/svg%3E");
 }
 
-@media (max-width: 1280px) {
-    .ax-tiles-four { grid-template-columns: repeat(2, 1fr); }
-}
 @media (max-width: 1024px) {
     .ax-grid-halves-even { grid-template-columns: 1fr; }
     .ax-balance { grid-template-columns: 1fr; justify-items: center; text-align: center; }
 }
 @media (max-width: 480px) {
-    .ax-tiles-four { grid-template-columns: 1fr; }
     .ax-advice-head { grid-template-columns: auto minmax(0, 1fr); }
     .ax-advice-impact { grid-column: 2; align-items: flex-start; text-align: left; }
 }
@@ -2084,14 +2210,12 @@ body:has(.ax-page) .app-main {
    panel underneath rather than squeezing a chart into a third of a phone.
    ========================================================================== */
 @media (max-width: 1280px) {
-    .ax-tiles { grid-template-columns: repeat(3, 1fr); }
     .ax-grid-halves { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 1024px) {
     .ax-grid-trajectory,
     .ax-grid-three { grid-template-columns: 1fr; }
-    .ax-tiles { grid-template-columns: repeat(2, 1fr); }
     .ax-subject { grid-template-columns: 1fr; }
     .ax-radar { max-width: 280px; margin-inline: auto; }
     .ax-compare { margin-left: 0; }
@@ -2104,11 +2228,7 @@ body:has(.ax-page) .app-main {
     .ax-callout { position: static; margin-top: 10px; }
 }
 
-@media (max-width: 620px) {
-}
-
 @media (max-width: 480px) {
-    .ax-tiles { grid-template-columns: 1fr; }
     .ax-head-actions { width: 100%; }
     .ax-btn { flex: 1; justify-content: center; }
     .ax-standing li { grid-template-columns: 78px minmax(0, 1fr) auto; }
@@ -2327,7 +2447,6 @@ body:has(.ax-page) .app-main {
 
 .ax-prose-tight { margin: 4px 0 0; font-size: 12px; line-height: 1.55; }
 .ax-figures-tight { margin-bottom: 10px; }
-.ax-tiles-five { grid-template-columns: repeat(5, 1fr); }
 
 /* ==========================================================================
    Habits — visual, behavioural, historical.
@@ -3032,7 +3151,6 @@ body:has(.ax-page) .app-main {
 }
 
 @media (max-width: 1280px) {
-    .ax-tiles-five { grid-template-columns: repeat(3, 1fr); }
     .ax-habit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .ax-relationship { grid-template-columns: 1fr; }
 }
@@ -3045,7 +3163,6 @@ body:has(.ax-page) .app-main {
 }
 
 @media (max-width: 768px) {
-    .ax-tiles-five { grid-template-columns: repeat(2, 1fr); }
     .ax-habit-grid { grid-template-columns: 1fr; }
     .ax-panel-aside { justify-content: flex-start; }
     .ax-phases li { grid-template-columns: minmax(0, 1fr) auto; }
@@ -3053,7 +3170,6 @@ body:has(.ax-page) .app-main {
 }
 
 @media (max-width: 480px) {
-    .ax-tiles-five { grid-template-columns: 1fr; }
     .ax-advice-foot { flex-direction: column; align-items: stretch; }
     .ax-try { width: 100%; }
 }
@@ -3066,14 +3182,12 @@ body:has(.ax-page) .app-main {
     .ax-try { transition: none; }
 }
 
-/* ==========================================================================
-   What changed, and where to go next.
-
-   Two additions in service of the same thing: a page somebody comes back to.
-   Everything else on the Overview states where the account *is*, which reads
-   identically on every visit; these two say what moved and what to do about it.
-   ========================================================================== */
-.ax-since {
+/* The tab's opening line — one sentence, above everything, on all seven tabs.
+   A card rather than a paragraph, because it is a finding and not an
+   introduction, and tinted only when there is a direction to report. `is-up`
+   and `is-down` are the finding; a tab with nothing rising or falling gets the
+   plain card rather than a colour that means nothing. See `TabOpening`. */
+.ax-opening {
     margin: 0 0 2px;
     padding: 11px 15px;
     border-radius: 11px;
@@ -3082,12 +3196,12 @@ body:has(.ax-page) .app-main {
     font-size: 13.5px;
     color: var(--ax-text);
 }
-.ax-since strong { font-weight: 700; }
-.ax-since.is-up {
+.ax-opening strong { font-weight: 700; }
+.ax-opening.is-up {
     border-color: color-mix(in srgb, var(--ax-green) 34%, transparent);
     background: color-mix(in srgb, var(--ax-green) 8%, transparent);
 }
-.ax-since.is-down {
+.ax-opening.is-down {
     border-color: color-mix(in srgb, var(--ax-amber) 34%, transparent);
     background: color-mix(in srgb, var(--ax-amber) 8%, transparent);
 }

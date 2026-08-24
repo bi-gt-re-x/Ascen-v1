@@ -171,6 +171,16 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
   return (
     <Panel
       title="Consistency Over Time"
+      claim={
+        <>
+          You worked on <strong>{rate}%</strong> of days
+          {delta === null
+            ? '.'
+            : delta === 0
+              ? `, unchanged ${compareLabel}.`
+              : `, ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points ${compareLabel}.`}
+        </>
+      }
       footer={
         <PanelNote label="What moves this">
           The share of days with <strong>any</strong> work on them. A fifteen-minute day and a
@@ -178,18 +188,6 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
         </PanelNote>
       }
     >
-      <div className="ax-consistency-head">
-        <strong className="ax-big">{rate}%</strong>
-        <span className="ax-muted">Average consistency</span>
-      </div>
-      {delta === null ? (
-        <span className="ax-delta ax-delta-none">No earlier period</span>
-      ) : (
-        <span className={`ax-delta ax-delta-${delta >= 0 ? 'up' : 'down'}`}>
-          {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)} points {compareLabel}
-        </span>
-      )}
-
       <div className="ax-heat">
         {/* Three-letter names rather than `HEAT_WEEKDAYS`' initials, which are
             S M T W T F S — two pairs that read identically. The order is that

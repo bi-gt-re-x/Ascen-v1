@@ -310,6 +310,22 @@ export function QualityGridPanel({ cells, summary, depth }: QualityGridPanelProp
     <Panel
       title="Difficulty against execution"
       note="Darker is more tasks"
+      claim={
+        summary.difficulty === null || summary.execution === null ? (
+          <>
+            Where your <strong>{summary.rated}</strong> rated{' '}
+            {summary.rated === 1 ? 'task' : 'tasks'} landed.
+          </>
+        ) : (
+          <>
+            Across <strong>{summary.rated}</strong> rated{' '}
+            {summary.rated === 1 ? 'task' : 'tasks'} you rate difficulty{' '}
+            <strong>{summary.difficulty.toFixed(1)}</strong> and execution{' '}
+            <strong>{summary.execution.toFixed(1)}</strong> — the grid says whether that is one
+            habit or several.
+          </>
+        )
+      }
       footer={
         <PanelNote label="How to read this">
           Difficulty runs left to right, execution bottom to top. Bottom-right is hard work going

@@ -94,6 +94,14 @@ export function CompoundingPanel({ data }: { data: Compounding }) {
     <Panel
       title="Compounding Growth"
       note="Small actions, compounded"
+      claim={
+        <>
+          At <strong>{data.dailyAverage.toLocaleString()} XP a day</strong> you reach{' '}
+          <strong>{data.projectedYear.toLocaleString()}</strong> in a year and{' '}
+          <strong>{data.projectedFiveYear.toLocaleString()}</strong> in five — doing exactly what
+          you already do, for longer.
+        </>
+      }
       footer={
         <PanelNote label="How this is projected">
           Your daily average, multiplied by the days ahead. Nothing compounds and nothing
@@ -295,10 +303,27 @@ export function StandingPanel({ standing }: StandingPanelProps) {
     );
   }
 
+  // The claim names the measure the account places best on, because "top 12%
+  // on consistency" is a fact somebody can carry away and a column of four bars
+  // is a thing they have to read. The bars are still there, one click down.
+  const ranked = standing.rows
+    .filter((row) => row.percentile !== null && STANDING[row.key])
+    .sort((a, b) => a.percentile! - b.percentile!);
+  const best = ranked[0];
+
   return (
     <Panel
       title="Where You Stand"
       note={`Compared to ${standing.cohort.toLocaleString()} Ascen ${standing.cohort === 1 ? 'user' : 'users'} with a comparable record`}
+      claim={
+        best ? (
+          <>
+            You are in the <strong>top {formatPercentile(best.percentile!)}%</strong> on{' '}
+            {STANDING[best.key]!.label.toLowerCase()}, your strongest measure against everybody
+            else.
+          </>
+        ) : undefined
+      }
       footer={STANDING_NOTE}
     >
       <ul className="ax-standing">

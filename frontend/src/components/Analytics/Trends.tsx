@@ -14,6 +14,7 @@
  * one good fortnight.
  */
 import { AreaChart, Panel, Sparkline, asTone, toneVar } from './charts';
+import { StatRow, type Stat } from './StatRow';
 import {
   COMPARISONS,
   type ComparisonKey,
@@ -128,10 +129,13 @@ export function DirectionPanel({
       title="Which way each measure is heading"
       note="Fitted line, with how much it explains"
     >
+      {/* The verdict itself is the tab's opening line now, in the slot above
+          the first section — but it stays the empty state here, because a tab
+          with nothing to fit is a tab whose opening line said exactly that and
+          a panel that then printed nothing would read as a failure. */}
       {directions.length === 0 ? (
         <p className="ax-empty">{verdict}</p>
       ) : (
-        <>
           <ul className="ax-directions">
             {directions.map((entry) => (
               <li key={entry.key}>
@@ -151,8 +155,6 @@ export function DirectionPanel({
               </li>
             ))}
           </ul>
-          <p className="ax-prose ax-prose-lead">{verdict}</p>
-        </>
       )}
     </Panel>
   );
@@ -239,25 +241,13 @@ export function TrendChart({
 // The tiles
 // --------------------------------------------------------------------------
 export function TrendTiles({ rows, label }: { rows: TrendRow[]; label: string }) {
-  return (
-    <div className="ax-tiles ax-tiles-five">
-      {rows.map((row) => (
-        <article className="ax-tile" key={row.key}>
-          <header>
-            <span className="ax-tile-dot" style={{ background: toneVar(row.tone) }} aria-hidden="true" />
-            <span className="ax-tile-label">{row.label}</span>
-          </header>
-          <strong className="ax-tile-value">{row.nowText}</strong>
-          {row.delta === null ? (
-            <span className="ax-delta ax-delta-none">no baseline</span>
-          ) : (
-            <span className={`ax-delta ax-delta-${row.delta > 0 ? 'up' : row.delta < 0 ? 'down' : 'flat'}`}>
-              {row.delta > 0 ? '↑' : row.delta < 0 ? '↓' : '→'} {Math.abs(row.delta)}% vs {label}
-            </span>
-          )}
-          {row.series.length > 1 && <Sparkline values={row.series} tone={asTone(row.tone)} />}
-        </article>
-      ))}
-    </div>
-  );
+  const stats: Stat[] = rows.map((row) => ({
+    key: row.key,
+    label: row.label,
+    value: row.nowText,
+    tone: asTone(row.tone),
+    delta: row.delta,
+    series: row.series,
+  }));
+  return <StatRow stats={stats} compare={`vs ${label}`} />;
 }

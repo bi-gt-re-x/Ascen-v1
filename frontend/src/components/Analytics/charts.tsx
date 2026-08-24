@@ -520,6 +520,29 @@ export interface PanelProps {
   children: ReactNode;
   /** The link row along the bottom. */
   footer?: ReactNode;
+  /**
+   * The panel's finding, in a sentence — and the thing that turns `children`
+   * into workings that open on request.
+   *
+   * Lifted from `FindingCard`, whose own note describes the arrangement
+   * exactly: "the claim, the chip, and the workings behind a disclosure. The
+   * headline is a full sentence and stands alone — a reader who never opens one
+   * of these should still have read the finding."
+   *
+   * That is the answer to a page carrying more data than a reader can meet at
+   * once, and it is a better answer than deleting panels: a claim is a smaller
+   * thing to read than a chart and says more of what the chart was for. A panel
+   * with no claim behaves exactly as it always did, so this is opt-in one panel
+   * at a time rather than a rewrite of thirty.
+   */
+  claim?: ReactNode;
+  /**
+   * Open the workings on arrival.
+   *
+   * For the one chart a tab is actually for — a hero panel folded shut is a
+   * page hiding the thing the reader came to look at. See `.ax-hero`.
+   */
+  openByDefault?: boolean;
 }
 
 /**
@@ -531,9 +554,47 @@ export interface PanelProps {
  * there is nothing left to disclaim. A tab that cannot be filled says so as a
  * whole rather than shipping placeholder panels with a footnote; see `Locked`.
  */
-export function Panel({ title, note, aside, className, children, footer }: PanelProps) {
+export function Panel({
+  title,
+  note,
+  aside,
+  className,
+  children,
+  footer,
+  claim,
+  openByDefault = false,
+}: PanelProps) {
+  const [open, setOpen] = useState(openByDefault);
+
+  const body = claim ? (
+    <>
+      <p className="ax-claim">{claim}</p>
+      <button
+        type="button"
+        className="ax-workings-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        {open ? 'Hide the workings' : 'Show the workings'}
+        <span className="ax-finding-mark" aria-hidden="true" />
+      </button>
+      {/* One wrapper, and it has to stay one — the collapse is a grid row going
+          to 0fr, and a second child lands in an implicit auto row that the 0fr
+          never touches. The same constraint `.ax-finding-body` documents. */}
+      <div className="ax-workings">
+        <div>{children}</div>
+      </div>
+    </>
+  ) : (
+    children
+  );
+
   return (
-    <section className={`ax-panel${className ? ` ${className}` : ''}`}>
+    <section
+      className={`ax-panel${claim ? ' ax-panel-claimed' : ''}${open ? ' is-open' : ''}${
+        className ? ` ${className}` : ''
+      }`}
+    >
       <header className="ax-panel-head">
         <div className="ax-panel-title">
           <h2>{title}</h2>
@@ -541,7 +602,7 @@ export function Panel({ title, note, aside, className, children, footer }: Panel
         {aside && <div className="ax-panel-aside">{aside}</div>}
       </header>
       {note && <p className="ax-panel-note">{note}</p>}
-      {children}
+      {body}
       {footer && <div className="ax-panel-foot">{footer}</div>}
     </section>
   );
@@ -570,6 +631,62 @@ export function PanelLink({ to, children }: { to: string; children: ReactNode })
     <Link className="ax-link" to={to}>
       {children} →
     </Link>
+  );
+}
+
+/**
+ * A named group of panels, opening and closing as one.
+ *
+ * Insights carried fifteen panels in eight rows, every one of them the same
+ * weight, none of them saying which of the tab's three questions it belonged
+ * to. A reader scrolling it met fifteen equal claims and had to build the
+ * grouping themselves, every visit.
+ *
+ * So the grouping is stated. Three headings — what is true now, why it happens,
+ * when and what you work on — and the panels live inside whichever one they
+ * answer. It is the same disclosure as `Panel`'s `claim` one level up: the
+ * heading and its one-line summary are always readable, and the panels open on
+ * request.
+ *
+ * ## Only the first is open
+ *
+ * A tab whose three groups are all shut is a tab that looks broken, and one
+ * whose three are all open is the wall this replaced. The first opens because
+ * it is the one that answers "how am I doing" — the others are there for the
+ * reader who has a follow-up question, which is most of what Insights is for.
+ */
+export function PanelGroup({
+  title,
+  note,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  /** One line saying what the group answers. Always visible. */
+  note: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className={`ax-group${open ? ' is-open' : ''}`}>
+      <button
+        type="button"
+        className="ax-group-head"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <span className="ax-group-title">
+          <strong>{title}</strong>
+          <span className="ax-muted ax-small">{note}</span>
+        </span>
+        <span className="ax-finding-mark" aria-hidden="true" />
+      </button>
+      {/* One wrapper, for the reason `.ax-finding-body` documents. */}
+      <div className="ax-group-body">
+        <div>{children}</div>
+      </div>
+    </section>
   );
 }
 
