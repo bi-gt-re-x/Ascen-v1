@@ -11,6 +11,9 @@
  *                         list and to where the reader stands in it.
  *   utils/skillProgress   how that becomes a percentage, an XP figure and a
  *                         status on the graph the whole page reads.
+ *   skills/iconMatch      which drawing a renamed node gets, and — the half
+ *                         that matters — when it gets none and keeps its own.
+ *   utils/skillNames      applying a reader's names over the graph.
  *
  * All of it is off-by-one arithmetic on an index into a list, which is the kind
  * of code that is correct until the afternoon it is not, and wrong in a way
@@ -38,6 +41,8 @@ const one = async (e, n) => { const o = join(dir, n + '.mjs');
 const S = await one('frontend/src/utils/skillSteps.ts', 'S');
 const P = await one('frontend/src/utils/skillProgress.ts', 'P');
 const st = await one('frontend/src/skills/subjectTrees.ts', 'st');
+const M = await one('frontend/src/skills/iconMatch.ts', 'M');
+const N = await one('frontend/src/utils/skillNames.ts', 'N');
 
 let fails = 0;
 const is = (label, got, want) => { const ok = JSON.stringify(got) === JSON.stringify(want);
@@ -86,6 +91,49 @@ is('a node with no plan is unaffected', untouched.percent, P.applyProgress(g, {}
 const seeded = g.nodes.find((n) => n.status === 'complete');
 const reopened = P.applyProgress(g, {}, { [seeded.id]: { steps: ['a','b','c'], at: 1 } }).nodes.find((n) => n.id === seeded.id);
 is(`a written programme can reopen ${seeded.id}`, reopened.status, 'progress');
+
+// ---- naming, and the drawing that follows from it ----
+is('an exact title matches', M.iconForName('Binary Search'), 'binary-search');
+is('one word matches', M.iconForName('Recursion'), 'recursion');
+is('a plural title matches the singular file', M.iconForName('Chess Openings'), 'opening');
+is('the longest run wins over its halves', M.iconForName('Free-Body Diagrams'), 'free-body');
+is('a level word is skipped', M.iconForName('Advanced Recursion'), 'recursion');
+is('a level word alone matches nothing', M.iconForName('Advanced'), undefined);
+is('no match is undefined, not a fallback', M.iconForName('Refactoring'), undefined);
+is('nonsense matches nothing', M.iconForName('Zzzz Qqqq'), undefined);
+is('an empty name matches nothing', M.iconForName('   '), undefined);
+is('punctuation does not stop a match', M.iconForName('  loops!! '), 'loops');
+is('an ampersand is not a word', M.iconForName('Loops & Things'), 'loops');
+
+// A rename must never reach for the generic drawing: `undefined` means the node
+// keeps what it had, and this is the assertion that says so.
+is('a rename with no match keeps the designed icon',
+  N.applyNames(
+    { id: 't', name: 't', nodes: [{ id: 'n', name: 'Old', icon: 'layers' }] },
+    { n: { name: 'Refactoring' } },
+  ).nodes[0],
+  { id: 'n', name: 'Refactoring', icon: 'layers' });
+is('a rename with a match takes the new icon',
+  N.applyNames(
+    { id: 't', name: 't', nodes: [{ id: 'n', name: 'Old', icon: 'layers' }] },
+    { n: { name: 'Binary Search', icon: 'binary-search' } },
+  ).nodes[0].icon,
+  'binary-search');
+is('a node nobody renamed is untouched',
+  N.applyNames({ id: 't', name: 't', nodes: [{ id: 'n', name: 'Old', icon: 'layers' }] }, { other: { name: 'X' } }).nodes[0].name,
+  'Old');
+is('names are squashed and capped', N.cleanName('  two   words  '), 'two words');
+is('an over-long name is cut', N.cleanName('z'.repeat(200)).length, N.NAME_MAX);
+is('a blank name is empty, so the caller drops the override', N.cleanName('   '), '');
+
+// Renaming must not disturb the graph the edges are keyed on.
+{
+  const g = st.graphFromSubjectTree(st.subjectTreeById('coding'));
+  const renamed = N.applyNames(g, { 'c.loops': { name: 'Iteration' } });
+  is('ids survive a rename', renamed.nodes.map((n) => n.id).join(), g.nodes.map((n) => n.id).join());
+  is('what required it still requires it',
+    renamed.nodes.find((n) => n.id === 'c.lists').requires.includes('c.loops'), true);
+}
 
 console.log(fails === 0 ? '\n\x1b[32mall passed\x1b[0m' : `\n\x1b[31m${fails} failed\x1b[0m`);
 await rm(dir, { recursive: true, force: true });

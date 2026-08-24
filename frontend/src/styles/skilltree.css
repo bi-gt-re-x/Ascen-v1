@@ -1257,7 +1257,59 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
 .stx-lp-blank-ico { width: 30px; height: 30px; color: var(--lat-faint); }
 
 .stx-lp-head { display: flex; align-items: center; gap: 13px; }
+.stx-lp-head-body { min-width: 0; flex: 1; }
 .stx-lp-head h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+
+/* ---- renaming ----
+   The heading is a button that looks like a heading. Nothing marks it until it
+   is hovered, because a permanently underlined title would be a link to
+   somewhere and there is nowhere to go — the affordance is worth less than the
+   heading reading as a heading. The field is sized to match so the swap does
+   not move the badges under it. */
+.stx-lp-name {
+    display: block;
+    max-width: 100%;
+    padding: 1px 5px;
+    margin: -1px -5px;
+    border: 0;
+    /* The same two pixels the field spends on its underline, so clicking the
+       title does not shunt the badges down by a line's worth of nothing. */
+    border-bottom: 2px solid transparent;
+    border-radius: 7px 7px 0 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: text;
+}
+.stx-lp-name:disabled { cursor: default; }
+.stx-lp-name:not(:disabled):hover { background: var(--lat-violet-soft); }
+.stx-lp-name-field {
+    width: 100%;
+    padding: 1px 5px;
+    margin: -1px -5px;
+    border: 0;
+    border-bottom: 2px solid var(--lat-violet);
+    border-radius: 0;
+    background: none;
+    color: var(--lat-text);
+    font: inherit;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+.stx-lp-name-field:focus { outline: none; }
+.stx-lp-name-reset {
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: var(--lat-faint);
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.stx-lp-name-reset:hover { color: var(--lat-rose); }
 .stx-lp-avatar {
     display: grid;
     place-items: center;

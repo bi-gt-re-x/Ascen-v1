@@ -16,6 +16,14 @@
  * have read the steps: how will I know, how does this go wrong, how long. All
  * four are one call into skills/improve, which is what stops them disagreeing.
  *
+ * ## The name can be rewritten too
+ *
+ * Clicking the heading turns it into a field. Saving a new name looks for the
+ * drawing that goes with it — see skills/iconMatch — and takes the node's
+ * existing one when the name matches nothing, which is the common case and the
+ * right answer for it. Ids are never touched, so nothing that depends on this
+ * node notices.
+ *
  * ## The programme can be rewritten, and then it is the record
  *
  * The suggested steps are a starting point. Opening the full list gives every
@@ -49,6 +57,7 @@ import {
   type GraphNode,
   type SkillGraph,
 } from '@/utils/skillGraph';
+import { NAME_MAX, cleanName } from '@/utils/skillNames';
 import {
   STEPS_MAX,
   STEP_MAX,
@@ -331,6 +340,12 @@ export interface LatticePanelProps {
   onSteps?: (plan: StepPlan) => void;
   /** Throw the reader's programme away and go back to the suggested one. */
   onResetSteps?: () => void;
+  /** Rename the node. Absent leaves the heading as plain text. */
+  onRename?: (name: string) => void;
+  /** Whether this node is under a name the reader gave it. */
+  renamed?: boolean;
+  /** Put the designed name back. */
+  onResetName?: () => void;
 }
 
 export function LatticePanel({
@@ -344,12 +359,20 @@ export function LatticePanel({
   steps = null,
   onSteps,
   onResetSteps,
+  onRename,
+  renamed = false,
+  onResetName,
 }: LatticePanelProps) {
   // The step list opens over the whole panel rather than beside it, so this is
   // panel-wide state rather than the section's. Reset on every change of node:
   // a reader who clicks a new tile wants that tile, not the steps of the last.
   const [allSteps, setAllSteps] = useState(false);
-  useEffect(() => setAllSteps(false), [node?.id]);
+  const [naming, setNaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  useEffect(() => {
+    setAllSteps(false);
+    setNaming(false);
+  }, [node?.id]);
 
   if (!node) {
     return (
@@ -392,6 +415,21 @@ export function LatticePanel({
   // the top of utils/skillSteps on why an override rather than a diff.
   const changeSteps = onSteps ? (next: StepPlan) => onSteps(next) : undefined;
 
+  function startNaming() {
+    if (!onRename) return;
+    setNameDraft(node!.name);
+    setNaming(true);
+  }
+
+  function commitName() {
+    setNaming(false);
+    const next = cleanName(nameDraft);
+    // Unchanged, or cleared to nothing: both mean "leave it alone". Clearing it
+    // is undone with Reset name rather than by emptying the field, or a stray
+    // select-all-delete would leave a tile with no label on it.
+    if (next && next !== node!.name) onRename?.(next);
+  }
+
   // The whole panel, given over to the programme. Not a section that grew a
   // scrollbar — the steps are what the reader asked for, so everything else
   // gets out of the way and the list has the full height to itself.
@@ -428,8 +466,36 @@ export function LatticePanel({
         <span className={`stx-lp-avatar is-${node.status}`}>
           <Ico icon={node.icon} className="stx-ico stx-lp-avatar-ico" />
         </span>
-        <div>
-          <h2>{node.name}</h2>
+        <div className="stx-lp-head-body">
+          {naming ? (
+            /* Saving on blur as well as on Enter: a heading that silently threw
+               away a typed name because the reader clicked the canvas would be
+               the worst of the three ways this could behave. */
+            <input
+              className="stx-lp-name-field"
+              value={nameDraft}
+              maxLength={NAME_MAX}
+              autoFocus
+              onChange={(event) => setNameDraft(event.target.value)}
+              onBlur={commitName}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') commitName();
+                if (event.key === 'Escape') setNaming(false);
+              }}
+            />
+          ) : (
+            <h2>
+              <button
+                type="button"
+                className="stx-lp-name"
+                onClick={startNaming}
+                disabled={!onRename}
+                title={onRename ? 'Rename this skill' : undefined}
+              >
+                {node.name}
+              </button>
+            </h2>
+          )}
           <p className="stx-lp-badges">
             {/* Difficulty first: it is the thing the tile was coloured by, so
                 the panel should confirm rather than reintroduce it. */}
@@ -440,6 +506,11 @@ export function LatticePanel({
               </span>
             ))}
             <span className={`stx-lp-badge is-state is-${node.status}`}>{STATUS_LABEL[node.status]}</span>
+            {renamed && onResetName && (
+              <button type="button" className="stx-lp-name-reset" onClick={onResetName}>
+                Reset name
+              </button>
+            )}
           </p>
         </div>
       </header>

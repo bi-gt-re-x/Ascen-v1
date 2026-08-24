@@ -37,6 +37,7 @@ import {
   SubjectRail,
 } from '@/components/SkillTree';
 import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
+import { iconForName } from '@/skills/iconMatch';
 import { treeForSubject } from '@/skills/subjectMap';
 import {
   DEFAULT_TREE,
@@ -65,6 +66,13 @@ import {
   saveProgress,
   type SkillProgress,
 } from '@/utils/skillProgress';
+import {
+  applyNames,
+  cleanName,
+  loadNames,
+  saveNames,
+  type NodeNames,
+} from '@/utils/skillNames';
 import {
   loadSteps,
   saveSteps,
@@ -155,6 +163,14 @@ export default function SkillTrees() {
     setPlans(loadSteps(username));
   }, [username]);
 
+  /* The nodes this account has renamed, and the drawings those names found.
+     Applied after progress rather than inside it: what a node is called has
+     never affected how far along it is. See utils/skillNames. */
+  const [names, setNames] = useState<NodeNames>({});
+  useEffect(() => {
+    setNames(loadNames(username));
+  }, [username]);
+
   /* The five across the top. Null until this account has chosen, which is what
      lets the band follow the subjects they actually use until the moment they
      say otherwise — see utils/focusTopics. */
@@ -175,7 +191,10 @@ export default function SkillTrees() {
   // and every status re-derived from the result. Everything downstream — the
   // canvas, the panel, the figures — reads this one graph, so a click cannot
   // move the tiles and leave the band behind.
-  const graph = useMemo(() => applyProgress(designed, progress, plans), [designed, progress, plans]);
+  const graph = useMemo(
+    () => applyNames(applyProgress(designed, progress, plans), names),
+    [designed, progress, plans, names],
+  );
   const nav = useMemo(() => navTargets(tree), [tree]);
   const totals = useMemo(() => tallyGraph(graph), [graph]);
   const chain = useMemo(() => parentChain(tree.id), [tree.id]);
@@ -260,6 +279,33 @@ export default function SkillTrees() {
         if (plan) next[id] = plan;
         else delete next[id];
         saveSteps(username, next);
+        return next;
+      });
+    },
+    [username],
+  );
+
+  /*
+   * Renaming, and the one decision in it: which drawing the new name gets.
+   *
+   * `iconForName` answers only when the words actually match a file, so most
+   * renames get `undefined` and the node keeps the icon it was designed with —
+   * "Refactoring" has no drawing of its own and a near-miss would be worse than
+   * the layers icon it already has. Stored rather than recomputed on render, so
+   * an icon added to the repository next month cannot repaint a tile somebody
+   * already named. See skills/iconMatch.
+   */
+  const rename = useCallback(
+    (id: string, raw: string | null) => {
+      setNames((current) => {
+        const next = { ...current };
+        const name = raw === null ? '' : cleanName(raw);
+        if (!name) delete next[id];
+        else {
+          const icon = iconForName(name);
+          next[id] = icon ? { name, icon } : { name };
+        }
+        saveNames(username, next);
         return next;
       });
     },
@@ -438,6 +484,9 @@ export default function SkillTrees() {
             steps={selected ? plans[selected.id] ?? null : null}
             onSteps={selected ? (plan) => writePlans(selected.id, plan) : undefined}
             onResetSteps={selected ? () => writePlans(selected.id, null) : undefined}
+            onRename={selected ? (name) => rename(selected.id, name) : undefined}
+            renamed={Boolean(selected && names[selected.id])}
+            onResetName={selected ? () => rename(selected.id, null) : undefined}
             flash={flash && selected && flash.id === selected.id ? flash.gain : null}
             placeholder={
               <>

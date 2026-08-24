@@ -22,6 +22,11 @@
  *   - a subject in the task catalogue that no lattice claims. The rail across
  *     the top of the page offers all hundred; one with no route silently falls
  *     back to its group's root, which is a reasonable guess and not an answer.
+ *   - a drawing in the icon folder that skills/iconNames has not caught up
+ *     with. That list is what a renamed node's title is matched against, so a
+ *     file missing from it is a drawing nothing can ever be named into — and
+ *     nothing about the page looks wrong, because the match simply fails and
+ *     the node keeps the icon it had.
  *   - an entry in skills/improve keyed to a node that no longer exists. The
  *     panel falls back to derived advice, so the tree renders perfectly, the
  *     written steps are simply never shown again, and the loss looks exactly
@@ -54,6 +59,7 @@ const ICON_DIR = join(root, 'utils', 'icons', 'tree_icons');
 const ENTRY = join(root, 'frontend', 'src', 'skills', 'trees', 'index.ts');
 const MAP_ENTRY = join(root, 'frontend', 'src', 'skills', 'subjectMap.ts');
 const IMPROVE_ENTRY = join(root, 'frontend', 'src', 'skills', 'improve.ts');
+const ICONS_ENTRY = join(root, 'frontend', 'src', 'skills', 'iconNames.ts');
 const CATALOGUE = join(root, 'backend', 'config', 'subjects.py');
 
 /* How small a tree is allowed to be before it stops being a lattice and starts
@@ -76,9 +82,11 @@ const dir = await mkdtemp(join(tmpdir(), 'ascen-trees-'));
 const outfile = join(dir, 'trees.mjs');
 const mapfile = join(dir, 'map.mjs');
 const improvefile = join(dir, 'improve.mjs');
+const iconfile = join(dir, 'icons.mjs');
 let TREES;
 let SUBJECT_TARGETS;
 let IMPROVE;
+let ICON_NAMES;
 try {
   await build({ entryPoints: [ENTRY], bundle: true, format: 'esm', outfile, logLevel: 'warning' });
   // The map imports skills/subjectTrees, which imports @/utils/skillGraph for a
@@ -102,7 +110,15 @@ try {
   });
   ({ TREES } = await import(pathToFileURL(outfile).href));
   ({ SUBJECT_TARGETS } = await import(pathToFileURL(mapfile).href));
+  await build({
+    entryPoints: [ICONS_ENTRY],
+    bundle: true,
+    format: 'esm',
+    outfile: iconfile,
+    logLevel: 'warning',
+  });
   ({ IMPROVE } = await import(pathToFileURL(improvefile).href));
+  ({ ICON_NAMES } = await import(pathToFileURL(iconfile).href));
 } finally {
   await rm(dir, { recursive: true, force: true });
 }
@@ -304,6 +320,29 @@ for (const id of Object.keys(IMPROVE)) {
   const node = byTreeId.get(owner).nodes.find((entry) => entry.id === id);
   if (node.navTo) {
     warn('improve', `"${id}" is a doorway — clicking it opens ${node.navTo}, so its steps never show`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The icon manifest still describes the icon folder
+// ---------------------------------------------------------------------------
+/* skills/iconNames is generated from this directory and read by skills/iconMatch
+   to decide which drawing a renamed node gets. Drift is silent in both
+   directions: a file missing from the list can never be matched, and a name in
+   the list with no file behind it produces a broken image only on the day
+   somebody happens to type that word. */
+{
+  const listed = new Set(ICON_NAMES);
+  const missing = [...icons].filter((name) => !listed.has(name)).sort();
+  const phantom = ICON_NAMES.filter((name) => !icons.has(name)).sort();
+  if (missing.length > 0) {
+    fail('icons', `${missing.length} drawing(s) not in skills/iconNames — nothing can be renamed into them: ${missing.join(', ')}`);
+  }
+  if (phantom.length > 0) {
+    fail('icons', `skills/iconNames lists ${phantom.length} name(s) with no file: ${phantom.join(', ')}`);
+  }
+  if (missing.length > 0 || phantom.length > 0) {
+    fail('icons', 'regenerate the list from utils/icons/tree_icons — it is one sorted array of the .svg names');
   }
 }
 
