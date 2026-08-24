@@ -65,6 +65,12 @@ import {
   saveProgress,
   type SkillProgress,
 } from '@/utils/skillProgress';
+import {
+  loadSteps,
+  saveSteps,
+  type StepPlan,
+  type StepPlans,
+} from '@/utils/skillSteps';
 import '@/styles/skilltree.css';
 
 /** The drawing, painted through the shared mask. */
@@ -140,6 +146,15 @@ export default function SkillTrees() {
     setProgress(loadProgress(username));
   }, [username]);
 
+  /* The programmes this account has rewritten. Same store, same reasoning —
+     see utils/skillSteps. A node in here is counted in steps rather than XP,
+     which is why it has to reach `applyProgress` rather than stopping at the
+     panel: the tile, the ring and the band across the top all read the graph. */
+  const [plans, setPlans] = useState<StepPlans>({});
+  useEffect(() => {
+    setPlans(loadSteps(username));
+  }, [username]);
+
   /* The five across the top. Null until this account has chosen, which is what
      lets the band follow the subjects they actually use until the moment they
      say otherwise — see utils/focusTopics. */
@@ -160,7 +175,7 @@ export default function SkillTrees() {
   // and every status re-derived from the result. Everything downstream — the
   // canvas, the panel, the figures — reads this one graph, so a click cannot
   // move the tiles and leave the band behind.
-  const graph = useMemo(() => applyProgress(designed, progress), [designed, progress]);
+  const graph = useMemo(() => applyProgress(designed, progress, plans), [designed, progress, plans]);
   const nav = useMemo(() => navTargets(tree), [tree]);
   const totals = useMemo(() => tallyGraph(graph), [graph]);
   const chain = useMemo(() => parentChain(tree.id), [tree.id]);
@@ -238,8 +253,37 @@ export default function SkillTrees() {
     if (flashTimer.current) window.clearTimeout(flashTimer.current);
   }, []);
 
+  const writePlans = useCallback(
+    (id: string, plan: StepPlan | null) => {
+      setPlans((current) => {
+        const next = { ...current };
+        if (plan) next[id] = plan;
+        else delete next[id];
+        saveSteps(username, next);
+        return next;
+      });
+    },
+    [username],
+  );
+
+  /*
+   * Practising means one of two things, and which one depends on whether this
+   * account has written the node's programme.
+   *
+   * An untouched node is counted in XP, so a session adds XP. A node whose
+   * steps the reader has written is counted in steps — utils/skillSteps has the
+   * argument — so a session ticks the next one off instead. Adding XP to it
+   * would be adding to a figure that is no longer read, which is the same as
+   * the button doing nothing.
+   */
   const practise = useCallback(
     (node: GraphNode) => {
+      const plan = plans[node.id];
+      if (plan) {
+        if (plan.at >= plan.steps.length) return;
+        writePlans(node.id, { ...plan, at: plan.at + 1 });
+        return;
+      }
       const gain = practiceGain(node);
       setProgress((current) => {
         const next = { ...current, [node.id]: (current[node.id] ?? 0) + gain };
@@ -250,7 +294,7 @@ export default function SkillTrees() {
       if (flashTimer.current) window.clearTimeout(flashTimer.current);
       flashTimer.current = window.setTimeout(() => setFlash(null), 1600);
     },
-    [username],
+    [username, plans, writePlans],
   );
 
   const entering = usePageEntrance(true);
@@ -391,6 +435,9 @@ export default function SkillTrees() {
             onSelect={select}
             onPractice={practise}
             gain={selected ? practiceGain(selected) : 0}
+            steps={selected ? plans[selected.id] ?? null : null}
+            onSteps={selected ? (plan) => writePlans(selected.id, plan) : undefined}
+            onResetSteps={selected ? () => writePlans(selected.id, null) : undefined}
             flash={flash && selected && flash.id === selected.id ? flash.gain : null}
             placeholder={
               <>

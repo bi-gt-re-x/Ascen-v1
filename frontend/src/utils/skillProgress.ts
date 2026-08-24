@@ -32,6 +32,7 @@
  */
 import { userScopedKey } from './calendarStore';
 import type { GraphNode, NodeStatus, SkillGraph } from './skillGraph';
+import { planPercent, type StepPlans } from './skillSteps';
 
 /** Node id → XP added by practising, on top of whatever the tree seeded. */
 export type SkillProgress = Record<string, number>;
@@ -103,14 +104,33 @@ export function practiceGain(node: GraphNode): number {
  * node's requirements sit above it — but the pass does not depend on that: it
  * repeats until nothing changes, so a chain of unlocks opens in one call rather
  * than one node per render.
+ *
+ * ## Nodes whose programme the reader has written
+ *
+ * A node in `plans` is counted in steps rather than in XP: the reader has said
+ * what its programme is, so how far through that programme they are *is* how
+ * far along they are. XP is then back-filled from the percentage rather than
+ * the other way round, so the reward line under the bar still adds up and
+ * nothing downstream needs to know which of the two kinds of node it is
+ * looking at. This is the only place the two models meet — see utils/skillSteps
+ * for why the step count is the record and the percentage the derived thing.
  */
-export function applyProgress(graph: SkillGraph, progress: SkillProgress): SkillGraph {
+export function applyProgress(
+  graph: SkillGraph,
+  progress: SkillProgress,
+  plans: StepPlans = {},
+): SkillGraph {
   const seededOpen = new Set(
     graph.nodes.filter((node) => node.status !== 'locked').map((node) => node.id),
   );
 
   const earned = new Map<string, number>();
   for (const node of graph.nodes) {
+    const plan = plans[node.id];
+    if (plan) {
+      earned.set(node.id, Math.round((node.need * planPercent(plan)) / 100));
+      continue;
+    }
     const added = progress[node.id] ?? 0;
     earned.set(node.id, Math.min(node.need, node.have + added));
   }
@@ -130,6 +150,15 @@ export function applyProgress(graph: SkillGraph, progress: SkillProgress): Skill
     graph.nodes.filter((node) => node.status === 'complete').map((node) => node.id),
   );
   for (const node of graph.nodes) {
+    const plan = plans[node.id];
+    // A written programme decides its own node both ways: every step done
+    // finishes it even where the tree seeded it short, and a step still to do
+    // means it is not finished however the tree was drawn.
+    if (plan) {
+      if (planPercent(plan) >= 100) complete.add(node.id);
+      else complete.delete(node.id);
+      continue;
+    }
     if (node.need > 0 && (earned.get(node.id) ?? 0) >= node.need) complete.add(node.id);
   }
 
@@ -153,7 +182,12 @@ export function applyProgress(graph: SkillGraph, progress: SkillProgress): Skill
     ...graph,
     nodes: graph.nodes.map((node) => {
       const have = earned.get(node.id) ?? 0;
-      const percent = node.need > 0 ? Math.round((have / node.need) * 100) : node.percent;
+      const plan = plans[node.id];
+      const percent = plan
+        ? planPercent(plan)
+        : node.need > 0
+          ? Math.round((have / node.need) * 100)
+          : node.percent;
 
       let status: NodeStatus;
       if (complete.has(node.id)) status = 'complete';

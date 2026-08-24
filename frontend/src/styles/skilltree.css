@@ -1565,6 +1565,145 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
 }
 .stx-lp-back:hover { color: var(--lat-violet); }
 .stx-lp-steps.is-all { gap: 10px; padding-left: 22px; }
+
+/* ---- editing a step ----
+   A row is a button rather than text, because the whole of it is the target:
+   asking somebody to hit a pencil icon beside a two-line instruction is a worse
+   affordance than letting them click the instruction. It is styled as text
+   until it is hovered, so the list still reads as a list. */
+.stx-lp-programme {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+    margin-right: -4px;
+}
+/* The number is drawn rather than marked.
+   A row has to be a grid — number, step, delete — and a list item that is a
+   grid is no longer a `list-item`, so its ::marker goes with it. A counter puts
+   it back in a column of its own, which the marker never had: an editing row
+   keeps its number beside the field instead of losing it above the wrap. The
+   three-step window above is untouched and still uses real markers, because it
+   needs `start` and this list always begins at one. */
+.stx-lp-steps.is-all { counter-reset: step; list-style: none; padding-left: 0; }
+.stx-lp-step {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) 18px;
+    align-items: start;
+    gap: 2px 6px;
+    counter-increment: step;
+}
+.stx-lp-step::before {
+    content: counter(step) ".";
+    color: var(--lat-faint);
+    font-weight: 700;
+    text-align: right;
+    /* Optical alignment with the text beside it, which sits on a 1.5 line. */
+    line-height: 1.5;
+}
+.stx-lp-step.is-now::before { color: var(--lat-violet); }
+.stx-lp-step.is-done::before { text-decoration: none; }
+.stx-lp-step-text {
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: text;
+}
+.stx-lp-step-text:disabled { cursor: default; }
+.stx-lp-step-text:not(:disabled):hover { background: var(--lat-violet-soft); }
+.stx-lp-step-del {
+    width: 18px; height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: none;
+    color: var(--lat-faint);
+    font: inherit;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    /* Held back until the row is under the cursor: a column of crosses beside
+       twenty steps reads as a list of things to delete. */
+    opacity: 0;
+    transition: opacity .12s ease, color .12s ease, background .12s ease;
+}
+.stx-lp-step:hover .stx-lp-step-del,
+.stx-lp-step-del:focus-visible { opacity: 1; }
+.stx-lp-step-del:hover { background: var(--lat-rose-soft); color: var(--lat-rose); }
+
+/* Both open states put their buttons on a second row under the field, in the
+   step's own column rather than under the number. */
+.stx-lp-step.is-editing,
+.stx-lp-step.is-confirming { grid-template-columns: 20px minmax(0, 1fr); gap: 6px; }
+.stx-lp-step-acts { grid-column: 2; }
+/* Struck-through text inside an open editor would be unreadable, and a step
+   being deleted is not a step you have done. */
+.stx-lp-step.is-editing,
+.stx-lp-step.is-confirming { opacity: 1; text-decoration: none; }
+.stx-lp-step-field {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--lat-violet);
+    border-radius: 8px;
+    background: var(--lat-field);
+    color: var(--lat-text);
+    font: inherit;
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+.stx-lp-step-field:focus { outline: 2px solid var(--lat-violet-soft); outline-offset: 1px; }
+.stx-lp-step-ask { font-size: 12.5px; font-weight: 650; color: var(--lat-rose); line-height: 1.5; }
+.stx-lp-step-acts { display: flex; gap: 8px; }
+.stx-lp-step-act {
+    padding: 4px 10px;
+    border: 1px solid var(--lat-line);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--lat-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.stx-lp-step-act:hover { border-color: var(--lat-grey); color: var(--lat-text); }
+.stx-lp-step-act.is-save {
+    border-color: var(--lat-violet);
+    background: var(--lat-violet);
+    color: #fff;
+}
+.stx-lp-step-act.is-save:hover { filter: brightness(1.08); color: #fff; }
+.stx-lp-step-act.is-danger {
+    border-color: var(--lat-rose);
+    background: var(--lat-rose);
+    color: #fff;
+}
+.stx-lp-step-act.is-danger:hover { filter: brightness(1.08); color: #fff; }
+
+.stx-lp-step-add {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--lat-line-soft);
+}
+.stx-lp-more:disabled { color: var(--lat-faint); cursor: default; text-decoration: none; }
+.stx-lp-step-reset {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lat-faint);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    cursor: pointer;
+}
+.stx-lp-step-reset:hover { color: var(--lat-rose); }
 /* Steps behind the reader are struck through rather than hidden: the list is a
    ladder, and a ladder with its bottom rungs removed reads as a shorter one. */
 .stx-lp-steps.is-all li.is-done { opacity: .45; text-decoration: line-through; }

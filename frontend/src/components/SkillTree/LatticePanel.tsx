@@ -16,6 +16,15 @@
  * have read the steps: how will I know, how does this go wrong, how long. All
  * four are one call into skills/improve, which is what stops them disagreeing.
  *
+ * ## The programme can be rewritten, and then it is the record
+ *
+ * The suggested steps are a starting point. Opening the full list gives every
+ * step an edit, a delete behind a confirmation, and a row at the bottom for a
+ * new one — and the moment a node is edited its completion figure is counted in
+ * steps rather than in XP, so adding one lowers it and deleting one ahead of
+ * you raises it. The arithmetic is in utils/skillSteps and utils/skillProgress;
+ * this file only ever hands over a whole plan and is handed one back.
+ *
  * ## Both lists are read from the graph, not from the node
  *
  * A node states what it `requires`; nothing states what it opens. That is the
@@ -40,6 +49,15 @@ import {
   type GraphNode,
   type SkillGraph,
 } from '@/utils/skillGraph';
+import {
+  STEPS_MAX,
+  STEP_MAX,
+  addStep,
+  cleanStep,
+  editStep,
+  removeStep,
+  type StepPlan,
+} from '@/utils/skillSteps';
 import { ProgressIndicator } from './ProgressIndicator';
 
 const number = (value: number) => Math.round(value).toLocaleString();
@@ -86,6 +104,215 @@ function Rows({
   );
 }
 
+/**
+ * The full programme, editable.
+ *
+ * One row is in exactly one of four states — reading, being edited, asking
+ * whether it should really go, or being the new row at the bottom — and the
+ * three pieces of state below are what say which. They are deliberately not
+ * merged into one: a reader who starts typing a new step and then decides to
+ * fix step four should not lose what they typed, and a delete they have not
+ * confirmed should survive an edit somewhere else in the list.
+ */
+function Programme({
+  plan,
+  at,
+  onChange,
+  onReset,
+  editable,
+  edited,
+}: {
+  plan: StepPlan;
+  at: number;
+  onChange?: (next: StepPlan) => void;
+  onReset?: () => void;
+  editable: boolean;
+  /** Whether this programme is the reader's or still the suggested one. */
+  edited: boolean;
+}) {
+  const [editingAt, setEditingAt] = useState<number | null>(null);
+  const [confirmAt, setConfirmAt] = useState<number | null>(null);
+  const [draft, setDraft] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [fresh, setFresh] = useState('');
+  const now = useRef<HTMLLIElement>(null);
+
+  // Twenty steps opened at the top would put a reader on step eighteen at the
+  // bottom of a scroll box, looking at rungs they finished months ago.
+  useEffect(() => {
+    now.current?.scrollIntoView({ block: 'center' });
+    // Once, on open. Re-running it on every edit would yank the list back to
+    // the current step the moment somebody edits the one below it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const startEdit = (index: number) => {
+    if (!editable) return;
+    setConfirmAt(null);
+    setEditingAt(index);
+    setDraft(plan.steps[index] ?? '');
+  };
+
+  const commit = () => {
+    if (editingAt === null) return;
+    // An edit cleared to nothing deletes the step, which is what utils/skillSteps
+    // does with it — but never silently on the last one, so the field simply
+    // closes and the step stands.
+    onChange?.(editStep(plan, editingAt, draft));
+    setEditingAt(null);
+  };
+
+  const commitNew = () => {
+    if (cleanStep(fresh)) onChange?.(addStep(plan, fresh));
+    setAdding(false);
+    setFresh('');
+  };
+
+  const full = plan.steps.length >= STEPS_MAX;
+
+  return (
+    <div className="stx-lp-body stx-lp-programme">
+      <ol className="stx-lp-steps is-all" >
+        {plan.steps.map((step, index) => {
+          const state = index < at ? 'is-done' : index === at ? 'is-now' : '';
+
+          if (editingAt === index) {
+            return (
+              <li key={`edit-${index}`} className={`stx-lp-step is-editing ${state}`}>
+                <input
+                  className="stx-lp-step-field"
+                  value={draft}
+                  maxLength={STEP_MAX}
+                  autoFocus
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') commit();
+                    if (event.key === 'Escape') setEditingAt(null);
+                  }}
+                />
+                <span className="stx-lp-step-acts">
+                  <button type="button" className="stx-lp-step-act is-save" onClick={commit}>
+                    Save
+                  </button>
+                  <button type="button" className="stx-lp-step-act" onClick={() => setEditingAt(null)}>
+                    Cancel
+                  </button>
+                </span>
+              </li>
+            );
+          }
+
+          if (confirmAt === index) {
+            return (
+              <li key={`confirm-${index}`} className={`stx-lp-step is-confirming ${state}`}>
+                <span className="stx-lp-step-ask">Delete this step?</span>
+                <span className="stx-lp-step-acts">
+                  <button
+                    type="button"
+                    className="stx-lp-step-act is-danger"
+                    onClick={() => {
+                      onChange?.(removeStep(plan, index));
+                      setConfirmAt(null);
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <button type="button" className="stx-lp-step-act" onClick={() => setConfirmAt(null)}>
+                    Keep
+                  </button>
+                </span>
+              </li>
+            );
+          }
+
+          return (
+            <li
+              key={`${index}-${step}`}
+              ref={index === at ? now : undefined}
+              className={`stx-lp-step ${state}`}
+            >
+              <button
+                type="button"
+                className="stx-lp-step-text"
+                onClick={() => startEdit(index)}
+                disabled={!editable}
+              >
+                {step}
+              </button>
+              {editable && plan.steps.length > 1 && (
+                <button
+                  type="button"
+                  className="stx-lp-step-del"
+                  aria-label={`Delete step ${index + 1}`}
+                  onClick={() => {
+                    setEditingAt(null);
+                    setConfirmAt(index);
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      {editable && (
+        <div className="stx-lp-step-add">
+          {adding ? (
+            <>
+              <input
+                className="stx-lp-step-field"
+                value={fresh}
+                maxLength={STEP_MAX}
+                placeholder="What to actually do…"
+                autoFocus
+                onChange={(event) => setFresh(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') commitNew();
+                  if (event.key === 'Escape') {
+                    setAdding(false);
+                    setFresh('');
+                  }
+                }}
+              />
+              <span className="stx-lp-step-acts">
+                <button type="button" className="stx-lp-step-act is-save" onClick={commitNew}>
+                  Add
+                </button>
+                <button
+                  type="button"
+                  className="stx-lp-step-act"
+                  onClick={() => {
+                    setAdding(false);
+                    setFresh('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </span>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="stx-lp-more"
+              onClick={() => setAdding(true)}
+              disabled={full}
+            >
+              {full ? `${STEPS_MAX} steps is the limit` : '+ Add a step'}
+            </button>
+          )}
+          {edited && onReset && (
+            <button type="button" className="stx-lp-step-reset" onClick={onReset}>
+              Reset to suggested
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export interface LatticePanelProps {
   graph: SkillGraph;
   node: GraphNode | null;
@@ -98,6 +325,12 @@ export interface LatticePanelProps {
   gain?: number;
   /** Just-added XP, shown for a moment so a click is visibly a change. */
   flash?: number | null;
+  /** The reader's own programme for this node, where they have written one. */
+  steps?: StepPlan | null;
+  /** Store a programme for this node. Absent leaves the list read-only. */
+  onSteps?: (plan: StepPlan) => void;
+  /** Throw the reader's programme away and go back to the suggested one. */
+  onResetSteps?: () => void;
 }
 
 export function LatticePanel({
@@ -108,18 +341,15 @@ export function LatticePanel({
   onPractice,
   gain = 0,
   flash = null,
+  steps = null,
+  onSteps,
+  onResetSteps,
 }: LatticePanelProps) {
   // The step list opens over the whole panel rather than beside it, so this is
   // panel-wide state rather than the section's. Reset on every change of node:
   // a reader who clicks a new tile wants that tile, not the steps of the last.
   const [allSteps, setAllSteps] = useState(false);
   useEffect(() => setAllSteps(false), [node?.id]);
-  // Twenty steps opened at the top would put a reader on step eighteen at the
-  // bottom of a scroll box, looking at rungs they finished months ago.
-  const now = useRef<HTMLLIElement>(null);
-  useEffect(() => {
-    if (allSteps) now.current?.scrollIntoView({ block: 'center' });
-  }, [allSteps]);
 
   if (!node) {
     return (
@@ -146,11 +376,21 @@ export function LatticePanel({
       .filter((entry): entry is GraphNode => Boolean(entry)),
   ];
 
+  // What is actually shown: the reader's programme where they have written one,
+  // and the suggested one otherwise. Everything below reads `programme`, so the
+  // panel never has to ask which of the two it is looking at — only the reset
+  // control does, and only to know whether there is anything to reset.
+  const programme: StepPlan = steps ?? { steps: plan.steps, at: plan.at };
+  const at = Math.min(programme.at, Math.max(0, programme.steps.length - 1));
+
   // Three at a time: the one the reader is on and the two after it. A panel
   // that prints all twenty is a wall nobody reads, and one that prints the
   // first three is wrong for everybody past the first three.
-  const window = plan.steps.slice(plan.at, plan.at + 3);
+  const window = programme.steps.slice(at, at + 3);
   const openSteps = () => setAllSteps(true);
+  // The first edit takes a copy of the suggested programme — see the note at
+  // the top of utils/skillSteps on why an override rather than a diff.
+  const changeSteps = onSteps ? (next: StepPlan) => onSteps(next) : undefined;
 
   // The whole panel, given over to the programme. Not a section that grew a
   // scrollbar — the steps are what the reader asked for, so everything else
@@ -165,21 +405,19 @@ export function LatticePanel({
           <div>
             <h2>{node.name}</h2>
             <p className="stx-lp-steps-count">
-              {plan.steps.length} steps · on {plan.at + 1}
+              {programme.steps.length} steps · on {at + 1}
+              {steps ? ' · yours' : ''}
             </p>
           </div>
         </header>
-        <ol className="stx-lp-body stx-lp-steps is-all">
-          {plan.steps.map((step, index) => (
-            <li
-              key={step}
-              ref={index === plan.at ? now : undefined}
-              className={index < plan.at ? 'is-done' : index === plan.at ? 'is-now' : ''}
-            >
-              {step}
-            </li>
-          ))}
-        </ol>
+        <Programme
+          plan={programme}
+          at={at}
+          onChange={changeSteps}
+          onReset={onResetSteps}
+          editable={Boolean(changeSteps)}
+          edited={Boolean(steps)}
+        />
       </aside>
     );
   }
@@ -245,7 +483,7 @@ export function LatticePanel({
           <p className={`stx-lp-headline is-${node.status}`}>{plan.headline}</p>
           {/* `start` rather than a re-numbered list: step seven has to read as
               step seven, or the count under it is describing something else. */}
-          <ol className="stx-lp-steps is-window" start={plan.at + 1} onClick={openSteps}>
+          <ol className="stx-lp-steps is-window" start={at + 1} onClick={openSteps}>
             {window.map((step, index) => (
               <li key={step} className={index === 0 ? 'is-now' : ''}>
                 {step}
@@ -253,7 +491,7 @@ export function LatticePanel({
             ))}
           </ol>
           <button type="button" className="stx-lp-more" onClick={openSteps}>
-            All {plan.steps.length} steps
+            All {programme.steps.length} steps
           </button>
           <dl className="stx-lp-notes">
             <div className="stx-lp-note is-proof">
@@ -275,9 +513,11 @@ export function LatticePanel({
         <Rows title="Related Skills" nodes={near} onSelect={onSelect} showPercent />
       </div>
 
-      {/* Three states, and each says what it actually is: a locked node names
-          what is in the way, a finished one has nothing left to add, and the
-          rest say what a session is worth rather than just "Practice". */}
+      {/* Four states, and each says what it actually is: a locked node names
+          what is in the way, a finished one has nothing left to add, a node
+          whose programme the reader has written is counted in steps rather than
+          XP so the button ticks the next one off, and the rest say what a
+          session is worth rather than just "Practice". */}
       <button
         type="button"
         className="stx-lp-cta"
@@ -289,7 +529,9 @@ export function LatticePanel({
           ? 'Locked — finish what it needs first'
           : node.status === 'complete'
             ? 'Mastered'
-            : `Practice This Skill · +${number(gain)} XP`}
+            : steps
+              ? `Done Step ${at + 1} of ${programme.steps.length}`
+              : `Practice This Skill · +${number(gain)} XP`}
       </button>
     </aside>
   );
