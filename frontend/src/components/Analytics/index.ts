@@ -7,12 +7,13 @@
  * panel file holds the panels that share a row, because that is the unit that
  * changes together when the layout does.
  *
- * The graded report card that used to be this page — `GradeCard`,
- * `ScoringDetails`, `metrics.ts` — is still here and still exported. Nothing
- * renders it since the redesign; its five scores survive as the Growth Score
- * tile, which reads the same endpoint. Kept rather than deleted because it is
- * the only thing that explains how a score is arrived at, and the new page
- * links to that explanation in more than one place without owning it yet.
+ * The graded report card that used to be this page is gone. `GradeCard` and
+ * `MetricRow` were kept for a while on the argument that they were the only
+ * thing explaining how a score is arrived at — but nothing rendered them, and
+ * that explanation had already moved to `ScoringDetails`, which the Trajectory
+ * panel opens in place. Two files nobody could reach, justified by a job
+ * something else was doing. `metrics.ts` stays for `gradeClass`, which
+ * `ScoreBanner` colours the letter with.
  */
 export { ScoreBanner } from './ScoreBanner';
 export type { ScoreBannerProps } from './ScoreBanner';
@@ -68,7 +69,6 @@ export { SubjectPanel, ConsistencyPanel, MilestonePanel } from './Breakdown';
 export type { SubjectPanelProps, ConsistencyPanelProps } from './Breakdown';
 
 export {
-  ComparisonPanel,
   CompoundingPanel,
   StreaksPanel,
   InsightsPanel,
@@ -79,7 +79,6 @@ export type { StreaksPanelProps, StandingPanelProps } from './Longterm';
 export {
   AreaChart,
   Columns,
-  GroupedBars,
   Panel,
   Radar,
   Scatter,
@@ -89,7 +88,7 @@ export {
   asTone,
   toneVar,
 } from './charts';
-export type { Tone, PanelProps, AreaSeries, BarPair, Column, RadarAxis, ScatterProps } from './charts';
+export type { Tone, PanelProps, AreaSeries, Column, RadarAxis, ScatterProps } from './charts';
 
 /**
  * The Growth Score — its five factors, and where a score places.
@@ -111,10 +110,5 @@ export {
 export type { GrowthScore, ScoreFactor } from './score';
 
 // The report card, no longer rendered. See the note at the top.
-export { GradeCard } from './GradeCard';
-export type { GradeCardProps } from './GradeCard';
-export { MetricRow } from './MetricRow';
-export type { MetricRowProps } from './MetricRow';
 export { ScoringDetails } from './ScoringDetails';
-export { gradeClass, metricLines } from './metrics';
-export type { MetricLine } from './metrics';
+export { gradeClass } from './metrics';

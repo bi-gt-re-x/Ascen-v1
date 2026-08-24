@@ -1,62 +1,22 @@
 /**
- * The bottom half: this period against the last, and where the pace leads.
+ * The long view: where the pace leads, what it has already reached, and how it
+ * compares to everybody else's.
  *
- * The comparison looks backwards and the projection forwards, from the same
- * daily average — so the panel that says "you did 46% more than last time" and
- * the one that says "this is 467K XP in five years" are two readings of one
- * number rather than two claims that could drift apart.
+ * It used to open with a grouped-bar `ComparisonPanel` — "This period against
+ * the last" — which was the same question the Trends tab's `ComparePanel`
+ * answers two rows above it, from the same window, with a period picker on top.
+ * Two panels, one question, one tab; the bars carried a footer link to the tab
+ * they were already on. The bars went and the picker stayed.
  */
 import type { CSSProperties } from 'react';
-import { AreaChart, GroupedBars, Panel, PanelLink, PanelNote, toneVar, type BarPair } from './charts';
+import { AreaChart, Panel, PanelLink, PanelNote, toneVar } from './charts';
 import { GLYPHS, type GlyphName } from './glyphs';
 import { axisSpan, datePositions } from './data';
 import { formatPercentile } from './score';
-import type { Compounding, ComparisonBar } from './data';
+import type { Compounding } from './data';
 import type { Standing, StandingKey } from '@/services/analytics';
 import { compact } from '@/utils/growthSummary';
 import type { Insight } from '@/utils/growthSummary';
-
-// --------------------------------------------------------------------------
-// Yearly comparison
-// --------------------------------------------------------------------------
-export function ComparisonPanel({ bars }: { bars: ComparisonBar[] }) {
-  const pairs: BarPair[] = bars.map((bar) => ({
-    label: bar.label,
-    current: bar.current,
-    previous: bar.previous,
-    currentText: bar.format(bar.current),
-    previousText: bar.previous > 0 ? bar.format(bar.previous) : '—',
-  }));
-
-  return (
-    <Panel
-      title="This period against the last"
-      note="The three rates first, totals underneath"
-      footer={<PanelLink to="/trends">See which way each measure is heading</PanelLink>}
-      aside={
-        <div className="ax-legend ax-legend-tight">
-          <span className="ax-legend-item">
-            <i className="ax-swatch" style={{ background: toneVar('violet') }} />
-            This Period
-          </span>
-          <span className="ax-legend-item">
-            <i className="ax-swatch ax-swatch-was" />
-            Previous Period
-          </span>
-        </div>
-      }
-    >
-      {/* The bars are a fixed height in a panel that is as tall as whatever
-          sits beside it in the row, so on a wide screen the leftover space all
-          fell below them and the chart hung off the top edge with a third of
-          the panel empty underneath. The wrapper takes the slack and centres
-          the bars in it. */}
-      <div className="ax-bars-fill">
-        <GroupedBars pairs={pairs} />
-      </div>
-    </Panel>
-  );
-}
 
 // --------------------------------------------------------------------------
 // Compounding

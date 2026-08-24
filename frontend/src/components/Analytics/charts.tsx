@@ -464,57 +464,6 @@ export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Ton
 }
 
 // --------------------------------------------------------------------------
-// Grouped bars — the period comparison
-// --------------------------------------------------------------------------
-export interface BarPair {
-  label: string;
-  current: number;
-  previous: number;
-  currentText: string;
-  previousText: string;
-}
-
-/**
- * Five pairs of bars, each pair scaled to itself.
- *
- * Five metrics in different units — XP in the tens of thousands, a score out of
- * ten — cannot share a y-axis without four of them becoming a flat line along
- * the floor. So each pair is scaled to its own larger member and the figures
- * are printed on the bars. The comparison a reader makes is *within* a pair,
- * which is the comparison the panel is for.
- */
-export function GroupedBars({ pairs }: { pairs: BarPair[] }) {
-  return (
-    <div className="ax-bars">
-      {pairs.map((pair) => {
-        const peak = Math.max(pair.current, pair.previous, 1);
-        return (
-          <div className="ax-bar-group" key={pair.label}>
-            <div className="ax-bar-pair">
-              <div className="ax-bar-col">
-                <span className="ax-bar-value">{pair.currentText}</span>
-                <div
-                  className="ax-bar ax-bar-now"
-                  style={{ height: `${(pair.current / peak) * 100}%` }}
-                />
-              </div>
-              <div className="ax-bar-col">
-                <span className="ax-bar-value ax-bar-value-was">{pair.previousText}</span>
-                <div
-                  className="ax-bar ax-bar-was"
-                  style={{ height: `${(pair.previous / peak) * 100}%` }}
-                />
-              </div>
-            </div>
-            <span className="ax-bar-label">{pair.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// --------------------------------------------------------------------------
 // Columns — one series of labelled bars
 // --------------------------------------------------------------------------
 export interface Column {
@@ -529,8 +478,8 @@ export interface Column {
 /**
  * A distribution, as bars sharing one scale.
  *
- * Unlike `GroupedBars` these are all the same measurement, so they share a
- * scale and the comparison between any two of them is real — that is the whole
+ * All the same measurement, so they share a scale and the comparison between
+ * any two of them is real — that is the whole
  * point of the panel, and scaling each to itself would flatten exactly the
  * difference the reader is looking for. The tallest is marked so the answer to
  * "when" is visible before any of the numbers are read.

@@ -75,7 +75,6 @@ import {
   BaselinePanel,
   BaselineSetup,
   ComparePanel,
-  ComparisonPanel,
   CompoundingPanel,
   ConsistencyPanel,
   Controls,
@@ -116,15 +115,11 @@ import {
   type View,
 } from '@/components/Analytics';
 import {
-  BalancePanel,
   ClockPanel,
   CurrentStatePanel,
   HeadlineTiles,
   HowPanel,
-  MomentumPanel,
   RelationshipsPanel,
-  RhythmPanel,
-  Summary,
   WeekPanel,
   WhyPanel,
   WorkingPanel,
@@ -151,7 +146,6 @@ import {
   SkillsChapter,
 } from '@/components/Growth';
 import {
-  comparisonBars,
   compounding,
   consistency,
   sliceWindow,
@@ -187,7 +181,6 @@ import { subjectXp } from '@/utils/subjectXp';
 import {
   balanceShape,
   clockShape,
-  momentum,
   rhythmShape,
   subjectQuality,
   weekShape,
@@ -256,8 +249,6 @@ const HEADLINE_ADVICE = 3;
 /** What an adopted suggestion is worth as a task. Its own habit is the reward. */
 const DEFAULT_ADVICE_XP = 25;
 
-/** The window the momentum panel compares, in days. See `momentum`. */
-const MOMENTUM_DAYS = 90;
 
 /**
  * How much history a tab needs before it will say anything at all.
@@ -575,7 +566,6 @@ export default function Analytics() {
     () => (recorded.length >= 2 ? ['First reading', '', '', 'Now'] : []),
     [recorded],
   );
-  const bars = useMemo(() => comparisonBars(slice), [slice]);
 
   const breakdown = useMemo(
     () => subjectXp(bySubject, subjects, fromIso, toIso, RADAR_SUBJECTS),
@@ -638,7 +628,6 @@ export default function Analytics() {
   const week = useMemo(() => weekShape(slice.current), [slice]);
   const clock = useMemo(() => clockShape(finished), [finished]);
   const rhythm = useMemo(() => rhythmShape(slice.current), [slice]);
-  const pace = useMemo(() => momentum(slice.current, MOMENTUM_DAYS), [slice]);
   const balance = useMemo(
     () => balanceShape(tasks, nameOf, fromIso, toIso),
     [fromIso, nameOf, tasks, toIso],
@@ -1098,14 +1087,8 @@ export default function Analytics() {
             onMetric={setMetric}
             grain={grain}
             onGrain={setGrain}
-            breakdown={breakdown}
-            previousBySubject={previousBySubject}
             rhythmRate={rhythmRate}
             heatRows={heatRows}
-            reached={reached}
-            bars={bars}
-            curve={curve}
-            insights={insights}
             currentStreak={account.data?.stats?.current_streak ?? 0}
             bestStreak={account.data?.stats?.best_streak ?? 0}
             quality={
@@ -1185,7 +1168,7 @@ export default function Analytics() {
               />
               <DirectionPanel directions={heading} verdict={verdict} />
             </section>
-            <section className="ax-section">
+            <section className="ax-section ax-hero">
               <TrendChart
                 weeks={weeks}
                 metricKey={trendMetric}
@@ -1197,16 +1180,19 @@ export default function Analytics() {
                 onMetric={setTrendMetric}
               />
             </section>
-            <section className="ax-section ax-grid ax-grid-halves-even">
-              <MomentumPanel rows={pace} window={MOMENTUM_DAYS} />
+            {/* The projection alone, full width. It was sharing a row with
+                "Which way you are heading", which asked the same question as
+                "Which way each measure is heading" two rows above it — the
+                same window, one as a delta and one as a fitted slope. The
+                fitted one stayed. */}
+            <section className="ax-section">
               <CompoundingPanel data={curve} />
             </section>
             {/* Both moved off the Overview, which was carrying them at lower
                 resolution under a heading that had already been answered. A
                 year against the last one and the dates things were reached are
                 the same question this tab is for: what the pace has been. */}
-            <section className="ax-section ax-grid ax-grid-halves-even">
-              <ComparisonPanel bars={bars} />
+            <section className="ax-section ax-compact">
               <MilestonePanel reached={reached} />
             </section>
             {/* The growth page's Long Term chapter, which was asking this tab's
@@ -1251,7 +1237,7 @@ export default function Analytics() {
               <h2 className="ax-band">Your habits</h2>
               <HabitCards habits={habits} todayIso={toIso} />
             </section>
-            <section className="ax-section">
+            <section className="ax-section ax-hero">
               <HabitCalendarPanel byDate={byDate} lastIso={toIso} accountDays={all.length} />
             </section>
             <section className="ax-section ax-grid ax-grid-halves-even">
@@ -1314,26 +1300,34 @@ export default function Analytics() {
             <section className="ax-section">
               <DiscoveredPatterns items={discovered} window={PATTERN_DAYS} />
             </section>
-            <section className="ax-section">
+            <section className="ax-section ax-hero">
               <RelationshipsPanel
                 relationships={links}
                 notice={unlock(slice.current.length, NEED_DAYS.insights, 'behavioural relationships')}
               />
             </section>
+            {/* When the work happens. `Summary` used to lead this row with a
+                paragraph assembled from these same figures — which is what
+                `CurrentStatePanel` does at the top of the tab, from the same
+                figures again. One opening paragraph per tab is enough. */}
             <section className="ax-section ax-grid ax-grid-halves-even">
-              <Summary week={week} clock={clock} rhythm={rhythm} span={spanText} />
               <ClockPanel clock={clock} />
-            </section>
-            <section className="ax-section ax-grid ax-grid-halves-even">
               <WeekPanel week={week} />
-              <RhythmPanel rhythm={rhythm} />
             </section>
             {/* The radar came off the Overview to sit beside the panel that
                 explains it: one draws the shape of the week by subject, the
                 other says whether that shape is drifting. */}
-            <section className="ax-section ax-grid ax-grid-halves-even">
-              <SubjectPanel rows={breakdown.rows} previous={previousBySubject} />
-              <BalancePanel balance={balance} />
+            {/* The web, its legend and the concentration reading, in one
+                panel across the full width. They were two panels side by side,
+                both enumerating the same subjects in the same order from the
+                same figures — see `SubjectPanel`, which absorbed the half of
+                the other that was not already here. */}
+            <section className="ax-section ax-hero">
+              <SubjectPanel
+                rows={breakdown.rows}
+                previous={previousBySubject}
+                balance={balance}
+              />
             </section>
             {/* The one panel on this tab that names individual tasks. Every
                 other finding here is an aggregate, and an aggregate cannot
@@ -1341,7 +1335,7 @@ export default function Analytics() {
                 which tasks were those. It sits on Insights rather than the
                 Overview because "why did this window go like that" is exactly
                 the question a list of your best and worst work answers. */}
-            <section className="ax-section ax-grid ax-grid-halves-even">
+            <section className="ax-section ax-grid ax-grid-halves-even ax-compact">
               <RatedTasksPanel rated={rated} summary={qualitySummary} />
               <InsightsPanel insights={insights} />
             </section>
@@ -1521,14 +1515,8 @@ interface OverviewProps {
   onMetric: (key: MetricKey) => void;
   grain: Grain;
   onGrain: (key: Grain) => void;
-  breakdown: ReturnType<typeof subjectXp>;
-  previousBySubject: Map<string, number>;
   rhythmRate: ReturnType<typeof consistency>;
   heatRows: ReturnType<typeof heatmapGrid>;
-  reached: ReturnType<typeof milestoneHistory>;
-  bars: ReturnType<typeof comparisonBars>;
-  curve: ReturnType<typeof compounding>;
-  insights: ReturnType<typeof growthInsights>;
   currentStreak: number;
   bestStreak: number;
   /** The baseline panel, or the offer to set one. See `BaselinePanel`. */
