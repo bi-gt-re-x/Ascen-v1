@@ -1491,6 +1491,45 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
 }
 .stx-lp-steps li::marker { color: var(--lat-faint); font-weight: 700; }
 
+/* The three notes under the steps.
+   A definition list, because that is what it is: three questions with one
+   answer each. The label is set small and uppercase so the column of answers
+   reads as a paragraph you can skim, rather than as six lines of equal weight
+   competing with the numbered steps above them. Each note carries a tone down
+   its left edge — you have it / it goes wrong / it costs — which is the whole
+   of the colour coding and is doing the work a third heading would otherwise
+   have to do. */
+.stx-lp-notes {
+    margin: 10px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.stx-lp-note {
+    --tone: var(--lat-grey);
+    padding-left: 10px;
+    border-left: 2px solid var(--tone);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.stx-lp-note.is-proof { --tone: var(--lat-green); }
+.stx-lp-note.is-pitfall { --tone: var(--lat-amber); }
+.stx-lp-note.is-effort { --tone: var(--lat-violet); }
+.stx-lp-note dt {
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--tone);
+}
+.stx-lp-note dd {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--lat-muted);
+}
+
 @media (max-width: 640px) {
     .stx-treenav { border-radius: var(--lat-radius); }
 }

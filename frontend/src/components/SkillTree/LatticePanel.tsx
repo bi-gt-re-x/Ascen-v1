@@ -3,8 +3,18 @@
  *
  * The column beside the canvas: the skill's drawing and name, what kind of
  * thing it is and where it stands, a sentence about it, the progress and the XP
- * behind that progress, then the two lists that make the panel a way of walking
- * the tree rather than a caption — what this node opens, and what sits near it.
+ * behind that progress, then how to get better at it, then the two lists that
+ * make the panel a way of walking the tree rather than a caption — what this
+ * node opens, and what sits near it.
+ *
+ * ## How to improve is the middle of the panel, not a footnote
+ *
+ * Everything above it describes the skill; everything below it is navigation.
+ * The section between the two is the only part that tells a reader what to do
+ * with their afternoon, so it is the one that carries four things rather than
+ * one — the steps, and then the three questions somebody asks the moment they
+ * have read the steps: how will I know, how does this go wrong, how long. All
+ * four are one call into skills/improve, which is what stops them disagreeing.
  *
  * ## Both lists are read from the graph, not from the node
  *
@@ -19,8 +29,8 @@
  * A list with no rows, an XP line on a node worth zero: each is absent rather
  * than drawn as a dash. A panel of dashes reads as a form that failed to load.
  */
-import { improveHeadline, improveSteps } from '@/skills/improve';
-import { iconUrl } from '@/skills/subjectTrees';
+import { improvePlan } from '@/skills/improve';
+import { groupOf, iconUrl } from '@/skills/subjectTrees';
 import {
   DIFFICULTY_LABEL,
   STATUS_LABEL,
@@ -111,6 +121,9 @@ export function LatticePanel({
   // What is actually in the way, which on a locked node is the only part of
   // `needs` worth naming — the rest are already done.
   const blockers = needs.filter((entry) => entry.status !== 'complete');
+  // Everything under "How to improve", in one call. The group decides which
+  // verbs the derived half speaks in, and the graph's own id is the tree's.
+  const plan = improvePlan(node, { opens, needs, blockers, group: groupOf(graph.id) });
   // Its own prerequisites first, then anything it suggests — the nodes a reader
   // would look at next in either direction.
   const near = [
@@ -169,15 +182,33 @@ export function LatticePanel({
 
       {/* How to improve — the part a reader came for once they have decided to
           work on this. The headline is about where *they* stand; the steps are
-          about the skill. See skills/improve. */}
+          what to go and do; the three notes under them are the questions a
+          reader asks next and used to have to guess at — how do I know it
+          worked, how does this go wrong, and how long is this going to take.
+          All four come from one call, so a locked node's steps and its proof
+          cannot disagree about what it is telling you to do. See skills/improve. */}
       <section className="stx-lp-section stx-lp-improve">
         <h3>How to improve</h3>
-        <p className={`stx-lp-headline is-${node.status}`}>{improveHeadline(node, blockers)}</p>
+        <p className={`stx-lp-headline is-${node.status}`}>{plan.headline}</p>
         <ol className="stx-lp-steps">
-          {improveSteps(node, opens).map((step) => (
+          {plan.steps.map((step) => (
             <li key={step}>{step}</li>
           ))}
         </ol>
+        <dl className="stx-lp-notes">
+          <div className="stx-lp-note is-proof">
+            <dt>You have it when</dt>
+            <dd>{plan.proof}</dd>
+          </div>
+          <div className="stx-lp-note is-pitfall">
+            <dt>Where it goes wrong</dt>
+            <dd>{plan.pitfall}</dd>
+          </div>
+          <div className="stx-lp-note is-effort">
+            <dt>What it takes</dt>
+            <dd>{plan.effort}</dd>
+          </div>
+        </dl>
       </section>
 
       <Rows title="Unlocks" nodes={opens} onSelect={onSelect} />

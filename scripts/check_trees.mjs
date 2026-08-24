@@ -22,6 +22,11 @@
  *   - a subject in the task catalogue that no lattice claims. The rail across
  *     the top of the page offers all hundred; one with no route silently falls
  *     back to its group's root, which is a reasonable guess and not an answer.
+ *   - an entry in skills/improve keyed to a node that no longer exists. The
+ *     panel falls back to derived advice, so the tree renders perfectly, the
+ *     written steps are simply never shown again, and the loss looks exactly
+ *     like a node nobody has got round to writing. Renaming a node is all it
+ *     takes, and renaming a node is a normal afternoon.
  *
  * None of these can be caught by TypeScript: every one of them is a string that
  * is correctly typed and wrong. So they are checked here instead, against the
@@ -48,6 +53,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ICON_DIR = join(root, 'utils', 'icons', 'tree_icons');
 const ENTRY = join(root, 'frontend', 'src', 'skills', 'trees', 'index.ts');
 const MAP_ENTRY = join(root, 'frontend', 'src', 'skills', 'subjectMap.ts');
+const IMPROVE_ENTRY = join(root, 'frontend', 'src', 'skills', 'improve.ts');
 const CATALOGUE = join(root, 'backend', 'config', 'subjects.py');
 
 /* How small a tree is allowed to be before it stops being a lattice and starts
@@ -69,8 +75,10 @@ const warn = (where, message) => warnings.push(`${where}: ${message}`);
 const dir = await mkdtemp(join(tmpdir(), 'ascen-trees-'));
 const outfile = join(dir, 'trees.mjs');
 const mapfile = join(dir, 'map.mjs');
+const improvefile = join(dir, 'improve.mjs');
 let TREES;
 let SUBJECT_TARGETS;
+let IMPROVE;
 try {
   await build({ entryPoints: [ENTRY], bundle: true, format: 'esm', outfile, logLevel: 'warning' });
   // The map imports skills/subjectTrees, which imports @/utils/skillGraph for a
@@ -84,8 +92,17 @@ try {
     logLevel: 'warning',
     alias: { '@': join(root, 'frontend', 'src') },
   });
+  await build({
+    entryPoints: [IMPROVE_ENTRY],
+    bundle: true,
+    format: 'esm',
+    outfile: improvefile,
+    logLevel: 'warning',
+    alias: { '@': join(root, 'frontend', 'src') },
+  });
   ({ TREES } = await import(pathToFileURL(outfile).href));
   ({ SUBJECT_TARGETS } = await import(pathToFileURL(mapfile).href));
+  ({ IMPROVE } = await import(pathToFileURL(improvefile).href));
 } finally {
   await rm(dir, { recursive: true, force: true });
 }
@@ -270,6 +287,28 @@ for (const id of Object.keys(SUBJECT_TARGETS)) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Every written improvement plan is attached to a node that exists
+// ---------------------------------------------------------------------------
+/* Only one direction is an error. A node with no entry is the normal case —
+   most of the eleven hundred are answered from the group, the tier and the
+   graph's own edges — but an entry with no node is prose nobody will ever read
+   again, and it fails silently: the panel derives something plausible and the
+   loss looks exactly like the ordinary case. */
+for (const id of Object.keys(IMPROVE)) {
+  const owner = nodeOwner.get(id);
+  if (!owner) {
+    fail('improve', `"${id}" has written steps and is not a node on any tree — renamed or deleted`);
+    continue;
+  }
+  const node = byTreeId.get(owner).nodes.find((entry) => entry.id === id);
+  if (node.navTo) {
+    warn('improve', `"${id}" is a doorway — clicking it opens ${node.navTo}, so its steps never show`);
+  }
+}
+
+const written = Object.keys(IMPROVE).length;
+
 const unused = [...icons].filter((name) => !iconsUsed.has(name)).sort();
 
 // ---------------------------------------------------------------------------
@@ -287,7 +326,8 @@ if (problems.length > 0) {
 
 console.log(
   `\n${TREES.length} trees · ${roots.length} roots · ${nodeCount} nodes · ` +
-  `${iconsUsed.size} icons in use · ${catalogueIds.length} task subjects routed`,
+  `${iconsUsed.size} icons in use · ${catalogueIds.length} task subjects routed · ` +
+  `${written} written improvement plans`,
 );
 for (const { group, trees } of groupRoots(roots)) {
   console.log(`  ${group}: ${trees.map((tree) => tree.title).join(', ')}`);

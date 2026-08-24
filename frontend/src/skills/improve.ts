@@ -15,17 +15,42 @@
  * own description is what this file exists to avoid: the reader has just read
  * that sentence two inches above.
  *
- * ## Anything missing still gets an answer
+ * ## A plan, not a list
  *
- * `improveSteps` falls back to advice built from what the graph already knows —
- * the node's name and what it opens. A tree that adds a node and forgets to add
- * its steps gets something useful rather than an empty heading, which is what
- * keeps this file from being a thing you must remember to update.
+ * What the panel prints is four things that have to agree with each other —
+ * what to do, how you will know it worked, how it usually goes wrong, and what
+ * it costs. `improvePlan` produces all four at once for that reason. Computed
+ * separately they drift, and the drift is always the same shape: a locked node
+ * told to go and practise the thing it has just said is locked.
+ *
+ * ## Most of it is derived, and that is the design
+ *
+ * Roughly a hundred and fifty of the eleven hundred nodes have an entry below.
+ * The rest are answered from the group, the tier and the graph's own edges —
+ * see the derived half. That is not a stub waiting to be replaced by authored
+ * text: eleven hundred hand-written entries is a promise to fall behind, and a
+ * derived sentence that knows the domain, the rung and what the node opens is
+ * worth more than an authored one written in a hurry to fill a gap.
+ *
+ * An entry may state as little as its steps and as much as its steps, its
+ * proof and its pitfall. Whatever it states wins; the rest is derived. So
+ * improving one node is a two-line edit rather than a schema change.
  */
+import { difficultyRank, type Difficulty } from '@/skills/types';
 import type { GraphNode } from '@/utils/skillGraph';
 
-/** Node id → three or so concrete moves. */
-export const IMPROVE: Record<string, string[]> = {
+/**
+ * What an entry may carry.
+ *
+ * The bare array is the original form and stays valid — a hundred and fifty
+ * entries are written that way and there is nothing wrong with any of them. The
+ * object form is for the node where the proof or the trap is worth stating
+ * outright rather than deriving, and states only the fields it improves on.
+ */
+export type ImproveEntry = string[] | { steps: string[]; proof?: string; pitfall?: string };
+
+/** Node id → three or so concrete moves, and anything else worth stating. */
+export const IMPROVE: Record<string, ImproveEntry> = {
   // ---- Coding -----------------------------------------------------------
   'c.vars': [
     'Name ten values in a program you already wrote — badly named ones count double.',
@@ -186,11 +211,6 @@ export const IMPROVE: Record<string, string[]> = {
     'Search for an insertion point rather than an exact match.',
     'Binary search on an answer rather than on an array.',
   ],
-  'a.complexity': [
-    'Give the big-O of five functions you have already written.',
-    'Find a loop inside a loop and say what makes it n².',
-    'Time a real function at 10, 100 and 1000 inputs and see if it matches.',
-  ],
   'a.dp': [
     'Solve one problem recursively, then add memoisation, then make it a table.',
     'Write the recurrence in words before writing any code.',
@@ -327,11 +347,27 @@ export const IMPROVE: Record<string, string[]> = {
     'Work with logs and exponents until the rules are automatic.',
     'Do one sequence and one series by hand.',
   ],
-  'm.linalg': [
-    'Multiply matrices by hand until it is boring.',
-    'Solve a system three ways: substitution, elimination, matrices.',
-    'Say what a determinant of zero means geometrically.',
+  'la.matrix': {
+    steps: [
+      'Multiply matrices by hand until it is boring — six or seven, no calculator.',
+      'Work out why the inner dimensions have to match, rather than remembering that they do.',
+      'Multiply the same pair in the other order and account for the difference.',
+    ],
+    proof: 'You can say what a matrix does to a vector before you have finished multiplying.',
+  },
+  'la.systems': [
+    'Solve one system three ways: substitution, elimination, and as a matrix.',
+    'Build a system with no solution and one with infinitely many, deliberately.',
+    'Say which of the three methods you would use on a system of eight, and why.',
   ],
+  'la.det': {
+    steps: [
+      'Compute determinants for five 2x2 and three 3x3 matrices by hand.',
+      'Draw what the determinant is measuring for one 2x2 — the area it scales by.',
+      'Find a matrix with determinant zero and say what it does to the plane.',
+    ],
+    pitfall: 'Treating it as a number you compute rather than as the thing that tells you whether the transformation can be undone.',
+  },
 
   // ---- Calculus ---------------------------------------------------------
   'k.limits': [
@@ -423,32 +459,42 @@ export const IMPROVE: Record<string, string[]> = {
     'Carry units through a calculation and check they survive.',
     'Convert between three unit systems without a calculator.',
   ],
-  'sc.physics': [
-    'Draw a free-body diagram for five situations.',
-    'Solve one problem with energy and again with forces.',
-    'Estimate an answer before solving, and check the order of magnitude.',
+  'ph.fbd': [
+    'Draw the diagram for five situations before writing a single equation.',
+    'Label every arrow with what is pushing what — no force without a source.',
+    'Find the one problem where you drew a force that is not really there.',
+    'Redo a problem you got wrong and check whether the diagram was the error.',
   ],
-  'sc.chem': [
-    'Balance ten equations.',
-    'Do one mole calculation end to end.',
-    'Predict a reaction, then look up whether you were right.',
+  'ch.formula': [
+    'Balance ten equations, starting with the ones that look easy.',
+    'Write the formula for five compounds from their names, then go the other way.',
+    'Find the equation you balanced by fiddling and redo it by counting atoms.',
   ],
-  'sc.bio': [
-    'Draw one system from memory and label it.',
-    'Follow one molecule through a whole process.',
-    'Explain a mechanism to someone without using jargon.',
+  'ch.mole': {
+    steps: [
+      'Do one mole calculation end to end, writing every unit down as you go.',
+      'Convert between mass, moles and particles for five substances.',
+      'Work out a limiting reagent for one reaction and say how you knew.',
+    ],
+    proof: 'You can tell whether an answer in grams is off by a factor of a thousand without redoing it.',
+    pitfall: 'Learning the triangle of formulae instead of what a mole counts. The triangle stops working the moment the question is phrased differently.',
+  },
+  'bi.organs': [
+    'Draw one organ system from memory and label it, then check what you missed.',
+    'Follow one molecule through the whole system, entry to exit.',
+    'Explain a mechanism to someone without using a single piece of jargon.',
   ],
-  'sc.energy': [
+  'ph.energy': [
     'Trace energy through three transformations and account for the losses.',
     'Calculate kinetic and potential energy for one real object.',
     'Find where the energy actually goes in something everyday.',
   ],
-  'sc.cells': [
+  'bi.cells': [
     'Label an organelle diagram from memory.',
     'Compare a plant and an animal cell without looking.',
     'Follow one cell through division, stage by stage.',
   ],
-  'sc.dna': [
+  'bi.dna': [
     'Transcribe and translate a short sequence by hand.',
     'Work out what one point mutation changes.',
     'Explain replication as a series of steps, in order.',
@@ -825,77 +871,319 @@ export const IMPROVE: Record<string, string[]> = {
     'Draw a line of best fit and say why it is justified.',
     'Find a published chart that misleads and say exactly how.',
   ],
-  'sc.motion': [
+  'ph.motion': [
     'Sketch position, velocity and acceleration graphs for one journey.',
     'Solve three problems with the constant-acceleration equations.',
     'Explain how something can accelerate while slowing down.',
   ],
-  'sc.forces': [
+  'ph.newton': [
     'Draw a free-body diagram for five different situations.',
     'Solve one problem on an inclined plane.',
     'Find the action-reaction pair in three everyday events.',
   ],
-  'sc.waves': [
+  'ph.waves': [
     'Measure the wavelength and frequency of something real.',
     'Explain reflection, refraction and diffraction with one diagram each.',
     'Work out why the pitch changes as an ambulance passes.',
   ],
-  'sc.electricity': [
+  'ph.circuits': [
     'Build a circuit and predict the current before measuring it.',
     'Compare series and parallel with the same components.',
     'Use Ohm\'s law in all three arrangements.',
   ],
-  'sc.atoms': [
+  'ch.atoms': [
     'Work out protons, neutrons and electrons for ten elements.',
     'Write the electron configuration for the first twenty.',
     'Explain one group of the periodic table from its outer electrons.',
   ],
-  'sc.bonding': [
+  'ch.bond': [
     'Draw dot-and-cross diagrams for five compounds.',
     'Predict which compounds conduct when dissolved and check.',
     'Explain a melting point from the bonding.',
   ],
-  'sc.reactions': [
-    'Balance ten equations.',
-    'Do one mole calculation end to end.',
-    'Predict a reaction, then look up whether you were right.',
+  'ch.reactions': [
+    'Sort twenty equations into their types without looking at the answers.',
+    'Predict the products of five reactions, then look up whether you were right.',
+    'Find two reactions that look alike on paper and behave differently.',
   ],
-  'sc.genetics': [
+  'bi.genetics': [
     'Transcribe and translate a short sequence by hand.',
     'Work out one Punnett square and check the ratios.',
     'Say what one point mutation actually changes.',
   ],
-  'sc.evolution': [
+  'bi.evolution': [
     'Explain natural selection without using the word wants.',
     'Trace one adaptation back to a selection pressure.',
     'Find and correct a common misstatement about it.',
   ],
-  'sc.ecology': [
+  'bi.ecology': [
     'Draw a food web for one habitat.',
     'Explain why energy thins out at each trophic level.',
     'Predict what removing one species would do.',
   ],
 };
 
-/**
- * What to go and do about a node.
+// ---------------------------------------------------------------------------
+// The derived half
+// ---------------------------------------------------------------------------
+/*
+ * Nine hundred and sixty-eight of the eleven hundred nodes have no entry above,
+ * and writing eleven hundred is not a plan — it is a promise to fall behind.
+ * So the derived half is not a placeholder for authored text that is coming
+ * later; it is the normal case, and it is built to read like the authored half.
  *
- * Falls back to advice assembled from the graph rather than to nothing: the
- * name is always known, and what a node opens is often the best reason to
- * bother with it.
+ * The trick is to derive from things that genuinely differ between nodes rather
+ * than from the node's name alone:
+ *
+ *     the group    what practice *is* in this domain. Reading a proof and
+ *                  running a set of squats are not the same verb, and advice
+ *                  that works for both says nothing about either.
+ *     the tier     how much of it is repetition and how much is judgement.
+ *                  A Foundation node wants reps; an Expert node wants a real
+ *                  piece of work that could go wrong.
+ *     the edges    what it opens and what it sits on — the only two reasons a
+ *                  skill is worth the afternoon, and both are already in the
+ *                  graph.
+ *
+ * Multiplied out, two nodes on the same tree at different tiers never read the
+ * same, which is the bar a derived sentence has to clear before it is worth
+ * more than a blank space.
  */
-export function improveSteps(node: GraphNode, opens: GraphNode[] = []): string[] {
-  const written = IMPROVE[node.id];
-  if (written && written.length > 0) return written;
+/** How a domain is practised, in that domain's own verbs. */
+interface Voice {
+  /** The opening move: cheap, today, and impossible to do vaguely. */
+  first: (name: string) => string;
+  /** What keeping it costs, once it is finished. Skills go quiet, not loud. */
+  keep: (name: string) => string;
+  /** The one that costs something — where the skill is actually tested. */
+  hard: (name: string) => string;
+  /** How you find out you were wrong, which is the part people skip. */
+  check: (name: string) => string;
+  /** The observable that says you have it. Not a feeling. */
+  proof: (name: string) => string;
+}
 
-  const steps = [
-    `Find three small problems that need ${node.name.toLowerCase()} and solve them.`,
-    'Explain it out loud to someone; the gaps show up where you hesitate.',
-  ];
+const GENERIC: Voice = {
+  first: (name) => `Find three small problems that need ${name} and solve them.`,
+  keep: (name) => `Use ${name} on something real once a month; that is the whole of the upkeep.`,
+  hard: (name) => `Take on one problem big enough that ${name} is the only way through it.`,
+  check: () => 'Explain it out loud to someone; the gaps show up where you hesitate.',
+  proof: (name) => `You reach for ${name} without being told to, on a problem nobody labelled.`,
+};
+
+/**
+ * One voice per group in the subject catalogue.
+ *
+ * Keyed by the group name rather than by tree id, so a new tree is covered the
+ * day it is added and an unknown key falls to `GENERIC` rather than to nothing.
+ */
+const VOICES: Record<string, Voice> = {
+  Computing: {
+    first: (name) => `Write the smallest program that cannot work without ${name}, and run it.`,
+    keep: (name) => `Write something that uses ${name} without looking anything up. The looking-up is the decay.`,
+    hard: (name) => `Break ${name} on purpose, then read the error properly instead of guessing.`,
+    check: () => 'Predict the output before you run it. Being surprised is the finding.',
+    proof: (name) => `You can read someone else's use of ${name} and say why they did it that way.`,
+  },
+  'Maths and science': {
+    first: (name) => `Work five problems on ${name} by hand, without looking at a worked example.`,
+    keep: (name) => `Work one problem on ${name} cold, with nothing open in front of you.`,
+    hard: (name) => `Take ${name} apart far enough to say why the method works, not just that it does.`,
+    check: () => 'Check the answer a second way — units, an estimate, or a limiting case.',
+    proof: (name) => `You can spot a wrong answer involving ${name} before you have finished the working.`,
+  },
+  'Language and humanities': {
+    first: (name) => `Find ${name} at work in something you are already reading, and mark three examples.`,
+    keep: (name) => `Read something that leans on ${name} and mark where it is doing the work.`,
+    hard: (name) => `Write four hundred words that depend on ${name}, then cut them to two hundred.`,
+    check: () => 'Give it to someone else and ask what they thought it said, not whether it was good.',
+    proof: (name) => `You notice ${name} being done badly, and can say exactly what would fix it.`,
+  },
+  Creative: {
+    first: (name) => `Make three quick, deliberately rough attempts at ${name} in one sitting.`,
+    keep: (name) => `Make one thing using ${name} that nobody asked for and nobody will see.`,
+    hard: (name) => `Take one attempt at ${name} all the way to a finish, including the part you would rather leave rough.`,
+    check: () => 'Put it beside work you admire and name one concrete difference, not a vague one.',
+    proof: (name) => `You can choose ${name} for a reason, and say the reason out loud.`,
+  },
+  'Health and fitness': {
+    first: (name) => `Do one honest session of ${name} at a load you can hold clean form through.`,
+    keep: (name) => `Keep ${name} in the week at a load you are not trying to beat.`,
+    hard: (name) => `Add one increment to ${name} — weight, distance or time — and hold it a week.`,
+    check: () => 'Film one set, or log the numbers. Memory flatters both effort and form.',
+    proof: (name) => `You can repeat ${name} on a bad day, not just on a good one.`,
+  },
+  'Business and money': {
+    first: (name) => `Apply ${name} to one real figure of your own rather than to a textbook case.`,
+    keep: (name) => `Run ${name} over one real number each month, even when nothing has changed.`,
+    hard: (name) => `Use ${name} to make a decision you would otherwise have made on instinct.`,
+    check: () => 'Write down what you expect to happen, then go back in a month and read it.',
+    proof: (name) => `You can explain ${name} to someone who has to act on it, in two minutes.`,
+  },
+  Work: {
+    first: (name) => `Run ${name} on one live piece of work this week — not on a hypothetical.`,
+    keep: (name) => `Keep ${name} running through the quiet weeks; it is the busy ones it has to survive.`,
+    hard: (name) => `Use ${name} on the week that is going badly. That is the only real test of it.`,
+    check: () => 'Review it on Friday: what did it change, and what did you quietly skip?',
+    proof: (name) => `You still run ${name} in a week you did not plan, which is most weeks.`,
+  },
+  'Life and home': {
+    first: (name) => `Do ${name} once, badly, today. The first one is for the sequence, not the result.`,
+    keep: (name) => `Do ${name} on the day you do not feel like it. That is the only day that tests it.`,
+    hard: (name) => `Do ${name} for someone else, where the standard is not yours to lower.`,
+    check: () => 'Note what went wrong while it is fresh — you will not remember by the next attempt.',
+    proof: (name) => `${name} has stopped being a project and become something you just do.`,
+  },
+};
+
+/**
+ * What the tier changes about the work.
+ *
+ * Not how hard the node is — the badge already says that — but what kind of
+ * session moves it, which is genuinely different at each rung and is the thing
+ * a reader is deciding when they look at this panel.
+ */
+const TIER_STEP: Record<Difficulty, (name: string) => string> = {
+  foundation: () => 'Repeat it until it is boring. This one is meant to become automatic.',
+  beginner: () => 'Do it again tomorrow on a different example, before it has faded.',
+  intermediate: (name) => `Use ${name} inside something larger, where it is not the point of the exercise.`,
+  advanced: (name) => `Find where ${name} stops working, and be able to say why.`,
+  expert: (name) => `Teach ${name} to someone one rung below you; that is where the last gaps surface.`,
+  mastery: (name) => `Hold ${name} to a standard nobody is checking, on work that is not for practice.`,
+};
+
+/** Roughly what the node costs, in the shape the work actually comes in. */
+const TIER_EFFORT: Record<Difficulty, string> = {
+  foundation: 'A session or two. Short and repetitive beats long and thoughtful here.',
+  beginner: 'Three or four sessions, spread across days rather than done in one.',
+  intermediate: 'A week or two of real use — it settles once you need it for something else.',
+  advanced: 'Several weeks, and you should expect to be wrong in public once or twice.',
+  expert: 'Months, mostly on work that was not set as an exercise.',
+  mastery: 'Open-ended. This is a standard you keep, not a box you tick.',
+};
+
+/** The way this tier of skill usually goes wrong. */
+const TIER_PITFALL: Record<Difficulty, (name: string) => string> = {
+  foundation: (name) =>
+    `Moving on while ${name} still only works when the example is in front of you.`,
+  beginner: () =>
+    'Recognising it when you see it and calling that knowing it. Recognition is not recall.',
+  intermediate: (name) =>
+    `Learning ${name} well enough for exercises and never once using it on your own work.`,
+  advanced: (name) =>
+    `Reaching for ${name} everywhere because it is new, including where something simpler was right.`,
+  expert: (name) =>
+    `Being fluent enough at ${name} to stop noticing the assumptions it is built on.`,
+  mastery: () =>
+    'Coasting on it. At this level nothing external tells you when the standard has slipped.',
+};
+
+const voiceFor = (group?: string): Voice => (group && VOICES[group]) || GENERIC;
+
+/** Lower-cased for use mid-sentence, but acronyms are left as they are. */
+function inline(name: string): string {
+  return /^[A-Z0-9&\-\s]+$/.test(name) || /[A-Z]{2,}/.test(name) ? name : name.toLowerCase();
+}
+
+// ---------------------------------------------------------------------------
+// The plan
+// ---------------------------------------------------------------------------
+/**
+ * Everything the panel prints under "How to improve".
+ *
+ * One object rather than four exported functions because the four answers have
+ * to agree with each other — a locked node's steps are about getting *in*, and
+ * its proof and pitfall have to be about the same thing. Computing them
+ * together is what keeps that true; computing them in four places is how a
+ * panel ends up telling you to practise something it has just told you is
+ * locked.
+ */
+export interface ImprovePlan {
+  /** Where the reader stands, and what that makes the next move. */
+  headline: string;
+  /** What to actually go and do, in order. */
+  steps: string[];
+  /** The observable that says it worked. Never a feeling. */
+  proof: string;
+  /** How this particular skill usually goes wrong. */
+  pitfall: string;
+  /** Roughly what it costs, and in what shape. */
+  effort: string;
+}
+
+const stepsOf = (entry: ImproveEntry | undefined): string[] =>
+  Array.isArray(entry) ? entry : entry?.steps ?? [];
+
+export interface ImproveContext {
+  /** What this node opens — the reason it is worth the afternoon. */
+  opens?: GraphNode[];
+  /** What is actually in the way, on a locked node. */
+  blockers?: GraphNode[];
+  /** Its prerequisites, done or not — what it is meant to be built on. */
+  needs?: GraphNode[];
+  /** The catalogue group the tree sits in, which decides the voice. */
+  group?: string;
+}
+
+/**
+ * The steps for a node nobody has written an entry for.
+ *
+ * Four lines rather than the two this used to manage, and each comes from a
+ * different place: the domain's opening move, the domain's hard move, the tier,
+ * and the graph. The last is the one that makes it feel written — "start Binary
+ * Search, which this opens" is a sentence only this node's position can produce.
+ */
+function derivedSteps(node: GraphNode, ctx: ImproveContext): string[] {
+  const voice = voiceFor(ctx.group);
+  const name = inline(node.name);
+
+  // A finished node is not started again, it is kept. The opening move is the
+  // wrong advice for it and reads as though the panel has not looked at the
+  // status it printed two lines above.
+  if (node.status === 'complete') {
+    return [
+      voice.keep(name),
+      voice.hard(name),
+      TIER_STEP[node.difficulty](name),
+    ];
+  }
+
+  // Past Intermediate the cheap opening move is beneath the node — somebody
+  // reaching an Expert tile is not looking for three rough attempts. They get
+  // the demanding move first and the way of being wrong second.
+  const senior = difficultyRank(node.difficulty) >= difficultyRank('advanced');
+  const steps = senior
+    ? [voice.hard(name), voice.check(name), TIER_STEP[node.difficulty](name)]
+    : [voice.first(name), voice.hard(name), TIER_STEP[node.difficulty](name)];
+
+  const done = (ctx.needs ?? []).filter((entry) => entry.status === 'complete');
+  if (done.length > 0) {
+    steps.splice(1, 0, `Start from ${done[0]!.name}, which you already have — this is the next thing built on it.`);
+  }
+  const opens = ctx.opens ?? [];
   if (opens.length > 0) {
-    steps.push(`Start ${opens[0]!.name}, which this one opens — using it is how it sticks.`);
+    steps.push(`Then start ${opens[0]!.name}, which this one opens — using it is how it sticks.`);
+  } else if (!senior) {
+    steps.push(voice.check(name));
   }
   return steps;
+}
+
+/**
+ * A locked node's steps are about the lock, not about the skill.
+ *
+ * The old panel printed "practise X" under a headline saying X was unavailable,
+ * which is the one arrangement guaranteed to waste the reader's time. What they
+ * need is the first move on whatever is in the way, and that is a plan this
+ * file can already produce — for the blocker instead.
+ */
+function blockedSteps(blockers: GraphNode[], ctx: ImproveContext): string[] {
+  const first = blockers[0]!;
+  const borrowed = stepsOf(IMPROVE[first.id]);
+  const plan = borrowed.length > 0 ? borrowed : derivedSteps(first, { ...ctx, opens: [], needs: [] });
+  // The headline has already named every blocker, so the steps spend their
+  // room on the first one properly rather than re-listing the others.
+  return [`Nothing here moves until ${first.name} is done, so start there.`, ...plan.slice(0, 3)];
 }
 
 /**
@@ -917,4 +1205,48 @@ export function improveHeadline(node: GraphNode, blockers: GraphNode[]): string 
     return `${Math.round(node.percent)}% of the way. To move it:`;
   }
   return 'Not started. A good first session:';
+}
+
+/**
+ * What to go and do about a node, in full.
+ *
+ * Written entries win on every field they state and the rest is derived, so a
+ * half-written entry is a real improvement over none rather than a hole — which
+ * is what makes it worth adding a `proof` to one node at a time.
+ */
+export function improvePlan(node: GraphNode, ctx: ImproveContext = {}): ImprovePlan {
+  const entry = IMPROVE[node.id];
+  const written = stepsOf(entry);
+  const blockers = ctx.blockers ?? [];
+  const locked = node.status === 'locked' && blockers.length > 0;
+  const voice = voiceFor(ctx.group);
+  const name = inline(node.name);
+
+  const steps = locked
+    ? blockedSteps(blockers, ctx)
+    : written.length > 0
+      ? written
+      : derivedSteps(node, ctx);
+
+  const stated = Array.isArray(entry) ? undefined : entry;
+
+  const proof = locked
+    ? `${blockers[0]!.name} is done, and this stops being greyed out.`
+    : node.status === 'complete'
+      ? `Come back in a month and do it cold. That is the only test ${name} has left.`
+      : stated?.proof ?? voice.proof(name);
+
+  const pitfall = locked
+    ? TIER_PITFALL[blockers[0]!.difficulty](inline(blockers[0]!.name))
+    : node.status === 'complete'
+      ? `Letting it go quiet. ${node.name} will not announce that it has faded — you find out on the day you need it.`
+      : stated?.pitfall ?? TIER_PITFALL[node.difficulty](name);
+
+  const effort = locked
+    ? `${TIER_EFFORT[blockers[0]!.difficulty]} This one comes after that.`
+    : node.status === 'complete'
+      ? 'Held rather than finished. A short revisit every month or so is the whole cost.'
+      : TIER_EFFORT[node.difficulty];
+
+  return { headline: improveHeadline(node, blockers), steps, proof, pitfall, effort };
 }

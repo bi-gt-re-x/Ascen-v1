@@ -111,6 +111,22 @@ export function parentChain(id: string): SubjectTree[] {
   return chain;
 }
 
+/**
+ * Which of the catalogue's nine groups a tree belongs to.
+ *
+ * `group` is stated on roots only — a child tree is inside whatever group its
+ * root is in — so this walks up to the root rather than reading the field, and
+ * answers for Calculus ("Maths and science") as readily as for Mathematics.
+ *
+ * It exists because how a subject is *practised* follows the group and almost
+ * nothing else: reading a proof, running a set of squats and cutting a draft
+ * are three different verbs, and advice general enough to cover all three says
+ * nothing about any of them. See skills/improve.
+ */
+export function groupOf(id: string): string {
+  return parentChain(id)[0]?.group ?? '';
+}
+
 // ---------------------------------------------------------------------------
 // To the renderer's shape
 // ---------------------------------------------------------------------------
