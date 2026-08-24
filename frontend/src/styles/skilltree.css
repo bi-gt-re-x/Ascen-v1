@@ -1000,8 +1000,15 @@ body:has(.stx-page--lattice) > #root { align-self: stretch; width: 100%; }
     background: var(--lat-field);
     box-shadow: var(--lat-shadow);
 }
+/* The canvas and the panel are the same height, declared once.
+   They used to be two independent boxes — the canvas a fixed clamp, the panel
+   however tall its node happened to be — so the right column overran the left
+   by a couple of hundred pixels on any node with a long description and two
+   full lists. Both now read this, and the panel scrolls its own middle. */
+.stx-page--lattice { --lat-column-h: clamp(520px, 68vh, 900px); }
+.stx-page--lattice .stx-canvas { height: var(--lat-column-h); box-sizing: border-box; }
 .stx-page--lattice .stx-scroll {
-    height: clamp(520px, 68vh, 900px);
+    height: 100%;
     background-color: var(--lat-field);
     background-image: radial-gradient(var(--lat-grid) 1.4px, transparent 1.4px);
     background-size: 22px 22px;
@@ -1215,7 +1222,26 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
     box-shadow: var(--lat-shadow);
     position: sticky;
     top: calc(var(--topnav-h, 0px) + 14px);
+    box-sizing: border-box;
+    height: var(--lat-column-h);
+    overflow: hidden;
 }
+/* The header and the practice button stay put; everything between them
+   scrolls. `min-height: 0` because a flex child will not shrink below its
+   content otherwise, which is the whole reason a scroll box in a column
+   silently refuses to scroll. */
+.stx-lp-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* Room for the scrollbar so it never sits on top of the text. */
+    padding-right: 4px;
+    margin-right: -4px;
+}
+.stx-lp.is-empty { height: auto; }
 .stx-lp-blank {
     display: flex;
     flex-direction: column;
@@ -1491,14 +1517,67 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
 }
 .stx-lp-steps li::marker { color: var(--lat-faint); font-weight: 700; }
 
+/* ---- the three-step window and the full programme ----
+   A node carries five steps at Foundation and twenty at Mastery, and the panel
+   shows three of them: the one the reader is on and the two after. The current
+   step is set at text weight and the two ahead are dimmed, so the list has a
+   front rather than being three equal instructions. Clicking anywhere in it
+   opens the whole programme over the panel. */
+.stx-lp-steps.is-window { cursor: pointer; }
+.stx-lp-steps li.is-now { color: var(--lat-text); font-weight: 600; }
+.stx-lp-steps.is-window li:not(.is-now) { opacity: .62; }
+.stx-lp-more {
+    align-self: flex-start;
+    margin-top: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lat-violet);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.stx-lp-more:hover { text-decoration: underline; }
+
+/* The full programme, with the panel given over to it. */
+.stx-lp.is-steps { gap: 12px; }
+.stx-lp-steps-head { display: flex; flex-direction: column; gap: 8px; }
+.stx-lp-steps-head h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+.stx-lp-steps-count {
+    margin: 2px 0 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--lat-faint);
+}
+.stx-lp-back {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lat-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+}
+.stx-lp-back:hover { color: var(--lat-violet); }
+.stx-lp-steps.is-all { gap: 10px; padding-left: 22px; }
+/* Steps behind the reader are struck through rather than hidden: the list is a
+   ladder, and a ladder with its bottom rungs removed reads as a shorter one. */
+.stx-lp-steps.is-all li.is-done { opacity: .45; text-decoration: line-through; }
+.stx-lp-steps.is-all li.is-now { color: var(--lat-text); font-weight: 650; }
+.stx-lp-steps.is-all li.is-now::marker { color: var(--lat-violet); }
+
 /* The three notes under the steps.
    A definition list, because that is what it is: three questions with one
    answer each. The label is set small and uppercase so the column of answers
    reads as a paragraph you can skim, rather than as six lines of equal weight
-   competing with the numbered steps above them. Each note carries a tone down
-   its left edge — you have it / it goes wrong / it costs — which is the whole
-   of the colour coding and is doing the work a third heading would otherwise
-   have to do. */
+   competing with the steps above them. Each note carries a tone down its left
+   edge — done / trap / time — which is the whole of the colour coding and does
+   the work a third heading would otherwise have to do. */
 .stx-lp-notes {
     margin: 10px 0 0;
     display: flex;
@@ -1529,6 +1608,7 @@ html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
     line-height: 1.5;
     color: var(--lat-muted);
 }
+
 
 @media (max-width: 640px) {
     .stx-treenav { border-radius: var(--lat-radius); }

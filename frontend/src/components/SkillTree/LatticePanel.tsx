@@ -29,6 +29,7 @@
  * A list with no rows, an XP line on a node worth zero: each is absent rather
  * than drawn as a dash. A panel of dashes reads as a form that failed to load.
  */
+import { useEffect, useRef, useState } from 'react';
 import { improvePlan } from '@/skills/improve';
 import { groupOf, iconUrl } from '@/skills/subjectTrees';
 import {
@@ -108,6 +109,18 @@ export function LatticePanel({
   gain = 0,
   flash = null,
 }: LatticePanelProps) {
+  // The step list opens over the whole panel rather than beside it, so this is
+  // panel-wide state rather than the section's. Reset on every change of node:
+  // a reader who clicks a new tile wants that tile, not the steps of the last.
+  const [allSteps, setAllSteps] = useState(false);
+  useEffect(() => setAllSteps(false), [node?.id]);
+  // Twenty steps opened at the top would put a reader on step eighteen at the
+  // bottom of a scroll box, looking at rungs they finished months ago.
+  const now = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (allSteps) now.current?.scrollIntoView({ block: 'center' });
+  }, [allSteps]);
+
   if (!node) {
     return (
       <aside className="stx-lp is-empty">
@@ -133,6 +146,44 @@ export function LatticePanel({
       .filter((entry): entry is GraphNode => Boolean(entry)),
   ];
 
+  // Three at a time: the one the reader is on and the two after it. A panel
+  // that prints all twenty is a wall nobody reads, and one that prints the
+  // first three is wrong for everybody past the first three.
+  const window = plan.steps.slice(plan.at, plan.at + 3);
+  const openSteps = () => setAllSteps(true);
+
+  // The whole panel, given over to the programme. Not a section that grew a
+  // scrollbar — the steps are what the reader asked for, so everything else
+  // gets out of the way and the list has the full height to itself.
+  if (allSteps) {
+    return (
+      <aside className={`stx-lp is-steps tier-${node.difficulty}`}>
+        <header className="stx-lp-steps-head">
+          <button type="button" className="stx-lp-back" onClick={() => setAllSteps(false)}>
+            ← Back
+          </button>
+          <div>
+            <h2>{node.name}</h2>
+            <p className="stx-lp-steps-count">
+              {plan.steps.length} steps · on {plan.at + 1}
+            </p>
+          </div>
+        </header>
+        <ol className="stx-lp-body stx-lp-steps is-all">
+          {plan.steps.map((step, index) => (
+            <li
+              key={step}
+              ref={index === plan.at ? now : undefined}
+              className={index < plan.at ? 'is-done' : index === plan.at ? 'is-now' : ''}
+            >
+              {step}
+            </li>
+          ))}
+        </ol>
+      </aside>
+    );
+  }
+
   return (
     <aside className={`stx-lp tier-${node.difficulty}`}>
       <header className="stx-lp-head">
@@ -155,64 +206,74 @@ export function LatticePanel({
         </div>
       </header>
 
-      {node.blurb && <p className="stx-lp-blurb">{node.blurb}</p>}
+      {/* Everything between the name and the button scrolls, so the panel is
+          exactly as tall as the canvas beside it however much a node carries. */}
+      <div className="stx-lp-body">
+        {node.blurb && <p className="stx-lp-blurb">{node.blurb}</p>}
 
-      <section className={`stx-lp-progress is-${node.status}`}>
-        <p className="stx-lp-line">
-          <span>Progress</span>
-          <b>
-            {Math.round(node.percent)}%
-            {flash != null && (
-              <span className="stx-lp-flash" role="status">
-                +{number(flash)} XP
-              </span>
-            )}
-          </b>
-        </p>
-        <ProgressIndicator percent={node.percent} shape="bar" />
-        {node.need > 0 && (
-          <p className="stx-lp-line stx-lp-xp">
-            <span>XP Earned</span>
+        <section className={`stx-lp-progress is-${node.status}`}>
+          <p className="stx-lp-line">
+            <span>Progress</span>
             <b>
-              {number(node.have)} / {number(node.need)} XP
+              {Math.round(node.percent)}%
+              {flash != null && (
+                <span className="stx-lp-flash" role="status">
+                  +{number(flash)} XP
+                </span>
+              )}
             </b>
           </p>
-        )}
-      </section>
+          <ProgressIndicator percent={node.percent} shape="bar" />
+          {node.need > 0 && (
+            <p className="stx-lp-line stx-lp-xp">
+              <span>XP Earned</span>
+              <b>
+                {number(node.have)} / {number(node.need)} XP
+              </b>
+            </p>
+          )}
+        </section>
 
-      {/* How to improve — the part a reader came for once they have decided to
-          work on this. The headline is about where *they* stand; the steps are
-          what to go and do; the three notes under them are the questions a
-          reader asks next and used to have to guess at — how do I know it
-          worked, how does this go wrong, and how long is this going to take.
-          All four come from one call, so a locked node's steps and its proof
-          cannot disagree about what it is telling you to do. See skills/improve. */}
-      <section className="stx-lp-section stx-lp-improve">
-        <h3>How to improve</h3>
-        <p className={`stx-lp-headline is-${node.status}`}>{plan.headline}</p>
-        <ol className="stx-lp-steps">
-          {plan.steps.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-        <dl className="stx-lp-notes">
-          <div className="stx-lp-note is-proof">
-            <dt>You have it when</dt>
-            <dd>{plan.proof}</dd>
-          </div>
-          <div className="stx-lp-note is-pitfall">
-            <dt>Where it goes wrong</dt>
-            <dd>{plan.pitfall}</dd>
-          </div>
-          <div className="stx-lp-note is-effort">
-            <dt>What it takes</dt>
-            <dd>{plan.effort}</dd>
-          </div>
-        </dl>
-      </section>
+        {/* How to improve — the part a reader came for once they have decided
+            to work on this. The headline is where *they* stand, the steps are
+            what to go and do, and the three notes are the questions asked the
+            moment the steps have been read: when am I done, what goes wrong,
+            how long. All of it is one call, so a locked node's steps and its
+            proof cannot disagree about what they are asking for. */}
+        <section className="stx-lp-section stx-lp-improve">
+          <h3>How to improve</h3>
+          <p className={`stx-lp-headline is-${node.status}`}>{plan.headline}</p>
+          {/* `start` rather than a re-numbered list: step seven has to read as
+              step seven, or the count under it is describing something else. */}
+          <ol className="stx-lp-steps is-window" start={plan.at + 1} onClick={openSteps}>
+            {window.map((step, index) => (
+              <li key={step} className={index === 0 ? 'is-now' : ''}>
+                {step}
+              </li>
+            ))}
+          </ol>
+          <button type="button" className="stx-lp-more" onClick={openSteps}>
+            All {plan.steps.length} steps
+          </button>
+          <dl className="stx-lp-notes">
+            <div className="stx-lp-note is-proof">
+              <dt>Done when</dt>
+              <dd>{plan.proof}</dd>
+            </div>
+            <div className="stx-lp-note is-pitfall">
+              <dt>Common trap</dt>
+              <dd>{plan.pitfall}</dd>
+            </div>
+            <div className="stx-lp-note is-effort">
+              <dt>Time</dt>
+              <dd>{plan.effort}</dd>
+            </div>
+          </dl>
+        </section>
 
-      <Rows title="Unlocks" nodes={opens} onSelect={onSelect} />
-      <Rows title="Related Skills" nodes={near} onSelect={onSelect} showPercent />
+        <Rows title="Unlocks" nodes={opens} onSelect={onSelect} />
+        <Rows title="Related Skills" nodes={near} onSelect={onSelect} showPercent />
+      </div>
 
       {/* Three states, and each says what it actually is: a locked node names
           what is in the way, a finished one has nothing left to add, and the

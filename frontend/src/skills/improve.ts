@@ -36,7 +36,7 @@
  * proof and its pitfall. Whatever it states wins; the rest is derived. So
  * improving one node is a two-line edit rather than a schema change.
  */
-import { difficultyRank, type Difficulty } from '@/skills/types';
+import type { Difficulty } from '@/skills/types';
 import type { GraphNode } from '@/utils/skillGraph';
 
 /**
@@ -927,158 +927,192 @@ export const IMPROVE: Record<string, ImproveEntry> = {
 // The derived half
 // ---------------------------------------------------------------------------
 /*
- * Nine hundred and sixty-eight of the eleven hundred nodes have no entry above,
- * and writing eleven hundred is not a plan — it is a promise to fall behind.
- * So the derived half is not a placeholder for authored text that is coming
- * later; it is the normal case, and it is built to read like the authored half.
+ * Most of the eleven hundred nodes have no entry above, and writing eleven
+ * hundred is not a plan. So the rest is derived — and derived long enough to be
+ * a real programme rather than a hint. A Foundation node gets five steps and a
+ * Mastery node twenty, because that is roughly the difference in what they
+ * take.
  *
- * The trick is to derive from things that genuinely differ between nodes rather
- * than from the node's name alone:
+ * ## The ladder
  *
- *     the group    what practice *is* in this domain. Reading a proof and
- *                  running a set of squats are not the same verb, and advice
- *                  that works for both says nothing about either.
- *     the tier     how much of it is repetition and how much is judgement.
- *                  A Foundation node wants reps; an Expert node wants a real
- *                  piece of work that could go wrong.
- *     the edges    what it opens and what it sits on — the only two reasons a
- *                  skill is worth the afternoon, and both are already in the
- *                  graph.
+ * Twenty rungs, cheapest first: copy one, do one unaided, vary it, break it,
+ * time it, use it in anger, explain it, keep it. Every skill goes up the same
+ * ladder — that is what makes it a ladder — and a tier decides which stretch of
+ * it you are on. Foundation takes the bottom five; Expert starts a third of the
+ * way up and takes sixteen. Two nodes at different tiers therefore share almost
+ * no steps.
  *
- * Multiplied out, two nodes on the same tree at different tiers never read the
- * same, which is the bar a derived sentence has to clear before it is worth
- * more than a blank space.
+ * A rung is written once, generically, and overridden by the domains that do it
+ * differently. "Do five in one sitting" is the same instruction in every
+ * subject; "find one worked example" is not what a squat needs. Only the rungs
+ * that break get an override, so the table stays readable.
+ *
+ * ## The register
+ *
+ * Short, imperative, countable. "Ten by hand, no notes" beats a sentence about
+ * why repetition matters — the reader is deciding what to do in the next hour,
+ * not being persuaded. Every rung should be something you could fail to do.
  */
-/** How a domain is practised, in that domain's own verbs. */
-interface Voice {
-  /** The opening move: cheap, today, and impossible to do vaguely. */
-  first: (name: string) => string;
-  /** What keeping it costs, once it is finished. Skills go quiet, not loud. */
-  keep: (name: string) => string;
-  /** The one that costs something — where the skill is actually tested. */
-  hard: (name: string) => string;
-  /** How you find out you were wrong, which is the part people skip. */
-  check: (name: string) => string;
-  /** The observable that says you have it. Not a feeling. */
-  proof: (name: string) => string;
+/** A rung, and the domains that climb it differently. */
+interface Rung {
+  line: (name: string) => string;
+  by?: Record<string, (name: string) => string>;
 }
 
-const GENERIC: Voice = {
-  first: (name) => `Find three small problems that need ${name} and solve them.`,
-  keep: (name) => `Use ${name} on something real once a month; that is the whole of the upkeep.`,
-  hard: (name) => `Take on one problem big enough that ${name} is the only way through it.`,
-  check: () => 'Explain it out loud to someone; the gaps show up where you hesitate.',
-  proof: (name) => `You reach for ${name} without being told to, on a problem nobody labelled.`,
-};
+/**
+ * The twenty rungs, cheapest first.
+ *
+ * The order is the argument: you cannot usefully break something you cannot yet
+ * do, and you cannot teach it before you have used it on work that mattered.
+ */
+const LADDER: Rung[] = [
+  {
+    line: (name) => `Follow one worked example of ${name} end to end.`,
+    by: {
+      'Health and fitness': (name) => `Watch ${name} done properly, then copy it unloaded.`,
+      'Life and home': (name) => `Do ${name} once with instructions open in front of you.`,
+      Creative: (name) => `Copy one piece that uses ${name}. Copy it exactly.`,
+    },
+  },
+  {
+    line: () => 'Do that same one again with the answer covered.',
+    by: {
+      'Health and fitness': () => 'Repeat it filmed from the side. Watch it back once.',
+      Computing: () => 'Retype it from memory. Do not paste.',
+    },
+  },
+  {
+    line: () => 'Do three more unaided. Mark every one you had to look up.',
+    by: {
+      'Health and fitness': () => 'Three sets at a load you can hold form through.',
+      Creative: () => 'Three more, rough, in one sitting.',
+    },
+  },
+  {
+    line: () => 'Redo the ones you looked up, from scratch.',
+    by: {
+      'Health and fitness': () => 'Redo the set that fell apart.',
+      'Life and home': () => 'Do again the part you rushed.',
+      Creative: () => 'Redo the one you were least happy with.',
+    },
+  },
+  {
+    line: (name) => `Write down the method for ${name} in five lines or fewer.`,
+    by: {
+      'Health and fitness': () => 'Write the cues down. Three of them, no more.',
+    },
+  },
+  {
+    line: () => 'Five in one sitting, no notes.',
+    by: {
+      Creative: () => 'Five in one sitting. Finish all five, however rough.',
+      'Business and money': () => 'Run it over five real figures of your own.',
+    },
+  },
+  {
+    line: () => 'Change one thing about the problem and do it again.',
+    by: {
+      'Health and fitness': () => 'Add one increment. Weight, distance or time — one.',
+      'Life and home': () => 'Do it again with one constraint you did not have.',
+    },
+  },
+  {
+    line: () => 'Do the version with the awkward case in it.',
+    by: {
+      Computing: () => 'Do the version with the empty input and the huge input.',
+      'Health and fitness': () => 'Do it tired, at the end of a session.',
+      'Life and home': () => 'Do it when the timing is inconvenient.',
+      Creative: () => 'Do the version you have been avoiding.',
+    },
+  },
+  {
+    line: () => 'Get one wrong on purpose. Say what the wrong answer looks like.',
+    by: {
+      Computing: () => 'Break it on purpose. Read the error before you guess.',
+      'Health and fitness': () => 'Have someone check your form and name one fault.',
+    },
+  },
+  {
+    line: (name) => `Find the case where ${name} does not apply.`,
+    by: {
+      'Health and fitness': () => 'Find the point where form goes, and stop one short of it.',
+    },
+  },
+  {
+    line: () => 'Ten in a row, timed.',
+    by: {
+      Creative: () => 'Ten quick ones. Keep none of them.',
+      'Life and home': () => 'Do it three days running.',
+    },
+  },
+  {
+    line: (name) => `Say when ${name} beats the other way of doing it, and when it does not.`,
+  },
+  {
+    line: (name) => `Use ${name} inside a bigger job, where it is not the point.`,
+    by: {
+      'Health and fitness': (name) => `Put ${name} in a full session, not a drill on its own.`,
+    },
+  },
+  {
+    line: () => 'Use it on something of your own that nobody set.',
+  },
+  {
+    line: (name) => `Explain ${name} in two sentences. No jargon.`,
+  },
+  {
+    line: () => 'Explain it to someone a rung below. Note where they stall.',
+  },
+  {
+    line: () => 'Do it under a deadline, or in front of somebody.',
+    by: {
+      'Business and money': () => 'Use it to make a decision you would have made on instinct.',
+    },
+  },
+  {
+    line: () => 'Do it on a day you do not feel like it.',
+  },
+  {
+    line: () => 'Come back a month later and do one cold.',
+  },
+  {
+    line: (name) => `Hold ${name} to standard on work that is not practice.`,
+  },
+];
 
 /**
- * One voice per group in the subject catalogue.
+ * How much of the ladder a tier is, and where on it that tier starts.
  *
- * Keyed by the group name rather than by tree id, so a new tree is covered the
- * day it is added and an unknown key falls to `GENERIC` rather than to nothing.
+ * The counts are the brief — five at the bottom, twenty at the top — and the
+ * offsets are what stop an Advanced node opening with "follow one worked
+ * example". Mastery is the exception and starts at zero, because twenty steps
+ * is the whole ladder and there is nowhere else for it to start. The window is
+ * clamped rather than checked, so a count that overruns simply ends at the top
+ * rung instead of running off it.
  */
-const VOICES: Record<string, Voice> = {
-  Computing: {
-    first: (name) => `Write the smallest program that cannot work without ${name}, and run it.`,
-    keep: (name) => `Write something that uses ${name} without looking anything up. The looking-up is the decay.`,
-    hard: (name) => `Break ${name} on purpose, then read the error properly instead of guessing.`,
-    check: () => 'Predict the output before you run it. Being surprised is the finding.',
-    proof: (name) => `You can read someone else's use of ${name} and say why they did it that way.`,
-  },
-  'Maths and science': {
-    first: (name) => `Work five problems on ${name} by hand, without looking at a worked example.`,
-    keep: (name) => `Work one problem on ${name} cold, with nothing open in front of you.`,
-    hard: (name) => `Take ${name} apart far enough to say why the method works, not just that it does.`,
-    check: () => 'Check the answer a second way — units, an estimate, or a limiting case.',
-    proof: (name) => `You can spot a wrong answer involving ${name} before you have finished the working.`,
-  },
-  'Language and humanities': {
-    first: (name) => `Find ${name} at work in something you are already reading, and mark three examples.`,
-    keep: (name) => `Read something that leans on ${name} and mark where it is doing the work.`,
-    hard: (name) => `Write four hundred words that depend on ${name}, then cut them to two hundred.`,
-    check: () => 'Give it to someone else and ask what they thought it said, not whether it was good.',
-    proof: (name) => `You notice ${name} being done badly, and can say exactly what would fix it.`,
-  },
-  Creative: {
-    first: (name) => `Make three quick, deliberately rough attempts at ${name} in one sitting.`,
-    keep: (name) => `Make one thing using ${name} that nobody asked for and nobody will see.`,
-    hard: (name) => `Take one attempt at ${name} all the way to a finish, including the part you would rather leave rough.`,
-    check: () => 'Put it beside work you admire and name one concrete difference, not a vague one.',
-    proof: (name) => `You can choose ${name} for a reason, and say the reason out loud.`,
-  },
-  'Health and fitness': {
-    first: (name) => `Do one honest session of ${name} at a load you can hold clean form through.`,
-    keep: (name) => `Keep ${name} in the week at a load you are not trying to beat.`,
-    hard: (name) => `Add one increment to ${name} — weight, distance or time — and hold it a week.`,
-    check: () => 'Film one set, or log the numbers. Memory flatters both effort and form.',
-    proof: (name) => `You can repeat ${name} on a bad day, not just on a good one.`,
-  },
-  'Business and money': {
-    first: (name) => `Apply ${name} to one real figure of your own rather than to a textbook case.`,
-    keep: (name) => `Run ${name} over one real number each month, even when nothing has changed.`,
-    hard: (name) => `Use ${name} to make a decision you would otherwise have made on instinct.`,
-    check: () => 'Write down what you expect to happen, then go back in a month and read it.',
-    proof: (name) => `You can explain ${name} to someone who has to act on it, in two minutes.`,
-  },
-  Work: {
-    first: (name) => `Run ${name} on one live piece of work this week — not on a hypothetical.`,
-    keep: (name) => `Keep ${name} running through the quiet weeks; it is the busy ones it has to survive.`,
-    hard: (name) => `Use ${name} on the week that is going badly. That is the only real test of it.`,
-    check: () => 'Review it on Friday: what did it change, and what did you quietly skip?',
-    proof: (name) => `You still run ${name} in a week you did not plan, which is most weeks.`,
-  },
-  'Life and home': {
-    first: (name) => `Do ${name} once, badly, today. The first one is for the sequence, not the result.`,
-    keep: (name) => `Do ${name} on the day you do not feel like it. That is the only day that tests it.`,
-    hard: (name) => `Do ${name} for someone else, where the standard is not yours to lower.`,
-    check: () => 'Note what went wrong while it is fresh — you will not remember by the next attempt.',
-    proof: (name) => `${name} has stopped being a project and become something you just do.`,
-  },
+/* Five at the shallowest, twenty at the deepest. A written entry and the line
+   about what the node opens are both additions to the tier's count, so the
+   total is capped rather than left to add up past the top of the range. */
+const MAX_STEPS = 20;
+
+const TIER_WINDOW: Record<Difficulty, { from: number; count: number }> = {
+  foundation: { from: 0, count: 5 },
+  beginner: { from: 1, count: 7 },
+  intermediate: { from: 3, count: 10 },
+  advanced: { from: 5, count: 13 },
+  expert: { from: 4, count: 16 },
+  mastery: { from: 0, count: 20 },
 };
 
-/**
- * What the tier changes about the work.
- *
- * Not how hard the node is — the badge already says that — but what kind of
- * session moves it, which is genuinely different at each rung and is the thing
- * a reader is deciding when they look at this panel.
- */
-const TIER_STEP: Record<Difficulty, (name: string) => string> = {
-  foundation: () => 'Repeat it until it is boring. This one is meant to become automatic.',
-  beginner: () => 'Do it again tomorrow on a different example, before it has faded.',
-  intermediate: (name) => `Use ${name} inside something larger, where it is not the point of the exercise.`,
-  advanced: (name) => `Find where ${name} stops working, and be able to say why.`,
-  expert: (name) => `Teach ${name} to someone one rung below you; that is where the last gaps surface.`,
-  mastery: (name) => `Hold ${name} to a standard nobody is checking, on work that is not for practice.`,
-};
-
-/** Roughly what the node costs, in the shape the work actually comes in. */
-const TIER_EFFORT: Record<Difficulty, string> = {
-  foundation: 'A session or two. Short and repetitive beats long and thoughtful here.',
-  beginner: 'Three or four sessions, spread across days rather than done in one.',
-  intermediate: 'A week or two of real use — it settles once you need it for something else.',
-  advanced: 'Several weeks, and you should expect to be wrong in public once or twice.',
-  expert: 'Months, mostly on work that was not set as an exercise.',
-  mastery: 'Open-ended. This is a standard you keep, not a box you tick.',
-};
-
-/** The way this tier of skill usually goes wrong. */
-const TIER_PITFALL: Record<Difficulty, (name: string) => string> = {
-  foundation: (name) =>
-    `Moving on while ${name} still only works when the example is in front of you.`,
-  beginner: () =>
-    'Recognising it when you see it and calling that knowing it. Recognition is not recall.',
-  intermediate: (name) =>
-    `Learning ${name} well enough for exercises and never once using it on your own work.`,
-  advanced: (name) =>
-    `Reaching for ${name} everywhere because it is new, including where something simpler was right.`,
-  expert: (name) =>
-    `Being fluent enough at ${name} to stop noticing the assumptions it is built on.`,
-  mastery: () =>
-    'Coasting on it. At this level nothing external tells you when the standard has slipped.',
-};
-
-const voiceFor = (group?: string): Voice => (group && VOICES[group]) || GENERIC;
+/** What one node is worth going and doing, at whatever length its tier says. */
+function ladderFor(node: GraphNode, group: string | undefined, skip = 0): string[] {
+  const { from, count } = TIER_WINDOW[node.difficulty];
+  const name = inline(node.name);
+  const start = Math.max(0, Math.min(from, LADDER.length - count));
+  return LADDER.slice(start, start + count)
+    .map((rung) => (group && rung.by?.[group] ? rung.by[group]! : rung.line)(name))
+    .slice(skip);
+}
 
 /** Lower-cased for use mid-sentence, but acronyms are left as they are. */
 function inline(name: string): string {
@@ -1086,31 +1120,75 @@ function inline(name: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// The three lines under the steps
+// ---------------------------------------------------------------------------
+/*
+ * Kept short on purpose. They answer three questions the steps cannot — when to
+ * stop, what to watch for, how long — and each is one line because a reader who
+ * wanted an essay would not be looking at a side panel.
+ */
+
+/** What finishing looks like, per domain. */
+const PROOF: Record<string, (name: string) => string> = {
+  Computing: (name) => `You can read someone else's ${name} and say why they wrote it that way.`,
+  'Maths and science': (name) => `You spot a wrong answer involving ${name} before you finish the working.`,
+  'Language and humanities': (name) => `You notice ${name} done badly, and can say what would fix it.`,
+  Creative: (name) => `You choose ${name} for a reason you can state.`,
+  'Health and fitness': () => 'It holds on a bad day, not just a good one.',
+  'Business and money': (name) => `You can explain ${name} to someone who has to act on it.`,
+  Work: () => 'It survives a week you did not plan.',
+  'Life and home': () => 'No longer a project — just something you do.',
+};
+
+const PROOF_DEFAULT = (name: string) => `You reach for ${name} unprompted, on a problem nobody labelled.`;
+
+/** The trap at each rung of the ladder. */
+const TIER_PITFALL: Record<Difficulty, (name: string) => string> = {
+  foundation: () => 'Only works with the example in front of you.',
+  beginner: () => 'Recognising it and calling that knowing it.',
+  intermediate: () => 'Works in exercises and never leaves them.',
+  advanced: (name) => `Reaching for ${name} where something simpler was right.`,
+  expert: (name) => `Fluent enough at ${name} to stop seeing its assumptions.`,
+  mastery: () => 'Coasting. Nothing external tells you the standard has slipped.',
+};
+
+/** Roughly what it costs. */
+const TIER_EFFORT: Record<Difficulty, string> = {
+  foundation: 'One or two short sessions.',
+  beginner: 'Three or four sessions, across days rather than in one.',
+  intermediate: 'A week or two of real use.',
+  advanced: 'Several weeks. Expect to be wrong in public once.',
+  expert: 'Months, mostly on work nobody set as an exercise.',
+  mastery: 'Open-ended. A standard you keep, not a box you tick.',
+};
+
+// ---------------------------------------------------------------------------
 // The plan
 // ---------------------------------------------------------------------------
 /**
  * Everything the panel prints under "How to improve".
  *
- * One object rather than four exported functions because the four answers have
- * to agree with each other — a locked node's steps are about getting *in*, and
- * its proof and pitfall have to be about the same thing. Computing them
- * together is what keeps that true; computing them in four places is how a
- * panel ends up telling you to practise something it has just told you is
- * locked.
+ * One object rather than five exported functions because the answers have to
+ * agree with each other — a locked node's steps are about getting *in*, and its
+ * proof and its cost have to be about the same thing. Computing them together
+ * is what keeps that true.
  */
 export interface ImprovePlan {
   /** Where the reader stands, and what that makes the next move. */
   headline: string;
-  /** What to actually go and do, in order. */
+  /** The whole programme, in order. Five steps to twenty, by tier. */
   steps: string[];
-  /** The observable that says it worked. Never a feeling. */
+  /** Which of them the reader is on. The panel opens on this one. */
+  at: number;
+  /** What finishing looks like. */
   proof: string;
-  /** How this particular skill usually goes wrong. */
+  /** The trap. */
   pitfall: string;
-  /** Roughly what it costs, and in what shape. */
+  /** Roughly what it costs. */
   effort: string;
 }
 
+/** What an entry may carry. The bare array is the old form and still valid. */
 const stepsOf = (entry: ImproveEntry | undefined): string[] =>
   Array.isArray(entry) ? entry : entry?.steps ?? [];
 
@@ -1119,76 +1197,63 @@ export interface ImproveContext {
   opens?: GraphNode[];
   /** What is actually in the way, on a locked node. */
   blockers?: GraphNode[];
-  /** Its prerequisites, done or not — what it is meant to be built on. */
+  /** Its prerequisites, done or not. */
   needs?: GraphNode[];
-  /** The catalogue group the tree sits in, which decides the voice. */
+  /** The catalogue group the tree sits in, which decides the verbs. */
   group?: string;
 }
 
 /**
- * The steps for a node nobody has written an entry for.
+ * A node's full programme: what is written for it, then the ladder.
  *
- * Four lines rather than the two this used to manage, and each comes from a
- * different place: the domain's opening move, the domain's hard move, the tier,
- * and the graph. The last is the one that makes it feel written — "start Binary
- * Search, which this opens" is a sentence only this node's position can produce.
+ * Written entries lead because they are specific — "balance ten equations"
+ * knows something about chemistry that no rung of a general ladder can. The
+ * ladder then carries it out to the length the tier asks for, skipping its own
+ * bottom rungs, since an entry that exists has already said how to start.
  */
-function derivedSteps(node: GraphNode, ctx: ImproveContext): string[] {
-  const voice = voiceFor(ctx.group);
-  const name = inline(node.name);
-
-  // A finished node is not started again, it is kept. The opening move is the
-  // wrong advice for it and reads as though the panel has not looked at the
-  // status it printed two lines above.
-  if (node.status === 'complete') {
-    return [
-      voice.keep(name),
-      voice.hard(name),
-      TIER_STEP[node.difficulty](name),
-    ];
-  }
-
-  // Past Intermediate the cheap opening move is beneath the node — somebody
-  // reaching an Expert tile is not looking for three rough attempts. They get
-  // the demanding move first and the way of being wrong second.
-  const senior = difficultyRank(node.difficulty) >= difficultyRank('advanced');
-  const steps = senior
-    ? [voice.hard(name), voice.check(name), TIER_STEP[node.difficulty](name)]
-    : [voice.first(name), voice.hard(name), TIER_STEP[node.difficulty](name)];
-
-  const done = (ctx.needs ?? []).filter((entry) => entry.status === 'complete');
-  if (done.length > 0) {
-    steps.splice(1, 0, `Start from ${done[0]!.name}, which you already have — this is the next thing built on it.`);
-  }
+function programme(node: GraphNode, ctx: ImproveContext): string[] {
+  const written = stepsOf(IMPROVE[node.id]);
+  const steps = [...written, ...ladderFor(node, ctx.group, written.length > 0 ? 2 : 0)];
   const opens = ctx.opens ?? [];
   if (opens.length > 0) {
-    steps.push(`Then start ${opens[0]!.name}, which this one opens — using it is how it sticks.`);
-  } else if (!senior) {
-    steps.push(voice.check(name));
+    steps.push(`Then start ${opens[0]!.name}, which this one opens.`);
   }
-  return steps;
+  return steps.slice(0, Math.min(MAX_STEPS, TIER_WINDOW[node.difficulty].count + (written.length > 0 ? 2 : 1)));
 }
 
 /**
  * A locked node's steps are about the lock, not about the skill.
  *
- * The old panel printed "practise X" under a headline saying X was unavailable,
- * which is the one arrangement guaranteed to waste the reader's time. What they
- * need is the first move on whatever is in the way, and that is a plan this
- * file can already produce — for the blocker instead.
+ * The reader cannot do this one. What they can do is the first thing in the
+ * way, so that is what the list is — the blocker's own programme, named as the
+ * blocker's.
  */
 function blockedSteps(blockers: GraphNode[], ctx: ImproveContext): string[] {
   const first = blockers[0]!;
-  const borrowed = stepsOf(IMPROVE[first.id]);
-  const plan = borrowed.length > 0 ? borrowed : derivedSteps(first, { ...ctx, opens: [], needs: [] });
-  // The headline has already named every blocker, so the steps spend their
-  // room on the first one properly rather than re-listing the others.
-  return [`Nothing here moves until ${first.name} is done, so start there.`, ...plan.slice(0, 3)];
+  // The heading line counts toward the cap: a locked Mastery blocker would
+  // otherwise put twenty-one steps on a node you cannot even start.
+  return [
+    `Nothing here moves until ${first.name} is done.`,
+    ...programme(first, { ...ctx, opens: [] }).slice(0, MAX_STEPS - 1),
+  ];
 }
 
 /**
- * The one line above the steps, which is about *this* reader rather than about
- * the skill: where they stand on it and what that makes the next move.
+ * Which step the reader is on.
+ *
+ * Read off the percentage, because that is the only signal there is — nothing
+ * records which of five moves somebody has made. It is an estimate and the
+ * panel says so by numbering the steps rather than ticking them.
+ */
+function stepAt(node: GraphNode, total: number): number {
+  if (node.status === 'locked' || node.status === 'available') return 0;
+  if (node.status === 'complete') return Math.max(0, total - 1);
+  return Math.min(total - 1, Math.floor((node.percent / 100) * total));
+}
+
+/**
+ * The one line above the steps: where they stand, and what that makes the next
+ * move. Short, because it is a caption and not an introduction.
  */
 export function improveHeadline(node: GraphNode, blockers: GraphNode[]): string {
   if (node.status === 'locked') {
@@ -1198,55 +1263,42 @@ export function improveHeadline(node: GraphNode, blockers: GraphNode[]): string 
       names.length === 1
         ? names[0]!
         : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]!}`;
-    return `Finish ${list} first — then this opens.`;
+    return `Finish ${list} first.`;
   }
-  if (node.status === 'complete') return 'Mastered. Worth keeping sharp:';
-  if (node.status === 'progress') {
-    return `${Math.round(node.percent)}% of the way. To move it:`;
-  }
-  return 'Not started. A good first session:';
+  if (node.status === 'complete') return 'Done. Keeping it is the work now.';
+  if (node.status === 'progress') return `${Math.round(node.percent)}% of the way.`;
+  return 'Not started.';
 }
 
-/**
- * What to go and do about a node, in full.
- *
- * Written entries win on every field they state and the rest is derived, so a
- * half-written entry is a real improvement over none rather than a hole — which
- * is what makes it worth adding a `proof` to one node at a time.
- */
+/** What to go and do about a node, in full. */
 export function improvePlan(node: GraphNode, ctx: ImproveContext = {}): ImprovePlan {
   const entry = IMPROVE[node.id];
-  const written = stepsOf(entry);
+  const stated = Array.isArray(entry) ? undefined : entry;
   const blockers = ctx.blockers ?? [];
   const locked = node.status === 'locked' && blockers.length > 0;
-  const voice = voiceFor(ctx.group);
   const name = inline(node.name);
 
-  const steps = locked
-    ? blockedSteps(blockers, ctx)
-    : written.length > 0
-      ? written
-      : derivedSteps(node, ctx);
+  const steps = locked ? blockedSteps(blockers, ctx) : programme(node, ctx);
+  const target = locked ? blockers[0]! : node;
 
-  const stated = Array.isArray(entry) ? undefined : entry;
-
-  const proof = locked
-    ? `${blockers[0]!.name} is done, and this stops being greyed out.`
-    : node.status === 'complete'
-      ? `Come back in a month and do it cold. That is the only test ${name} has left.`
-      : stated?.proof ?? voice.proof(name);
-
-  const pitfall = locked
-    ? TIER_PITFALL[blockers[0]!.difficulty](inline(blockers[0]!.name))
-    : node.status === 'complete'
-      ? `Letting it go quiet. ${node.name} will not announce that it has faded — you find out on the day you need it.`
-      : stated?.pitfall ?? TIER_PITFALL[node.difficulty](name);
-
-  const effort = locked
-    ? `${TIER_EFFORT[blockers[0]!.difficulty]} This one comes after that.`
-    : node.status === 'complete'
-      ? 'Held rather than finished. A short revisit every month or so is the whole cost.'
-      : TIER_EFFORT[node.difficulty];
-
-  return { headline: improveHeadline(node, blockers), steps, proof, pitfall, effort };
+  return {
+    headline: improveHeadline(node, blockers),
+    steps,
+    at: stepAt(node, steps.length),
+    proof: locked
+      ? `${blockers[0]!.name} is done, and this opens.`
+      : node.status === 'complete'
+        ? `A month from now you can still do ${name} cold.`
+        : stated?.proof ?? (PROOF[ctx.group ?? ''] ?? PROOF_DEFAULT)(name),
+    pitfall: locked
+      ? TIER_PITFALL[target.difficulty](inline(target.name))
+      : node.status === 'complete'
+        ? `${node.name} fades quietly. You find out on the day you need it.`
+        : stated?.pitfall ?? TIER_PITFALL[node.difficulty](name),
+    effort: locked
+      ? `${TIER_EFFORT[target.difficulty]} Then this one.`
+      : node.status === 'complete'
+        ? 'A short revisit every month or so.'
+        : TIER_EFFORT[node.difficulty],
+  };
 }
