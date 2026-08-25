@@ -1,8 +1,8 @@
 # Python
 __pycache__/
 *.pyc
+.pytest_cache/
 .venv/
-.venv-mac/
 .venv-fastapi/
 
 # Node
@@ -29,3 +29,7 @@ data/ascen.db-shm
 # copies of an already-ignored file; the .json exports beside them are the
 # tracked fixtures.
 data/backups/*.db
+
+# A development session key, generated on first run when SECRET_KEY is unset.
+# Per-machine and never shared — see backend/config/settings.py.
+data/.session_key

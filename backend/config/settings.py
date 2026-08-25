@@ -8,6 +8,7 @@ through a function rather than at import time, so `load_dotenv()` in the entry
 point still gets the first word.
 """
 import os
+import secrets
 
 # backend/config/settings.py -> backend/ -> repo root
 CONFIG_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -104,13 +105,76 @@ DEV_ORIGINS = [
 ]
 
 
+#: Where a generated development key is kept. Git-ignored with the database
+#: beside it, and never the same on two machines.
+SESSION_KEY_PATH = os.path.join(DATA_DIR, '.session_key')
+
+
 def secret_key():
     """What the session cookie is signed with.
 
     Read on each call rather than at import, so `load_dotenv()` in the entry
     point still gets the first word. Changing it signs everyone out.
+
+    ## There is no default, and there cannot be one
+
+    This used to fall back to a literal — `'grind-os-dev-secret-change-me'` —
+    which meant that an install where SECRET_KEY was never set signed its
+    session cookies with a value printed in the repository. Anyone who had read
+    the source could mint a session for any account. That was survivable while
+    the API took `username` as a parameter and checked nothing, because the
+    cookie was not protecting anything; now that the session *is* the whole of
+    the authorization (backend/api/guard.py), a guessable key is the account.
+
+    So: the environment wins if it says anything, and otherwise a random key is
+    generated once and kept in a git-ignored file beside the database. The
+    fallback is still a fallback — it keeps `python run.py` working in a fresh
+    clone with no setup, which is the reason the literal existed — but it is
+    not a value anybody else can know.
+
+    **Set SECRET_KEY explicitly for anything deployed.** A file-backed key is
+    per-machine, so two instances behind a load balancer would each sign with
+    their own and reject each other's cookies, and a container rebuild signs
+    everybody out.
     """
-    return os.environ.get('SECRET_KEY', 'grind-os-dev-secret-change-me')
+    from_env = os.environ.get('SECRET_KEY', '').strip()
+    if from_env:
+        return from_env
+    return _generated_key()
+
+
+def _generated_key():
+    """The development key: read it, or make one and keep it.
+
+    Written 0600 and read back on every call rather than cached, for the same
+    reason `secret_key` is not read at import: the environment may still be
+    about to answer, and a cached value would outlive a `.env` that appeared.
+    """
+    try:
+        with open(SESSION_KEY_PATH) as handle:
+            existing = handle.read().strip()
+        if existing:
+            return existing
+    except OSError:
+        pass
+
+    key = secrets.token_urlsafe(48)
+    try:
+        if not os.path.isdir(DATA_DIR):
+            os.makedirs(DATA_DIR)
+        # Opened with O_EXCL so two workers starting together cannot both write
+        # a key and disagree about which one is signing.
+        handle = os.open(SESSION_KEY_PATH, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(handle, 'w') as out:
+            out.write(key)
+        return key
+    except FileExistsError:
+        with open(SESSION_KEY_PATH) as handle:
+            return handle.read().strip() or key
+    except OSError:
+        # A read-only filesystem. Better an in-memory key that signs everyone
+        # out on restart than a shared literal that never signs anyone out.
+        return key
 
 
 def load_dotenv(path=None):
