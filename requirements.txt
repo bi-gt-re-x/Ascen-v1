@@ -3,24 +3,49 @@
 #   python3 -m venv .venv-fastapi
 #   .venv-fastapi/bin/python -m pip install -r requirements.txt
 #   .venv-fastapi/bin/python run.py
+#   .venv-fastapi/bin/python -m pytest        # the suite in tests/
 #
-fastapi>=0.115
-uvicorn[standard]>=0.30
+# ## Python
+#
+# **3.12 or newer.** The venv in this checkout is on 3.9.6 — the one that ships
+# with Xcode's command line tools — and 3.9 reached end of life in October
+# 2025, so it takes no security patches at all. Nothing here needs 3.9 and
+# nothing here is written to it; the move is a new venv and one install:
+#
+#     brew install python@3.12
+#     python3.12 -m venv .venv-fastapi
+#     .venv-fastapi/bin/python -m pip install -r requirements.txt
+#     .venv-fastapi/bin/python -m pytest
+#
+# That last line is the check that it worked. It is left undone here because
+# installing a Python is a change to the machine rather than to the project.
+#
+# ## Pinned, not floored
+#
+# These were `>=` ranges, which is a promise that every future release of six
+# libraries will keep working — a promise nobody made. A `pip install` six
+# months from now would have installed versions this app has never run against,
+# and the failure would land on whoever cloned it next rather than on whoever
+# chose the range. The versions below are the ones the suite in tests/ passes
+# against; moving one is a deliberate edit and a test run.
+#
+fastapi==0.128.8
+uvicorn[standard]==0.39.0
 
 # Renders the Jinja templates in frontend/templates/. Kept while the React
 # frontend is built alongside the old pages — see backend/routes/pages.py.
-jinja2>=3.1
+jinja2==3.1.6
 
 # Signs the session cookie for Starlette's SessionMiddleware.
-itsdangerous>=2.1
+itsdangerous==2.2.0
 
 # Only for werkzeug.security's password hashing. Accounts already in the
 # database hold pbkdf2 hashes in werkzeug's format, so reading them back needs
 # the same code that wrote them — see backend/tracking/auth.py.
-werkzeug>=3.0
+werkzeug==3.1.8
 
 # Form parsing on the OAuth callback.
-python-multipart>=0.0.9
+python-multipart==0.0.20
 
 # Breaking a goal into its five checkpoints — backend/tracking/planner.py.
 # Needs a key in the environment; without one the goals page shows the
@@ -30,5 +55,12 @@ python-multipart>=0.0.9
 # SDK — httpx is listed because planner.py imports it directly. It already
 # arrives as a dependency of anthropic; naming it here means the cheap path
 # does not quietly break if the paid one is ever dropped.
-httpx>=0.27
-anthropic>=0.121
+httpx==0.28.1
+anthropic==0.121.0
+
+# --- Tests ----------------------------------------------------------------
+# The suite in tests/ — see tests/conftest.py for how it gets a database of
+# its own. Listed with everything else rather than in a second file: one
+# install command is one fewer thing for a fresh clone to get wrong, and the
+# suite is not optional if the app is going to keep the guarantees in it.
+pytest==8.4.2
