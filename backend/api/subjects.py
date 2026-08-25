@@ -64,13 +64,11 @@ MAX_CUSTOM = 40
 
 
 class NewSubject(BaseModel):
-    username: str = Depends(current_username)
     name: str = ''
     family: Optional[str] = None
 
 
 class Recolour(BaseModel):
-    username: str = Depends(current_username)
     # None clears the choice and hands the subject back to the palette.
     family: Optional[str] = None
 
@@ -193,22 +191,20 @@ def create(body: NewSubject, username: str = Depends(current_username)):
     if family is not None and family not in FAMILIES:
         return fail('Unknown colour')
 
-    rows = db.user_subjects()
-    mine = [r for r in rows if r.get('user_id') == username]
+    mine = db.rows_for('user_subjects', username)
     if any(r['subject_id'] == subject_id for r in mine):
         return fail('You already have a subject called that')
     if len([r for r in mine if r.get('custom')]) >= MAX_CUSTOM:
         return fail('That is as many subjects as one account can add')
 
-    rows.append({
+    added = db.insert_row('user_subjects', {
         'user_id': username,
         'subject_id': subject_id,
         'name': name,
         'family': family,
         'custom': True,
     })
-    db.save_user_subjects(rows)
-    return ok(subject=_custom_entry(rows[-1], 0))
+    return ok(subject=_custom_entry(added, 0))
 
 
 @router.patch('/api/subjects/{subject_id}/color')
@@ -225,18 +221,20 @@ def recolour(subject_id: str, body: Recolour,
     if not known:
         return fail('No such subject')
 
-    rows = db.user_subjects()
-    for row in rows:
-        if row.get('user_id') == username and row['subject_id'] == subject_id:
-            # Clearing the colour on a catalogue subject leaves a row that says
-            # nothing; drop it rather than store "this account has no opinion".
-            if family is None and not row.get('custom'):
-                rows.remove(row)
-            else:
-                row['family'] = family
-            break
+    # This table is keyed on (user_id, subject_id) rather than an `id`, so the
+    # row operations are pointed at `subject_id` as the key.
+    row = db.find_row('user_subjects', subject_id, user_id=username, key='subject_id')
+    if row:
+        # Clearing the colour on a catalogue subject leaves a row that says
+        # nothing; drop it rather than store "this account has no opinion".
+        if family is None and not row.get('custom'):
+            db.delete_row('user_subjects', subject_id, user_id=username,
+                          key='subject_id')
+        else:
+            db.update_row('user_subjects', subject_id, {'family': family},
+                          user_id=username, key='subject_id')
     else:
-        rows.append({
+        db.insert_row('user_subjects', {
             'user_id': username,
             'subject_id': subject_id,
             'name': '',
@@ -244,7 +242,6 @@ def recolour(subject_id: str, body: Recolour,
             'custom': False,
         })
 
-    db.save_user_subjects(rows)
     return ok(subject_id=subject_id, family=family)
 
 
@@ -260,8 +257,5 @@ def remove(subject_id: str, username: str = Depends(current_username)):
     if subject_id not in own_ids(username):
         return fail('That is not one of yours to delete')
 
-    db.save_user_subjects([
-        row for row in db.user_subjects()
-        if not (row.get('user_id') == username and row['subject_id'] == subject_id)
-    ])
+    db.delete_row('user_subjects', subject_id, user_id=username, key='subject_id')
     return ok(subject_id=subject_id)

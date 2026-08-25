@@ -83,7 +83,6 @@ EDITABLE = ('title', 'description', 'status', 'goal_type',
 # What the endpoints accept
 # --------------------------------------------------------------------------
 class AddGoal(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
     title: Optional[str] = None
     description: str = ''
@@ -114,7 +113,6 @@ class UpdateGoal(BaseModel):
     """Only the fields actually sent are written, so every one is optional and
     the write below reads `model_fields_set` rather than testing truthiness."""
     id: Optional[str] = None
-    username: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
@@ -143,12 +141,10 @@ class UpdateGoal(BaseModel):
 
 class DeleteGoal(BaseModel):
     goal_id: Optional[str] = None
-    username: Optional[str] = None
 
 
 # ---- Milestones ----------------------------------------------------------
 class AddMilestone(BaseModel):
-    username: Optional[str] = None
     goal_id: Optional[str] = None
     title: Optional[str] = None
     note: str = ''
@@ -156,7 +152,6 @@ class AddMilestone(BaseModel):
 
 
 class UpdateMilestone(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
     title: Optional[str] = None
     note: Optional[str] = None
@@ -165,12 +160,10 @@ class UpdateMilestone(BaseModel):
 
 
 class DeleteMilestone(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
 
 
 class ReorderMilestones(BaseModel):
-    username: Optional[str] = None
     goal_id: Optional[str] = None
     # Milestone ids in the order they should be executed.
     order: List[str] = []
@@ -183,7 +176,6 @@ class SuggestMilestones(BaseModel):
     said about it is read from the row — or pass a `title` for a goal that does
     not exist yet, which is what the creation wizard has.
     """
-    username: Optional[str] = None
     goal_id: Optional[str] = None
     title: Optional[str] = None
     why: str = ''
@@ -192,7 +184,6 @@ class SuggestMilestones(BaseModel):
 
 
 class SetMilestones(BaseModel):
-    username: Optional[str] = None
     goal_id: Optional[str] = None
     # The checkpoint titles the goal should have, in execution order.
     titles: List[str] = []
@@ -206,7 +197,6 @@ class UpdateGoalProgress(BaseModel):
 
 
 class AutoApplyTaskXp(BaseModel):
-    username: Optional[str] = None
     xp: Any = 0
 
 
@@ -376,17 +366,37 @@ def _recompute(goal, milestones=None):
     return goal
 
 
+def _save_goal(goal, username):
+    """Write back one goal. The row, not the table.
+
+    Everything here used to read `db.goals()`, change one dict in the list and
+    call `db.save_goals(goals)` — a DELETE and a full re-INSERT of every goal
+    every account has, to move one number. Small tables, so the cost was never
+    the point; the point is that two requests each rewriting the whole table
+    from their own copy is how one of them silently disappears. See the note on
+    `write_table` in backend/database/connection.py.
+    """
+    return db.update_row('goals', goal['id'],
+                         {k: v for k, v in goal.items() if k != 'id'},
+                         user_id=username)
+
+
+def _save_stone(stone, username):
+    """Write back one checkpoint. Same reasoning as `_save_goal`."""
+    return db.update_row('goal_milestones', stone['id'],
+                         {k: v for k, v in stone.items() if k != 'id'},
+                         user_id=username)
+
+
 def _recompute_goal(goal_id, username):
     """Re-derive one goal after something under it changed. Saves if it moved."""
-    goals = db.goals()
-    goal = next((g for g in goals
-                 if g.get('id') == goal_id and g.get('user_id') == username), None)
+    goal = db.find_row('goals', goal_id, user_id=username)
     if not goal:
         return None
     before = (goal.get('progress'), goal.get('status'), goal.get('target_value'))
-    _recompute(goal, _milestones_of(db.goal_milestones(), goal_id))
+    _recompute(goal, _milestones_of(db.rows_for('goal_milestones', username), goal_id))
     if (goal.get('progress'), goal.get('status'), goal.get('target_value')) != before:
-        db.save_goals(goals)
+        _save_goal(goal, username)
     return goal
 
 
@@ -407,7 +417,7 @@ def apply_task_xp(username, xp):
     if not username or xp <= 0:
         return {"updated": [], "completed": []}
 
-    goals = db.goals()
+    goals = db.rows_for('goals', username)
     updated = []
     completed = []
 
@@ -427,9 +437,8 @@ def apply_task_xp(username, xp):
         updated.append(info)
         if is_done:
             completed.append(info)
+        _save_goal(goal, username)
 
-    if updated:
-        db.save_goals(goals)
     return {"updated": updated, "completed": completed}
 
 
@@ -439,18 +448,15 @@ def apply_task_completion(username):
     Mirrors how earned XP advances every active XP goal. Runs server-side on
     each completion, so the goals page reflects it whether or not it is open.
     """
-    goals = db.goals()
-    changed = False
-    for goal in _goals_of(goals, username, 'tasks', unfinished=True):
+    for goal in _goals_of(db.rows_for('goals', username), username, 'tasks',
+                          unfinished=True):
         target = goal.get('target_tasks', 0) or 0
         new_value = (goal.get('current_tasks', 0) or 0) + 1
         if target and new_value > target:
             new_value = target
         goal['current_tasks'] = new_value
         _recompute(goal)
-        changed = True
-    if changed:
-        db.save_goals(goals)
+        _save_goal(goal, username)
 
 
 @router.post('/api/auto_apply_task_xp')
@@ -479,9 +485,7 @@ def sync_streak_goals(username):
         db.save_user(user)
     current_streak = user.get('current_streak', 0) or 0
 
-    goals = db.goals()
-    changed = False
-    for goal in _goals_of(goals, username, 'streak'):
+    for goal in _goals_of(db.rows_for('goals', username), username, 'streak'):
         target = goal.get('target_streak', 0) or 0
         # Cap at the target so a completed goal reads "N / N Days".
         new_value = min(current_streak, target) if target else current_streak
@@ -491,9 +495,7 @@ def sync_streak_goals(username):
         _recompute(goal)
         if (goal.get('current_streak'), goal.get('status'),
                 goal.get('progress'), goal.get('target_value')) != before:
-            changed = True
-    if changed:
-        db.save_goals(goals)
+            _save_goal(goal, username)
 
 
 def sync_focus_goals(username):
@@ -503,13 +505,12 @@ def sync_focus_goals(username):
     — the account's lifetime tracked seconds minus the baseline recorded at
     creation — and it completes on its own the moment that reaches the target.
     """
-    goals = db.goals()
-    pending = _goals_of(goals, username, 'focus', unfinished=True)
+    pending = _goals_of(db.rows_for('goals', username), username, 'focus',
+                        unfinished=True)
     if not pending:
         return
 
     total_now = focus_tracking.total_seconds(username)
-    changed = False
     for goal in pending:
         target_min = goal.get('target_focus', 0) or 0
         try:
@@ -524,9 +525,7 @@ def sync_focus_goals(username):
         _recompute(goal)
         if (goal.get('current_focus'), goal.get('status'),
                 goal.get('progress'), goal.get('target_value')) != before:
-            changed = True
-    if changed:
-        db.save_goals(goals)
+            _save_goal(goal, username)
 
 
 # --------------------------------------------------------------------------
@@ -566,7 +565,6 @@ def add_goal(body: AddGoal, username: str = Depends(current_username)):
     goal_id = body.id or db.new_id('goals')
     category = body.category if body.category in CATEGORIES else 'other'
 
-    goals = db.goals()
     goal = {
         "id": goal_id,
         "user_id": username,
@@ -606,13 +604,14 @@ def add_goal(body: AddGoal, username: str = Depends(current_username)):
     }
 
     titles = [title.strip() for title in body.milestones if title and title.strip()]
-    rows = db.goal_milestones()
+    rows = db.rows_for('goal_milestones', username)
+    fresh = []
     if titles:
         now = datetime.now().isoformat()
         dates = _spread_dates(len(titles), body.deadline)
         for position, title in enumerate(titles):
-            rows.append({
-                "id": _fresh_milestone_id(rows),
+            fresh.append({
+                "id": _fresh_milestone_id(rows + fresh),
                 "goal_id": goal_id,
                 "user_id": username,
                 "title": title,
@@ -623,14 +622,16 @@ def add_goal(body: AddGoal, username: str = Depends(current_username)):
                 "created_at": now,
             })
 
-    _recompute(goal, _milestones_of(rows, goal_id))
-    goals.append(goal)
+    _recompute(goal, _milestones_of(rows + fresh, goal_id))
     # Goals first: a milestone row names a goal that has to exist by the time
-    # the milestone write runs its foreign-key check.
-    db.save_goals(goals)
-    if titles:
-        db.save_goal_milestones(rows)
-    return ok(message='Goal added successfully', id=goal_id)
+    # the milestone insert runs its foreign-key check. Foreign keys are ON for
+    # these writes — unlike `write_table`, which has to switch them off to swap
+    # a table — so the ordering is enforced rather than merely intended.
+    goal = db.insert_row('goals', goal)
+    for stone in fresh:
+        stone['goal_id'] = goal['id']
+        db.insert_row('goal_milestones', stone)
+    return ok(message='Goal added successfully', id=goal['id'])
 
 
 @router.get('/api/get_goals')
@@ -646,8 +647,8 @@ def get_goals(username: str = Depends(current_username)):
     active_days = {day for day in (xp_tracking.event_day(e) for e in events) if day}
     avg_xp_per_day = round(total_xp / len(active_days)) if active_days else 0
 
-    mine = [g for g in db.goals() if g.get('user_id') == username]
-    rows = db.goal_milestones()
+    mine = db.rows_for('goals', username)
+    rows = db.rows_for('goal_milestones', username)
     for goal in mine:
         # Named `measure` on the way out whatever it is on the way in, so the
         # front end never has to know that an old row leaves the column empty.
@@ -662,9 +663,7 @@ def update_goal(body: UpdateGoal, username: str = Depends(current_username)):
     if not body.id or not username:
         return fail('Goal ID and username required')
 
-    goals = db.goals()
-    goal = next((g for g in goals
-                 if g.get('id') == body.id and g.get('user_id') == username), None)
+    goal = db.find_row('goals', body.id, user_id=username)
     if not goal:
         return fail('Goal not found')
 
@@ -685,9 +684,10 @@ def update_goal(body: UpdateGoal, username: str = Depends(current_username)):
     # target to disagree with it — see the note there.
     if 'status' in sent and body.status in ('active', 'completed'):
         goal['status'] = body.status
-    _recompute(goal, _milestones_of(db.goal_milestones(), goal.get('id')))
+    _recompute(goal, _milestones_of(db.rows_for('goal_milestones', username),
+                                    goal.get('id')))
 
-    db.save_goals(goals)
+    _save_goal(goal, username)
     return ok()
 
 
@@ -696,24 +696,13 @@ def delete_goal(body: DeleteGoal, username: str = Depends(current_username)):
     if not body.goal_id:
         return fail('Goal ID required')
 
-    goals = db.goals()
-    if username:
-        kept = [g for g in goals
-                if not (g.get('id') == body.goal_id and g.get('user_id') == username)]
-    else:
-        kept = [g for g in goals if g.get('id') != body.goal_id]
-
-    # The checkpoints go with it, and they go first. `write_table` swaps rows
-    # with foreign keys off and checks the table it wrote on the way out, so
-    # the ON DELETE CASCADE on goal_milestones.goal_id never fires — leaving
-    # the milestones behind would not fail this write, it would fail the next
-    # write to *that* table, from somewhere else entirely.
-    rows = db.goal_milestones()
-    remaining = [row for row in rows if row.get('goal_id') != body.goal_id]
-    if len(remaining) != len(rows):
-        db.save_goal_milestones(remaining)
-
-    db.save_goals(kept)
+    # The checkpoints go with it, and they no longer have to be swept up by
+    # hand: `goal_milestones.goal_id` declares ON DELETE CASCADE and this is a
+    # real DELETE, so SQLite carries them. The old code deleted them itself
+    # because `write_table` swaps rows with foreign keys switched off, which
+    # meant the cascade never fired and orphaned checkpoints would surface as a
+    # failure in some later, unrelated write to that table.
+    db.delete_row('goals', body.goal_id, user_id=username)
 
     # The tasks stay. A task that was done for a goal was still done, and its
     # XP is already in the ledger; what it loses is the link, which is what
@@ -734,14 +723,12 @@ def add_milestone(body: AddMilestone, username: str = Depends(current_username))
     if not username or not body.goal_id or not body.title:
         return fail('Username, goal and title are required')
 
-    goals = db.goals()
-    if not any(g.get('id') == body.goal_id and g.get('user_id') == username
-               for g in goals):
+    if not db.find_row('goals', body.goal_id, user_id=username):
         return fail('Goal not found')
 
-    rows = db.goal_milestones()
+    rows = db.rows_for('goal_milestones', username)
     mine = _milestones_of(rows, body.goal_id)
-    rows.append({
+    db.insert_row('goal_milestones', {
         "id": _fresh_milestone_id(rows),
         "goal_id": body.goal_id,
         "user_id": username,
@@ -754,7 +741,6 @@ def add_milestone(body: AddMilestone, username: str = Depends(current_username))
         "target_date": body.target_date,
         "created_at": datetime.now().isoformat(),
     })
-    db.save_goal_milestones(rows)
     _recompute_goal(body.goal_id, username)
     return ok()
 
@@ -764,9 +750,7 @@ def update_milestone(body: UpdateMilestone, username: str = Depends(current_user
     if not username or not body.id:
         return fail('Username and milestone ID required')
 
-    rows = db.goal_milestones()
-    row = next((r for r in rows
-                if r.get('id') == body.id and r.get('user_id') == username), None)
+    row = db.find_row('goal_milestones', body.id, user_id=username)
     if not row:
         return fail('Milestone not found')
 
@@ -782,7 +766,7 @@ def update_milestone(body: UpdateMilestone, username: str = Depends(current_user
         # something that is not complete.
         row['completed_at'] = datetime.now().isoformat() if body.status == 'done' else None
 
-    db.save_goal_milestones(rows)
+    _save_stone(row, username)
     _recompute_goal(row.get('goal_id'), username)
     return ok()
 
@@ -792,19 +776,20 @@ def delete_milestone(body: DeleteMilestone, username: str = Depends(current_user
     if not username or not body.id:
         return fail('Username and milestone ID required')
 
-    rows = db.goal_milestones()
-    row = next((r for r in rows
-                if r.get('id') == body.id and r.get('user_id') == username), None)
+    row = db.find_row('goal_milestones', body.id, user_id=username)
     if not row:
         return fail('Milestone not found')
     goal_id = row.get('goal_id')
 
-    kept = [r for r in rows if r is not row]
+    db.delete_row('goal_milestones', body.id, user_id=username)
+
     # Close the gap, so the remaining checkpoints are 0..n-1 with no hole where
-    # the deleted one was.
+    # the deleted one was. Only the ones that actually moved are written.
+    kept = db.rows_for('goal_milestones', username)
     for position, remaining in enumerate(_milestones_of(kept, goal_id)):
-        remaining['position'] = position
-    db.save_goal_milestones(kept)
+        if remaining.get('position') != position:
+            db.update_row('goal_milestones', remaining['id'],
+                          {'position': position}, user_id=username)
 
     for task in db.tasks_for(username):
         if task.get('milestone_id') == body.id:
@@ -827,20 +812,19 @@ def reorder_milestones(body: ReorderMilestones, username: str = Depends(current_
     if not username or not body.goal_id:
         return fail('Username and goal ID required')
 
-    rows = db.goal_milestones()
-    mine = _milestones_of(rows, body.goal_id)
+    # Scoped to the caller by the read, so the ownership check below is now
+    # about the goal rather than about the rows.
+    mine = _milestones_of(db.rows_for('goal_milestones', username), body.goal_id)
     if not mine:
         return fail('Goal has no milestones')
-    if any(row.get('user_id') != username for row in mine):
-        return fail('Goal not found')
 
     by_id = {row.get('id'): row for row in mine}
     ordered = [by_id[mid] for mid in body.order if mid in by_id]
     ordered += [row for row in mine if row not in ordered]
     for position, row in enumerate(ordered):
-        row['position'] = position
-
-    db.save_goal_milestones(rows)
+        if row.get('position') != position:
+            db.update_row('goal_milestones', row['id'],
+                          {'position': position}, user_id=username)
     return ok()
 
 
@@ -859,9 +843,7 @@ def suggest_milestones(body: SuggestMilestones, username: str = Depends(current_
     unit = target = ''
 
     if body.goal_id:
-        goal = next((g for g in db.goals()
-                     if g.get('id') == body.goal_id
-                     and g.get('user_id') == username), None)
+        goal = db.find_row('goals', body.goal_id, user_id=username)
         if not goal:
             return fail('Goal not found')
         # The row is the better source: it has what the wizard collected, and
@@ -910,21 +892,19 @@ def set_milestones(body: SetMilestones, username: str = Depends(current_username
     if len(titles) > planner.COUNT:
         return fail('A goal takes at most {} checkpoints'.format(planner.COUNT))
 
-    goals = db.goals()
-    if not any(g.get('id') == body.goal_id and g.get('user_id') == username
-               for g in goals):
+    if not db.find_row('goals', body.goal_id, user_id=username):
         return fail('Goal not found')
 
-    rows = db.goal_milestones()
+    rows = db.rows_for('goal_milestones', username)
     mine = _milestones_of(rows, body.goal_id)
     now = datetime.now().isoformat()
 
     for position, title in enumerate(titles):
         if position < len(mine):
-            mine[position]['title'] = title
-            mine[position]['position'] = position
+            db.update_row('goal_milestones', mine[position]['id'],
+                          {'title': title, 'position': position}, user_id=username)
             continue
-        rows.append({
+        rows.append(db.insert_row('goal_milestones', {
             "id": _fresh_milestone_id(rows),
             "goal_id": body.goal_id,
             "user_id": username,
@@ -934,17 +914,17 @@ def set_milestones(body: SetMilestones, username: str = Depends(current_username
             "status": 'pending',
             "target_date": '',
             "created_at": now,
-        })
+        }))
 
-    dropped = {row.get('id') for row in mine[len(titles):]}
-    if dropped:
-        rows = [row for row in rows if row.get('id') not in dropped]
+    # Whatever the new list is shorter than the old one by. The tasks that
+    # pointed at a dropped checkpoint lose the link and keep themselves.
+    for extra in mine[len(titles):]:
         for task in db.tasks_for(username):
-            if task.get('milestone_id') in dropped:
+            if task.get('milestone_id') == extra['id']:
                 db.update_row('tasks', task['id'],
                               {'milestone_id': None}, user_id=username)
+        db.delete_row('goal_milestones', extra['id'], user_id=username)
 
-    db.save_goal_milestones(rows)
     _recompute_goal(body.goal_id, username)
     return ok()
 
@@ -956,12 +936,9 @@ def update_goal_progress(body: UpdateGoalProgress,
     if not body.goal_id:
         return fail('Goal ID required')
 
-    goals = db.goals()
-    # Matched on owner as well as id. Without the second half this advanced
-    # any goal in the table by name, including somebody else's.
-    goal = next((g for g in goals
-                 if str(g.get('id')) == str(body.goal_id)
-                 and g.get('user_id') == username), None)
+    # Scoped to the owner. Without that this advanced any goal in the table
+    # by name, including somebody else's.
+    goal = db.find_row('goals', body.goal_id, user_id=username)
     if not goal:
         return fail('Goal not found')
 
@@ -983,7 +960,7 @@ def update_goal_progress(body: UpdateGoalProgress,
     goal['status'] = status
     goal['progress'] = _progress(new_value, target)
     goal['target_value'] = target
-    db.save_goals(goals)
+    _save_goal(goal, username)
 
     return ok(
         goal_type=goal_type,

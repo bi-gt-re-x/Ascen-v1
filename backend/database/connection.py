@@ -443,9 +443,28 @@ def write_table(table, rows, columns=None):
 
 
 def _columns_for(con, table, row):
-    """The columns of `table` that `row` has something to say about."""
+    """The columns of `table` that `row` has something to say about.
+
+    For UPDATE, where the dict is a list of changes: a key that is not there is
+    a column this write is not about, and is left alone.
+    """
     schema = _schema(con, table)
     return [name for name, _, _ in schema if name in row]
+
+
+def _insert_columns(con, table, row):
+    """The columns an INSERT of `row` names — `write_table`'s rule, exactly.
+
+    A key the row does not have is stored as NULL where the column allows one,
+    so it reads back missing, and is left out where it does not so the column's
+    DEFAULT stands in. That is the convention the whole backend reads by (see
+    the note at the top of this module), and the two write paths have to agree
+    on it or a row's shape would depend on which function wrote it — an
+    `insert_row` task getting `priority: 'medium'` from a DEFAULT where a
+    `write_table` one got NULL and read back with no priority at all.
+    """
+    return [name for name, _, nullable in _schema(con, table)
+            if name in row or nullable]
 
 
 #: How many times `insert_row` will step a colliding id before giving up.
@@ -467,7 +486,7 @@ def insert_row(table, row, key='id'):
     """
     con = connect()
     try:
-        names = _columns_for(con, table, row)
+        names = _insert_columns(con, table, row)
         if not names:
             return row
         sql = 'INSERT INTO "{}" ({}) VALUES ({})'.format(

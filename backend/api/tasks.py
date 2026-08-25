@@ -35,7 +35,6 @@ router = APIRouter(tags=['tasks'])
 # What the endpoints accept
 # --------------------------------------------------------------------------
 class CreateTask(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
     name: str = ''
     priority: str = 'medium'
@@ -59,7 +58,6 @@ class UpdateTask(BaseModel):
     """Every field is optional and only the ones actually sent are applied —
     which is why this uses `model_fields_set` rather than truthiness below.
     `completed: false` has to be distinguishable from "not mentioned"."""
-    username: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[str] = None
@@ -79,7 +77,6 @@ class UpdateTask(BaseModel):
 
 class DeleteTask(BaseModel):
     id: Optional[str] = None
-    username: Optional[str] = None
 
 
 class TaskId(BaseModel):
@@ -88,12 +85,10 @@ class TaskId(BaseModel):
 
 class UpdateDueDate(BaseModel):
     id: Optional[str] = None
-    username: Optional[str] = None
     due_date: Optional[str] = None
 
 
 class CompleteTask(BaseModel):
-    username: Optional[str] = None
     task_id: Optional[str] = None
 
 
@@ -105,7 +100,6 @@ class RateTask(BaseModel):
     allowed to answer one of them. See `rate_task`.
     """
 
-    username: Optional[str] = None
     task_id: Optional[str] = None
     #: How hard it was, 1-5. Null means not answered.
     difficulty: Optional[int] = None
@@ -164,13 +158,12 @@ def _parse_dt(raw):
 
 
 def _delete(task_id, username=None):
-    """Remove one task, scoped to its owner when one is given.
+    """Remove one task, scoped to its owner. True if there was one to remove.
 
     A DELETE, where this was a read of every task in the table and a rewrite of
-    all of them minus one. `user_id=None` still means "whoever owns it" and is
-    left only for the callers that have already checked.
+    all of them minus one.
     """
-    db.delete_row('tasks', task_id, user_id=username)
+    return db.delete_row('tasks', task_id, user_id=username)
 
 
 def _subject(raw, username=None):
@@ -317,7 +310,8 @@ def update_task(task_id: str, body: UpdateTask,
 
 @router.delete('/api/tasks/{task_id}')
 def delete_task_by_id(task_id: str, username: str = Depends(current_username)):
-    _delete(task_id, username or None)
+    if not _delete(task_id, username):
+        return fail('Task not found')
     return ok()
 
 
@@ -331,7 +325,8 @@ def add_task(body: CreateTask,
 @router.post('/api/delete_task')
 def delete_task(body: DeleteTask, username: str = Depends(current_username)):
     """Older name for DELETE /api/tasks/<id>, with the id in the body."""
-    _delete(body.id, username)
+    if not _delete(body.id, username):
+        return fail('Task not found')
     return ok()
 
 
@@ -346,7 +341,8 @@ def delete_task_no_tracking(body: DeleteTask,
     Scoped to the caller: `_delete` with no username matches on the id alone,
     which is every task in the table and not just this account's.
     """
-    _delete(body.id, username)
+    if not _delete(body.id, username):
+        return fail('Task not found')
     return ok()
 
 
