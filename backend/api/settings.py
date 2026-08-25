@@ -271,7 +271,7 @@ def update_settings(request: Request, body: UpdateSettings,
             return fail('That is not a valid value for {}.'.format(key), status=400)
         db.set_user_setting(user['username'], key, checked)
 
-    db.save_users(users)
+    db.save_user(user)
 
     payload = ok(settings=_shape(user))
     if theme_changed is None:
@@ -599,12 +599,15 @@ def reset_data(request: Request, body: ResetRequest,
     removed = run(user)
 
     if scope == 'account':
-        users = [row for row in users if row is not user]
-        db.save_users(users)
+        # ON DELETE CASCADE carries every owned table with it, which is the
+        # whole point of deleting the row rather than filtering it out of a
+        # copy of the table and writing that back with foreign keys switched
+        # off — the way `write_table` has to do it.
+        db.delete_row('users', user['id'])
         # The session names an account that no longer exists; leaving it set
         # would send the next request into the gate as a signed-in nobody.
         request.session.clear()
         return ok(message=said, removed=removed, signed_out=True)
 
-    db.save_users(users)
+    db.save_user(user)
     return ok(message=said, removed=removed, settings=_shape(user))

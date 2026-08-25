@@ -97,9 +97,7 @@ def usage(username: Optional[str]):
     if not username:
         return {}
     counts = {}
-    for task in db.tasks():
-        if task.get('user_id') != username:
-            continue
+    for task in db.tasks_for(username):
         subject_id = task.get('subject')
         if not subject_id:
             continue

@@ -476,7 +476,7 @@ def sync_streak_goals(username):
         return
     # Decay a stale streak first so goals follow the same live value everywhere.
     if xp_tracking.refresh_streak(user):
-        db.save_users(users)
+        db.save_user(user)
     current_streak = user.get('current_streak', 0) or 0
 
     goals = db.goals()
@@ -718,15 +718,10 @@ def delete_goal(body: DeleteGoal, username: str = Depends(current_username)):
     # The tasks stay. A task that was done for a goal was still done, and its
     # XP is already in the ledger; what it loses is the link, which is what
     # `the link` reads as "no goal" from here on.
-    tasks = db.tasks()
-    touched = False
-    for task in tasks:
+    for task in db.tasks_for(username):
         if task.get('goal_id') == body.goal_id:
-            task['goal_id'] = None
-            task['milestone_id'] = None
-            touched = True
-    if touched:
-        db.save_tasks(tasks)
+            db.update_row('tasks', task['id'],
+                          {'goal_id': None, 'milestone_id': None}, user_id=username)
 
     return ok()
 
@@ -811,14 +806,10 @@ def delete_milestone(body: DeleteMilestone, username: str = Depends(current_user
         remaining['position'] = position
     db.save_goal_milestones(kept)
 
-    tasks = db.tasks()
-    touched = False
-    for task in tasks:
+    for task in db.tasks_for(username):
         if task.get('milestone_id') == body.id:
-            task['milestone_id'] = None
-            touched = True
-    if touched:
-        db.save_tasks(tasks)
+            db.update_row('tasks', task['id'],
+                          {'milestone_id': None}, user_id=username)
 
     _recompute_goal(goal_id, username)
     return ok()
@@ -948,14 +939,10 @@ def set_milestones(body: SetMilestones, username: str = Depends(current_username
     dropped = {row.get('id') for row in mine[len(titles):]}
     if dropped:
         rows = [row for row in rows if row.get('id') not in dropped]
-        tasks = db.tasks()
-        touched = False
-        for task in tasks:
+        for task in db.tasks_for(username):
             if task.get('milestone_id') in dropped:
-                task['milestone_id'] = None
-                touched = True
-        if touched:
-            db.save_tasks(tasks)
+                db.update_row('tasks', task['id'],
+                              {'milestone_id': None}, user_id=username)
 
     db.save_goal_milestones(rows)
     _recompute_goal(body.goal_id, username)

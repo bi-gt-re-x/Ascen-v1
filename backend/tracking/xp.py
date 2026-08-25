@@ -37,8 +37,14 @@ def level_for_total_xp(total_xp):
 # The ledger
 # --------------------------------------------------------------------------
 def events_for(username):
-    """Every ledger row belonging to one account."""
-    return [e for e in db.xp_events() if e.get('user_id') == username]
+    """Every ledger row belonging to one account.
+
+    Filtered in SQL rather than by reading the whole ledger and dropping most
+    of it: the table is shared, so the Python version's cost was every
+    account's events on every call. `xp_events_user_date_idx` leads on
+    user_id, so this reads only the rows it returns.
+    """
+    return db.rows_for('xp_events', username)
 
 
 def event_day(event):
@@ -66,9 +72,7 @@ def log_event(username, amount, reason, tasks_completed=1, day=None):
         "date": day or date.today().isoformat(),
         "tasks_completed": tasks_completed,
     }
-    events = db.xp_events()
-    events.append(event)
-    db.save_xp_events(events)
+    db.insert_row('xp_events', event)
     return event
 
 
@@ -116,30 +120,27 @@ def track_daily(username, xp_earned, tasks_completed):
     is how it has always behaved; nothing in the frontend calls it today.
     """
     today = date.today().isoformat()
-    events = db.xp_events()
-
-    entry = next((e for e in events
-                  if e.get('user_id') == username and e.get('date') == today), None)
+    entry = next((e for e in events_for(username) if e.get('date') == today), None)
 
     if entry:
-        entry['amount'] += xp_earned
-        entry['tasks_completed'] += tasks_completed
-        entry['avg_task_xp'] = (entry['amount'] / entry['tasks_completed']
-                                if entry['tasks_completed'] > 0 else 0)
+        amount = (entry.get('amount') or 0) + xp_earned
+        done = (entry.get('tasks_completed') or 0) + tasks_completed
+        db.update_row('xp_events', entry['id'], {
+            'amount': amount,
+            'tasks_completed': done,
+            'avg_task_xp': amount / done if done > 0 else 0,
+        }, user_id=username)
     else:
-        now = datetime.now()
-        events.append({
+        db.insert_row('xp_events', {
             "id": db.new_id('xp_events'),
             "user_id": username,
             "amount": xp_earned,
             "reason": "daily_xp",
-            "timestamp": now.isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "date": today,
             "tasks_completed": tasks_completed,
             "avg_task_xp": xp_earned / tasks_completed if tasks_completed > 0 else 0,
         })
-
-    db.save_xp_events(events)
 
 
 def last_task_completion(username):
@@ -303,11 +304,41 @@ def award_task_completion(user, xp_reward):
     """Move an account's whole progression on for one completed task.
 
     XP in, level recalculated from the new total, tasks_completed up one and
-    the streak extended. Mutates `user`; the caller saves the store.
+    the streak extended. **This writes the row itself** — the caller does not
+    save afterwards — and `user` is updated in place to match what landed.
+
+    ## Why the write is here rather than in the caller
+
+    It used to add to `user['xp']` in Python and leave the caller to save the
+    whole users table. Two completions arriving together each read the same
+    starting total and each wrote their own +1, so one of them disappeared:
+    thirty concurrent completions moved `tasks_completed` by one. XP and the
+    task count are running totals and the database has to be the one adding to
+    them.
+
+    The streak is different and is still computed here: it is derived from
+    `last_task_date` rather than accumulated, so two writers on the same day
+    reach the same answer and the last one winning is correct.
     """
-    user['xp'] = user.get('xp', 0) + xp_reward
-    user['tasks_completed'] = user.get('tasks_completed', 0) + 1
+    extend_streak(user)
+    row = db.add_to_row('users', user['id'],
+                        {'xp': xp_reward, 'tasks_completed': 1},
+                        changes={
+                            'current_streak': user['current_streak'],
+                            'best_streak': user['best_streak'],
+                            'last_task_date': user['last_task_date'],
+                            'day_state': user['day_state'],
+                        })
+    # Read back rather than assumed: another completion may have landed between
+    # this one's read and its write, and the level has to follow the total that
+    # is actually in the row.
+    if row:
+        user.update(row)
+    else:
+        user['xp'] = user.get('xp', 0) + xp_reward
+        user['tasks_completed'] = user.get('tasks_completed', 0) + 1
+
     levels = level_for_total_xp(user['xp'])
     user['level'] = levels['level']
-    extend_streak(user)
+    db.update_row('users', user['id'], {'level': levels['level']})
     return levels

@@ -163,24 +163,14 @@ def _parse_dt(raw):
     return None
 
 
-def _find(tasks, task_id, username=None):
-    for task in tasks:
-        if task.get('id') != task_id:
-            continue
-        if username and task.get('user_id') != username:
-            continue
-        return task
-    return None
-
-
 def _delete(task_id, username=None):
-    tasks = db.tasks()
-    if username:
-        kept = [t for t in tasks
-                if not (t.get('id') == task_id and t.get('user_id') == username)]
-    else:
-        kept = [t for t in tasks if t.get('id') != task_id]
-    db.save_tasks(kept)
+    """Remove one task, scoped to its owner when one is given.
+
+    A DELETE, where this was a read of every task in the table and a rewrite of
+    all of them minus one. `user_id=None` still means "whoever owns it" and is
+    left only for the callers that have already checked.
+    """
+    db.delete_row('tasks', task_id, user_id=username)
 
 
 def _subject(raw, username=None):
@@ -245,9 +235,11 @@ def _create(body: CreateTask, username: str):
 
     goal_id, milestone_id = _link(body.goal_id, body.milestone_id, username)
 
-    tasks = db.tasks()
     task_id = body.id or db.new_id('tasks')
-    tasks.append({
+    # The row comes back carrying the id actually used: `insert_row` steps past
+    # a millisecond another writer took first, so the value handed to the
+    # client has to be read back rather than assumed.
+    task = db.insert_row('tasks', {
         "id": task_id,
         "user_id": username,
         "title": body.name,
@@ -264,8 +256,7 @@ def _create(body: CreateTask, username: str):
         "goal_id": goal_id,
         "milestone_id": milestone_id,
     })
-    db.save_tasks(tasks)
-    return ok(task_id=task_id)
+    return ok(task_id=task['id'])
 
 
 # --------------------------------------------------------------------------
@@ -273,7 +264,7 @@ def _create(body: CreateTask, username: str):
 # --------------------------------------------------------------------------
 @router.get('/api/tasks')
 def list_tasks(username: str = Depends(current_username)):
-    return ok(tasks=[t for t in db.tasks() if t.get('user_id') == username])
+    return ok(tasks=db.tasks_for(username))
 
 
 @router.post('/api/tasks')
@@ -286,8 +277,7 @@ def create_task(body: CreateTask,
 def update_task(task_id: str, body: UpdateTask,
                 username: str = Depends(current_username)):
 
-    tasks = db.tasks()
-    task = _find(tasks, task_id, username)
+    task = db.find_row('tasks', task_id, user_id=username)
     if not task:
         return fail('Task not found')
 
@@ -321,7 +311,7 @@ def update_task(task_id: str, body: UpdateTask,
         # when re-opening. A task with no due date uses this as its calendar end.
         task['completed_at'] = datetime.now().isoformat() if body.completed else None
 
-    db.save_tasks(tasks)
+    db.save_task(task, username)
     return ok()
 
 
@@ -366,13 +356,11 @@ def update_task_due_date(body: UpdateDueDate, username: str = Depends(current_us
     if not body.id or not username or not body.due_date:
         return fail('Missing required fields')
 
-    tasks = db.tasks()
-    task = _find(tasks, body.id, username)
+    task = db.find_row('tasks', body.id, user_id=username)
     if not task:
         return fail('Task not found')
 
-    task['due_date'] = body.due_date
-    db.save_tasks(tasks)
+    db.update_row('tasks', body.id, {'due_date': body.due_date}, user_id=username)
     return ok()
 
 
@@ -385,7 +373,7 @@ def get_task_status(body: TaskId,
     if not body.task_id:
         return fail('Task ID required')
 
-    task = _find(db.tasks(), body.task_id, username)
+    task = db.find_row('tasks', body.task_id, user_id=username)
     if not task:
         return fail('Task not found')
 
@@ -400,14 +388,11 @@ def timer_expired(body: TaskId,
     if not body.task_id:
         return fail('Task ID required')
 
-    tasks = db.tasks()
-    task = _find(tasks, body.task_id, username)
-    if not task:
+    if not db.find_row('tasks', body.task_id, user_id=username):
         return fail('Task not found')
 
-    task['timer_expired'] = True
-    task['status'] = 'expired'
-    db.save_tasks(tasks)
+    db.update_row('tasks', body.task_id,
+                  {'timer_expired': True, 'status': 'expired'}, user_id=username)
 
     return ok(message='Timer expiration recorded', task_id=body.task_id)
 
@@ -420,12 +405,11 @@ def complete_task(body: CompleteTask, username: str = Depends(current_username))
     if not username or not body.task_id:
         return fail('Username and task_id required')
 
-    tasks = db.tasks()
-    task = _find(tasks, body.task_id, username)
+    task = db.find_row('tasks', body.task_id, user_id=username)
     if not task:
         return fail('Task not found')
 
-    users, user = load_user(username)
+    _, user = load_user(username)
     if not user:
         return fail('User not found')
 
@@ -447,11 +431,15 @@ def complete_task(body: CompleteTask, username: str = Depends(current_username))
     if due_dt is not None:
         task['met_deadline'] = now <= due_dt
 
-    # XP in, level recalculated, streak extended.
-    levels = xp_tracking.award_task_completion(user, xp_reward)
+    # One row written, not a whole table. This used to be `db.save_tasks(tasks)`
+    # + `db.save_users(users)` — a DELETE and a full re-INSERT of every task in
+    # the system and every account, to mark one checkbox.
+    db.save_task(task, username)
 
-    db.save_tasks(tasks)
-    db.save_users(users)
+    # XP in, level recalculated, streak extended. Writes the account row itself,
+    # adding in SQL so two completions at once cannot cancel each other out —
+    # see the note on it.
+    levels = xp_tracking.award_task_completion(user, xp_reward)
 
     xp_tracking.log_event(username, xp_reward, 'task_completion', tasks_completed=1)
 
@@ -502,8 +490,7 @@ def rate_task(body: RateTask, username: str = Depends(current_username)):
         if value is not None and not (RATING_RANGE[0] <= value <= RATING_RANGE[1]):
             return fail('{} must be between {} and {}.'.format(name, *RATING_RANGE))
 
-    tasks = db.tasks()
-    task = _find(tasks, body.task_id, username)
+    task = db.find_row('tasks', body.task_id, user_id=username)
     if not task:
         return fail('Task not found')
 
@@ -524,7 +511,7 @@ def rate_task(body: RateTask, username: str = Depends(current_username)):
         # — but it must not erase an answer that is already there, which is
         # what filing it as None would do.
 
-    db.save_tasks(tasks)
+    db.save_task(task, username)
 
     return ok(
         task_id=body.task_id,

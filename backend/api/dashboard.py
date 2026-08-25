@@ -42,9 +42,9 @@ def get_user_data(username: str = Depends(current_username)):
 
     # Decay a stale streak (lost after a full day with no task) before reporting.
     if xp_tracking.refresh_streak(user):
-        db.save_users(users)
+        db.save_user(user)
 
-    user_tasks = [t for t in db.tasks() if t.get('user_id') == username]
+    user_tasks = db.tasks_for(username)
 
     return ok(
         stats={
@@ -75,5 +75,5 @@ def update_stats(body: UpdateStats, username: str = Depends(current_username)):
         user['level'] = body.level
         user['xp'] = body.xp
         user['tasks_completed'] = body.tasks_completed
-        db.save_users(users)
+        db.save_user(user)
     return ok()

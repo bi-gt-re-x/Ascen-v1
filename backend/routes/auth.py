@@ -102,7 +102,7 @@ def login(request: Request, body: Login):
     # Upgrade a legacy plaintext password now that we have seen it.
     if user.get('password_hash') == password:
         user['password_hash'] = auth.hash_password(password)
-        db.save_users(users)
+        db.save_user(user)
 
     payload = auth.sign_in(request, user)
     return _with_theme(ok(
@@ -150,7 +150,7 @@ def legacy_signup(body: LegacySignup):
     if auth.find_user(users, username=body.username):
         return fail('Account already exists.')
 
-    users.append({
+    db.insert_row('users', {
         "id": db.new_id('users'),
         "username": body.username,
         "password_hash": auth.hash_password(body.password),
@@ -161,7 +161,6 @@ def legacy_signup(body: LegacySignup):
         # creation date.
         "created_at": datetime.now().isoformat(),
     })
-    db.save_users(users)
     return ok(message='Account created successfully! Please log in.')
 
 
@@ -215,7 +214,7 @@ def resend(request: Request, body: Resend):
         return ok(already=True, message='That e-mail is already confirmed.')
 
     auth.new_verify_token(user)
-    db.save_users(users)
+    db.save_user(user)
     sent, link = auth.send_verification(user, request)
     return ok(sent=sent, dev_link=None if sent else link,
               message='Sent again to {}.'.format(user.get('email')))
@@ -286,6 +285,11 @@ def complete_profile(request: Request, body: CompleteProfile):
             return fail('That username is taken.', field='username')
         old = user['username']
         user['username'] = wanted
+        # The one save that still rewrites the table, and it has to. Every
+        # owned table has a foreign key onto users.username, and SQLite will
+        # not let an UPDATE move a parent key out from under its children —
+        # `write_table` switches foreign keys off for exactly this. The rename
+        # then carries the children across. Once per account, at sign-up.
         db.save_users(users)
         auth.rename_user(old, wanted)
 
@@ -298,7 +302,7 @@ def complete_profile(request: Request, body: CompleteProfile):
     user['daily_goal'] = max(10, min(2000, goal))
 
     user['profile_complete'] = True
-    db.save_users(users)
+    db.save_user(user)
 
     payload = auth.sign_in(request, user)
     return _with_theme(ok(user=payload, message='You are all set.'), user['theme'])

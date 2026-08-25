@@ -357,7 +357,7 @@ def _figures(username, user):
     stores — see the module note — so a figure here is always a re-reading of
     the record rather than a number this endpoint keeps.
     """
-    mine = [row for row in db.tasks() if row.get('user_id') == username]
+    mine = db.tasks_for(username)
     done = [row for row in mine if row.get('status') == 'done']
 
     per_day = {}
@@ -384,7 +384,7 @@ def _figures(username, user):
             if weekday >= 5:
                 weekend += 1
 
-    focus_rows = [row for row in db.focus_days() if row.get('user_id') == username]
+    focus_rows = db.rows_for('focus_days', username, order='date')
     focus_seconds = sum(float(row.get('seconds') or 0) for row in focus_rows)
     focus_best = max((float(row.get('seconds') or 0) for row in focus_rows), default=0)
     # A day counts as hit only where a goal was actually set on it. `goal_hours`
@@ -397,9 +397,7 @@ def _figures(username, user):
     )
 
     xp_per_day = {}
-    for event in db.xp_events():
-        if event.get('user_id') != username:
-            continue
+    for event in db.rows_for('xp_events', username):
         day = event_day(event)
         if day:
             xp_per_day[day] = xp_per_day.get(day, 0) + float(event.get('amount') or 0)
@@ -409,8 +407,8 @@ def _figures(username, user):
         'priority': priority,
         'day_tasks': max(per_day.values(), default=0),
         'events': sum(
-            1 for row in db.calendar_events()
-            if row.get('user_id') == username and row.get('completed')
+            1 for row in db.rows_for('calendar_events', username)
+            if row.get('completed')
         ),
         'xp': int(user.get('xp') or 0),
         'day_xp': int(max(xp_per_day.values(), default=0)),
@@ -429,33 +427,33 @@ def _figures(username, user):
         'focus_days': sum(1 for row in focus_rows if float(row.get('seconds') or 0) > 0),
         'focus_best': int(focus_best // 3600),
         'subjects': len(subjects),
-        'notes': sum(1 for row in db.notes() if row.get('user_id') == username),
+        'notes': len(db.rows_for('notes', username)),
         'goals': sum(
-            1 for row in db.goals()
-            if row.get('user_id') == username and row.get('status') == 'completed'
+            1 for row in db.rows_for('goals', username)
+            if row.get('status') == 'completed'
         ),
-        'records': sum(1 for row in db.records() if row.get('user_id') == username),
+        'records': len(db.rows_for('records', username)),
     }
 
 
 def _record_earned(username, earned_ids):
-    """Write a row for anything newly earned, and return every earned date."""
-    rows = db.read_table('user_achievements')
+    """Write a row for anything newly earned, and return every earned date.
+
+    Inserts only what is new. It used to read every row in the table — every
+    account's — and rewrite all of them to add one, which on a first visit to
+    the page meant a full rewrite per badge the account had ever earned.
+    """
     mine = {
         row.get('achievement_id'): row.get('earned_at')
-        for row in rows
-        if row.get('user_id') == username
+        for row in db.rows_for('user_achievements', username)
     }
-    fresh = [i for i in earned_ids if i not in mine]
-    if fresh:
-        now = datetime.now().isoformat(timespec='seconds')
-        rows = rows + [
-            {'user_id': username, 'achievement_id': i, 'earned_at': now}
-            for i in fresh
-        ]
-        db.write_table('user_achievements', rows)
-        for i in fresh:
-            mine[i] = now
+    now = datetime.now().isoformat(timespec='seconds')
+    for badge_id in earned_ids:
+        if badge_id in mine:
+            continue
+        db.insert_row('user_achievements', {
+            'user_id': username, 'achievement_id': badge_id, 'earned_at': now})
+        mine[badge_id] = now
     return mine
 
 

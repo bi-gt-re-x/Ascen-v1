@@ -219,8 +219,7 @@ def ratings(username, record=True):
     active_days = min(len(active_day_set), total_days)
 
     # --- Completed tasks: difficulty + efficiency inputs ---
-    done = [t for t in db.tasks()
-            if t.get('user_id') == username and t.get('status') == 'done']
+    done = [t for t in db.tasks_for(username) if t.get('status') == 'done']
     total_tasks = len(done)
     total_task_xp = sum(t.get('xp_value', 0) or 0 for t in done)
 

@@ -334,8 +334,7 @@ def create_account(name, email, password):
         'theme': 'light',
         'created_at': now,
     }
-    users.append(user)
-    db.save_users(users)
+    db.insert_row('users', user)
     return user
 
 
@@ -349,7 +348,7 @@ def consume_verify_token(token):
     user['email_verified'] = True
     user['verify_token'] = None
     user['verified_at'] = datetime.now().isoformat()
-    db.save_users(users)
+    db.save_user(user)
     return user
 
 
@@ -429,8 +428,8 @@ def upsert_google_user(info, email):
             'theme': 'light',
             'created_at': datetime.now().isoformat(),
         }
-        users.append(user)
+        db.insert_row('users', user)
     else:
         user['email_verified'] = True
-    db.save_users(users)
+        db.save_user(user)
     return user

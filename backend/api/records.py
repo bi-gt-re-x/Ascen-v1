@@ -107,7 +107,7 @@ def _mine(username):
     Applied here rather than in the client for the reason notes.py gives — one
     ordering, decided once.
     """
-    rows = [row for row in db.records() if row.get('user_id') == username]
+    rows = db.rows_for('records', username)
     rows.sort(
         key=lambda row: (
             0 if row.get('achieved_on') else 1,
@@ -153,17 +153,16 @@ def save_record(entry: SaveRecord, username: str = Depends(current_username)):
     if not fields['name']:
         return fail('A record needs a name.')
 
-    rows = db.records()
-
     if entry.id:
-        row = next((r for r in rows
-                    if r.get('id') == entry.id and r.get('user_id') == username), None)
+        row = db.find_row('records', entry.id, user_id=username)
         # Not silently created: making a new row out of a failed edit is how an
         # account ends up with two of something it meant to change once.
         if not row:
             return fail('That record no longer exists.')
         row.update(fields)
         row['updated_at'] = _now()
+        db.update_row('records', row['id'],
+                      {**fields, 'updated_at': row['updated_at']}, user_id=username)
         saved = row
     else:
         saved = {
@@ -173,9 +172,8 @@ def save_record(entry: SaveRecord, username: str = Depends(current_username)):
             'created_at': _now(),
             'updated_at': _now(),
         }
-        rows.append(saved)
+        saved = db.insert_row('records', saved)
 
-    db.save_records(rows)
     return ok(record=saved)
 
 
@@ -187,11 +185,6 @@ def delete_record(body: DeleteRecord, username: str = Depends(current_username))
     if not body.id:
         return fail('Record ID required')
 
-    rows = db.records()
-    keep = [r for r in rows
-            if not (r.get('id') == body.id and r.get('user_id') == username)]
-    if len(keep) == len(rows):
+    if not db.delete_row('records', body.id, user_id=username):
         return fail('Record not found')
-
-    db.save_records(keep)
     return ok(id=body.id)
