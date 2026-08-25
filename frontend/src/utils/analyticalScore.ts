@@ -56,15 +56,26 @@ export const GRADE_BANDS: ReadonlyArray<readonly [number, Grade]> = [
   [0, 'F'],
 ];
 
-/** What each letter means, in one phrase, for the places that explain it. */
+/**
+ * What each letter means, in one phrase, for the places that explain it.
+ *
+ * Every one of these describes the *five measures*, not the person, and that
+ * is a correction rather than a style note. F used to read "not enough is
+ * happening yet to score" — which the page printed over an account with 4,120
+ * finished tasks, a 152-day streak and, eight inches to the right, the words
+ * "top 1.0% of Ascen users". A low score can mean an empty record or a full
+ * one that is missing its deadlines, and the phrase has to be true of both. An
+ * account with no record at all scores `null` and draws a dash; that is where
+ * "not enough yet" belongs and it is already said there.
+ */
 export const GRADE_MEANING: Record<Grade, string> = {
   S: 'every one of the five at full marks',
   'A+': 'the band below perfect',
   A: 'strong across the board',
   B: 'solid, with one or two soft spots',
   C: 'working, with real room in it',
-  D: 'the record is thin or uneven',
-  F: 'not enough is happening yet to score',
+  D: 'two or three of the five are low',
+  F: 'every measure is coming in low',
 };
 
 export function gradeFor(score: number): Grade {
@@ -216,7 +227,8 @@ export function howItIsCalculated(score: AnalyticalScore): string {
   if (score.value === null) return 'Not enough of a record yet to score.';
   const { weakest, strongest } = score;
   const base =
-    'The average of five measures — productivity, quality, consistency, efficiency and focus — each scored out of 100.';
+    'The average of five measures — productivity, quality, consistency, efficiency ' +
+    'and focus — each scored out of 100, over the last 90 days.';
   if (!weakest || !strongest || weakest.name === strongest.name) return base;
   /* Naming a best and a worst only says something when they differ. Five
      metrics all at 100 would otherwise produce "Focus is carrying it at 100;

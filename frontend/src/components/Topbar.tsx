@@ -30,7 +30,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth, useTheme, useUserData } from '@/hooks';
+import { useAuth, useSettings, useTheme, useUserData } from '@/hooks';
 import { AVATARS, avatarPath } from '@/services/avatars';
 import { auth } from '@/services';
 import { format } from '@/utils';
@@ -133,6 +133,12 @@ function alertsFrom(tasks: Task[], streak: number): Alert[] {
 // --------------------------------------------------------------------------
 export function Topbar() {
   const { username, avatar, signOut, refresh } = useAuth();
+  /* The name the account calls itself, which is the one the dashboard greets
+     it by. The bar used to show `username` while the greeting under it showed
+     `displayName`, so an account named "temu" with the username "Alpha" read
+     as two people on one screen. One name on the surface; the username is in
+     the menu below, which is where "which account am I in" belongs. */
+  const { displayName } = useSettings();
   const { theme, setTheme } = useTheme();
   /*
    * A second read of /api/get_user_data — the rail makes the first, for the
@@ -347,7 +353,7 @@ export function Topbar() {
             onClick={() => toggle('account')}
           >
             <img className="topbar-avatar" src={avatar} alt="" width={34} height={34} />
-            <span className="topbar-name">{username}</span>
+            <span className="topbar-name">{displayName || username}</span>
             <svg className="topbar-caret" {...stroke} strokeWidth={2.2}>
               <path d="m6 9 6 6 6-6" />
             </svg>
@@ -356,7 +362,13 @@ export function Topbar() {
           {open === 'account' && (
             <div className="topbar-panel topbar-account-menu" role="menu">
               <div className="topbar-account-head">
-                <strong>{username}</strong>
+                <strong>{displayName || username}</strong>
+                {/* The username, where it is an answer rather than a label:
+                    the menu is where somebody checks which account they are
+                    signed in to. Only shown when it differs from the name
+                    above it, so an account that never set one does not read
+                    its own username twice. */}
+                {displayName && displayName !== username && <span>@{username}</span>}
                 {level && (
                   <span>
                     Level {level.level} · {format.number(data?.stats.xp ?? 0)} XP

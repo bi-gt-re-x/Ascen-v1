@@ -679,11 +679,27 @@ export function statSeries(tasks: Task[], today = new Date(), days = TREND_DAYS)
   return series;
 }
 
-/** Where a series has got to against where it started, as a percentage. */
+/**
+ * Where a series has got to against where it started, as a percentage.
+ *
+ * `null` when there is no honest percentage to give, and a baseline of two is
+ * as dishonest as a baseline of zero. This card read **"+271950% from last
+ * week"** — a real screenshot — because the week started with a couple of open
+ * tasks and ended with five thousand. The arithmetic is right and the sentence
+ * is noise: nobody reads 271950% as a quantity, and a figure the reader has to
+ * discount is worse than a blank.
+ *
+ * Below the floor the caller says something else instead, which is the honest
+ * version — "Everything still on your list" is true and useful where
+ * "+271950%" is neither.
+ */
+const TREND_FLOOR = 5;
+
 export function trendPct(series: number[]): number | null {
   const first = series[0];
   const last = series[series.length - 1];
-  if (first === undefined || last === undefined || first === 0) return null;
+  if (first === undefined || last === undefined) return null;
+  if (first < TREND_FLOOR) return null;
   return Math.round(((last - first) / first) * 100);
 }
 

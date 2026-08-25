@@ -14,10 +14,30 @@
  * behind a display that only moves every six minutes would keep it running for
  * nothing.
  *
- * The first paint counts up from zero. The dashboard arrives after a loading
- * state, so there is no earlier number on screen to travel from, and a page
- * that assembles itself in the moment it appears reads as alive rather than
- * as a screenshot.
+ * ## The first paint does not animate, and that is the point
+ *
+ * It used to count up from zero, on the reasoning that there was no earlier
+ * number on screen to travel from. There is not — but zero is not "no number",
+ * it is a *wrong* number, and for the six hundred milliseconds of the tween it
+ * is the only one the reader has. Caught mid-flight on this dashboard:
+ *
+ *     Current Streak   0 days     (5)
+ *     Best Streak      8 days     (152)
+ *     Today's Progress 1%         (30%)
+ *     Overdue          1          (26)
+ *     Open             305        (5,441)
+ *
+ * "Current Streak: 0 days" is the single worst sentence a streak app can show
+ * somebody who has a streak, and it is what this app said to every returning
+ * user for the first half-second of every visit. A figure that is briefly
+ * wrong is worse than a figure that does not move, because the reader cannot
+ * tell which one they are looking at.
+ *
+ * So: land on the value the first time, and tween every change after it. That
+ * keeps the thing the tween was actually for — a task completed, 3/7 becoming
+ * 4/7 while you watch — and drops the part that was only decoration. The page
+ * still assembles itself on arrival; `pg-enter` does that, and it does it
+ * without asserting anything false about the numbers.
  *
  * Nothing animates at all under `prefers-reduced-motion`: the value is simply
  * the value, from the first render onwards.
@@ -29,16 +49,20 @@ import { reduced } from '@/utils/homePlay';
 const DURATION = 650;
 
 export function useCountUp(value: number, duration = DURATION): number {
-  const [shown, setShown] = useState(() => (reduced ? value : 0));
+  const [shown, setShown] = useState(value);
   // What is on screen right now. A ref as well as state because a run that is
   // interrupted by a newer value has to start from where it got to, and the
   // effect that starts the new run cannot see the state from the render that
   // scheduled it.
   const current = useRef(shown);
   const frame = useRef<number | null>(null);
+  // The first value this hook is given is the truth arriving, not a change to
+  // it. See the note above.
+  const arrived = useRef(false);
 
   useEffect(() => {
-    if (reduced || current.current === value) {
+    if (reduced || !arrived.current || current.current === value) {
+      arrived.current = true;
       current.current = value;
       setShown(value);
       return;
