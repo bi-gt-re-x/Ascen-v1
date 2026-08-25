@@ -521,28 +521,19 @@ export interface PanelProps {
   /** The link row along the bottom. */
   footer?: ReactNode;
   /**
-   * The panel's finding, in a sentence — and the thing that turns `children`
-   * into workings that open on request.
+   * The panel's finding, in a sentence, printed above the chart it came from.
    *
-   * Lifted from `FindingCard`, whose own note describes the arrangement
-   * exactly: "the claim, the chip, and the workings behind a disclosure. The
-   * headline is a full sentence and stands alone — a reader who never opens one
-   * of these should still have read the finding."
+   * A claim is a smaller thing to read than a chart and says more of what the
+   * chart was for, so a panel that can state its finding states it — but it
+   * states it *with* the evidence, not instead of it. It used to fold the
+   * chart, grid or table away behind a "Show the workings" disclosure, and
+   * that was the wrong trade: a reader who came to look at the year of days
+   * found a sentence about it and a button, and the panel's whole reason for
+   * existing was one click away on every visit.
    *
-   * That is the answer to a page carrying more data than a reader can meet at
-   * once, and it is a better answer than deleting panels: a claim is a smaller
-   * thing to read than a chart and says more of what the chart was for. A panel
-   * with no claim behaves exactly as it always did, so this is opt-in one panel
-   * at a time rather than a rewrite of thirty.
+   * A panel with no claim renders exactly as it always did.
    */
   claim?: ReactNode;
-  /**
-   * Open the workings on arrival.
-   *
-   * For the one chart a tab is actually for — a hero panel folded shut is a
-   * page hiding the thing the reader came to look at. See `.ax-hero`.
-   */
-  openByDefault?: boolean;
 }
 
 /**
@@ -562,39 +553,9 @@ export function Panel({
   children,
   footer,
   claim,
-  openByDefault = false,
 }: PanelProps) {
-  const [open, setOpen] = useState(openByDefault);
-
-  const body = claim ? (
-    <>
-      <p className="ax-claim">{claim}</p>
-      <button
-        type="button"
-        className="ax-workings-toggle"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        {open ? 'Hide the workings' : 'Show the workings'}
-        <span className="ax-finding-mark" aria-hidden="true" />
-      </button>
-      {/* One wrapper, and it has to stay one — the collapse is a grid row going
-          to 0fr, and a second child lands in an implicit auto row that the 0fr
-          never touches. The same constraint `.ax-finding-body` documents. */}
-      <div className="ax-workings">
-        <div>{children}</div>
-      </div>
-    </>
-  ) : (
-    children
-  );
-
   return (
-    <section
-      className={`ax-panel${claim ? ' ax-panel-claimed' : ''}${open ? ' is-open' : ''}${
-        className ? ` ${className}` : ''
-      }`}
-    >
+    <section className={`ax-panel${className ? ` ${className}` : ''}`}>
       <header className="ax-panel-head">
         <div className="ax-panel-title">
           <h2>{title}</h2>
@@ -602,7 +563,13 @@ export function Panel({
         {aside && <div className="ax-panel-aside">{aside}</div>}
       </header>
       {note && <p className="ax-panel-note">{note}</p>}
-      {body}
+      {/* No wrapper around `children` when there is a claim: the claim is a
+          sibling of the content, not a lid on it, and `.ax-panel`'s rules for
+          what may grow into the panel's slack — `.ax-heat`, `.ax-standing`,
+          `.ax-timeline` — are direct-child selectors that a wrapper would
+          have cut off from the content they are meant to size. */}
+      {claim && <p className="ax-claim">{claim}</p>}
+      {children}
       {footer && <div className="ax-panel-foot">{footer}</div>}
     </section>
   );

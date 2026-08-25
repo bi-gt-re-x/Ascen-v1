@@ -1076,60 +1076,24 @@ body:has(.ax-page) .app-main {
     .ax-group-body { transition: none; }
 }
 
-/* ---------- The claim, and the workings behind it -------------------------
-   A panel given a `claim` states its finding in a sentence and folds the chart,
-   grid or table underneath it away. The reader meets one line per panel instead
-   of one picture per panel, and opens the ones they want to argue with.
+/* ---------- The claim ------------------------------------------------------
+   A panel given a `claim` states its finding in a sentence above the chart,
+   grid or table it read that finding off. The sentence is the fast path and
+   the picture is the proof, and both are on the page at once.
 
-   The collapse is the same grid-rows trick `.ax-finding-body` uses, and for the
-   same reason: it animates without anybody measuring the content, and it needs
-   exactly one child wrapper or the row it collapses is not the row the content
-   is in.
-
-   No `content-visibility: auto` on the inner wrapper, tempting as it is for a
-   folded chart: it brings size containment with it, and a size-contained box
-   inside a `1fr` row measures zero, so the panel opens onto nothing. */
+   This used to be a disclosure — the claim, a "Show the workings" toggle, and
+   the content folded into a `grid-template-rows: 0fr` row underneath. It is
+   gone. A panel exists to show its evidence, and one that opens on a sentence
+   with the evidence one click away is a panel hiding the reason it is there.
+   The trailing margin is the gap the folded row used to take when open, so
+   the spacing under a claim is the spacing the page was designed around. */
 .ax-claim {
-    margin: 0;
+    margin: 0 0 12px;
     font-size: 13.5px;
     line-height: 1.55;
     color: var(--ax-text);
 }
 .ax-claim strong { font-weight: 700; }
-
-.ax-workings-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    align-self: flex-start;
-    margin-top: 10px;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--ax-violet);
-    font: inherit;
-    font-size: 11.5px;
-    font-weight: 700;
-    cursor: pointer;
-}
-.ax-workings-toggle:hover { text-decoration: underline; }
-.ax-workings-toggle .ax-finding-mark { background: currentColor; margin-top: 0; width: 12px; height: 12px; }
-.ax-panel-claimed.is-open .ax-workings-toggle .ax-finding-mark { transform: rotate(180deg); }
-
-.ax-workings {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows .22s ease;
-}
-.ax-panel-claimed.is-open .ax-workings { grid-template-rows: 1fr; margin-top: 12px; }
-.ax-workings > div { overflow: hidden; min-height: 0; }
-/* A claimed panel is a column of its own parts, and the workings take the
-   slack rather than the gap above the footer. */
-.ax-panel-claimed.is-open .ax-workings > div { display: flex; flex-direction: column; }
-
-@media (prefers-reduced-motion: reduce) {
-    .ax-workings { transition: none; }
-}
 
 /* ---------- Three panel weights -------------------------------------------
    Every panel on this page used to be the same size, the same padding and the
