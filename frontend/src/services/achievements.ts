@@ -10,27 +10,64 @@
  *
  * `value` arrives already capped at `threshold`, so a progress bar is
  * `value / threshold` and never overflows on an account that is far past it.
+ *
+ * ## A locked hidden badge arrives blank
+ *
+ * Five of the hundred are hidden, and the server does not describe one until it
+ * is earned: the name is "???", the description says only that it exists, and
+ * `threshold`, `value` and `metric` are all zeroed. That is why nothing here is
+ * optional — the shape is the same for every badge, and the emptiness is the
+ * message. Read `hidden && !earned` to draw it as a secret rather than
+ * inferring it from a zero threshold.
  */
 import { get } from './api';
 import type { ApiResult } from '@/types';
 
-export type Metric = 'tasks' | 'xp' | 'streak' | 'level' | 'focus' | 'goals';
+/** Everything a badge can be measured on. See `METRIC_LABELS` on the server. */
+export type Metric =
+  | 'tasks' | 'priority' | 'day_tasks' | 'events'
+  | 'xp' | 'day_xp' | 'level'
+  | 'streak' | 'active_days' | 'perfect_days' | 'months'
+  | 'early' | 'weekend' | 'night'
+  | 'focus' | 'focus_days' | 'focus_best'
+  | 'subjects' | 'notes' | 'goals' | 'records';
+
+/** The five headings the wall is filed under. */
+export type Category = 'Productivity' | 'Consistency' | 'Learning' | 'Milestones' | 'Special';
 
 export interface Badge {
   id: string;
+  /** "???" while a hidden badge is unearned. */
   name: string;
   description: string;
-  metric: Metric;
+  /** Empty while a hidden badge is unearned. */
+  metric: Metric | '';
   /** What `value` counts — "tasks", "XP", "days". */
   unit: string;
+  /** Zero while a hidden badge is unearned. */
   threshold: number;
   /** Progress toward the threshold, capped at it. */
   value: number;
   earned: boolean;
   /** ISO timestamp of the first read that saw it earned, or null. */
   earned_at: string | null;
-  /** 1 to 4, roughly a week of use to a year of it. The wall's rows. */
+  /** 1 to 5: how hard it is, not what order it comes in. */
   tier: number;
+  /** The tier in words — "Starter" to "Legendary". */
+  tier_label: string;
+  category: Category;
+  /** What earning it is worth toward the achievement score. Never account XP. */
+  xp_reward: number;
+  /** One of the five nobody is told about until they have it. */
+  hidden: boolean;
+  /** The title it confers, once earned. Exactly one badge has one. */
+  title: string | null;
+}
+
+export interface CategoryCount {
+  name: Category;
+  earned: number;
+  total: number;
 }
 
 export interface AchievementsResult {
@@ -39,6 +76,22 @@ export interface AchievementsResult {
   total: number;
   /** The account's current value for each metric, uncapped. */
   figures: Record<Metric, number>;
+  categories: CategoryCount[];
+  /**
+   * The sum of the rewards on the badges earned, and what a full wall scores.
+   *
+   * A score, not currency: the server never adds it to the account's XP. Two
+   * figures rather than one because "5,240" says nothing on its own — it is
+   * only a reading of a wall against the wall it could be.
+   */
+  achievement_xp: number;
+  total_xp: number;
+  /** The live streak, for the band at the top. */
+  streak: number;
+  level: number;
+  xp_to_next: number;
+  /** The title this account has earned, or null. Only `Ascended` confers one. */
+  title: string | null;
 }
 
 export function getAchievements(username: string): Promise<ApiResult<AchievementsResult>> {

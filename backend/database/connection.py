@@ -101,6 +101,17 @@ ADDED_COLUMNS = (
     # cannot attach one to a table that already has rows, and rewriting the
     # table to add it is exactly the kind of migration ADDED_COLUMNS refuses to
     # carry. The range is enforced by the endpoint instead.
+    # What the badge wall needs a badge to carry beyond its threshold: which
+    # of the five headings it is filed under, what it is worth toward the
+    # achievement score, whether it is one of the five nobody is told about,
+    # and the title it confers if it is Ascended. Every one is additive with a
+    # null default, and a row written before they existed reads as an
+    # uncategorised, unweighted, visible badge — which is what it was.
+    ('achievements', 'category', 'TEXT'),
+    ('achievements', 'xp_reward', 'INTEGER'),
+    ('achievements', 'hidden', 'INTEGER'),
+    ('achievements', 'title', 'TEXT'),
+
     ('tasks', 'difficulty', 'INTEGER'),
     ('tasks', 'execution', 'INTEGER'),
 

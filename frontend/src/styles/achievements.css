@@ -1,15 +1,32 @@
 /* ==========================================================================
    achievements.css — the badge wall. See src/pages/Achievements.tsx.
 
-   Four shelves down the page, each a grid of badges at the same difficulty.
-   An earned badge and a locked one are the same size and sit in the same
-   rows: the wall is meant to be read as one thing with gaps in it, not as a
-   list of wins followed by a list of losses.
+   Four bands down the page, in the order the reader's questions arrive:
 
-   The difference between them is carried by the mark and by what fills the
-   third column — a date on an earned badge, a progress bar on a locked one —
-   rather than by hiding anything. Tone follows the tier, so the rarer shelves
-   read warmer as they go down.
+       .ac-band      the ring and three figures — how far along the wall is
+       .ac-recent    the last four earned, largest, because they are the news
+       .ac-cats      five chips, one per heading, each of them its own filter
+       .ac-list      the hundred, searchable
+
+   ## Difficulty is a colour, and it is the only colour
+
+   Every badge carries a `tier-N` class, and that class sets one custom
+   property — `--t`, the tone for that difficulty. The hexagon, its glow, the
+   progress bar and the score pill all paint from `--t` and nothing else, so a
+   difficulty is one edit here rather than five, and a row cannot end up with a
+   gold hexagon over a violet bar.
+
+   Green, blue, violet, gold, rose as the tiers climb. Rose is the top and is
+   used nowhere else on the page, which is what makes a Legendary row read as
+   rare from across the screen without a word being printed.
+
+   ## Earned and locked are the same size
+
+   An earned badge and a locked one sit in the same rows at the same height:
+   the wall is meant to read as one thing with gaps in it, not as a list of
+   wins followed by a list of losses. What differs is the drawing in the
+   hexagon and what fills the row's third column — a date on an earned badge,
+   a bar on a locked one — never the space it takes.
 
    Tokens are declared here and redeclared for dark, the same shape
    records.css uses.
@@ -27,6 +44,7 @@ body:has(.ac-page) .app-main {
     --ac-card: #ffffff;
     --ac-card-2: #f7f8fb;
     --ac-line: #e6e9ef;
+    --ac-well: #eef1f6;
 
     --ac-text: #1f2733;
     --ac-muted: #6b7684;
@@ -36,16 +54,17 @@ body:has(.ac-page) .app-main {
     --ac-blue: #2f6fd0;
     --ac-green: #1f8a54;
     --ac-gold: #c08324;
+    --ac-rose: #c2407a;
+    --ac-flame: #d2691e;
 
     --ac-radius: 16px;
     --ac-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
 
     box-sizing: border-box;
     width: 100%;
-    /* No column cap: the wall is a grid that takes whatever it is given, and
-       auto-fill turns extra width into more badges a row rather than wider
-       ones. A max-width here would leave the right of a large screen empty
-       for no gain. */
+    /* No column cap: the wall takes whatever width it is given and turns it
+       into more badges a row rather than wider ones. A max-width here would
+       leave the right of a large screen empty for no gain. */
     padding: 26px 28px 60px;
     color: var(--ac-text);
     font-family: 'Inter', 'Segoe UI', sans-serif;
@@ -55,6 +74,7 @@ html[data-theme="dark"] .ac-page {
     --ac-card: #161d2c;
     --ac-card-2: #1b2334;
     --ac-line: #28324a;
+    --ac-well: #0f1523;
 
     --ac-text: #e7ecf6;
     --ac-muted: #8f9bb3;
@@ -64,6 +84,8 @@ html[data-theme="dark"] .ac-page {
     --ac-blue: #6a9bff;
     --ac-green: #46c483;
     --ac-gold: #e0b23c;
+    --ac-rose: #ff7bb0;
+    --ac-flame: #ff9245;
 
     --ac-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 8px 24px rgba(0, 0, 0, .26);
     color-scheme: dark;
@@ -72,130 +94,401 @@ html[data-theme="dark"] .ac-page {
 .ac-shell { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
 .ac-quiet { color: var(--ac-muted); }
 
+/* ---------- Difficulty, as one property ----------------------------------
+   Set on the badge's outermost element so everything inside it — hexagon,
+   glow, bar, pill — inherits the same tone. Adding a sixth tier is one line. */
+.tier-1 { --t: var(--ac-green); }
+.tier-2 { --t: var(--ac-blue); }
+.tier-3 { --t: var(--ac-violet); }
+.tier-4 { --t: var(--ac-gold); }
+.tier-5 { --t: var(--ac-rose); }
+
+.tone-gold { --t: var(--ac-gold); }
+.tone-flame { --t: var(--ac-flame); }
+.tone-violet { --t: var(--ac-violet); }
+
 /* ---------- Head ---------------------------------------------------------- */
 .ac-head {
     display: flex; align-items: flex-start; justify-content: space-between;
     gap: 16px; flex-wrap: wrap;
 }
-.ac-head h1 { margin: 0; font-size: 25px; font-weight: 700; letter-spacing: -.02em; }
-.ac-head p { margin: 4px 0 0; font-size: 13.5px; }
+.ac-head h1 { margin: 0; font-size: 27px; font-weight: 700; letter-spacing: -.02em; }
+.ac-head p { margin: 5px 0 0; font-size: 13.5px; }
 .ac-head-tools { display: flex; align-items: center; gap: 9px; }
 
-/* ---------- The count across the top --------------------------------------
-   One figure and one bar. The wall below says which badges; this says how
-   much of it there is, which is the only thing a reader cannot get by
-   looking. */
-.ac-summary {
+.ac-select select {
+    appearance: none;
+    padding: 9px 34px 9px 14px;
+    border: 1px solid var(--ac-line);
+    border-radius: 10px;
+    background: var(--ac-card);
+    color: var(--ac-text);
+    font: inherit; font-size: 13px; font-weight: 550;
+    cursor: pointer;
+    /* The chevron, drawn rather than shipped — one arrow does not earn a file
+       under utils/icons/. currentColor is not available inside a data URI, so
+       the stroke is the muted token's value written out; it reads correctly on
+       both themes because the token is near-grey on each. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238f9bb3' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    background-size: 15px;
+}
+.ac-select select:focus-visible { outline: 2px solid var(--ac-violet); outline-offset: 2px; }
+
+/* ---------- The band across the top ---------------------------------------
+   The ring is the wall; the three figures beside it are the account. One card
+   rather than four, because they are one answer to one question and four
+   floating tiles would say they were four. */
+.ac-band {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto repeat(3, minmax(0, 1fr));
     align-items: center;
-    gap: 22px;
-    padding: 18px 20px;
+    gap: 10px 26px;
+    padding: 20px 24px;
     border: 1px solid var(--ac-line);
     border-radius: var(--ac-radius);
     background: var(--ac-card);
     box-shadow: var(--ac-shadow);
 }
-.ac-count { display: flex; align-items: baseline; gap: 8px; }
-.ac-count strong {
-    font-size: 30px; font-weight: 700; line-height: 1;
-    color: var(--ac-violet);
+.ac-band-ring {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding-right: 26px;
+    border-right: 1px solid var(--ac-line);
+}
+.ac-band-ring .ac-quiet { font-size: 11.5px; }
+
+.ac-ring { position: relative; width: 108px; height: 108px; }
+.ac-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ac-ring-track {
+    fill: none; stroke: var(--ac-well); stroke-width: 9;
+}
+.ac-ring-arc {
+    fill: none;
+    stroke: var(--ac-violet);
+    stroke-width: 9;
+    stroke-linecap: round;
+    transition: stroke-dashoffset .8s cubic-bezier(.22, 1, .36, 1);
+}
+.ac-ring-face {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+}
+.ac-ring-face strong {
+    font-size: 25px; font-weight: 700; letter-spacing: -.02em;
     font-variant-numeric: tabular-nums;
 }
-.ac-count span { font-size: 13px; }
-.ac-summary-bar { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
-.ac-summary-bar span { font-size: 11.5px; }
 
-/* ---------- Bars ---------------------------------------------------------- */
-.ac-bar {
-    height: 6px;
-    border-radius: 99px;
-    background: var(--ac-card-2);
-    overflow: hidden;
+.ac-stat { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ac-stat-top { display: flex; align-items: center; gap: 9px; }
+.ac-stat-top svg { width: 22px; height: 22px; color: var(--t, var(--ac-violet)); flex: none; }
+.ac-stat-top strong {
+    font-size: 27px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
 }
-html[data-theme="dark"] .ac-bar { background: #0f1523; }
-.ac-bar.is-lg { height: 9px; }
-.ac-bar > i {
-    display: block; height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, var(--ac-violet), var(--ac-blue));
-    transition: width .5s cubic-bezier(.22, 1, .36, 1);
-}
+.ac-stat-label { font-size: 12.5px; font-weight: 600; }
+.ac-stat .ac-quiet { font-size: 11.5px; }
 
-/* ---------- Shelves ------------------------------------------------------- */
-.ac-shelf { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.ac-shelf-head {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+/* The one title in the app, when it has been earned. Rose, because the badge
+   that confers it is the only Legendary hidden one — see `Ascended`. */
+.ac-title-banner {
+    margin: 0;
+    padding: 11px 16px;
+    border: 1px solid color-mix(in srgb, var(--ac-rose) 40%, var(--ac-line));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--ac-rose) 9%, var(--ac-card));
+    font-size: 13px;
 }
-.ac-shelf-head h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
-.ac-shelf-head span { font-size: 12px; font-variant-numeric: tabular-nums; }
+.ac-title-banner strong { color: var(--ac-rose); }
 
-/* auto-fill rather than auto-fit: a shelf with one badge on it keeps that
-   badge card-width instead of stretching it across the whole page. */
-.ac-grid {
+/* ---------- Sections ------------------------------------------------------ */
+.ac-section { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ac-section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap;
+}
+.ac-section-head h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+
+.ac-view-all {
+    padding: 0; border: 0; background: none;
+    color: var(--ac-violet);
+    font: inherit; font-size: 12.5px; font-weight: 650;
+    cursor: pointer;
+}
+.ac-view-all:hover { text-decoration: underline; }
+
+/* ---------- Recently earned ----------------------------------------------
+   The largest thing on the page after the band, and the only place a badge is
+   drawn as a card rather than a row. Four across on a wide screen, and the
+   tier's tone tints the whole card rather than only the hexagon — these are
+   the four the reader is most likely to want to look at rather than read. */
+.ac-recent {
     list-style: none; margin: 0; padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 12px;
 }
+.ac-recent-card {
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    padding: 20px 16px 14px;
+    text-align: center;
+    border: 1px solid color-mix(in srgb, var(--t) 30%, var(--ac-line));
+    border-radius: var(--ac-radius);
+    background:
+        radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--t) 14%, transparent), transparent 70%),
+        var(--ac-card);
+    box-shadow: var(--ac-shadow);
+}
+.ac-recent-card strong { font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; }
+.ac-recent-card .ac-quiet { font-size: 11.5px; line-height: 1.5; }
+.ac-recent-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; width: 100%;
+    margin-top: 6px; padding-top: 11px;
+    border-top: 1px solid var(--ac-line);
+}
+.ac-recent-foot .ac-quiet { font-size: 11px; }
 
-/* ---------- One badge -----------------------------------------------------
-   Three rows in a fixed order — mark and title, then the third row that is
-   either a date or a bar. Both states are the same height, so a shelf where
-   some are earned does not come out ragged. */
-.ac-badge {
+/* ---------- The mark ------------------------------------------------------
+   A hexagon in the tier's tone with the badge's drawing inside it. Two sizes:
+   the row's, and `is-lg` for the four cards above. */
+.ac-mark {
+    position: relative;
+    display: grid; place-items: center;
+    width: 42px; height: 42px;
+    flex: none;
+    color: var(--t, var(--ac-violet));
+}
+.ac-mark.is-lg { width: 66px; height: 66px; }
+
+.ac-mark-hex {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    fill: color-mix(in srgb, currentColor 13%, transparent);
+    stroke: color-mix(in srgb, currentColor 45%, transparent);
+    stroke-width: 1.4;
+}
+.ac-mark.is-earned .ac-mark-hex {
+    fill: color-mix(in srgb, currentColor 22%, transparent);
+    stroke: currentColor;
+}
+.ac-mark-glyph {
+    position: relative;
+    width: 46%; height: 46%;
+}
+
+/* A secret badge is drawn grey whatever its tier, because its tier is one more
+   thing nobody has been told. */
+.ac-mark.is-secret { color: var(--ac-faint); }
+
+/* Locked is quieter, not hidden: the drawing still says what the badge wants. */
+.ac-mark:not(.is-earned):not(.is-secret) { opacity: .82; }
+
+/* ---------- Categories ----------------------------------------------------
+   Five chips, and each is the filter it names — see the note in the page. */
+.ac-cats {
+    list-style: none; margin: 0; padding: 0;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    align-items: center;
-    gap: 4px 13px;
-    min-height: 92px;
-    padding: 15px 16px;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 12px;
+}
+.ac-cat { display: flex; min-width: 0; }
+.ac-cat button {
+    display: flex; flex-direction: column; gap: 10px;
+    width: 100%;
+    padding: 14px 15px;
     border: 1px solid var(--ac-line);
     border-radius: 14px;
     background: var(--ac-card);
+    box-shadow: var(--ac-shadow);
+    color: inherit; font: inherit; text-align: left;
+    cursor: pointer;
     transition: border-color .15s ease, transform .15s ease;
 }
-.ac-badge:hover { transform: translateY(-1px); }
-.ac-badge.is-earned { border-color: color-mix(in srgb, var(--ac-violet) 34%, var(--ac-line)); }
+.ac-cat button:hover { transform: translateY(-1px); }
+.ac-cat button[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--t) 55%, var(--ac-line));
+    background: color-mix(in srgb, var(--t) 7%, var(--ac-card));
+}
+.ac-cat button:focus-visible { outline: 2px solid var(--t); outline-offset: 2px; }
 
-.ac-badge-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ac-badge-text strong { font-size: 13.5px; font-weight: 650; line-height: 1.35; }
-.ac-badge-text .ac-quiet { font-size: 11.5px; line-height: 1.5; }
+/* One tone per heading, so the chip and the badges filed under it agree. */
+.ac-cat.cat-productivity { --t: var(--ac-green); }
+.ac-cat.cat-consistency { --t: var(--ac-flame); }
+.ac-cat.cat-learning { --t: var(--ac-violet); }
+.ac-cat.cat-milestones { --t: var(--ac-blue); }
+.ac-cat.cat-special { --t: var(--ac-gold); }
 
-/* The mark spans both rows so the text and the progress under it share one
-   left edge. */
-.ac-mark {
-    grid-row: 1 / span 2;
+.ac-cat-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ac-cat-ico {
     display: grid; place-items: center;
-    width: 38px; height: 38px;
-    border-radius: 11px;
-    background: var(--ac-card-2);
+    width: 34px; height: 34px; flex: none;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--t) 15%, transparent);
+    color: var(--t);
+}
+.ac-cat-ico svg { width: 17px; height: 17px; }
+.ac-cat-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ac-cat-text strong { font-size: 13px; font-weight: 650; }
+.ac-cat-text .ac-quiet { font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Search -------------------------------------------------------- */
+.ac-search {
+    display: flex; align-items: center; gap: 8px;
+    min-width: 0; width: min(280px, 100%);
+    padding: 8px 12px;
+    border: 1px solid var(--ac-line);
+    border-radius: 10px;
+    background: var(--ac-card);
     color: var(--ac-faint);
 }
-.ac-mark svg { width: 18px; height: 18px; }
-.ac-badge.is-earned .ac-mark { color: #fff; background: var(--ac-violet); }
-.ac-badge.is-earned .ac-mark.tier-2 { background: var(--ac-blue); }
-.ac-badge.is-earned .ac-mark.tier-3 { background: var(--ac-green); }
-.ac-badge.is-earned .ac-mark.tier-4 { background: var(--ac-gold); }
+.ac-search:focus-within { border-color: var(--ac-violet); }
+.ac-search svg { width: 15px; height: 15px; flex: none; }
+.ac-search input {
+    min-width: 0; flex: 1;
+    border: 0; background: none; outline: none;
+    color: var(--ac-text);
+    font: inherit; font-size: 13px;
+}
+.ac-search input::placeholder { color: var(--ac-faint); }
 
-/* Both live in the same cell, so neither can shift the other's row. */
-.ac-progress { grid-column: 2; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* ---------- The list ------------------------------------------------------
+   Four columns: mark, what it is, where you are, what it scores. The third is
+   the one that changes with state, and it is given a fixed width so a hundred
+   rows keep one column of bars rather than a hundred ragged ones. */
+.ac-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.ac-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 190px auto;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--ac-line);
+    border-radius: 13px;
+    background: var(--ac-card);
+    transition: border-color .15s ease, transform .15s ease;
+}
+.ac-row:hover { transform: translateY(-1px); }
+.ac-row.is-earned { border-color: color-mix(in srgb, var(--t) 32%, var(--ac-line)); }
+/* Grey whatever its tier, because its tier is one more thing nobody has been
+   told — and `--t` is set here rather than on the mark alone so the border and
+   the score pill go grey with it. */
+.ac-row.is-secret { --t: var(--ac-faint); border-style: dashed; }
+
+.ac-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ac-row-text strong {
+    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+    font-size: 13.5px; font-weight: 650; letter-spacing: -.01em;
+}
+.ac-row-text .ac-quiet { font-size: 11.5px; line-height: 1.5; }
+
+.ac-title {
+    font-style: normal; font-size: 10.5px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--ac-rose) 16%, transparent);
+    color: var(--ac-rose);
+}
+
+.ac-row-state { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ac-row-state .ac-quiet { font-size: 11px; font-variant-numeric: tabular-nums; }
+.ac-done {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12.5px; font-weight: 650;
+    color: var(--ac-green);
+}
+.ac-done svg { width: 15px; height: 15px; flex: none; }
+.ac-secret-note { font-style: italic; }
+
+.ac-progress { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .ac-figures { font-size: 11px; font-variant-numeric: tabular-nums; }
-.ac-earned-on {
-    grid-column: 2;
-    font-size: 11px; font-weight: 600;
-    color: var(--ac-violet);
+
+/* ---------- Bars ----------------------------------------------------------
+   One bar, painted from `--t`, so a bar's colour is its difficulty wherever it
+   appears — under a row or inside a category chip. */
+.ac-bar {
+    display: block;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--ac-well);
+    overflow: hidden;
+}
+.ac-bar > i {
+    display: block; height: 100%;
+    border-radius: inherit;
+    background: var(--t, var(--ac-violet));
+    transition: width .5s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ---------- The score pill ------------------------------------------------ */
+.ac-xp {
+    padding: 5px 10px;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--t) 13%, transparent);
+    color: var(--t);
+    font-size: 11.5px; font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.ac-xp.is-earned { background: color-mix(in srgb, var(--t) 22%, transparent); }
+
+/* ---------- Feet ---------------------------------------------------------- */
+.ac-empty {
+    margin: 0; padding: 26px;
+    text-align: center;
+    border: 1px dashed var(--ac-line);
+    border-radius: 13px;
+    color: var(--ac-muted);
+    font-size: 13px;
+}
+.ac-foot {
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    margin: 4px 0 0; padding: 15px;
+    border: 1px dashed var(--ac-line);
+    border-radius: 13px;
+    background: var(--ac-card-2);
+    color: var(--ac-muted);
+    font-size: 12.5px;
+    text-align: center;
+}
+.ac-foot svg { width: 15px; height: 15px; flex: none; }
+
+/* ---------- Narrow --------------------------------------------------------
+   The band's four cells become two, then one; the list's fixed progress column
+   drops under the text rather than squeezing it, because a bar 40px wide is
+   not a bar. */
+@media (max-width: 1100px) {
+    .ac-row { grid-template-columns: auto minmax(0, 1fr) 150px auto; }
+}
+
+@media (max-width: 900px) {
+    .ac-band { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .ac-band-ring {
+        grid-column: 1 / -1;
+        flex-direction: row; gap: 14px;
+        padding: 0 0 16px; border-right: 0;
+        border-bottom: 1px solid var(--ac-line);
+    }
 }
 
 @media (max-width: 640px) {
     .ac-page { padding: 20px 15px 48px; }
-    .ac-summary { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-    .ac-grid { grid-template-columns: minmax(0, 1fr); }
+    .ac-band { grid-template-columns: minmax(0, 1fr); }
+    .ac-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 10px 12px;
+    }
+    /* The state moves to its own line under the text, spanning the width the
+       mark and the pill leave. */
+    .ac-row-state { grid-column: 2 / -1; }
+    .ac-search { width: 100%; }
+    .ac-section-head { align-items: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .ac-bar > i { transition: none; }
-    .ac-badge, .ac-badge:hover { transition: none; transform: none; }
+    .ac-bar > i, .ac-ring-arc { transition: none; }
+    .ac-row, .ac-row:hover,
+    .ac-cat button, .ac-cat button:hover { transition: none; transform: none; }
 }
