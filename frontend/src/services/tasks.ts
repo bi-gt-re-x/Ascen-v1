@@ -27,12 +27,12 @@ export interface UserData {
  * Reading this also decays a streak that went stale overnight, so it is the
  * call that makes every page agree on the streak.
  */
-export function getUserData(username: string): Promise<ApiResult<UserData>> {
-  return get<UserData>('/api/get_user_data', { username });
+export function getUserData(): Promise<ApiResult<UserData>> {
+  return get<UserData>('/api/get_user_data');
 }
 
-export function listTasks(username: string): Promise<ApiResult<{ tasks: Task[] }>> {
-  return get<{ tasks: Task[] }>('/api/tasks', { username });
+export function listTasks(): Promise<ApiResult<{ tasks: Task[] }>> {
+  return get<{ tasks: Task[] }>('/api/tasks');
 }
 
 // --------------------------------------------------------------------------
@@ -67,10 +67,9 @@ export interface NewTask {
 }
 
 export function createTask(
-  username: string,
   task: NewTask,
 ): Promise<ApiResult<{ task_id: string }>> {
-  return post<{ task_id: string }>('/api/tasks', { username, ...task });
+  return post<{ task_id: string }>('/api/tasks', { ...task });
 }
 
 /**
@@ -99,18 +98,16 @@ export interface TaskEdit {
 }
 
 export function updateTask(
-  username: string,
   taskId: string,
   edit: TaskEdit,
 ): Promise<ApiResult<Record<string, never>>> {
-  return put(`/api/tasks/${encodeURIComponent(taskId)}`, { username, ...edit });
+  return put(`/api/tasks/${encodeURIComponent(taskId)}`, { ...edit });
 }
 
 export function deleteTask(
-  username: string,
   taskId: string,
 ): Promise<ApiResult<Record<string, never>>> {
-  return del(`/api/tasks/${encodeURIComponent(taskId)}`, { username });
+  return del(`/api/tasks/${encodeURIComponent(taskId)}`);
 }
 
 /**
@@ -126,13 +123,11 @@ export function deleteTaskWithoutTracking(
 }
 
 export function pushDueDate(
-  username: string,
   taskId: string,
   dueDate: string,
 ): Promise<ApiResult<Record<string, never>>> {
   return post('/api/update_task_due_date', {
     id: taskId,
-    username,
     due_date: dueDate,
   });
 }
@@ -169,11 +164,9 @@ export interface CompletionResult {
 }
 
 export function completeTask(
-  username: string,
   taskId: string,
 ): Promise<ApiResult<CompletionResult>> {
   return post<CompletionResult>('/api/complete_task', {
-    username,
     task_id: taskId,
   });
 }
@@ -200,12 +193,10 @@ export interface TaskRating {
  * rather than failing the whole call over it.
  */
 export function rateTask(
-  username: string,
   taskId: string,
   ratings: { difficulty?: number; execution?: number; reason?: string },
 ): Promise<ApiResult<TaskRating>> {
   return post<TaskRating>('/api/rate_task', {
-    username,
     task_id: taskId,
     ...ratings,
   });
@@ -218,9 +209,8 @@ export function rateTask(
  * through to its console — `at` changes, and that is the signal.
  */
 export function lastCompletion(
-  username: string,
 ): Promise<ApiResult<{ xp: number | null; at: string | null }>> {
-  return get('/api/last_task_completion', { username });
+  return get('/api/last_task_completion');
 }
 
 // --------------------------------------------------------------------------
@@ -228,12 +218,10 @@ export function lastCompletion(
 // --------------------------------------------------------------------------
 /** Fold a batch of XP and completions into today's single ledger row. */
 export function trackDailyXp(
-  username: string,
   xpEarned: number,
   tasksCompleted: number,
 ): Promise<ApiResult<{ message: string }>> {
   return post('/api/track_daily_xp', {
-    username,
     xp_earned: xpEarned,
     tasks_completed: tasksCompleted,
   });

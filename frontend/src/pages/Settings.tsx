@@ -413,7 +413,7 @@ export default function Settings() {
   const call = useCallback(
     () =>
       username
-        ? service.getSettings(username)
+        ? service.getSettings()
         : Promise.resolve({ success: false as const, message: 'Sign in to change your settings.' }),
     [username],
   );
@@ -445,11 +445,11 @@ export default function Settings() {
 
   /** The account-row half — name, theme, daily goal. */
   const saveSheet = useCallback(
-    async (edit: Parameters<typeof service.saveSettings>[1], label: string) => {
+    async (edit: Parameters<typeof service.saveSettings>[0], label: string) => {
       if (!username || busy) return;
       setBusy(true);
       setFailure(null);
-      const result = await service.saveSettings(username, edit);
+      const result = await service.saveSettings(edit);
       setBusy(false);
       if (!result.success) {
         setFailure(result.message);
@@ -503,7 +503,7 @@ export default function Settings() {
       if (!username || asking) return;
       setAsking(true);
       setAskFailure(null);
-      const result = await service.resetData(username, scope, typed);
+      const result = await service.resetData(scope, typed);
       if (!result.success) {
         setAsking(false);
         setAskFailure(result.message);
@@ -1099,7 +1099,7 @@ export default function Settings() {
             control: (
               <a
                 className="st-btn"
-                href={service.exportUrl(sheet.username, 'all', 'json')}
+                href={service.exportUrl('all', 'json')}
                 download
               >
                 Download JSON
@@ -1116,7 +1116,7 @@ export default function Settings() {
                   <a
                     key={table}
                     className="st-btn is-small"
-                    href={service.exportUrl(sheet.username, table, 'csv')}
+                    href={service.exportUrl(table, 'csv')}
                     download
                   >
                     {table}

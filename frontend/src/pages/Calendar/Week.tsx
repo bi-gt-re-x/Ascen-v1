@@ -195,7 +195,7 @@ export default function Week() {
   useEffect(() => {
     if (!username) return;
     let live = true;
-    void focusService.history(username, opensIso, closesIso).then((result) => {
+    void focusService.history(opensIso, closesIso).then((result) => {
       if (live && result.success) setHistory(result.days);
     });
     return () => {

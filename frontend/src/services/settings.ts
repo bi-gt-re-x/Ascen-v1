@@ -132,15 +132,14 @@ export function weekStartDay(prefs: Pick<Prefs, 'week_starts_on'>): 0 | 1 {
   return prefs.week_starts_on === 'sunday' ? 0 : 1;
 }
 
-export function getSettings(username: string): Promise<ApiResult<{ settings: Settings }>> {
-  return get<{ settings: Settings }>('/api/settings', { username });
+export function getSettings(): Promise<ApiResult<{ settings: Settings }>> {
+  return get<{ settings: Settings }>('/api/settings');
 }
 
 export function saveSettings(
-  username: string,
   edit: SettingsEdit,
 ): Promise<ApiResult<{ settings: Settings }>> {
-  return post<{ settings: Settings }>('/api/settings', { username, ...edit });
+  return post<{ settings: Settings }>('/api/settings', { ...edit });
 }
 
 /**
@@ -171,15 +170,14 @@ export interface ResetResult {
 }
 
 export function resetData(
-  username: string,
   scope: ResetScope,
   confirm?: string,
 ): Promise<ApiResult<ResetResult>> {
-  return post<ResetResult>('/api/settings/reset', { username, scope, confirm });
+  return post<ResetResult>('/api/settings/reset', { scope, confirm });
 }
 
 /** Where the browser should be pointed to download an export. */
-export function exportUrl(username: string, table: string, format: 'json' | 'csv'): string {
-  const query = new URLSearchParams({ username, table, format });
+export function exportUrl(table: string, format: 'json' | 'csv'): string {
+  const query = new URLSearchParams({ table, format });
   return `/api/settings/export?${query.toString()}`;
 }

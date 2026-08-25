@@ -76,7 +76,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLoadedFor(null);
       return;
     }
-    const result = await service.getSettings(username);
+    const result = await service.getSettings();
     if (result.success) {
       setPrefs(prefsOf(result.settings as unknown as Record<string, unknown>));
       setDailyGoal(Number(result.settings.daily_goal) || DEFAULT_DAILY_GOAL);
@@ -133,7 +133,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const previous = prefs;
       setPrefs((current) => ({ ...current, ...values }));
       if (!username) return null;
-      const result = await service.saveSettings(username, { values });
+      const result = await service.saveSettings({ values });
       if (!result.success) {
         setPrefs(previous);
         return result.message;

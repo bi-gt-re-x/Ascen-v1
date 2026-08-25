@@ -99,7 +99,7 @@ export default function Month() {
     let live = true;
     const start = dates.isoDate(new Date(year, month - 1, 1));
     const end = dates.isoDate(new Date(year, month + 1, 0));
-    void focusService.history(username, start, end).then((result) => {
+    void focusService.history(start, end).then((result) => {
       if (live && result.success) setHistory(result.days);
     });
     return () => {

@@ -275,7 +275,7 @@ export function useBlockActions(
         const dueDate = columnStamp(iso, draft.endTime);
         steps.push(() =>
           taskService
-            .createTask(username, {
+            .createTask({
               id,
               name: draft.name,
               priority,
@@ -332,7 +332,7 @@ export function useBlockActions(
       const gone = new Set(targets.map((task) => String(task.id)));
       void inSequence(
         targets.map(
-          (task) => () => taskService.deleteTask(username, String(task.id)),
+          (task) => () => taskService.deleteTask(String(task.id)),
         ),
       )
         .then(() => patch((list) => list.filter((task) => !gone.has(String(task.id)))))
@@ -372,7 +372,7 @@ export function useBlockActions(
         () => taskService.deleteTaskWithoutTracking(oldId),
         () =>
           taskService
-            .createTask(username, {
+            .createTask({
               id: newId,
               name: task.title || '',
               priority,

@@ -161,7 +161,7 @@ export function useFocusSession(username: string | null): UseFocusSession {
     if (!username) return;
     const s = latest.current;
     void focusService
-      .syncDay(username, todayStr(), Math.round(focusedSeconds(s)), goal.current)
+      .syncDay(todayStr(), Math.round(focusedSeconds(s)), goal.current)
       .catch(() => {
         /* offline — the next sync retries, and the server never lowers a total */
       });

@@ -55,17 +55,16 @@ export interface NoteDraft {
   notebook?: string;
 }
 
-export function list(username: string): Promise<ApiResult<{ notes: Note[] }>> {
-  return get<{ notes: Note[] }>('/api/notes', { username });
+export function list(): Promise<ApiResult<{ notes: Note[] }>> {
+  return get<{ notes: Note[] }>('/api/notes');
 }
 
 export function save(
-  username: string,
   draft: NoteDraft,
 ): Promise<ApiResult<{ note: Note }>> {
-  return post<{ note: Note }>('/api/notes/save', { username, ...draft });
+  return post<{ note: Note }>('/api/notes/save', { ...draft });
 }
 
-export function remove(username: string, id: string): Promise<ApiResult<{ id: string }>> {
-  return post<{ id: string }>('/api/notes/delete', { username, id });
+export function remove(id: string): Promise<ApiResult<{ id: string }>> {
+  return post<{ id: string }>('/api/notes/delete', { id });
 }

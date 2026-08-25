@@ -194,7 +194,7 @@ export function SubjectLibrary({ subjects, username, onClose }: SubjectLibraryPr
     async (subjectId: string, family: Family | null) => {
       if (!username) return;
       setBusyId(subjectId);
-      const result = await setColor(username, subjectId, family);
+      const result = await setColor(subjectId, family);
       if (!result.success) setError(result.message);
       // Re-read either way: a failed write means the list on screen may already
       // disagree with the server, and this is the cheap way to find out.
@@ -216,7 +216,7 @@ export function SubjectLibrary({ subjects, username, onClose }: SubjectLibraryPr
     // swatch beside it is one press away. Asking for a name *and* a colour
     // before anything exists is two decisions to make something the reader can
     // already see how to change.
-    const result = await create(username, typed, null);
+    const result = await create(typed, null);
     if (result.success) {
       setName('');
       await refreshSubjects(username);
@@ -235,7 +235,7 @@ export function SubjectLibrary({ subjects, username, onClose }: SubjectLibraryPr
         : '';
       if (!window.confirm(`Delete “${subject.name}”?${used}`)) return;
       setBusyId(subject.id);
-      const result = await remove(username, subject.id);
+      const result = await remove(subject.id);
       if (!result.success) setError(result.message);
       await refreshSubjects(username);
       setBusyId(null);

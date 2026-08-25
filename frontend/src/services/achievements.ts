@@ -94,6 +94,6 @@ export interface AchievementsResult {
   title: string | null;
 }
 
-export function getAchievements(username: string): Promise<ApiResult<AchievementsResult>> {
-  return get<AchievementsResult>('/api/achievements', { username });
+export function getAchievements(): Promise<ApiResult<AchievementsResult>> {
+  return get<AchievementsResult>('/api/achievements');
 }

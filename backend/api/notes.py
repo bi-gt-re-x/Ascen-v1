@@ -45,7 +45,6 @@ BODY_MAX = 20000
 
 
 class SaveNote(BaseModel):
-    username: Optional[str] = None
     #: Absent on a create, present on an edit. The row's own id, never reused.
     id: Optional[str] = None
     title: str = ''
@@ -62,7 +61,6 @@ class SaveNote(BaseModel):
 
 
 class DeleteNote(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
 
 

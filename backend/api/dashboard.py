@@ -21,13 +21,11 @@ router = APIRouter(tags=['dashboard'])
 
 
 class TrackDailyXp(BaseModel):
-    username: Optional[str] = None
     xp_earned: int = 0
     tasks_completed: int = 0
 
 
 class UpdateStats(BaseModel):
-    username: Optional[str] = None
     level: Optional[int] = None
     xp: Optional[int] = None
     tasks_completed: Optional[int] = None

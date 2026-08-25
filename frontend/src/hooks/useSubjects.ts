@@ -8,6 +8,12 @@
  * instead, keyed by account, and the in-flight promise is cached too so two
  * dialogs opening at once make one request rather than two.
  *
+ * The key is still the account even though the request no longer names one —
+ * the server reads that off the session now (backend/api/guard.py). It is a
+ * *cache* key, and it has to stay: one browser can sign out and back in as
+ * somebody else, and an unkeyed cache would hand the second account the
+ * first's catalogue.
+ *
  * The cache is deliberately not invalidated when a task is created. Creating
  * one task moves a subject up the order at most one place, and re-fetching a
  * hundred rows to reflect that in a dialog the reader has just closed is not
@@ -54,7 +60,7 @@ function load(username: string): Promise<Subject[]> {
   const running = inFlight.get(username);
   if (running) return running;
 
-  const request = listSubjects(username)
+  const request = listSubjects()
     .then((result) => {
       const list = result.success ? result.subjects : [];
       // Only a real answer is cached. An empty list from a failed request

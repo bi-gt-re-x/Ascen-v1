@@ -252,7 +252,7 @@ export default function Notes() {
 
   const load = useCallback(async () => {
     if (!username) return;
-    const result = await noteService.list(username);
+    const result = await noteService.list();
     if (result.success) {
       setRows(result.notes);
       setError(null);
@@ -511,7 +511,7 @@ export default function Notes() {
       return;
     }
     setBusy(true);
-    const result = await noteService.save(username, {
+    const result = await noteService.save({
       ...(draft.id ? { id: draft.id } : {}),
       title: draft.title,
       body: draft.body,
@@ -534,7 +534,7 @@ export default function Notes() {
   const discard = useCallback(async () => {
     if (!username || !draft.id || busy) return;
     setBusy(true);
-    const result = await noteService.remove(username, draft.id);
+    const result = await noteService.remove(draft.id);
     setBusy(false);
     if (!result.success) {
       setMessage(result.message);

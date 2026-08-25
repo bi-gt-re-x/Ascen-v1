@@ -53,38 +53,34 @@ export interface Subject {
   custom: boolean;
 }
 
-export function list(username: string): Promise<ApiResult<{ subjects: Subject[] }>> {
-  return get<{ subjects: Subject[] }>('/api/subjects', { username });
+export function list(): Promise<ApiResult<{ subjects: Subject[] }>> {
+  return get<{ subjects: Subject[] }>('/api/subjects');
 }
 
 /** Add a subject of the account's own. The id is derived from the name. */
 export function create(
-  username: string,
   name: string,
   family: Family | null,
 ): Promise<ApiResult<{ subject: Subject }>> {
-  return post<{ subject: Subject }>('/api/subjects', { username, name, family });
+  return post<{ subject: Subject }>('/api/subjects', { name, family });
 }
 
 /** Choose a colour for any subject. `null` hands it back to the palette. */
 export function setColor(
-  username: string,
   subjectId: string,
   family: Family | null,
 ): Promise<ApiResult<{ subject_id: string; family: Family | null }>> {
   return patch<{ subject_id: string; family: Family | null }>(
     `/api/subjects/${encodeURIComponent(subjectId)}/color`,
-    { username, family },
+    { family },
   );
 }
 
 /** Delete one of the account's own. Tasks already filed under it keep the id. */
 export function remove(
-  username: string,
   subjectId: string,
 ): Promise<ApiResult<{ subject_id: string }>> {
   return del<{ subject_id: string }>(`/api/subjects/${encodeURIComponent(subjectId)}`, {
-    username,
   });
 }
 

@@ -25,7 +25,6 @@ MAX_GOAL_HOURS = 12.0
 
 
 class FocusSync(BaseModel):
-    username: Optional[str] = None
     date: Optional[str] = None
     # Read as strings-or-numbers and coerced below, so junk lands on the
     # "Invalid focus values" reply rather than a 422 the client can't read.

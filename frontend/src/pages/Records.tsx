@@ -361,7 +361,7 @@ export default function Records() {
   const seriesCall = useCallback(
     () =>
       username
-        ? growthService.series(username, 0)
+        ? growthService.series(0)
         : Promise.resolve({ success: false as const, message: 'Sign in to see your records.' }),
     [username],
   );
@@ -370,7 +370,7 @@ export default function Records() {
   const listCall = useCallback(
     () =>
       username
-        ? recordService.list(username)
+        ? recordService.list()
         : Promise.resolve({ success: false as const, message: 'Sign in to see your records.' }),
     [username],
   );
@@ -448,7 +448,7 @@ export default function Records() {
   const saveRecord = useCallback(
     async (draft: RecordDraft) => {
       if (!username) return;
-      const ok = await write(() => recordService.save(username, draft));
+      const ok = await write(() => recordService.save(draft));
       if (ok) setModal({ open: false, kind: draft.kind });
     },
     [username, write],
@@ -457,7 +457,7 @@ export default function Records() {
   const deleteRecord = useCallback(
     async (entry: RecordRow) => {
       if (!username) return;
-      const ok = await write(() => recordService.remove(username, entry.id));
+      const ok = await write(() => recordService.remove(entry.id));
       if (ok) setModal({ open: false, kind: entry.kind });
     },
     [username, write],

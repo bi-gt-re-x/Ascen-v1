@@ -198,7 +198,7 @@ export default function Day() {
     if (!username) return;
     let live = true;
     setXpEarned(null);
-    void eventService.xpEarnedOn(username, iso).then((result) => {
+    void eventService.xpEarnedOn(iso).then((result) => {
       if (live) setXpEarned(result.success ? Number(result.xp_earned) || 0 : 0);
     });
     return () => {

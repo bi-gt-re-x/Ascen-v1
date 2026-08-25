@@ -127,7 +127,7 @@ export default function Goals() {
         return;
       }
       if (!quiet) setLoading(true);
-      const result = await goalService.getGoals(username);
+      const result = await goalService.getGoals();
       if (result.success) {
         setList(result.goals ?? []);
         setError(null);
@@ -204,7 +204,7 @@ export default function Goals() {
     async (task: Task) => {
       if (!username || busy) return;
       setBusy(true);
-      const result = await taskService.completeTask(username, task.id);
+      const result = await taskService.completeTask(task.id);
       setBusy(false);
       if (!result.success) {
         setError(result.message ?? 'That task could not be completed.');
@@ -227,7 +227,7 @@ export default function Goals() {
   const addAction = useCallback(
     async (goal: Goal, title: string, milestoneId?: string) => {
       if (!username) return;
-      const result = await taskService.createTask(username, {
+      const result = await taskService.createTask({
         name: title,
         priority: 'medium',
         xp_reward: 25,
@@ -255,7 +255,7 @@ export default function Goals() {
   const linkTask = useCallback(
     async (goal: Goal, task: Task, milestoneId?: string) => {
       if (!username) return;
-      const result = await taskService.updateTask(username, task.id, {
+      const result = await taskService.updateTask(task.id, {
         goal_id: goal.id,
         milestone_id: milestoneId ?? null,
       });
@@ -272,7 +272,7 @@ export default function Goals() {
   const createGoal = useCallback(
     async (draft: NewGoal) => {
       if (!username) return;
-      const ok = await write(() => goalService.addGoal(username, draft));
+      const ok = await write(() => goalService.addGoal(draft));
       if (ok) setWizardOpen(false);
     },
     [username, write],
@@ -283,7 +283,7 @@ export default function Goals() {
       if (!username) return;
       const ok = await write(() =>
         draft.id
-          ? goalService.updateGoal(username, draft.id, {
+          ? goalService.updateGoal(draft.id, {
               title: draft.title,
               description: draft.description,
               goal_type: draft.goal_type,
@@ -294,7 +294,7 @@ export default function Goals() {
               target_tasks: draft.target_tasks,
               target_focus: draft.target_focus,
             })
-          : goalService.addGoal(username, draft),
+          : goalService.addGoal(draft),
       );
       if (ok) {
         setModalOpen(false);
@@ -307,7 +307,7 @@ export default function Goals() {
   const setValue = useCallback(
     (goal: Goal, value: number) => {
       if (!username) return;
-      void write(() => goalService.updateGoal(username, goal.id, { current_value: value }));
+      void write(() => goalService.updateGoal(goal.id, { current_value: value }));
     },
     [username, write],
   );
@@ -315,7 +315,7 @@ export default function Goals() {
   const confirmDelete = useCallback(async () => {
     if (!username || !pendingDelete) return;
     const gone = pendingDelete.id;
-    await write(() => goalService.deleteGoal(username, gone));
+    await write(() => goalService.deleteGoal(gone));
     setPendingDelete(null);
     // The drawer was showing the goal that no longer exists.
     setOpenId((current) => (current === gone ? null : current));
@@ -325,7 +325,7 @@ export default function Goals() {
   const addMilestone = useCallback(
     (goal: Goal, title: string) => {
       if (!username) return;
-      void write(() => goalService.addMilestone(username, goal.id, { title }));
+      void write(() => goalService.addMilestone(goal.id, { title }));
     },
     [username, write],
   );
@@ -333,7 +333,7 @@ export default function Goals() {
   const setMilestoneStatus = useCallback(
     (milestone: Milestone, status: MilestoneStatus) => {
       if (!username) return;
-      void write(() => goalService.updateMilestone(username, milestone.id, { status }));
+      void write(() => goalService.updateMilestone(milestone.id, { status }));
     },
     [username, write],
   );
@@ -342,7 +342,7 @@ export default function Goals() {
   const setMilestoneDate = useCallback(
     (milestone: Milestone, date: string) => {
       if (!username) return;
-      void write(() => goalService.updateMilestone(username, milestone.id, { target_date: date }));
+      void write(() => goalService.updateMilestone(milestone.id, { target_date: date }));
     },
     [username, write],
   );
@@ -350,7 +350,7 @@ export default function Goals() {
   const removeMilestone = useCallback(
     (milestone: Milestone) => {
       if (!username) return;
-      void write(() => goalService.deleteMilestone(username, milestone.id));
+      void write(() => goalService.deleteMilestone(milestone.id));
     },
     [username, write],
   );
@@ -358,7 +358,7 @@ export default function Goals() {
   const reorder = useCallback(
     (goal: Goal, order: string[]) => {
       if (!username) return;
-      void write(() => goalService.reorderMilestones(username, goal.id, order));
+      void write(() => goalService.reorderMilestones(goal.id, order));
     },
     [username, write],
   );
@@ -378,7 +378,7 @@ export default function Goals() {
   const suggestMilestones = useCallback(
     async (goal: Goal): Promise<string[] | null> => {
       if (!username) return null;
-      const result = await goalService.suggestMilestones(username, { goalId: goal.id });
+      const result = await goalService.suggestMilestones({ goalId: goal.id });
       if (!result.success) {
         setError(result.message);
         return null;
@@ -393,7 +393,7 @@ export default function Goals() {
   const saveMilestones = useCallback(
     (goal: Goal, titles: string[]) => {
       if (!username) return Promise.resolve(false);
-      return write(() => goalService.setMilestones(username, goal.id, titles));
+      return write(() => goalService.setMilestones(goal.id, titles));
     },
     [username, write],
   );

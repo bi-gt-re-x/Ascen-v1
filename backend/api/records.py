@@ -81,7 +81,6 @@ def _number(raw):
 
 
 class SaveRecord(BaseModel):
-    username: Optional[str] = None
     #: Absent on a create, present on an edit. The row's own id, never reused.
     id: Optional[str] = None
     kind: str = 'record'
@@ -95,7 +94,6 @@ class SaveRecord(BaseModel):
 
 
 class DeleteRecord(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
 
 

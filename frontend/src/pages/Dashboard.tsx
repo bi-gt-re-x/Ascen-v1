@@ -151,7 +151,7 @@ export default function Dashboard() {
       setBusyId(task.id);
       setFailure(null);
       try {
-        const result = await taskService.completeTask(username, task.id);
+        const result = await taskService.completeTask(task.id);
         if (!result.success) {
           setFailure(result.message);
           // The page can no longer vouch for what it is showing, so this is
@@ -243,7 +243,7 @@ export default function Dashboard() {
       const target = rating;
       setRating(null);
       if (!username || !target) return;
-      void taskService.rateTask(username, target.id, values).then((result) => {
+      void taskService.rateTask(target.id, values).then((result) => {
         if (!result.success) return;
         mutate((current) => ({
           ...current,
@@ -262,7 +262,7 @@ export default function Dashboard() {
       setSaving(true);
       setFailure(null);
       try {
-        const result = await taskService.createTask(username, task);
+        const result = await taskService.createTask(task);
         if (!result.success) {
           setFailure(result.message);
           return;

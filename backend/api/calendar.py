@@ -30,7 +30,6 @@ DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 # rather than renamed. `populate_by_name` lets the Python name work too.
 # --------------------------------------------------------------------------
 class CalendarEntry(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
     date: str = ''
     time_block: str = ''
@@ -52,7 +51,6 @@ class SyncTaskToCalendar(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     task_id: Optional[str] = None
-    username: Optional[str] = None
     date: Optional[str] = None
     time_block: Optional[str] = None
     recurrence_month: Optional[str] = Field(default=None, alias='recurrence-month')
@@ -63,7 +61,6 @@ class SyncTaskToCalendar(BaseModel):
 
 class MarkTaskCompleted(BaseModel):
     task_id: Optional[str] = None
-    username: Optional[str] = None
 
 
 class AddEventColor(BaseModel):
@@ -71,7 +68,6 @@ class AddEventColor(BaseModel):
 
 
 class DayFocus(BaseModel):
-    username: Optional[str] = None
     date: Optional[str] = None
     text: str = ''
 

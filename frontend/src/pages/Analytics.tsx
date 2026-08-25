@@ -287,7 +287,7 @@ export default function Analytics() {
   const seriesCall = useCallback(
     () =>
       username
-        ? growthService.series(username, 0)
+        ? growthService.series(0)
         : Promise.resolve({ success: false as const, message: 'Sign in to see your analytics.' }),
     [username],
   );
@@ -300,7 +300,7 @@ export default function Analytics() {
   const ratingsCall = useCallback(
     () =>
       username
-        ? growthService.ratings(username)
+        ? growthService.ratings()
         : Promise.resolve({ success: false as const, message: 'Sign in to see your score.' }),
     [username],
   );
@@ -314,7 +314,7 @@ export default function Analytics() {
   const standingCall = useCallback(
     () =>
       username
-        ? analyticsService.standing(username)
+        ? analyticsService.standing()
         : Promise.resolve({ success: false as const, message: 'Sign in to see where you stand.' }),
     [username],
   );
@@ -327,7 +327,7 @@ export default function Analytics() {
   const goalsCall = useCallback(
     () =>
       username
-        ? goalsService.getGoals(username)
+        ? goalsService.getGoals()
         : Promise.resolve({ success: false as const, message: 'Sign in to see your goals.' }),
     [username],
   );
@@ -340,7 +340,7 @@ export default function Analytics() {
   const baselineCall = useCallback(
     () =>
       username
-        ? analyticsService.baseline(username)
+        ? analyticsService.baseline()
         : Promise.resolve({ success: false as const, message: 'Sign in to set a baseline.' }),
     [username],
   );
@@ -352,7 +352,7 @@ export default function Analytics() {
   const adoptedCall = useCallback(
     () =>
       username
-        ? analyticsService.adoptedAdvice(username)
+        ? analyticsService.adoptedAdvice()
         : Promise.resolve({ success: false as const, message: 'Sign in to see your changes.' }),
     [username],
   );
@@ -364,7 +364,7 @@ export default function Analytics() {
   const gradedCall = useCallback(
     () =>
       username
-        ? analyticsService.metricHistories(username)
+        ? analyticsService.metricHistories()
         : Promise.resolve({ success: false as const, message: 'Sign in to see your history.' }),
     [username],
   );
@@ -375,7 +375,7 @@ export default function Analytics() {
   const historyCall = useCallback(
     () =>
       username
-        ? analyticsService.metricHistory(username, 'overall')
+        ? analyticsService.metricHistory('overall')
         : Promise.resolve({ success: false as const, message: 'Sign in to see your history.' }),
     [username],
   );
@@ -415,7 +415,7 @@ export default function Analytics() {
       try {
         const due = new Date();
         due.setDate(due.getDate() + 1);
-        const result = await taskService.createTask(username, {
+        const result = await taskService.createTask({
           name: item.title,
           priority: item.priority === 'high' ? 'high' : item.priority === 'medium' ? 'medium' : 'low',
           xp_reward: DEFAULT_ADVICE_XP,
@@ -423,7 +423,7 @@ export default function Analytics() {
         });
         if (!result.success) return false;
 
-        await analyticsService.adoptAdvice(username, item.id, item.title);
+        await analyticsService.adoptAdvice(item.id, item.title);
         adopted.reload();
         setJustAdopted(item.title);
         return true;
@@ -450,7 +450,7 @@ export default function Analytics() {
       if (!username) return;
       setDropping(id);
       try {
-        await analyticsService.dropAdvice(username, id);
+        await analyticsService.dropAdvice(id);
         adopted.reload();
       } finally {
         setDropping(null);
@@ -972,7 +972,7 @@ export default function Analytics() {
   const saveBaseline = useCallback(
     async (values: BaselineValues) => {
       if (!username) return false;
-      const result = await analyticsService.setBaseline(username, values);
+      const result = await analyticsService.setBaseline(values);
       if (!result.success) return false;
       baseline.reload();
       setEditingBaseline(false);

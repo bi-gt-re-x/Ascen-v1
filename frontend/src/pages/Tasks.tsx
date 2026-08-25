@@ -155,7 +155,7 @@ export default function Tasks() {
   useEffect(() => {
     if (!username) return;
     let live = true;
-    void goalService.getGoals(username).then((result) => {
+    void goalService.getGoals().then((result) => {
       if (live && result.success) setGoals(result.goals ?? []);
     });
     return () => {
@@ -313,7 +313,7 @@ export default function Tasks() {
     (task: Task) => {
       if (!username) return Promise.resolve(false);
       return run(task.id, async () => {
-        const result = await taskService.completeTask(username, task.id);
+        const result = await taskService.completeTask(task.id);
         if (!result.success) {
           setFailure(result.message);
           return false;
@@ -366,7 +366,7 @@ export default function Tasks() {
       const target = rating;
       setRating(null);
       if (!username || !target) return;
-      void taskService.rateTask(username, target.id, values).then((result) => {
+      void taskService.rateTask(target.id, values).then((result) => {
         if (!result.success) return;
         // Onto the local copy, so a re-render of the row shows what was said
         // without a round trip for the whole list.
@@ -392,7 +392,7 @@ export default function Tasks() {
     (task: Task) => {
       if (!username) return;
       void run(task.id, async () => {
-        const result = await taskService.updateTask(username, task.id, { completed: false });
+        const result = await taskService.updateTask(task.id, { completed: false });
         if (!result.success) {
           setFailure(result.message);
           return false;
@@ -415,7 +415,7 @@ export default function Tasks() {
     (task: Task, title: string) => {
       if (!username) return;
       void run(task.id, async () => {
-        const result = await taskService.updateTask(username, task.id, { name: title });
+        const result = await taskService.updateTask(task.id, { name: title });
         if (!result.success) {
           setFailure(result.message);
           return false;
@@ -439,7 +439,7 @@ export default function Tasks() {
     (task: Task, goalId: string | null) => {
       if (!username) return;
       void run(task.id, async () => {
-        const result = await taskService.updateTask(username, task.id, {
+        const result = await taskService.updateTask(task.id, {
           goal_id: goalId,
           milestone_id: null,
         });
@@ -471,7 +471,7 @@ export default function Tasks() {
       // for all of them.
       if (ask && prefs.confirm_delete && !window.confirm(`Delete “${task.title}”?`)) return;
       void run(task.id, async () => {
-        const result = await taskService.deleteTask(username, task.id);
+        const result = await taskService.deleteTask(task.id);
         if (!result.success) {
           setFailure(result.message);
           return false;
@@ -510,7 +510,7 @@ export default function Tasks() {
           //
           // The optimistic row below has always said `false`, so until the
           // next reload the page also disagreed with what it had just stored.
-          const result = await taskService.createTask(username, {
+          const result = await taskService.createTask({
             show_on_calendar: false,
             ...draft,
           });

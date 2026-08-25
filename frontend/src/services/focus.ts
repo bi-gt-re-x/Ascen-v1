@@ -27,13 +27,11 @@ import type { ApiResult, DayFocusNotes, FocusDay, FocusHistory } from '@/types';
  * number is corrected before it makes a round trip rather than after.
  */
 export function syncDay(
-  username: string,
   date: string,
   focusedSeconds: number,
   goalHours: number,
 ): Promise<ApiResult<{ focus: FocusDay }>> {
   return post<{ focus: FocusDay }>('/api/focus_sync', {
-    username,
     date,
     focused_seconds: Math.max(0, Math.min(MAX_FOCUS_SECONDS, focusedSeconds)),
     goal_hours: Math.max(MIN_GOAL_HOURS, Math.min(MAX_GOAL_HOURS, goalHours)),
@@ -47,12 +45,10 @@ export function syncDay(
  * planned — so read them with a fallback rather than expecting a full range.
  */
 export function history(
-  username: string,
   start?: string,
   end?: string,
 ): Promise<ApiResult<{ days: FocusHistory }>> {
   return get<{ days: FocusHistory }>('/api/focus_history', {
-    username,
     start,
     end,
   });
@@ -62,19 +58,16 @@ export function history(
 // The per-day focus note
 // --------------------------------------------------------------------------
 export function dayNotes(
-  username: string,
 ): Promise<ApiResult<{ day_focus: DayFocusNotes }>> {
-  return get<{ day_focus: DayFocusNotes }>('/api/day_focus', { username });
+  return get<{ day_focus: DayFocusNotes }>('/api/day_focus');
 }
 
 /** Upsert one day's note. Empty text deletes it. Truncated to 200 chars. */
 export function setDayNote(
-  username: string,
   date: string,
   text: string,
 ): Promise<ApiResult<{ date: string; text: string }>> {
   return post<{ date: string; text: string }>('/api/day_focus', {
-    username,
     date,
     text: text.trim().slice(0, 200),
   });

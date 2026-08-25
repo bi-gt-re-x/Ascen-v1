@@ -28,8 +28,8 @@ export interface GoalsResult {
 }
 
 /** Every goal, with the self-tracking ones brought up to date first. */
-export function getGoals(username: string): Promise<ApiResult<GoalsResult>> {
-  return get<GoalsResult>('/api/get_goals', { username });
+export function getGoals(): Promise<ApiResult<GoalsResult>> {
+  return get<GoalsResult>('/api/get_goals');
 }
 
 export interface NewGoal {
@@ -63,10 +63,9 @@ export interface NewGoal {
 }
 
 export function addGoal(
-  username: string,
   goal: NewGoal,
 ): Promise<ApiResult<{ message: string; id: string }>> {
-  return post('/api/add_goal', { username, ...goal });
+  return post('/api/add_goal', { ...goal });
 }
 
 /**
@@ -106,18 +105,16 @@ export type GoalEdit = Partial<
 >;
 
 export function updateGoal(
-  username: string,
   goalId: string,
   edit: GoalEdit,
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/update_goal', { id: goalId, username, ...edit });
+  return post('/api/update_goal', { id: goalId, ...edit });
 }
 
 export function deleteGoal(
-  username: string,
   goalId: string,
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/delete_goal', { goal_id: goalId, username });
+  return post('/api/delete_goal', { goal_id: goalId });
 }
 
 // --------------------------------------------------------------------------
@@ -131,15 +128,13 @@ export function deleteGoal(
  * moved, and patching that in the client would be a second opinion.
  */
 export function addMilestone(
-  username: string,
   goalId: string,
   milestone: { title: string; note?: string; target_date?: string },
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/add_milestone', { username, goal_id: goalId, ...milestone });
+  return post('/api/add_milestone', { goal_id: goalId, ...milestone });
 }
 
 export function updateMilestone(
-  username: string,
   milestoneId: string,
   edit: {
     title?: string;
@@ -148,14 +143,13 @@ export function updateMilestone(
     target_date?: string;
   },
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/update_milestone', { username, id: milestoneId, ...edit });
+  return post('/api/update_milestone', { id: milestoneId, ...edit });
 }
 
 export function deleteMilestone(
-  username: string,
   milestoneId: string,
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/delete_milestone', { username, id: milestoneId });
+  return post('/api/delete_milestone', { id: milestoneId });
 }
 
 /**
@@ -171,11 +165,9 @@ export function deleteMilestone(
  * rather than treating it as the page breaking.
  */
 export function suggestMilestones(
-  username: string,
   goal: { goalId?: string; title?: string; why?: string; description?: string; category?: string },
 ): Promise<ApiResult<{ milestones: string[] }>> {
   return post<{ milestones: string[] }>('/api/suggest_milestones', {
-    username,
     goal_id: goal.goalId,
     title: goal.title,
     why: goal.why,
@@ -196,20 +188,18 @@ export function suggestMilestones(
  * At most five, which is what the ladder on the page draws.
  */
 export function setMilestones(
-  username: string,
   goalId: string,
   titles: string[],
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/set_milestones', { username, goal_id: goalId, titles });
+  return post('/api/set_milestones', { goal_id: goalId, titles });
 }
 
 /** The new execution order, as milestone ids. */
 export function reorderMilestones(
-  username: string,
   goalId: string,
   order: string[],
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/reorder_milestones', { username, goal_id: goalId, order });
+  return post('/api/reorder_milestones', { goal_id: goalId, order });
 }
 
 export interface ProgressResult {
@@ -257,8 +247,7 @@ export interface AppliedXp {
  * the XP counts twice.
  */
 export function applyTaskXp(
-  username: string,
   xp: number,
 ): Promise<ApiResult<AppliedXp>> {
-  return post<AppliedXp>('/api/auto_apply_task_xp', { username, xp });
+  return post<AppliedXp>('/api/auto_apply_task_xp', { xp });
 }

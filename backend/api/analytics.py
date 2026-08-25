@@ -54,12 +54,11 @@ router = APIRouter(tags=['analytics'])
 class SetBaseline(BaseModel):
     """What a reader can state about their own intentions on day one.
 
-    `username` rides in the body rather than the query because every other
-    POST in this app does — see backend/api/goals.py — and one endpoint with a
-    different convention is one endpoint somebody calls wrongly.
+    No `username`: the account is the signed-in one and nothing else — see
+    backend/api/guard.py. The field used to ride in the body here because every
+    other POST in this app sent one; none of them do now.
     """
 
-    username: str = Depends(current_username)
     #: Days a week they mean to work. 1-7.
     active_days: Optional[int] = None
     #: What a normal sitting is, in minutes.
@@ -101,13 +100,11 @@ class AdoptAdvice(BaseModel):
     remembers what the reader actually agreed to.
     """
 
-    username: str = Depends(current_username)
     id: str = ''
     title: str = ''
 
 
 class DropAdvice(BaseModel):
-    username: str = Depends(current_username)
     id: str = ''
 
 

@@ -23,7 +23,7 @@ export function useUserData(): UseApiResult<UserData> & { username: string | nul
   const call = useCallback(
     () =>
       username
-        ? tasks.getUserData(username)
+        ? tasks.getUserData()
         : Promise.resolve({
             success: false as const,
             message: 'Sign in to see your dashboard.',

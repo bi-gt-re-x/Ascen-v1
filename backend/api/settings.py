@@ -163,7 +163,6 @@ class UpdateSettings(BaseModel):
     field each, so adding a preference to FIELDS does not also mean adding a
     line to this model.
     """
-    username: Optional[str] = None
     name: Optional[str] = None
     theme: Optional[str] = None
     daily_goal: Optional[int] = None
@@ -573,7 +572,6 @@ TYPED = ('tasks', 'progress', 'content', 'account')
 
 
 class ResetRequest(BaseModel):
-    username: Optional[str] = None
     scope: Optional[str] = None
     #: The username, typed again, for the scopes in TYPED.
     confirm: Optional[str] = None

@@ -683,7 +683,7 @@ export default function Achievements() {
   const call = useCallback(
     () =>
       username
-        ? service.getAchievements(username)
+        ? service.getAchievements()
         : Promise.resolve({ success: false as const, message: 'Sign in to see your badges.' }),
     [username],
   );
