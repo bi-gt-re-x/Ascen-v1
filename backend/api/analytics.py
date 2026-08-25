@@ -38,9 +38,10 @@ utils/followup.ts, next to the rules whose promises it is checking.
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking import analytics as analytics_tracking
@@ -58,7 +59,7 @@ class SetBaseline(BaseModel):
     different convention is one endpoint somebody calls wrongly.
     """
 
-    username: str = ''
+    username: str = Depends(current_username)
     #: Days a week they mean to work. 1-7.
     active_days: Optional[int] = None
     #: What a normal sitting is, in minutes.
@@ -100,18 +101,18 @@ class AdoptAdvice(BaseModel):
     remembers what the reader actually agreed to.
     """
 
-    username: str = ''
+    username: str = Depends(current_username)
     id: str = ''
     title: str = ''
 
 
 class DropAdvice(BaseModel):
-    username: str = ''
+    username: str = Depends(current_username)
     id: str = ''
 
 
 @router.get('/api/standing')
-def get_standing(username: str = ''):
+def get_standing(username: str = Depends(current_username)):
     """Where this account places against the others, measure by measure.
 
     Returns the placements, the size of the cohort behind them, and whether
@@ -119,8 +120,6 @@ def get_standing(username: str = ''):
     tracking/standing.py for why the last of those is a field rather than an
     assumption.
     """
-    if not username:
-        return fail('Username required')
 
     placement = standing_tracking.standing(username)
     if placement is None:
@@ -129,7 +128,7 @@ def get_standing(username: str = ''):
 
 
 @router.get('/api/metric_history')
-def get_metric_history(username: str = '', metric: str = 'overall'):
+def get_metric_history(username: str = Depends(current_username), metric: str = 'overall'):
     """Past grades for one metric, oldest first.
 
     The snapshots have been accumulating since the report card existed — every
@@ -142,8 +141,6 @@ def get_metric_history(username: str = '', metric: str = 'overall'):
     *what changed since I was last here.* One score is a status; two scores a
     week apart is a reason to come back.
     """
-    if not username:
-        return fail('Username required')
 
     rows = analytics_tracking.history(username, metric)
     return ok(metric=metric, points=[
@@ -153,7 +150,7 @@ def get_metric_history(username: str = '', metric: str = 'overall'):
 
 
 @router.get('/api/metric_histories')
-def get_metric_histories(username: str = ''):
+def get_metric_histories(username: str = Depends(current_username)):
     """Every graded metric's past readings at once, grouped by metric.
 
     The endpoint above answers about one metric and is what the score panel
@@ -166,8 +163,6 @@ def get_metric_histories(username: str = ''):
     same table read either way, so fanning out would be several round trips to
     answer a question one already can.
     """
-    if not username:
-        return fail('Username required')
 
     series: dict = {}
     for row in analytics_tracking.history(username):
@@ -214,14 +209,12 @@ def _clean(raw):
 
 
 @router.get('/api/baseline')
-def get_baseline(username: str = ''):
+def get_baseline(username: str = Depends(current_username)):
     """What this account said it was aiming at, or nothing.
 
     `baseline: null` is a real answer and the page depends on it — it is what
     puts a new reader on the setup screen instead of a wall of countdowns.
     """
-    if not username:
-        return fail('Username required')
 
     _, user = load_user(username)
     if not user:
@@ -231,7 +224,7 @@ def get_baseline(username: str = ''):
 
 
 @router.post('/api/baseline')
-def set_baseline(body: SetBaseline):
+def set_baseline(body: SetBaseline, username: str = Depends(current_username)):
     """Record what the account is aiming at.
 
     Both numbers are required and bounded. `focus_subject` is not: a reader who
@@ -242,8 +235,6 @@ def set_baseline(body: SetBaseline):
     it worth anything later — a target set eight months ago and never revisited
     is a different thing from one set last week, and the page says which.
     """
-    if not body.username:
-        return fail('Username required')
 
     if body.active_days is None or body.session_minutes is None:
         return fail('A baseline needs both how often and how long.')
@@ -254,11 +245,11 @@ def set_baseline(body: SetBaseline):
     if not (SESSION_MINUTES[0] <= body.session_minutes <= SESSION_MINUTES[1]):
         return fail('A sitting must be between {} and {} minutes.'.format(*SESSION_MINUTES))
 
-    _, user = load_user(body.username)
+    _, user = load_user(username)
     if not user:
         return fail('User not found')
 
-    stored = db.set_user_setting(body.username, BASELINE_KEY, {
+    stored = db.set_user_setting(username, BASELINE_KEY, {
         'active_days': int(body.active_days),
         'session_minutes': int(body.session_minutes),
         'focus_subject': str(body.focus_subject or ''),
@@ -320,10 +311,8 @@ def _remember(rows: List[dict], ident: str, title: str) -> List[dict]:
 
 
 @router.get('/api/adopted_advice')
-def get_adopted(username: str = ''):
+def get_adopted(username: str = Depends(current_username)):
     """Every recommendation this account has said it would act on, oldest first."""
-    if not username:
-        return fail('Username required')
 
     _, user = load_user(username)
     if not user:
@@ -333,7 +322,7 @@ def get_adopted(username: str = ''):
 
 
 @router.post('/api/adopt_advice')
-def adopt_advice(body: AdoptAdvice):
+def adopt_advice(body: AdoptAdvice, username: str = Depends(current_username)):
     """Record that the reader is acting on a recommendation, dated today.
 
     Dated today rather than tomorrow, even though the task this creates is due
@@ -343,22 +332,22 @@ def adopt_advice(body: AdoptAdvice):
     anyway, and "the day I pressed the button" is the one a reader can
     remember.
     """
-    if not body.username or not body.id:
+    if not username or not body.id:
         return fail('Username and id required')
 
-    _, user = load_user(body.username)
+    _, user = load_user(username)
     if not user:
         return fail('User not found')
 
-    rows = _adopted(db.user_setting(body.username, ADOPTED_KEY))
+    rows = _adopted(db.user_setting(username, ADOPTED_KEY))
     stored = db.set_user_setting(
-        body.username, ADOPTED_KEY, _remember(rows, body.id, body.title))
+        username, ADOPTED_KEY, _remember(rows, body.id, body.title))
 
     return ok(adopted=_adopted(stored))
 
 
 @router.post('/api/drop_advice')
-def drop_advice(body: DropAdvice):
+def drop_advice(body: DropAdvice, username: str = Depends(current_username)):
     """Forget an adoption.
 
     This deletes the record of the decision and nothing else — any task the
@@ -366,15 +355,15 @@ def drop_advice(body: DropAdvice):
     the same as undoing the work, and silently deleting somebody's task on a
     second click is not what either button meant.
     """
-    if not body.username or not body.id:
+    if not username or not body.id:
         return fail('Username and id required')
 
-    _, user = load_user(body.username)
+    _, user = load_user(username)
     if not user:
         return fail('User not found')
 
-    rows = [row for row in _adopted(db.user_setting(body.username, ADOPTED_KEY))
+    rows = [row for row in _adopted(db.user_setting(username, ADOPTED_KEY))
             if row['id'] != body.id]
-    stored = db.set_user_setting(body.username, ADOPTED_KEY, rows)
+    stored = db.set_user_setting(username, ADOPTED_KEY, rows)
 
     return ok(adopted=_adopted(stored))

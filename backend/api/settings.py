@@ -47,10 +47,11 @@ order, and the delete is the last step rather than the only one.
 """
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.config.settings import THEME_COOKIE_MAX_AGE
 from backend.database import connection as db
@@ -226,7 +227,7 @@ def _shape(user):
 
 
 @router.get('/api/settings')
-def get_settings(username: str = ''):
+def get_settings(username: str = Depends(current_username)):
     _, user = load_user((username or '').strip())
     if not user:
         return fail('Account not found')
@@ -234,8 +235,9 @@ def get_settings(username: str = ''):
 
 
 @router.post('/api/settings')
-def update_settings(request: Request, body: UpdateSettings):
-    users, user = load_user((body.username or '').strip())
+def update_settings(request: Request, body: UpdateSettings,
+                    username: str = Depends(current_username)):
+    users, user = load_user(username)
     if not user:
         return fail('Account not found')
 
@@ -312,7 +314,7 @@ def _csv_cell(value):
 
 
 @router.get('/api/settings/export')
-def export_data(username: str = '', table: str = 'all', format: str = 'json'):
+def export_data(username: str = Depends(current_username), table: str = 'all', format: str = 'json'):
     """Everything this account has, as JSON or CSV.
 
     `table=all` in JSON is the whole account in one object. CSV is one table at
@@ -578,8 +580,9 @@ class ResetRequest(BaseModel):
 
 
 @router.post('/api/settings/reset')
-def reset_data(request: Request, body: ResetRequest):
-    users, user = load_user((body.username or '').strip())
+def reset_data(request: Request, body: ResetRequest,
+               username: str = Depends(current_username)):
+    users, user = load_user(username)
     if not user:
         return fail('Account not found')
 

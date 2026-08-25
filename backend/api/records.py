@@ -23,9 +23,10 @@ back — the best is read, never stored — so there is nothing to keep honest.
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking.auth import load_user
@@ -135,7 +136,7 @@ def _clean(entry: SaveRecord):
 
 
 @router.get('/api/records')
-def list_records(username: str = ''):
+def list_records(username: str = Depends(current_username)):
     """Every record and milestone this account has, in the page's order."""
     if not _known(username):
         return fail('Sign in to see your records.')
@@ -143,9 +144,9 @@ def list_records(username: str = ''):
 
 
 @router.post('/api/records/save')
-def save_record(entry: SaveRecord):
+def save_record(entry: SaveRecord, username: str = Depends(current_username)):
     """Create a record or milestone, or replace the writable fields of one."""
-    if not _known(entry.username):
+    if not _known(username):
         return fail('Sign in to add a record.')
 
     fields = _clean(entry)
@@ -156,7 +157,7 @@ def save_record(entry: SaveRecord):
 
     if entry.id:
         row = next((r for r in rows
-                    if r.get('id') == entry.id and r.get('user_id') == entry.username), None)
+                    if r.get('id') == entry.id and r.get('user_id') == username), None)
         # Not silently created: making a new row out of a failed edit is how an
         # account ends up with two of something it meant to change once.
         if not row:
@@ -167,7 +168,7 @@ def save_record(entry: SaveRecord):
     else:
         saved = {
             'id': str(db.new_id('records')),
-            'user_id': entry.username,
+            'user_id': username,
             **fields,
             'created_at': _now(),
             'updated_at': _now(),
@@ -179,16 +180,16 @@ def save_record(entry: SaveRecord):
 
 
 @router.post('/api/records/delete')
-def delete_record(body: DeleteRecord):
+def delete_record(body: DeleteRecord, username: str = Depends(current_username)):
     """Remove one row. Only ever this account's own."""
-    if not _known(body.username):
+    if not _known(username):
         return fail('Sign in to delete a record.')
     if not body.id:
         return fail('Record ID required')
 
     rows = db.records()
     keep = [r for r in rows
-            if not (r.get('id') == body.id and r.get('user_id') == body.username)]
+            if not (r.get('id') == body.id and r.get('user_id') == username)]
     if len(keep) == len(rows):
         return fail('Record not found')
 

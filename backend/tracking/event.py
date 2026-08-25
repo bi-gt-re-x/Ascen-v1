@@ -75,12 +75,19 @@ def delete_entry(entry_id, username=None):
 # --------------------------------------------------------------------------
 # Events: standalone calendar blocks
 # --------------------------------------------------------------------------
-def create_event(name, day, time_block, recurrence_month=None,
+def create_event(username, name, day, time_block, recurrence_month=None,
                  recurrence_week=None, end_date=None, description=''):
-    """A new standalone calendar event."""
+    """A new standalone calendar event, belonging to one account.
+
+    `user_id` was not written until now, and `custom_events` did not filter on
+    it, so every event anybody created was on everybody's calendar. The column
+    was always in the schema (calendar_events references users.username with
+    ON DELETE CASCADE); nothing was putting a value in it.
+    """
     events = db.calendar_events()
     event = {
         "id": _new_id('calendar_events'),
+        "user_id": username,
         "name": name,
         "recurrence-month": recurrence_month or None,
         "recurrence-week": recurrence_week or None,
@@ -97,11 +104,16 @@ def create_event(name, day, time_block, recurrence_month=None,
     return {"success": True, "entry_id": event["id"], "message": "Calendar event created"}
 
 
-def delete_event(event_id):
-    """Delete a custom event. Built-in (default) events are protected."""
+def delete_event(event_id, username):
+    """Delete one of this account's custom events. Defaults are protected.
+
+    An event belonging to somebody else answers "not found" rather than
+    "not yours": the two are the same fact to a caller who should not have
+    known the id existed.
+    """
     events = db.calendar_events()
     event = next((e for e in events if e.get('id') == event_id), None)
-    if not event:
+    if not event or event.get('user_id') != username:
         return {"success": False, "message": "Event not found"}
     if event.get('is_default', False):
         return {"success": False, "message": "Cannot delete default events"}
@@ -113,8 +125,10 @@ def default_events():
     return [e for e in db.calendar_events() if e.get('is_default', False)]
 
 
-def custom_events():
-    return [e for e in db.calendar_events() if not e.get('is_default', False)]
+def custom_events(username):
+    """This account's own events. The defaults are everybody's; these are not."""
+    return [e for e in db.calendar_events()
+            if not e.get('is_default', False) and e.get('user_id') == username]
 
 
 def sync_task(task_id, username, day, time_block=None, recurrence_month=None,

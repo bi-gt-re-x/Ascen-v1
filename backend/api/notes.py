@@ -27,9 +27,10 @@ where the ordering is wrong.
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking.auth import load_user
@@ -151,7 +152,7 @@ def _clean(note: SaveNote):
 
 
 @router.get('/api/notes')
-def list_notes(username: str = ''):
+def list_notes(username: str = Depends(current_username)):
     """Every note this account has, in the order the page draws them."""
     if not _known(username):
         return fail('Sign in to see your notes.')
@@ -159,7 +160,7 @@ def list_notes(username: str = ''):
 
 
 @router.post('/api/notes/save')
-def save_note(note: SaveNote):
+def save_note(note: SaveNote, username: str = Depends(current_username)):
     """Create a note, or replace the writable fields of one that exists.
 
     One endpoint for both because the difference is a single branch and the
@@ -167,7 +168,7 @@ def save_note(note: SaveNote):
     failure rather than a create: silently making a new note out of a failed
     edit would lose whatever the reader thought they were editing.
     """
-    username = (note.username or '').strip()
+    username = (username or '').strip()
     if not _known(username):
         return fail('Sign in to save a note.')
 
@@ -200,9 +201,9 @@ def save_note(note: SaveNote):
 
 
 @router.post('/api/notes/delete')
-def delete_note(request: DeleteNote):
+def delete_note(request: DeleteNote, username: str = Depends(current_username)):
     """Remove one note. There is no trash — a note is the reader's to discard."""
-    username = (request.username or '').strip()
+    username = (username or '').strip()
     if not _known(username):
         return fail('Sign in to delete a note.')
 

@@ -30,6 +30,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from backend import middleware, routes
+from backend.api.guard import NotSignedIn
 from backend.config import settings
 
 
@@ -48,6 +49,19 @@ def create_app():
             {"success": False, "message": "Invalid request.",
              "detail": exc.errors()},
             status_code=200)
+
+    @app.exception_handler(NotSignedIn)
+    async def not_signed_in(request, exc):
+        """A request to an account endpoint with no session behind it.
+
+        Raised by the dependencies in backend/api/guard.py, which every
+        endpoint that touches an account's data now depends on. 401 rather than
+        the usual 200, because this is the one failure the client acts on
+        rather than displays — see the note in guard.py.
+        """
+        return JSONResponse(
+            {"success": False, "message": "Sign in to continue."},
+            status_code=401)
 
     middleware.register(app)
 

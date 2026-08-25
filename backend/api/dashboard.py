@@ -8,9 +8,10 @@ completed.
 """
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking import xp as xp_tracking
@@ -33,9 +34,7 @@ class UpdateStats(BaseModel):
 
 
 @router.get('/api/get_user_data')
-def get_user_data(username: str = ''):
-    if not username:
-        return fail('Username required')
+def get_user_data(username: str = Depends(current_username)):
 
     users, user = load_user(username)
     if not user:
@@ -61,19 +60,17 @@ def get_user_data(username: str = ''):
 
 
 @router.post('/api/track_daily_xp')
-def track_daily_xp(body: TrackDailyXp):
+def track_daily_xp(body: TrackDailyXp, username: str = Depends(current_username)):
     """Roll a batch of XP and completions into today's single ledger row."""
-    if not body.username:
-        return fail('Username required')
 
-    xp_tracking.track_daily(body.username, body.xp_earned, body.tasks_completed)
+    xp_tracking.track_daily(username, body.xp_earned, body.tasks_completed)
     return ok(message='Daily XP tracked successfully')
 
 
 @router.post('/api/update_stats')
-def update_stats(body: UpdateStats):
+def update_stats(body: UpdateStats, username: str = Depends(current_username)):
     """Write back level / XP / task count the client has recalculated."""
-    users, user = load_user(body.username)
+    users, user = load_user(username)
     if user:
         user['level'] = body.level
         user['xp'] = body.xp

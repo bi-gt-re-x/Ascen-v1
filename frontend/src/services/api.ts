@@ -20,10 +20,37 @@
  *    narrow on `.success`. `ApiError` is thrown only when the network itself
  *    failed or the body was not JSON, which are the cases no caller can handle
  *    field-by-field anyway.
+ *
+ * ## The one exception: 401
+ *
+ * Every endpoint that touches an account now derives it from the session
+ * cookie rather than a `username` parameter (backend/api/guard.py), and
+ * answers 401 when there is no session behind the request. That is the single
+ * status code this layer reads, because it is the only failure the *app* acts
+ * on rather than displays: a session that expired mid-visit should put the
+ * reader in front of the sign-in popup, not leave twelve panels each showing
+ * "Sign in to continue." in their own error state.
+ *
+ * `onUnauthorized` is how it gets there. AuthProvider registers a callback on
+ * mount; this module calls it once per 401 and still returns the envelope, so
+ * a caller that wants to render something in the meantime can.
  */
 import { ApiError } from '@/types';
 import type { ApiResult } from '@/types';
 import { API_BASE } from './constants';
+
+/**
+ * What to do when the server says nobody is signed in.
+ *
+ * A module-level slot rather than a parameter threaded through ~50 call sites,
+ * and a slot rather than an event because there is exactly one thing that
+ * should ever react to it. AuthProvider owns it; nothing else should set it.
+ */
+let unauthorized: (() => void) | null = null;
+
+export function onUnauthorized(handler: (() => void) | null): void {
+  unauthorized = handler;
+}
 
 type Query = Record<string, string | number | boolean | undefined | null>;
 
@@ -58,6 +85,14 @@ async function request<T>(
     throw new ApiError(
       cause instanceof Error ? cause.message : 'Network request failed',
     );
+  }
+
+  // Before the body is even parsed: whatever this call was, the answer is that
+  // the reader is signed out, and every other call in flight is about to say
+  // the same thing. Telling AuthProvider once is what turns twelve failures
+  // into one sign-in popup.
+  if (response.status === 401) {
+    unauthorized?.();
   }
 
   const body = await response.text();

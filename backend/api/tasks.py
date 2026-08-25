@@ -16,10 +16,11 @@ scripts still call them.
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from backend.api.goals import apply_task_completion
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.api import subjects as user_subjects
 from backend.config import subjects as subject_catalogue
@@ -235,18 +236,20 @@ def _link(goal_id, milestone_id, username):
     return goal['id'], (stone['id'] if stone else None)
 
 
-def _create(body: CreateTask):
-    """Shared by POST /api/tasks and its older name, /api/add_task."""
-    if not body.username:
-        return fail('Username required')
+def _create(body: CreateTask, username: str):
+    """Shared by POST /api/tasks and its older name, /api/add_task.
 
-    goal_id, milestone_id = _link(body.goal_id, body.milestone_id, body.username)
+    `username` is passed in rather than resolved here: this is a plain
+    function, and a Depends() default on one is a Depends object sitting
+    where a name should be. The two routes above own the dependency."""
+
+    goal_id, milestone_id = _link(body.goal_id, body.milestone_id, username)
 
     tasks = db.tasks()
     task_id = body.id or db.new_id('tasks')
     tasks.append({
         "id": task_id,
-        "user_id": body.username,
+        "user_id": username,
         "title": body.name,
         "description": '',
         "priority": body.priority,
@@ -257,7 +260,7 @@ def _create(body: CreateTask):
         # Honor a client-supplied created_at (the week calendar's drag-to-create
         # task uses it to place the block on the dragged slot); default to now.
         "created_at": body.created_at or datetime.now().isoformat(),
-        "subject": _subject(body.subject, body.username),
+        "subject": _subject(body.subject, username),
         "goal_id": goal_id,
         "milestone_id": milestone_id,
     })
@@ -269,24 +272,22 @@ def _create(body: CreateTask):
 # CRUD
 # --------------------------------------------------------------------------
 @router.get('/api/tasks')
-def list_tasks(username: str = ''):
-    if not username:
-        return fail('Username required')
+def list_tasks(username: str = Depends(current_username)):
     return ok(tasks=[t for t in db.tasks() if t.get('user_id') == username])
 
 
 @router.post('/api/tasks')
-def create_task(body: CreateTask):
-    return _create(body)
+def create_task(body: CreateTask,
+                username: str = Depends(current_username)):
+    return _create(body, username)
 
 
 @router.put('/api/tasks/{task_id}')
-def update_task(task_id: str, body: UpdateTask):
-    if not body.username:
-        return fail('Username required')
+def update_task(task_id: str, body: UpdateTask,
+                username: str = Depends(current_username)):
 
     tasks = db.tasks()
-    task = _find(tasks, task_id, body.username)
+    task = _find(tasks, task_id, username)
     if not task:
         return fail('Task not found')
 
@@ -305,7 +306,7 @@ def update_task(task_id: str, body: UpdateTask):
     if 'due_date' in sent:
         task['due_date'] = body.due_date
     if 'subject' in sent:
-        task['subject'] = _subject(body.subject, body.username)
+        task['subject'] = _subject(body.subject, username)
     # Resolved as a pair even when only one of them is sent, because a
     # checkpoint is only meaningful against its own goal: re-running both
     # through `_link` is what stops a task keeping a milestone belonging to the
@@ -313,7 +314,7 @@ def update_task(task_id: str, body: UpdateTask):
     if 'goal_id' in sent or 'milestone_id' in sent:
         wanted_goal = body.goal_id if 'goal_id' in sent else task.get('goal_id')
         wanted_stone = body.milestone_id if 'milestone_id' in sent else task.get('milestone_id')
-        task['goal_id'], task['milestone_id'] = _link(wanted_goal, wanted_stone, body.username)
+        task['goal_id'], task['milestone_id'] = _link(wanted_goal, wanted_stone, username)
     if 'completed' in sent:
         task['status'] = 'done' if body.completed else 'todo'
         # Record the completion time (the task's "end") when finishing; clear it
@@ -325,43 +326,48 @@ def update_task(task_id: str, body: UpdateTask):
 
 
 @router.delete('/api/tasks/{task_id}')
-def delete_task_by_id(task_id: str, username: str = ''):
+def delete_task_by_id(task_id: str, username: str = Depends(current_username)):
     _delete(task_id, username or None)
     return ok()
 
 
 @router.post('/api/add_task')
-def add_task(body: CreateTask):
+def add_task(body: CreateTask,
+             username: str = Depends(current_username)):
     """Older name for POST /api/tasks."""
-    return _create(body)
+    return _create(body, username)
 
 
 @router.post('/api/delete_task')
-def delete_task(body: DeleteTask):
+def delete_task(body: DeleteTask, username: str = Depends(current_username)):
     """Older name for DELETE /api/tasks/<id>, with the id in the body."""
-    _delete(body.id, body.username)
+    _delete(body.id, username)
     return ok()
 
 
 @router.post('/api/delete_task_no_tracking')
-def delete_task_no_tracking(body: DeleteTask):
+def delete_task_no_tracking(body: DeleteTask,
+                            username: str = Depends(current_username)):
     """Drop a task without any XP / streak / count side effects.
 
     Used when a timer is terminated: the task never happened, so nothing about
     the account's progression should move.
+
+    Scoped to the caller: `_delete` with no username matches on the id alone,
+    which is every task in the table and not just this account's.
     """
-    _delete(body.id)
+    _delete(body.id, username)
     return ok()
 
 
 @router.post('/api/update_task_due_date')
-def update_task_due_date(body: UpdateDueDate):
+def update_task_due_date(body: UpdateDueDate, username: str = Depends(current_username)):
     """Push a task's due date out — the "add more time" button."""
-    if not body.id or not body.username or not body.due_date:
+    if not body.id or not username or not body.due_date:
         return fail('Missing required fields')
 
     tasks = db.tasks()
-    task = _find(tasks, body.id, body.username)
+    task = _find(tasks, body.id, username)
     if not task:
         return fail('Task not found')
 
@@ -374,11 +380,12 @@ def update_task_due_date(body: UpdateDueDate):
 # Status and timers
 # --------------------------------------------------------------------------
 @router.post('/api/get_task_status')
-def get_task_status(body: TaskId):
+def get_task_status(body: TaskId,
+                    username: str = Depends(current_username)):
     if not body.task_id:
         return fail('Task ID required')
 
-    task = _find(db.tasks(), body.task_id)
+    task = _find(db.tasks(), body.task_id, username)
     if not task:
         return fail('Task not found')
 
@@ -387,13 +394,14 @@ def get_task_status(body: TaskId):
 
 
 @router.post('/api/timer_expired')
-def timer_expired(body: TaskId):
+def timer_expired(body: TaskId,
+                  username: str = Depends(current_username)):
     """Record that a task's timer ran out before it was finished."""
     if not body.task_id:
         return fail('Task ID required')
 
     tasks = db.tasks()
-    task = _find(tasks, body.task_id)
+    task = _find(tasks, body.task_id, username)
     if not task:
         return fail('Task not found')
 
@@ -408,16 +416,16 @@ def timer_expired(body: TaskId):
 # Completion
 # --------------------------------------------------------------------------
 @router.post('/api/complete_task')
-def complete_task(body: CompleteTask):
-    if not body.username or not body.task_id:
+def complete_task(body: CompleteTask, username: str = Depends(current_username)):
+    if not username or not body.task_id:
         return fail('Username and task_id required')
 
     tasks = db.tasks()
-    task = _find(tasks, body.task_id, body.username)
+    task = _find(tasks, body.task_id, username)
     if not task:
         return fail('Task not found')
 
-    users, user = load_user(body.username)
+    users, user = load_user(username)
     if not user:
         return fail('User not found')
 
@@ -445,10 +453,10 @@ def complete_task(body: CompleteTask):
     db.save_tasks(tasks)
     db.save_users(users)
 
-    xp_tracking.log_event(body.username, xp_reward, 'task_completion', tasks_completed=1)
+    xp_tracking.log_event(username, xp_reward, 'task_completion', tasks_completed=1)
 
     # Count this completion toward the user's active "complete N tasks" goals.
-    apply_task_completion(body.username)
+    apply_task_completion(username)
 
     return ok(
         message='Task completed successfully!',
@@ -465,7 +473,7 @@ def complete_task(body: CompleteTask):
 
 
 @router.post('/api/rate_task')
-def rate_task(body: RateTask):
+def rate_task(body: RateTask, username: str = Depends(current_username)):
     """Record what the person said about a task they just finished.
 
     A separate call from `/api/complete_task` on purpose. Completing is the act
@@ -480,7 +488,7 @@ def rate_task(body: RateTask):
     silently filing it as a 5 would put a number in the record that nobody
     chose.
     """
-    if not body.username or not body.task_id:
+    if not username or not body.task_id:
         return fail('Username and task_id required')
 
     # `is None` rather than falsiness, and the difference matters for exactly
@@ -495,7 +503,7 @@ def rate_task(body: RateTask):
             return fail('{} must be between {} and {}.'.format(name, *RATING_RANGE))
 
     tasks = db.tasks()
-    task = _find(tasks, body.task_id, body.username)
+    task = _find(tasks, body.task_id, username)
     if not task:
         return fail('Task not found')
 
@@ -527,11 +535,9 @@ def rate_task(body: RateTask):
 
 
 @router.get('/api/last_task_completion')
-def last_task_completion(username: str = ''):
+def last_task_completion(username: str = Depends(current_username)):
     """The most recent completed-task XP. The goals page polls this so a
     dashboard completion signals through to its console."""
-    if not username:
-        return fail('Username required')
 
     latest = xp_tracking.last_task_completion(username)
     if latest is None:

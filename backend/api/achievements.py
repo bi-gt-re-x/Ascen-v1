@@ -63,8 +63,9 @@ would be naming it in everything but the string.
 """
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking.auth import load_user
@@ -459,7 +460,7 @@ def _record_earned(username, earned_ids):
 
 
 @router.get('/api/achievements')
-def list_achievements(username: str = ''):
+def list_achievements(username: str = Depends(current_username)):
     name = (username or '').strip()
     _, user = load_user(name)
     if not user:
