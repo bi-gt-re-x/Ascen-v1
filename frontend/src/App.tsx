@@ -12,7 +12,7 @@
  */
 import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { Loading, Rail, Topbar } from '@/components';
+import { AppBoundary, Loading, Rail, Topbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
 import { useAuth, usePinnedViewport, useSettings } from '@/hooks';
 import Dashboard from '@/pages/Dashboard';
@@ -153,6 +153,11 @@ export default function App() {
           so its one account read happens once for the session. */}
       {!landing && <Topbar />}
       <main className="app-main">
+        {/* Inside the shell, so a page that throws loses the page and not the
+            rail, the top bar and the way back. Keyed on the path: navigating
+            away from a broken screen clears the error rather than pinning it
+            over the route the reader just chose. See components/ErrorBoundary. */}
+        <AppBoundary resetKey={pathname}>
         <Suspense fallback={<Loading />}>
           <Routes>
             {/* Public */}
@@ -228,6 +233,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </Suspense>
+        </AppBoundary>
       </main>
     </>
   );

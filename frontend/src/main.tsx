@@ -18,6 +18,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { RootBoundary } from '@/components';
 import { AuthProvider, SettingsProvider, ThemeProvider } from '@/context';
 
 import '@/styles/grades.css';
@@ -33,14 +34,18 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <SettingsProvider>
-            <App />
-          </SettingsProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    {/* Outside the providers, because a provider throwing is exactly the case
+        the boundary inside App.tsx cannot catch — there would be no App. */}
+    <RootBoundary>
+      <BrowserRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <SettingsProvider>
+              <App />
+            </SettingsProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </RootBoundary>
   </StrictMode>,
 );
