@@ -516,7 +516,14 @@ def list_achievements(username: str = ''):
     progress = level_for_total_xp(figures['xp'])
     return ok(
         achievements=badges,
-        earned=len(dates),
+        # Counted over the wall that is being sent, not over the rows in the
+        # table. `user_achievements` never deletes — see `_sync_catalogue` — so
+        # it still holds a row for every badge this account earned under an id
+        # the catalogue has since dropped or renamed, and `len(dates)` counts
+        # those. That put "71 Achievements Earned" above a wall with 68 on it,
+        # and made the ring, the category bars and the achievement score three
+        # different answers to one question.
+        earned=sum(1 for b in badges if b['earned']),
         total=len(badges),
         figures=figures,
         categories=categories,

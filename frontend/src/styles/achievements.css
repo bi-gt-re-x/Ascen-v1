@@ -6,7 +6,7 @@
        .ac-band      the ring and three figures — how far along the wall is
        .ac-recent    the last four earned, largest, because they are the news
        .ac-cats      five chips, one per heading, each of them its own filter
-       .ac-list      the hundred, searchable
+       .ac-grid      the hundred, as tiles, in two headed halves
 
    ## Difficulty is a colour, and it is the only colour
 
@@ -22,11 +22,12 @@
 
    ## Earned and locked are the same size
 
-   An earned badge and a locked one sit in the same rows at the same height:
-   the wall is meant to read as one thing with gaps in it, not as a list of
-   wins followed by a list of losses. What differs is the drawing in the
-   hexagon and what fills the row's third column — a date on an earned badge,
-   a bar on a locked one — never the space it takes.
+   An earned tile and a locked one are the same tile at the same height. They
+   sit in two headed grids rather than one list, but the split is a heading and
+   a tint, never a shrinking: a locked badge is a thing the reader is being
+   asked to want, and a half-height grey stub is not an invitation. What
+   differs is the fill behind the card and what its foot carries — a date on an
+   earned badge, a bar on a locked one — never the space it takes.
 
    Tokens are declared here and redeclared for dark, the same shape
    records.css uses.
@@ -255,7 +256,7 @@ html[data-theme="dark"] .ac-page {
 .ac-mark {
     position: relative;
     display: grid; place-items: center;
-    width: 42px; height: 42px;
+    width: 46px; height: 46px;
     flex: none;
     color: var(--t, var(--ac-violet));
 }
@@ -274,8 +275,53 @@ html[data-theme="dark"] .ac-page {
 }
 .ac-mark-glyph {
     position: relative;
+    /* Nudged down by the pips' height so the drawing sits centred in the space
+       left under them rather than centred in the hexagon and crowding them. */
     width: 46%; height: 46%;
+    margin-top: 8%;
 }
+
+/* ---- Pips: the tier, counted ----
+   One to five along the hexagon's top edge, in the tier's own tone. Absolutely
+   placed rather than in flow so adding one never moves the drawing. */
+.ac-pips {
+    position: absolute;
+    /* A quarter down rather than at the apex: the hexagon is barely twelve
+       pixels wide at its point and five pips do not fit in it. This is the
+       first line across it that is wide enough to hold them. */
+    top: 25%; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 1.6px;
+    line-height: 0;
+}
+.ac-pips > i {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .6;
+}
+.ac-mark.is-earned .ac-pips > i { opacity: 1; }
+.ac-mark.is-lg .ac-pips > i { width: 4.5px; height: 4.5px; }
+.ac-mark.is-lg .ac-pips { gap: 2.5px; }
+
+/* ---- The rosette ----
+   Earning used to be said by replacing the drawing with a tick, which made two
+   thirds of a good wall the same picture. It is said here instead: a small
+   solid disc off the hexagon's lower-right, reading as a stamp on the badge
+   rather than as the badge. */
+.ac-mark-tick {
+    position: absolute;
+    right: -3px; bottom: -1px;
+    display: grid; place-items: center;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--t, var(--ac-violet));
+    box-shadow: 0 0 0 2px var(--ac-card);
+}
+.ac-mark-tick svg { width: 9px; height: 9px; color: #fff; }
+.ac-mark.is-lg .ac-mark-tick { width: 20px; height: 20px; right: -2px; }
+.ac-mark.is-lg .ac-mark-tick svg { width: 12px; height: 12px; }
+
+html[data-theme="dark"] .ac-mark-tick svg { color: #10151f; }
 
 /* A secret badge is drawn grey whatever its tier, because its tier is one more
    thing nobody has been told. */
@@ -352,39 +398,108 @@ html[data-theme="dark"] .ac-page {
 }
 .ac-search input::placeholder { color: var(--ac-faint); }
 
-/* ---------- The list ------------------------------------------------------
-   Four columns: mark, what it is, where you are, what it scores. The third is
-   the one that changes with state, and it is given a fixed width so a hundred
-   rows keep one column of bars rather than a hundred ragged ones. */
-.ac-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-
-.ac-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) 190px auto;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    border: 1px solid var(--ac-line);
-    border-radius: 13px;
-    background: var(--ac-card);
-    transition: border-color .15s ease, transform .15s ease;
+/* ---------- The two halves ------------------------------------------------
+   A heading with the count in it, and a rule running to the right margin so
+   the eye can find where one half stops without counting tiles. */
+.ac-wall-head {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-top: 4px;
 }
-.ac-row:hover { transform: translateY(-1px); }
-.ac-row.is-earned { border-color: color-mix(in srgb, var(--t) 32%, var(--ac-line)); }
+.ac-wall-head h3 {
+    display: flex; align-items: baseline; gap: 8px;
+    margin: 0; flex: none;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+}
+.ac-wall-count {
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--ac-well);
+    color: var(--ac-muted);
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
+.ac-wall-head .ac-quiet { font-size: 11.5px; }
+/* The rule takes whatever the heading leaves. */
+.ac-wall-head::after {
+    content: ""; flex: 1;
+    height: 1px; min-width: 20px;
+    background: var(--ac-line);
+    align-self: center;
+}
+
+/* ---------- The tiles -----------------------------------------------------
+   Two rows: mark and text across the top, state and score along the foot. The
+   mark stays in its own column and the foot spans both, so the bar under a
+   locked badge is the tile's full width rather than a stub beside the hexagon.
+
+   `auto-fill` with a 300px floor: the wall answers a wider screen with more
+   badges a row, never with wider ones. */
+.ac-grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+}
+
+.ac-tile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: start;
+    gap: 9px 13px;
+    padding: 14px 15px 12px;
+    border: 1px solid var(--ac-line);
+    border-radius: 14px;
+    background: var(--ac-card);
+    transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.ac-tile:hover { transform: translateY(-2px); box-shadow: var(--ac-shadow); }
+
+/* Earned carries its tier across the whole card. A wash rather than a flat
+   fill so the tile still reads as paper the badge sits on, and 9% rather than
+   more because five of these tones beside each other at any strength becomes
+   a colour chart. */
+.ac-tile.is-earned {
+    border-color: color-mix(in srgb, var(--t) 38%, var(--ac-line));
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--t) 11%, transparent), color-mix(in srgb, var(--t) 4%, transparent)),
+        var(--ac-card);
+}
+
+/* Locked is the plain card — no tint, and its own drawing at slightly less
+   than full weight. It is the ground the earned tiles are read against. */
+.ac-tile:not(.is-earned) { background: var(--ac-card-2); }
+
 /* Grey whatever its tier, because its tier is one more thing nobody has been
    told — and `--t` is set here rather than on the mark alone so the border and
    the score pill go grey with it. */
-.ac-row.is-secret { --t: var(--ac-faint); border-style: dashed; }
+.ac-tile.is-secret { --t: var(--ac-faint); border-style: dashed; }
 
-.ac-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ac-row-text strong {
-    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
-    font-size: 13.5px; font-weight: 650; letter-spacing: -.01em;
+.ac-tile-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ac-tile-top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 9px; min-width: 0;
 }
-.ac-row-text .ac-quiet { font-size: 11.5px; line-height: 1.5; }
+.ac-tile-top strong {
+    font-size: 13.5px; font-weight: 650; letter-spacing: -.01em;
+    min-width: 0;
+}
+.ac-tile-text .ac-quiet { font-size: 11.5px; line-height: 1.5; }
+
+/* The tier in words, for the reader who has not yet learned the colours or
+   the pips. Quiet on a locked tile and in the tier's tone once it is won. */
+.ac-rank {
+    flex: none;
+    font-size: 9.5px; font-weight: 700;
+    letter-spacing: .07em; text-transform: uppercase;
+    color: var(--ac-faint);
+}
+.ac-tile.is-earned .ac-rank { color: var(--t); }
 
 .ac-title {
-    font-style: normal; font-size: 10.5px; font-weight: 700;
+    align-self: flex-start;
+    margin-top: 3px;
+    font-style: normal; font-size: 10px; font-weight: 700;
     letter-spacing: .04em; text-transform: uppercase;
     padding: 3px 8px;
     border-radius: 99px;
@@ -392,17 +507,26 @@ html[data-theme="dark"] .ac-page {
     color: var(--ac-rose);
 }
 
-.ac-row-state { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.ac-row-state .ac-quiet { font-size: 11px; font-variant-numeric: tabular-nums; }
+/* The foot spans both columns and sits on a rule, so every tile in a row has
+   its date or its bar at the same height whatever the description ran to. */
+.ac-tile-foot {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; min-width: 0;
+    padding-top: 10px;
+    border-top: 1px solid color-mix(in srgb, var(--ac-line) 70%, transparent);
+}
+.ac-tile-foot .ac-quiet { font-size: 11px; font-variant-numeric: tabular-nums; }
+
 .ac-done {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12.5px; font-weight: 650;
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+    font-size: 11.5px; font-weight: 650;
     color: var(--ac-green);
 }
-.ac-done svg { width: 15px; height: 15px; flex: none; }
+.ac-done svg { width: 14px; height: 14px; flex: none; }
 .ac-secret-note { font-style: italic; }
 
-.ac-progress { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ac-progress { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
 .ac-figures { font-size: 11px; font-variant-numeric: tabular-nums; }
 
 /* ---------- Bars ----------------------------------------------------------
@@ -456,13 +580,9 @@ html[data-theme="dark"] .ac-page {
 .ac-foot svg { width: 15px; height: 15px; flex: none; }
 
 /* ---------- Narrow --------------------------------------------------------
-   The band's four cells become two, then one; the list's fixed progress column
-   drops under the text rather than squeezing it, because a bar 40px wide is
-   not a bar. */
-@media (max-width: 1100px) {
-    .ac-row { grid-template-columns: auto minmax(0, 1fr) 150px auto; }
-}
-
+   The band's four cells become two, then one. The grid needs no breakpoint of
+   its own — `auto-fill` drops to a single column the moment two 300px tiles
+   stop fitting. */
 @media (max-width: 900px) {
     .ac-band { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
     .ac-band-ring {
@@ -476,19 +596,16 @@ html[data-theme="dark"] .ac-page {
 @media (max-width: 640px) {
     .ac-page { padding: 20px 15px 48px; }
     .ac-band { grid-template-columns: minmax(0, 1fr); }
-    .ac-row {
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        gap: 10px 12px;
-    }
-    /* The state moves to its own line under the text, spanning the width the
-       mark and the pill leave. */
-    .ac-row-state { grid-column: 2 / -1; }
+    /* Below the floor the grid would enforce anyway, so it is stated: one
+       column, and tiles that use the width rather than centring in it. */
+    .ac-grid { grid-template-columns: minmax(0, 1fr); }
     .ac-search { width: 100%; }
     .ac-section-head { align-items: flex-start; }
+    .ac-wall-head .ac-quiet { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .ac-bar > i, .ac-ring-arc { transition: none; }
-    .ac-row, .ac-row:hover,
+    .ac-tile, .ac-tile:hover,
     .ac-cat button, .ac-cat button:hover { transition: none; transform: none; }
 }
