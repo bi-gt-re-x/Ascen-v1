@@ -72,7 +72,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Ambient, ErrorState, Loading } from '@/components';
 import {
+  CheckpointsPanel as GoalCheckpointsPanel,
+  EffortPanel as GoalEffortPanel,
   NotesPanel as GoalNotesPanel,
+  PaceMapPanel as GoalPaceMapPanel,
   PacePanel as GoalPacePanel,
   PortfolioPanel as GoalPortfolioPanel,
   SuggestPanel as GoalSuggestPanel,
@@ -201,7 +204,15 @@ import {
   whyFindings,
 } from '@/utils/insight';
 import { goalActions, goalNotes, goalsOverview } from '@/utils/goalAnalytics';
-import { goalWorkShare, suggestGoals } from '@/utils/goalSuggest';
+import { goalHealth } from '@/utils/goalHealth';
+import {
+  checkpointsByMonth,
+  effortAgainstPriority,
+  goalHeadline,
+  goalWorkShare,
+  paceMap,
+  suggestGoals,
+} from '@/utils/goalSuggest';
 import {
   qualityBands,
   qualityGrid,
@@ -857,6 +868,34 @@ export default function Analytics() {
     [liveGoals],
   );
 
+  /* The three charts. All arithmetic over `liveGoals` and `tasks`, both of
+     which the page already had — no tab on this page fetches for itself. */
+  const goalPace = useMemo(
+    () => paceMap(liveGoals, (goal) => goalHealth(goal, tasks).state),
+    [liveGoals, tasks],
+  );
+  const goalEffort = useMemo(() => effortAgainstPriority(liveGoals, tasks), [liveGoals, tasks]);
+  const goalCheckpoints = useMemo(() => checkpointsByMonth(liveGoals), [liveGoals]);
+
+  /**
+   * The dozen words at the head of the tab.
+   *
+   * The subject clause names the one the most goal-aimed work went to, and
+   * only when it is actually the leader rather than the first row of a tie —
+   * see `goalHeadline` for why the sentence would rather be short than hedge.
+   */
+  const goalLead = useMemo(() => {
+    const top = breakdown.rows.find((row) => row.key !== 'other' && row.xp > 0);
+    const leads = top !== undefined && breakdown.total > 0 && top.xp / breakdown.total >= 0.3;
+    return goalHeadline({
+      active: goalSet.active,
+      behind: goalSet.atRisk + goalSet.offTrack,
+      completed: goalSet.completed,
+      focusSubject: leads && top ? (top.name ?? top.label) : null,
+      aimedShare: aimedShare ? aimedShare.share : null,
+    });
+  }, [aimedShare, breakdown, goalSet]);
+
   /** How many of the window's live subjects a goal actually names. */
   const namedSubjects = useMemo(() => {
     const worked = breakdown.rows.filter((row) => row.key !== 'other' && row.xp > 0);
@@ -1284,12 +1323,30 @@ export default function Analytics() {
             a question they did not ask. */}
         {view.key === 'goals' && (
           <>
+            {/* A dozen words, above everything. A reader who opens this tab
+                and reads one thing should read this one — see `goalHeadline`
+                for why it is assembled rather than written. */}
+            <p className="ax-goal-lead">{goalLead}</p>
+
+            {/* The set, then the one chart the tab is really for. */}
             <section className="ax-section ax-grid ax-grid-halves-even">
               <GoalPortfolioPanel overview={goalSet} />
-              <GoalPacePanel goals={liveGoals} tasks={tasks} />
+              <GoalPaceMapPanel points={goalPace.points} undated={goalPace.undated} />
             </section>
+
+            {/* What has actually been reached, and where the work went. The
+                two questions the pace map raises and cannot answer. */}
             <section className="ax-section ax-grid ax-grid-halves-even">
+              <GoalCheckpointsPanel months={goalCheckpoints} />
+              <GoalEffortPanel rows={goalEffort} />
+            </section>
+
+            <section className="ax-section ax-grid ax-grid-halves-even">
+              <GoalPacePanel goals={liveGoals} tasks={tasks} />
               <GoalNotesPanel notes={goalRows} />
+            </section>
+
+            <section className="ax-section">
               <GoalSuggestPanel suggestions={goalIdeas} />
             </section>
           </>

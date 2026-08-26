@@ -4216,6 +4216,151 @@ body:has(.ax-page) .app-main {
     color: var(--ax-violet);
 }
 
+/* The dozen words at the head of the tab. Bigger than body text and lighter
+   than a heading: it is a sentence to be read once, not a title. */
+.ax-goal-lead {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -.01em;
+    color: var(--ax-text);
+}
+
+/* What lands next, under the spread. A hairline rule rather than a card: it is
+   the second half of one panel, not a panel inside a panel. */
+.ax-goal-soon {
+    margin: 16px 0 0;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-goal-soon h4 {
+    margin: 0 0 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+.ax-goal-soon p { margin: 0; font-size: 12.5px; line-height: 1.5; }
+.ax-goal-soon ul { margin: 0; padding: 0; list-style: none; }
+.ax-goal-soon li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: 12.5px;
+}
+.ax-goal-soon a {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ax-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+.ax-goal-soon a:hover { text-decoration: underline; }
+.ax-goal-soon li span { flex: none; font-size: 11.5px; }
+
+/* ---------- The pace map -------------------------------------------------
+   Time gone against work done. The diagonal is the whole chart, so it is the
+   most strongly drawn thing in the frame and everything else is scaffolding
+   held well back from it. */
+.ax-pacemap {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+.ax-pacemap-plot { fill: var(--ax-card-2); stroke: none; }
+.ax-pacemap-grid { stroke: var(--ax-line-soft); stroke-width: 1; }
+/* The deadline. Dashed, because it is a boundary rather than a reading. */
+.ax-pacemap-deadline {
+    stroke: var(--ax-line);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+}
+.ax-pacemap-pace {
+    stroke: var(--ax-violet);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+    opacity: .75;
+}
+.ax-pacemap-dot {
+    stroke: var(--ax-card);
+    stroke-width: 1.5;
+    opacity: .92;
+}
+/* Outside the svg — see the note in GoalsView. `deadline` sits under the
+   dashed line rather than at the right edge, because the plot runs past it. */
+.ax-pacemap-axis {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 2px 0;
+    padding-right: 16.7%;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
+/* ---------- What you said against what you did ---------------------------
+   Two bars per row on one scale. Overlaid rather than stacked: the reading is
+   the difference between them, and two rows of bars an inch apart make the
+   reader measure it by eye across a gap. */
+.ax-goal-effort { margin: 0; padding: 0; list-style: none; }
+.ax-goal-effort li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.ax-goal-effort li:last-child { border-bottom: 0; }
+.ax-goal-effort-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ax-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ax-goal-effort-bars {
+    position: relative;
+    display: block;
+    height: 14px;
+}
+.ax-goal-effort-bars i {
+    position: absolute;
+    left: 0;
+    height: 6px;
+    min-width: 2px;
+    border-radius: 999px;
+}
+.ax-goal-effort-bars i.is-said {
+    top: 0;
+    background: color-mix(in srgb, var(--ax-violet) 38%, transparent);
+}
+.ax-goal-effort-bars i.is-did {
+    top: 8px;
+    background: var(--ax-blue);
+}
+.ax-goal-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 12px 0 0;
+    font-size: 11.5px;
+    color: var(--ax-muted);
+}
+.ax-goal-key span { display: flex; align-items: center; gap: 7px; }
+.ax-goal-key i { width: 14px; height: 5px; border-radius: 999px; }
+.ax-goal-key i.is-said { background: color-mix(in srgb, var(--ax-violet) 38%, transparent); }
+.ax-goal-key i.is-did { background: var(--ax-blue); }
+
 /* The one-line additions on Insights and Subjects. A strip, not a panel: a
    titled card around a single figure is how a tab about behaviour becomes a
    tab about goals. */

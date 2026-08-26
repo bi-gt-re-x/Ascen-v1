@@ -173,3 +173,221 @@ export function goalWorkShare(tasks: Task[]): { share: number; aimed: number; to
   const aimed = done.filter((task) => task.goal_id).length;
   return { share: aimed / done.length, aimed, total: done.length };
 }
+
+// --------------------------------------------------------------------------
+// The line at the head of the tab
+// --------------------------------------------------------------------------
+/**
+ * Everything on this tab, in one sentence of about a dozen words.
+ *
+ * Assembled from the figures rather than written, so it cannot drift from the
+ * panels underneath it — the same rule `howItIsCalculated` and `habitLead`
+ * follow. Three clauses at most: how many, what state they are in, and where
+ * the work is actually going. A clause whose figure is missing is dropped
+ * rather than hedged, so a thin account gets a shorter sentence instead of a
+ * vaguer one.
+ *
+ * Short on purpose. It is the thing a reader who opens this tab and reads
+ * nothing else should leave with, and at thirty words nobody reads it either.
+ */
+export function goalHeadline(input: {
+  active: number;
+  behind: number;
+  completed: number;
+  /** The subject the most goal-linked work went to, if one stands out. */
+  focusSubject: string | null;
+  /** Share of finished work aimed at any goal, 0-1, or null. */
+  aimedShare: number | null;
+}): string {
+  const { active, behind, completed, focusSubject, aimedShare } = input;
+
+  if (active === 0) {
+    return completed > 0
+      ? `No live goals. ${completed} finished — nothing is aimed anywhere right now.`
+      : 'No goals yet, so nothing on this page has a target to be read against.';
+  }
+
+  const one = active === 1;
+  const head = `${active} ${one ? 'goal' : 'goals'} live`;
+  const state =
+    behind === 0
+      ? one
+        ? 'and on track'
+        : 'and none behind'
+      : `and ${behind} behind`;
+
+  /* The third clause is whichever of the two is the more useful thing to know,
+     never both — two trailing clauses is how a dozen words becomes twenty.
+     A majority of unaimed work outranks naming a subject, because it says the
+     rest of the tab is describing a minority of what the reader does. */
+  if (aimedShare !== null && aimedShare < 0.5) {
+    return `${head}, ${state}, but most of your work is not aimed at any of them.`;
+  }
+  if (focusSubject) {
+    return `${head}, ${state}, with most of the work going to ${focusSubject}.`;
+  }
+  return `${head}, ${state}.`;
+}
+
+// --------------------------------------------------------------------------
+// The pace map
+// --------------------------------------------------------------------------
+export interface PacePoint {
+  id: string;
+  title: string;
+  /** Share of the goal's own window that has gone, 0-1.2 — see below. */
+  elapsed: number;
+  /** Share of the goal that is done, 0-1. */
+  progress: number;
+  /** Priority, 1-10, which the chart draws as the dot's size. */
+  weight: number;
+  state: string;
+}
+
+/**
+ * Every goal as a point of "time gone" against "work done".
+ *
+ * The chart this feeds has one idea in it: the diagonal. A goal exactly on
+ * pace sits on the line where those two shares are equal, and everything below
+ * it is behind. That is a comparison the reader cannot make from a list of
+ * percentages, because "40% done" means nothing until you know whether 20% or
+ * 90% of the time has gone.
+ *
+ * Only goals with both a start and a deadline: without a deadline there is no
+ * window for time to be a share *of*, and a point plotted at an invented x
+ * would be the one thing on this page that was made up. They are counted out
+ * loud by the panel instead.
+ *
+ * `elapsed` is allowed past 1 and capped at 1.2, so an overdue goal sits just
+ * off the right edge rather than being clamped onto it beside goals that are
+ * merely due today — the distinction between "late" and "due" is the one this
+ * chart most needs to keep.
+ */
+export function paceMap(
+  goals: Goal[],
+  health: (goal: Goal) => string,
+  today: Date = new Date(),
+): { points: PacePoint[]; undated: number } {
+  const live = goals.filter((goal) => goal.status !== 'completed');
+  const points: PacePoint[] = [];
+  let undated = 0;
+
+  live.forEach((goal) => {
+    const start = Date.parse(`${String(goal.start_date || goal.created_at).slice(0, 10)}T00:00:00`);
+    const end = Date.parse(`${String(goal.deadline).slice(0, 10)}T00:00:00`);
+    if (!goal.deadline || Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+      undated += 1;
+      return;
+    }
+    const elapsed = Math.max(0, Math.min(1.2, (today.getTime() - start) / (end - start)));
+    points.push({
+      id: goal.id,
+      title: goal.title,
+      elapsed,
+      progress: Math.max(0, Math.min(1, goalNumbers(goal).progress / 100)),
+      weight: Math.max(1, Math.min(10, Math.trunc(Number(goal.priority)) || 5)),
+      state: health(goal),
+    });
+  });
+
+  return { points, undated };
+}
+
+// --------------------------------------------------------------------------
+// Where the work actually went
+// --------------------------------------------------------------------------
+export interface EffortRow {
+  id: string;
+  title: string;
+  /** Priority as the reader set it, 0-1 of the maximum. */
+  priority: number;
+  /** This goal's share of all goal-aimed finished work, 0-1. */
+  effort: number;
+  finished: number;
+}
+
+/**
+ * What the reader said mattered, against what they actually worked on.
+ *
+ * The one reading on this tab that neither figure gives on its own: a goal at
+ * priority 9 holding 4% of the work is a real finding, and it is invisible in
+ * both the goals list (which sorts by priority) and the task list (which knows
+ * nothing about priority).
+ *
+ * Shares of the goal-aimed work rather than raw counts, because the question
+ * is allocation. Goals with no finished work still appear — a zero bar against
+ * a tall priority is the strongest row this can produce, and dropping it would
+ * hide exactly the case worth seeing.
+ */
+export function effortAgainstPriority(goals: Goal[], tasks: Task[]): EffortRow[] {
+  const live = goals.filter((goal) => goal.status !== 'completed');
+  if (live.length === 0) return [];
+
+  const done = tasks.filter((task) => task.status === 'done' && task.goal_id);
+  const counts = new Map<string, number>();
+  done.forEach((task) => {
+    const id = String(task.goal_id);
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  });
+  const aimed = live.reduce((sum, goal) => sum + (counts.get(goal.id) ?? 0), 0);
+
+  return live
+    .map((goal) => {
+      const finished = counts.get(goal.id) ?? 0;
+      return {
+        id: goal.id,
+        title: goal.title,
+        priority: Math.max(1, Math.min(10, Math.trunc(Number(goal.priority)) || 5)) / 10,
+        effort: aimed > 0 ? finished / aimed : 0,
+        finished,
+      };
+    })
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 6);
+}
+
+// --------------------------------------------------------------------------
+// Checkpoints reached, over time
+// --------------------------------------------------------------------------
+export interface ReachedMonth {
+  key: string;
+  label: string;
+  count: number;
+}
+
+/**
+ * Checkpoints reached per month — the only real history goals have.
+ *
+ * A goal's progress is not recorded over time anywhere; only its current value
+ * is stored, so "progress over the last six months" cannot be drawn without
+ * inventing the middle. What *is* dated is every checkpoint the reader has
+ * ticked, because `completed_at` is written when they tick it — so this is the
+ * honest version of the same question, and it is a count rather than a curve.
+ *
+ * Empty months are kept. A gap is the finding here, and a chart that skipped
+ * the quiet months would draw four scattered checkpoints as a steady rhythm.
+ */
+export function checkpointsByMonth(goals: Goal[], months = 6, today: Date = new Date()): ReachedMonth[] {
+  const out: ReachedMonth[] = [];
+  const cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  for (let back = months - 1; back >= 0; back--) {
+    const at = new Date(cursor.getFullYear(), cursor.getMonth() - back, 1);
+    out.push({
+      key: `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, '0')}`,
+      label: at.toLocaleDateString(undefined, { month: 'short' }),
+      count: 0,
+    });
+  }
+
+  const index = new Map(out.map((row) => [row.key, row]));
+  goals.forEach((goal) => {
+    (goal.milestones ?? []).forEach((stone) => {
+      if (stone.status !== 'done' || !stone.completed_at) return;
+      const row = index.get(String(stone.completed_at).slice(0, 7));
+      if (row) row.count += 1;
+    });
+  });
+
+  return out;
+}
