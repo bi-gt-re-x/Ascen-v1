@@ -44,7 +44,8 @@ import { GoalVisual } from './GoalVisual';
 import { formatGoalDate, goalDate, goalNumbers, goalWeight, isOverdue } from './numbers';
 import { goalHealth } from '@/utils/goalHealth';
 import { pickVisual, visualContext } from '@/utils/goalVisuals';
-import type { Goal, Task } from '@/types';
+import { promptFor, stepProgress, toggleStep } from '@/utils/milestoneSteps';
+import type { Goal, Milestone, MilestoneStep, Task } from '@/types';
 
 const DAY = 86_400_000;
 
@@ -131,6 +132,10 @@ export interface ActiveGoalCardProps {
   onSuggest: (goal: Goal) => Promise<string[] | null>;
   /** Write a whole checkpoint list. Resolves false if the write failed. */
   onSaveStones: (goal: Goal, titles: string[]) => Promise<boolean>;
+  /** Make one checkpoint the focus. */
+  onFocusMilestone: (milestone: Milestone) => void;
+  /** Tick or untick one of the focus checkpoint's steps. */
+  onMilestoneSteps: (milestone: Milestone, steps: MilestoneStep[]) => void;
   /** Turns a subject id into its name, for the charts that group by subject. */
   nameOf: (id: string) => string;
 }
@@ -147,6 +152,8 @@ export function ActiveGoalCard({
   onLinkTask,
   onSuggest,
   onSaveStones,
+  onFocusMilestone,
+  onMilestoneSteps,
   nameOf,
 }: ActiveGoalCardProps) {
   const today = Date.now();
@@ -156,6 +163,11 @@ export function ActiveGoalCard({
   const stones = goal.milestones ?? [];
 
   const [menuOpen, setMenuOpen] = useState(false);
+  /* The focus picker, closed by default. It is a disclosure rather than a
+     select because the options are checkpoint titles — full sentences, most of
+     them — and a native select would truncate every one of them to the width
+     of the panel. */
+  const [picking, setPicking] = useState(false);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
   /* Which search result the keyboard is on. -1 is the box itself, and it is the
@@ -184,6 +196,15 @@ export function ActiveGoalCard({
       stones.find((stone) => stone.status !== 'done') ??
       null,
     [stones],
+  );
+
+  /** The checkpoints the focus could be moved to — everything not yet reached. */
+  const switchable = useMemo(() => stones.filter((stone) => stone.status !== 'done'), [stones]);
+
+  /** How many of the focus checkpoint's named steps are ticked. */
+  const focusSteps = useMemo(
+    () => (focus ? stepProgress(focus.steps) : { done: 0, total: 0 }),
+    [focus],
   );
 
   /** How much of the focus checkpoint's own work is finished, where any exists. */
@@ -397,25 +418,112 @@ export function ActiveGoalCard({
           </header>
 
           {focus ? (
-            <div className="ag-focus">
-              <span className="ag-focus-ico" aria-hidden="true">
-                <GoalTile goal={goal} size={16} />
-              </span>
-              <div className="ag-focus-text">
-                <strong>{focus.title}</strong>
-                <span>{focus.note || health.reason}</span>
-              </div>
-              {focusShare === null ? (
-                <span className="ag-focus-when">{monthYear(focus.target_date)}</span>
-              ) : (
-                <span className="ag-focus-pct">{pct(focusShare)}%</span>
-              )}
-              {focusShare !== null && (
-                <span className="ag-focus-bar">
-                  <i style={{ width: `${pct(focusShare)}%` }} />
+            <>
+              {/* The whole block is the control that changes which checkpoint
+                  this is. It used to be a plain div showing whichever one the
+                  card had guessed at — the first unfinished one — with no way
+                  to say it had guessed wrong. */}
+              <button
+                type="button"
+                className="ag-focus is-pickable"
+                disabled={busy || switchable.length < 2}
+                aria-expanded={picking}
+                title={
+                  switchable.length < 2
+                    ? 'The only checkpoint left'
+                    : 'Change which checkpoint this goal is on'
+                }
+                onClick={() => setPicking((on) => !on)}
+              >
+                <span className="ag-focus-ico" aria-hidden="true">
+                  <GoalTile goal={goal} size={16} />
                 </span>
+                <div className="ag-focus-text">
+                  <strong>{focus.title}</strong>
+                  <span>{focus.note || health.reason}</span>
+                </div>
+                {focusShare === null ? (
+                  <span className="ag-focus-when">{monthYear(focus.target_date)}</span>
+                ) : (
+                  <span className="ag-focus-pct">{pct(focusShare)}%</span>
+                )}
+                {focusShare !== null && (
+                  <span className="ag-focus-bar">
+                    <i style={{ width: `${pct(focusShare)}%` }} />
+                  </span>
+                )}
+              </button>
+
+              {picking && (
+                <ul className="ag-focus-pick">
+                  {switchable.map((stone) => (
+                    <li key={stone.id}>
+                      <button
+                        type="button"
+                        className={stone.id === focus.id ? 'is-current' : undefined}
+                        disabled={busy}
+                        onClick={() => {
+                          if (stone.id !== focus.id) onFocusMilestone(stone);
+                          setPicking(false);
+                        }}
+                      >
+                        <span>{stone.title}</span>
+                        {stone.id === focus.id && <em>current</em>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </div>
+
+              {/* The checkpoint's own breakdown — the three-or-more small
+                  pieces that finish it. Tickable here and renamable only in
+                  the drawer: ticking is something you do while working, naming
+                  is something you do while planning. See MilestoneChecklist. */}
+              <ul className="ag-steps">
+                {focus.steps.map((step, index) => (
+                  <li
+                    className={`ag-step${step.done ? ' is-done' : ''}${step.placeholder ? ' is-empty' : ''}`}
+                    key={step.id}
+                  >
+                    <button
+                      type="button"
+                      className="ag-check ag-step-check"
+                      disabled={busy || step.placeholder}
+                      aria-label={
+                        step.placeholder
+                          ? 'Name this step in the goal details before you can tick it'
+                          : step.done
+                            ? `Undo ${step.title}`
+                            : `Finish ${step.title}`
+                      }
+                      onClick={() => onMilestoneSteps(focus, toggleStep(focus.steps, index))}
+                    >
+                      <span aria-hidden="true" />
+                    </button>
+                    {step.placeholder ? (
+                      <button
+                        type="button"
+                        className="ag-step-name is-empty"
+                        onClick={() => onOpen(goal)}
+                        title="Name this step in the goal's details"
+                      >
+                        {promptFor(index)}
+                      </button>
+                    ) : (
+                      <span className="ag-step-name" title={step.title}>
+                        {step.title}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {focusSteps.total > 0 && (
+                <p className="ag-steps-count ag-quiet">
+                  {focusSteps.done} of {focusSteps.total} step
+                  {focusSteps.total === 1 ? '' : 's'} done on this checkpoint
+                </p>
+              )}
+            </>
           ) : (
             <p className="ag-empty">
               {/* `focus` is null in two quite different situations and one

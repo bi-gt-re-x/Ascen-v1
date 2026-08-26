@@ -129,6 +129,26 @@ export type GoalCategory =
 export type MilestoneStatus = 'pending' | 'active' | 'done';
 
 /**
+ * One small piece of work under a checkpoint.
+ *
+ * Not a `Task`, and the difference is the same one the checkpoint itself draws
+ * against a task: a step has no XP, no due date, no timer and no priority, and
+ * never reaches the tasks page. It is the checkpoint's own breakdown — the
+ * three-to-eight things that, done, mean the checkpoint is reached.
+ *
+ * `placeholder` is derived from the title being empty, never sent up by the
+ * client: a checklist always has at least `MIN_STEPS` rows and the unwritten
+ * ones are drawn as prompts rather than counted as work planned.
+ */
+export interface MilestoneStep {
+  /** Unique within its own checklist, not across the account. */
+  id: string;
+  title: string;
+  done: boolean;
+  placeholder: boolean;
+}
+
+/**
  * A checkpoint inside a goal.
  *
  * Not a task, and the difference is the whole reason the table exists: a task
@@ -145,6 +165,8 @@ export interface Milestone {
   /** Execution order, dense from 0. Rewritten on every reorder. */
   position: number;
   status: MilestoneStatus;
+  /** Always at least MIN_STEPS long — the API pads it. See utils/milestoneSteps. */
+  steps: MilestoneStep[];
   target_date?: string;
   completed_at?: string;
   created_at: string;

@@ -12,14 +12,7 @@
  * Backend: backend/api/goals.py.
  */
 import { get, post } from './api';
-import type {
-  ApiResult,
-  Goal,
-  GoalCategory,
-  GoalMeasure,
-  GoalType,
-  MilestoneStatus,
-} from '@/types';
+import type { ApiResult, Goal, GoalCategory, GoalMeasure, GoalType, MilestoneStatus, MilestoneStep } from '@/types';
 
 export interface GoalsResult {
   goals: Goal[];
@@ -141,6 +134,8 @@ export function updateMilestone(
     note?: string;
     status?: MilestoneStatus;
     target_date?: string;
+    /** The whole checklist. Sent entire — see UpdateMilestone in the API. */
+    steps?: MilestoneStep[];
   },
 ): Promise<ApiResult<Record<string, never>>> {
   return post('/api/update_milestone', { id: milestoneId, ...edit });

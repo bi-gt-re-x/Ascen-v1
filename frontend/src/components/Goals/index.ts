@@ -56,6 +56,8 @@ export {
 } from './Outcome';
 export { GoalDetail } from './GoalDetail';
 export type { GoalDetailProps } from './GoalDetail';
+export { MilestoneChecklist } from './MilestoneChecklist';
+export type { MilestoneChecklistProps } from './MilestoneChecklist';
 export { NewGoalWizard } from './NewGoalWizard';
 export type { NewGoalWizardProps } from './NewGoalWizard';
 export {

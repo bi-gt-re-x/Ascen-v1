@@ -73,7 +73,7 @@ import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
 import { useAuth, useDocumentTitle, usePageEntrance, useSubjectIndex, useUserData } from '@/hooks';
 import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewGoal } from '@/services/goals';
-import type { Goal, Milestone, MilestoneStatus, Task } from '@/types';
+import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
 import type { TabId } from '@/components/Goals';
 import '@/styles/goals.css';
 
@@ -338,6 +338,33 @@ export default function Goals() {
     [username, write],
   );
 
+  /**
+   * Make one checkpoint the focus — the one the card draws under "Current
+   * focus" and the one new actions are linked to by default.
+   *
+   * `active` is the status that means it, and until now nothing in the app
+   * ever set it: the card fell back to the first unfinished checkpoint, which
+   * is a reasonable guess and was the only thing on offer. The API demotes any
+   * other active checkpoint on the same goal, so this is a move rather than an
+   * addition — see update_milestone in backend/api/goals.py.
+   */
+  const focusMilestone = useCallback(
+    (milestone: Milestone) => {
+      if (!username || milestone.status === 'done') return;
+      void write(() => goalService.updateMilestone(milestone.id, { status: 'active' }));
+    },
+    [username, write],
+  );
+
+  /** The checkpoint's own checklist, written whole. See utils/milestoneSteps. */
+  const setMilestoneSteps = useCallback(
+    (milestone: Milestone, steps: MilestoneStep[]) => {
+      if (!username) return;
+      void write(() => goalService.updateMilestone(milestone.id, { steps }));
+    },
+    [username, write],
+  );
+
   /** When a checkpoint is meant to be reached. Empty string clears it. */
   const setMilestoneDate = useCallback(
     (milestone: Milestone, date: string) => {
@@ -525,6 +552,8 @@ export default function Goals() {
                     }
                     onSuggest={suggestMilestones}
                     onSaveStones={saveMilestones}
+                    onFocusMilestone={focusMilestone}
+                    onMilestoneSteps={setMilestoneSteps}
                     nameOf={subjectName}
                   />
                 ))}
@@ -715,6 +744,8 @@ export default function Goals() {
           onDelete={setPendingDelete}
           onAddMilestone={addMilestone}
           onMilestoneStatus={setMilestoneStatus}
+          onFocusMilestone={focusMilestone}
+          onMilestoneSteps={setMilestoneSteps}
           onDeleteMilestone={removeMilestone}
           onReorder={reorder}
           onValue={setValue}

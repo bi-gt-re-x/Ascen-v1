@@ -37,6 +37,8 @@ analytics on the page, not to the percentage. See utils/goalHealth.ts on the
 front end, which is where "is this on track" is decided.
 """
 from datetime import date, datetime, timedelta
+import json
+import re
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends
@@ -157,6 +159,10 @@ class UpdateMilestone(BaseModel):
     note: Optional[str] = None
     status: Optional[str] = None
     target_date: Optional[str] = None
+    # The whole checklist, sent entire rather than as a per-step edit. It is at
+    # most eight short rows, and one write of the list cannot interleave with
+    # another the way "add a step" and "tick step 2" can.
+    steps: Optional[List[Any]] = None
 
 
 class DeleteMilestone(BaseModel):
@@ -313,11 +319,124 @@ def _spread_dates(count, deadline, today=None):
     ]
 
 
+# --------------------------------------------------------------------------
+# The checklist under a checkpoint
+# --------------------------------------------------------------------------
+# How many small pieces of work a checkpoint is broken into. Three is a floor
+# rather than a default: a checkpoint you cannot name three pieces of is either
+# already small enough to be a task, or has not been thought about yet, and the
+# empty rows are the prompt to do that thinking. There is no way to go below
+# it from the UI or from here — `_clean_steps` pads back up to three whatever
+# it is handed.
+MIN_STEPS = 3
+
+# The ceiling. A checkpoint needing more than this is two checkpoints.
+MAX_STEPS = 8
+
+# One step's title. Long enough for a real sentence, short enough that the card
+# can draw three of them without becoming a document.
+STEP_MAX = 120
+
+# What the three seeded rows say. They are prompts rather than content, and are
+# flagged `placeholder` so every reader can tell the difference — the card draws
+# them muted, and nothing counts an unfilled row as work planned.
+PLACEHOLDERS = (
+    'Name the first piece of work',
+    'Name the second',
+    'Name what finishes it',
+)
+
+
+def _fresh_step_id(taken):
+    """A short id unique within one checklist. Ids are per-milestone, not global."""
+    n = 1
+    while f's{n}' in taken:
+        n += 1
+    return f's{n}'
+
+
+def _clean_steps(value):
+    """Whatever came in, as a checklist that satisfies the rules.
+
+    Total about what it accepts, because it is fed three quite different
+    things: a JSON string off a database row, a list off a request body, and
+    NULL from a checkpoint written before this column existed. All three have
+    the same honest answer — the steps that could be read, padded to `MIN_STEPS`
+    with placeholders and cut at `MAX_STEPS`.
+
+    Padding rather than rejecting is deliberate. A request that sends two steps
+    is not an error to report to somebody who was editing a checklist; it is a
+    checklist with a row they have not written yet.
+    """
+    raw = value
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw) if raw.strip() else []
+        except (ValueError, TypeError):
+            raw = []
+    if not isinstance(raw, list):
+        raw = []
+
+    out, taken = [], set()
+    for entry in raw[:MAX_STEPS]:
+        if not isinstance(entry, dict):
+            continue
+        # Squashed as well as trimmed, and cut afterwards. utils/milestoneSteps
+        # does exactly this on the way in, and a server that only stripped
+        # would store a title the client had already shown differently.
+        title = re.sub(r'\s+', ' ', str(entry.get('title') or '')).strip()[:STEP_MAX]
+        step_id = str(entry.get('id') or '').strip() or _fresh_step_id(taken)
+        if step_id in taken:
+            step_id = _fresh_step_id(taken)
+        taken.add(step_id)
+        out.append({
+            'id': step_id,
+            'title': title,
+            'done': bool(entry.get('done')),
+            # Derived, never trusted from the caller: an untitled row is a
+            # placeholder and a titled one is not. Taking the client's flag
+            # would let a stale one grey out work somebody had written.
+            'placeholder': not title,
+        })
+
+    while len(out) < MIN_STEPS:
+        title = PLACEHOLDERS[len(out)] if len(out) < len(PLACEHOLDERS) else ''
+        step_id = _fresh_step_id(taken)
+        taken.add(step_id)
+        out.append({'id': step_id, 'title': title, 'done': False, 'placeholder': True})
+
+    return out
+
+
+def _steps_column(steps):
+    """The checklist as it is stored. Placeholders are not written out."""
+    return json.dumps([
+        {'id': s['id'], 'title': s['title'], 'done': s['done']}
+        for s in steps if not s['placeholder']
+    ])
+
+
+def _seed_steps():
+    """The column value a brand-new checkpoint is created with."""
+    return _steps_column(_clean_steps([]))
+
+
 def _milestones_of(rows, goal_id):
-    """One goal's checkpoints, in execution order."""
+    """One goal's checkpoints, in execution order, each with its checklist.
+
+    `steps` leaves here as a list rather than as the JSON string it is stored
+    as, and always with at least `MIN_STEPS` entries — including for the rows
+    that predate the column, which read as NULL and come out as three
+    placeholders. The front end therefore never has to parse anything or count
+    to three itself.
+    """
     mine = [row for row in rows if row.get('goal_id') == goal_id]
-    return sorted(mine, key=lambda row: (row.get('position') or 0,
+    mine = sorted(mine, key=lambda row: (row.get('position') or 0,
                                          str(row.get('id') or '')))
+    # Copies. `create_goal` runs rows through here that it has not inserted
+    # yet, and parsing `steps` in place would hand the insert a Python list
+    # where the column wants text.
+    return [dict(row, steps=_clean_steps(row.get('steps'))) for row in mine]
 
 
 def _recompute(goal, milestones=None):
@@ -619,6 +738,7 @@ def add_goal(body: AddGoal, username: str = Depends(current_username)):
                 "position": position,
                 "status": 'pending',
                 "target_date": dates[position],
+                "steps": _seed_steps(),
                 "created_at": now,
             })
 
@@ -739,6 +859,8 @@ def add_milestone(body: AddMilestone, username: str = Depends(current_username))
         "position": len(mine),
         "status": 'pending',
         "target_date": body.target_date,
+        # Three empty rows, not none. See MIN_STEPS.
+        "steps": _seed_steps(),
         "created_at": datetime.now().isoformat(),
     })
     _recompute_goal(body.goal_id, username)
@@ -759,12 +881,27 @@ def update_milestone(body: UpdateMilestone, username: str = Depends(current_user
         if field in sent and getattr(body, field) is not None:
             row[field] = getattr(body, field)
 
+    if 'steps' in sent and body.steps is not None:
+        row['steps'] = _steps_column(_clean_steps(body.steps))
+
     if 'status' in sent and body.status in ('pending', 'active', 'done'):
         row['status'] = body.status
         # The date it was reached, kept only while it is reached. Reopening a
         # checkpoint clears it rather than leaving a completion date on
         # something that is not complete.
         row['completed_at'] = datetime.now().isoformat() if body.status == 'done' else None
+
+        # One focus per goal. `active` is what the card reads to decide which
+        # checkpoint it is drawing, and it takes the first it finds — so two
+        # active rows is not a visible conflict, it is a card that quietly
+        # stops following the one you last clicked. Demote the others here
+        # rather than trusting every caller to send two requests in order.
+        if body.status == 'active':
+            for other in _milestones_of(db.rows_for('goal_milestones', username),
+                                        row.get('goal_id')):
+                if other.get('id') != row.get('id') and other.get('status') == 'active':
+                    db.update_row('goal_milestones', other['id'],
+                                  {'status': 'pending'}, user_id=username)
 
     _save_stone(row, username)
     _recompute_goal(row.get('goal_id'), username)

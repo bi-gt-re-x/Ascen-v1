@@ -16,7 +16,8 @@ import { HealthChip, MilestoneTrack, ProgressBar, categoryOf } from './Outcome';
 import { fmtGoalNumber, formatGoalDate, goalNumbers } from './numbers';
 import { goalHealth, goalPace } from '@/utils/goalHealth';
 import { bottleneckOf, goalActions, goalReading } from '@/utils/goalAnalytics';
-import type { Goal, Milestone, MilestoneStatus, Task } from '@/types';
+import { MilestoneChecklist } from './MilestoneChecklist';
+import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
 
 export interface GoalDetailProps {
   goal: Goal;
@@ -27,6 +28,10 @@ export interface GoalDetailProps {
   onDelete: (goal: Goal) => void;
   onAddMilestone: (goal: Goal, title: string) => void;
   onMilestoneStatus: (milestone: Milestone, status: MilestoneStatus) => void;
+  /** Make this the checkpoint the goal is currently on. */
+  onFocusMilestone: (milestone: Milestone) => void;
+  /** Write this checkpoint's checklist, whole. */
+  onMilestoneSteps: (milestone: Milestone, steps: MilestoneStep[]) => void;
   onDeleteMilestone: (milestone: Milestone) => void;
   onReorder: (goal: Goal, order: string[]) => void;
   /** Raise the figure on a number goal. */
@@ -185,14 +190,37 @@ export function GoalDetail(props: GoalDetailProps) {
                 >
                   {row.status === 'done' ? '✓' : index === rows.findIndex((r) => r.status !== 'done') ? '→' : '○'}
                 </button>
-                <div className="gx-ms-body">
-                  <span className="gx-ms-title">{row.title}</span>
-                  {row.status === 'done' && row.completed_at ? (
-                    <span className="gx-quiet">reached {formatGoalDate(row.completed_at)}</span>
-                  ) : row.target_date ? (
-                    <span className="gx-quiet">due {formatGoalDate(row.target_date)}</span>
-                  ) : null}
-                </div>
+                {/* The body is the focus control. The tick beside it already
+                    owns "reached / not reached", so clicking the title had no
+                    meaning to take — and "which one am I on" was previously
+                    unsayable: the card guessed at the first unfinished one and
+                    the reader had no way to disagree with it. A finished
+                    checkpoint is not a thing you can be working on, so it
+                    renders as plain text rather than as a dead button. */}
+                {row.status === 'done' ? (
+                  <div className="gx-ms-body">
+                    <span className="gx-ms-title">{row.title}</span>
+                    {row.completed_at ? (
+                      <span className="gx-quiet">reached {formatGoalDate(row.completed_at)}</span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="gx-ms-body is-pickable"
+                    disabled={busy}
+                    aria-pressed={row.status === 'active'}
+                    title={row.status === 'active' ? 'This is the current focus' : 'Make this the current focus'}
+                    onClick={() => props.onFocusMilestone(row)}
+                  >
+                    <span className="gx-ms-title">{row.title}</span>
+                    {row.status === 'active' ? (
+                      <span className="gx-ms-focus-tag">current focus</span>
+                    ) : row.target_date ? (
+                      <span className="gx-quiet">due {formatGoalDate(row.target_date)}</span>
+                    ) : null}
+                  </button>
+                )}
                 <span className="gx-ms-tools">
                   <button type="button" disabled={busy || index === 0} onClick={() => move(index, -1)} aria-label="Move up">
                     ↑
@@ -209,6 +237,11 @@ export function GoalDetail(props: GoalDetailProps) {
                     ×
                   </button>
                 </span>
+                <MilestoneChecklist
+                  steps={row.steps}
+                  busy={busy}
+                  onChange={(steps) => props.onMilestoneSteps(row, steps)}
+                />
               </li>
             ))}
           </ol>

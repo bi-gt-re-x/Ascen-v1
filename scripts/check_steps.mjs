@@ -9,6 +9,8 @@
  *
  *   utils/skillSteps      what adding, deleting and editing a step does to the
  *                         list and to where the reader stands in it.
+ *   utils/milestoneSteps  the same job for a goal checkpoint's checklist, whose
+ *                         extra rule is a floor: three rows, always.
  *   utils/skillProgress   how that becomes a percentage, an XP figure and a
  *                         status on the graph the whole page reads.
  *   skills/iconMatch      which drawing a renamed node gets, and — the half
@@ -43,6 +45,7 @@ const P = await one('frontend/src/utils/skillProgress.ts', 'P');
 const st = await one('frontend/src/skills/subjectTrees.ts', 'st');
 const M = await one('frontend/src/skills/iconMatch.ts', 'M');
 const N = await one('frontend/src/utils/skillNames.ts', 'N');
+const MS = await one('frontend/src/utils/milestoneSteps.ts', 'MS');
 
 let fails = 0;
 const is = (label, got, want) => { const ok = JSON.stringify(got) === JSON.stringify(want);
@@ -133,6 +136,53 @@ is('a blank name is empty, so the caller drops the override', N.cleanName('   ')
   is('ids survive a rename', renamed.nodes.map((n) => n.id).join(), g.nodes.map((n) => n.id).join());
   is('what required it still requires it',
     renamed.nodes.find((n) => n.id === 'c.lists').requires.includes('c.loops'), true);
+}
+
+// ---- a checkpoint's checklist ----
+// The floor is the whole point: there is no sequence of edits that leaves a
+// checkpoint with fewer than three rows, and the interesting cases are the ones
+// that try — deleting at the floor, normalising an empty list, an API reply
+// that arrives short.
+{
+  const titles = (steps) => steps.map((s) => s.title);
+  const three = MS.normalise([
+    { id: 'a', title: 'One', done: false },
+    { id: 'b', title: 'Two', done: true },
+    { id: 'c', title: 'Three', done: false },
+  ]);
+
+  is('nothing normalises to three placeholders', MS.normalise([]).length, MS.MIN_STEPS);
+  is('null normalises too, rather than throwing', MS.normalise(null).length, MS.MIN_STEPS);
+  is('a short list is padded up to the floor', MS.normalise([{ id: 'a', title: 'One' }]).length, MS.MIN_STEPS);
+  is('padding is flagged placeholder', MS.normalise([{ id: 'a', title: 'One' }]).slice(1).every((s) => s.placeholder), true);
+  is('a written row is not a placeholder', three.every((s) => !s.placeholder), true);
+  is('an over-long list is cut to the ceiling',
+    MS.normalise(Array.from({ length: 20 }, (_, i) => ({ id: `x${i}`, title: `t${i}` }))).length, MS.MAX_STEPS);
+
+  is('delete at the floor empties the row rather than removing it',
+    [MS.removeStep(three, 1).length, MS.removeStep(three, 1)[1].title], [3, '']);
+  is('an emptied row loses its tick', MS.removeStep(three, 1)[1].done, false);
+  is('delete above the floor removes it',
+    titles(MS.removeStep(MS.addStep(three), 0)), ['Two', 'Three', '']);
+
+  is('add stops at the ceiling',
+    MS.addStep(MS.normalise(Array.from({ length: MS.MAX_STEPS }, (_, i) => ({ id: `x${i}`, title: `t${i}` })))).length,
+    MS.MAX_STEPS);
+
+  is('text is trimmed and squashed', MS.editStep(three, 0, '  two   words  ')[0].title, 'two words');
+  is('over-long text is cut', MS.editStep(three, 0, 'z'.repeat(400))[0].title.length, MS.STEP_MAX);
+  is('editing a placeholder makes it real', MS.editStep(MS.normalise([]), 0, 'Real')[0].placeholder, false);
+
+  is('a placeholder cannot be ticked', MS.toggleStep(MS.normalise([]), 0)[0].done, false);
+  is('a written step can', MS.toggleStep(three, 0)[0].done, true);
+  is('and untick again', MS.toggleStep(MS.toggleStep(three, 0), 0)[0].done, false);
+
+  is('progress counts only written rows', MS.stepProgress(three), { done: 1, total: 3 });
+  is('placeholders are not in the total', MS.stepProgress(MS.normalise([{ id: 'a', title: 'One', done: true }])), { done: 1, total: 1 });
+  is('a checklist of nothing but prompts is not complete', MS.stepsComplete(MS.normalise([])), false);
+  is('every written row done is complete',
+    MS.stepsComplete(MS.normalise([{ id: 'a', title: 'One', done: true }, { id: 'b', title: 'Two', done: true }])), true);
+  is('ids stay unique after a pad', new Set(MS.normalise([{ id: 's1', title: 'One' }]).map((s) => s.id)).size, MS.MIN_STEPS);
 }
 
 console.log(fails === 0 ? '\n\x1b[32mall passed\x1b[0m' : `\n\x1b[31m${fails} failed\x1b[0m`);

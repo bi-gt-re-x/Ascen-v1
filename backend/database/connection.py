@@ -121,6 +121,12 @@ ADDED_COLUMNS = (
     # gives existing rows NULL, and every reader here treats NULL and '' alike.
     ('notes', 'subject_ids', 'TEXT'),
     ('notes', 'notebook', 'TEXT'),
+
+    # The checklist under a checkpoint — a JSON array of {id, title, done}.
+    # Existing checkpoints get NULL, which the API reads as "no checklist yet"
+    # and fills with placeholders on first write, so a goal written before this
+    # existed is not a goal with a broken one. See data/sql/goals.sql.
+    ('goal_milestones', 'steps', 'TEXT'),
 )
 
 # Tables added to the app after the database was first created.
