@@ -737,6 +737,7 @@ export default function Goals() {
           onMilestoneStatus={setMilestoneStatus}
           onFocusMilestone={focusMilestone}
           onMilestoneSteps={setMilestoneSteps}
+          onMilestoneDate={setMilestoneDate}
           onDeleteMilestone={removeMilestone}
           onReorder={reorder}
           onValue={setValue}

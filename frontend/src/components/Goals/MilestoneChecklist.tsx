@@ -30,6 +30,7 @@ import {
   MIN_STEPS,
   STEP_MAX,
   addStep,
+  dueStep,
   editStep,
   promptFor,
   removeStep,
@@ -42,9 +43,32 @@ export interface MilestoneChecklistProps {
   steps: MilestoneStep[];
   busy: boolean;
   onChange: (steps: MilestoneStep[]) => void;
+  /** Due dates of the tasks steps are linked to, keyed by task id. */
+  taskDue?: Map<string, string | undefined>;
 }
 
-export function MilestoneChecklist({ steps, busy, onChange }: MilestoneChecklistProps) {
+/** "14 Sep". Short, because these sit in a column an inch wide. */
+function shortDay(iso: string): string {
+  const at = Date.parse(`${String(iso).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(at)) return '';
+  return new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+/**
+ * Strictly before today, and not already done.
+ *
+ * A step due today is not late, and a finished step is never late whenever it
+ * was due — it is finished. Marking one amber tells the reader to go and do
+ * something they have already done.
+ */
+function overdue(iso: string | null, done = false): boolean {
+  if (!iso || done) return false;
+  const at = Date.parse(`${String(iso).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(at)) return false;
+  return at < new Date(new Date().toDateString()).getTime();
+}
+
+export function MilestoneChecklist({ steps, busy, onChange, taskDue }: MilestoneChecklistProps) {
   /** Which row is being typed in, and what is in it. One at a time. */
   const [editing, setEditing] = useState<{ index: number; text: string } | null>(null);
   const { done, total } = stepProgress(steps);
@@ -79,7 +103,9 @@ export function MilestoneChecklist({ steps, busy, onChange }: MilestoneChecklist
       </div>
 
       <ul className="gx-checklist-list">
-        {steps.map((step, index) => (
+        {steps.map((step, index) => {
+          const linkedDue = step.task_id ? taskDue?.get(step.task_id) ?? null : null;
+          return (
           <li className={`gx-cstep${step.done ? ' is-done' : ''}${step.placeholder ? ' is-empty' : ''}`} key={step.id}>
             <button
               type="button"
@@ -130,6 +156,34 @@ export function MilestoneChecklist({ steps, busy, onChange }: MilestoneChecklist
               </button>
             )}
 
+            {/* A date of its own, and only where nothing else holds one. A
+                linked step takes the task's date, so a second control here
+                would be a second answer to "when" — the row prints the
+                task's instead. See `stepDue` in utils/milestoneSteps. */}
+            {step.placeholder ? (
+              <span />
+            ) : step.task_id ? (
+              <span
+                className="gx-cstep-due is-borrowed"
+                title="This step takes its date from the task it is linked to"
+              >
+                {linkedDue ? shortDay(linkedDue) : 'from task'}
+              </span>
+            ) : (
+              <label className="gx-cstep-due">
+                <span className={overdue(step.due, step.done) ? 'is-late' : undefined}>
+                  {step.due ? shortDay(step.due) : '+ date'}
+                </span>
+                <input
+                  type="date"
+                  value={step.due ?? ''}
+                  disabled={busy}
+                  aria-label={`When to finish ${step.title}`}
+                  onChange={(event) => onChange(dueStep(steps, index, event.target.value))}
+                />
+              </label>
+            )}
+
             <button
               type="button"
               className="gx-cstep-cut"
@@ -145,7 +199,8 @@ export function MilestoneChecklist({ steps, busy, onChange }: MilestoneChecklist
               ×
             </button>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );

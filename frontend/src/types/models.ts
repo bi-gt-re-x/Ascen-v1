@@ -154,6 +154,16 @@ export interface MilestoneStep {
    * the difference between this and the step simply *being* the task.
    */
   task_id: string | null;
+  /**
+   * When this step is meant to be done, as an ISO day, or null.
+   *
+   * Only ever set on a step with no `task_id`. A step pointing at a task takes
+   * that task's date: two dates for one piece of work is two answers to
+   * "when", and the task's is the one the calendar, the dashboard and the
+   * reminders read. Linking a task therefore clears this rather than keeping a
+   * second copy nothing else can see.
+   */
+  due: string | null;
 }
 
 /**

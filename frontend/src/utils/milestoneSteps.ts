@@ -64,7 +64,7 @@ function freshId(steps: MilestoneStep[]): string {
 }
 
 function blank(steps: MilestoneStep[]): MilestoneStep {
-  return { id: freshId(steps), title: '', done: false, placeholder: true, task_id: null };
+  return { id: freshId(steps), title: '', done: false, placeholder: true, task_id: null, due: null };
 }
 
 /**
@@ -87,6 +87,10 @@ export function normalise(steps: MilestoneStep[] | undefined | null): MilestoneS
       // ...and loses its link for the same reason. A pointer hanging off a row
       // with no text is a task attached to nothing.
       task_id: title ? (step?.task_id ?? null) : null,
+      // A date only where nothing else holds one. See `due` on MilestoneStep:
+      // a linked task owns the date, and a second copy here would be a second
+      // answer to "when" that only this checklist can see.
+      due: title && !step?.task_id ? (step?.due ?? null) : null,
     });
   }
   while (out.length < MIN_STEPS) out.push(blank(out));
@@ -129,8 +133,38 @@ export function linkStep(
   taskId: string | null,
 ): MilestoneStep[] {
   return normalise(
-    steps.map((step, at) => (at === index ? { ...step, task_id: taskId } : step)),
+    // Linking hands the date to the task. `normalise` would drop it anyway —
+    // clearing it here as well is what makes that a decision rather than a
+    // side effect somebody has to go and find.
+    steps.map((step, at) =>
+      at === index ? { ...step, task_id: taskId, due: taskId ? null : step.due } : step,
+    ),
   );
+}
+
+/**
+ * Put a date on a step, or clear it with null.
+ *
+ * Refused on a linked step rather than silently ignored at the far end: the
+ * caller should not be offering the control there, and a write that quietly
+ * does nothing is worse to debug than one that visibly does nothing.
+ */
+export function dueStep(
+  steps: MilestoneStep[],
+  index: number,
+  due: string | null,
+): MilestoneStep[] {
+  const step = steps[index];
+  if (!step || step.task_id || step.placeholder) return steps;
+  return normalise(
+    steps.map((row, at) => (at === index ? { ...row, due: due || null } : row)),
+  );
+}
+
+/** The step's own date, or the linked task's — whichever is holding one. */
+export function stepDue(step: MilestoneStep, taskDue?: string | null): string | null {
+  if (step.task_id) return taskDue ? String(taskDue).slice(0, 10) : null;
+  return step.due;
 }
 
 /** Where a task is already the execution for a step, or -1. */

@@ -347,6 +347,23 @@ PLACEHOLDERS = (
 )
 
 
+def _clean_due(value):
+    """An ISO day, or None.
+
+    Anything that is not a date this app could have written is dropped rather
+    than stored and printed back as a broken one — the front end sends what an
+    `<input type="date">` produced, and everything else is either a client bug
+    or somebody posting by hand.
+    """
+    text = str(value or '').strip()[:10]
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text).isoformat()
+    except ValueError:
+        return None
+
+
 def _fresh_step_id(taken):
     """A short id unique within one checklist. Ids are per-milestone, not global."""
     n = 1
@@ -397,10 +414,19 @@ def _clean_steps(value):
         # pointer hanging off a row with no text is a task attached to
         # nothing. utils/milestoneSteps drops it on the way in too.
         task_id = (str(entry.get('task_id') or '').strip() or None) if title else None
+
+        # A date of its own, and only where there is nothing else holding one.
+        # A step pointing at a task takes that task's due date — two dates for
+        # one piece of work is two answers to "when", and the one on the task
+        # is the one the calendar, the dashboard and the reminders all read.
+        # So linking a task drops the step's own date rather than keeping a
+        # second copy that nothing else can see.
+        due = _clean_due(entry.get('due')) if (title and not task_id) else None
         out.append({
             'id': step_id,
             'title': title,
             'task_id': task_id,
+            'due': due,
             'done': bool(entry.get('done')),
             # Derived, never trusted from the caller: an untitled row is a
             # placeholder and a titled one is not. Taking the client's flag
@@ -412,7 +438,7 @@ def _clean_steps(value):
         title = PLACEHOLDERS[len(out)] if len(out) < len(PLACEHOLDERS) else ''
         step_id = _fresh_step_id(taken)
         taken.add(step_id)
-        out.append({'id': step_id, 'title': title, 'task_id': None,
+        out.append({'id': step_id, 'title': title, 'task_id': None, 'due': None,
                     'done': False, 'placeholder': True})
 
     return out
@@ -421,7 +447,8 @@ def _clean_steps(value):
 def _steps_column(steps):
     """The checklist as it is stored. Placeholders are not written out."""
     return json.dumps([
-        {'id': s['id'], 'title': s['title'], 'done': s['done'], 'task_id': s['task_id']}
+        {'id': s['id'], 'title': s['title'], 'done': s['done'],
+         'task_id': s['task_id'], 'due': s['due']}
         for s in steps if not s['placeholder']
     ])
 

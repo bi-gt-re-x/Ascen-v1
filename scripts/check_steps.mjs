@@ -183,6 +183,28 @@ is('a blank name is empty, so the caller drops the override', N.cleanName('   ')
   is('every written row done is complete',
     MS.stepsComplete(MS.normalise([{ id: 'a', title: 'One', done: true }, { id: 'b', title: 'Two', done: true }])), true);
   is('ids stay unique after a pad', new Set(MS.normalise([{ id: 's1', title: 'One' }]).map((s) => s.id)).size, MS.MIN_STEPS);
+
+  // ---- dates ----
+  // One rule, seen from four sides: a step's own date exists only where
+  // nothing else is holding one.
+  const dated = MS.normalise([{ id: 'a', title: 'One', due: '2026-09-14' }]);
+  is('an unlinked step keeps its date', dated[0].due, '2026-09-14');
+  is('a placeholder has none', dated[1].due, null);
+  is('emptying a row clears its date', MS.editStep(dated, 0, '')[0].due, null);
+  is('setting a date', MS.dueStep(three, 0, '2026-10-01')[0].due, '2026-10-01');
+  is('clearing a date', MS.dueStep(dated, 0, null)[0].due, null);
+  is('an empty string clears rather than storing ""', MS.dueStep(dated, 0, '')[0].due, null);
+  is('a placeholder refuses a date', MS.dueStep(MS.normalise([]), 0, '2026-10-01')[0].due, null);
+
+  const linked = MS.normalise([{ id: 'a', title: 'One', due: '2026-09-14', task_id: 't1' }]);
+  is('a linked step carries no date of its own', linked[0].due, null);
+  is('linking a dated step hands the date over', MS.linkStep(dated, 0, 't9')[0].due, null);
+  is('a linked step refuses one', MS.dueStep(linked, 0, '2026-10-01')[0].due, null);
+  is('unlinking does not resurrect it', MS.linkStep(linked, 0, null)[0].due, null);
+
+  is('stepDue reads the step when unlinked', MS.stepDue(dated[0], '2026-01-01'), '2026-09-14');
+  is('stepDue reads the task when linked', MS.stepDue(linked[0], '2026-01-01T09:00:00'), '2026-01-01');
+  is('stepDue is null when neither holds one', MS.stepDue(linked[0], null), null);
 }
 
 console.log(fails === 0 ? '\n\x1b[32mall passed\x1b[0m' : `\n\x1b[31m${fails} failed\x1b[0m`);

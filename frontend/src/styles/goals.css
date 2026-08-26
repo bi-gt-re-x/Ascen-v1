@@ -3256,7 +3256,7 @@ html[data-theme="dark"] .gx-page {
 .gx-checklist-list { list-style: none; margin: 5px 0 0; padding: 0; }
 .gx-cstep {
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr) 20px;
+    grid-template-columns: 18px minmax(0, 1fr) auto 20px;
     align-items: center;
     gap: 9px;
     padding: 3px 0;
@@ -3313,6 +3313,59 @@ html[data-theme="dark"] .gx-page {
     font: inherit;
     font-size: 12.5px;
 }
+/* The checkpoint's own date, in the tools cluster beside the arrows — so it
+   is held back on hover with them. That is right here and would not be
+   anywhere else: the date itself is already printed in the row body ("due 14
+   Sep"), and this is only the control that changes it. A step's date has no
+   such second home, which is why `.gx-cstep-due` is always visible. */
+.gx-page .gx-ms-date {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    color: var(--gx-faint);
+    font-size: 11px;
+    cursor: pointer;
+}
+.gx-page .gx-ms-date:hover { background: var(--gx-line-soft); color: var(--gx-text); }
+.gx-page .gx-ms-date input {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    padding: 0; border: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* A step's own date. "+ date" until there is one, then the day. The input
+   covers the label, so the whole chip is the picker's hit area. */
+.gx-cstep-due {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    min-width: 54px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--gx-faint);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.gx-page .gx-cstep-due:hover { background: var(--gx-card-2); color: var(--gx-text); }
+.gx-cstep-due .is-late { color: var(--gx-amber); font-weight: 600; }
+.gx-cstep-due input {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    padding: 0; border: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+/* Borrowed from the linked task. Not a control: no hover, no pointer. */
+.gx-cstep-due.is-borrowed { cursor: default; font-style: italic; opacity: .8; }
+.gx-page .gx-cstep-due.is-borrowed:hover { background: transparent; color: var(--gx-faint); }
+
 .gx-page .gx-cstep-cut {
     width: 20px; height: 20px;
     border: 0; border-radius: 6px;
@@ -5207,7 +5260,7 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 }
 .ag-step {
     display: grid;
-    grid-template-columns: 17px 17px minmax(0, 1fr) 22px;
+    grid-template-columns: 17px 17px minmax(0, 1fr) auto 22px;
     align-items: center;
     gap: 9px;
     padding: 5px 6px;
@@ -5269,6 +5322,18 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     cursor: pointer;
 }
 .ag-step-name.is-empty:hover { color: var(--gx-muted); text-decoration: underline; }
+
+/* The date the step is held to, wherever it is coming from. Read-only on the
+   card — naming and dating are both planning, and the drawer is where
+   planning happens. */
+.ag-step-due {
+    font-size: 11px;
+    color: var(--gx-faint);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+.ag-step-due.is-late { color: var(--gx-amber); font-weight: 600; }
 
 /* The link. Held back until the row is under the cursor — a column of chain
    icons beside every step reads as a list of things that are already linked —

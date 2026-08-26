@@ -50,6 +50,7 @@ import {
   editStep,
   linkStep,
   promptFor,
+  stepDue,
   stepProgress,
   stepWindow,
   stepsComplete,
@@ -167,6 +168,8 @@ export function ActiveGoalCard({
   onCompleteGoal,
   nameOf,
 }: ActiveGoalCardProps) {
+  /** Midnight today, so a step due today is not drawn as late. */
+  const todayStart = new Date(new Date().toDateString()).getTime();
   const category = categoryOf(goal);
   const numbers = goalNumbers(goal);
   const health = goalHealth(goal, tasks);
@@ -578,6 +581,28 @@ export function ActiveGoalCard({
                           {linked && <span className="ag-step-linked" title={linked.title}>· {linked.title}</span>}
                         </span>
                       )}
+
+                      {/* The date it is held to, wherever that is coming
+                          from — its own where it has one, the linked task's
+                          where it does not. Read-only here: naming and dating
+                          are both planning, and the drawer is where planning
+                          happens. See `stepDue`. */}
+                      {(() => {
+                        const when = stepDue(step, linked?.due_date);
+                        if (!when) return <span className="ag-step-due" />;
+                        const at = time(when);
+                        return (
+                          <span
+                            /* A finished step is never late, whenever it was
+                               due. Amber on a done row tells the reader to go
+                               and do something they have already done. */
+                            className={`ag-step-due${!step.done && at && at < todayStart ? ' is-late' : ''}`}
+                            title={step.task_id ? `From "${linked?.title ?? 'the linked task'}"` : 'Due date for this step'}
+                          >
+                            {shortDate(when)}
+                          </span>
+                        );
+                      })()}
 
                       {/* One task per step. The button is the link and the
                           unlink both, because a step already pointing at
