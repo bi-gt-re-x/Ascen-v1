@@ -180,7 +180,11 @@ export default function App() {
                   a local useState could have managed. */}
               <Route path="/recommendations" element={<Analytics />} />
               <Route path="/analytics" element={<Analytics />} />
-              <Route path="/trends" element={<Analytics />} />
+              {/* The Goals tab. `/trends` was this slot and redirects rather
+                  than 404s, because it was a tab with its own URL for long
+                  enough to be bookmarked. */}
+              <Route path="/analytics/goals" element={<Analytics />} />
+              <Route path="/trends" element={<Navigate to="/analytics/goals" replace />} />
               <Route path="/habits" element={<Analytics />} />
               <Route path="/insights" element={<Analytics />} />
               <Route path="/subjects" element={<Analytics />} />

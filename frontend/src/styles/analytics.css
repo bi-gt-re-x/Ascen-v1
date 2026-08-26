@@ -4092,6 +4092,160 @@ body:has(.ax-page) .app-main {
     color: var(--ax-muted);
 }
 
+/* ==========================================================================
+   The Goals tab
+   ==========================================================================
+   It replaced Trends, and it is deliberately the plainest tab on the page:
+   four panels, no chart. Everything here is a count or a name, and a chart of
+   four numbers is decoration. The goals page draws the goals themselves. */
+
+.ax-goal-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 14px;
+}
+.ax-goal-figure {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-goal-head p { margin: 0; font-size: 12.5px; line-height: 1.5; }
+
+/* The spread, as one bar rather than four tiles — the question is proportion,
+   and four numbers side by side make the reader do the division. */
+.ax-goal-bar {
+    display: flex;
+    gap: 2px;
+    height: 9px;
+    margin: 0 0 12px;
+}
+.ax-goal-bar i { border-radius: 3px; min-width: 4px; }
+.ax-goal-bar i.is-good, .ax-goal-legend i.is-good { background: var(--ax-green); }
+.ax-goal-bar i.is-warn, .ax-goal-legend i.is-warn { background: var(--ax-amber); }
+.ax-goal-bar i.is-bad,  .ax-goal-legend i.is-bad  { background: var(--ax-pink); }
+.ax-goal-bar i.is-flat, .ax-goal-legend i.is-flat { background: var(--ax-line); }
+
+.ax-goal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.ax-goal-legend li { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.ax-goal-legend i { width: 8px; height: 8px; border-radius: 2px; }
+.ax-goal-legend span { color: var(--ax-muted); }
+.ax-goal-legend strong { color: var(--ax-text); font-variant-numeric: tabular-nums; }
+
+/* Pace, and what stands out. Both are lists of a name and a reading. */
+.ax-goal-pace, .ax-goal-notes, .ax-goal-suggest {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.ax-goal-pace li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+    font-size: 12.5px;
+}
+.ax-goal-pace li:last-child { border-bottom: 0; }
+.ax-goal-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ax-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+.ax-goal-name:hover { text-decoration: underline; }
+.ax-goal-drift { font-size: 12px; font-weight: 600; }
+.ax-goal-pace li.is-late .ax-goal-drift { color: var(--ax-amber); }
+.ax-goal-pace li.is-early .ax-goal-drift { color: var(--ax-green); }
+.ax-goal-foot { margin: 12px 0 0; font-size: 11.5px; line-height: 1.5; }
+
+.ax-goal-notes li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 0 9px 12px;
+    border-left: 2px solid var(--ax-line);
+    margin: 0 0 8px;
+    font-size: 12.5px;
+}
+.ax-goal-notes li:last-child { margin-bottom: 0; }
+.ax-goal-notes li.is-good { border-left-color: var(--ax-green); }
+.ax-goal-notes li.is-watch { border-left-color: var(--ax-amber); }
+.ax-goal-notes strong { font-weight: 650; color: var(--ax-text); }
+.ax-goal-notes span { line-height: 1.5; }
+
+/* What is missing. The kind chip is the only colour, and it names the shape of
+   the goal being suggested rather than an urgency — nothing here is urgent. */
+.ax-goal-suggest li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 11px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.ax-goal-suggest li:last-child { border-bottom: 0; }
+.ax-goal-suggest div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-goal-suggest strong { font-size: 13px; font-weight: 650; color: var(--ax-text); }
+.ax-goal-suggest span { font-size: 12px; line-height: 1.5; }
+.ax-goal-kind {
+    align-self: start;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--ax-card-2);
+    color: var(--ax-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+.ax-goal-kind.is-first, .ax-goal-kind.is-subject {
+    background: color-mix(in srgb, var(--ax-violet) 14%, transparent);
+    color: var(--ax-violet);
+}
+
+/* The one-line additions on Insights and Subjects. A strip, not a panel: a
+   titled card around a single figure is how a tab about behaviour becomes a
+   tab about goals. */
+.ax-goal-line {
+    margin: 0;
+    padding: 11px 15px;
+    border-radius: 11px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ax-text);
+}
+.ax-goal-line strong { font-weight: 700; }
+
+/* The goals' own advice on the Recommendations tab. */
+.ax-goal-advice { margin: 0; padding: 0; list-style: none; }
+.ax-goal-advice li {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+    font-size: 12.5px;
+}
+.ax-goal-advice li:last-child { border-bottom: 0; }
+.ax-goal-advice strong { font-size: 13px; font-weight: 650; color: var(--ax-text); }
+.ax-goal-advice span { line-height: 1.55; }
+.ax-goal-advice li.is-urgent strong { color: var(--ax-amber); }
+
 .ax-sr-only {
     position: absolute;
     width: 1px; height: 1px;

@@ -72,13 +72,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Ambient, ErrorState, Loading } from '@/components';
 import {
+  NotesPanel as GoalNotesPanel,
+  PacePanel as GoalPacePanel,
+  PortfolioPanel as GoalPortfolioPanel,
+  SuggestPanel as GoalSuggestPanel,
+} from '@/components/Analytics/GoalsView';
+import {
   BaselinePanel,
   BaselineSetup,
-  ComparePanel,
-  CompoundingPanel,
   ConsistencyPanel,
   Controls,
-  DirectionPanel,
   HabitCalendarPanel,
   HabitCards,
   HabitConsistencyPanel,
@@ -92,7 +95,6 @@ import {
   Header,
   InsightsPanel,
   Locked,
-  MilestonePanel,
   NextActions,
   PanelGroup,
   PatternsPanel,
@@ -110,8 +112,6 @@ import {
   Tiles,
   TimelinePanel,
   Trajectory,
-  TrendChart,
-  TrendTiles,
   ViewTabs,
   viewFor,
   type BaselineValues,
@@ -145,11 +145,9 @@ import {
 import {
   BenchmarksChapter,
   FocusChapter,
-  LongTermChapter,
   SkillsChapter,
 } from '@/components/Growth';
 import {
-  compounding,
   consistency,
   sliceWindow,
   spanLabel,
@@ -176,7 +174,6 @@ import type {
 import {
   growthInsights,
   heatmapGrid,
-  milestoneHistory,
   summaryFigures,
   tileSeries,
 } from '@/utils/growthSummary';
@@ -203,15 +200,8 @@ import {
   whatsWorking,
   whyFindings,
 } from '@/utils/insight';
-import {
-  TREND_METRICS,
-  comparisonSlices,
-  directions,
-  trendRows,
-  trendVerdict,
-  weeklyPoints,
-  type ComparisonKey,
-} from '@/utils/trends';
+import { goalActions, goalNotes, goalsOverview } from '@/utils/goalAnalytics';
+import { goalWorkShare, suggestGoals } from '@/utils/goalSuggest';
 import {
   qualityBands,
   qualityGrid,
@@ -268,7 +258,7 @@ const DEFAULT_ADVICE_XP = 25;
  * page counts down to, and a page counting to a different number than the one
  * that unlocks it would be worse than the duplication.
  */
-const NEED_DAYS = { trends: 21, habits: 21, insights: 28, recommendations: 14 };
+const NEED_DAYS = { habits: 21, insights: 28, recommendations: 14 };
 
 export default function Analytics() {
   const location = useLocation();
@@ -486,8 +476,6 @@ export default function Analytics() {
   const [metric, setMetric] = useState<MetricKey>('productivity');
   const [grain, setGrain] = useState<Grain>('weekly');
   const [subject, setSubject] = useState('');
-  const [comparison, setComparison] = useState<ComparisonKey>('thirty');
-  const [trendMetric, setTrendMetric] = useState('productivity');
   const [category, setCategory] = useState('');
 
   const all = useMemo(() => series.data?.growth_data ?? [], [series.data]);
@@ -534,8 +522,6 @@ export default function Analytics() {
   const sparks = useMemo(() => tileSeries(slice), [slice]);
   const insights = useMemo(() => growthInsights(slice), [slice]);
   const rhythmRate = useMemo(() => consistency(slice), [slice]);
-  const curve = useMemo(() => compounding(slice, all), [all, slice]);
-  const reached = useMemo(() => milestoneHistory(all), [all]);
   // Always a year, whatever the window says — see the note at the top.
   const heatRows = useMemo(() => heatmapGrid(all, '365'), [all]);
 
@@ -801,15 +787,84 @@ export default function Analytics() {
     [balance, rhythm, slice, week],
   );
 
-  // ---- Trends -------------------------------------------------------------
-  const rows = useMemo(() => trendRows(slice.current, comparison), [comparison, slice]);
-  const heading = useMemo(() => directions(slice.current), [slice]);
-  const weeks = useMemo(() => weeklyPoints(slice.current), [slice]);
-  const partial = useMemo(
-    () => comparisonSlices(slice.current, comparison).partial,
-    [comparison, slice],
+  // ---- Goals --------------------------------------------------------------
+  /* All four read the goals fetched for the Records tab, so this tab costs no
+     request of its own — the same rule the rest of the page follows. */
+  const liveGoals = useMemo(() => goals.data?.goals ?? [], [goals.data]);
+  const goalSet = useMemo(() => goalsOverview(liveGoals, tasks), [liveGoals, tasks]);
+  const goalRows = useMemo(() => goalNotes(liveGoals, tasks), [liveGoals, tasks]);
+  const goalIdeas = useMemo(
+    () =>
+      suggestGoals({
+        goals: liveGoals,
+        tasks,
+        days: slice.current,
+        // The window's subject split, as shares — the same rows the Subjects
+        // tab draws, so a suggestion about a subject and the bar chart of it
+        // cannot disagree.
+        subjects: breakdown.rows
+          .filter((row) => row.key !== 'other')
+          .map((row) => ({
+            id: row.key,
+            label: row.name ?? row.label,
+            xp: row.xp,
+            share: breakdown.total > 0 ? row.xp / breakdown.total : 0,
+          })),
+        currentStreak: account.data?.stats?.current_streak ?? 0,
+      }),
+    [account.data, breakdown, liveGoals, slice, tasks],
   );
-  const verdict = trendVerdict(heading);
+
+  /** How much of the account's finished work is aimed at a goal. */
+  const aimedShare = useMemo(() => goalWorkShare(tasks), [tasks]);
+
+  /**
+   * The two rows of advice the goals themselves produce.
+   *
+   * `goalActions` is per goal and returns nothing for a goal that is simply
+   * going well, so this is empty on a healthy account. Urgent first, then one
+   * per goal at most — three rows about the same drifting goal is the goals
+   * page, which is one link away.
+   */
+  const goalAdvice = useMemo(() => {
+    const seen = new Set<string>();
+    return liveGoals
+      .filter((goal) => goal.status !== 'completed')
+      .flatMap((goal) =>
+        goalActions(goal, tasks)
+          .filter((action) => action.tone === 'urgent' || action.tone === 'nudge')
+          .slice(0, 1)
+          .map((action) => ({ ...action, goalTitle: goal.title, goalId: goal.id })),
+      )
+      .filter((row) => (seen.has(row.goalId) ? false : seen.add(row.goalId)))
+      .sort((a, b) => Number(b.tone === 'urgent') - Number(a.tone === 'urgent'))
+      .slice(0, 2);
+  }, [liveGoals, tasks]);
+
+  /** Subject ids some live goal names, for the line on the Subjects tab. */
+  const goalSubjects = useMemo(
+    () =>
+      new Set(
+        liveGoals
+          .filter((goal) => goal.status !== 'completed')
+          .flatMap((goal) =>
+            String(goal.subject_ids || '')
+              .split(',')
+              .map((id) => id.trim())
+              .filter(Boolean),
+          ),
+      ),
+    [liveGoals],
+  );
+
+  /** How many of the window's live subjects a goal actually names. */
+  const namedSubjects = useMemo(() => {
+    const worked = breakdown.rows.filter((row) => row.key !== 'other' && row.xp > 0);
+    return {
+      total: worked.length,
+      named: worked.filter((row) => goalSubjects.has(row.key)).length,
+    };
+  }, [breakdown, goalSubjects]);
 
   // ---- Recommendations ----------------------------------------------------
   const advice = useMemo(
@@ -1047,11 +1102,27 @@ export default function Analytics() {
             topAdvice={advice[0]?.title ?? null}
             adviceCount={advice.length}
             phase={waitFor('insights') === 0 ? state.phase : null}
+            goals={
+              goalSet.active > 0
+                ? { active: goalSet.active, behind: goalSet.atRisk + goalSet.offTrack }
+                : null
+            }
           />
         );
-      case 'trends':
-        return waitFor('trends') === 0 && heading.length > 0 ? (
-          <TabOpening>{verdict}</TabOpening>
+      case 'goals':
+        return goalSet.active > 0 ? (
+          <TabOpening tone={goalSet.atRisk + goalSet.offTrack > 0 ? 'down' : 'up'}>
+            <strong>{goalSet.active}</strong> {goalSet.active === 1 ? 'goal is' : 'goals are'}{' '}
+            live
+            {goalSet.atRisk + goalSet.offTrack > 0 ? (
+              <>
+                , and <strong>{goalSet.atRisk + goalSet.offTrack}</strong> of them{' '}
+                {goalSet.atRisk + goalSet.offTrack === 1 ? 'is' : 'are'} behind.
+              </>
+            ) : (
+              <>, and none of them is behind.</>
+            )}
+          </TabOpening>
         ) : null;
       case 'habits':
         return waitFor('habits') === 0 && habits.length > 0 ? (
@@ -1087,7 +1158,6 @@ export default function Analytics() {
   })();
 
   const compareLabel = `vs ${option.compare.toLowerCase()}`;
-  const comparisonWord = comparison === 'week' ? 'last week' : comparison === 'month' ? 'last month' : 'previous 30';
 
   return (
     <div className="ax-page">
@@ -1206,72 +1276,21 @@ export default function Analytics() {
           />
         )}
 
-        {view.key === 'trends' && (waitFor('trends') > 0 || heading.length === 0) && (
-          <Locked
-            title="Trends"
-            remaining={waitFor('trends')}
-            need={NEED_DAYS.trends}
-            have={historyDays}
-            promise="Three weeks is the shortest run that tells a slope from a good fortnight."
-            brings={['Direction, per measure', 'This period vs last', 'Signal or noise', 'Where the pace projects']}
-            emptyMessage="Nothing has moved far enough in one direction to call a trend."
-            action={
-              <Link to="/analytics" className="ax-btn">
-                See totals
-              </Link>
-            }
-          />
-        )}
-
-        {view.key === 'trends' && waitFor('trends') === 0 && heading.length > 0 && (
+        {/* ---- Goals ---------------------------------------------------
+            No `Locked` gate, unlike the tab it replaced. Trends needed three
+            weeks before a slope meant anything; this needs a goal, and an
+            account with none is exactly who the empty state here is written
+            for — telling them to come back in three weeks would be answering
+            a question they did not ask. */}
+        {view.key === 'goals' && (
           <>
-            <section className="ax-section">
-              <TrendTiles rows={rows} label={comparisonWord} />
+            <section className="ax-section ax-grid ax-grid-halves-even">
+              <GoalPortfolioPanel overview={goalSet} />
+              <GoalPacePanel goals={liveGoals} tasks={tasks} />
             </section>
             <section className="ax-section ax-grid ax-grid-halves-even">
-              <ComparePanel
-                rows={rows}
-                chosen={comparison}
-                onChoose={setComparison}
-                partial={partial}
-              />
-              <DirectionPanel directions={heading} verdict={verdict} />
-            </section>
-            <section className="ax-section ax-hero">
-              <TrendChart
-                weeks={weeks}
-                metricKey={trendMetric}
-                metricLabel={
-                  TREND_METRICS.find((entry) => entry.key === trendMetric)?.label ?? 'Productivity'
-                }
-                tone={TREND_METRICS.find((entry) => entry.key === trendMetric)?.tone ?? 'violet'}
-                options={TREND_METRICS.map((entry) => ({ key: entry.key, label: entry.label }))}
-                onMetric={setTrendMetric}
-              />
-            </section>
-            {/* The projection alone, full width. It was sharing a row with
-                "Which way you are heading", which asked the same question as
-                "Which way each measure is heading" two rows above it — the
-                same window, one as a delta and one as a fitted slope. The
-                fitted one stayed. */}
-            <section className="ax-section">
-              <CompoundingPanel data={curve} />
-            </section>
-            {/* Both moved off the Overview, which was carrying them at lower
-                resolution under a heading that had already been answered. A
-                year against the last one and the dates things were reached are
-                the same question this tab is for: what the pace has been. */}
-            <section className="ax-section ax-compact">
-              <MilestonePanel reached={reached} />
-            </section>
-            {/* The growth page's Long Term chapter, which was asking this tab's
-                question at higher resolution on a page of its own: where the
-                line goes if the pace holds, and when each round number lands.
-                Below the panels above rather than replacing them — those are
-                the movement, this is where the movement ends up. */}
-            <section className="ax-section gr-scope">
-              <h2 className="ax-band">Where this is heading</h2>
-              <LongTermChapter all={all} streak={streak} />
+              <GoalNotesPanel notes={goalRows} />
+              <GoalSuggestPanel suggestions={goalIdeas} />
             </section>
           </>
         )}
@@ -1451,6 +1470,31 @@ export default function Analytics() {
             fortnight. It is gated on nothing: an account three days old still
             has overdue work and a goal with a deadline, and those are exactly
             the days when being told what to do is worth most. */}
+        {/* One line, not a panel. The Insights tab is about what conditions
+            the reader's better work shows up under, and "was it aimed at
+            anything" is one such condition — but it is a single figure, and a
+            titled card around a single figure is how a tab about behaviour
+            becomes a tab about goals. */}
+        {view.key === 'insights' && waitFor('insights') === 0 && aimedShare && (
+          <section className="ax-section">
+            <p className="ax-goal-line">
+              <strong>{Math.round(aimedShare.share * 100)}%</strong> of the{' '}
+              {aimedShare.total} tasks you finished were aimed at a goal
+              {aimedShare.share < 0.5 ? (
+                <>
+                  {' '}— most of your work is not, which is worth knowing before you read the
+                  rest of this tab as being about progress.
+                </>
+              ) : (
+                <>, so most of what you do is pointed somewhere.</>
+              )}{' '}
+              <Link to="/analytics/goals" className="ax-link">
+                See the goals
+              </Link>
+            </p>
+          </section>
+        )}
+
         {view.key === 'recommendations' && (
           <section className="ax-section">
             <NextActions
@@ -1478,6 +1522,32 @@ export default function Analytics() {
             ) : (
               <DiagnosisEmpty enoughRecord={recent.previous.length >= 7} />
             )}
+          </section>
+        )}
+
+        {/* The goals' own advice, kept separate from the ranked list below
+            rather than merged into it. `advice` is ranked by XP a year and
+            these are not comparable to that — a goal drifting past its date
+            is not worth "1,200 XP", it is worth the goal. Two rows at most:
+            this is a pointer to the goals page, not a second copy of it. */}
+        {view.key === 'recommendations' && goalAdvice.length > 0 && (
+          <section className="ax-section">
+            <PanelGroup
+              title="From your goals"
+              note="What each goal's own figures say, where they say anything. A goal that is simply going well produces nothing here."
+            >
+              <ul className="ax-goal-advice">
+                {goalAdvice.map((row) => (
+                  <li key={row.id} className={`is-${row.tone}`}>
+                    <strong>{row.title}</strong>
+                    <span className="ax-muted">{row.because}</span>
+                    <Link to="/goals" className="ax-link">
+                      {row.goalTitle}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </PanelGroup>
           </section>
         )}
 
@@ -1548,6 +1618,32 @@ export default function Analytics() {
             page and neither had a counterpart here — mastery and achievement
             are questions the five original tabs never asked. They keep their own
             layout inside `.gr-scope`; see the stylesheet note at the top. */}
+        {/* One line above the chapter. Which subjects are being worked is
+            this tab's whole job; which of them anybody decided to aim at is
+            one sentence of context on top of that, and it earns its place
+            only when the two lists differ. */}
+        {view.key === 'subjects' && namedSubjects.total > 0 && (
+          <section className="ax-section">
+            <p className="ax-goal-line">
+              {namedSubjects.named === 0 ? (
+                <>
+                  None of the <strong>{namedSubjects.total}</strong> subjects you worked in
+                  this window has a goal aimed at it.
+                </>
+              ) : (
+                <>
+                  <strong>{namedSubjects.named}</strong> of the {namedSubjects.total} subjects
+                  you worked in this window {namedSubjects.named === 1 ? 'has' : 'have'} a goal
+                  aimed at {namedSubjects.named === 1 ? 'it' : 'them'}.
+                </>
+              )}{' '}
+              <Link to="/analytics/goals" className="ax-link">
+                See what is missing
+              </Link>
+            </p>
+          </section>
+        )}
+
         {view.key === 'subjects' && (
           <div className="ax-section gr-scope">
             <SkillsChapter all={all} tasks={tasks} subjects={subjects} />
@@ -1707,9 +1803,9 @@ function OverviewView(props: OverviewProps) {
       <section className="ax-section ax-next">
         <p>Where to go next</p>
         <div className="ax-next-row">
-          <Link to="/trends">
-            <strong>Trends</strong>
-            <span>Whether productivity, consistency and quality are actually moving</span>
+          <Link to="/analytics/goals">
+            <strong>Goals</strong>
+            <span>Whether what you aimed at is going to happen</span>
           </Link>
           <Link to="/insights">
             <strong>Insights</strong>

@@ -20,7 +20,7 @@ import { WINDOWS, type WindowKey } from './data';
 export type ViewKey =
   | 'recommendations'
   | 'overview'
-  | 'trends'
+  | 'goals'
   | 'habits'
   | 'insights'
   | 'subjects'
@@ -95,11 +95,14 @@ export const VIEWS: View[] = [
     title: 'Overview',
   },
   {
-    key: 'trends',
-    label: 'Trends',
-    path: '/trends',
-    purpose: 'Which way each measure is heading, and whether the movement is real.',
-    title: 'Trends',
+    key: 'goals',
+    label: 'Goals',
+    // A level down from `/goals`, which is the goals page — the same split
+    // `/analytics/records` makes against `/records`. That page is where a goal
+    // is made, edited and worked; this tab is about the set of them.
+    path: '/analytics/goals',
+    purpose: 'Whether what you aimed at is going to happen, and what you have not aimed at.',
+    title: 'Goals',
   },
   {
     key: 'habits',

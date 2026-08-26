@@ -31,11 +31,14 @@
  * standing rule against invented figures, applied to prose — see the note at
  * the top of pages/Analytics.
  *
- * **Five is the cap.** Rows one to three reorganise what the Overview already
- * said; rows four and five are the point of the thing, because "what to do" and
- * "why the record looks like this" live two tabs away and a reader who wanted
- * the short version was never going to find them. A sixth row would mean
- * something here has stopped earning its place.
+ * **Five is the cap, and there are six candidates.** Rows one to three
+ * reorganise what the Overview already said; the rest are the point of the
+ * thing, because "what to do", "how the goals are doing" and "why the record
+ * looks like this" each live a tab away and a reader who wanted the short
+ * version was never going to find them. They are pushed in the order they are
+ * worth reading and cut at `MAX_ROWS`, so the softest one falls off rather
+ * than the block growing — a seventh candidate would mean something here has
+ * stopped earning its place.
  *
  * Every row links to the tab that proves it. The summary is deliberately not
  * arguable on its own: it states, and hands off to the panel that shows the
@@ -72,7 +75,12 @@ export interface SummaryProps {
   adviceCount: number;
   /** The behavioural phase — "Building", "Dormant" — from `currentState`. */
   phase: string | null;
+  /** Live goals and how many of them are behind, or null when there are none. */
+  goals: { active: number; behind: number } | null;
 }
+
+/** Five is the cap. See the note at the top for why, and `goals` for how. */
+const MAX_ROWS = 5;
 
 interface Row {
   key: string;
@@ -82,7 +90,7 @@ interface Row {
   label: string;
 }
 
-export function Summary({ score, movement, topAdvice, adviceCount, phase }: SummaryProps) {
+export function Summary({ score, movement, topAdvice, adviceCount, phase, goals }: SummaryProps) {
   const { value, grade, weakest } = score;
 
   /* No score is not a broken panel — it is a new account, and it deserves the
@@ -119,8 +127,11 @@ export function Summary({ score, movement, topAdvice, adviceCount, phase }: Summ
             {movement.days === 1 ? ' yesterday' : <>, {movement.days} days ago</>}.
           </>
         ),
-      href: '/trends',
-      label: 'See what is moving',
+      // Trends was this row's destination and is gone. The score over time is
+      // drawn by `ScorePanel` on this same tab, which is where the movement
+      // this row states can actually be looked at.
+      href: '#trajectory',
+      label: 'See it over time',
     });
   }
 
@@ -149,6 +160,32 @@ export function Summary({ score, movement, topAdvice, adviceCount, phase }: Summ
       ),
       href: '/recommendations',
       label: 'See what to change',
+    });
+  }
+
+  /* Above the phase row, and that ordering is the whole of how the cap holds:
+     rows are pushed in the order they are worth reading and the list is cut at
+     five, so on an account with something to say about every one of them the
+     phase — the softest of the six — is what falls off. A goal behind its date
+     outranks a description of how the last three weeks have felt. */
+  if (goals && goals.active > 0) {
+    rows.push({
+      key: 'goals',
+      text:
+        goals.behind > 0 ? (
+          <>
+            <strong>{goals.behind}</strong> of your <strong>{goals.active}</strong>{' '}
+            {goals.active === 1 ? 'goal' : 'goals'}{' '}
+            {goals.behind === 1 ? 'is' : 'are'} behind.
+          </>
+        ) : (
+          <>
+            All <strong>{goals.active}</strong> of your{' '}
+            {goals.active === 1 ? 'goal is' : 'goals are'} on track.
+          </>
+        ),
+      href: '/analytics/goals',
+      label: 'See the goals',
     });
   }
 
@@ -184,7 +221,7 @@ export function Summary({ score, movement, topAdvice, adviceCount, phase }: Summ
 
       {rows.length > 0 && (
         <ul className="ax-summary-rows">
-          {rows.map((row) => (
+          {rows.slice(0, MAX_ROWS).map((row) => (
             <li key={row.key}>
               <p>{row.text}</p>
               {/* A hash is an anchor on the tab that is already open; anything

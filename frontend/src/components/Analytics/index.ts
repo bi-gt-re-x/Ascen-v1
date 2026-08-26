@@ -24,6 +24,14 @@
  * of the score over time is the one that earns its place. `Summary` took the
  * slot, kept the derivation behind a disclosure, and left the bars behind.
  */
+/** The Goals tab, which replaced Trends. See ./GoalsView. */
+export {
+  PortfolioPanel as GoalPortfolioPanel,
+  PacePanel as GoalPacePanel,
+  NotesPanel as GoalNotesPanel,
+  SuggestPanel as GoalSuggestPanel,
+} from './GoalsView';
+
 export { Summary } from './Summary';
 export type { SummaryProps } from './Summary';
 export { NextActions } from './NextActions';
@@ -49,7 +57,16 @@ export {
   habitLead,
 } from './Habits';
 
-export { ComparePanel, DirectionPanel, TrendChart, TrendTiles } from './Trends';
+/* The Trends tab's four panels were exported from ./Trends, which is gone with
+   the tab — see ./GoalsView for what took its slot, and utils/trends went with
+   it since nothing else read it.
+
+   `CompoundingPanel`, `MilestonePanel` and Growth's `LongTermChapter` are the
+   three the removal left unrendered. They are still exported below and from
+   their own files, which have live siblings: each is a real panel about the
+   pace of the record rather than about goals, and Records is the tab that
+   would want them. Left placed rather than deleted, deliberately, and named
+   here so the next person does not have to work out why nothing draws them. */
 
 /** What a tab shows instead of inventing figures it does not have. */
 export { Locked } from './Locked';

@@ -262,7 +262,7 @@ export function MilestonePanel({ reached }: { reached: ReachedMilestone[] }) {
   const shown = [...reached].reverse().slice(0, 5);
 
   return (
-    <Panel title="Milestone Timeline" footer={<PanelLink to="/trends">See the pace behind these</PanelLink>}>
+    <Panel title="Milestone Timeline" footer={<PanelLink to="/analytics/goals">See the goals behind these</PanelLink>}>
       {shown.length === 0 ? (
         <p className="ax-empty">No milestones cleared yet — the first is 1,000 XP.</p>
       ) : (
