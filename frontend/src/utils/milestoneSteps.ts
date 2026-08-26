@@ -64,7 +64,7 @@ function freshId(steps: MilestoneStep[]): string {
 }
 
 function blank(steps: MilestoneStep[]): MilestoneStep {
-  return { id: freshId(steps), title: '', done: false, placeholder: true };
+  return { id: freshId(steps), title: '', done: false, placeholder: true, task_id: null };
 }
 
 /**
@@ -84,6 +84,9 @@ export function normalise(steps: MilestoneStep[] | undefined | null): MilestoneS
       // written cannot be one somebody finished.
       done: title ? Boolean(step?.done) : false,
       placeholder: !title,
+      // ...and loses its link for the same reason. A pointer hanging off a row
+      // with no text is a task attached to nothing.
+      task_id: title ? (step?.task_id ?? null) : null,
     });
   }
   while (out.length < MIN_STEPS) out.push(blank(out));
@@ -119,10 +122,45 @@ export function toggleStep(steps: MilestoneStep[], index: number): MilestoneStep
   return normalise(next);
 }
 
+/** Point a step at a task, or clear it with null. */
+export function linkStep(
+  steps: MilestoneStep[],
+  index: number,
+  taskId: string | null,
+): MilestoneStep[] {
+  return normalise(
+    steps.map((step, at) => (at === index ? { ...step, task_id: taskId } : step)),
+  );
+}
+
+/** Where a task is already the execution for a step, or -1. */
+export function stepForTask(steps: MilestoneStep[], taskId: string): number {
+  return steps.findIndex((step) => step.task_id === taskId);
+}
+
 /** Append an empty row, up to `MAX_STEPS`. At the ceiling the list is unchanged. */
 export function addStep(steps: MilestoneStep[]): MilestoneStep[] {
   if (steps.length >= MAX_STEPS) return steps;
   return normalise([...steps, blank(steps)]);
+}
+
+/**
+ * The three the card shows, and where they start.
+ *
+ * A card is not the place for eight rows, and the three that matter are the
+ * ones around whatever is unfinished — so the window opens on the first
+ * undone step rather than always at the top, and slides back from the end so
+ * a checklist finishing at step eight still shows three rather than one.
+ */
+export function stepWindow(
+  steps: MilestoneStep[],
+  size = MIN_STEPS,
+): { from: number; shown: MilestoneStep[] } {
+  if (steps.length <= size) return { from: 0, shown: steps };
+  const next = steps.findIndex((step) => !step.done);
+  const at = next === -1 ? steps.length - size : next;
+  const from = Math.max(0, Math.min(at, steps.length - size));
+  return { from, shown: steps.slice(from, from + size) };
 }
 
 /**

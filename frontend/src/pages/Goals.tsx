@@ -216,39 +216,13 @@ export default function Goals() {
   );
 
   /**
-   * Add an action to a goal, from the goal's own card.
-   *
-   * A real task, created through the same service the tasks page uses, so it
-   * shows on the dashboard, appears on the calendar and pays the same XP. It
-   * carries the goal — and the checkpoint being worked on, where there is one —
-   * which is what makes it come back to the card it was typed on. Nothing could
-   * write that link until now; see `_link` in backend/api/tasks.py.
-   */
-  const addAction = useCallback(
-    async (goal: Goal, title: string, milestoneId?: string) => {
-      if (!username) return;
-      const result = await taskService.createTask({
-        name: title,
-        priority: 'medium',
-        xp_reward: 25,
-        goal_id: goal.id,
-        ...(milestoneId ? { milestone_id: milestoneId } : {}),
-      });
-      if (!result.success) {
-        setError(result.message ?? 'That action could not be added.');
-        return;
-      }
-      await Promise.all([load(true), account.reload()]);
-    },
-    [account, load, username],
-  );
-
-  /**
    * Point a task that already exists at this goal.
    *
-   * The other half of "Add new action": work is often written down before the
-   * goal it turns out to serve is, and retyping it would leave two tasks where
-   * there is one piece of work. It is the same link `addAction` writes, through
+   * The card no longer creates tasks — "add" there means adding a step to a
+   * checkpoint's checklist, and a step is not a task. What is left is the
+   * half that was always the more useful one: work is usually written down
+   * before the goal it turns out to serve is, and retyping it would leave two
+   * tasks where there is one piece of work. The link is written through
    * the edit the tasks page already uses — so the task keeps its due date, its
    * subject and its history, and simply starts counting here.
    */
@@ -352,6 +326,24 @@ export default function Goals() {
     (milestone: Milestone) => {
       if (!username || milestone.status === 'done') return;
       void write(() => goalService.updateMilestone(milestone.id, { status: 'active' }));
+    },
+    [username, write],
+  );
+
+  /**
+   * Call the goal itself finished.
+   *
+   * Only offered once every checkpoint is reached, and it is a request rather
+   * than an assertion: the backend re-derives status from the goal's own truth
+   * on every write, so a milestone goal is already completed by the time this
+   * is reachable and this is the confirmation. What it genuinely decides is
+   * the goals with no target to measure against, which arithmetic cannot
+   * finish and only the reader can. See `_recompute` in backend/api/goals.py.
+   */
+  const completeGoal = useCallback(
+    (goal: Goal) => {
+      if (!username || goal.status === 'completed') return;
+      void write(() => goalService.updateGoal(goal.id, { status: 'completed' }));
     },
     [username, write],
   );
@@ -544,9 +536,6 @@ export default function Goals() {
                     }}
                     onDelete={setPendingDelete}
                     onComplete={(task) => void completeMove(task)}
-                    onAddAction={(entry, title, milestoneId) =>
-                      void addAction(entry, title, milestoneId)
-                    }
                     onLinkTask={(entry, task, milestoneId) =>
                       void linkTask(entry, task, milestoneId)
                     }
@@ -554,6 +543,8 @@ export default function Goals() {
                     onSaveStones={saveMilestones}
                     onFocusMilestone={focusMilestone}
                     onMilestoneSteps={setMilestoneSteps}
+                    onMilestoneStatus={setMilestoneStatus}
+                    onCompleteGoal={completeGoal}
                     nameOf={subjectName}
                   />
                 ))}

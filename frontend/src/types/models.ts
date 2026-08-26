@@ -146,6 +146,14 @@ export interface MilestoneStep {
   title: string;
   done: boolean;
   placeholder: boolean;
+  /**
+   * The one task this step is execution for, or null.
+   *
+   * A pointer, not ownership. The step stands whether or not anything is on
+   * the other end, and unlinking a task does not delete the step — which is
+   * the difference between this and the step simply *being* the task.
+   */
+  task_id: string | null;
 }
 
 /**

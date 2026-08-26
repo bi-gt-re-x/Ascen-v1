@@ -4609,6 +4609,9 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 
 .ag-card {
     --tone: var(--gx-violet);
+    /* The containing block for `.ag-cheer`, which covers this card and no
+       more — what was finished happened here. */
+    position: relative;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--gx-line);
@@ -5186,28 +5189,41 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     color: var(--tone);
 }
 
-/* ---------- The focus checkpoint's own steps ------------------------------
-   Three rows minimum, directly under the block they break down. Deliberately
-   quieter than "Next actions" below them: those are scheduled tasks with dates
-   and XP, these are the checkpoint's own breakdown, and the card has to keep
-   the two readable as different kinds of thing. */
+/* ---------- The checkpoint's checklist ------------------------------------
+   A numbered list, three rows at a time, in the shape styles/skilltree.css
+   gives a programme — because it is the same object: a short ordered list of
+   the work that finishes one thing. The number comes from a CSS counter in a
+   column of its own rather than from a `::marker`, so a row that wraps keeps
+   its number beside the text instead of losing it above the wrap, and `start`
+   on the <ol> still numbers a window that opens partway down. */
 .ag-steps {
+    counter-reset: ag-step calc(var(--ag-step-from, 1) - 1);
     list-style: none;
-    margin: 8px 0 0;
+    margin: 10px 0 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
 }
 .ag-step {
     display: grid;
-    grid-template-columns: 17px minmax(0, 1fr);
+    grid-template-columns: 17px 17px minmax(0, 1fr) 22px;
     align-items: center;
-    gap: 10px;
-    padding: 4px 6px;
-    border-radius: 8px;
+    gap: 9px;
+    padding: 5px 6px;
+    border-radius: 9px;
     font-size: 12.5px;
     color: var(--gx-text);
+    counter-increment: ag-step;
+    transition: background .14s ease;
+}
+.ag-step::before {
+    content: counter(ag-step) ".";
+    color: var(--gx-faint);
+    font-weight: 700;
+    font-size: 11.5px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 .ag-step:hover { background: var(--gx-card-2); }
 .ag-step-check { border-radius: 5px; }
@@ -5215,8 +5231,12 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     border-color: var(--gx-good);
     background: var(--gx-good);
 }
+.ag-step.is-done::before { color: var(--gx-good); }
 .ag-step-name {
     min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -5226,9 +5246,17 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     text-decoration: line-through;
     text-decoration-thickness: 1px;
 }
-/* An unnamed row. It is a button because clicking it opens the drawer, which
-   is the only place the text can be written. */
-.ag-page .ag-step-name.is-empty,
+/* The task on the other end of a link, named quietly beside the step so the
+   row says what it is pointing at without becoming two lines. */
+.ag-step-linked {
+    flex: none;
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--gx-muted);
+}
 .ag-step-name.is-empty {
     padding: 0;
     border: 0;
@@ -5242,10 +5270,182 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 }
 .ag-step-name.is-empty:hover { color: var(--gx-muted); text-decoration: underline; }
 
-.ag-steps-count { margin: 6px 0 0; font-size: 11px; }
+/* The link. Held back until the row is under the cursor — a column of chain
+   icons beside every step reads as a list of things that are already linked —
+   except on the rows that actually are, which keep it on and tinted. */
+.ag-step-link {
+    width: 22px; height: 22px;
+    display: grid; place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gx-faint);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .14s ease, color .14s ease, background .14s ease;
+}
+.ag-step-link svg { width: 13px; height: 13px; }
+.ag-step:hover .ag-step-link,
+.ag-step-link:focus-visible { opacity: 1; }
+.ag-step-link.is-on { opacity: 1; color: var(--tone); }
+.ag-step-link:hover:not(:disabled) { background: var(--gx-line-soft); color: var(--gx-text); }
+.ag-step-link:disabled { opacity: 0; cursor: default; }
+
+.ag-steps-rest { margin: 7px 0 0; font-size: 11px; }
+.ag-link-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--gx-violet, var(--tone));
+    font: inherit;
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* The task search, when one step is choosing what it points at. */
+.ag-link-box {
+    margin: 8px 0 0;
+    padding: 8px;
+    border: 1px solid var(--gx-line);
+    border-radius: 10px;
+    background: var(--gx-card);
+}
+.ag-link-box input { width: 100%; }
+.ag-found-none { margin: 8px 2px 2px; font-size: 11.5px; line-height: 1.5; }
+
+/* ---------- Finishing something ------------------------------------------
+   Green, full width, and only on screen when the thing it names is genuinely
+   available — a button that is usually disabled teaches the reader to stop
+   looking at it. The question mark is deliberate: this is the app asking,
+   because the reader ticked the last box rather than saying they were done. */
+.ag-finish {
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    border: 1px solid color-mix(in srgb, var(--gx-good) 45%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--gx-good) 13%, transparent);
+    color: var(--gx-good);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .14s ease, transform .14s ease;
+    animation: ag-finish-in .22s var(--gx-ease, ease) both;
+}
+.ag-finish:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gx-good) 20%, transparent);
+    transform: translateY(-1px);
+}
+.ag-finish:disabled { opacity: .55; cursor: default; }
+/* The goal is the bigger claim and is filled rather than tinted. */
+.ag-finish.is-goal {
+    border-color: var(--gx-good);
+    background: var(--gx-good);
+    color: #fff;
+}
+.ag-finish.is-goal:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gx-good) 88%, #000);
+}
+@keyframes ag-finish-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* ---------- The celebration ----------------------------------------------
+   Over the card rather than over the page: what was finished happened here,
+   and a viewport-wide takeover for a checkpoint would be the same weight as
+   finishing the goal. It announces and lets go — see the timer in
+   ActiveGoalCard for why there is nothing to dismiss. */
+.ag-cheer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--gx-card) 82%, transparent);
+    backdrop-filter: blur(2px);
+    animation: ag-cheer-in .2s ease both;
+    pointer-events: none;
+}
+.ag-cheer-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 18px 26px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--gx-good) 40%, transparent);
+    background: var(--gx-card);
+    box-shadow: 0 18px 40px rgba(16, 24, 40, .16);
+    text-align: center;
+    animation: ag-cheer-pop .32s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.ag-cheer-mark {
+    display: grid; place-items: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--gx-good);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 800;
+}
+.ag-cheer-card strong { font-size: 14.5px; font-weight: 750; color: var(--gx-text); }
+.ag-cheer-card span:last-child {
+    max-width: 240px;
+    font-size: 12px;
+    color: var(--gx-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ag-cheer-burst { position: absolute; inset: 0; overflow: hidden; }
+.ag-cheer-burst i {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 7px; height: 7px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: ag-cheer-fly .9s ease-out both;
+}
+/* Twelve directions on a circle, coloured off the palette in fours. Placed
+   here rather than by script: a fixed spray reads as a burst just as well as
+   a seeded one, and this way it costs nothing at run time. */
+.ag-cheer-burst i:nth-child(1)  { --fx: 0px;    --fy: -120px; background: var(--gx-good); animation-delay: .00s; }
+.ag-cheer-burst i:nth-child(2)  { --fx: 60px;   --fy: -104px; background: var(--gx-violet, #6d5efc); animation-delay: .03s; }
+.ag-cheer-burst i:nth-child(3)  { --fx: 104px;  --fy: -60px;  background: var(--gx-amber, #f59e0b); animation-delay: .06s; }
+.ag-cheer-burst i:nth-child(4)  { --fx: 120px;  --fy: 0px;    background: var(--gx-good); animation-delay: .09s; }
+.ag-cheer-burst i:nth-child(5)  { --fx: 104px;  --fy: 60px;   background: var(--gx-violet, #6d5efc); animation-delay: .12s; }
+.ag-cheer-burst i:nth-child(6)  { --fx: 60px;   --fy: 104px;  background: var(--gx-amber, #f59e0b); animation-delay: .00s; }
+.ag-cheer-burst i:nth-child(7)  { --fx: 0px;    --fy: 120px;  background: var(--gx-good); animation-delay: .03s; }
+.ag-cheer-burst i:nth-child(8)  { --fx: -60px;  --fy: 104px;  background: var(--gx-violet, #6d5efc); animation-delay: .06s; }
+.ag-cheer-burst i:nth-child(9)  { --fx: -104px; --fy: 60px;   background: var(--gx-amber, #f59e0b); animation-delay: .09s; }
+.ag-cheer-burst i:nth-child(10) { --fx: -120px; --fy: 0px;    background: var(--gx-good); animation-delay: .12s; }
+.ag-cheer-burst i:nth-child(11) { --fx: -104px; --fy: -60px;  background: var(--gx-violet, #6d5efc); animation-delay: .06s; }
+.ag-cheer-burst i:nth-child(12) { --fx: -60px;  --fy: -104px; background: var(--gx-amber, #f59e0b); animation-delay: .03s; }
+
+@keyframes ag-cheer-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ag-cheer-pop {
+    from { opacity: 0; transform: scale(.9); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes ag-cheer-fly {
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(.6); }
+    70%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(1) rotate(220deg); }
+}
 
 @media (prefers-reduced-motion: reduce) {
-    .ag-focus.is-pickable { transition: none; }
+    .ag-focus.is-pickable, .ag-step, .ag-step-link, .ag-finish { transition: none; }
+    .ag-finish, .ag-cheer, .ag-cheer-card { animation: none; }
+    /* Forty pieces flickering in and out at a near-zero duration is not a
+       quieter version of a burst. It goes entirely — the same call
+       GoalReached makes. */
+    .ag-cheer-burst { display: none; }
 }
 
 /* ---------- Next actions -------------------------------------------------- */

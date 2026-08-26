@@ -389,9 +389,18 @@ def _clean_steps(value):
         if step_id in taken:
             step_id = _fresh_step_id(taken)
         taken.add(step_id)
+        # The one task this step is execution for, if the reader linked one.
+        # A step is still not a task — this is a pointer, and the step stands
+        # whether or not anything is on the other end of it.
+        #
+        # An emptied row loses it, for the same reason it loses its tick: a
+        # pointer hanging off a row with no text is a task attached to
+        # nothing. utils/milestoneSteps drops it on the way in too.
+        task_id = (str(entry.get('task_id') or '').strip() or None) if title else None
         out.append({
             'id': step_id,
             'title': title,
+            'task_id': task_id,
             'done': bool(entry.get('done')),
             # Derived, never trusted from the caller: an untitled row is a
             # placeholder and a titled one is not. Taking the client's flag
@@ -403,7 +412,8 @@ def _clean_steps(value):
         title = PLACEHOLDERS[len(out)] if len(out) < len(PLACEHOLDERS) else ''
         step_id = _fresh_step_id(taken)
         taken.add(step_id)
-        out.append({'id': step_id, 'title': title, 'done': False, 'placeholder': True})
+        out.append({'id': step_id, 'title': title, 'task_id': None,
+                    'done': False, 'placeholder': True})
 
     return out
 
@@ -411,7 +421,7 @@ def _clean_steps(value):
 def _steps_column(steps):
     """The checklist as it is stored. Placeholders are not written out."""
     return json.dumps([
-        {'id': s['id'], 'title': s['title'], 'done': s['done']}
+        {'id': s['id'], 'title': s['title'], 'done': s['done'], 'task_id': s['task_id']}
         for s in steps if not s['placeholder']
     ])
 
