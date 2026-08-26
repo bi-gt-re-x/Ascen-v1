@@ -100,9 +100,9 @@ import {
   QualityPanel,
   RatedTasksPanel,
   ReasonsPanel,
-  ScoreBanner,
+  scoreMovement,
   ScorePanel,
-  SinceLast,
+  Summary,
   TabOpening,
   StandingPanel,
   StreaksPanel,
@@ -370,7 +370,7 @@ export default function Analytics() {
   );
   const gradedLog = useApi<MetricHistories>(gradedCall, [username]);
 
-  // The score's own recorded past. See the note on `SinceLast` for what it is
+  // The score's own recorded past. See the note on `scoreMovement` for what it is
   // for, and services/analytics for why it took an endpoint to reach it.
   const historyCall = useCallback(
     () =>
@@ -1036,7 +1036,19 @@ export default function Analytics() {
   const opening = ((): React.ReactNode => {
     switch (view.key) {
       case 'overview':
-        return <SinceLast points={recorded} />;
+        /* The one tab whose opening is a block rather than a line. Everything
+           it states is already in scope here — which is why it lives in this
+           slot rather than inside `OverviewView`, which would need four more
+           props to say the same thing. */
+        return (
+          <Summary
+            score={analytical}
+            movement={scoreMovement(recorded)}
+            topAdvice={advice[0]?.title ?? null}
+            adviceCount={advice.length}
+            phase={waitFor('insights') === 0 ? state.phase : null}
+          />
+        );
       case 'trends':
         return waitFor('trends') === 0 && heading.length > 0 ? (
           <TabOpening>{verdict}</TabOpening>
@@ -1129,7 +1141,6 @@ export default function Analytics() {
 
         {view.key === 'overview' && (
           <OverviewView
-            analytical={analytical}
             figures={figures}
             sparks={sparks}
             score={score}
@@ -1565,8 +1576,6 @@ export default function Analytics() {
 // Overview
 // --------------------------------------------------------------------------
 interface OverviewProps {
-  /** The score, its letter and its five parts. See ScoreBanner. */
-  analytical: ReturnType<typeof analyticalScore>;
   figures: ReturnType<typeof summaryFigures>;
   sparks: ReturnType<typeof tileSeries>;
   score: number | null;
@@ -1612,14 +1621,10 @@ interface OverviewProps {
 function OverviewView(props: OverviewProps) {
   return (
     <>
-      {/* The score and its letter, above everything — including what moved.
-          A reader who opens this tab and reads one thing should read this one:
-          it is the whole account in a number, and the sentence under it names
-          the measure holding that number down. */}
-      <ScoreBanner score={props.analytical} />
-
-      {/* What moved, before anything that merely *is*. See `SinceLast`. */}
-
+      {/* The score, its letter and what moved used to open here, in a banner
+          of their own. They open the tab still — but as `Summary`, in the
+          shared opening slot a few lines up in this file, alongside the two
+          things this tab could never say: what to change, and why. */}
       <section id="overview" className="ax-section">
         <Tiles
           figures={props.figures}

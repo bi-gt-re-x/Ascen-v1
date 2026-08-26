@@ -354,20 +354,31 @@ export function TabOpening({
 // --------------------------------------------------------------------------
 // What changed since last time
 // --------------------------------------------------------------------------
-export interface SinceLastProps {
-  /** Recorded readings of the overall score, out of 100, oldest first. */
-  points: Array<{ date: string; score: number }>;
+/** A reading of the overall score, out of 100, as `/api/metric_history` files it. */
+export interface ScoreReading {
+  date: string;
+  score: number;
 }
 
 /** How far back a reading can be and still count as "last time". */
 const STALE_DAYS = 45;
 
+export interface ScoreMovement {
+  /** The latest reading, out of 100 — the scale it is recorded on. */
+  now: number;
+  /** The last *different* reading, or null when the score has never moved. */
+  previous: number | null;
+  /** Days back to that reading — or, when it held, how long it has held for. */
+  days: number;
+  direction: 'up' | 'down' | 'held';
+}
+
 /**
- * The one line on this page a returning reader is actually here for.
+ * The one thing on this page a returning reader is actually here for.
  *
  * Everything else states where the account *is*. This states what **moved**,
- * which is the only thing that rewards coming back: a score of 6.5 is a status
- * and reads the same on every visit, but "6.5, up from 6.1 on Tuesday" is news,
+ * which is the only thing that rewards coming back: a score of 65 is a status
+ * and reads the same on every visit, but "65, up from 61 on Tuesday" is news,
  * and news is what a weekly habit is made of.
  *
  * It needed an endpoint. The grades have been filed daily since the report card
@@ -378,16 +389,22 @@ const STALE_DAYS = 45;
  * "no change" every single day, which is both true and useless; against the
  * last time it actually moved it produces "steady for twelve days", which is a
  * real statement about the account. Beyond `STALE_DAYS` there is nothing
- * honest to compare to and the strip says so rather than reaching further.
+ * honest to compare to, and this returns null rather than reaching further.
+ *
+ * Figures, not a sentence. This was a component — `SinceLast`, the strip that
+ * opened the Overview — until the summary took that slot and needed the same
+ * movement as one of its rows. A component and a summary row both doing this
+ * walk would be two copies free to drift apart, so the walk stayed and the
+ * strip went. The scale stays as recorded, out of 100; the caller divides if
+ * it prints the score out of ten.
  */
-export function SinceLast({ points }: SinceLastProps) {
+export function scoreMovement(points: ScoreReading[]): ScoreMovement | null {
   if (points.length < 2) return null;
 
   const last = points[points.length - 1]!;
-  const now = last.score / 10;
 
   // Back to the most recent reading that differs, and how long ago that was.
-  let earlier: { date: string; score: number } | null = null;
+  let earlier: ScoreReading | null = null;
   for (let index = points.length - 2; index >= 0; index--) {
     if (points[index]!.score !== last.score) {
       earlier = points[index]!;
@@ -404,22 +421,15 @@ export function SinceLast({ points }: SinceLastProps) {
   if (!earlier) {
     const held = days(points[0]!.date);
     if (held < 2) return null;
-    return (
-      <TabOpening>
-        Your growth score has held at <strong>{now.toFixed(1)}</strong> for {held} days.
-      </TabOpening>
-    );
+    return { now: last.score, previous: null, days: held, direction: 'held' };
   }
 
   const gap = days(earlier.date);
   if (gap > STALE_DAYS) return null;
-  const move = now - earlier.score / 10;
-  const up = move > 0;
-
-  return (
-    <TabOpening tone={up ? 'up' : 'down'}>
-      Your growth score is <strong>{now.toFixed(1)}</strong>, {up ? 'up' : 'down'} from{' '}
-      {(earlier.score / 10).toFixed(1)} {gap === 1 ? 'yesterday' : `${gap} days ago`}.
-    </TabOpening>
-  );
+  return {
+    now: last.score,
+    previous: earlier.score,
+    days: gap,
+    direction: last.score > earlier.score ? 'up' : 'down',
+  };
 }

@@ -13,18 +13,27 @@
  * that explanation had already moved to `ScoringDetails`, which the Trajectory
  * panel opens in place. Two files nobody could reach, justified by a job
  * something else was doing. `metrics.ts` stays for `gradeClass`, which
- * `ScoreBanner` colours the letter with.
+ * `Summary` colours the letter with.
+ *
+ * `ScoreBanner` went the same way for the same reason. It opened the Overview
+ * with the score, its letter, two paragraphs of derivation and five labelled
+ * bars — and the bars were the same five measures `ScorePanel` draws a few
+ * rows further down, on the same tab, from a second implementation of the same
+ * arithmetic (`./score` scores them out of ten, `utils/analyticalScore` out of
+ * a hundred). One row of bars is enough, and the one that sits with the chart
+ * of the score over time is the one that earns its place. `Summary` took the
+ * slot, kept the derivation behind a disclosure, and left the bars behind.
  */
-export { ScoreBanner } from './ScoreBanner';
-export type { ScoreBannerProps } from './ScoreBanner';
+export { Summary } from './Summary';
+export type { SummaryProps } from './Summary';
 export { NextActions } from './NextActions';
 export type { NextActionsProps } from './NextActions';
 export { DiagnosisCards, DiagnosisEmpty } from './Diagnosis';
 export { Patterns as DiscoveredPatterns } from './Patterns';
 export type { PatternsProps as DiscoveredPatternsProps } from './Patterns';
 
-export { SinceLast } from './Header';
-export type { SinceLastProps } from './Header';
+export { scoreMovement } from './Header';
+export type { ScoreMovement, ScoreReading } from './Header';
 export { Header, ViewTabs, Controls, TabOpening, VIEWS, viewFor } from './Header';
 export type { HeaderProps, ViewTabsProps, ControlsProps, View, ViewKey } from './Header';
 

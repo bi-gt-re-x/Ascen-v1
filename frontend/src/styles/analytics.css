@@ -3940,146 +3940,156 @@ body:has(.ax-page) .app-main {
 }
 
 /* ==========================================================================
-   The Analytical Score banner
+   The summary — the short version, at the top of the Overview
    ==========================================================================
-   The first thing on the Overview, and the only thing on its row. Three parts
-   across the top — the number, the letter, the explanation — and the five
-   measures it is the average of underneath.
+   This replaced `.ax-scoreband`, which was the same slot doing a third of the
+   job: the score, its letter, two paragraphs of derivation and five labelled
+   bars. The bars are gone (`.ax-score-*` on the Trajectory row draws the same
+   five, beside the chart of the score over time, which is where they mean
+   something) and the derivation is in a disclosure at the foot of this block.
+   What is left is five sentences and a way out of each.
+
+   The styling job is restraint. This sits above `.ax-tiles`, which is already
+   a row of numbers with sparklines under them — so if this block also reaches
+   for figures-as-objects it becomes a second tile row that happens to be made
+   of prose, and the reader is back to two summaries. Hence: no fills, no
+   chips, no colour on the rows. One tinted rule at the top in the grade's own
+   colour, one badge, and then text.
 
    The letter's colour comes from `--grade-color`, which the `.grade-*` classes
-   in growth.css set; the banner carries one of those, so the accent rule, the
-   badge and the bar fills are all one colour without this file knowing which. */
+   in growth.css set; the section carries one of those. */
 
-.ax-scoreband {
+.ax-summary {
     gap: 0;
     border-top: 3px solid var(--grade-color, var(--ax-violet));
 }
-.ax-scoreband.is-empty { border-top-color: var(--ax-line); }
+.ax-summary.is-empty { border-top-color: var(--ax-line); }
 
-.ax-scoreband-main {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
+/* ---------- The lead: the score, its letter, and what the letter means ---- */
+.ax-summary-head {
+    display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
 }
 
-.ax-scoreband-figure { display: flex; flex-direction: column; gap: 2px; }
-
-.ax-scoreband-label {
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--ax-faint);
-}
-
-.ax-scoreband-value {
-    font-size: 42px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -.03em;
-    color: var(--ax-text);
-    font-variant-numeric: tabular-nums;
-}
-.ax-scoreband-value em {
-    font-size: 15px;
-    font-weight: 600;
-    font-style: normal;
-    color: var(--ax-faint);
-    margin-left: 2px;
-}
-
-/* The letter, as a badge in the grade's own colour. Sized off the number
-   beside it so the two read as one statement rather than as a figure with a
-   sticker next to it. */
-.ax-scoreband-grade {
+/* Sized down from the banner's 62px. It was the largest object on the page
+   when it was the whole opening; here it introduces five sentences and should
+   not outweigh them. */
+.ax-summary-grade {
+    flex: none;
     display: grid;
     place-items: center;
-    min-width: 62px;
-    height: 62px;
+    min-width: 52px;
+    height: 52px;
     padding: 0 12px;
-    border-radius: 16px;
+    border-radius: 14px;
     background: color-mix(in srgb, var(--grade-color, var(--ax-violet)) 14%, transparent);
     color: var(--grade-color, var(--ax-violet));
-    font-size: 30px;
+    font-size: 26px;
     font-weight: 800;
     line-height: 1;
     letter-spacing: -.02em;
 }
 
-.ax-scoreband-said { min-width: 0; }
-
-.ax-scoreband-meaning {
+.ax-summary-lead {
     margin: 0;
-    font-size: 13.5px;
+    min-width: 0;
+    font-size: 16px;
     font-weight: 600;
     line-height: 1.45;
     color: var(--ax-text);
 }
+/* The figure sits inside the sentence rather than beside it — see the note at
+   the top of Summary.tsx. Big enough to be the thing the eye lands on, small
+   enough that the words around it are still part of the same statement. */
+.ax-summary-lead strong {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-summary-lead strong em {
+    font-size: 13px;
+    font-weight: 600;
+    font-style: normal;
+    color: var(--ax-faint);
+    margin-left: 1px;
+}
 
-/* The derivation. Never hidden behind a disclosure — see the note at the top
-   of ScoreBanner for why a grade without one is worth very little. */
-.ax-scoreband-how {
-    margin: 5px 0 0;
+/* ---------- The rows ------------------------------------------------------
+   Hairline-separated rather than carded. Four cards here would read as four
+   things to do; four rules read as one paragraph with the breaks marked. */
+.ax-summary-rows {
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-summary-rows li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px 20px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.ax-summary-rows li:last-child { border-bottom: 0; }
+
+.ax-summary-rows p {
+    margin: 0;
+    min-width: 0;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ax-text);
+}
+.ax-summary-rows strong {
+    font-weight: 700;
+    color: var(--ax-text);
+}
+
+/* The way out. Quiet on purpose: the sentence is the content and this is the
+   footnote that proves it, so it takes the smaller size and only gains an
+   underline when the reader goes for it. */
+.ax-summary-more {
+    flex: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-violet);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity .15s ease;
+}
+.ax-summary-more:hover { text-decoration: underline; }
+
+/* ---------- The derivation, one disclosure down -------------------------- */
+.ax-summary-how {
+    margin: 14px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-summary-how > summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-muted);
+    list-style: none;
+}
+.ax-summary-how > summary::-webkit-details-marker { display: none; }
+.ax-summary-how > summary::before {
+    content: '›';
+    display: inline-block;
+    margin-right: 7px;
+    color: var(--ax-faint);
+    transition: transform .15s ease;
+}
+.ax-summary-how[open] > summary::before { transform: rotate(90deg); }
+.ax-summary-how > summary:hover { color: var(--ax-text); }
+.ax-summary-how p {
+    margin: 9px 0 0;
     font-size: 12.5px;
     line-height: 1.55;
     color: var(--ax-muted);
-}
-
-.ax-scoreband-parts {
-    display: grid;
-    /* 175px so all five fit on one row on a full-width shell. At 210 the fifth
-       wrapped alone under four, which reads as a sixth thing that failed to
-       load rather than as the last of five. */
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 175px), 1fr));
-    gap: 10px 22px;
-    margin: 20px 0 0;
-    padding: 18px 0 0;
-    border-top: 1px solid var(--ax-line-soft);
-    list-style: none;
-}
-.ax-scoreband-parts li {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 4px 10px;
-}
-
-.ax-scoreband-part-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--ax-text);
-}
-.ax-scoreband-part-score {
-    font-size: 12.5px;
-    font-weight: 700;
-    color: var(--ax-muted);
-    font-variant-numeric: tabular-nums;
-}
-
-.ax-scoreband-track {
-    grid-column: 1 / -1;
-    order: 3;
-    height: 5px;
-    border-radius: 999px;
-    background: var(--ax-card-2);
-    overflow: hidden;
-}
-.ax-scoreband-track i {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: var(--grade-color, var(--ax-violet));
-}
-
-/* The measured quantity, which is the part a reader can actually act on —
-   "22 of 30 days worked" rather than "Consistency 73". */
-.ax-scoreband-part-raw {
-    grid-column: 1 / -1;
-    order: 4;
-    font-size: 11.5px;
-    line-height: 1.45;
-    color: var(--ax-faint);
 }
 
 .ax-sr-only {
@@ -4092,12 +4102,22 @@ body:has(.ax-page) .app-main {
     border: 0;
 }
 
+/* On a phone the hand-off drops under the sentence it belongs to rather than
+   squeezing it into a column two words wide. */
 @media (max-width: 640px) {
-    .ax-scoreband-main {
-        grid-template-columns: auto auto;
-        gap: 14px 18px;
+    .ax-summary-head { gap: 13px; }
+    .ax-summary-grade { min-width: 46px; height: 46px; font-size: 22px; }
+    .ax-summary-lead { font-size: 15px; }
+    .ax-summary-lead strong { font-size: 23px; }
+    .ax-summary-rows li {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
     }
-    .ax-scoreband-said { grid-column: 1 / -1; }
-    .ax-scoreband-value { font-size: 34px; }
-    .ax-scoreband-grade { min-width: 52px; height: 52px; font-size: 24px; }
+    .ax-summary-rows p { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-summary-how > summary::before,
+    .ax-summary-more { transition: none; }
 }
