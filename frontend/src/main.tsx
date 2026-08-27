@@ -19,7 +19,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { RootBoundary } from '@/components';
-import { AuthProvider, SettingsProvider, ThemeProvider } from '@/context';
+import { AuthProvider, SettingsProvider, ThemeProvider, UserDataProvider } from '@/context';
 
 import '@/styles/grades.css';
 import '@/styles/layout.css';
@@ -41,7 +41,13 @@ createRoot(container).render(
         <ThemeProvider>
           <AuthProvider>
             <SettingsProvider>
-              <App />
+              {/* Above App, so the one big account read happens once for the
+                  session rather than once per caller — the dashboard, the top
+                  bar and the rail all want it and all mount together. See
+                  context/UserDataProvider. */}
+              <UserDataProvider>
+                <App />
+              </UserDataProvider>
             </SettingsProvider>
           </AuthProvider>
         </ThemeProvider>

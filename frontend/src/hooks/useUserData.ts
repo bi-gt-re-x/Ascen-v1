@@ -1,35 +1,27 @@
 /**
  * The account's stats and tasks — the call most pages start with.
  *
- * Wrapped rather than left to each page because reading it has a side effect
- * worth being deliberate about: the backend decays a streak that went stale
- * overnight while answering. So this is the call that makes every page agree
- * on the streak.
+ * A reader of <UserDataProvider>, not a fetch. It used to be a fetch, and that
+ * meant one request per caller: the dashboard, the top bar and the rail mount
+ * together, so the first paint asked for the app's largest response three
+ * times. The state lives above them now — see context/UserDataProvider for the
+ * whole argument — and this returns exactly the object it always did, so every
+ * call site reads the same.
  *
- * It used to be the call every page made again after every write, too. It is
- * not now: `mutate` puts the change the page just made onto the page, and
- * `reload` is what the Refresh button does. See hooks/useApi.
+ * What the provider carries is still `useApi`'s shape. `mutate` puts the
+ * change a page just made onto the screen without a round trip, and `reload`
+ * is what the Refresh button does; the difference is that both now move every
+ * page at once rather than one caller's private copy.
  */
-import { useCallback } from 'react';
-import { useApi } from './useApi';
-import { useAuth } from './useAuth';
-import { tasks } from '@/services';
-import type { UserData } from '@/services/tasks';
-import type { UseApiResult } from './useApi';
+import { useContext } from 'react';
+import { UserDataContext } from '@/context/contexts';
+import type { UserDataValue } from '@/context/contexts';
 
-export function useUserData(): UseApiResult<UserData> & { username: string | null } {
-  const { username } = useAuth();
-
-  const call = useCallback(
-    () =>
-      username
-        ? tasks.getUserData()
-        : Promise.resolve({
-            success: false as const,
-            message: 'Sign in to see your dashboard.',
-          }),
-    [username],
-  );
-
-  return { ...useApi(call, [username]), username };
+/** The account's stats and tasks. Must be inside <UserDataProvider>. */
+export function useUserData(): UserDataValue {
+  const value = useContext(UserDataContext);
+  if (!value) {
+    throw new Error('useUserData must be used inside <UserDataProvider>');
+  }
+  return value;
 }

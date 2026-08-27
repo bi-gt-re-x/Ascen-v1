@@ -12,7 +12,9 @@
  */
 import { createContext } from 'react';
 import type { Theme } from '@/types';
+import type { UseApiResult } from '@/hooks/useApi';
 import type { Prefs } from '@/services/settings';
+import type { UserData } from '@/services/tasks';
 
 // --------------------------------------------------------------------------
 // Theme
@@ -87,3 +89,29 @@ export interface SettingsValue {
 }
 
 export const SettingsContext = createContext<SettingsValue | null>(null);
+
+// --------------------------------------------------------------------------
+// The account's stats and tasks
+// --------------------------------------------------------------------------
+/**
+ * One `/api/get_user_data` read, shared by everything that wants it.
+ *
+ * This is the app's biggest response and it was being asked for once per
+ * caller: the dashboard, the top bar and the rail all mount together and all
+ * called `useUserData`, so landing on a page fetched the same several
+ * megabytes three times over. Nothing about the data is per-caller — it is the
+ * account — so the read belongs above them all, exactly like the preferences
+ * next door.
+ *
+ * The shape is `useApi`'s, unchanged, because that is what every call site
+ * already destructures. What changes is who owns the state: `mutate` now moves
+ * every reader at once, so a task completed on the dashboard updates the XP in
+ * the top bar without a second request, and `reload` is one request rather
+ * than one per mounted caller.
+ */
+export interface UserDataValue extends UseApiResult<UserData> {
+  /** Who the data belongs to, or null when signed out. */
+  username: string | null;
+}
+
+export const UserDataContext = createContext<UserDataValue | null>(null);

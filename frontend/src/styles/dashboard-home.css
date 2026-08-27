@@ -744,13 +744,28 @@ body:has(.dash) .app-main {
    strip — those rules key off `.focus-panel`, which is why the panel keeps
    that class.
    ========================================================================== */
+/* `--dash-fold` is the *ceiling* the fold animates from, not a height. It has
+   to sit above the tallest these sections ever get, because anything shorter
+   does not clip them — `overflow` is visible, so the content simply spills out
+   and paints over whatever is below.
+
+   400px was fine for the four stat cards in one row and wrong the moment they
+   stacked. Measured on a 375px screen: `.dash-stats` was a 400px box holding
+   780px of cards and `.dash-insights` a 400px box holding 697px, so the
+   dashboard drew its Tasks panel straight through the Focus Time card — 162px
+   of overlap, on every phone, on the app's first screen.
+
+   It is raised rather than removed because the fold needs two numbers to
+   travel between; `none` does not animate to `0`. See the breakpoints below,
+   where stacking begins. */
 .dash-greeting,
 .dash-stats,
 .dash-insights,
 .quote-container {
+    --dash-fold: 400px;
     transition: opacity 0.45s ease, transform 0.6s ease,
                 margin 0.6s ease, max-height 0.6s ease;
-    max-height: 400px;
+    max-height: var(--dash-fold);
 }
 html.focus-mode .dash-greeting,
 html.focus-mode .dash-stats,
@@ -800,6 +815,15 @@ html.focus-mode .dash-main .dash-tasks { order: 1; min-height: 0; }
    NARROWER SCREENS
    ========================================================================== */
 @media (max-width: 1240px) {
+    /* Two across, then one: from here down these sections are as tall as their
+       contents stacked, and the fold's ceiling has to clear that. Tied to the
+       viewport rather than to a pixel count, so it scales with the device
+       instead of needing a new number the next time a card is added. */
+    .dash-greeting,
+    .dash-stats,
+    .dash-insights,
+    .quote-container { --dash-fold: 250vh; }
+
     .dash-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dash-insights { grid-template-columns: minmax(0, 1fr); }
 

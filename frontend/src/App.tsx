@@ -150,7 +150,9 @@ export default function App() {
       {!landing && <Rail />}
       {/* Beside the rail rather than above it: the rail owns the full height
           and the bar starts at `--rail-w`. Outside the router with the rail,
-          so its one account read happens once for the session. */}
+          so neither is torn down and rebuilt on every navigation. The account
+          read they both show is not theirs any more — it belongs to
+          UserDataProvider above them, and happens once for the session. */}
       {!landing && <Topbar />}
       <main className="app-main">
         {/* Inside the shell, so a page that throws loses the page and not the

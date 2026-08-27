@@ -44,7 +44,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { useAuth, useSettings, useUserData } from '@/hooks';
+import { useAuth, useMediaQuery, useSettings, useUserData } from '@/hooks';
 import { format } from '@/utils';
 import { rankFor } from '@/utils/mastery';
 import '@/styles/rail.css';
@@ -66,7 +66,32 @@ interface Tab {
    * is plainly on the analytics page.
    */
   also?: string[];
+  /**
+   * Show this one in the phone's bottom bar.
+   *
+   * Four of the ten, because a bar is only as wide as the phone. All ten were
+   * laid out across 375px and the last two — Records and Settings — were
+   * simply off the end of the screen: measured at x 352-393 and 395-436, with
+   * nothing to scroll. Two whole sections of the app were unreachable on a
+   * phone. The other six are one tap away behind More.
+   *
+   * These four because they are the ones a phone is *for*: what is on today,
+   * what is next, what is due, and what it is all toward. The reference pages
+   * — analytics, records, the skill tree — are what a desk is for.
+   */
+  phone?: boolean;
 }
+
+/**
+ * The width below which the rail lies down along the bottom of the screen.
+ *
+ * The same 640px as the `@media (max-width: 640px)` block in styles/rail.css,
+ * and the duplication is the point of naming it: below this the rail is not a
+ * narrower rail, it is a different component with four tabs and a sheet. CSS
+ * cannot express "render six of these somewhere else", so the breakpoint has
+ * to exist in both places. If one moves, move the other.
+ */
+const PHONE = '(max-width: 640px)';
 
 const stroke = {
   viewBox: '0 0 24 24',
@@ -88,6 +113,7 @@ const stroke = {
 const TABS: Tab[] = [
   {
     to: '/dashboard',
+    phone: true,
     label: 'Dashboard',
     icon: (
       <svg {...stroke}>
@@ -100,6 +126,7 @@ const TABS: Tab[] = [
   },
   {
     to: '/calendar',
+    phone: true,
     label: 'Calendar',
     icon: (
       <svg {...stroke}>
@@ -125,6 +152,7 @@ const TABS: Tab[] = [
     also: [
       '/analytics',
       '/analytics/records',
+      '/analytics/goals',
       '/trends',
       '/habits',
       '/insights',
@@ -146,6 +174,7 @@ const TABS: Tab[] = [
   // see `Tab.also` above, and the `/growth` redirect in App.tsx.
   {
     to: '/tasks',
+    phone: true,
     label: 'Tasks',
     icon: (
       <svg {...stroke}>
@@ -155,6 +184,7 @@ const TABS: Tab[] = [
   },
   {
     to: '/goals',
+    phone: true,
     label: 'Goals',
     icon: (
       <svg {...stroke}>
@@ -295,6 +325,18 @@ export function Rail() {
      decoration. */
   const rank = level ? rankFor(level.level) : null;
 
+  /* Below the breakpoint the bar shows four tabs and a More sheet; above it,
+     all ten in a column. See PHONE and the `phone` flag on Tab. */
+  const phone = useMediaQuery(PHONE);
+  const shown = phone ? TABS.filter((tab) => tab.phone) : TABS;
+  const rest = phone ? TABS.filter((tab) => !tab.phone) : [];
+
+  /* Closed on arrival, and closed again the moment the reader lands
+     somewhere — a sheet still open over the page it just navigated to is a
+     sheet the reader has to dismiss to see what they asked for. */
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => setMoreOpen(false), [pathname]);
+
   return (
     <nav className="rail" aria-label="Main">
       {/* The mark is a span, not a link: secret/easter-egg.js counts clicks on
@@ -350,7 +392,7 @@ export function Rail() {
       </div>
 
       <div className="rail-links">
-        {TABS.map((tab) => (
+        {shown.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
@@ -363,7 +405,62 @@ export function Rail() {
             <span>{tab.label}</span>
           </NavLink>
         ))}
+
+        {/* The other six, on a phone. Lit when the reader is on one of them,
+            so the bar still answers "where am I" for every page in the app
+            rather than only for the four it has room to name. */}
+        {phone && (
+          <button
+            type="button"
+            className={`rail-link rail-more${moreOpen ? ' is-open' : ''}${
+              rest.some((tab) => tab.to === pathname || tab.also?.includes(pathname))
+                ? ' active'
+                : ''
+            }`}
+            aria-expanded={moreOpen}
+            aria-haspopup="menu"
+            onClick={() => setMoreOpen((was) => !was)}
+          >
+            <svg {...stroke}>
+              <circle cx="5" cy="12" r="1.6" />
+              <circle cx="12" cy="12" r="1.6" />
+              <circle cx="19" cy="12" r="1.6" />
+            </svg>
+            <span>More</span>
+          </button>
+        )}
       </div>
+
+      {phone && moreOpen && (
+        <>
+          {/* Tapping anywhere else closes it, which is what a sheet has to do
+              on a device with no Escape key. */}
+          <button
+            type="button"
+            className="rail-sheet-scrim"
+            aria-label="Close menu"
+            onClick={() => setMoreOpen(false)}
+          />
+          <div className="rail-sheet" role="menu">
+            {rest.map((tab) => (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                role="menuitem"
+                className={({ isActive }) =>
+                  `rail-sheet-link${
+                    isActive || tab.also?.includes(pathname) ? ' active' : ''
+                  }`
+                }
+                onClick={() => setMoreOpen(false)}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* The dark-mode switch stood here until it moved to the top bar, where
           the rest of the app's controls already were. See components/Topbar. */}
