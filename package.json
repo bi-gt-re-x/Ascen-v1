@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "npm run typecheck && npm run check:trees && npm run check:steps && vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "check:trees": "node scripts/check_trees.mjs",
     "check:steps": "node scripts/check_steps.mjs"
@@ -28,11 +31,17 @@
     "Move to >8.2.0 once it ships, and delete this note."
   ],
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.6",
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "jsdom": "^30.0.1",
     "typescript": "^5.9.0",
-    "vite": "^7.1.0"
+    "vite": "^7.1.0",
+    "vitest": "^4.1.11"
   }
 }

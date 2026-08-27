@@ -9,6 +9,9 @@ __pycache__/
 node_modules/
 frontend/dist/
 
+# Written by `npm run test:coverage`. A report of the tests, not a test.
+coverage/
+
 # Environment files. One .env at the root serves both halves — vite.config.ts
 # points envDir back here so the frontend reads the same file the backend does.
 .env
