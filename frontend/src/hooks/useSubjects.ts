@@ -144,7 +144,16 @@ export function useSubjects(username: string | null): Subject[] {
  * An id the catalogue does not recognise resolves to nothing, which is the
  * same thing as a task with no subject: no icon, no pill, counted under Other.
  */
-export function useSubjectIndex(username: string | null): Map<string, Subject> {
+/**
+ * The catalogue, keyed by id.
+ *
+ * Named because three call sites pass it around — the analytics model and two
+ * of its tabs — and `Map<string, Subject>` spelled out at each of them says
+ * less than the name does.
+ */
+export type SubjectIndex = Map<string, Subject>;
+
+export function useSubjectIndex(username: string | null): SubjectIndex {
   const subjects = useSubjects(username);
   return useMemo(
     () => new Map(subjects.map((subject) => [subject.id, subject])),

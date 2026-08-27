@@ -142,3 +142,24 @@ export type { GrowthScore, ScoreFactor } from './score';
 // The report card, no longer rendered. See the note at the top.
 export { ScoringDetails } from './ScoringDetails';
 export { gradeClass } from './metrics';
+
+/**
+ * The page's fetching and its arithmetic, each in one place.
+ *
+ * Exported from here so the page imports its parts the same way it imports its
+ * panels. Neither is a component; both are the page's own and are not meant to
+ * be reached from anywhere else.
+ */
+export { useAnalyticsData } from './useAnalyticsData';
+export { useAnalyticsModel, NEED_DAYS } from './useAnalyticsModel';
+export type { AnalyticsModel } from './useAnalyticsModel';
+export type { AnalyticsData } from './useAnalyticsData';
+
+/** The six tab bodies. Each lays out what the model already worked out. */
+export { OverviewTab } from './tabs/OverviewTab';
+export { GoalsTab } from './tabs/GoalsTab';
+export { HabitsTab } from './tabs/HabitsTab';
+export { InsightsTab } from './tabs/InsightsTab';
+export { RecommendationsTab } from './tabs/RecommendationsTab';
+export { RecordsTab } from './tabs/RecordsTab';
+export { SubjectsTab } from './tabs/SubjectsTab';

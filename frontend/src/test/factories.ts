@@ -10,7 +10,7 @@
  * test overrides exactly what it cares about, so a default that changes cannot
  * quietly change what a test means.
  */
-import type { Task, UserStats } from '@/types';
+import type { GrowthDay, Task, UserStats } from '@/types';
 
 let counter = 0;
 
@@ -39,4 +39,33 @@ export function stats(overrides: Partial<UserStats> = {}): UserStats {
     charge: 0,
     ...overrides,
   };
+}
+
+/**
+ * A run of consecutive days, as the growth series returns them.
+ *
+ * `from` is the first day and `count` the length. Every figure is zero unless
+ * the caller says otherwise — the tests that use this care about the *dates*,
+ * which is what the windowing and the follow-up slice on.
+ */
+export function days(from: string, count: number, over: Partial<GrowthDay> = {}): GrowthDay[] {
+  const start = new Date(`${from}T00:00:00`);
+  return Array.from({ length: count }, (_, index) => {
+    const at = new Date(start);
+    at.setDate(at.getDate() + index);
+    const iso = `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, '0')}-${String(
+      at.getDate(),
+    ).padStart(2, '0')}`;
+    return {
+      date: iso,
+      day_number: index + 1,
+      xp_earned: 0,
+      tasks_completed: 0,
+      cumulative_xp: 0,
+      avg_task_xp: 0,
+      focus_minutes: 0,
+      cumulative_focus_minutes: 0,
+      ...over,
+    } as GrowthDay;
+  });
 }
