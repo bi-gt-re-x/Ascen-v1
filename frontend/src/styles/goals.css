@@ -510,7 +510,7 @@ body:has(.goals-page) {
 }
 
 /* Modal */
-.modal {
+.gx-page .modal {
     display: none;
     position: fixed;
     z-index: 1000;
@@ -522,7 +522,7 @@ body:has(.goals-page) {
     animation: fadeIn 0.3s ease-out;
 }
 
-.modal-content {
+.gx-page .modal-content {
     background-color: white;
     margin: 5% auto;
     padding: 40px;
@@ -534,13 +534,13 @@ body:has(.goals-page) {
     animation: fadeIn 0.4s ease-out;
 }
 
-.modal-content h2 {
+.gx-page .modal-content h2 {
     color: #1a237e;
     margin-bottom: 25px;
     font-weight: bold;
 }
 
-.close {
+.gx-page .close {
     color: #aaa;
     float: right;
     font-size: 28px;
@@ -549,12 +549,12 @@ body:has(.goals-page) {
     transition: color 0.3s ease;
 }
 
-.close:hover {
+.gx-page .close:hover {
     color: #1a237e;
 }
 
 /* Modal form */
-.modal-content label {
+.gx-page .modal-content label {
     display: block;
     margin-bottom: 8px;
     color: #333;
@@ -562,11 +562,11 @@ body:has(.goals-page) {
     font-size: 0.95em;
 }
 
-.modal-content input[type="text"],
-.modal-content input[type="number"],
-.modal-content input[type="date"],
-.modal-content textarea,
-.modal-content select {
+.gx-page .modal-content input[type="text"],
+.gx-page .modal-content input[type="number"],
+.gx-page .modal-content input[type="date"],
+.gx-page .modal-content textarea,
+.gx-page .modal-content select {
     width: 100%;
     padding: 12px;
     margin-bottom: 20px;
@@ -577,7 +577,7 @@ body:has(.goals-page) {
     transition: border-color 0.3s ease;
 }
 
-.modal-content select {
+.gx-page .modal-content select {
     background-color: white;
     color: #333;
     border: 2px solid #e0e0e0;
@@ -590,29 +590,29 @@ body:has(.goals-page) {
     transition: border-color 0.3s ease;
 }
 
-.modal-content select option {
+.gx-page .modal-content select option {
     background-color: white;
     color: #1a237e;
 }
 
-.modal-content input:focus,
-.modal-content textarea:focus,
-.modal-content select:focus {
+.gx-page .modal-content input:focus,
+.gx-page .modal-content textarea:focus,
+.gx-page .modal-content select:focus {
     outline: none;
     border-color: #1a237e;
 }
 
 /* Invalid date input styling */
-.modal-content input.invalid-date,
-.modal-content input[type="date"].invalid-date {
+.gx-page .modal-content input.invalid-date,
+.gx-page .modal-content input[type="date"].invalid-date {
     border-color: #ff0000;
     background-color: rgba(255, 0, 0, 0.1);
     animation: invalidDatePulse 0.5s ease-in-out;
 }
 
 /* Invalid input styling for title and amounts */
-.modal-content input.invalid-input,
-.modal-content textarea.invalid-input {
+.gx-page .modal-content input.invalid-input,
+.gx-page .modal-content textarea.invalid-input {
     border-color: #ff0000;
     background-color: rgba(255, 0, 0, 0.1);
     animation: invalidDatePulse 0.5s ease-in-out;
@@ -627,7 +627,7 @@ body:has(.goals-page) {
     }
 }
 
-.modal-content textarea {
+.gx-page .modal-content textarea {
     resize: vertical;
     min-height: 80px;
     background-color: white;
@@ -656,30 +656,30 @@ body:has(.goals-page) {
 
 
 /* Consistent modal styling across all themes */
-body.classic .modal-content {
+body.classic .gx-page .modal-content{
     background-color: white;
     border: 2px solid #1a237e;
 }
 
-body.classic .modal-content h2 {
+body.classic .gx-page .modal-content h2{
     color: #1a237e;
 }
 
-body.classic .modal-content label {
+body.classic .gx-page .modal-content label{
     color: #333;
 }
 
-body.classic .modal-content input,
-body.classic .modal-content textarea,
-body.classic .modal-content select {
+body.classic .gx-page .modal-content input,
+body.classic .gx-page .modal-content textarea,
+body.classic .gx-page .modal-content select{
     background-color: white;
     color: #333;
     border: 2px solid #e0e0e0;
 }
 
-body.classic .modal-content input:focus,
-body.classic .modal-content textarea:focus,
-body.classic .modal-content select:focus {
+body.classic .gx-page .modal-content input:focus,
+body.classic .gx-page .modal-content textarea:focus,
+body.classic .gx-page .modal-content select:focus{
     border-color: #1a237e;
 }
 
@@ -851,7 +851,7 @@ body.classic .goal-controls button:hover {
 }
 
 /* Add New Goal popup — styled like the dashboard's Add Task popup */
-body.classic .modal-content {
+body.classic .gx-page .modal-content{
     background-color: #FFFFFF;
     margin: 8% auto;
     padding: 32px;
@@ -865,14 +865,14 @@ body.classic .modal-content {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-body.classic .modal-content h2 {
+body.classic .gx-page .modal-content h2{
     margin: 0 0 24px 0;
     font-size: 1.3rem;
     font-weight: 700;
     color: #2C302E;
 }
 
-body.classic .close {
+body.classic .gx-page .close{
     color: #A0A0A0;
     position: absolute;
     top: 18px;
@@ -882,19 +882,19 @@ body.classic .close {
     font-weight: bold;
 }
 
-body.classic .close:hover { color: #2C302E; }
+body.classic .gx-page .close:hover{ color: #2C302E; }
 
-body.classic .modal-content label {
+body.classic .gx-page .modal-content label{
     color: #6C757D;
     font-weight: 500;
     text-align: left;
 }
 
-body.classic .modal-content input[type="text"],
-body.classic .modal-content input[type="number"],
-body.classic .modal-content input[type="date"],
-body.classic .modal-content textarea,
-body.classic .modal-content select {
+body.classic .gx-page .modal-content input[type="text"],
+body.classic .gx-page .modal-content input[type="number"],
+body.classic .gx-page .modal-content input[type="date"],
+body.classic .gx-page .modal-content textarea,
+body.classic .gx-page .modal-content select{
     width: 100%;
     padding: 12px;
     margin-bottom: 18px;
@@ -906,9 +906,9 @@ body.classic .modal-content select {
     background-color: #FFFFFF;
 }
 
-body.classic .modal-content input:focus,
-body.classic .modal-content textarea:focus,
-body.classic .modal-content select:focus {
+body.classic .gx-page .modal-content input:focus,
+body.classic .gx-page .modal-content textarea:focus,
+body.classic .gx-page .modal-content select:focus{
     outline: none;
     border-color: #2C302E;
 }
@@ -1090,29 +1090,29 @@ body.dark .goal-controls button {
 body.dark .goal-controls button:hover { background: #b89b80; border-color: #b89b80; }
 
 /* Dark modal (matches the dashboard's dark popup) */
-body.dark .modal-content {
+body.dark .gx-page .modal-content{
     background-color: #161B22;
     border: 1.5px solid #30363D;
     border-radius: 14px;
     color: #e6e8f0;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
-body.dark .modal-content h2 { color: #e6e8f0; }
-body.dark .close { color: #8b949e; }
-body.dark .close:hover { color: #e6e8f0; }
-body.dark .modal-content label { color: #9aa0b5; }
-body.dark .modal-content input[type="text"],
-body.dark .modal-content input[type="number"],
-body.dark .modal-content input[type="date"],
-body.dark .modal-content textarea,
-body.dark .modal-content select {
+body.dark .gx-page .modal-content h2{ color: #e6e8f0; }
+body.dark .gx-page .close{ color: #8b949e; }
+body.dark .gx-page .close:hover{ color: #e6e8f0; }
+body.dark .gx-page .modal-content label{ color: #9aa0b5; }
+body.dark .gx-page .modal-content input[type="text"],
+body.dark .gx-page .modal-content input[type="number"],
+body.dark .gx-page .modal-content input[type="date"],
+body.dark .gx-page .modal-content textarea,
+body.dark .gx-page .modal-content select{
     background-color: #0f141a;
     border: 1.5px solid #30363D;
     color: #e6e8f0;
 }
-body.dark .modal-content input:focus,
-body.dark .modal-content textarea:focus,
-body.dark .modal-content select:focus { border-color: #A38A70; }
+body.dark .gx-page .modal-content input:focus,
+body.dark .gx-page .modal-content textarea:focus,
+body.dark .gx-page .modal-content select:focus{ border-color: #A38A70; }
 body.dark .confirm-add-btn { background: #A38A70; color: #0D1117; }
 body.dark .confirm-add-btn:hover { background: #b89b80; }
 
@@ -1692,7 +1692,7 @@ body.dark .goals-page .goal-description { color: #9aa0b5; }
 }
 
 /* ---- Modernized goal modal ---- */
-.modal-content.goal-modal-modern {
+.gx-page .modal-content.goal-modal-modern {
     width: min(460px, 92vw);
     border-radius: 18px;
     padding: 30px 32px;
@@ -1952,7 +1952,7 @@ body:has(.gx-page) .app-main {
     min-width: 0;
 }
 
-.gx-page {
+.gx-page  {
     --gx-bg: transparent;
     --gx-card: #ffffff;
     --gx-card-2: #f7f8fa;
@@ -2081,7 +2081,7 @@ html[data-theme="dark"] .gx-page {
     color: var(--gx-faint);
 }
 
-.gx-page .gx-cat {
+.gx-page .gx-cat  {
     display: inline-block;
     font-size: 10.5px;
     font-weight: 700;
@@ -2097,14 +2097,14 @@ html[data-theme="dark"] .gx-page {
     display: inline-block;
 }
 
-.gx-page .gx-link {
+.gx-page .gx-link  {
     border: 0; background: none; padding: 0;
     color: var(--gx-violet);
     font: inherit; font-size: 12px; font-weight: 600;
     cursor: pointer;
 }
 
-.gx-page .gx-btn {
+.gx-page .gx-btn  {
     border: 1px solid var(--gx-line);
     background: var(--gx-card);
     color: var(--gx-text);
@@ -2363,7 +2363,7 @@ html[data-theme="dark"] .gx-page {
 }
 
 /* ---------- Health chip --------------------------------------------------- */
-.gx-page .gx-health {
+.gx-page .gx-health  {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -2375,7 +2375,7 @@ html[data-theme="dark"] .gx-page {
     white-space: nowrap;
     border: 1px solid transparent;
 }
-.gx-page .gx-health i {
+.gx-page .gx-health i  {
     width: 6px; height: 6px;
     border-radius: 50%;
     background: currentColor;
@@ -3092,7 +3092,7 @@ html[data-theme="dark"] .gx-page {
 }
 .gx-drawer-head p { margin: 0; font-size: 13px; line-height: 1.55; }
 
-.gx-page .gx-close {
+.gx-page .gx-close  {
     flex: none;
     width: 32px; height: 32px;
     border: 0; border-radius: 9px;
@@ -3168,7 +3168,7 @@ html[data-theme="dark"] .gx-page {
     border-bottom: 1px solid var(--gx-line-soft);
 }
 .gx-ms:last-child { border-bottom: 0; }
-.gx-page .gx-ms-tick {
+.gx-page .gx-ms-tick  {
     width: 24px; height: 24px;
     display: grid; place-items: center;
     border-radius: 50%;
@@ -3185,7 +3185,7 @@ html[data-theme="dark"] .gx-page {
 .gx-ms-body .gx-quiet { font-size: 11px; }
 .gx-ms-tools { display: flex; gap: 2px; opacity: 0; transition: opacity .14s; }
 .gx-ms:hover .gx-ms-tools, .gx-ms:focus-within .gx-ms-tools { opacity: 1; }
-.gx-page .gx-ms-tools button {
+.gx-page .gx-ms-tools button  {
     width: 24px; height: 24px;
     border: 0; border-radius: 7px;
     background: transparent;
@@ -3201,7 +3201,7 @@ html[data-theme="dark"] .gx-page {
    replaced, because the row already carries a tick and two arrows and a cross,
    and a fourth thing that looks pressable would make the row a toolbar. The
    affordance arrives on hover instead. */
-.gx-page .gx-ms-body.is-pickable {
+.gx-page .gx-ms-body.is-pickable  {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -3240,7 +3240,7 @@ html[data-theme="dark"] .gx-page {
     gap: 10px;
 }
 .gx-checklist-head .gx-quiet { font-size: 11px; }
-.gx-page .gx-checklist-add {
+.gx-page .gx-checklist-add  {
     padding: 2px 6px;
     border: 0;
     border-radius: 6px;
@@ -3261,7 +3261,7 @@ html[data-theme="dark"] .gx-page {
     gap: 9px;
     padding: 3px 0;
 }
-.gx-page .gx-cstep-tick {
+.gx-page .gx-cstep-tick  {
     width: 16px; height: 16px;
     display: grid; place-items: center;
     padding: 0;
@@ -3273,7 +3273,7 @@ html[data-theme="dark"] .gx-page {
     cursor: pointer;
     transition: border-color .14s ease, background .14s ease;
 }
-.gx-page .gx-cstep-tick:hover:not(:disabled) {
+.gx-page .gx-cstep-tick:hover:not(:disabled)  {
     border-color: var(--gx-good);
     background: color-mix(in srgb, var(--gx-good) 14%, transparent);
 }
@@ -3282,7 +3282,7 @@ html[data-theme="dark"] .gx-page {
 
 /* The text is a button so a click opens the editor. Styled as text, for the
    same reason the checkpoint body above is. */
-.gx-page .gx-cstep-text {
+.gx-page .gx-cstep-text  {
     padding: 2px 5px;
     margin: 0 -5px;
     border: 0;
@@ -3302,7 +3302,7 @@ html[data-theme="dark"] .gx-page {
 /* A row nobody has written yet. Its text is a prompt, not content. */
 .gx-cstep.is-empty .gx-cstep-text { color: var(--gx-faint); font-style: italic; }
 
-.gx-page .gx-cstep-input {
+.gx-page .gx-cstep-input  {
     width: 100%;
     padding: 2px 5px;
     margin: 0 -5px;
@@ -3318,7 +3318,7 @@ html[data-theme="dark"] .gx-page {
    anywhere else: the date itself is already printed in the row body ("due 14
    Sep"), and this is only the control that changes it. A step's date has no
    such second home, which is why `.gx-cstep-due` is always visible. */
-.gx-page .gx-ms-date {
+.gx-page .gx-ms-date  {
     position: relative;
     display: grid;
     place-items: center;
@@ -3329,7 +3329,7 @@ html[data-theme="dark"] .gx-page {
     cursor: pointer;
 }
 .gx-page .gx-ms-date:hover { background: var(--gx-line-soft); color: var(--gx-text); }
-.gx-page .gx-ms-date input {
+.gx-page .gx-ms-date input  {
     position: absolute;
     inset: 0;
     width: 100%; height: 100%;
@@ -3366,7 +3366,7 @@ html[data-theme="dark"] .gx-page {
 .gx-cstep-due.is-borrowed { cursor: default; font-style: italic; opacity: .8; }
 .gx-page .gx-cstep-due.is-borrowed:hover { background: transparent; color: var(--gx-faint); }
 
-.gx-page .gx-cstep-cut {
+.gx-page .gx-cstep-cut  {
     width: 20px; height: 20px;
     border: 0; border-radius: 6px;
     background: transparent;
@@ -3445,7 +3445,7 @@ html[data-theme="dark"] .gx-page {
 .gx-page input[type="number"],
 .gx-page input[type="date"],
 .gx-page input:not([type]),
-.gx-page textarea {
+.gx-page textarea  {
     width: 100%;
     box-sizing: border-box;
     padding: 10px 13px;
@@ -3460,7 +3460,7 @@ html[data-theme="dark"] .gx-page {
 }
 .gx-page textarea { resize: vertical; line-height: 1.55; }
 .gx-page input:focus,
-.gx-page textarea:focus {
+.gx-page textarea:focus  {
     border-color: var(--gx-violet);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--gx-violet) 18%, transparent);
 }
@@ -3518,7 +3518,7 @@ html[data-theme="dark"] .gx-page {
 }
 
 .gx-chips { display: flex; flex-wrap: wrap; gap: 7px; }
-.gx-page .gx-chip {
+.gx-page .gx-chip  {
     border: 1px solid var(--gx-line);
     background: var(--gx-card-2);
     color: var(--gx-muted);
@@ -3527,14 +3527,14 @@ html[data-theme="dark"] .gx-page {
     font: inherit; font-size: 12.5px; font-weight: 600;
     cursor: pointer;
 }
-.gx-page .gx-chip.is-on {
+.gx-page .gx-chip.is-on  {
     background: color-mix(in srgb, var(--tone) 14%, transparent);
     border-color: var(--tone);
     color: var(--tone);
 }
 
 .gx-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
-.gx-page .gx-choice {
+.gx-page .gx-choice  {
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -3578,7 +3578,7 @@ html[data-theme="dark"] .gx-page {
     font-size: 10.5px; font-weight: 700;
 }
 .gx-draft-list li span { flex: 1; min-width: 0; }
-.gx-page .gx-draft-list li button {
+.gx-page .gx-draft-list li button  {
     border: 0; background: none; padding: 0;
     width: 22px; height: 22px;
     color: var(--gx-faint);

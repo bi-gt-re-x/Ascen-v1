@@ -84,7 +84,7 @@
    (search "flex: 1 1 auto") sets margin: 0 and wins on equal specificity.
    The card's top offset comes from the body's padding-top instead. */
 
-.calendar-container {
+.calendar-container  {
     /* The viewport, less the two things above and below the card: the fixed top
      * bar, and the gutter the body keeps under it.
      *
@@ -1356,7 +1356,7 @@ body.classic .timestamp-section input[type="time"] {
 
 /* Modal Styles */
 
-.modal {
+.calendar-container .modal {
 
     display: none;
 
@@ -1394,7 +1394,7 @@ body.classic .timestamp-section input[type="time"] {
    The top and bottom margins are the same fraction, so the cap and the gap
    agree and the dialog sits with even air around it instead of the old
    `calc(8% - 42px)`, which was a number tuned for one form's height. */
-.modal-content {
+.calendar-container .modal-content {
 
     margin: min(5vh, 44px) auto;
 
@@ -1420,7 +1420,7 @@ body.classic .timestamp-section input[type="time"] {
 
 
 /* Week view opens the shared "Add New Event" modal 2x wider, with no horizontal scroll. */
-.modal.from-week .modal-content {
+.calendar-container .modal.from-week .modal-content {
 
     width: min(1200px, 96%);
 
@@ -1430,14 +1430,14 @@ body.classic .timestamp-section input[type="time"] {
 
 }
 
-.modal.from-week .modal-body {
+.calendar-container .modal.from-week .modal-body {
 
     overflow-x: hidden;
 
 }
 
 
-.modal-header {
+.calendar-container .modal-header {
 
     flex: none;
 
@@ -1456,7 +1456,7 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
-.modal-header h3 {
+.calendar-container .modal-header h3 {
 
     margin: 0;
 
@@ -1469,7 +1469,7 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
-.close-btn {
+.calendar-container .close-btn {
 
     font-size: 32px;
 
@@ -1486,7 +1486,7 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
-.close-btn:hover {
+.calendar-container .close-btn:hover {
 
     color: #1a237e;
 
@@ -1497,7 +1497,7 @@ body.classic .timestamp-section input[type="time"] {
    that matters: a flex item's automatic minimum is its content, so without it
    the body would refuse to shrink, push the footer off the bottom of the
    dialog, and scroll nothing. */
-.modal-body {
+.calendar-container .modal-body {
 
     flex: 1 1 auto;
 
@@ -1782,7 +1782,7 @@ html[data-theme="dark"] .event-suggest-bad { background: #2e1618; border-color: 
 html[data-theme="dark"] .event-suggest .event-suggest-link { color: #8fbcff; }
 html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297; }
 
-.modal-footer {
+.calendar-container .modal-footer {
 
     flex: none;
 
@@ -2039,7 +2039,7 @@ body:has(.calendar-container) .app-main {
     padding-right: 12px;
 }
 
-.calendar-container {
+.calendar-container  {
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
@@ -2895,14 +2895,14 @@ html[data-theme="light"] .add-section-btn:hover {
 /* ── Add/Edit/Delete Section modal in light theme: cream surface, tan-bordered
    inputs, black "Add Section" button, beige "Cancel" — matches the mockup.
    Base modal rules use navy (#1a237e); these override them in light theme. */
-html[data-theme="light"] .modal-content {
+html[data-theme="light"] .calendar-container .modal-content{
     background: #fdfbf6;
     border: 1px solid #d8c7a4;
 }
-html[data-theme="light"] .modal-header { border-bottom: 1px solid #e7dcc4; }
-html[data-theme="light"] .modal-header h3 { color: #1c140b; }
-html[data-theme="light"] .close-btn { color: #2c2013; }
-html[data-theme="light"] .close-btn:hover { color: #6b5030; }
+html[data-theme="light"] .calendar-container .modal-header{ border-bottom: 1px solid #e7dcc4; }
+html[data-theme="light"] .calendar-container .modal-header h3{ color: #1c140b; }
+html[data-theme="light"] .calendar-container .close-btn{ color: #2c2013; }
+html[data-theme="light"] .calendar-container .close-btn:hover{ color: #6b5030; }
 html[data-theme="light"] .form-group label { color: #2c2013; }
 html[data-theme="light"] .recurrence-note { color: #7a6650; }
 html[data-theme="light"] .form-group input[type="text"],
@@ -2923,7 +2923,7 @@ html[data-theme="light"] .radio-group label,
 html[data-theme="light"] .checkbox-group label { color: #2c2013; }
 html[data-theme="light"] .checkbox-group label { background: #f3ece0; }
 html[data-theme="light"] .checkbox-group label:hover { background: #e9ddc8; }
-html[data-theme="light"] .modal-footer { border-top: 1px solid #e7dcc4; }
+html[data-theme="light"] .calendar-container .modal-footer{ border-top: 1px solid #e7dcc4; }
 html[data-theme="light"] .btn-cancel {
     background: #dbc9a8;
     border: 2px solid #dbc9a8;
@@ -2943,8 +2943,8 @@ html[data-theme="light"] .btn-confirm:hover {
     border-color: #33261a;
 }
 /* Brown scrollbar inside the scrolling modal body (matches the mockup) */
-html[data-theme="light"] .modal-body::-webkit-scrollbar { width: 10px; }
-html[data-theme="light"] .modal-body::-webkit-scrollbar-thumb {
+html[data-theme="light"] .calendar-container .modal-body::-webkit-scrollbar{ width: 10px; }
+html[data-theme="light"] .calendar-container .modal-body::-webkit-scrollbar-thumb{
     background: #b79a6a;
     border-radius: 8px;
 }
@@ -3024,8 +3024,8 @@ html[data-theme="dark"] .bottom-nav {
    Reuses the calendar card's bluish-glow panel gradient and the cyan #2dd4bf
    accent from the completion ring, so the popup matches the rest of the dark
    UI (the base modal is navy/white). */
-html[data-theme="dark"] .modal { background-color: rgba(6, 8, 12, 0.62); }
-html[data-theme="dark"] .modal-content {
+html[data-theme="dark"] .calendar-container .modal{ background-color: rgba(6, 8, 12, 0.62); }
+html[data-theme="dark"] .calendar-container .modal-content{
     background:
         radial-gradient(135% 120% at 50% -12%, rgba(64, 84, 134, 0.40) 0%, rgba(18, 20, 28, 0) 58%),
         linear-gradient(168deg, #181b24 0%, #0e0f15 100%);
@@ -3035,13 +3035,13 @@ html[data-theme="dark"] .modal-content {
         0 0 40px rgba(45, 212, 191, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
-html[data-theme="dark"] .modal-header { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-html[data-theme="dark"] .modal-header h3 {
+html[data-theme="dark"] .calendar-container .modal-header{ border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .calendar-container .modal-header h3{
     color: #f4f4f6;
     text-shadow: 0 0 18px rgba(45, 212, 191, 0.25);
 }
-html[data-theme="dark"] .close-btn { color: #9a9ba4; }
-html[data-theme="dark"] .close-btn:hover { color: #2dd4bf; }
+html[data-theme="dark"] .calendar-container .close-btn{ color: #9a9ba4; }
+html[data-theme="dark"] .calendar-container .close-btn:hover{ color: #2dd4bf; }
 html[data-theme="dark"] .form-group label { color: #e7e7ec; }
 html[data-theme="dark"] .recurrence-note { color: #8b8d97; }
 html[data-theme="dark"] .form-group input[type="text"],
@@ -3064,7 +3064,7 @@ html[data-theme="dark"] .radio-group label,
 html[data-theme="dark"] .checkbox-group label { color: #e7e7ec; }
 html[data-theme="dark"] .checkbox-group label { background: rgba(255, 255, 255, 0.05); }
 html[data-theme="dark"] .checkbox-group label:hover { background: rgba(255, 255, 255, 0.10); }
-html[data-theme="dark"] .modal-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .calendar-container .modal-footer{ border-top: 1px solid rgba(255, 255, 255, 0.08); }
 html[data-theme="dark"] .btn-cancel {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.18);
@@ -3086,8 +3086,8 @@ html[data-theme="dark"] .btn-confirm:hover {
     border-color: rgba(45, 212, 191, 0.85);
     box-shadow: 0 0 26px rgba(45, 212, 191, 0.5);
 }
-html[data-theme="dark"] .modal-body::-webkit-scrollbar { width: 10px; }
-html[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
+html[data-theme="dark"] .calendar-container .modal-body::-webkit-scrollbar{ width: 10px; }
+html[data-theme="dark"] .calendar-container .modal-body::-webkit-scrollbar-thumb{
     background: rgba(45, 212, 191, 0.35);
     border-radius: 8px;
 }
