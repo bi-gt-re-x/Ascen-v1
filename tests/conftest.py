@@ -42,14 +42,40 @@ _TMP = tempfile.mkdtemp(prefix='ascen-tests-')
 os.environ['ASCEN_DB'] = os.path.join(_TMP, 'test.db')
 os.environ['SECRET_KEY'] = 'tests-do-not-need-a-real-one'
 
+# The session cookie is marked Secure by default, and a Secure cookie is never
+# sent over http:// — which is what TestClient speaks. Left on, every test that
+# signs in would appear to sign in and then be anonymous on the next request.
+#
+# This is the same flag the development server sets for the same reason (see
+# `main` in backend/run.py), not a weakening of the check: the secure default
+# itself is asserted in tests/test_ratelimit.py, which builds an app without
+# this and reads the Set-Cookie header.
+os.environ['ASCEN_INSECURE_COOKIES'] = '1'
+
 import pytest                                            # noqa: E402
 from fastapi.testclient import TestClient                # noqa: E402
 
 from backend.database import connection as db            # noqa: E402
 from backend.main import create_app                      # noqa: E402
+from backend.middleware import limit                     # noqa: E402
 from backend.tracking import auth                        # noqa: E402
 
 PASSWORD = 'not-a-real-password-1'
+
+
+@pytest.fixture(autouse=True)
+def fresh_limiter():
+    """Empty rate-limit counters per test.
+
+    The limiter's table is module-level and shared by every app this suite
+    builds, so without this the tests that deliberately exhaust a budget would
+    leave it exhausted for whatever ran next — and `sign_in` would start
+    failing in tests that have nothing to do with rate limiting. Autouse
+    because the coupling is invisible from the test that breaks.
+    """
+    limit.attempts.reset()
+    yield
+    limit.attempts.reset()
 
 
 @pytest.fixture

@@ -110,6 +110,40 @@ DEV_ORIGINS = [
 SESSION_KEY_PATH = os.path.join(DATA_DIR, '.session_key')
 
 
+def trust_proxy():
+    """Whether `X-Forwarded-For` may be believed.
+
+    Off unless `ASCEN_TRUST_PROXY` says otherwise, and the default is the
+    important half. The header is what a reverse proxy uses to pass on who it
+    heard from, and it is also a header any caller can write — so believing it
+    on an app that is reachable directly means the rate limiter can be bypassed
+    by sending a different value each request.
+
+    Turn it on only when something in front of this app is overwriting the
+    header, which is a fact about the deployment that nobody but its operator
+    knows. See `client_ip` in backend/middleware/limit.py.
+    """
+    return os.environ.get('ASCEN_TRUST_PROXY', '').strip().lower() in (
+        '1', 'true', 'yes', 'on')
+
+
+def secure_cookies():
+    """Whether the session cookie is marked Secure and sent over HTTPS only.
+
+    On unless `ASCEN_INSECURE_COOKIES` says otherwise, and that default is the
+    one that matters: a session cookie without `Secure` is a session cookie a
+    browser will send over plain HTTP, where anything on the path can read it
+    and become the account.
+
+    The escape hatch exists because development is HTTP — the Vite dev server
+    on 5090, this app on 5050 — and a `Secure` cookie is simply never sent
+    there, which would make signing in locally impossible. `run.py` sets it for
+    a local run; nothing deployed should.
+    """
+    return os.environ.get('ASCEN_INSECURE_COOKIES', '').strip().lower() not in (
+        '1', 'true', 'yes', 'on')
+
+
 def secret_key():
     """What the session cookie is signed with.
 

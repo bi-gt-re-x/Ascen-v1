@@ -66,12 +66,23 @@ def create_app():
     middleware.register(app)
 
     # Added after the gate so it runs before it — see the note above.
+    #
+    # `https_only` is what marks the cookie Secure, and it is on unless the
+    # environment says otherwise. Without it the browser will send the session
+    # over plain HTTP, where anything between the reader and the server can
+    # read it and *be* them — the cookie is the whole of the authorization now
+    # (backend/api/guard.py), so it is the one thing worth protecting.
+    #
+    # Development is the exception the flag exists for: a Secure cookie is
+    # simply never sent over the http:// dev server, so signing in locally
+    # would stop working. run.py sets ASCEN_INSECURE_COOKIES for a local run.
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key(),
         session_cookie=settings.SESSION_COOKIE,
         max_age=settings.SESSION_MAX_AGE,
         same_site='lax',
+        https_only=settings.secure_cookies(),
     )
 
     # The Vite dev server is a separate origin during development and the

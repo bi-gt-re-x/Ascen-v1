@@ -25,13 +25,33 @@ app = create_app()
 
 
 def main():
-    """Serve the app on PORT.
+    """Serve the app on PORT, for development.
 
     Passed as an import string rather than the app object so uvicorn's reloader
     can rebuild it in the worker process — handing it a live object disables
     reload with a warning.
+
+    ## Why the cookie flag is set here and not at import
+
+    The session cookie is marked Secure by default (see `secure_cookies` in
+    config/settings.py), and a Secure cookie is never sent over http:// — so
+    signing in against this server, which serves plain HTTP on localhost,
+    would silently stop working.
+
+    Turning that off belongs to *this function* rather than to the module,
+    because this function is the development server and nothing else calls it:
+    it binds 127.0.0.1 and enables the reloader. Anything deployed points a
+    real server at `backend.run:app`, which imports the module and never gets
+    here, so it keeps the secure default. Putting the flag at module scope
+    would have handed the insecure default to every deployment that imported
+    the app — the opposite of what it is for.
+
+    An explicit ASCEN_INSECURE_COOKIES in the environment still wins, so this
+    only fills in a default.
     """
     import uvicorn
+
+    os.environ.setdefault('ASCEN_INSECURE_COOKIES', '1')
 
     uvicorn.run('backend.run:app',
                 host='127.0.0.1',
