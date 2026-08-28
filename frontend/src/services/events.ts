@@ -12,6 +12,14 @@
  * Colours are tracked separately: every hex colour handed out so far, so a new
  * event can be given one that is visibly different from the rest.
  *
+ * **Neither of those two kinds is where the calendar you see comes from.** The
+ * month, week and day views draw their blocks from a per-account document —
+ * `calendarStore` / `calendarStore.save` at the bottom of this file — because
+ * that is the shape the views have always held, and the entry/event tables
+ * above cannot hold it: no start or end time, no subtasks, no XP, no colour.
+ * The wrappers above are kept because the tables and the endpoints are real and
+ * the task-sync half is still reachable, not because the calendar uses them.
+ *
  * Backend: backend/api/calendar.py.
  */
 import { del, get, post, put } from './api';
@@ -161,4 +169,30 @@ export function xpEarnedOn(
   date: string,
 ): Promise<ApiResult<{ date: string; xp_earned: number; tasks_completed: number }>> {
   return get('/api/xp_earned_on', { date });
+}
+
+// --------------------------------------------------------------------------
+// The calendar itself
+// --------------------------------------------------------------------------
+/**
+ * One account's whole calendar, as the views hold it.
+ *
+ * Day keys to blocks — the exact object in utils/calendarStore, sent and
+ * received unchanged. It is a document rather than rows because that is what
+ * the client has, and because the alternative was translating it through a
+ * schema that would have dropped four fields per event.
+ *
+ * An empty `data` means the server has never been sent this calendar, which
+ * for every account predating this endpoint is the case: the browser's copy
+ * was the only copy. `useCalendarStore` reads that as "migrate", not "empty".
+ */
+export function calendarStore(): Promise<ApiResult<{ data: Record<string, unknown> }>> {
+  return get<{ data: Record<string, unknown> }>('/api/calendar_store');
+}
+
+/** Replace it. Whole-document, last write wins — see the endpoint. */
+export function saveCalendarStore(
+  data: Record<string, unknown>,
+): Promise<ApiResult<Record<string, never>>> {
+  return put<Record<string, never>>('/api/calendar_store', { data });
 }

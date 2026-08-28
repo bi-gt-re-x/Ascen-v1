@@ -44,6 +44,7 @@ JSON_COLUMNS = {
     ('user_settings', 'value'),
     ('setting_defaults', 'value'),
     ('library_items', 'tags'),
+    ('calendar_documents', 'data'),
 }
 
 _build_lock = threading.Lock()
@@ -206,6 +207,17 @@ ADDED_TABLES = ('''
 ''', '''
     CREATE INDEX IF NOT EXISTS calendar_events_user_idx
         ON calendar_events (user_id, date)
+''', '''
+    -- One account's whole calendar, as the JSON the views already hold.
+    -- Mirrors data/sql/events.sql; see the comment there for why this is a
+    -- document and not a table of events. It exists because until now the
+    -- calendar was in localStorage and nowhere else, so a cleared browser was
+    -- a deleted calendar and the server had no copy to restore from.
+    CREATE TABLE IF NOT EXISTS calendar_documents (
+        user_id     TEXT PRIMARY KEY REFERENCES users (username) ON DELETE CASCADE,
+        data        TEXT NOT NULL DEFAULT '{}',
+        updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    )
 ''')
 
 
@@ -932,6 +944,54 @@ def calendar_entries():
 
 def save_calendar_entries(rows):
     write_table('calendar_entries', rows)
+
+
+def calendar_document(username):
+    """One account's whole calendar, as the dict the client keeps.
+
+    `{}` when the account has never saved one — which, until this table
+    existed, was every account: the views wrote localStorage and nothing else.
+    A caller cannot tell "never saved" from "saved an empty calendar", and does
+    not need to; both mean there is nothing on the server to show.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'calendar_documents'):
+            return {}
+        row = con.execute(
+            'SELECT data FROM calendar_documents WHERE user_id = ?',
+            (username,)).fetchone()
+        if not row or not row['data']:
+            return {}
+        try:
+            parsed = json.loads(row['data'])
+        except (ValueError, TypeError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    finally:
+        con.close()
+
+
+def save_calendar_document(username, data):
+    """Replace one account's calendar with `data`.
+
+    A whole-document write, because that is how the client holds it: the views
+    keep one object and re-save it after every edit. Upserted on `user_id`, so
+    an account has exactly one and there is no create/update decision for a
+    caller to get wrong.
+    """
+    con = connect()
+    try:
+        con.execute(
+            'INSERT INTO calendar_documents (user_id, data, updated_at) '
+            "VALUES (?, ?, datetime('now')) "
+            'ON CONFLICT(user_id) DO UPDATE SET '
+            "data = excluded.data, updated_at = datetime('now')",
+            (username, json.dumps(data, sort_keys=True)))
+        con.commit()
+        return True
+    finally:
+        con.close()
 
 
 def calendar_events():

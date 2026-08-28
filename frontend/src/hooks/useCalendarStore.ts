@@ -13,8 +13,29 @@
  * out the next one. What happens here is the two ends of that — every event in
  * the store declares its colour as taken, so a colour is held for exactly as
  * long as the event using it is on the calendar, and a new event claims one.
+ *
+ * ## The calendar is on the server now, and it was not before
+ *
+ * Every event any user of this app had ever made lived in their own browser's
+ * localStorage and nowhere else — the views never called the backend, so a
+ * cleared site-data was a deleted calendar, a second browser was an empty one,
+ * and nobody could take a backup because the server had never seen it.
+ *
+ * `/api/calendar_store` holds it now, as the same object this file already
+ * keeps. Three rules make the change safe on a database full of accounts whose
+ * only copy is local:
+ *
+ *   * **localStorage is still written, every time.** It is the offline copy
+ *     and the thing that paints the calendar on the first frame, before any
+ *     request has landed. Nothing was taken away.
+ *   * **The server never overwrites a local calendar with nothing.** An empty
+ *     answer means "never uploaded" — true of every account before this — and
+ *     is read as *migrate*, not as *empty*. The local copy goes up.
+ *   * **Nothing is uploaded until the first read has come back.** Otherwise an
+ *     edit made in the first second would push a partial local calendar over a
+ *     good server one.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Family } from '@/utils/eventPalette';
 import {
   claimFamily,
@@ -23,6 +44,7 @@ import {
   resetLiveColors,
 } from '@/utils/colorRegistry';
 import { familyForSection } from '@/utils/calendarColors';
+import { events as eventService } from '@/services';
 import {
   isSameEvent,
   loadCalendarData,
@@ -77,14 +99,71 @@ export interface UseCalendarStore {
   occurrenceCount: (section: CalendarSection) => number;
 }
 
+/** How long a burst of edits is collected before one upload. */
+const SAVE_DEBOUNCE_MS = 700;
+
+function isEmptyCalendar(data: CalendarData): boolean {
+  return Object.values(data).every((day) => !day?.timestamps?.length && !day?.focus);
+}
+
 export function useCalendarStore(username: string | null): UseCalendarStore {
+  // Seeded from localStorage rather than from nothing: the calendar has to be
+  // on screen in the first frame, and the server's answer is a round trip away.
   const [data, setData] = useState<CalendarData>(() => loadCalendarData(username));
+
+  /*
+   * Whether the server's copy has been read yet.
+   *
+   * Uploads are held until it has. Without that, an edit made before the read
+   * lands would push whatever this browser happens to hold — possibly an empty
+   * calendar, on a machine that has never opened this account — over a good
+   * copy on the server.
+   */
+  const synced = useRef(false);
 
   // A change of account is a different calendar, not the same one edited — and
   // a different set of colours held, so the live reservations start again.
   useEffect(() => {
     resetLiveColors();
+    synced.current = false;
     setData(loadCalendarData(username));
+  }, [username]);
+
+  /*
+   * Reconcile the browser's copy with the server's.
+   *
+   * Three cases, and only one of them writes:
+   *
+   *   * the server has a calendar — it wins, and is mirrored back into
+   *     localStorage so the next first frame is right;
+   *   * the server has nothing and this browser does — the account predates
+   *     the endpoint, so the local copy is the only copy and goes up;
+   *   * neither has anything — a new account. Nothing to do.
+   *
+   * A failed read leaves `synced` false, so uploads stay off and the calendar
+   * behaves exactly as it did before any of this: local, and on screen.
+   */
+  useEffect(() => {
+    if (!username) return;
+    let live = true;
+
+    void eventService.calendarStore().then((result) => {
+      if (!live || !result.success) return;
+      const remote = (result.data ?? {}) as CalendarData;
+      const local = loadCalendarData(username);
+
+      if (!isEmptyCalendar(remote)) {
+        saveCalendarData(username, remote);
+        setData(remote);
+      } else if (!isEmptyCalendar(local)) {
+        void eventService.saveCalendarStore(local as Record<string, unknown>);
+      }
+      synced.current = true;
+    });
+
+    return () => {
+      live = false;
+    };
   }, [username]);
 
   useEffect(() => {
@@ -105,13 +184,70 @@ export function useCalendarStore(username: string | null): UseCalendarStore {
     reserveFamilies(seen);
   }, [data]);
 
+  /*
+   * The upload, debounced.
+   *
+   * `commit` runs on every keystroke of the day panel's inline name field, and
+   * a PUT per keystroke would be one request per letter. localStorage is still
+   * written synchronously in `commit` — the local copy is never behind — so
+   * what this delays is only the server catching up.
+   */
+  const pending = useRef<number | null>(null);
+  const unsaved = useRef<CalendarData | null>(null);
+
+  const flush = useCallback(() => {
+    if (pending.current !== null) {
+      window.clearTimeout(pending.current);
+      pending.current = null;
+    }
+    const next = unsaved.current;
+    unsaved.current = null;
+    if (next) void eventService.saveCalendarStore(next as Record<string, unknown>);
+  }, []);
+
+  const upload = useCallback(
+    (next: CalendarData) => {
+      if (!username || !synced.current) return;
+      unsaved.current = next;
+      if (pending.current !== null) window.clearTimeout(pending.current);
+      pending.current = window.setTimeout(() => {
+        pending.current = null;
+        const latest = unsaved.current;
+        unsaved.current = null;
+        if (latest) void eventService.saveCalendarStore(latest as Record<string, unknown>);
+      }, SAVE_DEBOUNCE_MS);
+    },
+    [username],
+  );
+
+  /*
+   * Leaving the page inside the debounce window must not drop the upload.
+   *
+   * Cancelling the timer would not lose data — localStorage was written
+   * synchronously — but it would leave the server a version behind until the
+   * next edit, which is the state this whole change exists to get out of. So
+   * the pending write is sent rather than cancelled, both on unmount and when
+   * the tab is hidden, which is the one a phone actually takes.
+   */
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      flush();
+    };
+  }, [flush]);
+
   /** Every write goes through here, so nothing is saved without being shown. */
   const commit = useCallback(
     (next: CalendarData) => {
       saveCalendarData(username, next);
       setData(next);
+      upload(next);
     },
-    [username],
+    [upload, username],
   );
 
   const addEvent = useCallback(

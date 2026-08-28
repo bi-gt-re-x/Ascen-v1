@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.api.guard import current_username
 from backend.api.reply import fail, ok
+from backend.database import connection as db
 from backend.tracking import event as event_tracking
 from backend.tracking import focus as focus_tracking
 from backend.tracking import xp as xp_tracking
@@ -70,6 +71,19 @@ class AddEventColor(BaseModel):
 class DayFocus(BaseModel):
     date: Optional[str] = None
     text: str = ''
+
+
+class CalendarDocument(BaseModel):
+    """The whole calendar for one account, as the views hold it.
+
+    `data` is not modelled further on purpose. It is the client's own store —
+    day keys to a list of blocks — and every field in it (start and end times,
+    subtasks, XP, a colour family, two legacy colour spellings) exists because
+    some calendar written over the last two years put it there. Declaring a
+    stricter shape here would mean this endpoint silently dropping whatever it
+    had not been told about, which is the exact failure it was added to stop.
+    """
+    data: dict = Field(default_factory=dict)
 
 
 # --------------------------------------------------------------------------
@@ -203,6 +217,48 @@ def set_day_focus(body: DayFocus, username: str = Depends(current_username)):
     if not focus_tracking.set_day_note(username, day, text):
         return fail('User not found')
     return ok(date=day, text=text)
+
+
+# --------------------------------------------------------------------------
+# The calendar itself
+# --------------------------------------------------------------------------
+# Until this pair existed, every event any user of this app had ever made lived
+# in their browser's localStorage under `calendarData:<account>` and nowhere
+# else. The month, week and day views never called the endpoints above, so
+# clearing site data — or opening the app in a second browser — was a calendar
+# that had never existed. The server held seven rows, all of them defaults.
+#
+# The endpoints above are not a home for it. They model the old coarse
+# calendar: a `time_block` of 'morning', a recurrence spelled "mon, tue, wed",
+# no start or end time, no subtasks, no XP, no colour. Writing the store
+# through them would have dropped four fields per event on the way, so what was
+# needed was somewhere to put the shape that exists — see
+# `calendar_documents` in data/sql/events.sql.
+
+
+@router.get('/api/calendar_store')
+def get_calendar_store(username: str = Depends(current_username)):
+    """One account's calendar, or `{}` if the server has never been sent one.
+
+    An empty answer is what an account that predates this endpoint gets, and it
+    is the signal the client migrates on: it means "the browser's copy is the
+    only copy", not "this calendar is empty".
+    """
+    return ok(data=db.calendar_document(username))
+
+
+@router.put('/api/calendar_store')
+def put_calendar_store(body: CalendarDocument,
+                       username: str = Depends(current_username)):
+    """Replace one account's calendar.
+
+    Whole-document, because that is how the client holds and edits it. There is
+    no merge here and there should not be: two browsers editing one calendar is
+    last-write-wins, which is what the localStorage version already was, only
+    now the loser can at least get their copy back from the other machine.
+    """
+    db.save_calendar_document(username, body.data)
+    return ok()
 
 
 @router.get('/api/xp_earned_on')

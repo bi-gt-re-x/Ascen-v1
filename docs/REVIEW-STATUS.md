@@ -1,7 +1,8 @@
 # Review remediation — status and what is left
 
-Working notes for the twelve-point code review. Seven items are done or
-substantially done and committed on `copy-pass`; the rest are described below
+Working notes for the twelve-point code review. Item 1 is now complete apart
+from the date-windowing described below; seven items are done or substantially
+done and committed on `copy-pass`; the rest are described below
 in enough detail to pick up cold.
 
 Every "not verified" note below means the same thing: the pages behind the
@@ -15,6 +16,7 @@ login could not be checked, because that needs credentials.
 |---|------|--------|
 | 1 (half) | Stop fetching the same data three times | `e60810c` |
 | 1 (most) | Split the endpoint; task read is demand-gated | this branch |
+| 1 (rest) | Calendar events off localStorage-only | this branch |
 | 2 | Frontend tests, from zero | `a131c7c` |
 | 3 | Analytics monolith, 1,879 → 423 lines | `ada6da3` |
 | 4 | CSS collisions become a build failure | `17ebcb8` |
@@ -22,8 +24,8 @@ login could not be checked, because that needs credentials.
 | 6 (main) | Off end-of-life Python, 3.9.6 → 3.13.15 | `aa69eed` |
 | 12 | Delete unrendered components | `61dd7cf` |
 
-Current gate: `npm run build` (typecheck + 3 data lints + vite), 216 frontend
-tests (`npm test`), 83 backend tests (`.venv-fastapi/bin/python -m pytest`).
+Current gate: `npm run build` (typecheck + 3 data lints + vite), 221 frontend
+tests (`npm test`), 89 backend tests (`.venv-fastapi/bin/python -m pytest`).
 
 ---
 
@@ -92,19 +94,57 @@ and records.
 questions ("most tasks in a day, ever"), so a window would break it. That one
 wants server-side aggregation rather than a narrower read.
 
-Related finding, from the #12 work — **calendar events are localStorage-only**.
-`frontend/src/utils/calendarStore.ts` documents it:
+### The calendar was localStorage-only — fixed
+
+`frontend/src/utils/calendarStore.ts` documented it:
 
 > The backend has endpoints for calendar entries, but the month, week and day
 > views never used them, so every event any user of this app has ever made is
 > in this store and nowhere else.
 
-So: `backend/api/calendar.py` endpoints are dead, the ten matching wrappers in
-`frontend/src/services/events.ts` are dead (left in place deliberately — see
-`61dd7cf`), and user-created calendar events do not survive clearing site data
-or changing browser. That is a data-loss bug wearing a dead-code costume, and
-it belongs to this item rather than to #12. **Still open, and the next thing
-worth doing.**
+**Confirmed against the database before touching anything:** `calendar_events`
+held 7 rows, every one `is_default = 1` with `user_id = NULL`. `calendar_entries`
+held 0. Not one user-created event existed server-side. The data was not merely
+fragile — it was *invisible*, sitting in each user's own browser where it could
+not be backed up, inspected or restored.
+
+**The dead endpoints were not a home for it**, which is the part the original
+note got wrong. They model the old coarse calendar and cannot hold what the
+store keeps:
+
+| store field | `calendar_events` |
+|---|---|
+| `startTime` / `endTime` (`"HH:MM"`) | `time_block`, a string like `'morning'` |
+| `subtasks[]`, `hasSubtasks` | — |
+| `xp` | — |
+| `family` / `color` / `colorIndex` | — (colours are a global 30-row table) |
+| `recurrence` + `recurrenceDays[]` | `recurrence-week` as `"mon, tue, wed"` |
+
+Wiring the views to them would have dropped four fields per event — turning a
+risk of data loss into certain data loss.
+
+**What was done instead:** a `calendar_documents` table holding one account's
+whole calendar as the JSON the views already keep, with
+`GET`/`PUT /api/calendar_store`. A document rather than rows because nothing
+queries individual events, and because the alternative was translating through
+a schema that loses fields. When something does need to ask questions of single
+events, that is the moment for a real table — the DDL comment says so.
+
+Three properties make it safe on a database full of accounts whose only copy is
+local, and each has a test that fails if the logic is removed (verified by
+mutation, not assumed):
+
+1. **localStorage is still written every time** — it is the offline copy and
+   what paints the first frame. Nothing was taken away.
+2. **An empty server answer means "never uploaded", not "empty"** — so the
+   local copy migrates up instead of being wiped.
+3. **Nothing uploads before the first read returns** — otherwise a browser that
+   has never opened the account would push an empty calendar over a good one.
+
+Uploads are debounced 700 ms and flushed on unmount and on tab-hide, so leaving
+the page mid-edit does not leave the server a version behind.
+
+**Not yet verified visually** — the calendar is behind the login.
 
 ---
 
