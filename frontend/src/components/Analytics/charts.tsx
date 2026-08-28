@@ -13,7 +13,7 @@
  * the box and `preserveAspectRatio` does the rest, so a panel that changes
  * width at a breakpoint needs no JS to stay drawn correctly.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 /** The series colours, as the CSS variable each panel paints with. */
@@ -537,6 +537,30 @@ export interface PanelProps {
 }
 
 /**
+ * How deep in the page a panel's title sits.
+ *
+ * Every panel used to print an `<h2>`, including the ones nested inside a
+ * `PanelGroup` — so a screen reader moving by heading met a flat list where the
+ * page has two levels, and the group headings that organise a tab were not in
+ * the outline at all, because `PanelGroup` drew its title as a `<strong>`
+ * inside a button rather than as a heading.
+ *
+ * A context rather than a prop because `PanelGroup` takes its panels as opaque
+ * `children` and cannot reach in to tell each one what level it is at.
+ * Ungrouped panels stay at 2, which is what they have always rendered.
+ */
+const HeadingLevel = createContext(2);
+
+/** A heading at whatever depth the surrounding groups have reached. */
+function Heading({ className, children }: { className?: string; children: ReactNode }) {
+  const level = useContext(HeadingLevel);
+  // Capped at 6 because there is no h7; nothing here nests that far, and a tag
+  // the browser does not know is worse than a heading one level too shallow.
+  const Tag = `h${Math.min(level, 6)}` as 'h2';
+  return <Tag className={className}>{children}</Tag>;
+}
+
+/**
  * A panel.
  *
  * It used to carry one more thing: a Sample chip in the top right, marking a
@@ -558,7 +582,7 @@ export function Panel({
     <section className={`ax-panel${className ? ` ${className}` : ''}`}>
       <header className="ax-panel-head">
         <div className="ax-panel-title">
-          <h2>{title}</h2>
+          <Heading>{title}</Heading>
         </div>
         {aside && <div className="ax-panel-aside">{aside}</div>}
       </header>
@@ -635,23 +659,40 @@ export function PanelGroup({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const level = useContext(HeadingLevel);
   return (
     <section className={`ax-group${open ? ' is-open' : ''}`}>
-      <button
-        type="button"
-        className="ax-group-head"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <span className="ax-group-title">
-          <strong>{title}</strong>
-          <span className="ax-muted ax-small">{note}</span>
-        </span>
-        <span className="ax-finding-mark" aria-hidden="true" />
-      </button>
-      {/* One wrapper, for the reason `.ax-finding-body` documents. */}
-      <div className="ax-group-body">
-        <div>{children}</div>
+      {/* The button is *inside* the heading rather than around it: the group
+          title is what a reader navigating by heading is looking for, and a
+          heading wrapping the control is the shape that gives them both. */}
+      <Heading>
+        <button
+          type="button"
+          className="ax-group-head"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          <span className="ax-group-title">
+            <strong>{title}</strong>
+            <span className="ax-muted ax-small">{note}</span>
+          </span>
+          <span className="ax-finding-mark" aria-hidden="true" />
+        </button>
+      </Heading>
+      {/*
+        One wrapper, for the reason `.ax-finding-body` documents.
+
+        `inert` while shut, and that is not decoration. The collapse is a grid
+        row going to `0fr` with `overflow: hidden`, which hides the content from
+        the eye and from nothing else: it stayed in the accessibility tree and
+        in the tab order, so `aria-expanded="false"` announced a closed group
+        whose charts a screen reader then read out, and a keyboard user tabbed
+        into buttons they could not see. `inert` is what actually closes it.
+      */}
+      <div className="ax-group-body" inert={!open}>
+        <HeadingLevel.Provider value={level + 1}>
+          <div>{children}</div>
+        </HeadingLevel.Provider>
       </div>
     </section>
   );

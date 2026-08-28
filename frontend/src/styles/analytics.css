@@ -1035,6 +1035,11 @@ body:has(.ax-page) .app-main {
    label, which is what a section heading is. */
 .ax-group { display: flex; flex-direction: column; }
 .ax-group + .ax-group { margin-top: 4px; }
+/* The group's title is a real heading now, wrapped around the disclosure
+   button so a reader moving by heading finds the groups that organise the tab.
+   It carries a heading's default margins and size, and it should not: the
+   button inside it is what is styled. */
+.ax-group > :is(h2, h3, h4) { margin: 0; font: inherit; }
 .ax-group-head {
     display: flex;
     align-items: center;
@@ -1119,14 +1124,14 @@ body:has(.ax-page) .app-main {
     --ax-chart-h: 320px;
     padding: 22px 24px 18px;
 }
-.ax-hero > .ax-panel > .ax-panel-head h2 { font-size: 20px; letter-spacing: -.02em; }
+.ax-hero > .ax-panel > .ax-panel-head :is(h2, h3, h4) { font-size: 20px; letter-spacing: -.02em; }
 .ax-hero > .ax-panel > .ax-panel-note { font-size: 12.5px; margin-bottom: 16px; }
 
 .ax-compact > .ax-panel {
     --ax-chart-h: 150px;
     padding: 12px 14px 10px;
 }
-.ax-compact > .ax-panel > .ax-panel-head h2 { font-size: 14px; }
+.ax-compact > .ax-panel > .ax-panel-head :is(h2, h3, h4) { font-size: 14px; }
 .ax-compact > .ax-panel > .ax-panel-note { font-size: 11.5px; margin-bottom: 8px; }
 
 /* ---------- Panels -------------------------------------------------------- */
@@ -1151,7 +1156,12 @@ body:has(.ax-page) .app-main {
 
 .ax-panel-title { display: flex; align-items: center; gap: 8px; }
 
-.ax-panel h2 {
+/* A panel's title is an h2 on its own and an h3 inside a PanelGroup — the
+   nesting is real and the heading outline now says so, so the selector matches
+   the level rather than the tag. See `Heading` in components/Analytics/charts.
+   The size is the panel's, not the level's: a grouped panel is not a smaller
+   panel. */
+.ax-panel :is(h2, h3, h4) {
     margin: 0;
     font-size: 17px;
     font-weight: 650;

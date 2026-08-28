@@ -74,10 +74,17 @@ export function FindingCard({ finding }: { finding: Finding }) {
         <strong>{finding.headline}</strong>
         <span className="ax-finding-mark" aria-hidden="true" />
       </button>
-      {/* One wrapper, and it has to stay one: the collapse is a grid row going
-          to 0fr, and a second child would land in an implicit auto row that the
-          0fr never touches. See `.ax-finding-body` in styles/analytics.css. */}
-      <div className="ax-finding-body">
+      {/*
+        One wrapper, and it has to stay one: the collapse is a grid row going
+        to 0fr, and a second child would land in an implicit auto row that the
+        0fr never touches. See `.ax-finding-body` in styles/analytics.css.
+
+        `inert` while shut, because that collapse hides the evidence from the
+        eye and from nothing else — `overflow: hidden` leaves it in the
+        accessibility tree, so `aria-expanded="false"` claimed the finding was
+        folded away while a screen reader read the workings out anyway.
+      */}
+      <div className="ax-finding-body" inert={!open}>
         <div>
           <p className="ax-prose">{finding.detail}</p>
           <StrengthChip strength={finding.strength} />

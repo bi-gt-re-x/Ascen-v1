@@ -17,6 +17,7 @@ login could not be checked, because that needs credentials.
 | 1 (half) | Stop fetching the same data three times | `e60810c` |
 | 1 (most) | Split the endpoint; task read is demand-gated | this branch |
 | 1 (rest) | Calendar events off localStorage-only | this branch |
+| 10 | Accessibility: inert disclosures, heading outline | this branch |
 | 2 | Frontend tests, from zero | `a131c7c` |
 | 3 | Analytics monolith, 1,879 → 423 lines | `ada6da3` |
 | 4 | CSS collisions become a build failure | `17ebcb8` |
@@ -24,7 +25,7 @@ login could not be checked, because that needs credentials.
 | 6 (main) | Off end-of-life Python, 3.9.6 → 3.13.15 | `aa69eed` |
 | 12 | Delete unrendered components | `61dd7cf` |
 
-Current gate: `npm run build` (typecheck + 3 data lints + vite), 221 frontend
+Current gate: `npm run build` (typecheck + 3 data lints + vite), 224 frontend
 tests (`npm test`), 89 backend tests (`.venv-fastapi/bin/python -m pytest`).
 
 ---
@@ -249,33 +250,64 @@ components, not the paragraph.
 
 ---
 
-## 10. Accessibility — recommended next
+## 10. Accessibility — done, but not the work that was described
 
-The review's "Analytics has 0 ARIA attributes" is now literally true of
-`pages/Analytics.tsx` (423 lines of shell) but the picture is more nuanced:
+The review said "Analytics has 0 ARIA attributes". These notes already
+corrected that once, for the charts. Auditing the rest, **both remaining claims
+were also wrong, and there were real defects underneath them that neither
+named.**
 
-```
-27  pages/Notes.tsx          9  pages/SkillTrees.tsx     1  pages/Goals.tsx
-22  pages/Records.tsx        9  pages/Achievements.tsx   0  pages/Analytics.tsx
-17  pages/Settings.tsx       8  pages/Tasks.tsx          0  all 7 Analytics tabs
-                             2  pages/Dashboard.tsx
-```
+### The claims, checked
 
-The charts are **better than the review implies** — `components/Analytics/
-charts.tsx` already has `role="img"` + `aria-label` on the area chart, radar
-and scatter, and `<title>` on radar axes.
+**"17 `<button>` elements with no accessible name."** There are exactly 17
+buttons under `components/Analytics/`, so the count was right. Every one of
+them has text content, which *is* an accessible name. Most also carry correct
+state — `aria-pressed` on the chip groups, `aria-current` on the view tabs,
+`aria-expanded` on the disclosures. The single icon-only button, the heat-map
+cell in `Habits.tsx`, already had an `aria-label`. **Unnamed buttons: zero.**
 
-The real gaps:
-- **17 `<button>` elements in `components/Analytics/` with no accessible name**
-  beyond their text content — several are icon-only.
-- **Zero ARIA in all seven tab components** (`components/Analytics/tabs/*`) —
-  these are the panel/section wrappers, so headings-and-landmarks work rather
-  than chart work.
-- `pages/Goals.tsx` (1 attribute) and `pages/Dashboard.tsx` (2) are thinner
-  than Analytics now is.
+**"Zero ARIA in all seven tab components — headings-and-landmarks work."** The
+tab files do contain almost no ARIA and only two literal `<h2>` tags. But their
+panels are rendered by the shared `Panel` in `charts.tsx`, which emits an
+`<h2>` per panel, and `Header.tsx` emits the page's `<h1>`. The heading outline
+was already there; it was just not written in those files.
 
-This is contained, and the Analytics refactor made it much cheaper — the work
-is now in seven small files instead of one 1,879-line one.
+### What was actually wrong
+
+**Two disclosures were closed to the eye and open to everything else.** Both
+collapses — `.ax-group-body` (`PanelGroup`) and `.ax-finding-body`
+(`FindingCard`) — are a grid row going to `0fr` with `overflow: hidden`. That
+clips the content visually and does nothing else: it stayed in the
+accessibility tree and in the tab order. So a group announcing
+`aria-expanded="false"` had a screen reader read its charts out anyway, and a
+keyboard user tabbed into controls that were not on the screen. `inert` while
+shut is the fix.
+
+This is the one that mattered — it is a WCAG 4.1.2 and 2.4.3 failure, and it
+affects every reader using a keyboard or a screen reader on the two densest
+tabs.
+
+**`PanelGroup` titles were not headings.** They were `<strong>` inside a
+button. The three groups are what organise the Insights tab — the file's own
+comment says so — and they were absent from the outline, leaving fifteen equal
+`<h2>`s and no structure. The title is now a real heading wrapped around the
+button, and `Panel` picks its level from a context, so a grouped panel renders
+`<h3>` and an ungrouped one still renders `<h2>`. Three CSS selectors match the
+level rather than the tag.
+
+**`Trajectory`'s chips claimed to be tabs.** `role="tab"` commits to a
+`tabpanel` named by `aria-controls` and to arrow-key movement across the set,
+and there was neither — a screen reader announced "tab, 1 of 5" and the arrow
+keys did nothing. They are not tabs: nothing is swapped, the same chart redraws
+for a different series. They are `aria-pressed` toggles now, which is what
+every other chip group on the page already was.
+
+### Verified
+
+Three tests in `components/Analytics/disclosure.test.tsx`, each checked by
+breaking the code it covers — all three fail when their guard is removed.
+
+**Not verified visually**; the page is behind the login.
 
 ---
 

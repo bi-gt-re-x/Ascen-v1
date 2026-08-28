@@ -91,13 +91,24 @@ export function Trajectory({
         </label>
       }
     >
-      <div className="ax-chips ax-chips-inline" role="tablist" aria-label="Chart series">
+      {/*
+        `aria-pressed`, not `role="tab"`.
+
+        These were tabs, and the role was a promise the markup did not keep:
+        `role="tab"` commits to a `tabpanel` named by `aria-controls` and to
+        arrow-key movement across the set, and there was neither — so a screen
+        reader announced "tab, 1 of 5" and the arrow keys did nothing. They are
+        not tabs anyway; nothing is swapped, the same chart redraws for a
+        different series. Every other chip group on this page — the window
+        picker in Header, the budget row in NextActions — is a pressed toggle,
+        and these are the same component.
+      */}
+      <div className="ax-chips ax-chips-inline" role="group" aria-label="Chart series">
         {METRICS.map((entry) => (
           <button
             key={entry.key}
             type="button"
-            role="tab"
-            aria-selected={entry.key === metric}
+            aria-pressed={entry.key === metric}
             className={`ax-chip${entry.key === metric ? ' is-on' : ''}`}
             onClick={() => onMetric(entry.key)}
           >
