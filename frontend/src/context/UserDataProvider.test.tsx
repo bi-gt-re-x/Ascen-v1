@@ -1,5 +1,6 @@
 /**
- * One read of the account, shared by everyone who wants it.
+ * One read of the account, shared by everyone who wants it — and only if
+ * somebody does.
  *
  * The change this provider made is a performance one, so the tests are counts:
  * three consumers must produce one request, not three. That is not something a
@@ -9,13 +10,21 @@
  * The second reason is correctness, and it has a visible symptom: completing a
  * task on the dashboard used to leave the top bar showing the XP from before,
  * because each caller held its own copy. Two consumers rendered side by side,
- * one calling `mutate`, is that bug written down.
+ * one calling `mutate`, is that bug written down. It matters more since the
+ * stats moved into `StatsProvider`: the two halves now live in two states, and
+ * the point of the split is that nobody can tell.
+ *
+ * The third is the demand gate. The task list is megabytes and most pages
+ * never read one, so a provider that fetched on mount was charging every page
+ * for the few that need it. "No consumer, no request" is asserted the same way
+ * the others are — on the call count.
  */
 import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { AuthContext } from './contexts';
+import { StatsProvider } from './StatsProvider';
 import { UserDataProvider } from './UserDataProvider';
 import { useUserData } from '@/hooks/useUserData';
 import { stats, task } from '@/test/factories';
@@ -25,11 +34,12 @@ import type { UserData } from '@/services/tasks';
 // Mocked at the module boundary the provider actually imports, so the test
 // exercises the real `useApi` underneath rather than a stand-in for it.
 vi.mock('@/services', () => ({
-  tasks: { getUserData: vi.fn() },
+  tasks: { getUserData: vi.fn(), getStats: vi.fn() },
 }));
 
 const { tasks: taskService } = await import('@/services');
 const getUserData = vi.mocked(taskService.getUserData);
+const getStats = vi.mocked(taskService.getStats);
 
 const DATA: UserData = { stats: stats({ xp: 640 }), tasks: [task({ title: 'Revise' })] };
 
@@ -49,7 +59,9 @@ function wrapper(username: string | null = 'myles') {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <AuthContext.Provider value={auth(username)}>
-        <UserDataProvider>{children}</UserDataProvider>
+        <StatsProvider>
+          <UserDataProvider>{children}</UserDataProvider>
+        </StatsProvider>
       </AuthContext.Provider>
     );
   };
@@ -57,6 +69,7 @@ function wrapper(username: string | null = 'myles') {
 
 beforeEach(() => {
   getUserData.mockResolvedValue({ success: true, ...DATA });
+  getStats.mockResolvedValue({ success: true, stats: DATA.stats });
 });
 
 describe('useUserData', () => {
@@ -91,11 +104,13 @@ describe('one read for the whole app', () => {
 
     render(
       <AuthContext.Provider value={auth('myles')}>
-        <UserDataProvider>
+        <StatsProvider>
+          <UserDataProvider>
           <Consumer label="dashboard" />
           <Consumer label="topbar" />
           <Consumer label="rail" />
         </UserDataProvider>
+        </StatsProvider>
       </AuthContext.Provider>,
     );
 
@@ -115,11 +130,13 @@ describe('one read for the whole app', () => {
 
     render(
       <AuthContext.Provider value={auth('myles')}>
-        <UserDataProvider>
+        <StatsProvider>
+          <UserDataProvider>
           <Consumer />
           <Consumer />
           <Consumer />
         </UserDataProvider>
+        </StatsProvider>
       </AuthContext.Provider>,
     );
 
@@ -133,18 +150,22 @@ describe('one read for the whole app', () => {
   it('re-reads when the account changes', async () => {
     const { rerender } = render(
       <AuthContext.Provider value={auth('myles')}>
-        <UserDataProvider>
+        <StatsProvider>
+          <UserDataProvider>
           <Reader />
         </UserDataProvider>
+        </StatsProvider>
       </AuthContext.Provider>,
     );
     await waitFor(() => expect(getUserData).toHaveBeenCalledTimes(1));
 
     rerender(
       <AuthContext.Provider value={auth('someone-else')}>
-        <UserDataProvider>
+        <StatsProvider>
+          <UserDataProvider>
           <Reader />
         </UserDataProvider>
+        </StatsProvider>
       </AuthContext.Provider>,
     );
     await waitFor(() => expect(getUserData).toHaveBeenCalledTimes(2));
@@ -182,10 +203,12 @@ describe('mutate moves the whole app', () => {
 
     render(
       <AuthContext.Provider value={auth('myles')}>
-        <UserDataProvider>
+        <StatsProvider>
+          <UserDataProvider>
           <Dashboard />
           <Topbar />
         </UserDataProvider>
+        </StatsProvider>
       </AuthContext.Provider>,
     );
 
@@ -196,6 +219,53 @@ describe('mutate moves the whole app', () => {
 
     expect(screen.getByRole('button')).toHaveTextContent('complete (680)');
     expect(screen.getByRole('status')).toHaveTextContent('680');
+    expect(getUserData).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the demand gate', () => {
+  it('reads nothing until something asks for the task list', async () => {
+    // The rail and the top bar mount on every page and want six integers.
+    // Before the gate, mounting them fetched the account's entire task history
+    // — for the largest account in this database, 2.9 MB of JSON per page.
+    render(
+      <AuthContext.Provider value={auth('myles')}>
+        <StatsProvider>
+          <UserDataProvider>
+            <span>a page that shows no tasks</span>
+          </UserDataProvider>
+        </StatsProvider>
+      </AuthContext.Provider>,
+    );
+
+    await waitFor(() => expect(getStats).toHaveBeenCalledTimes(1));
+    expect(getUserData).not.toHaveBeenCalled();
+  });
+
+  it('reads once a consumer mounts, and stays read when it leaves', async () => {
+    // The latch. Without it, navigating dashboard → analytics → dashboard
+    // would drop the demand to zero and re-fetch megabytes coming back, which
+    // is worse than the problem the gate solves.
+    function Screen({ tasks: wantsTasks }: { tasks: boolean }) {
+      return (
+        <AuthContext.Provider value={auth('myles')}>
+          <StatsProvider>
+            <UserDataProvider>{wantsTasks ? <Reader /> : <span>no tasks here</span>}</UserDataProvider>
+          </StatsProvider>
+        </AuthContext.Provider>
+      );
+    }
+
+    const { rerender } = render(<Screen tasks={false} />);
+    await waitFor(() => expect(getStats).toHaveBeenCalledTimes(1));
+    expect(getUserData).not.toHaveBeenCalled();
+
+    rerender(<Screen tasks />);
+    await waitFor(() => expect(getUserData).toHaveBeenCalledTimes(1));
+
+    // The consumer leaves; nothing re-reads, and nothing is thrown away.
+    rerender(<Screen tasks={false} />);
+    rerender(<Screen tasks />);
     expect(getUserData).toHaveBeenCalledTimes(1);
   });
 });
@@ -214,6 +284,22 @@ describe('signed out', () => {
   });
 });
 
+describe('the stats live in StatsProvider', () => {
+  it('reads them from there rather than from its own response', async () => {
+    // `/api/get_user_data` still answers with a stats block. It is dropped:
+    // six integers are not worth a second source of truth, and two copies is
+    // exactly the bug that put the old XP in the top bar.
+    getStats.mockResolvedValue({ success: true, stats: stats({ xp: 999 }) });
+
+    const { result } = renderHook(() => useUserData(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.data).not.toBeNull());
+
+    // 999 from /api/stats, not the 640 that came back attached to the tasks.
+    expect(result.current.data!.stats.xp).toBe(999);
+    expect(result.current.data!.tasks).toHaveLength(1);
+  });
+});
+
 describe('the context value', () => {
   it('is stable while nothing about it has changed', async () => {
     // The provider sits above the entire app. `useApi` returns a fresh object
@@ -227,9 +313,11 @@ describe('the context value', () => {
 
     const { rerender } = render(
       <AuthContext.Provider value={auth('myles')}>
-        <UserDataProvider>
+        <StatsProvider>
+          <UserDataProvider>
           <Consumer />
         </UserDataProvider>
+        </StatsProvider>
       </AuthContext.Provider>,
     );
     await waitFor(() => expect(seen[seen.length - 1]!.data).not.toBeNull());
@@ -237,9 +325,11 @@ describe('the context value', () => {
     const settled = seen[seen.length - 1]!;
     rerender(
       <AuthContext.Provider value={auth('myles')}>
-        <UserDataProvider>
+        <StatsProvider>
+          <UserDataProvider>
           <Consumer />
         </UserDataProvider>
+        </StatsProvider>
       </AuthContext.Provider>,
     );
     expect(seen[seen.length - 1]).toBe(settled);
@@ -257,6 +347,7 @@ describe('the context value', () => {
       'refreshing',
       'reload',
       'username',
+      'want',
     ]);
   });
 });

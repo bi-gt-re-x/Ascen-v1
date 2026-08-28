@@ -57,7 +57,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Ambient, ErrorState, Loading, STATS_CHANGED } from '@/components';
 import { GROUPS, SORTS } from '@/components/Tasks';
-import { useApi, useAuth, useDocumentTitle, usePageEntrance, useSettings, useTheme, useUserData } from '@/hooks';
+import { useApi, useAuth, useDocumentTitle, usePageEntrance, useSettings, useTheme } from '@/hooks';
 import { settings as service } from '@/services';
 import type {
   Accent,
@@ -405,10 +405,11 @@ export default function Settings() {
 
   const { section: routeSection } = useParams();
   const navigate = useNavigate();
-  const { username } = useUserData();
   const { prefs, update, refresh } = useSettings();
   const { setTheme } = useTheme();
-  const { signOut } = useAuth();
+  // One `useAuth` for both. `username` came from `useUserData` and cost the
+  // account's whole task list to read a string — see hooks/useUserData.
+  const { username, signOut } = useAuth();
 
   const call = useCallback(
     () =>

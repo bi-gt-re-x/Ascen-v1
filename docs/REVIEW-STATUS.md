@@ -1,8 +1,8 @@
 # Review remediation — status and what is left
 
-Working notes for the twelve-point code review. Five items are done and
-committed on `copy-pass`; the rest are described below in enough detail to pick
-up cold.
+Working notes for the twelve-point code review. Seven items are done or
+substantially done and committed on `copy-pass`; the rest are described below
+in enough detail to pick up cold.
 
 Every "not verified" note below means the same thing: the pages behind the
 login could not be checked, because that needs credentials.
@@ -14,39 +14,83 @@ login could not be checked, because that needs credentials.
 | # | Item | Commit |
 |---|------|--------|
 | 1 (half) | Stop fetching the same data three times | `e60810c` |
+| 1 (most) | Split the endpoint; task read is demand-gated | this branch |
 | 2 | Frontend tests, from zero | `a131c7c` |
 | 3 | Analytics monolith, 1,879 → 423 lines | `ada6da3` |
 | 4 | CSS collisions become a build failure | `17ebcb8` |
 | 6 (part) | Login rate limiting + Secure cookie | `5ef1864` |
+| 6 (main) | Off end-of-life Python, 3.9.6 → 3.13.15 | `aa69eed` |
 | 12 | Delete unrendered components | `61dd7cf` |
 
-Current gate: `npm run build` (typecheck + 3 data lints + vite), 213 frontend
+Current gate: `npm run build` (typecheck + 3 data lints + vite), 216 frontend
 tests (`npm test`), 83 backend tests (`.venv-fastapi/bin/python -m pytest`).
 
 ---
 
-## 1. The data architecture — the big one, still open
+## 1. The data architecture — mostly done
 
-**Half done.** `UserDataProvider` (`e60810c`) fixed the *three requests per
-page* half: the dashboard, top bar and rail now share one read.
+**The three-requests-per-page half** was fixed by `UserDataProvider`
+(`e60810c`). **The payload half is now fixed too**, for every page that does
+not render a task.
 
-**The other half is untouched and is the review's #1 concern.**
-`/api/get_user_data` (`backend/api/dashboard.py:35`) still returns
-`db.tasks_for(username)` — every task the account has ever created, on every
-page load. Performance scales with history rather than with what is on screen.
+### What the numbers actually were
 
-What a fix looks like, roughly in order of value:
+Measured against this database — 8 accounts, 10,660 tasks, the largest account
+holding 9,547 of them:
 
-1. **Paginate or scope the task read.** The dashboard needs today's plate plus
-   recent completions; Analytics needs a date window it already computes
-   (`useAnalyticsModel` slices `from`/`to` client-side after downloading
-   everything). Push that window into the query.
-2. **Split the endpoint.** `stats` is six integers and is what the top bar and
-   rail actually want; `tasks` is the megabytes. They are one response only
-   because one page once needed both.
-3. **Do not break the streak decay.** Reading `get_user_data` has a side
-   effect — `xp_tracking.refresh_streak` — and pages currently rely on it. Any
-   split has to keep exactly one call doing that, or move it.
+| endpoint | payload | server time |
+|---|---|---|
+| `/api/get_user_data` (before, and still, for task pages) | 2,869 KB | 40 ms |
+| `/api/stats` | 0.1 KB | <1 ms |
+| `/api/alerts` | 0.2 KB | 16 ms |
+| `/api/tasks/search?q=…` | 2.2 KB | 2 ms |
+
+**A page that renders no task now costs 0.3 KB instead of 2.9 MB.**
+
+Note this corrects two figures that were guessed rather than measured. The
+payload is 2.9 MB, not the 4.4 MB a raw SQLite dump suggests — the API drops
+NULL columns. And date-windowing the read, which the original notes put first
+in value order, turns out to be worth only ~40%: the largest account has 5,428
+*open* tasks, and no date window excludes those. Splitting the endpoint was
+worth far more, so it was done first.
+
+### What was done
+
+1. **`/api/stats`** — the six integers, by themselves. The rail and the top bar
+   read this. **It owns the streak decay**, which is the "exactly one caller"
+   constraint: the rail mounts outside the router and never unmounts, so
+   `/api/stats` is fetched once per session at precisely the moment
+   `/api/get_user_data` used to be. The decay did not move in time, only in
+   which endpoint carries it. `/api/get_user_data` no longer decays and must
+   not start again.
+2. **`/api/alerts`** — the bell's three facts as four numbers and two titles,
+   aggregated in SQL. The top bar used to filter the whole task list for this.
+3. **`/api/tasks/search`** — title search with a capped `LIMIT`. Also the top
+   bar, also formerly a `.filter()` over everything.
+4. **The task read is demand-gated.** `UserDataProvider` does not fetch until
+   something calls `useUserData`. The gate latches on for the session, so
+   navigating away and back does not re-fetch megabytes.
+5. **`StatsProvider` is the only stats state.** `UserDataProvider` still reads
+   `/api/get_user_data` and deliberately drops its stats block. Two copies
+   would reintroduce the exact bug the provider was built to kill — the top bar
+   showing the XP from before a completion.
+
+Callers moved off the heavy read: the rail, the top bar, `pages/Settings.tsx`
+and `pages/Achievements.tsx` (both held it to read a `username`; `useAuth` has
+one).
+
+### What is left
+
+**Push the date window into the query.** `useAnalyticsModel` still slices
+`from`/`to` in the browser after downloading the whole history. Analytics is a
+genuine task consumer — it counts the subject breakdown and finished-in-window
+totals off individual rows — so it cannot simply stop reading; it needs a
+scoped read. Worth ~40% on that page and on dashboard, tasks, calendar, goals
+and records.
+
+`pages/Records.tsx` is the awkward one: `personalRecords` asks all-time
+questions ("most tasks in a day, ever"), so a window would break it. That one
+wants server-side aggregation rather than a narrower read.
 
 Related finding, from the #12 work — **calendar events are localStorage-only**.
 `frontend/src/utils/calendarStore.ts` documents it:
@@ -59,7 +103,8 @@ So: `backend/api/calendar.py` endpoints are dead, the ten matching wrappers in
 `frontend/src/services/events.ts` are dead (left in place deliberately — see
 `61dd7cf`), and user-created calendar events do not survive clearing site data
 or changing browser. That is a data-loss bug wearing a dead-code costume, and
-it belongs to this item rather than to #12.
+it belongs to this item rather than to #12. **Still open, and the next thing
+worth doing.**
 
 ---
 
@@ -84,14 +129,13 @@ an explicit shrink-only list of known exceptions.
 ## 6. Security — what is left
 
 Done: login/signup/resend/AI rate limiting, `Secure` + `HttpOnly` +
-`SameSite=lax` session cookie.
+`SameSite=lax` session cookie, **and the Python upgrade** — the venv is on
+3.13.15 (Homebrew) instead of the end-of-life 3.9.6 that shipped with Xcode's
+command line tools. Every pin in `requirements.txt` installed unchanged and all
+83 backend tests pass on it.
 
 **Still open:**
 
-- **Python 3.9.6 is end of life** (October 2025, no security patches). This is
-  the highest-value remaining item and it is two commands.
-  `requirements.txt` already carries the exact steps. Left undone here because
-  installing a Python changes the machine rather than the project.
 - **CSRF is partial.** `SameSite=lax` blocks the cross-site form POST, which is
   the common case, but there is no token on state-changing endpoints. Lax does
   not cover top-level GET navigations that mutate — worth auditing whether any

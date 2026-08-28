@@ -31,6 +31,53 @@ export function getUserData(): Promise<ApiResult<UserData>> {
   return get<UserData>('/api/get_user_data');
 }
 
+/**
+ * The six numbers, without the task list.
+ *
+ * The read every page makes. `getUserData` above is the same six numbers plus
+ * several megabytes of tasks, which is why it is no longer what the rail and
+ * the top bar call — see context/StatsProvider.
+ *
+ * This is also the call that decays a streak gone stale overnight. Exactly one
+ * endpoint does that (backend/api/dashboard.py says why it is this one), so
+ * this is the read that makes every page agree on the streak.
+ */
+export function getStats(): Promise<ApiResult<{ stats: UserStats }>> {
+  return get<{ stats: UserStats }>('/api/stats');
+}
+
+/** What the top bar's bell shows. Counted in SQL, not by filtering a list. */
+export interface Alerts {
+  /** Open tasks whose date has passed, and the oldest one's title. */
+  late: number;
+  late_title: string | null;
+  /** Open tasks dated today, and one of their titles. */
+  due_today: number;
+  due_today_title: string | null;
+  /** Whether anything at all has been finished today. */
+  finished_today: boolean;
+}
+
+/**
+ * @param day The caller's local ISO day. Sent rather than left to the server
+ *            because stored stamps carry no timezone, so "today" is the
+ *            reader's day and only the reader knows it.
+ */
+export function getAlerts(day: string): Promise<ApiResult<{ alerts: Alerts }>> {
+  return get<{ alerts: Alerts }>('/api/alerts', { day });
+}
+
+/**
+ * Title search for the top bar's panel.
+ *
+ * Was a `.filter()` over the account's whole task list, which is most of why
+ * the top bar needed that list. Unfinished results come first, which is the
+ * ordering the panel has always applied.
+ */
+export function searchTasks(query: string): Promise<ApiResult<{ tasks: Task[] }>> {
+  return get<{ tasks: Task[] }>('/api/tasks/search', { q: query });
+}
+
 export function listTasks(): Promise<ApiResult<{ tasks: Task[] }>> {
   return get<{ tasks: Task[] }>('/api/tasks');
 }

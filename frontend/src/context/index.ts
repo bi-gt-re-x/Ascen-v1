@@ -5,5 +5,13 @@
 export { AuthProvider } from './AuthContext';
 export { SettingsProvider } from './SettingsProvider';
 export { ThemeProvider } from './ThemeContext';
+export { StatsProvider } from './StatsProvider';
 export { UserDataProvider } from './UserDataProvider';
-export type { AuthStatus, AuthValue, SettingsValue, ThemeValue, UserDataValue } from './contexts';
+export type {
+  AuthStatus,
+  AuthValue,
+  SettingsValue,
+  StatsValue,
+  ThemeValue,
+  UserDataValue,
+} from './contexts';

@@ -19,4 +19,5 @@ export { subjectOf, useSubjectIndex, useSubjects } from './useSubjects';
 export { useMediaQuery } from './useMediaQuery';
 export { useSettings } from './useSettings';
 export { useTheme } from './useTheme';
+export { useStats } from './useStats';
 export { useUserData } from './useUserData';

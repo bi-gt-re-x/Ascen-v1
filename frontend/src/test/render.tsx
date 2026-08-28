@@ -15,10 +15,20 @@ import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import type { ReactElement, ReactNode } from 'react';
-import { AuthContext, SettingsContext, UserDataContext } from '@/context/contexts';
+import {
+  AuthContext,
+  SettingsContext,
+  StatsContext,
+  UserDataContext,
+} from '@/context/contexts';
 import { DEFAULTS, DEFAULT_DAILY_GOAL } from '@/services/settings';
 import { stats } from './factories';
-import type { AuthValue, SettingsValue, UserDataValue } from '@/context/contexts';
+import type {
+  AuthValue,
+  SettingsValue,
+  StatsValue,
+  UserDataValue,
+} from '@/context/contexts';
 import type { Prefs } from '@/services/settings';
 import type { UserData } from '@/services/tasks';
 
@@ -34,6 +44,7 @@ export interface Options {
   auth?: Partial<AuthValue>;
   settings?: Partial<Omit<SettingsValue, 'prefs'>> & { prefs?: Partial<Prefs> };
   userData?: Partial<UserDataValue>;
+  stats?: Partial<StatsValue>;
 }
 
 export function authValue(overrides: Partial<AuthValue> = {}): AuthValue {
@@ -74,21 +85,41 @@ export function userDataValue(overrides: Partial<UserDataValue> = {}): UserDataV
     reload: vi.fn(),
     mutate: vi.fn(),
     username: 'myles',
+    // The real provider does not fetch until this is called. A test renders
+    // with the data already in place, so it is a spy — but it is here rather
+    // than optional so that a component which stops calling `useUserData`
+    // cannot go unnoticed.
+    want: vi.fn(),
+    ...overrides,
+  };
+}
+
+export function statsValue(overrides: Partial<StatsValue> = {}): StatsValue {
+  return {
+    stats: stats(),
+    error: null,
+    loading: false,
+    refreshing: false,
+    reload: vi.fn(),
+    mutate: vi.fn(),
+    username: 'myles',
     ...overrides,
   };
 }
 
 export function renderWithProviders(ui: ReactElement, options: Options = {}) {
-  const { route = '/dashboard', auth, settings, userData } = options;
+  const { route = '/dashboard', auth, settings, userData, stats: statsOverrides } = options;
 
   function Providers({ children }: { children: ReactNode }) {
     return (
       <MemoryRouter initialEntries={[route]}>
         <AuthContext.Provider value={authValue(auth)}>
           <SettingsContext.Provider value={settingsValue(settings)}>
-            <UserDataContext.Provider value={userDataValue(userData)}>
-              {children}
-            </UserDataContext.Provider>
+            <StatsContext.Provider value={statsValue(statsOverrides)}>
+              <UserDataContext.Provider value={userDataValue(userData)}>
+                {children}
+              </UserDataContext.Provider>
+            </StatsContext.Provider>
           </SettingsContext.Provider>
         </AuthContext.Provider>
       </MemoryRouter>

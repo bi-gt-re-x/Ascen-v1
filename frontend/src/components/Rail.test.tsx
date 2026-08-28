@@ -247,7 +247,7 @@ describe('the foot', () => {
   it('shows nothing rather than a wrong rank while the read is in flight', () => {
     // "Beginner, level 1" for a second on every load is a wrong answer, not a
     // missing one — and it is wrong for the reader who has played longest.
-    renderWithProviders(<Rail />, { userData: { data: null, loading: true } });
+    renderWithProviders(<Rail />, { stats: { stats: null, loading: true } });
 
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
@@ -259,9 +259,7 @@ describe('the foot', () => {
     // rail prints the mastery ladder's names against an account level, so
     // this is also the assertion that the two ladders are being crossed on
     // purpose rather than by accident.
-    renderWithProviders(<Rail />, {
-      userData: { data: { stats: stats({ xp: 640 }), tasks: [] } },
-    });
+    renderWithProviders(<Rail />, { stats: { stats: stats({ xp: 640 }) } });
 
     expect(screen.getByText('Beginner')).toBeInTheDocument();
     // The number and its unit are separate elements, so this reads the row.
@@ -276,7 +274,7 @@ describe('the foot', () => {
   it('offers a way in instead of a rank when signed out', () => {
     renderWithProviders(<Rail />, {
       auth: { status: 'signed-out', username: null },
-      userData: { data: null, error: 'Sign in to see your dashboard.' },
+      stats: { stats: null, error: 'Sign in to see your dashboard.' },
     });
 
     expect(screen.getByRole('link', { name: 'Log In' })).toHaveAttribute(
@@ -290,7 +288,7 @@ describe('the foot', () => {
     // The rail is mounted outside the router and never unmounts, so without
     // this it would still be showing the level you had when you opened the app.
     const reload = vi.fn();
-    renderWithProviders(<Rail />, { userData: { reload } });
+    renderWithProviders(<Rail />, { stats: { reload } });
 
     expect(reload).not.toHaveBeenCalled();
     act(() => {
@@ -301,7 +299,7 @@ describe('the foot', () => {
 
   it('stops listening once it is gone', () => {
     const reload = vi.fn();
-    const { unmount } = renderWithProviders(<Rail />, { userData: { reload } });
+    const { unmount } = renderWithProviders(<Rail />, { stats: { reload } });
 
     unmount();
     act(() => {

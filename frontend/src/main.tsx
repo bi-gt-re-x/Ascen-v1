@@ -19,7 +19,13 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { RootBoundary } from '@/components';
-import { AuthProvider, SettingsProvider, ThemeProvider, UserDataProvider } from '@/context';
+import {
+  AuthProvider,
+  SettingsProvider,
+  StatsProvider,
+  ThemeProvider,
+  UserDataProvider,
+} from '@/context';
 
 import '@/styles/grades.css';
 import '@/styles/layout.css';
@@ -41,13 +47,21 @@ createRoot(container).render(
         <ThemeProvider>
           <AuthProvider>
             <SettingsProvider>
-              {/* Above App, so the one big account read happens once for the
-                  session rather than once per caller — the dashboard, the top
-                  bar and the rail all want it and all mount together. See
-                  context/UserDataProvider. */}
-              <UserDataProvider>
-                <App />
-              </UserDataProvider>
+              {/* The account's six numbers, for the rail and the top bar,
+                  which mount on every screen behind the login. Above
+                  UserDataProvider because that one writes its stats here
+                  rather than keeping a second copy — one state, so the top bar
+                  and the dashboard cannot disagree about the XP. This is also
+                  the read that decays a stale streak. */}
+              <StatsProvider>
+                {/* The task list. Above App so it is read once for the session
+                    rather than once per caller, and demand-gated so a session
+                    that never opens a task page never reads it at all. See
+                    context/UserDataProvider. */}
+                <UserDataProvider>
+                  <App />
+                </UserDataProvider>
+              </StatsProvider>
             </SettingsProvider>
           </AuthProvider>
         </ThemeProvider>

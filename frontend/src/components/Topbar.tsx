@@ -30,12 +30,14 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth, useSettings, useTheme, useUserData } from '@/hooks';
+import { STATS_CHANGED } from './Rail';
+import { useAuth, useSettings, useStats, useTheme } from '@/hooks';
 import { AVATARS, avatarPath } from '@/services/avatars';
-import { auth } from '@/services';
+import { auth, tasks as taskService } from '@/services';
 import { format } from '@/utils';
 import { isoDate } from '@/utils/dates';
 import type { Task, Theme } from '@/types';
+import type { Alerts } from '@/services/tasks';
 import '@/styles/topbar.css';
 
 const stroke = {
@@ -74,48 +76,47 @@ interface Alert {
  * last week, or what the reader could be doing better. That is what the
  * analytics page is for, it is never urgent, and a bell that rings about it is
  * a bell people turn off.
+ *
+ * The three of them used to be counted here, by filtering the account's entire
+ * task list — which is why this bar, on every page behind the login, needed
+ * that list at all. They are counted in SQL now (`/api/alerts`), and what
+ * arrives is four numbers and two titles.
  */
-function alertsFrom(tasks: Task[], streak: number): Alert[] {
-  const today = isoDate();
+function alertsFrom(counts: Alerts | null, streak: number): Alert[] {
   const out: Alert[] = [];
+  if (!counts) return out;
 
-  const open = tasks.filter((task) => task.status !== 'done');
-  const dueDay = (task: Task) => String(task.due_date || '').slice(0, 10);
-
-  const late = open.filter((task) => dueDay(task) && dueDay(task) < today);
-  const due = open.filter((task) => dueDay(task) === today);
-
-  if (late.length > 0) {
+  if (counts.late > 0) {
     out.push({
       id: 'late',
       tone: 'late',
       title:
-        late.length === 1
+        counts.late === 1
           ? '1 task is past its date'
-          : `${late.length} tasks are past their dates`,
+          : `${counts.late} tasks are past their dates`,
       detail:
-        late.length === 1
-          ? late[0]!.title
-          : `Oldest: ${[...late].sort((a, b) => dueDay(a).localeCompare(dueDay(b)))[0]!.title}`,
+        counts.late === 1
+          ? (counts.late_title ?? '')
+          : `Oldest: ${counts.late_title ?? ''}`,
       to: '/tasks',
     });
   }
 
-  if (due.length > 0) {
+  if (counts.due_today > 0) {
     out.push({
       id: 'today',
       tone: 'today',
-      title: `${due.length} ${due.length === 1 ? 'task is' : 'tasks are'} due today`,
-      detail: due.length === 1 ? due[0]!.title : `Including ${due[0]!.title}`,
+      title: `${counts.due_today} ${counts.due_today === 1 ? 'task is' : 'tasks are'} due today`,
+      detail:
+        counts.due_today === 1
+          ? (counts.due_today_title ?? '')
+          : `Including ${counts.due_today_title ?? ''}`,
       to: '/tasks',
     });
   }
 
   // Nothing finished today, and something to lose by leaving it that way.
-  const finishedToday = tasks.some(
-    (task) => task.status === 'done' && String(task.completed_at || '').slice(0, 10) === today,
-  );
-  if (streak > 0 && !finishedToday) {
+  if (streak > 0 && !counts.finished_today) {
     out.push({
       id: 'streak',
       tone: 'streak',
@@ -140,21 +141,14 @@ export function Topbar() {
      the menu below, which is where "which account am I in" belongs. */
   const { displayName } = useSettings();
   const { theme, setTheme } = useTheme();
-  /*
-   * A second read of /api/get_user_data — the rail makes the first, for the
-   * level under the avatar. Two small GETs per page load rather than a store
-   * shared between two components that mount once each and never unmount: the
-   * shared version is the right answer the moment a third caller appears, and
-   * inventing it for the second is more machinery than the call costs.
-   */
-  const { data } = useUserData();
+  // Shared with the rail, which shows the same level under the avatar. Six
+  // integers, read once for the session — this used to be the account's whole
+  // task list, twice, because the bar and the rail each asked for it.
+  const { stats } = useStats();
   const navigate = useNavigate();
 
-  const tasks = useMemo(() => data?.tasks ?? [], [data]);
-  const streak = data?.stats?.current_streak ?? 0;
-  const level = data ? format.levelForTotalXp(data.stats.xp) : null;
-
-  const alerts = useMemo(() => alertsFrom(tasks, streak), [streak, tasks]);
+  const streak = stats?.current_streak ?? 0;
+  const level = stats ? format.levelForTotalXp(stats.xp) : null;
 
   const [open, setOpen] = useState<'search' | 'alerts' | 'account' | null>(null);
   const [query, setQuery] = useState('');
@@ -183,16 +177,69 @@ export function Topbar() {
     if (open === 'search') inputRef.current?.focus();
   }, [open]);
 
-  const matches = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return [];
-    return tasks
-      .filter((task) => task.title.toLowerCase().includes(needle))
-      // Unfinished first: a search on a to-do list is nearly always somebody
-      // looking for something they still have to do.
-      .sort((a, b) => Number(a.status === 'done') - Number(b.status === 'done'))
-      .slice(0, RESULTS);
-  }, [query, tasks]);
+  /*
+   * The bell's three facts, counted by the server.
+   *
+   * Read when the bar mounts and again whenever a completion moves the numbers
+   * — the same `ascen:stats-changed` event the rail listens to, because
+   * finishing a task is exactly what clears a "due today" or a streak warning.
+   *
+   * The day is sent rather than left to the server: stored stamps carry no
+   * timezone, so "today" is the reader's day.
+   */
+  const [alertCounts, setAlertCounts] = useState<Alerts | null>(null);
+
+  useEffect(() => {
+    if (!username) {
+      setAlertCounts(null);
+      return;
+    }
+    let live = true;
+    const read = () => {
+      void taskService.getAlerts(isoDate()).then((result) => {
+        if (live && result.success) setAlertCounts(result.alerts);
+      });
+    };
+    read();
+    window.addEventListener(STATS_CHANGED, read);
+    return () => {
+      live = false;
+      window.removeEventListener(STATS_CHANGED, read);
+    };
+  }, [username]);
+
+  const alerts = useMemo(() => alertsFrom(alertCounts, streak), [alertCounts, streak]);
+
+  /*
+   * Search results, from the server.
+   *
+   * This was a `.filter()` over the account's whole task list, and that list is
+   * the single largest thing the app fetches — several megabytes for the
+   * largest account here. Holding it on every page so that a panel most
+   * sessions never open could filter it was the wrong trade by a wide margin.
+   *
+   * Debounced rather than sent per keystroke, and the guard is a ticket rather
+   * than a cancel: replies can arrive out of order, and the one that matters is
+   * the one for the text currently in the box.
+   */
+  const [matches, setMatches] = useState<Task[]>([]);
+  const searchTicket = useRef(0);
+
+  useEffect(() => {
+    const needle = query.trim();
+    if (!needle) {
+      setMatches([]);
+      return;
+    }
+    const mine = ++searchTicket.current;
+    const timer = window.setTimeout(() => {
+      void taskService.searchTasks(needle).then((result) => {
+        if (mine !== searchTicket.current) return;
+        setMatches(result.success ? result.tasks.slice(0, RESULTS) : []);
+      });
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   const toggle = useCallback(
     (panel: 'search' | 'alerts' | 'account') =>
@@ -371,7 +418,7 @@ export function Topbar() {
                 {displayName && displayName !== username && <span>@{username}</span>}
                 {level && (
                   <span>
-                    Level {level.level} · {format.number(data?.stats.xp ?? 0)} XP
+                    Level {level.level} · {format.number(stats?.xp ?? 0)} XP
                   </span>
                 )}
               </div>

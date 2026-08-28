@@ -260,6 +260,24 @@ def list_tasks(username: str = Depends(current_username)):
     return ok(tasks=db.tasks_for(username))
 
 
+@router.get('/api/tasks/search')
+def search_tasks(q: str = '', limit: int = 8,
+                 username: str = Depends(current_username)):
+    """Title search, for the top bar's search panel.
+
+    Registered above `PUT/DELETE /api/tasks/{task_id}` in this file but not in
+    conflict with them: those are other methods, and there is no
+    `GET /api/tasks/{task_id}` for `search` to be mistaken for.
+
+    The panel used to do this in the browser over the account's whole task
+    list, which is most of why the top bar — on every page behind the login —
+    needed that list at all. `limit` is capped rather than trusted: the panel
+    shows eight, and an endpoint that will return ten thousand rows on request
+    is the endpoint this change exists to remove.
+    """
+    return ok(tasks=db.search_tasks(username, q, max(1, min(int(limit), 50))))
+
+
 @router.post('/api/tasks')
 def create_task(body: CreateTask,
                 username: str = Depends(current_username)):

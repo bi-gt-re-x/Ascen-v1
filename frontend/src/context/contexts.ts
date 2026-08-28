@@ -11,7 +11,7 @@
  * one, hooks in `src/hooks/`. Nothing else about them changes.
  */
 import { createContext } from 'react';
-import type { Theme } from '@/types';
+import type { Theme, UserStats } from '@/types';
 import type { UseApiResult } from '@/hooks/useApi';
 import type { Prefs } from '@/services/settings';
 import type { UserData } from '@/services/tasks';
@@ -112,6 +112,48 @@ export const SettingsContext = createContext<SettingsValue | null>(null);
 export interface UserDataValue extends UseApiResult<UserData> {
   /** Who the data belongs to, or null when signed out. */
   username: string | null;
+  /**
+   * Register that something on screen wants the task list.
+   *
+   * Called by `useUserData` on mount and by nothing else. The provider does
+   * not fetch until this has happened at least once, which is what stops the
+   * pages that never read a task from paying for one. See UserDataProvider.
+   */
+  want: () => void;
 }
 
 export const UserDataContext = createContext<UserDataValue | null>(null);
+
+// --------------------------------------------------------------------------
+// The account's numbers
+// --------------------------------------------------------------------------
+/**
+ * Level, XP, task count and the two streaks — read on every page, by itself.
+ *
+ * These six integers used to arrive bolted to the account's entire task list,
+ * because one endpoint returned both. The rail shows the level, the top bar
+ * shows the XP, and both mount on every screen behind the login, so every
+ * screen paid megabytes for six numbers. `/api/stats` is those numbers alone.
+ *
+ * **This is the only stats state in the app.** `UserDataProvider` still reads
+ * `/api/get_user_data` for the pages whose subject is the task list, and that
+ * response still carries a stats block — but the provider hands it here rather
+ * than keeping a second copy. Two copies would be two answers, and the whole
+ * reason the account read moved above the components was that the top bar and
+ * the dashboard must never disagree about the XP.
+ */
+export interface StatsValue {
+  /** The numbers, or null before the first answer. */
+  stats: UserStats | null;
+  error: string | null;
+  loading: boolean;
+  refreshing: boolean;
+  /** Re-ask the server. Also re-decays the streak. */
+  reload: () => void;
+  /** Write the numbers a completion response just reported. */
+  mutate: (update: (current: UserStats) => UserStats) => void;
+  /** Who they belong to, or null when signed out. */
+  username: string | null;
+}
+
+export const StatsContext = createContext<StatsValue | null>(null);

@@ -54,7 +54,7 @@
  */
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
-import { useApi, useDocumentTitle, usePageEntrance, useUserData } from '@/hooks';
+import { useApi, useAuth, useDocumentTitle, usePageEntrance } from '@/hooks';
 import { achievements as service } from '@/services';
 import type { Badge, Category, Metric } from '@/services/achievements';
 import '@/styles/achievements.css';
@@ -679,7 +679,10 @@ function Ring({ share }: { share: number }) {
 export default function Achievements() {
   useDocumentTitle('Achievements');
 
-  const { username } = useUserData();
+  // `useAuth`, not `useUserData`: this page wants a name to key its own
+  // fetch on, and asking `useUserData` for one is what makes the app read the
+  // account's entire task list. See hooks/useUserData.
+  const { username } = useAuth();
   const call = useCallback(
     () =>
       username

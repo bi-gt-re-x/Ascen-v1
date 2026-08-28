@@ -619,6 +619,29 @@ def delete_row(table, row_id, user_id=None, key='id'):
         con.close()
 
 
+def _decode_records(con, table, records):
+    """Cursor rows as the app expects to see them.
+
+    Split out of `rows_for` because the scoped task reads further down answer a
+    different WHERE clause but must hand back rows in exactly the same shape —
+    same decoding, same dropping of NULLs. Two copies of this loop would be two
+    places for a BOOLEAN to start arriving as a 0.
+    """
+    columns = _schema(con, table)
+    if not columns:
+        return []
+    types = {name: sql_type for name, sql_type, _ in columns}
+    rows = []
+    for record in records:
+        row = {}
+        for name in record.keys():
+            value = record[name]
+            if value is not None:
+                row[name] = _decode(table, name, value, types.get(name, ''))
+        rows.append(row)
+    return rows
+
+
 def rows_for(table, user_id, order='rowid'):
     """Every row of `table` belonging to one account, in written order.
 
@@ -628,20 +651,10 @@ def rows_for(table, user_id, order='rowid'):
     """
     con = connect()
     try:
-        columns = _schema(con, table)
-        if not columns:
+        if not _schema(con, table):
             return []
-        types = {name: sql_type for name, sql_type, _ in columns}
-        rows = []
         query = 'SELECT * FROM "{}" WHERE user_id = ? ORDER BY {}'.format(table, order)
-        for record in con.execute(query, (user_id,)):
-            row = {}
-            for name in record.keys():
-                value = record[name]
-                if value is not None:
-                    row[name] = _decode(table, name, value, types.get(name, ''))
-            rows.append(row)
-        return rows
+        return _decode_records(con, table, con.execute(query, (user_id,)))
     finally:
         con.close()
 
@@ -777,6 +790,116 @@ def save_task(task, username):
     """Write back one task, scoped to its owner."""
     changes = {k: v for k, v in task.items() if k != 'id'}
     return update_row('tasks', task['id'], changes, user_id=username)
+
+
+# --------------------------------------------------------------------------
+# Asking about the tasks without reading them
+# --------------------------------------------------------------------------
+# The two questions the top bar asks on every page. Both used to be answered in
+# the browser, by filtering the account's entire task list — which is why the
+# bar needed that list at all, and why every page paid megabytes to render a
+# bell and a search box. In SQL they are an aggregate and a LIMIT 8.
+#
+# The day is passed in rather than computed here. Stored stamps are local ISO
+# text with no zone (see backend/tracking/xp.py), so "today" is the caller's
+# day, and the caller is the only one who knows it.
+
+
+def task_alert_counts(username, day):
+    """What the top bar's bell needs, as four numbers and two titles.
+
+    Answers three questions in one round trip: how many open tasks are past
+    their date (and the oldest one's title), how many are due today (and one
+    title), and whether anything at all was finished today — the last being
+    what decides whether a live streak is still at risk.
+
+    Titles come back with the counts because the panel shows one of each, and
+    a second query to fetch two strings would be the same round trip twice.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'tasks'):
+            return {'late': 0, 'late_title': None,
+                    'due_today': 0, 'due_today_title': None,
+                    'finished_today': False}
+
+        # substr(due_date, 1, 10) rather than date(due_date): the column holds
+        # either a bare day or a full stamp, and substr treats both the same
+        # way the client's .slice(0, 10) always has.
+        late = con.execute(
+            'SELECT COUNT(*) AS n, MIN(substr(due_date, 1, 10)) AS oldest '
+            'FROM tasks WHERE user_id = ? AND status != ? '
+            "AND substr(due_date, 1, 10) != '' AND substr(due_date, 1, 10) < ?",
+            (username, 'done', day)).fetchone()
+
+        late_title = None
+        if late['n']:
+            row = con.execute(
+                'SELECT title FROM tasks WHERE user_id = ? AND status != ? '
+                'AND substr(due_date, 1, 10) = ? ORDER BY rowid LIMIT 1',
+                (username, 'done', late['oldest'])).fetchone()
+            late_title = row['title'] if row else None
+
+        due = con.execute(
+            'SELECT COUNT(*) AS n FROM tasks WHERE user_id = ? AND status != ? '
+            'AND substr(due_date, 1, 10) = ?',
+            (username, 'done', day)).fetchone()
+
+        due_title = None
+        if due['n']:
+            row = con.execute(
+                'SELECT title FROM tasks WHERE user_id = ? AND status != ? '
+                'AND substr(due_date, 1, 10) = ? ORDER BY rowid LIMIT 1',
+                (username, 'done', day)).fetchone()
+            due_title = row['title'] if row else None
+
+        finished = con.execute(
+            'SELECT 1 FROM tasks WHERE user_id = ? AND status = ? '
+            'AND substr(completed_at, 1, 10) = ? LIMIT 1',
+            (username, 'done', day)).fetchone()
+
+        return {
+            'late': late['n'] or 0,
+            'late_title': late_title,
+            'due_today': due['n'] or 0,
+            'due_today_title': due_title,
+            'finished_today': finished is not None,
+        }
+    finally:
+        con.close()
+
+
+def search_tasks(username, needle, limit=8):
+    """One account's tasks whose title contains `needle`, unfinished first.
+
+    The ordering is the one the search panel has always applied after
+    downloading everything: a search on a to-do list is nearly always somebody
+    looking for something they still have to do.
+
+    An empty needle matches nothing rather than everything — the panel shows no
+    results until something is typed, and a LIKE '%%' here would mean the one
+    query in the app that returns the whole table.
+    """
+    needle = (needle or '').strip()
+    if not needle:
+        return []
+
+    con = connect()
+    try:
+        if not _schema(con, 'tasks'):
+            return []
+        # ESCAPE, so a title search for "50%" is a search for "50%" rather than
+        # a wildcard that matches every row in the table.
+        pattern = '%' + needle.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        query = (
+            'SELECT * FROM tasks WHERE user_id = ? '
+            "AND lower(title) LIKE lower(?) ESCAPE '\\' "
+            'ORDER BY (status = ?), rowid LIMIT ?')
+        return _decode_records(
+            con, 'tasks',
+            con.execute(query, (username, pattern, 'done', int(limit))))
+    finally:
+        con.close()
 
 
 def goals():

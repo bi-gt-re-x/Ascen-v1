@@ -26,10 +26,12 @@
  * answer arrives a moment after the first paint, and without something to open
  * on, a collapsed rail would swing open and shut on every load.
  *
- * The rank and XP in the foot are the one thing here that reads account data.
- * The rail is mounted outside the router, so that is one call for the session
- * rather than one per page — and because it never unmounts, it would otherwise
- * still be showing the level you had when you opened the app. The dashboard
+ * The rank and XP in the foot are the one thing here that reads account data,
+ * and it reads `/api/stats` — six integers — rather than the account's whole
+ * task list, which is what it used to arrive attached to. The rail is mounted
+ * outside the router, so that is one call for the session rather than one per
+ * page — and because it never unmounts, it would otherwise still be showing
+ * the level you had when you opened the app. The dashboard
  * announces `ascen:stats-changed` when a completion moves the total, and this
  * listens. A custom event rather than shared state because that is the whole of
  * the dependency: one number, one direction, no reply.
@@ -44,7 +46,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { useAuth, useMediaQuery, useSettings, useUserData } from '@/hooks';
+import { useAuth, useMediaQuery, useSettings, useStats } from '@/hooks';
 import { format } from '@/utils';
 import { rankFor } from '@/utils/mastery';
 import '@/styles/rail.css';
@@ -268,7 +270,7 @@ const TABS: Tab[] = [
 
 export function Rail() {
   const { status } = useAuth();
-  const { data, reload } = useUserData();
+  const { stats, reload } = useStats();
   // Only for `Tab.also` — NavLink handles its own path on every other entry.
   const { pathname } = useLocation();
 
@@ -318,7 +320,7 @@ export function Rail() {
   }, [reload]);
 
   const signedIn = status === 'signed-in';
-  const level = data ? format.levelForTotalXp(data.stats.xp) : null;
+  const level = stats ? format.levelForTotalXp(stats.xp) : null;
   /* The same twenty band names the skill trees use, read off the account level
      rather than a subject's. One ladder of names across the app: "Adept" has to
      mean the same distance travelled wherever it is printed, or it is
@@ -485,7 +487,7 @@ export function Rail() {
 
               <div className="rail-xp-row">
                 <span>Level {level.level}</span>
-                <span>{format.number(data?.stats.xp ?? 0)} XP</span>
+                <span>{format.number(stats?.xp ?? 0)} XP</span>
               </div>
               <div
                 className="rail-xp-bar"

@@ -40,6 +40,18 @@ import type { Ratings } from '@/types';
 const DEFAULT_ADVICE_XP = 25;
 
 export function useAnalyticsData() {
+  /*
+   * The account's stats and its task list.
+   *
+   * The list is the expensive read (see hooks/useUserData) and this page is
+   * one of the pages that genuinely needs it: `useAnalyticsModel` counts the
+   * subject breakdown, the finished-in-window totals and the goal-aimed share
+   * off individual task rows, none of which the day series carries.
+   *
+   * What it does *not* need is the whole history. The window picker slices
+   * `from`/`to` here in the browser after downloading everything, and pushing
+   * that window into the query is the next thing worth doing to this page.
+   */
   const account = useUserData();
   const { username } = account;
 
