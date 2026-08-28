@@ -22,21 +22,11 @@
  * for the five XP and focus series, and the analytics page's own trajectory
  * chart is a different chart rather than a replacement for it.
  */
-export { GrowthChart } from './GrowthChart';
-export type { GrowthChartProps } from './GrowthChart';
-export { LongTermChapter } from './Chapters';
-export type { LongTermChapterProps } from './Chapters';
 export { FocusChapter } from './FocusChapter';
 export type { FocusChapterProps } from './FocusChapter';
 export { SkillsChapter } from './SkillsChapter';
 export type { SkillsChapterProps } from './SkillsChapter';
 export { BenchmarksChapter } from './BenchmarksChapter';
 export type { BenchmarksChapterProps } from './BenchmarksChapter';
-export { LongTermChart, Sparkline, TrendChart } from './MiniChart';
-export type {
-  LongTermChartProps,
-  SparklineProps,
-  TrendChartProps,
-} from './MiniChart';
 /** What the chapters share — see the note at the top of GrowthPanels. */
 export { CountValue, Glyph, Hint } from './GrowthPanels';

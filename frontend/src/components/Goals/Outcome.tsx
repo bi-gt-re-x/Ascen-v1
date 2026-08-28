@@ -31,8 +31,8 @@
  */
 import { useId, type ReactNode } from 'react';
 import { useCountUp } from '@/hooks';
-import { fmtGoalNumber, formatGoalDate, goalNumbers } from './numbers';
-import { goalHealth, type GoalHealth, type HealthState } from '@/utils/goalHealth';
+import { formatGoalDate } from './numbers';
+import { type GoalHealth, type HealthState } from '@/utils/goalHealth';
 import { goalNotes, goalsOverview, type GoalNote } from '@/utils/goalAnalytics';
 import type { Goal, GoalCategory, Milestone, Task } from '@/types';
 
@@ -206,21 +206,6 @@ function Spark({ values, tone }: { values: number[]; tone: string }) {
   );
 }
 
-/** Weekly counts of finished work toward a goal, oldest first. */
-function weeklyWork(goal: Goal, tasks: Task[], weeks = 12, today = new Date()): number[] {
-  const out = new Array(weeks).fill(0) as number[];
-  tasks.forEach((task) => {
-    if (task.goal_id !== goal.id || task.status !== 'done' || !task.completed_at) return;
-    const at = new Date(`${String(task.completed_at).slice(0, 10)}T00:00:00`).getTime();
-    if (Number.isNaN(at)) return;
-    const back = Math.floor((today.getTime() - at) / (7 * DAY));
-    if (back < 0 || back >= weeks) return;
-    const index = weeks - 1 - back;
-    out[index] = (out[index] ?? 0) + 1;
-  });
-  return out;
-}
-
 // --------------------------------------------------------------------------
 // Section 1 — the strip
 // --------------------------------------------------------------------------
@@ -344,94 +329,6 @@ export function OverviewStrip({
 // --------------------------------------------------------------------------
 // Section 2 — the priority cards
 // --------------------------------------------------------------------------
-/**
- * One goal, at the size the page opens on.
- *
- * Everything the reader asks, in the order they ask it: what it is, what it is
- * about, how far along, the figures behind that, what is left, when it is due,
- * and whether any of it is going to happen. The health chip is bottom-left on
- * every card — one position, one meaning, on a page where the whole point is
- * scanning eight of these at once.
- */
-export function OutcomeCard({
-  goal,
-  tasks,
-  today,
-  onOpen,
-}: {
-  goal: Goal;
-  tasks: Task[];
-  today?: Date;
-  onOpen: (goal: Goal) => void;
-}) {
-  const numbers = goalNumbers(goal);
-  const health = goalHealth(goal, tasks, today);
-  const category = categoryOf(goal);
-  const rows = goal.milestones ?? [];
-  const left = rows.filter((row) => row.status !== 'done').length;
-  const pct = Math.round(useCountUp(Math.round(numbers.progress)));
-
-  return (
-    <article
-      className={`gx-card tone-${category.tone}`}
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(goal)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpen(goal);
-        }
-      }}
-    >
-      <header className="gx-card-head">
-        <GoalTile goal={goal} />
-        <div className="gx-card-title">
-          <h3>{goal.title}</h3>
-          <span className="gx-cat">{category.label}</span>
-        </div>
-      </header>
-
-      <div className="gx-card-bar">
-        <strong className="gx-card-pct">{pct}%</strong>
-        <ProgressBar pct={numbers.progress} tone={category.tone} />
-      </div>
-
-      <p className="gx-card-figures">
-        {numbers.numeric && numbers.target > 0 ? (
-          <>
-            {fmtGoalNumber(numbers.current, numbers)} / {fmtGoalNumber(numbers.target, numbers)}
-            {numbers.label ? ` ${numbers.label}` : ''}
-          </>
-        ) : rows.length > 0 ? (
-          <>
-            {numbers.current} / {numbers.target} milestones
-          </>
-        ) : (
-          'No measure set yet'
-        )}
-      </p>
-
-      <ul className="gx-card-facts">
-        <li>
-          <Icon path="M9 11l3 3L22 4M21 12v7H3V5h11" size={13} />
-          {left > 0 ? `${left} milestone${left === 1 ? '' : 's'} remaining` : 'every milestone reached'}
-        </li>
-        <li>
-          <Icon path={STAT_ICONS.calendar} size={13} />
-          {goal.deadline ? `Target: ${formatGoalDate(goal.deadline)}` : 'No target date'}
-        </li>
-      </ul>
-
-      <footer className="gx-card-foot">
-        <HealthChip health={health} />
-      </footer>
-
-      <Spark values={weeklyWork(goal, tasks, 12, today)} tone={category.tone} />
-    </article>
-  );
-}
-
 // --------------------------------------------------------------------------
 // Section 3 — the timeline
 // --------------------------------------------------------------------------

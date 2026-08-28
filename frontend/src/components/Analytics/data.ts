@@ -387,16 +387,6 @@ export function bucketed(
   return out;
 }
 
-/** The whole-window figure a metric comes to, in the units it is stated in. */
-export function metricTotal(days: GrowthDay[], metric: MetricOption): number {
-  if (days.length === 0) return 0;
-  if (metric.cumulative) return days.reduce((acc, day) => acc + metric.read(day), 0);
-  const weigh = metric.weigh ?? (() => 1);
-  const weight = days.reduce((acc, day) => acc + weigh(day), 0);
-  if (weight === 0) return 0;
-  return days.reduce((acc, day) => acc + metric.read(day) * weigh(day), 0) / weight;
-}
-
 // --------------------------------------------------------------------------
 // Consistency
 // --------------------------------------------------------------------------
@@ -514,81 +504,3 @@ export function compounding(slice: RangeSlice, all: GrowthDay[]): Compounding {
 // --------------------------------------------------------------------------
 // The yearly comparison
 // --------------------------------------------------------------------------
-export interface ComparisonBar {
-  label: string;
-  current: number;
-  previous: number;
-  format: (value: number) => string;
-}
-
-/**
- * The five headline figures, this period beside the one before it.
- *
- * Every bar is a pair from the same slice the tiles above are drawn from, so
- * the panel restates the tiles rather than recomputing them differently. When
- * there is no previous period the bars still draw — at zero, which reads as
- * "nothing to compare with" and is the truth.
- *
- * The three rates lead, for the reason the tiles do: a longer window banks more
- * of everything, so a pair of *total* bars compares two calendars as much as it
- * compares two performances. XP a day, days worked and XP a task are the three
- * that hold still when the window does.
- *
- * The Growth Score bar is gone. It was the fifth pair and its previous half was
- * hard-coded to zero — no earlier reading of the score is recorded — so it drew
- * one bar beside an empty slot in a panel whose entire subject is the pair. The
- * score's own history has a panel on the Overview that draws it properly, or
- * says why it cannot.
- */
-export function comparisonBars(slice: RangeSlice): ComparisonBar[] {
-  const sum = (days: GrowthDay[], read: (day: GrowthDay) => number) =>
-    days.reduce((acc, day) => acc + read(day), 0);
-  const { current, previous } = slice;
-  const perDay = (days: GrowthDay[]) =>
-    days.length ? sum(days, (day) => num(day.xp_earned)) / days.length : 0;
-  const worked = (days: GrowthDay[]) =>
-    days.length
-      ? (days.filter((day) => num(day.xp_earned) > 0).length / days.length) * 100
-      : 0;
-  // Weighted by ratings, not by days. See `perTask` in utils/growthSummary.
-  const perTask = (days: GrowthDay[]) => {
-    const rated = sum(days, (day) => num(day.rated_tasks));
-    return rated
-      ? sum(days, (day) => num(day.quality_score) * num(day.rated_tasks)) / rated
-      : 0;
-  };
-
-  return [
-    {
-      label: 'Productivity (XP/day)',
-      current: perDay(current),
-      previous: perDay(previous),
-      format: (value) => Math.round(value).toLocaleString(),
-    },
-    {
-      label: 'Consistency (% of days)',
-      current: worked(current),
-      previous: worked(previous),
-      format: (value) => `${Math.round(value)}%`,
-    },
-    {
-      label: 'Quality (of 25)',
-      current: perTask(current),
-      previous: perTask(previous),
-      format: (value) => value.toFixed(1),
-    },
-    {
-      label: 'Tasks Completed',
-      current: sum(current, (day) => num(day.tasks_completed)),
-      previous: sum(previous, (day) => num(day.tasks_completed)),
-      format: (value) => Math.round(value).toLocaleString(),
-    },
-    {
-      label: 'XP Earned',
-      current: sum(current, (day) => num(day.xp_earned)),
-      previous: sum(previous, (day) => num(day.xp_earned)),
-      format: compact,
-    },
-  ];
-}
-

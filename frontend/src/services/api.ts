@@ -151,17 +151,3 @@ export function del<T>(path: string, query?: Query): Promise<ApiResult<T>> {
   return request<T>(path, { method: 'DELETE' }, query);
 }
 
-/**
- * Take the payload, or throw with the backend's own message.
- *
- * For the calls where a failure is genuinely exceptional and there is nothing
- * useful to render — an error boundary or a catch is going to handle it. Where
- * the message belongs next to a form field, narrow on `.success` instead and
- * keep the envelope.
- */
-export function unwrap<T>(result: ApiResult<T>): T {
-  if (!result.success) {
-    throw new ApiError(result.message);
-  }
-  return result;
-}

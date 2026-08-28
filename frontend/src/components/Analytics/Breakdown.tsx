@@ -7,9 +7,8 @@
  * than at three different periods.
  */
 import type { CSSProperties } from 'react';
-import { Panel, Radar, TONES, toneVar, type RadarAxis, PanelLink, PanelNote } from './charts';
-import { GLYPHS, type GlyphName } from './glyphs';
-import { HEAT_WEEKDAYS, type HeatRow, type ReachedMilestone } from '@/utils/growthSummary';
+import { Panel, Radar, TONES, toneVar, type RadarAxis, PanelNote } from './charts';
+import { HEAT_WEEKDAYS, type HeatRow } from '@/utils/growthSummary';
 import type { SubjectXpRow } from '@/utils/subjectXp';
 import type { BalanceShape } from '@/utils/behaviour';
 
@@ -250,50 +249,3 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
 // --------------------------------------------------------------------------
 // Milestones
 // --------------------------------------------------------------------------
-/** A colour and a drawing per ladder, so a row is recognisable before it is read. */
-const MILESTONE_LOOK: Record<string, { tone: string; glyph: GlyphName }> = {
-  xp: { tone: 'violet', glyph: 'sparkle' },
-  focus: { tone: 'blue', glyph: 'clock' },
-  streak: { tone: 'amber', glyph: 'flame' },
-};
-
-export function MilestonePanel({ reached }: { reached: ReachedMilestone[] }) {
-  // Newest first, and only as many as the panel has room for beside two charts.
-  const shown = [...reached].reverse().slice(0, 5);
-
-  return (
-    <Panel title="Milestone Timeline" footer={<PanelLink to="/analytics/goals">See the goals behind these</PanelLink>}>
-      {shown.length === 0 ? (
-        <p className="ax-empty">No milestones cleared yet — the first is 1,000 XP.</p>
-      ) : (
-        <ol className="ax-timeline">
-          {shown.map((entry) => {
-            const look = MILESTONE_LOOK[entry.kind] ?? MILESTONE_LOOK.xp!;
-            return (
-            <li key={`${entry.kind}-${entry.name}`}>
-              <span
-                className="ax-timeline-dot"
-                style={
-                  { color: toneVar(look.tone), '--ico': GLYPHS[look.glyph] } as CSSProperties
-                }
-                aria-hidden="true"
-              />
-              <div className="ax-timeline-body">
-                <strong>{entry.name}</strong>
-                <span className="ax-muted">
-                  {new Date(`${entry.on}T00:00:00`).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </span>
-              </div>
-              <span className="ax-timeline-reward">+{entry.reward.toLocaleString()} XP</span>
-            </li>
-            );
-          })}
-        </ol>
-      )}
-    </Panel>
-  );
-}

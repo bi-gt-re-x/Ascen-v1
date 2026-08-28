@@ -16,4 +16,4 @@ export * from './types';
 export * from './graph';
 export * from './goals';
 export * from './generate';
-export { ALL_NODES, skillLibrary, skillNode, skillName, formatTime } from './library';
+export { ALL_NODES, skillLibrary, skillNode, skillName } from './library';

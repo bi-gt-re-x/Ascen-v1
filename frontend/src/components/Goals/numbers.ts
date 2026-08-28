@@ -155,26 +155,6 @@ export function goalProgressPct(goal: Goal): number {
   return Math.max(0, Math.min(100, goalNumbers(goal).progress || 0));
 }
 
-/**
- * The weighted mean of every goal's progress:
- *
- *     sum(progress x weight) / sum(weight)
- *
- * so a heavily weighted goal moves the bar more than a trivial one. With the
- * worked example — 60%/5, 40%/5, 80%/3, 50%/2 — that is
- * (300 + 200 + 240 + 100) / 15 = 56%.
- */
-export function overallProgress(goals: Goal[]): number {
-  let weighted = 0;
-  let weight = 0;
-  goals.forEach((g) => {
-    const w = goalWeight(g);
-    weighted += goalProgressPct(g) * w;
-    weight += w;
-  });
-  return weight ? weighted / weight : 0;
-}
-
 /** An active goal whose deadline has passed. */
 export function isOverdue(goal: Goal, now: number = Date.now()): boolean {
   if (!goal.deadline || goal.status !== 'active') return false;

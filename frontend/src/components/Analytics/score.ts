@@ -128,19 +128,6 @@ export function growthScore(ratings: Ratings | null): GrowthScore {
   return { value: round1(total), factors };
 }
 
-/**
- * Whether the parts still add up to the backend's own total.
- *
- * Exported for tests and for the panel to fall back on rather than argue with
- * the server: if the backend ever stops taking a flat mean, this goes false and
- * the fix is `WEIGHT`, not a fudge in the component.
- */
-export function agreesWithOverall(ratings: Ratings | null): boolean {
-  if (!ratings) return true;
-  const local = growthScore(ratings).value ?? 0;
-  return Math.abs(local - ratings.overall.score / SCORE_SCALE) < 0.05;
-}
-
 // --------------------------------------------------------------------------
 // Where the score sits
 // --------------------------------------------------------------------------

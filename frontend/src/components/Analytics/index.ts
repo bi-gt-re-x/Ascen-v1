@@ -94,11 +94,10 @@ export type {
 export { Trajectory, ScorePanel } from './Trajectory';
 export type { TrajectoryProps, ScorePanelProps } from './Trajectory';
 
-export { SubjectPanel, ConsistencyPanel, MilestonePanel } from './Breakdown';
+export { SubjectPanel, ConsistencyPanel } from './Breakdown';
 export type { SubjectPanelProps, ConsistencyPanelProps } from './Breakdown';
 
 export {
-  CompoundingPanel,
   StreaksPanel,
   InsightsPanel,
   StandingPanel,
@@ -131,7 +130,6 @@ export type { Tone, PanelProps, AreaSeries, Column, RadarAxis, ScatterProps } fr
 export {
   SCORE_SCALE,
   WEIGHT as SCORE_WEIGHT,
-  agreesWithOverall,
   formatPercentile,
   growthScore,
   percentileFor,

@@ -5,36 +5,15 @@
  * panel, the header and summary row, the dialogs, and the arithmetic all of
  * them read the same answers from.
  */
-export { GoalCard, isSelfTracking } from './GoalCard';
-export type { GoalCardProps } from './GoalCard';
 export { ConfirmModal, GoalModal } from './GoalModal';
 export type { ConfirmModalProps, GoalModalProps } from './GoalModal';
-export { GoalsHeader, GoalsSummaryRow } from './GoalsSummary';
-export type { GoalsSummaryProps } from './GoalsSummary';
-export { GoalLadder, RUNGS } from './GoalLadder';
-export type { GoalLadderProps } from './GoalLadder';
 export { MilestoneCalendar, milestoneDays } from './MilestoneCalendar';
 export type { MilestoneCalendarProps, MilestoneDay } from './MilestoneCalendar';
-export {
-  GoalsGreeting,
-  GrowthAreas,
-  MOMENTUM_DAYS,
-  MOVES,
-  Momentum,
-  NextMoves,
-  goalOf,
-  growthAreas,
-  momentum,
-  nextMoves,
-} from './NextMoves';
-export type { Area, MomentumReading, Move } from './NextMoves';
 export { Trajectory, reading } from './Trajectory';
 export { GoalTable, GoalTabs, HealthBreakdown, TABS } from './GoalTable';
 export type { GoalTableProps, TabId } from './GoalTable';
 export { GoalStats } from './GoalStats';
 export type { GoalStatsProps } from './GoalStats';
-export { MilestonesPanel } from './MilestonesPanel';
-export type { MilestonesPanelProps } from './MilestonesPanel';
 export {
   Band,
   CATEGORIES,
@@ -46,7 +25,6 @@ export {
   HealthRing,
   MilestoneTrack,
   NextMilestones,
-  OutcomeCard,
   OverviewStrip,
   ProgressBar,
   RecentlyCompleted,
@@ -72,7 +50,6 @@ export {
   isOverdue,
   measureOf,
   msUntilNextDeadline,
-  overallProgress,
 } from './numbers';
 export type { GoalNumbers } from './numbers';
 export { ActiveGoalCard } from './ActiveGoalCard';
@@ -81,3 +58,13 @@ export { SystemGoals } from './SystemGoals';
 export type { SystemGoalsProps } from './SystemGoals';
 export { GoalVisual } from './GoalVisual';
 export type { GoalVisualProps } from './GoalVisual';
+export {
+  GoalsGreeting,
+  GrowthAreas,
+  MOMENTUM_DAYS,
+  Momentum,
+  goalOf,
+  growthAreas,
+  momentum,
+} from './NextMoves';
+export type { Area, MomentumReading, Move } from './NextMoves';

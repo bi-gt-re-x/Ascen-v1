@@ -13,7 +13,6 @@
  * nor bad and a card that decorated it with a red arrow would be inventing an
  * opinion the number does not hold.
  */
-import type { CSSProperties } from 'react';
 import { useCountUp } from '@/hooks';
 import type { StatSeries, TaskCounts } from './board';
 import { trendPct } from './board';
@@ -167,7 +166,3 @@ export function StatCards({ counts, series }: StatCardsProps) {
   );
 }
 
-/** Sets `--tk-fill` so a card can tint itself without a second class. */
-export function toneStyle(tone: string): CSSProperties {
-  return { '--tk-fill': `var(--tk-${tone})` } as CSSProperties;
-}

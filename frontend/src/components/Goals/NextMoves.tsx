@@ -22,18 +22,14 @@
  * nothing linked shows as exactly that, because "you have not connected any
  * work to this" is the useful thing to say to somebody who has not.
  */
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { categoryOf } from './Outcome';
 import { goalNumbers } from './numbers';
-import { plannedSeconds, spellDuration } from '@/components/Tasks/board';
 import { goalsOverview } from '@/utils/goalAnalytics';
 import { greeting as timeGreeting } from '@/utils/dates';
 import type { Goal, Task } from '@/types';
 
 const DAY = 86_400_000;
-
-/** How many moves are offered at once. See the note in Goals.tsx on LIST_GOALS. */
-export const MOVES = 6;
 
 /** The window `Momentum` reads. A week, because that is the unit people plan in. */
 export const MOMENTUM_DAYS = 7;
@@ -119,117 +115,6 @@ export interface Move {
   planned: number | null;
   /** Days past its date. 0 or less means it is not late. */
   late: number;
-}
-
-/**
- * The open, goal-linked tasks in the order they ought to be done.
- *
- * Late first, then by date, then by the priority of the goal behind it — which
- * is the order somebody would put them in if they sat down and did it by hand.
- * Undated tasks sort last rather than first: a task with no date is not urgent,
- * it is unscheduled, and those are different problems.
- */
-export function nextMoves(
-  goals: Goal[],
-  tasks: Task[],
-  today: Date = new Date(),
-  limit = MOVES,
-): Move[] {
-  const index = goalIndex(goals.filter((goal) => goal.status !== 'completed'));
-  const now = today.getTime();
-
-  return tasks
-    .filter((task) => task.status !== 'done')
-    .map((task) => {
-      const goal = goalOf(task, index);
-      if (!goal) return null;
-      const due = at(task.due_date);
-      return {
-        task,
-        goal,
-        planned: plannedSeconds(task),
-        late: due === null ? 0 : Math.floor((now - due) / DAY),
-      } satisfies Move;
-    })
-    .filter((move): move is Move => move !== null)
-    .sort((a, b) => {
-      if (a.late !== b.late && (a.late > 0 || b.late > 0)) return b.late - a.late;
-      const aDue = at(a.task.due_date) ?? Number.MAX_SAFE_INTEGER;
-      const bDue = at(b.task.due_date) ?? Number.MAX_SAFE_INTEGER;
-      if (aDue !== bDue) return aDue - bDue;
-      return (Number(b.goal.priority) || 5) - (Number(a.goal.priority) || 5);
-    })
-    .slice(0, limit);
-}
-
-export function NextMoves({
-  goals,
-  tasks,
-  busy,
-  onComplete,
-  onOpen,
-  today = new Date(),
-}: {
-  goals: Goal[];
-  tasks: Task[];
-  busy: boolean;
-  /** Ticks the task off. The page owns the call and the re-read. */
-  onComplete: (task: Task) => void;
-  onOpen: (goal: Goal) => void;
-  today?: Date;
-}) {
-  const moves = useMemo(() => nextMoves(goals, tasks, today), [goals, tasks, today]);
-  /** Ticked here, waiting on the server. Held so the row can grey out at once. */
-  const [going, setGoing] = useState<string[]>([]);
-
-  if (moves.length === 0) {
-    return (
-      <p className="gx-empty">
-        No open task names a goal. Link one from the tasks page.
-      </p>
-    );
-  }
-
-  return (
-    <ul className="gx-moves">
-      {moves.map(({ task, goal, planned, late }) => {
-        const category = categoryOf(goal);
-        const done = going.includes(task.id);
-        return (
-          <li key={task.id} className={`gx-move tone-${category.tone}${done ? ' is-going' : ''}`}>
-            <button
-              type="button"
-              className="gx-move-tick"
-              disabled={busy || done}
-              aria-label={`Complete ${task.title}`}
-              title="Mark this done"
-              onClick={() => {
-                setGoing((list) => [...list, task.id]);
-                onComplete(task);
-              }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <path d="m5 13 4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-
-            <span className="gx-move-body">
-              <span className="gx-move-title">{task.title}</span>
-              <button type="button" className="gx-move-goal" onClick={() => onOpen(goal)}>
-                {goal.title}
-              </button>
-            </span>
-
-            <span className="gx-move-facts">
-              {late > 0 && <span className="gx-move-late">{late}d late</span>}
-              {planned !== null && <span>{spellDuration(planned)}</span>}
-              {task.xp_value > 0 && <span className="gx-move-xp">{task.xp_value} XP</span>}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
 }
 
 // ---------------------------------------------------------------------------
