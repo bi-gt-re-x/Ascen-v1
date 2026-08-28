@@ -16,7 +16,7 @@
  * paragraph explaining why — not a second formula under this one.
  *
  * The mean is taken here rather than read from `overall.score` for the reason
- * utils/score gives: a panel that prints five parts and a total the reader
+ * components/Analytics/score gives: a panel that prints five parts and a total the reader
  * cannot add up is a panel nobody trusts. `agreesWithBackend` is what notices
  * if the backend ever stops taking a flat mean.
  *

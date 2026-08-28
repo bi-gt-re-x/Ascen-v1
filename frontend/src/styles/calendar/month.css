@@ -29,7 +29,7 @@
  * appended after the main bundle's, so it beat dashboard.css on source order.
  *
  * Nothing replaces it. Pinning the calendar to one screen is `body.pins-viewport`
- * in styles/navbar.css, which App.tsx sets per route and which only applies
+ * in styles/rail.css, which App.tsx sets per route and which only applies
  * above 1120x640 — this rule applied at every size and broke the calendar's own
  * scrolling on a small window, which is exactly what that media query exists to
  * avoid. min-height, margin and padding are already on the body rule in

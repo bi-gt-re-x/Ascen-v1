@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && npm run check:trees && npm run check:steps && npm run check:css && vite build",
+    "build": "npm run typecheck && npm run check:trees && npm run check:steps && npm run check:css && npm run check:docs && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "check:trees": "node scripts/check_trees.mjs",
     "check:steps": "node scripts/check_steps.mjs",
-    "check:css": "node scripts/check_css.mjs"
+    "check:css": "node scripts/check_css.mjs",
+    "check:docs": "node scripts/check_docs.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",

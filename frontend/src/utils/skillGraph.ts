@@ -15,8 +15,9 @@
  * is told. That split is the point: the renderer that hangs off this file draws
  * any number of nodes, edges, branches and categories in any arrangement, so
  * the day a generator produces a real per-account skill graph, the drawing code
- * does not change — only what feeds it. utils/skillGraphFromTrees is today's
- * feed and is deliberately the only file that knows both shapes.
+ * does not change — only what feeds it. `graphFromSubjectTree` in
+ * skills/subjectTrees is today's feed and is deliberately the only thing that
+ * knows both shapes.
  *
  * ## What this file does *not* do
  *

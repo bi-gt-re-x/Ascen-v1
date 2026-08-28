@@ -26,7 +26,7 @@
  * `body` other than `visible` stops it propagating to the viewport, and the
  * page then refuses to scroll at all — `overflow-y: auto` did it just as
  * surely as `hidden`. Whether this page scrolls is `body.pins-viewport`
- * (styles/navbar.css), which App.tsx sets per route and which already unpins
+ * (styles/rail.css), which App.tsx sets per route and which already unpins
  * below 1120x640 for exactly the small-viewport reason the old comment gave.
  * min-height, margin and padding are on the always-loaded body rule in
  * styles/dashboard.css. */

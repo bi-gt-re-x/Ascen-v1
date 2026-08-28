@@ -20,6 +20,8 @@ login could not be checked, because that needs credentials.
 | 10 | Accessibility: inert disclosures, heading outline | this branch |
 | CSS | All nine class collisions cleared, LEGACY empty | this branch |
 | 8 (part) | Two dead modules deleted; advice.ts assessed | this branch |
+| 9 | 20 stale comment references fixed; check_docs gate | this branch |
+| 11 | Verified; one live link to /history corrected in prose | this branch |
 | 2 | Frontend tests, from zero | `a131c7c` |
 | 3 | Analytics monolith, 1,879 → 423 lines | `ada6da3` |
 | 4 | CSS collisions become a build failure | `17ebcb8` |
@@ -27,7 +29,7 @@ login could not be checked, because that needs credentials.
 | 6 (main) | Off end-of-life Python, 3.9.6 → 3.13.15 | `aa69eed` |
 | 12 | Delete unrendered components | `61dd7cf` |
 
-Current gate: `npm run build` (typecheck + 3 data lints + vite), 224 frontend
+Current gate: `npm run build` (typecheck + 4 data lints + vite), 224 frontend
 tests (`npm test`), 89 backend tests (`.venv-fastapi/bin/python -m pytest`).
 
 ---
@@ -355,23 +357,69 @@ extraction itself is straightforward and the Analytics refactor is the template.
 
 ---
 
-## 9. Documentation may be excessive
+## 9. Documentation — the defect was accuracy, not volume
 
-**The subtlest item, and the one I would not touch without a steer.**
+**The steer was never given, and in the end the useful half did not need one.**
 
-This codebase's comments are unusually good — most explain *why*, name the bug
-they prevent, and several directly enabled the fixes above. The `.modal`
-collision fix in `17ebcb8` came straight out of a comment in `dashboard.css`
-that had diagnosed the bug and prescribed the fix.
+The worry was over-trimming, and it was the right worry: these comments are
+unusually good, several directly enabled the fixes on this branch, and the
+`.modal` fix came straight out of a `dashboard.css` comment that had already
+diagnosed the bug. Cutting for length would have destroyed value.
 
-So the risk of over-trimming is real. If pursued, the test is the review's:
-keep anything answering **"why is this weird?"**, cut anything narrating
-**"what does this obvious function do?"**. Decision records stay.
+So nothing was cut for length. What was done instead is a fact check, which
+carries no such risk: **a comment naming a file is a claim, and the claim is
+either true or it is not.**
 
-One concrete instance was already found and fixed: the Analytics barrel had a
-paragraph explaining why three components were deliberately unrendered. The
-paragraph was correct and well-written and the right fix was deleting the
-components, not the paragraph.
+Twenty were not.
+
+```
+styles/navbar.css              -> styles/rail.css          (4 files)
+styles/topnav.css              -> styles/rail.css          (2 files)
+scripts/check_trees.py         -> scripts/check_trees.mjs  (2 files)
+utils/skillGraphFromTrees      -> graphFromSubjectTree in skills/subjectTrees
+utils/skillGraphFromGenerated  -> never written
+utils/score                    -> components/Analytics/score
+utils/goalModel / subjectIdsOf -> neither exists
+components/Growth/GrowthChart  -> deleted (3 references in growth.css)
+components/Growth/Chapters     -> components/Growth/*Chapter.tsx
+```
+
+Two of those were load-bearing architectural claims. `utils/skillGraph` said
+"utils/skillGraphFromTrees is today's feed and is deliberately the only file
+that knows both shapes" — naming a file that does not exist, about the seam the
+whole folder is designed around. `skills/index` said the generated tree "is
+handed to the renderer that already exists" via a converter that was never
+written.
+
+None of this is catchable by a compiler, a test or a reviewer: the code is
+correct and only the prose is wrong. And note that **trimming would not have
+found a single one of them** — a wrong pointer is not a long pointer.
+
+### It is a build gate now
+
+`scripts/check_docs.mjs`, wired into `npm run build` beside the other three.
+Every path-shaped string in every comment must resolve to a file. `GONE` is the
+one escape hatch, for sentences whose point is that a file was removed; it
+holds three entries and may only shrink, exactly like `LEGACY` in
+`check_css.mjs`.
+
+Checked by renaming a file a comment points at: the build fails and names it.
+
+This is also the answer to the `documentation rules` line under item 5, which
+was still convention-only. It is a system now.
+
+### What was not done
+
+No comment was shortened, merged or deleted for being long. The review's test —
+keep anything answering "why is this weird?", cut anything narrating "what does
+this obvious function do?" — still needs a human who has read the file, and on
+the evidence of this pass the second category is rare here. The stale
+*references* were the real defect and they are fixed.
+
+Three comments were also rewritten because the thing they described had been
+deleted on this branch (the `GrowthChart` paragraph, `skillTree`'s "side by
+side", the `.theme-select` labels), and one because it was simply out of date:
+`components/Dashboard/InsightCards` still called `/tasks` unbuilt.
 
 ---
 
@@ -436,62 +484,31 @@ breaking the code it covers — all three fail when their guard is removed.
 
 ---
 
-## 11. Unbuilt routes — smaller than it looks
+## 11. Unbuilt routes — verified, and one correction
 
-Three placeholders remain, in `frontend/src/pages/Unbuilt.tsx`:
+Three placeholders remain in `frontend/src/pages/Unbuilt.tsx`: `/focus`,
+`/library`, `/history`. None is in the rail.
 
-| Path | Name | Backing |
-|------|------|---------|
-| `/focus` | Focus | `backend/api/focus.py` exists and is wired; `frontend/js/timer.js` to port |
-| `/library` | Library | `backend/api/library.py` is a stub; schema only |
-| `/history` | History | `backend/api/history.py` is a stub; schema only |
+**But "nothing links to them" was wrong.** `components/Dashboard/InsightCards`
+ends its activity card with a live "View all activity →" pointing at
+`/history`. It is on the dashboard, which is the first page behind the login.
 
-**None of them is in the rail** — the rail's ten entries do not include any of
-these, and nothing links to them. They are reachable only by typing the URL.
+It has been left in place. It is not the dead end
+`components/Analytics/charts.tsx` argues against — those eleven footers had no
+handler and no href and went nowhere at all, whereas this one lands on
+`pages/Unbuilt`, which says what the page will be and which files it will be
+built from. The comment beside it makes the case: pointing at the real path
+from the start means the link works the day the page does, and that already
+paid off once — `/tasks` was on that list and needed no rewiring when it
+shipped. The comment was updated, because it still called `/tasks` unbuilt.
 
-So the review's advice ("consider removing them from the navigation entirely")
-is already satisfied. The remaining question is narrower: delete the three
-placeholders and their routes, or keep them as the documented note for whoever
-builds them. `Unbuilt.tsx`'s own header argues for the latter, and given they
-are invisible in normal use, that argument is decent. **Lowest value item on
-this list.**
+Every claim `Unbuilt.tsx` makes was checked and all of them hold:
+`backend/api/focus.py` really does have `focus_sync` and `focus_history`,
+`services/focus.ts` really is wired (four call sites), `frontend/js/timer.js` is
+there, and `library.py` / `history.py` really are four-line stubs over real
+schemas.
 
----
-
-## CSS collisions still listed
-
-`npm run check:css` passes but names nine known ones, all real:
-
-```
-.bottom-nav           goals.css, growth.css
-.home-btn             calendar/month.css, growth.css
-.nav-btn              calendar/month.css, growth.css
-.tab-btn              goals.css, growth.css
-.tab-navigation       goals.css, growth.css
-.task-name            calendar/month.css, dashboard.css
-.theme-select         dashboard.css, homepage.css
-.theme-selector-wrap  goals.css, growth.css
-.xp-input-field       calendar/week.css, dashboard.css
-```
-
-Six of nine are `goals.css` vs `growth.css`. Since the growth page merged into
-Analytics, `growth.css` is now only loaded by the Analytics tabs inside
-`.gr-scope` — so scoping those six under `.gr-scope` is probably one edit and
-clears most of the list. The pattern to follow is `17ebcb8`, which scoped
-`.modal` under `.gx-page` and `.calendar-container`.
-
-Deleting an entry from `LEGACY` in `scripts/check_css.mjs` is required when one
-is fixed — a stale entry fails the build on purpose.
+Nothing to do here beyond that. It remains the lowest-value item on the list.
 
 ---
 
-## Suggested order
-
-1. **Python upgrade** (#6) — two commands, highest security value, unblocks nothing else
-2. **The `get_user_data` payload** (#1) — the item that gets harder with time
-3. **The calendar localStorage finding** (#1) — potential silent data loss
-4. **Accessibility** (#10) — contained, and cheap now
-5. **CSS collisions** — six of nine likely fall to one edit
-6. **`Settings.tsx` / `Notes.tsx`** (#3, #8) — same treatment as Analytics
-7. **Doc trimming** (#9) — only with a steer; high risk of removing good comments
-8. **Unbuilt routes** (#11) — lowest value; arguably already fine

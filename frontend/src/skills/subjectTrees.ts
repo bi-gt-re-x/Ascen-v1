@@ -56,7 +56,7 @@
  *
  * Icons name a file in utils/icons/tree_icons (served at
  * `/static/icons/tree_icons`), without the extension. Anything missing falls
- * back to `core-skill` — and scripts/check_trees.py fails if any tree is relying
+ * back to `core-skill` — and scripts/check_trees.mjs fails if any tree is relying
  * on that fallback.
  */
 import type { NodeStatus, SkillGraph } from '@/utils/skillGraph';

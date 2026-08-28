@@ -24,7 +24,7 @@
  *
  * What each was reaching for is already handled: min-height, margin and padding
  * by the always-loaded body rule in styles/dashboard.css, and whether the page
- * is pinned to one screen by `body.pins-viewport` in styles/navbar.css, which
+ * is pinned to one screen by `body.pins-viewport` in styles/rail.css, which
  * App.tsx sets per route and unpins below 1120x640. Horizontal clipping that
  * this page actually needs belongs on .growth-container, not on body. */
 
@@ -376,7 +376,7 @@ body.classic .growth-card p {
     padding-bottom: 16px;
 }
 
-/* Pinned page (see styles/topnav.css): fill exactly what the nav leaves and
+/* Pinned page (see styles/rail.css): fill exactly what the nav leaves and
    no more, so a card taller than the space scrolls in here rather than
    pushing the window. */
 @media (min-width: 1120px) and (min-height: 640px) {
@@ -1383,9 +1383,9 @@ html[data-theme="light"] #growthCard.growth-card {
     /* The wheel stops at the edge of the list instead of carrying on into the
        page. Reading to the bottom of the milestones and finding the whole page
        has moved on is the same surprise as zooming the chart and finding it has
-       scrolled — see the wheel listener in components/Growth/GrowthChart for
-       the other half of this, which `contain` cannot fix because the canvas
-       does not scroll at all. */
+       scrolled. The chart that had the other half of this — a wheel listener on
+       a canvas `contain` could not help, because the canvas did not scroll at
+       all — has since been deleted along with its renderer. */
     overscroll-behavior: contain;
 }
 .gr-panel > .gr-empty { flex: 1 1 auto; }
@@ -1457,8 +1457,8 @@ html[data-theme="light"] #growthCard.growth-card {
    **They play on mount and only on mount.** A CSS animation runs when the
    element enters the document, so arriving at the page plays them and a
    refresh — which re-renders the same elements with new numbers — does not.
-   That is the rule the chart follows too (see components/Growth/GrowthChart):
-   a panel that re-grew itself every time the data was re-read would be a tic,
+   That was the rule the canvas chart followed too, before it was deleted: a
+   panel that re-grew itself every time the data was re-read would be a tic,
    not an entrance. The exception is deliberate: the figures do travel to a new
    value on a refresh, because that number genuinely changed and the movement
    is what says so. See hooks/useCountUp.
@@ -1508,7 +1508,7 @@ html[data-theme="light"] #growthCard.growth-card {
 
 /* ---- The chapters --------------------------------------------------------
    The five "isn't built yet" placeholder rules used to live here. Every tab is
-   a page of real panels now (components/Growth/Chapters), and they are drawn
+   a page of real panels now (components/Growth/*Chapter.tsx), and they are drawn
    with the classes above rather than any of their own — the same card, tiles,
    bar rows and lines the Overview uses, because they are the same page from a
    different angle. What follows is the little the Overview had no need for.
@@ -1539,10 +1539,11 @@ html[data-theme="light"] #growthCard.growth-card {
     flex: 1 1 auto; min-height: 0;
     display: flex; flex-direction: column;
 }
-/* The canvas takes what the row leaves rather than naming a height of its own
-   — the row is the fixed thing now. It repaints on mount and on window resize
-   (see components/Growth/GrowthChart), and both are when this box can change
-   size, so the buffer never goes stale against the box. */
+/* The canvas took what the row left rather than naming a height of its own —
+   the row is the fixed thing. It repainted on mount and on window resize, both
+   of which are when this box can change size, so the buffer never went stale
+   against it. The canvas and its renderer are gone; the sizing stays because
+   the row it belongs to is still drawn. */
 #growthCard .gr-chart-panel canvas,
 .gr-scope .gr-chart-panel canvas {
     /* Basis 0, not auto: the buffer the renderer sets gives the element an

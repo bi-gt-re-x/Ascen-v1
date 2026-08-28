@@ -30,7 +30,7 @@
  * The consistency of all this — that every `requires` names a node on the same
  * tree, every `navTo` names a tree that exists, every icon names a drawing that
  * is really in utils/icons/tree_icons, and every node is reachable by finishing
- * what sits above it — is checked by scripts/check_trees.py rather than trusted.
+ * what sits above it — is checked by scripts/check_trees.mjs rather than trusted.
  */
 import type { SubjectTree } from './types';
 

@@ -7,7 +7,7 @@
  * the ordinary thing and scrolls.
  *
  * The class only does anything on a screen big enough to hold a whole page;
- * `body.pins-viewport` in src/styles/navbar.css is where that is decided and
+ * `body.pins-viewport` in src/styles/rail.css is where that is decided and
  * why.
  */
 import { useEffect } from 'react';

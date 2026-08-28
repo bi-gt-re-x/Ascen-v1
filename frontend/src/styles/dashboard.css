@@ -73,7 +73,7 @@ body {
     padding: 0 24px;
 }
 
-/* On a screen the page is pinned to (see styles/topnav.css), the container
+/* On a screen the page is pinned to (see styles/rail.css), the container
    takes a fixed height rather than a minimum, so the cards divide up exactly
    what is there and the task list scrolls inside its own card. min-height: 0
    is what lets the flex children actually shrink to fit. */

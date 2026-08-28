@@ -4,8 +4,8 @@
  * Every piece here is fed rather than deriving anything: hand them a graph in
  * the shape utils/skillGraph describes and they draw it, whatever it holds.
  * What builds the graph is somebody else's problem, deliberately — see
- * utils/skillGraphFromTrees, which is today's answer and is meant to be
- * replaceable without touching a line in this folder.
+ * `graphFromSubjectTree` in skills/subjectTrees, which is today's answer and is
+ * meant to be replaceable without touching a line in this folder.
  */
 export { SkillTree, ZOOM } from './SkillTree';
 export type { SkillTreeProps } from './SkillTree';
