@@ -109,21 +109,25 @@ const CROSS_CUTTING = new Map([
 /**
  * The collisions that were already here. This list may only shrink.
  *
- * Each is a real hazard of the `.modal` kind: two unrelated components whose
+ * Each was a real hazard of the `.modal` kind: two unrelated components whose
  * sheets both write the bare class, where the winner is whichever import Vite
  * happened to order last.
+ *
+ * **It is empty, and that is the finished state.** All nine are cleared. Eight
+ * of them turned out not to be styling problems at all — the classes were dead,
+ * left behind by the server-rendered pages this app grew out of, and no element
+ * in the built bundle carried any of them. Deleting the rules resolved the
+ * collision because there was never anything on either side of it.
+ *
+ * The ninth, `.xp-input-field`, was live: the dashboard's Add Task popup and
+ * the calendar's write the same class name from two stylesheets. Each is scoped
+ * to its own modal id now.
+ *
+ * A new entry here is not how a new collision gets past the build. If one is
+ * ever added, it needs the same thing these got: a reason it cannot be fixed
+ * today, and a date it will be.
  */
-const LEGACY = [
-  ['bottom-nav', 'Goals and growth each style the same bare class.'],
-  ['home-btn', 'Calendar and growth.'],
-  ['nav-btn', 'Calendar and growth.'],
-  ['tab-btn', 'Goals and growth both built a tab strip.'],
-  ['tab-navigation', 'As above.'],
-  ['theme-selector-wrap', 'As above.'],
-  ['task-name', 'The calendar month grid and the dashboard task list.'],
-  ['theme-select', 'The dashboard and the landing page.'],
-  ['xp-input-field', 'The calendar week view and the dashboard.'],
-];
+const LEGACY = [];
 
 // --------------------------------------------------------------------------
 // Reading the sheets

@@ -36,46 +36,6 @@
  * styles/dashboard.css, which is in the main bundle and always loaded. */
 
 
-/* Rounded navigation buttons */
-
-.nav-btn {
-
-    border-radius: 25px !important;
-
-    border: 2px solid black;
-
-    background: white;
-
-    color: black;
-
-    padding: 10px 20px;
-
-    font-weight: bold;
-
-    transition: opacity 0.3s ease, transform 0.3s ease;
-
-
-}
-
-
-.home-btn {
-
-    animation-delay: 0.2s;
-
-}
-
-
-.nav-btn:hover {
-
-    background: white;
-
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
-
-    transform: scale(1.05);
-
-}
-
-
 /* Theme selector in top right corner */
 
 
@@ -1888,22 +1848,6 @@ html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297;
     }
 
 
-    .home-btn {
-
-        padding: 8px 15px;
-
-        font-size: 12px;
-
-    }
-
-
-    .home-btn {
-
-        left: 10px !important;
-
-    }
-
-
 }
 
 
@@ -1923,11 +1867,6 @@ html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297;
     font-size: 12px;
     text-transform: uppercase;
     color: #888;
-}
-
-.task-name {
-    font-weight: 500;
-    color: #333;
 }
 
 .task-due-time {

@@ -911,7 +911,14 @@ html[data-theme="dark"] .calendar-hint { color: #9aa4b2; background: #20262f; bo
 html[data-theme="dark"] .calendar-hint a { color: #d8c3a5; }
 
 /* XP value box next to the slider in the Add Task popup */
-.xp-input-field {
+/* Scoped to this modal, like everything else about it.
+   It was a bare `.xp-input-field`, and the calendar's Add Task popup uses the
+   same class name — so whichever stylesheet loaded second dressed both boxes.
+   The two designs are close enough that nobody saw it, which is the whole
+   difficulty with this kind of bug: it is invisible until the day the designs
+   diverge. See styles/calendar/week.css, which scopes its half under
+   #addTaskModal for the same reason. */
+#taskModal .xp-input-field {
     width: 56px;
     padding: 6px 8px;
     border: 1.5px solid #D9D9D9;
@@ -926,7 +933,7 @@ html[data-theme="dark"] .calendar-hint a { color: #d8c3a5; }
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.xp-input-field:focus {
+#taskModal .xp-input-field:focus {
     border-color: #A38A70;
     box-shadow: 0 0 0 3px rgba(163, 138, 112, 0.18);
 }
@@ -955,8 +962,8 @@ html[data-theme="dark"] .calendar-hint a { color: #d8c3a5; }
     min-width: 0;
 }
 
-.xp-input-field::-webkit-outer-spin-button,
-.xp-input-field::-webkit-inner-spin-button {
+#taskModal .xp-input-field::-webkit-outer-spin-button,
+#taskModal .xp-input-field::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
@@ -984,12 +991,6 @@ html[data-theme="dark"] .calendar-hint a { color: #d8c3a5; }
 
 .task-checkbox:hover {
     border-color: #2C302E;
-}
-
-.task-name {
-    font-size: 14px;
-    font-weight: 400;
-    color: #2C302E;
 }
 
 .task-due-date {
@@ -1493,25 +1494,6 @@ html[data-theme="dark"] .cal-suggest-bad .cal-suggest-link { color: #ff9297; }
     color: #FFFFFF !important;
 }
 
-/* ==========================================================================
-   THEME SELECTOR (Light / Dark dropdown)
-   ========================================================================== */
-.theme-select {
-    -webkit-appearance: none;
-    appearance: none;
-    background-color: #FFFFFF;
-    color: #2C302E;
-    border: 1px solid #EAEAEA;
-    border-radius: 20px;
-    padding: 7px 30px 7px 16px;
-    font-size: 14px;
-    font-family: inherit;
-    font-weight: 500;
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236C757D' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-}
 
 /* ==========================================================================
    DARK THEME  (applied via <html data-theme="dark">)
@@ -1525,26 +1507,14 @@ html[data-theme="dark"] .logo img {
     mix-blend-mode: screen;
     filter: invert(1);
 }
-html[data-theme="dark"] .theme-select {
-    background-color: #161b22;
-    color: #f0f2f5;
-    border-color: #30363d;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-}
-html[data-theme="dark"] .theme-select option {
-    background: #161b22;
-    color: #f0f2f5;
-}
 
 /* Cards & containers */
 html[data-theme="dark"] .card {
     background: #1a1f26;
     border-color: #30363d;
-}
-html[data-theme="dark"] .card h2,
+}html[data-theme="dark"] .card h2,
 html[data-theme="dark"] .username,
-html[data-theme="dark"] .stat-row strong,
-html[data-theme="dark"] .task-name {
+html[data-theme="dark"] .stat-row strong{
     color: #f0f2f5;
 }
 html[data-theme="dark"] .username-row .label,
@@ -1602,7 +1572,7 @@ html[data-theme="dark"] .modal-content label {
     color: #f0f2f5 !important;
 }
 html[data-theme="dark"] #modalTaskName,
-html[data-theme="dark"] .xp-input-field,
+html[data-theme="dark"] #taskModal .xp-input-field,
 html[data-theme="dark"] .due-date-input,
 html[data-theme="dark"] .dropdown-btn,
 html[data-theme="dark"] .timer-input-group input {

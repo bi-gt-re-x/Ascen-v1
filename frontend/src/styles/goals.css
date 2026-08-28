@@ -72,32 +72,6 @@ body:has(.goals-page) {
 /* Goals list section */
 
 
-/* Tab Navigation */
-.tab-navigation {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.tab-btn {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1.5px solid rgba(100, 200, 255, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    padding: 12px 24px;
-    border-radius: 20px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.tab-btn:hover, .tab-btn.active {
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border-color: rgba(100, 200, 255, 0.5);
-    border-bottom: 2px solid rgba(100, 200, 255, 0.8);
-}
-
 /* Desert Solitude Theme for Bottom Navigation */
 
 
@@ -728,32 +702,6 @@ body.classic .add-goal-btn:hover {
 /* Stat boxes */
 
 
-/* Filter tabs */
-body.classic .tab-btn {
-    background: #ffffff;
-    backdrop-filter: none;
-    border: 1.5px solid #e6e8f0;
-    color: #6C757D;
-    border-radius: 999px;
-    padding: 9px 20px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-body.classic .tab-btn:hover {
-    background: #f6f2ec;
-    color: #2C302E;
-    border-color: #d8c8b4;
-    border-bottom: 1.5px solid #d8c8b4;
-}
-
-body.classic .tab-btn.active {
-    background: #f3ece2;
-    color: #2C302E;
-    border: 1.5px solid #A38A70;
-    border-bottom: 1.5px solid #A38A70;
-}
-
 /* Goals list + empty state */
 body.classic .no-goals { color: #6C757D; }
 
@@ -985,16 +933,6 @@ body.dark .goals-list::-webkit-scrollbar-thumb:hover {
            margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
 }
 
-/* ============================================================
-   THEME SELECTOR (fixed, top-right)
-   ============================================================ */
-.theme-selector-wrap {
-    position: fixed;
-    top: 18px;
-    right: 24px;
-    z-index: 300;
-}
-
 
 /* ============================================================
    DARK THEME
@@ -1018,20 +956,6 @@ body.dark .add-goal-btn {
     font-weight: 600;
 }
 body.dark .add-goal-btn:hover { background: #A38A70; border-color: #A38A70; color: #0D1117; }
-
-
-body.dark .tab-btn {
-    background: #21262D;
-    backdrop-filter: none;
-    border: 1.5px solid #30363D;
-    color: #c9d1d9;
-    border-radius: 999px;
-    padding: 9px 20px;
-    font-size: 14px;
-    font-weight: 600;
-}
-body.dark .tab-btn:hover { background: #2a3038; color: #e6e8f0; border-color: #A38A70; border-bottom: 1.5px solid #A38A70; }
-body.dark .tab-btn.active { background: #A38A70; color: #0D1117; border: 1.5px solid #A38A70; border-bottom: 1.5px solid #A38A70; }
 
 body.dark .no-goals { color: #9aa0b5; }
 
@@ -1118,14 +1042,6 @@ body.dark .confirm-add-btn:hover { background: #b89b80; }
 
 /* Theme selector in dark */
 
-/* Phone (≤480px): let the pill nav wrap instead of overflowing */
-@media (max-width: 480px) {
-    .bottom-nav {
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: calc(100% - 1.5rem);
-    }
-}
 
 /* ==========================================================================
    2026 redesign — 70/30 split: goals (left) + Milestones panel (right).
@@ -1794,9 +1710,6 @@ body.dark .sum-total .sum-icon { background: #2a2419; color: #d8c3a5; }
 body.dark .sum-total .sum-number { color: #d8c3a5; }
 body.dark .sum-badge { background: #21262d; color: #8b949e; }
 body.dark .goal-icon { background: #2a2419; color: #d8c3a5; }
-body.dark .goals-toolbar .tab-btn { background: #161b22; border-color: #2b3242; color: #9aa0b5; }
-body.dark .goals-toolbar .tab-btn:hover { background: #1c222c; color: #e6e8f0; border-color: #3a4150; }
-body.dark .goals-toolbar .tab-btn.active { background: #A38A70; border-color: #A38A70; color: #0d1117; }
 body.dark .goals-page .goal-item { background: #161b22; border-color: #2b3242; box-shadow: none; }
 body.dark .goal-target-big { color: #e6e8f0; }
 body.dark .gs-track { color: #30363d; }

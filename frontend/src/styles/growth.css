@@ -29,41 +29,6 @@
  * this page actually needs belongs on .growth-container, not on body. */
 
 
-/* Rounded navigation buttons */
-.nav-btn {
-    border-radius: 25px !important;
-    border: 2px solid black;
-    background: white;
-    color: black;
-    padding: 10px 20px;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    animation: fadeIn 0.8s ease-out;
-}
-
-.home-btn {
-    animation-delay: 0.2s;
-}
-
-
-.nav-btn:hover {
-    background: white;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
-    transform: scale(1.05);
-}
-
-/* Position buttons at bottom */
-.home-btn {
-    position: fixed !important;
-    bottom: 20px !important;
-    top: auto !important;
-}
-
-.home-btn {
-    left: 20px !important;
-}
-
-
 /* Theme selector in top right corner */
 
 
@@ -81,38 +46,6 @@
        container that pushed its bottom past the viewport. */
 }
 
-/* Tab Navigation */
-.tab-navigation {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    padding: 0 20px;
-}
-
-.tab-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 25px;
-    background-color: #f0f0f0;
-    color: #2C302E;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Century Gothic', sans-serif;
-    border: 2px solid #e0e0e0;
-}
-
-.tab-btn:hover {
-    background-color: #e8e8e8;
-    transform: translateY(-2px);
-}
-
-.tab-btn.active {
-    background-color: #2C302E;
-    color: white;
-    border-color: #2C302E;
-}
 
 /* Tab Content */
 .tab-content {
@@ -292,25 +225,6 @@ body.classic .growth-card p {
     text-shadow: none;
 }
 
-/* Tab pills */
-.tab-btn {
-    background-color: #f2f3f7;
-    border: 1px solid #e4e6ee;
-    color: #5a6072;
-    font-weight: 600;
-    box-shadow: none;
-}
-
-.tab-btn:hover {
-    background-color: #e9ebf2;
-    transform: translateY(-1px);
-}
-
-.tab-btn.active {
-    background-color: #2C302E;
-    color: #ffffff;
-    border-color: #2C302E;
-}
 
 /* Chart title */
 .chart-title {
@@ -361,22 +275,6 @@ body.classic .growth-card p {
 /* Ratings card flows right under the chart, 5px below it */
 
 
-/* Professional floating bottom navigation */
-.bottom-nav {
-    position: relative;
-    transform: none;
-    margin: 28px auto 36px;
-    background: #ffffff;
-    backdrop-filter: none;
-    border: 1px solid #e6e8f0;
-    border-radius: 999px;
-    padding: 8px 10px;
-    display: inline-flex;
-    gap: 4px;
-    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
-    width: fit-content;
-}
-
 /* ============================================================
    AUTHORITATIVE OVERRIDES (kept last so they win over the
    original bottom-nav / ratings rules above)
@@ -388,22 +286,6 @@ body.classic .growth-card p {
 
 /* Ratings card flows right under the chart, 5px below it */
 
-
-/* Professional floating bottom navigation */
-.bottom-nav {
-    position: relative;
-    transform: none;
-    margin: 28px auto 36px;
-    background: #ffffff;
-    backdrop-filter: none;
-    border: 1px solid #e6e8f0;
-    border-radius: 999px;
-    padding: 8px 10px;
-    display: inline-flex;
-    gap: 4px;
-    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
-    width: fit-content;
-}
 
 /* Size the chart container to its content (title + fixed-height canvas) so the
    chart never overflows onto the ratings card below it. The x-axis labels are
@@ -558,24 +440,6 @@ body.classic .growth-card p {
 }
 
 
-/* Nudge only the tab buttons + chart down 10px. The header stays put (it's
-   above this), and the bottom button stays anchored (its margin-top:auto just
-   absorbs 10px less free space). */
-#growthCard .tab-navigation {
-    margin-top: 34px;
-}
-
-/* ============================================================
-   THEME SELECTOR (fixed, top-right) + DARK THEME
-   ============================================================ */
-.theme-selector-wrap {
-    position: fixed;
-    top: 18px;
-    right: 24px;
-    z-index: 300;
-}
-
-
 /* --- DARK THEME --- */
 /* Scoped to this page, for the reason the note at the top of this file gives:
  * the stylesheet is fetched when /growth or /analytics mounts and then stays in
@@ -623,18 +487,6 @@ body.dark #dailyFocusChart {
     background: transparent;
 }
 
-/* Tabs */
-body.dark .tab-btn {
-    background-color: #21262D;
-    border-color: #30363D;
-    color: #c9d1d9;
-}
-
-body.dark .tab-btn.active {
-    background-color: #A38A70;
-    border-color: #A38A70;
-    color: #0D1117;
-}
 
 /* Theme selector in dark */
 
@@ -1068,14 +920,6 @@ body.dark .see-ratings-btn:hover {
     .grade-badge { min-width: 38px; height: 38px; font-size: 19px; padding: 0 10px; }
 }
 
-/* Phone (≤480px): let the pill nav wrap instead of overflowing */
-@media (max-width: 480px) {
-    .bottom-nav {
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: calc(100% - 1.5rem);
-    }
-}
 
 /* ============================================================
    FULL BLEED — the page is the container
@@ -1188,7 +1032,6 @@ html[data-theme="light"] #growthCard.growth-card {
     /* The title sits closer to the tabs than it did: that gap was most of what
        pushed the button off screen. */
     #growthCard .card-header { margin-bottom: 0; }
-    #growthCard .tab-navigation { margin-top: clamp(8px, 2vh, 34px); }
 
     /* Everything between the tabs and the button shares the slack. */
     #growthCard .tab-content { flex: 1 1 auto; min-height: 0; }
@@ -1400,27 +1243,6 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-export:hover:not(:disabled) { border-color: #c9ccd8; background: #fafbfc; }
 .gr-export:disabled { opacity: .5; cursor: default; }
 
-/* ---- Tabs: left-aligned, as the design has them -------------------------- */
-#growthCard .tab-navigation {
-    justify-content: flex-start;
-    padding: 0;
-    margin: 0 0 20px;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-#growthCard .tab-btn {
-    padding: 9px 17px; border-radius: 999px; font-size: 13.5px;
-}
-/* The chosen chapter is the accent, as the design draws it. Id-scoped because
-   the base rules paint it `#2C302E`, and `body.dark .tab-btn.active` paints it
-   the app's gold — both out-weigh a bare class, and neither belongs on this
-   page. */
-#growthCard .tab-btn.active {
-    background-color: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-ink);
-}
-#growthCard .tab-btn.active:hover { background-color: var(--accent-deep); border-color: var(--accent-deep); }
 
 /* ---- The grid -----------------------------------------------------------
    Three columns, the third wider than the other two, and three rows:

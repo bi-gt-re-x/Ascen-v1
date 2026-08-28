@@ -18,6 +18,7 @@ login could not be checked, because that needs credentials.
 | 1 (most) | Split the endpoint; task read is demand-gated | this branch |
 | 1 (rest) | Calendar events off localStorage-only | this branch |
 | 10 | Accessibility: inert disclosures, heading outline | this branch |
+| CSS | All nine class collisions cleared, LEGACY empty | this branch |
 | 2 | Frontend tests, from zero | `a131c7c` |
 | 3 | Analytics monolith, 1,879 → 423 lines | `ada6da3` |
 | 4 | CSS collisions become a build failure | `17ebcb8` |
@@ -146,6 +147,69 @@ Uploads are debounced 700 ms and flushed on unmount and on tab-hide, so leaving
 the page mid-edit does not leave the server a version behind.
 
 **Not yet verified visually** — the calendar is behind the login.
+
+---
+
+## CSS collisions — all nine cleared
+
+`scripts/check_css.mjs` carried nine known collisions. **The list is now
+empty**, which is the state its own comment describes as the finished one.
+
+The working theory was that six of the nine were `goals.css` vs `growth.css`
+and could be scoped under `.gr-scope` in one edit. That turned out not to hold:
+`.gr-scope` only ever qualifies `gr-`-prefixed classes, and the six colliding
+rules were unscoped globals in a 3,129-line sheet that loads whole the moment
+Analytics mounts.
+
+**Eight of the nine were not styling problems at all — the classes were dead.**
+`.bottom-nav`, `.home-btn`, `.nav-btn`, `.tab-btn`, `.tab-navigation`,
+`.theme-selector-wrap` appear **zero times in the built bundle**; `.task-name`
+appears only as `wk-`, `dash-` and `day-` prefixed variants, never bare. They
+are leftovers from the server-rendered pages this app grew out of. Deleting the
+rules cleared the collision because there had never been anything on either
+side of it — 384 lines gone, which is also a small down-payment on item 8.
+
+**One was live, and visibly so.** `.theme-select` is written by both
+`dashboard.css` and `homepage.css`, and `Dashboard.tsx` is imported *eagerly*
+in `App.tsx`, so `dashboard.css` loads on every page including the public
+landing page. The landing page's theme control was rendering as a mix:
+`background`, `border`, `padding` and `font-size` from `homepage.css`, but
+`appearance: none` and `border-radius: 20px` bleeding in from `dashboard.css`.
+Combined with `homepage.css`'s `background-image: none`, `appearance: none`
+left the `<select>` with **no dropdown indicator at all** — it read as plain
+text rather than a control. Confirmed in the browser before and after:
+`appearance` went `none` → `auto` and the chevron came back.
+
+Nothing on the dashboard uses `.theme-select` any more — the theme control
+moved to the top bar — so that rule was dead *and* harmful.
+
+**`.xp-input-field` was the only genuine two-component collision**: the
+dashboard's Add Task popup and the calendar's both write the class, from two
+sheets. Each is scoped to its own modal id now, matching what
+`calendar/week.css` already did for its half.
+
+### A note on how the deletion was done
+
+The rules were removed with a throwaway CSS-aware pruner rather than by hand,
+and it was wrong twice before it was right. First it deleted the comments above
+the rules it removed — unacceptable in these files. Then its brace scanner
+desynchronised on comments *containing* CSS: `calendar/month.css` has
+`` `body { overflow: hidden }` `` inside a comment, and the scanner counted
+those braces, mangling the file. Both were caught by inspection and reverted.
+The final version skips comments and strings while scanning, and was checked by
+round-tripping all 32 stylesheets with a class that does not exist — every file
+came back byte-identical.
+
+The eighteen comments left orphaned by the deletions were found by comparing
+what followed each comment before and after, and removed too. A label for a
+rule that no longer exists is worse than no label.
+
+**Pre-existing, not fixed:** the legacy Jinja pages (`careers.html`,
+`aboutus.html`, `contact-support.html`) render a `class="nav-btn home-btn"`
+button, and the two stylesheets they load have never defined either class, so
+it shows as a raw browser button. Unaffected by this work — those pages never
+loaded the sheets the rules lived in — but it is now the only place those names
+appear.
 
 ---
 
