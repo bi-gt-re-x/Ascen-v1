@@ -19,6 +19,7 @@ login could not be checked, because that needs credentials.
 | 1 (rest) | Calendar events off localStorage-only | this branch |
 | 10 | Accessibility: inert disclosures, heading outline | this branch |
 | CSS | All nine class collisions cleared, LEGACY empty | this branch |
+| 8 (part) | Two dead modules deleted; advice.ts assessed | this branch |
 | 2 | Frontend tests, from zero | `a131c7c` |
 | 3 | Analytics monolith, 1,879 → 423 lines | `ada6da3` |
 | 4 | CSS collisions become a build failure | `17ebcb8` |
@@ -265,32 +266,92 @@ because it gets harder later, is #1 above. Everything else on that list
 
 ---
 
-## 8. Too much code for the product
+## 8. Too much code — 1,100 more lines gone, and two files cleared
 
-86.8k TS/Python + 32.4k CSS. `61dd7cf` removed ~3,000 lines of dead components
-but **the bundle did not shrink by a byte** — Rollup was already tree-shaking
-them. So this item is about maintenance surface, not performance.
+`61dd7cf` removed ~3,000 lines of dead components and the bundle did not shrink
+by a byte, so this item is maintenance surface, not performance. That still
+holds: the deletions below also left the bundle byte-identical.
 
-The files the review flagged as suspiciously large are still there:
+### Two whole modules were dead
 
 ```
-1,304  frontend/src/skills/improve.ts
-1,256  frontend/src/utils/growthSummary.ts
-1,351  frontend/src/pages/Settings.tsx
-1,060  frontend/src/utils/advice.ts
+675  frontend/src/utils/growthChart.ts   deleted
+429  frontend/src/utils/skillTree.ts     deleted
+```
+
+Neither was imported by any module, any test or any build script, and none of
+their symbols appear in the built bundle.
+
+`growthChart.ts` is the interesting one, because it was **deliberately kept**
+and the reason had quietly expired. The barrel in `components/Growth/index.ts`
+carried a paragraph saying `GrowthChart` "is still exported and nothing mounts
+it — kept because it is the only renderer for the five XP and focus series."
+`GrowthChart` does not exist. It went with the other unrendered components in
+`61dd7cf`, and the paragraph outlived it — so a 675-line renderer went on being
+kept for a caller that had already been deleted.
+
+That is the same slip `61dd7cf` was praised for avoiding elsewhere: the
+Analytics barrel's paragraph about three unrendered components, where the right
+fix was deleting the components rather than the paragraph. One instance in the
+neighbouring barrel was missed, and it kept a file alive for two commits.
+
+Every comment naming either module was rewritten rather than left dangling —
+`components/Growth/index.ts`, `components/Analytics/charts.tsx`,
+`utils/skillGraph.ts`, `skills/subjectTrees.ts`. Each now says what happened in
+the past tense, because each was making a claim about a file that is gone.
+
+A sweep for any other module nothing imports found none: every remaining hit
+was a page reached through `lazy(() => import(...))` in App.tsx, or test
+infrastructure named in `vitest.config.ts`.
+
+### advice.ts and growthSummary.ts are not rule tables
+
+This was the review's leading hypothesis for both, and having read them, **it
+does not hold for either.** Neither should be converted to data.
+
+`advice.ts` looks repetitive because each rule pushes an object literal. The
+literals are the only thing they share. Every rule tests a different shape
+(`rhythm.gapCount`, `week.weekendGap`, `rhythm.typicalSession`,
+`clock.lateShare`, `balance.fading`), computes its impact with different
+arithmetic, and builds its evidence differently — the weekend rule runs a
+filter-and-reduce over `week.stats` inside its own string. Expressing those
+conditions and formulas as data would mean inventing a small language for them,
+which is more code and less readable than the code it replaced.
+
+`growthSummary.ts` has **already** taken this advice everywhere it applies:
+`RANGES`, `HEAT_WINDOWS`, `LONG_TERM_WINDOWS`, `XP_TIERS`, `FOCUS_TIERS`,
+`STREAK_TIERS` and `WEEKDAYS` are all tables. What is left is about thirty
+small pure functions doing genuinely different arithmetic. There is no table
+hiding in it.
+
+The one duplication note in the file — `consistency` also existing in
+`components/Analytics/data` — is a deliberate single-source decision with its
+reason written down (the headline tile and the heatmap under it must be one
+figure), not a redundancy to collapse.
+
+### Settings.tsx and Notes.tsx — the split is right, doing it blind is not
+
+Both are still the shape the review describes, and a state/fetch/render split
+would help:
+
+```
+1,352  frontend/src/pages/Settings.tsx
 1,044  frontend/src/pages/Notes.tsx
-  866  frontend/src/utils/growthFocus.ts
-  784  frontend/src/utils/habits.ts
 ```
 
-The honest question for each is the review's: genuinely complex domain, or a
-simple idea implemented at length? Worth reading `advice.ts` and
-`growthSummary.ts` first — they are the two most likely to be rule tables that
-could be data.
+`Settings.tsx` is ~950 lines of component with eight `useState`, a `useApi`, and
+a confirmation flow guarding **destructive actions** — deleting every task,
+resetting preferences, deleting the account.
 
-`Settings.tsx` and `Notes.tsx` are the same shape of problem as Analytics was
-and would take the same treatment (state/fetch/calculation/render split), but
-neither is as tangled as Analytics was.
+It has **no tests**, and no page in this codebase does. Combined with the fact
+that the page cannot be opened without credentials, a 950-line restructure of
+the file that owns "delete my account" would be unverifiable in every way that
+matters: nothing would catch a confirmation wired to the wrong handler except a
+user losing their data.
+
+So the recommendation is the order, not the refusal: **tests first, then the
+split** — and ideally after somebody has clicked through the page once. The
+extraction itself is straightforward and the Analytics refactor is the template.
 
 ---
 

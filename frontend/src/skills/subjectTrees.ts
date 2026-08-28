@@ -3,12 +3,16 @@
  *
  * ## What this is, and what it is not
  *
- * This is a *designed* hierarchy, not a reading of the account's record. The
- * task-derived trees in utils/skillTree answer "how far into this subject have
- * you actually gone"; this answers a different question — "what is the shape of
- * the subject, and where does one part of it hand off to another." The two live
- * side by side on purpose, the same way the Records page keeps what you logged
- * apart from what Ascen counted.
+ * This is a *designed* hierarchy, not a reading of the account's record. It
+ * answers "what is the shape of the subject, and where does one part of it hand
+ * off to another."
+ *
+ * There was a second kind, task-derived, in utils/skillTree — "how far into
+ * this subject have you actually gone". The two were meant to live side by
+ * side, the way the Records page keeps what you logged apart from what Ascen
+ * counted. Nothing ever rendered the task-derived one, so it has been deleted
+ * and this is the only kind. The distinction is still worth knowing: what is
+ * here is authored, and none of it is evidence about the reader.
  *
  * ## Where the data is
  *

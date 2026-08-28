@@ -1,15 +1,16 @@
 /**
  * The shape a skill tree is drawn from — any skill tree.
  *
- * ## Why this exists beside utils/skillTree
+ * ## Why this knows nothing about what a node means
  *
- * utils/skillTree knows what a skill tree *means* on this account: that Depth
- * is XP on the mastery ladder, that Output is finished tasks, that a node opens
- * when a threshold is crossed. It is one specific tree, derived from one
- * specific record, and the page used to be written against its shape — three
- * named branches, five nodes each, a fan of exactly three curves.
+ * There used to be a second file, utils/skillTree, that knew exactly what a
+ * skill tree *meant* on this account: Depth was XP on the mastery ladder,
+ * Output was finished tasks, a node opened when a threshold was crossed. It was
+ * one specific tree derived from one specific record, and the page was once
+ * written against its shape — three named branches, five nodes each, a fan of
+ * exactly three curves. Nothing rendered it in the end and it has been deleted.
  *
- * This file knows none of that. A graph here is nodes and edges and a status
+ * This file deliberately knew none of that, and that is why it outlived it. A graph here is nodes and edges and a status
  * per node, and that is the whole model. It cannot say why a node is locked; it
  * is told. That split is the point: the renderer that hangs off this file draws
  * any number of nodes, edges, branches and categories in any arrangement, so

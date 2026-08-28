@@ -1,13 +1,14 @@
 /**
  * The page's drawing kit — small SVG pieces, no library.
  *
- * SVG rather than the canvas renderer the growth page uses (utils/growthChart),
- * and the reason is theming: every colour here is a CSS custom property read by
- * the cascade, so the light and dark palettes are two blocks of CSS and a chart
- * repaints itself on a theme change with no listener, no MutationObserver and
- * no repaint on the JS side at all. The canvas renderer has to watch
- * `data-theme` and redraw by hand — worth it for a chart with wheel-zoom and a
- * hover crosshair, and pure cost for fourteen static panels.
+ * SVG rather than the canvas the growth page drew into, and the reason is
+ * theming: every colour here is a CSS custom property read by the cascade, so
+ * the light and dark palettes are two blocks of CSS and a chart repaints itself
+ * on a theme change with no listener, no MutationObserver and no repaint on the
+ * JS side at all. A canvas renderer has to watch `data-theme` and redraw by
+ * hand — worth it for a chart with wheel-zoom and a hover crosshair, and pure
+ * cost for fourteen static panels. That was the trade; the canvas renderer is
+ * gone and these are what the page draws with.
  *
  * Every component here takes a `viewBox` and no width or height: the CSS sizes
  * the box and `preserveAspectRatio` does the rest, so a panel that changes
