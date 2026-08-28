@@ -1,82 +1,136 @@
 /**
  * Skill Tree — the page.
  *
- * ## What this file is
+ * ## The shape of it
  *
- * Very little, and less than it was. It fetches, it holds a choice of tree, a
- * selection and a filter, and it hands a graph to a canvas. Everything that
- * draws lives in components/SkillTree and takes the generic shape in
- * utils/skillGraph; everything that decides *what is in* a tree lives in
- * skills/. This file is the seam and owns neither side.
+ * A band of figures across the top, the lattice and its detail panel side by
+ * side under that, and a legend along the bottom. The page holds which tree is
+ * open and which node is picked and does nothing else: the canvas owns pan,
+ * zoom, the vertical scroll and full screen, the layout in utils/skillGraph
+ * owns placement, and skills/subjectTrees owns what is in a tree and where it
+ * forks. This file is the seam between them.
  *
- * ## Two feeds, one canvas
+ * ## Walking between subjects
  *
- *     Your subjects   utils/skillTree derives it from finished tasks, and
- *                     utils/skillGraphFromTrees puts it in the canvas's shape.
- *                     Real, and about this account.
- *     A goal          skills/generate grows it out of the shared node library,
- *                     and utils/skillGraphFromGenerated puts it in the same
- *                     shape. A curriculum, and about the skill rather than the
- *                     person.
+ * A subject too big for one canvas forks into others, and a fork is a single
+ * navigation node — a diamond that, clicked, opens the child tree rather than
+ * selecting a skill. The child names its parent, so the breadcrumb is the way
+ * back up, and the switcher jumps between the top-level subjects outright.
+ * Changing tree clears the selection, or the panel would be describing a node
+ * no longer on the canvas.
  *
- * They are different kinds of claim and the picker says so rather than running
- * them together — the same separation the Records page keeps between what you
- * logged and what Ascen counted. Neither adapter knows the other exists, and the
- * canvas knows about neither.
+ * ## The figures are counted, not stored
  *
- * ## Nothing here is progress
- *
- * A generated tree's statuses come from evaluating prerequisite rules against
- * what the request says is held, and this page holds nothing yet — so a goal
- * tree opens with its roots available and everything above them locked. That is
- * the true reading of "nothing done so far" rather than a placeholder, and
- * wiring the account's real history into `completedNodes` is the whole of what
- * Part 3 has to do here: one argument, at the call to `generateTree` below.
+ * Every number in the band is `tallyGraph` on the tree that is open — there is
+ * no second copy of "how many are mastered" to drift from the tiles. Skill
+ * level is the one derived thing, and it is derived here rather than in the
+ * data because it is a reading of the tally rather than a fact about a subject.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Ambient, ErrorState, Loading } from '@/components';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Ambient } from '@/components';
 import {
-  NodeDetailPanel,
+  FocusTopics,
+  LatticeNode,
+  LatticePanel,
   ProgressIndicator,
   SkillTree as SkillTreeCanvas,
-  SkillTreeToolbar,
+  SubjectRail,
 } from '@/components/SkillTree';
-import { useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
-import { GOALS, generateTree, goalById, skillLibrary } from '@/skills';
-import { format } from '@/utils';
+import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
+import { iconForName } from '@/skills/iconMatch';
+import { treeForSubject } from '@/skills/subjectMap';
 import {
-  NO_FILTER,
-  filterGraph,
+  DEFAULT_TREE,
+  childrenOf,
+  graphFromSubjectTree,
+  iconUrl,
+  navTargets,
+  parentChain,
+  parentOf,
+  siblingsOf,
+  subjectTreeById,
+} from '@/skills/subjectTrees';
+import {
+  DIFFICULTIES,
+  DIFFICULTY_LABEL,
+  LATTICE_GEOM,
   tallyGraph,
-  type GraphFilter,
   type GraphNode,
+  type GraphTally,
 } from '@/utils/skillGraph';
-import { graphFromGenerated } from '@/utils/skillGraphFromGenerated';
-import { graphFromTrees } from '@/utils/skillGraphFromTrees';
-import { skillTrees, unfiledTasks } from '@/utils/skillTree';
+import { FOCUS_COUNT, loadFocus, resolveFocus, saveFocus } from '@/utils/focusTopics';
+import {
+  applyProgress,
+  loadProgress,
+  practiceGain,
+  saveProgress,
+  type SkillProgress,
+} from '@/utils/skillProgress';
+import {
+  applyNames,
+  cleanName,
+  loadNames,
+  saveNames,
+  type NodeNames,
+} from '@/utils/skillNames';
+import {
+  loadSteps,
+  saveSteps,
+  type StepPlan,
+  type StepPlans,
+} from '@/utils/skillSteps';
 import '@/styles/skilltree.css';
 
-/** The subjects feed, which is not a goal and needs a value of its own. */
-const SUBJECTS = 'your-subjects';
+/** The drawing, painted through the shared mask. */
+function Ico({ icon, className }: { icon: string; className: string }) {
+  return <i className={className} style={{ ['--ico' as string]: `url(${iconUrl(icon)})` }} />;
+}
 
-/** The header's headline figure and the bar under it. */
-function Milestone({ done, total, unit }: { done: number; total: number; unit: string }) {
-  // The next round number of nodes, or the finish line if it is nearer. A
-  // milestone is meant to be close enough to be worth walking to; "all 240" from
-  // a standing start is a number, not a target.
-  const step = total <= 40 ? 10 : total <= 120 ? 25 : 50;
-  const mark = Math.min(total, Math.ceil((done + 1) / step) * step);
-  const floor = Math.max(0, mark - step);
-  const percent = ((done - floor) / Math.max(1, mark - floor)) * 100;
+/**
+ * What to call how far down a tree somebody is.
+ *
+ * Bands rather than a number, because "Advanced" answers the question a reader
+ * is actually asking and "61%" is already printed two inches to the left.
+ */
+function skillLevel(tally: GraphTally): string {
+  if (tally.total === 0) return 'Unstarted';
+  const share = (tally.complete + tally.progress * 0.5) / tally.total;
+  if (share >= 0.85) return 'Master';
+  if (share >= 0.6) return 'Expert';
+  if (share >= 0.35) return 'Advanced';
+  if (share >= 0.15) return 'Intermediate';
+  if (share > 0) return 'Beginner';
+  return 'Unstarted';
+}
 
+/** One figure in the band across the top. */
+function Figure({
+  label,
+  value,
+  sub,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+  icon?: string;
+  tone?: string;
+}) {
   return (
-    <div className="stx-milestone">
-      <span className="stx-milestone-top">
-        <b>{done}</b> of {mark} {unit}
-        <em>{done >= total ? `every ${unit.replace(/s$/, '')} open` : `${mark - done} to the next milestone`}</em>
-      </span>
-      <ProgressIndicator percent={percent} shape="bar" />
+    <div className={`stx-figure${tone ? ` is-${tone}` : ''}`}>
+      <div className="stx-figure-text">
+        <span className="stx-figure-label">{label}</span>
+        <strong className="stx-figure-value">
+          {value}
+          {sub && <em>{sub}</em>}
+        </strong>
+      </div>
+      {icon && (
+        <span className="stx-figure-badge">
+          <Ico icon={icon} className="stx-ico stx-figure-ico" />
+        </span>
+      )}
     </div>
   );
 }
@@ -84,199 +138,399 @@ function Milestone({ done, total, unit }: { done: number; total: number; unit: s
 export default function SkillTrees() {
   useDocumentTitle('Skill Tree');
 
-  const { data, loading, error, reload, username } = useUserData();
-  const subjects = useSubjectIndex(username);
-  const tasks = useMemo(() => data?.tasks ?? [], [data]);
-
-  const trees = useMemo(() => skillTrees(tasks, subjects), [subjects, tasks]);
-  const unfiled = useMemo(() => unfiledTasks(tasks, subjects), [subjects, tasks]);
-
-  // The picker's value is the whole of the state, with no fallback laid over it.
-  // An earlier version quietly redirected an account with no subject trees to a
-  // goal tree, which read well and did two bad things: "Your subjects" became
-  // unselectable, because choosing it recomputed straight back to the goal, and
-  // the empty state below — the one that explains that finished tasks need a
-  // subject on them — became unreachable code. The empty state points at the goal
-  // trees instead, which gets a first-run account to the same place by saying so.
-  const [source, setSource] = useState<string>(SUBJECTS);
-  const goal = source === SUBJECTS ? null : goalById(source);
-
-  const library = skillLibrary();
-  const generated = useMemo(
-    () =>
-      goal
-        ? // Part 3 fills these in from the account. The engine already takes
-          // them, so the change is here and nowhere else.
-          generateTree(library, {
-            goal: goal.id,
-            completedNodes: [],
-          })
-        : null,
-    [goal, library],
-  );
-
-  const graph = useMemo(
-    () =>
-      generated
-        ? graphFromGenerated(generated, library)
-        : graphFromTrees(trees, 'Your subjects'),
-    [generated, library, trees],
-  );
-
-  const [filter, setFilter] = useState<GraphFilter>(NO_FILTER);
-  const shown = useMemo(() => filterGraph(graph, filter), [filter, graph]);
-
-  // Counted on the whole graph, not the filtered one: a header that moved when a
-  // filter was flicked would be reporting the filter rather than the tree.
-  const totals = useMemo(() => tallyGraph(graph), [graph]);
-
+  const { username } = useAuth();
+  // The account's own catalogue, usage-ordered by the endpoint. Everything at
+  // the top of this page is drawn from it: the five focus cards, the rail, and
+  // half of what the search can find.
+  const subjects = useSubjects(username);
+  const [treeId, setTreeId] = useState<string>(DEFAULT_TREE.id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  /* Practice done on top of what the trees seed — see utils/skillProgress for
+     why it lives in the browser. Loaded once per account, and written back on
+     every change rather than on unmount, so a click survives a closed tab. */
+  const [progress, setProgress] = useState<SkillProgress>({});
+  useEffect(() => {
+    setProgress(loadProgress(username));
+  }, [username]);
+
+  /* The programmes this account has rewritten. Same store, same reasoning —
+     see utils/skillSteps. A node in here is counted in steps rather than XP,
+     which is why it has to reach `applyProgress` rather than stopping at the
+     panel: the tile, the ring and the band across the top all read the graph. */
+  const [plans, setPlans] = useState<StepPlans>({});
+  useEffect(() => {
+    setPlans(loadSteps(username));
+  }, [username]);
+
+  /* The nodes this account has renamed, and the drawings those names found.
+     Applied after progress rather than inside it: what a node is called has
+     never affected how far along it is. See utils/skillNames. */
+  const [names, setNames] = useState<NodeNames>({});
+  useEffect(() => {
+    setNames(loadNames(username));
+  }, [username]);
+
+  /* The five across the top. Null until this account has chosen, which is what
+     lets the band follow the subjects they actually use until the moment they
+     say otherwise — see utils/focusTopics. */
+  const [chosenFocus, setChosenFocus] = useState<string[] | null>(null);
+  useEffect(() => {
+    setChosenFocus(loadFocus(username));
+  }, [username]);
+
+  const focus = useMemo(
+    () => resolveFocus(chosenFocus, subjects.map((subject) => subject.id)),
+    [chosenFocus, subjects],
+  );
+
+  const tree = subjectTreeById(treeId) ?? DEFAULT_TREE;
+
+  const designed = useMemo(() => graphFromSubjectTree(tree), [tree]);
+  // What is actually drawn: the designed tree with the account's practice added
+  // and every status re-derived from the result. Everything downstream — the
+  // canvas, the panel, the figures — reads this one graph, so a click cannot
+  // move the tiles and leave the band behind.
+  const graph = useMemo(
+    () => applyNames(applyProgress(designed, progress, plans), names),
+    [designed, progress, plans, names],
+  );
+  const nav = useMemo(() => navTargets(tree), [tree]);
+  const totals = useMemo(() => tallyGraph(graph), [graph]);
+  const chain = useMemo(() => parentChain(tree.id), [tree.id]);
+  // The three ways out of this tree, so walking the hierarchy never depends on
+  // finding the right diamond on the canvas.
+  const up = useMemo(() => parentOf(tree.id), [tree.id]);
+  const into = useMemo(() => childrenOf(tree.id), [tree.id]);
+  const beside = useMemo(() => siblingsOf(tree.id), [tree.id]);
+
+  // Everything the reader is currently inside, root first. The focus cards and
+  // the rail light from this, so walking three forks down does not put every
+  // pill out — see the note on `openTrail` in SubjectRail.
+  const trail = useMemo(() => chain.map((entry) => entry.id), [chain]);
+
+  const goTo = useCallback((id: string) => {
+    setTreeId(id);
+    setSelectedId(null);
+  }, []);
+
+  /* Opening a tree *at* a node — what the search and the subject rail do.
+     Every route into a different tree passes through here or through `goTo`,
+     and both say what the selection becomes, which is why there is no effect
+     watching the tree id to clear it: one would run after this and wipe the
+     node the reader just searched for. */
+  const openTree = useCallback((id: string, node?: string) => {
+    setTreeId(id);
+    setSelectedId(node ?? null);
+  }, []);
+
+  /** A catalogue subject — Mandarin, Gym, Taxes — routed to its lattice. */
+  const openSubject = useCallback(
+    (subjectId: string) => {
+      const subject = subjects.find((row) => row.id === subjectId);
+      const target = treeForSubject(subjectId, subject?.group);
+      openTree(target.tree, target.node);
+    },
+    [openTree, subjects],
+  );
+
+  /* Changing one slot stores all five, including the ones that were still
+     derived — otherwise the four the reader did not touch would keep moving as
+     their task counts changed. */
+  const setFocusAt = useCallback(
+    (index: number, subjectId: string) => {
+      setChosenFocus((current) => {
+        const base = resolveFocus(current, subjects.map((subject) => subject.id));
+        const next = Array.from({ length: FOCUS_COUNT }, (_, slot) => base[slot] ?? '')
+          .map((id, slot) => (slot === index ? subjectId : id))
+          .filter(Boolean);
+        saveFocus(username, next);
+        return next;
+      });
+    },
+    [subjects, username],
+  );
+
   const selected = useMemo(
     () => graph.nodes.find((node) => node.id === selectedId) ?? null,
     [graph.nodes, selectedId],
   );
 
-  const select = useCallback((node: GraphNode | null) => setSelectedId(node?.id ?? null), []);
+  // Picking the same node again puts the panel and the lit run back.
+  const select = useCallback(
+    (node: GraphNode | null) =>
+      setSelectedId((current) => (node && current !== node.id ? node.id : null)),
+    [],
+  );
 
-  // A filter that hides the selected node clears it, or the panel describes
-  // something no longer on the canvas and its two link lists point at nothing.
-  // Changing tree does the same, for the same reason.
-  useEffect(() => {
-    if (selectedId && !shown.nodes.some((node) => node.id === selectedId)) setSelectedId(null);
-  }, [selectedId, shown.nodes]);
+  /* The "+250 XP" that appears for a moment after a click. Held with its node
+     id so switching selection mid-flash cannot show one node's gain on
+     another, and the timer is cleared on unmount and on every new click. */
+  const [flash, setFlash] = useState<{ id: string; gain: number } | null>(null);
+  const flashTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (flashTimer.current) window.clearTimeout(flashTimer.current);
+  }, []);
 
-  useEffect(() => {
-    setFilter(NO_FILTER);
-    setSelectedId(null);
-  }, [source]);
+  const writePlans = useCallback(
+    (id: string, plan: StepPlan | null) => {
+      setPlans((current) => {
+        const next = { ...current };
+        if (plan) next[id] = plan;
+        else delete next[id];
+        saveSteps(username, next);
+        return next;
+      });
+    },
+    [username],
+  );
 
-  if (loading) return <Loading label="Growing your trees" />;
-  if (!data) {
-    return <ErrorState message={error ?? 'No account data yet.'} onRetry={username ? reload : undefined} />;
-  }
+  /*
+   * Renaming, and the one decision in it: which drawing the new name gets.
+   *
+   * `iconForName` answers only when the words actually match a file, so most
+   * renames get `undefined` and the node keeps the icon it was designed with —
+   * "Refactoring" has no drawing of its own and a near-miss would be worse than
+   * the layers icon it already has. Stored rather than recomputed on render, so
+   * an icon added to the repository next month cannot repaint a tile somebody
+   * already named. See skills/iconMatch.
+   */
+  const rename = useCallback(
+    (id: string, raw: string | null) => {
+      setNames((current) => {
+        const next = { ...current };
+        const name = raw === null ? '' : cleanName(raw);
+        if (!name) delete next[id];
+        else {
+          const icon = iconForName(name);
+          next[id] = icon ? { name, icon } : { name };
+        }
+        saveNames(username, next);
+        return next;
+      });
+    },
+    [username],
+  );
 
-  const bare = !goal && trees.length === 0;
+  /*
+   * Practising means one of two things, and which one depends on whether this
+   * account has written the node's programme.
+   *
+   * An untouched node is counted in XP, so a session adds XP. A node whose
+   * steps the reader has written is counted in steps — utils/skillSteps has the
+   * argument — so a session ticks the next one off instead. Adding XP to it
+   * would be adding to a figure that is no longer read, which is the same as
+   * the button doing nothing.
+   */
+  const practise = useCallback(
+    (node: GraphNode) => {
+      const plan = plans[node.id];
+      if (plan) {
+        if (plan.at >= plan.steps.length) return;
+        writePlans(node.id, { ...plan, at: plan.at + 1 });
+        return;
+      }
+      const gain = practiceGain(node);
+      setProgress((current) => {
+        const next = { ...current, [node.id]: (current[node.id] ?? 0) + gain };
+        saveProgress(username, next);
+        return next;
+      });
+      setFlash({ id: node.id, gain });
+      if (flashTimer.current) window.clearTimeout(flashTimer.current);
+      flashTimer.current = window.setTimeout(() => setFlash(null), 1600);
+    },
+    [username, plans, writePlans],
+  );
+
+  const entering = usePageEntrance(true);
+  const unlocked = totals.total - totals.locked;
 
   return (
-    <div className="stx-page">
+    <div className="stx-page stx-page--lattice">
       <Ambient />
-      <div className="stx-shell page-shell">
-        <header className="stx-head">
-          <div className="stx-head-text">
-            <h1>Skill Tree</h1>
-            <p>
-              {goal
-                ? goal.blurb
-                : 'Build your skills, unlock new abilities, and see how far you have come.'}
-            </p>
-          </div>
+      <div className={`stx-shell page-shell${entering ? ' pg-enter' : ''}`}>
+        <FocusTopics
+          subjects={subjects}
+          focus={focus}
+          openTrail={trail}
+          onOpen={openSubject}
+          onChange={setFocusAt}
+        />
 
-          <div className="stx-head-figures">
-            <label className="stx-field stx-source">
-              <span className="stx-sr">Which tree</span>
-              <select value={source} onChange={(event) => setSource(event.target.value)}>
-                <optgroup label="From your record">
-                  <option value={SUBJECTS}>Your subjects</option>
-                </optgroup>
-                <optgroup label="Toward a goal">
-                  {GOALS.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.name}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </label>
+        <SubjectRail subjects={subjects} openTrail={trail} onOpen={openTree} />
 
-            {!bare && (
-              <>
-                <div className="stx-level">
-                  <ProgressIndicator percent={totals.percent} shape="ring" size={54} />
-                  <div>
-                    <span>{goal ? 'Done' : 'Overall'}</span>
-                    <strong>{Math.round(totals.percent)}%</strong>
-                  </div>
-                </div>
-                <Milestone done={totals.complete} total={totals.total} unit="nodes" />
-                <p className="stx-head-xp">
-                  {goal
-                    ? `${format.number(totals.xpTotal)} XP on this path`
-                    : /* Every node's XP summed, which on the subjects feed is the
-                         roots and therefore the account's filed total. Not
-                         `xpEarned`: that counts only nodes marked complete, and a
-                         subject root is not complete until all fifteen of its
-                         thresholds are. */
-                      `${format.number(totals.xpTotal)} XP filed across ${trees.length} ${
-                        trees.length === 1 ? 'subject' : 'subjects'
-                      }`}
-                </p>
-              </>
-            )}
-          </div>
+        <header className="stx-lead">
+          {chain.length > 1 && (
+            <nav className="stx-crumbs" aria-label="Where this tree sits">
+              {chain.map((crumb, index) => {
+                const here = crumb.id === tree.id;
+                return (
+                  <span key={crumb.id} className="stx-crumb">
+                    {here ? (
+                      <span aria-current="page">{crumb.title}</span>
+                    ) : (
+                      <button type="button" onClick={() => goTo(crumb.id)}>
+                        {crumb.title}
+                      </button>
+                    )}
+                    {index < chain.length - 1 && <i aria-hidden="true">›</i>}
+                  </span>
+                );
+              })}
+            </nav>
+          )}
+          <h1>{tree.title}</h1>
+          <p className="stx-lead-sub">{tree.blurb}</p>
         </header>
 
-        {bare ? (
-          /* Not a locked screen and not the `NotBuilt` treatment: the page is
-             built and the account is not behind on anything. It is missing one
-             input, the input is a dropdown on a task, and saying which is more
-             use than a countdown to nothing. The goals in the picker above work
-             regardless — they are about skills rather than about this account. */
-          <section className="stx-empty">
-            <h2>No trees from your own work yet</h2>
-            {unfiled.count > 0 ? (
-              <p>
-                You have finished <strong>{unfiled.count}</strong>{' '}
-                {unfiled.count === 1 ? 'task' : 'tasks'} worth {format.number(unfiled.xp)} XP, and
-                none of them carry a subject — so there is nothing to file a tree under. The
-                subject picker is on the task itself; fill one in and the tree exists on the next
-                finished task. The goal trees in the picker above need none of that.
-              </p>
-            ) : (
-              <p>
-                A tree of your own grows from finished tasks filed under a subject. Nothing is
-                finished yet, so there is nothing to grow one from — but the goal trees in the
-                picker above are built from the skill library and are there now.
-              </p>
+        {/* ---- moving between trees ----
+            The diamonds on the canvas walk downward and the breadcrumb walks
+            up, but both mean hunting for a control. This says every tree
+            adjacent to this one outright: the one above, the ones below, and
+            the ones beside it. */}
+        {(up || into.length > 0 || beside.length > 0) && (
+          <nav className="stx-treenav" aria-label="Move between trees">
+            {up && (
+              <span className="stx-treenav-group">
+                <span className="stx-treenav-label">Up</span>
+                <button type="button" className="stx-treenav-link is-up" onClick={() => goTo(up.id)}>
+                  <Ico icon="branch" className="stx-ico stx-treenav-ico" />
+                  {up.title}
+                </button>
+              </span>
             )}
-            <Link to="/tasks" className="stx-cta">
-              Open Tasks
-            </Link>
-          </section>
-        ) : (
-          <>
-            <SkillTreeToolbar
-              graph={graph}
-              filter={filter}
-              onChange={setFilter}
-              shown={shown.nodes.length}
-            />
-
-            <div className="stx-layout">
-              <SkillTreeCanvas
-                graph={shown}
-                selectedId={selectedId}
-                onSelect={select}
-                empty={
-                  <>
-                    <strong>Nothing matches</strong>
-                    <span>
-                      No node in this tree carries all of that. Clear a filter and the canvas comes
-                      back.
-                    </span>
-                  </>
-                }
-              />
-
-              <NodeDetailPanel
-                graph={graph}
-                node={selected}
-                onSelect={select}
-                onClose={() => setSelectedId(null)}
-                action={goal ? undefined : { label: 'Open Tasks', href: '/tasks' }}
-              />
-            </div>
-          </>
+            {into.length > 0 && (
+              <span className="stx-treenav-group">
+                <span className="stx-treenav-label">Branches into</span>
+                {into.map((child) => (
+                  <button
+                    key={child.id}
+                    type="button"
+                    className="stx-treenav-link is-into"
+                    onClick={() => goTo(child.id)}
+                  >
+                    {child.title}
+                    <i aria-hidden="true">›</i>
+                  </button>
+                ))}
+              </span>
+            )}
+            {beside.length > 0 && (
+              <span className="stx-treenav-group">
+                <span className="stx-treenav-label">Beside</span>
+                {beside.map((peer) => (
+                  <button
+                    key={peer.id}
+                    type="button"
+                    className="stx-treenav-link"
+                    onClick={() => goTo(peer.id)}
+                  >
+                    {peer.title}
+                  </button>
+                ))}
+              </span>
+            )}
+          </nav>
         )}
+
+        {/* ---- the band of figures ---- */}
+        <section className="stx-band" aria-label="Where this tree stands">
+          <div className="stx-figure stx-figure--ring">
+            <div className="stx-figure-text">
+              <span className="stx-figure-label">Overall Progress</span>
+              <strong className="stx-figure-value stx-figure-big">
+                {Math.round(totals.percent)}%
+              </strong>
+            </div>
+            <ProgressIndicator percent={totals.percent} shape="ring" size={54} />
+          </div>
+
+          <Figure label="Skills Unlocked" value={unlocked} sub={`/ ${totals.total}`} tone="accent" />
+          <Figure label="Mastered" value={totals.complete} icon="trophy" tone="done" />
+          <Figure label="In Progress" value={totals.progress} icon="in-progress" tone="prog" />
+          <Figure label="Locked" value={totals.locked} icon="locked" tone="lock" />
+          <Figure label="Skill Level" value={skillLevel(totals)} icon="gem" tone="level" />
+        </section>
+
+        {/* ---- the lattice and what a node is ---- */}
+        <div className="stx-layout">
+          <SkillTreeCanvas
+            graph={graph}
+            selectedId={selectedId}
+            onSelect={select}
+            geom={LATTICE_GEOM}
+            fit
+            renderNode={(placed, ctx) => {
+              const to = nav.get(placed.node.id);
+              return (
+                <LatticeNode
+                  placed={placed}
+                  size={LATTICE_GEOM.nodeW}
+                  selected={ctx.selected}
+                  onSelect={ctx.onSelect}
+                  onNavigate={to ? () => goTo(to) : undefined}
+                />
+              );
+            }}
+          />
+
+          <LatticePanel
+            graph={graph}
+            node={selected}
+            onSelect={select}
+            onPractice={practise}
+            gain={selected ? practiceGain(selected) : 0}
+            steps={selected ? plans[selected.id] ?? null : null}
+            onSteps={selected ? (plan) => writePlans(selected.id, plan) : undefined}
+            onResetSteps={selected ? () => writePlans(selected.id, null) : undefined}
+            onRename={selected ? (name) => rename(selected.id, name) : undefined}
+            renamed={Boolean(selected && names[selected.id])}
+            onResetName={selected ? () => rename(selected.id, null) : undefined}
+            flash={flash && selected && flash.id === selected.id ? flash.gain : null}
+            placeholder={
+              <>
+                <Ico icon="target" className="stx-ico stx-lp-blank-ico" />
+                <strong>Pick a skill</strong>
+                <span>
+                  Every tile on the lattice opens here — what it is, how far along you are, and what
+                  it leads to. The diamonds open a subject of their own.
+                </span>
+              </>
+            }
+          />
+        </div>
+
+        {/* ---- legend ---- */}
+        {/* The tiles are coloured by difficulty, so that is what the legend has
+            to explain. Status is on every tile already, in the percentage badge
+            beside the tier and in the fill of a finished one. */}
+        <footer className="stx-legend">
+          <ul className="stx-legend-keys">
+            {DIFFICULTIES.map((tier) => (
+              <li key={tier}>
+                <i className={`stx-legend-dot tier-${tier}`} aria-hidden="true" />
+                {DIFFICULTY_LABEL[tier]}
+              </li>
+            ))}
+            <li className="stx-legend-line">
+              <svg viewBox="0 0 28 6" aria-hidden="true">
+                <path d="M1 3h26" />
+              </svg>
+              Prerequisite
+            </li>
+            <li className="stx-legend-line">
+              <svg viewBox="0 0 28 6" aria-hidden="true">
+                <path d="M1 3h26" strokeDasharray="4 4" />
+              </svg>
+              Recommended
+            </li>
+          </ul>
+          <p className="stx-legend-tip">
+            <Ico icon="idea" className="stx-ico stx-legend-tip-ico" />
+            <b>Tip:</b> drag the canvas to explore · ⌘ or Ctrl + scroll to zoom
+          </p>
+        </footer>
       </div>
     </div>
   );

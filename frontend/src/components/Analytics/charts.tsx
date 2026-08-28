@@ -1,19 +1,20 @@
 /**
  * The page's drawing kit — small SVG pieces, no library.
  *
- * SVG rather than the canvas renderer the growth page uses (utils/growthChart),
- * and the reason is theming: every colour here is a CSS custom property read by
- * the cascade, so the light and dark palettes are two blocks of CSS and a chart
- * repaints itself on a theme change with no listener, no MutationObserver and
- * no repaint on the JS side at all. The canvas renderer has to watch
- * `data-theme` and redraw by hand — worth it for a chart with wheel-zoom and a
- * hover crosshair, and pure cost for fourteen static panels.
+ * SVG rather than the canvas the growth page drew into, and the reason is
+ * theming: every colour here is a CSS custom property read by the cascade, so
+ * the light and dark palettes are two blocks of CSS and a chart repaints itself
+ * on a theme change with no listener, no MutationObserver and no repaint on the
+ * JS side at all. A canvas renderer has to watch `data-theme` and redraw by
+ * hand — worth it for a chart with wheel-zoom and a hover crosshair, and pure
+ * cost for fourteen static panels. That was the trade; the canvas renderer is
+ * gone and these are what the page draws with.
  *
  * Every component here takes a `viewBox` and no width or height: the CSS sizes
  * the box and `preserveAspectRatio` does the rest, so a panel that changes
  * width at a breakpoint needs no JS to stay drawn correctly.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 /** The series colours, as the CSS variable each panel paints with. */
@@ -464,57 +465,6 @@ export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Ton
 }
 
 // --------------------------------------------------------------------------
-// Grouped bars — the period comparison
-// --------------------------------------------------------------------------
-export interface BarPair {
-  label: string;
-  current: number;
-  previous: number;
-  currentText: string;
-  previousText: string;
-}
-
-/**
- * Five pairs of bars, each pair scaled to itself.
- *
- * Five metrics in different units — XP in the tens of thousands, a score out of
- * ten — cannot share a y-axis without four of them becoming a flat line along
- * the floor. So each pair is scaled to its own larger member and the figures
- * are printed on the bars. The comparison a reader makes is *within* a pair,
- * which is the comparison the panel is for.
- */
-export function GroupedBars({ pairs }: { pairs: BarPair[] }) {
-  return (
-    <div className="ax-bars">
-      {pairs.map((pair) => {
-        const peak = Math.max(pair.current, pair.previous, 1);
-        return (
-          <div className="ax-bar-group" key={pair.label}>
-            <div className="ax-bar-pair">
-              <div className="ax-bar-col">
-                <span className="ax-bar-value">{pair.currentText}</span>
-                <div
-                  className="ax-bar ax-bar-now"
-                  style={{ height: `${(pair.current / peak) * 100}%` }}
-                />
-              </div>
-              <div className="ax-bar-col">
-                <span className="ax-bar-value ax-bar-value-was">{pair.previousText}</span>
-                <div
-                  className="ax-bar ax-bar-was"
-                  style={{ height: `${(pair.previous / peak) * 100}%` }}
-                />
-              </div>
-            </div>
-            <span className="ax-bar-label">{pair.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// --------------------------------------------------------------------------
 // Columns — one series of labelled bars
 // --------------------------------------------------------------------------
 export interface Column {
@@ -529,8 +479,8 @@ export interface Column {
 /**
  * A distribution, as bars sharing one scale.
  *
- * Unlike `GroupedBars` these are all the same measurement, so they share a
- * scale and the comparison between any two of them is real — that is the whole
+ * All the same measurement, so they share a scale and the comparison between
+ * any two of them is real — that is the whole
  * point of the panel, and scaling each to itself would flatten exactly the
  * difference the reader is looking for. The tallest is marked so the answer to
  * "when" is visible before any of the numbers are read.
@@ -571,6 +521,44 @@ export interface PanelProps {
   children: ReactNode;
   /** The link row along the bottom. */
   footer?: ReactNode;
+  /**
+   * The panel's finding, in a sentence, printed above the chart it came from.
+   *
+   * A claim is a smaller thing to read than a chart and says more of what the
+   * chart was for, so a panel that can state its finding states it — but it
+   * states it *with* the evidence, not instead of it. It used to fold the
+   * chart, grid or table away behind a "Show the workings" disclosure, and
+   * that was the wrong trade: a reader who came to look at the year of days
+   * found a sentence about it and a button, and the panel's whole reason for
+   * existing was one click away on every visit.
+   *
+   * A panel with no claim renders exactly as it always did.
+   */
+  claim?: ReactNode;
+}
+
+/**
+ * How deep in the page a panel's title sits.
+ *
+ * Every panel used to print an `<h2>`, including the ones nested inside a
+ * `PanelGroup` — so a screen reader moving by heading met a flat list where the
+ * page has two levels, and the group headings that organise a tab were not in
+ * the outline at all, because `PanelGroup` drew its title as a `<strong>`
+ * inside a button rather than as a heading.
+ *
+ * A context rather than a prop because `PanelGroup` takes its panels as opaque
+ * `children` and cannot reach in to tell each one what level it is at.
+ * Ungrouped panels stay at 2, which is what they have always rendered.
+ */
+const HeadingLevel = createContext(2);
+
+/** A heading at whatever depth the surrounding groups have reached. */
+function Heading({ className, children }: { className?: string; children: ReactNode }) {
+  const level = useContext(HeadingLevel);
+  // Capped at 6 because there is no h7; nothing here nests that far, and a tag
+  // the browser does not know is worse than a heading one level too shallow.
+  const Tag = `h${Math.min(level, 6)}` as 'h2';
+  return <Tag className={className}>{children}</Tag>;
 }
 
 /**
@@ -582,16 +570,30 @@ export interface PanelProps {
  * there is nothing left to disclaim. A tab that cannot be filled says so as a
  * whole rather than shipping placeholder panels with a footnote; see `Locked`.
  */
-export function Panel({ title, note, aside, className, children, footer }: PanelProps) {
+export function Panel({
+  title,
+  note,
+  aside,
+  className,
+  children,
+  footer,
+  claim,
+}: PanelProps) {
   return (
     <section className={`ax-panel${className ? ` ${className}` : ''}`}>
       <header className="ax-panel-head">
         <div className="ax-panel-title">
-          <h2>{title}</h2>
+          <Heading>{title}</Heading>
         </div>
         {aside && <div className="ax-panel-aside">{aside}</div>}
       </header>
       {note && <p className="ax-panel-note">{note}</p>}
+      {/* No wrapper around `children` when there is a claim: the claim is a
+          sibling of the content, not a lid on it, and `.ax-panel`'s rules for
+          what may grow into the panel's slack — `.ax-heat`, `.ax-standing`,
+          `.ax-timeline` — are direct-child selectors that a wrapper would
+          have cut off from the content they are meant to size. */}
+      {claim && <p className="ax-claim">{claim}</p>}
       {children}
       {footer && <div className="ax-panel-foot">{footer}</div>}
     </section>
@@ -621,6 +623,79 @@ export function PanelLink({ to, children }: { to: string; children: ReactNode })
     <Link className="ax-link" to={to}>
       {children} →
     </Link>
+  );
+}
+
+/**
+ * A named group of panels, opening and closing as one.
+ *
+ * Insights carried fifteen panels in eight rows, every one of them the same
+ * weight, none of them saying which of the tab's three questions it belonged
+ * to. A reader scrolling it met fifteen equal claims and had to build the
+ * grouping themselves, every visit.
+ *
+ * So the grouping is stated. Three headings — what is true now, why it happens,
+ * when and what you work on — and the panels live inside whichever one they
+ * answer. It is the same disclosure as `Panel`'s `claim` one level up: the
+ * heading and its one-line summary are always readable, and the panels open on
+ * request.
+ *
+ * ## Only the first is open
+ *
+ * A tab whose three groups are all shut is a tab that looks broken, and one
+ * whose three are all open is the wall this replaced. The first opens because
+ * it is the one that answers "how am I doing" — the others are there for the
+ * reader who has a follow-up question, which is most of what Insights is for.
+ */
+export function PanelGroup({
+  title,
+  note,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  /** One line saying what the group answers. Always visible. */
+  note: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const level = useContext(HeadingLevel);
+  return (
+    <section className={`ax-group${open ? ' is-open' : ''}`}>
+      {/* The button is *inside* the heading rather than around it: the group
+          title is what a reader navigating by heading is looking for, and a
+          heading wrapping the control is the shape that gives them both. */}
+      <Heading>
+        <button
+          type="button"
+          className="ax-group-head"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          <span className="ax-group-title">
+            <strong>{title}</strong>
+            <span className="ax-muted ax-small">{note}</span>
+          </span>
+          <span className="ax-finding-mark" aria-hidden="true" />
+        </button>
+      </Heading>
+      {/*
+        One wrapper, for the reason `.ax-finding-body` documents.
+
+        `inert` while shut, and that is not decoration. The collapse is a grid
+        row going to `0fr` with `overflow: hidden`, which hides the content from
+        the eye and from nothing else: it stayed in the accessibility tree and
+        in the tab order, so `aria-expanded="false"` announced a closed group
+        whose charts a screen reader then read out, and a keyboard user tabbed
+        into buttons they could not see. `inert` is what actually closes it.
+      */}
+      <div className="ax-group-body" inert={!open}>
+        <HeadingLevel.Provider value={level + 1}>
+          <div>{children}</div>
+        </HeadingLevel.Provider>
+      </div>
+    </section>
   );
 }
 

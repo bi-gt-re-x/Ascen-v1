@@ -16,7 +16,7 @@ from backend.tracking.auth import find_user
 
 
 def _rows_for(username):
-    return [r for r in db.focus_days() if r.get('user_id') == username]
+    return db.rows_for('focus_days', username, order='date')
 
 
 def _seconds(row):
@@ -48,17 +48,19 @@ def record_day(username, day, seconds, goal_hours):
     if not find_user(db.users(), username=username):
         return None
 
-    rows = db.focus_days()
-    row = next((r for r in rows
-                if r.get('user_id') == username and r.get('date') == day), None)
-    if row is None:
-        row = {'user_id': username, 'date': day, 'seconds': 0.0, 'goal_hours': goal_hours}
-        rows.append(row)
+    # One day's row, found by its own primary key (user_id, date) rather than
+    # by reading the whole ledger — every account's, every day's — and writing
+    # all of it back to change one number.
+    row = db.find_row('focus_days', day, user_id=username, key='date')
+    kept = round(max(seconds, _seconds(row or {})), 1)
 
-    row['seconds'] = round(max(seconds, _seconds(row)), 1)
-    row['goal_hours'] = goal_hours
-    db.save_focus_days(rows)
-    return {'seconds': row['seconds'], 'goal_hours': row['goal_hours']}
+    if row is None:
+        db.insert_row('focus_days', {'user_id': username, 'date': day,
+                                     'seconds': kept, 'goal_hours': goal_hours})
+    else:
+        db.update_row('focus_days', day, {'seconds': kept, 'goal_hours': goal_hours},
+                      user_id=username, key='date')
+    return {'seconds': kept, 'goal_hours': goal_hours}
 
 
 def history_range(username, start='', end=''):
@@ -107,9 +109,8 @@ def set_day_note(username, day, text):
     if not find_user(db.users(), username=username):
         return False
 
-    rows = [r for r in db.day_focus_notes()
-            if not (r.get('user_id') == username and r.get('date') == day)]
+    db.delete_row('day_focus_notes', day, user_id=username, key='date')
     if text:
-        rows.append({'user_id': username, 'date': day, 'text': text})
-    db.save_day_focus_notes(rows)
+        db.insert_row('day_focus_notes',
+                      {'user_id': username, 'date': day, 'text': text})
     return True

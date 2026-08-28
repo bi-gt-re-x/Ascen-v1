@@ -40,7 +40,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ambient, ErrorState, Loading } from '@/components';
-import { useAuth, useDocumentTitle, useSubjects } from '@/hooks';
+import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
 import { notes as noteService } from '@/services';
 import {
   NotebookPicker,
@@ -252,7 +252,7 @@ export default function Notes() {
 
   const load = useCallback(async () => {
     if (!username) return;
-    const result = await noteService.list(username);
+    const result = await noteService.list();
     if (result.success) {
       setRows(result.notes);
       setError(null);
@@ -511,7 +511,7 @@ export default function Notes() {
       return;
     }
     setBusy(true);
-    const result = await noteService.save(username, {
+    const result = await noteService.save({
       ...(draft.id ? { id: draft.id } : {}),
       title: draft.title,
       body: draft.body,
@@ -534,7 +534,7 @@ export default function Notes() {
   const discard = useCallback(async () => {
     if (!username || !draft.id || busy) return;
     setBusy(true);
-    const result = await noteService.remove(username, draft.id);
+    const result = await noteService.remove(draft.id);
     setBusy(false);
     if (!result.success) {
       setMessage(result.message);
@@ -543,6 +543,10 @@ export default function Notes() {
     blank();
     await load();
   }, [blank, busy, draft.id, load, username]);
+
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!loading);
 
   if (loading) return <Loading label="Reading your notes" />;
   if (rows === null) {
@@ -562,12 +566,12 @@ export default function Notes() {
   return (
     <div className="nt-page">
       <Ambient />
-      <div className="nt-shell page-shell">
+      <div className={`nt-shell page-shell${entering ? ' pg-enter' : ''}`}>
         {/* ---- The page's own header ---- */}
         <header className="nt-head">
           <div className="nt-head-titles">
             <h1>Notes</h1>
-            <p>Capture ideas. Organize knowledge. Fuel growth.</p>
+            <p>Somewhere to think.</p>
           </div>
 
           <div className="nt-head-tools">
@@ -711,7 +715,7 @@ export default function Notes() {
               {shown.length === 0 ? (
                 <p className="nt-list-empty">
                   {rows.length === 0
-                    ? 'Nothing written yet. The panel beside this one is already a blank note — start there.'
+                    ? 'Nothing written yet. The panel beside this one is a blank note.'
                     : `No note matches “${query.trim()}”.`}
                 </p>
               ) : (

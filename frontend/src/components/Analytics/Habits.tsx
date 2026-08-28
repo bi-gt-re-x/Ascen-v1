@@ -16,6 +16,7 @@
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Panel, Sparkline, asTone, toneVar } from './charts';
+import { StatRow, type Stat } from './StatRow';
 import {
   CALENDAR_WINDOWS,
   STRENGTH_LABEL,
@@ -60,7 +61,7 @@ function since(iso: string | null, todayIso: string): string {
 // The headline
 // --------------------------------------------------------------------------
 export function HabitTiles({ summary, span }: { summary: HabitSummary; span: string }) {
-  const tiles = [
+  const stats: Stat[] = [
     {
       key: 'tracked',
       label: 'Habits found',
@@ -91,20 +92,7 @@ export function HabitTiles({ summary, span }: { summary: HabitSummary; span: str
     },
   ];
 
-  return (
-    <div className="ax-tiles ax-tiles-four">
-      {tiles.map((tile) => (
-        <article className="ax-tile" key={tile.key}>
-          <header>
-            <span className={`ax-tile-dot ax-tone-${tile.tone}`} aria-hidden="true" />
-            <span className="ax-tile-label">{tile.label}</span>
-          </header>
-          <strong className="ax-tile-value ax-tile-value-sm">{tile.value}</strong>
-          <span className="ax-muted ax-small">{tile.note}</span>
-        </article>
-      ))}
-    </div>
-  );
+  return <StatRow stats={stats} />;
 }
 
 // --------------------------------------------------------------------------
@@ -190,8 +178,7 @@ export function HabitCards({ habits, todayIso }: { habits: Habit[]; todayIso: st
   if (habits.length === 0) {
     return (
       <p className="ax-empty">
-        Nothing in this range recurs often enough to call a habit. Four separate days is the floor —
-        three is a coincidence, and a page of coincidences is a page nobody reads twice.
+        Nothing here repeats often enough to call a habit yet.
       </p>
     );
   }
@@ -373,8 +360,7 @@ export function PatternsPanel({ patterns }: { patterns: HabitPattern[] }) {
     >
       {patterns.length === 0 ? (
         <p className="ax-empty">
-          No behaviour in this range repeats often enough to state as a pattern yet. These need
-          twenty days or so before they say anything that will still be true next week.
+          Nothing repeats often enough to call a pattern yet.
         </p>
       ) : (
         <ul className="ax-patterns">
@@ -415,10 +401,21 @@ export function ConsistencyPanel({ habits }: { habits: Habit[] }) {
     list: habits.filter((habit) => habit.strength === strength),
   }));
 
+  // The first bucket is the strongest, `ORDER` being reliability-first.
+  const solid = grouped[0]?.list.length ?? 0;
+
   return (
     <Panel
       title="Which habits are actually stable"
       note="By reliability, not by earnings"
+      claim={
+        habits.length === 0 ? undefined : (
+          <>
+            <strong>{solid}</strong> of your <strong>{habits.length}</strong> habits{' '}
+            {solid === 1 ? 'is' : 'are'} holding reliably; the rest come and go.
+          </>
+        )
+      }
     >
       <div className="ax-buckets">
         {grouped.map(({ strength, list }) => (
@@ -473,15 +470,29 @@ export function TimelinePanel({
 }) {
   const withPhases = habits.filter((habit) => habit.phases.length >= 2).slice(0, 6);
 
+  // Which way the tracked habits moved overall — the one thing the four little
+  // phase bars are there to show, said in words first.
+  const rising = withPhases.filter(
+    (habit) => (habit.phases[habit.phases.length - 1] ?? 0) > (habit.phases[0] ?? 0),
+  ).length;
+
   return (
     <Panel
       title="Your behavioural history"
       note="Where each started, where it is"
+      claim={
+        withPhases.length === 0 ? undefined : (
+          <>
+            Of the <strong>{withPhases.length}</strong> habits with enough history to split,{' '}
+            <strong>{rising}</strong> {rising === 1 ? 'is' : 'are'} stronger now than when{' '}
+            {rising === 1 ? 'it' : 'they'} started.
+          </>
+        )
+      }
     >
       {withPhases.length === 0 ? (
         <p className="ax-empty">
-          The range is too short to split into phases. A habit needs a couple of months before its
-          history is a shape rather than a point.
+          Too short a range to split into phases.
         </p>
       ) : (
         <ul className="ax-phases">
@@ -538,13 +549,18 @@ export function TimelinePanel({
 // The opening
 // --------------------------------------------------------------------------
 /**
- * One paragraph naming the reader's own routine back to them.
+ * The tab's opening sentence, naming the reader's own routine back to them.
  *
  * Assembled from the summary rather than written, clause by clause, with each
  * clause dropped when the figure behind it is missing — the same contract the
- * Insights summary keeps, for the same reason.
+ * Insights state keeps, for the same reason.
+ *
+ * It is a function rather than the lead paragraph of the panel below because
+ * the sentence belongs at the top of the tab, in the slot every other tab now
+ * fills too. See `TabOpening`. The panel keeps everything that is not this
+ * sentence, and no longer prints it twice.
  */
-export function HabitOpening({ summary, span }: { summary: HabitSummary; span: string }) {
+export function habitLead(summary: HabitSummary, span: string): string {
   const parts: string[] = [];
   if (summary.tracked > 0) {
     parts.push(
@@ -556,31 +572,27 @@ export function HabitOpening({ summary, span }: { summary: HabitSummary; span: s
       `and ${summary.anchor.name} is the steadiest of them, appearing in ${summary.anchor.consistency}% of the weeks`,
     );
   }
+  return parts.length
+    ? `${parts.join(', ')}.`
+    : 'Nothing here repeats often enough to call a habit yet.';
+}
 
+/** What the routine looks like underneath the sentence at the top of the tab. */
+export function HabitOpening({ summary, span }: { summary: HabitSummary; span: string }) {
   return (
     <Panel title="What you actually do" note={span}>
       <p className="ax-prose ax-prose-lead">
-        {parts.length
-          ? `${parts.join(', ')}.`
-          : 'Nothing in this range repeats often enough to be called a habit yet — which is a fact about the range as much as about the routine.'}
-      </p>
-      <p className="ax-prose">
+        You worked <strong>{summary.activeRate}%</strong> of the days here.{' '}
         {summary.activeRate >= 80
-          ? `You put work on ${summary.activeRate}% of the days here. At that rate the totals climb
-             on their own without any single day having to be remarkable, which is the whole game.`
+          ? 'At that rate the totals climb on their own.'
           : summary.activeRate >= 50
-            ? `You put work on ${summary.activeRate}% of the days here — a real routine with real
-               holes in it. What is missing is frequency rather than effort: the days you do turn up
-               are productive ones.`
-            : `You put work on ${summary.activeRate}% of the days here. Most of the calendar is
-               empty, so how often those days come round matters far more right now than what
-               happens on them.`}
+            ? 'A real routine with holes in it. What is missing is frequency, not effort.'
+            : 'Most of the calendar is empty. How often you turn up matters more than what you do.'}
       </p>
       {summary.slipping && summary.slipping.trend !== null && (
         <p className="ax-prose">
-          <strong>{summary.slipping.name}</strong> is the one moving the wrong way — down{' '}
-          {Math.abs(summary.slipping.trend)}% against its own rate earlier in this range. That is
-          stated here as a count, not a diagnosis; the Insights tab is where it gets one.
+          <strong>{summary.slipping.name}</strong> is moving the wrong way — down{' '}
+          <strong>{Math.abs(summary.slipping.trend)}%</strong> against its own earlier rate.
         </p>
       )}
     </Panel>

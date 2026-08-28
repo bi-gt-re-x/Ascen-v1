@@ -38,7 +38,7 @@ back to the old XP-per-task proxy when there is nothing rated, and `basis` says
 which of the two the reader is looking at. Every surface that prints the figure
 prints the basis with it; see `metricLines` on the client.
 """
-from datetime import date
+from datetime import date, timedelta
 
 from backend.database import connection as db
 from backend.tracking import focus as focus_tracking
@@ -51,18 +51,38 @@ METRICS = ('productivity', 'quality', 'consistency', 'efficiency', 'focus')
 # --------------------------------------------------------------------------
 # Grading
 # --------------------------------------------------------------------------
+#: The letter bands, high to low, as (floor, letter).
+#:
+#: The conventional school scale — ninety is an A, eighty a B, and so on down in
+#: tens — with two exceptions at the top. A+ is the narrow band below a perfect
+#: hundred, and S is the hundred itself: a grade you cannot reach by being very
+#: good at four of the five metrics and adequate at the last, only by topping
+#: all five. That is what makes it worth having.
+#:
+#: The bands were 95/85/72/65/40, which was neither the school scale nor any
+#: other one: a 41 and a 64 shared a letter across twenty-four points while A
+#: and S sat nine apart. One scale now, and it is the one a reader already knows
+#: how to read. Note that it is stricter in the middle — a 73 was a B and is now
+#: a C — so grades on existing accounts move down when this lands.
+#:
+#: frontend/src/utils/analyticalScore.ts mirrors this table. If a band moves
+#: here it moves there, and `sameBandsAsBackend` is what notices if it does not.
+GRADE_BANDS = (
+    (100, 'S'),
+    (96, 'A+'),
+    (90, 'A'),
+    (80, 'B'),
+    (70, 'C'),
+    (60, 'D'),
+    (0, 'F'),
+)
+
+
 def grade_for_score(score):
     """Map a 0-100 score to the global letter grade."""
-    if score >= 95:
-        return 'S'
-    if score >= 85:
-        return 'A'
-    if score >= 72:
-        return 'B'
-    if score >= 65:
-        return 'C'
-    if score >= 40:
-        return 'D'
+    for floor, letter in GRADE_BANDS:
+        if score >= floor:
+            return letter
     return 'F'
 
 
@@ -88,6 +108,32 @@ def _clamp(value, low=0, high=100):
 # --------------------------------------------------------------------------
 #: The best a single task can score: 5 for difficulty times 5 for execution.
 QUALITY_MAX = 25
+
+#: How far back the report card looks.
+#:
+#: It used to look at everything, and "everything" is the account's whole life:
+#: `total_days` was the number of days since it was created. An account made in
+#: 2021 and taken seriously in 2026 was scored on the mean of both, so the
+#: five-year-old account in this repository — 4,120 tasks finished, level 60, a
+#: 152-day best streak — read **"F: not enough is happening yet to score"**
+#: while the same page called it the top 1% of users. The lifetime mean of a
+#: long-dormant account cannot recover; there is no amount of work this month
+#: that moves an average over 1,840 days.
+#:
+#: Ninety days is long enough that one bad week does not swing the letter and
+#: short enough that a month of real work shows up in it. It is also the
+#: horizon a report card is *for*: "how am I doing" means now, not since 2021.
+#: Lifetime totals still exist and are still shown — on the cards that say
+#: "lifetime", where the number means what it says.
+SCORING_WINDOW_DAYS = 90
+
+#: The daily XP target for an account that never chose one.
+#:
+#: The same 100 that Complete Profile defaults to (backend/routes/auth.py) and
+#: that the settings page reads back. Named here rather than repeated, because
+#: a productivity score against one number and a dashboard ring against another
+#: would be two answers to "did I have a good day".
+DEFAULT_DAILY_GOAL = 100
 
 
 def rating_of(task):
@@ -185,40 +231,68 @@ def ratings(username, record=True):
         return None
 
     today = date.today()
-    total_days = max((today - created_date_for(user)).days + 1, 1)
 
-    # --- Total XP earned + distinct active days, from the ledger ---
+    # The window the card is scored over: the last ninety days, or the whole
+    # account where it is younger than that. A three-day-old account is scored
+    # on three days rather than being marked down for eighty-seven days it did
+    # not exist for. See SCORING_WINDOW_DAYS.
+    lifetime_days = max((today - created_date_for(user)).days + 1, 1)
+    total_days = min(lifetime_days, SCORING_WINDOW_DAYS)
+    window_start = today - timedelta(days=total_days - 1)
+
+    def within(day_iso):
+        parsed = xp_tracking.parse_day(day_iso)
+        return parsed is not None and window_start <= parsed <= today
+
+    # --- XP earned + distinct active days in the window, from the ledger ---
     events = xp_tracking.events_for(username)
     total_xp = 0
     active_day_set = set()
     for event in events:
-        total_xp += event.get('amount', 0) or 0
         day = xp_tracking.event_day(event)
+        if not within(day):
+            continue
+        total_xp += event.get('amount', 0) or 0
         if day:
             active_day_set.add(day)
     active_days = min(len(active_day_set), total_days)
 
-    # --- Completed tasks: difficulty + efficiency inputs ---
-    done = [t for t in db.tasks()
-            if t.get('user_id') == username and t.get('status') == 'done']
+    # --- Tasks finished in the window: difficulty + efficiency inputs ---
+    done = [t for t in db.tasks_for(username)
+            if t.get('status') == 'done' and within(str(t.get('completed_at') or '')[:10])]
     total_tasks = len(done)
     total_task_xp = sum(t.get('xp_value', 0) or 0 for t in done)
 
-    avg_daily_xp = total_xp / total_days
+    # Per day *worked*, not per day on the calendar. Turning up is what
+    # consistency measures, and scoring the same absence twice is why a
+    # five-day-a-week account was marked down for its weekends in two metrics
+    # at once. This is "how much do you get done when you work".
+    avg_daily_xp = (total_xp / active_days) if active_days else 0
     avg_task_xp = (total_task_xp / total_tasks) if total_tasks else 0
 
-    # 1. Productivity — XP earned per day.
-    productivity_score = round(_clamp(avg_daily_xp / 3))
+    # 1. Productivity — a day's work against the day's goal the account set
+    #    itself. The divisor was a flat 3, which is 300 XP a day for full
+    #    marks: a number nobody chose, applied to everybody. Complete Profile
+    #    already asks for a daily goal and the dashboard already scores the day
+    #    against it; this is the same target, read the same way.
+    daily_goal = user.get('daily_goal') or DEFAULT_DAILY_GOAL
+    productivity_score = round(_clamp(avg_daily_xp / daily_goal * 100))
     # 2. Quality — how well the work went, times how hard it was, over the tasks
     #    that were rated. Falls back to the XP proxy when none were; see the
     #    module docstring for why an unrated account is not graded zero.
     rated = rating_summary(done)
     quality_basis = 'ratings' if rated['rated'] else 'xp'
     if quality_basis == 'ratings':
-        quality_score = round(_clamp(rated['avg_quality'] / QUALITY_MAX * 100))
+        # The geometric mean of the two answers, on their own 1-5 scale, as a
+        # percentage of 5. `avg_quality` is the mean of difficulty x execution,
+        # so its square root is the typical rating — and a task rated 3 and 3
+        # scores 60 rather than the 36 a straight 9/25 gave it. The product's
+        # midpoint is not the scale's midpoint, and reading it as one is what
+        # made ordinary good work look like a failure.
+        quality_score = round(_clamp((rated['avg_quality'] ** 0.5) / 5 * 100))
     else:
         quality_score = round(_clamp(avg_task_xp * 1.75))
-    # 3. Consistency — share of days the user showed up.
+    # 3. Consistency — share of the window's days the account showed up on.
     consistency_rate = (active_days / total_days) * 100
     consistency_score = round(_clamp(consistency_rate))
 
@@ -241,19 +315,40 @@ def ratings(username, record=True):
     else:
         deadline_score = 0
 
-    efficiency_score = round(_clamp(deadline_score * 0.5 + speed_score * 0.5))
+    # Deadlines only. The other half used to be a "speed" score off
+    # `completion_seconds` — the wall-clock gap between creating a task and
+    # finishing it — which is not speed, it is scheduling: a task written on
+    # Monday for Friday scores as five days of slowness. That punished the
+    # exact behaviour the calendar and the goals page exist to encourage, and
+    # it was half of this metric. `avg_minutes` is still measured and still
+    # shown, because it is interesting; it no longer decides a grade it was
+    # never a fair measure of. The card's own caption already read "82%
+    # finished on time" beside a score computed from something else.
+    efficiency_score = round(_clamp(deadline_score))
 
     # 5. Focus — tracked focus time vs the daily focus goal, across every day
     #    with a synced record.
+    #    Windowed with everything else, and counted over the days focus was
+    #    actually tracked. A day with a row and no seconds on it used to add
+    #    its goal to the denominator and nothing to the numerator, so every
+    #    day off was marked down here as well as in consistency — the same
+    #    double count productivity had. This asks "when you sit down, do you
+    #    do the hours", and consistency asks how often you sit down.
     history = focus_tracking.history_for(username)
     focused_sec = 0.0
     focus_goal_sec = 0.0
-    for record_row in history.values():
+    for day_iso, record_row in history.items():
+        if not within(day_iso):
+            continue
         try:
-            focused_sec += float(record_row.get('seconds', 0) or 0)
-            focus_goal_sec += float(record_row.get('goal_hours', 0) or 0) * 3600.0
+            seconds = float(record_row.get('seconds', 0) or 0)
+            goal = float(record_row.get('goal_hours', 0) or 0) * 3600.0
         except (TypeError, ValueError, AttributeError):
             continue
+        if seconds <= 0:
+            continue
+        focused_sec += seconds
+        focus_goal_sec += goal
     focus_ratio = (focused_sec / focus_goal_sec) if focus_goal_sec > 0 else 0.0
     focus_score = round(_clamp(focus_ratio * 100))
 

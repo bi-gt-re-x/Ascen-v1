@@ -44,8 +44,8 @@ def _ratings_by_day(username):
     counts as rated.
     """
     buckets = {}
-    for task in db.tasks():
-        if task.get('user_id') != username or task.get('status') != 'done':
+    for task in db.tasks_for(username):
+        if task.get('status') != 'done':
             continue
         score = analytics_tracking.rating_of(task)
         if score is None:

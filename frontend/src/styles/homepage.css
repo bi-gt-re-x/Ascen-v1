@@ -219,79 +219,31 @@ body {
     text-decoration: underline;
 }
 
-/* ---------- Auth modal ---------- */
-.modal {
-    position: fixed;
-    z-index: 2000;
-    inset: 0;
-    overflow: auto;
-    background: rgba(23, 28, 36, 0.5);
-    backdrop-filter: blur(5px);
-    animation: fadeIn 0.3s;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+/* ---------- Auth modal ----------
 
-.modal.hidden {
-    display: none;
-}
+   Nothing here any more, and that is the fix.
 
-.modal-content {
-    background: #ffffff;
-    padding: 40px;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 400px;
-    color: #1f2733;
-    text-align: center;
-    position: relative;
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
-}
+   This block styled `.modal`, `.modal-content` and `.close` — the sign-in
+   box as it was before the homepage was ported to React. The port rewrote
+   the dialog as `auth-*` (components/Home/AuthModal) and left these rules
+   behind, where they did nothing for this page and a good deal to everybody
+   else's: the names were shared with the goal editor, the calendar's event
+   dialog and the dashboard's Add Task box, this sheet is global once loaded,
+   and at equal specificity the last one in wins. So a reader who passed
+   through the landing page was dressing three other pages' dialogs in a
+   400px white card for the rest of the session.
 
-.modal-content h2 {
-    margin-top: 0;
-}
-
-.close {
-    color: #aab1bb;
-    position: absolute;
-    top: 14px;
-    right: 20px;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-
-.close:hover {
-    color: #1f2733;
-}
+   See scripts/check_css.mjs, which fails the build on a new pair like it. */
 
 
-.modal-content input {
-    width: 100%;
-    padding: 14px;
-    border-radius: 10px;
-    border: 1px solid #d7dce3;
-    font-family: inherit;
-    font-size: 1rem;
-    transition: border-color 0.2s;
-}
 
-.modal-content input:focus {
-    border-color: #1f2733;
-    outline: none;
-}
 
-.modal-content input.hidden {
-    display: none;
-}
 
-.modal-content input.error {
-    border-color: #e04747;
-    animation: wiggle 0.3s ease-in-out;
-}
+
+
+
+
+
 
 @keyframes wiggle {
     0%, 100% { transform: translateX(0); }
@@ -421,30 +373,11 @@ html[data-theme="dark"] .copyright a {
 }
 
 /* Auth modal */
-html[data-theme="dark"] .modal-content {
-    background: #161c25;
-    color: #e6edf3;
-    border: 1px solid #30363d;
-}
-
-html[data-theme="dark"] .modal-content input {
-    background: #0d1117;
-    color: #e6edf3;
-    border-color: #30363d;
-}
-
-html[data-theme="dark"] .modal-content input:focus {
-    border-color: #e6edf3;
-}
 
 
-html[data-theme="dark"] .close {
-    color: #6a7480;
-}
 
-html[data-theme="dark"] .close:hover {
-    color: #e6edf3;
-}
+
+
 
 html[data-theme="dark"] #authMessage {
     color: #aeb8c4;

@@ -91,6 +91,19 @@ CREATE INDEX IF NOT EXISTS goals_user_type_idx ON goals (user_id, goal_type);
 -- `position` is the execution order and is what the timeline draws. It is
 -- rewritten as a dense 0..n-1 run on every reorder rather than being sparse:
 -- the list is short and a gap in it is a bug waiting to be read as an order.
+--
+-- `steps` is the checklist of small pieces of work that finish the checkpoint,
+-- as a JSON array of {id, title, done}. A column rather than a table, and that
+-- is the one place this schema stores a list inline: the list is capped at a
+-- handful, it is read and written only ever with the milestone that owns it,
+-- and nothing queries a step on its own. A table would buy a cascade, a
+-- position rewrite and a second round trip for a checklist of three.
+--
+-- It does NOT make a milestone into a task list. A step has no XP, no due
+-- date, no timer and no priority, and never appears on the tasks page — the
+-- distinction the note above draws still holds. Real tasks still point here
+-- through tasks.milestone_id, and a step and a linked task are different
+-- claims: "the checkpoint needs this doing" against "this is scheduled work".
 CREATE TABLE IF NOT EXISTS goal_milestones (
     id           TEXT PRIMARY KEY,
     goal_id      TEXT NOT NULL REFERENCES goals (id) ON DELETE CASCADE,
@@ -100,6 +113,7 @@ CREATE TABLE IF NOT EXISTS goal_milestones (
     position     INTEGER DEFAULT 0,
     status       TEXT DEFAULT 'pending'
                  CHECK (status IN ('pending', 'active', 'done')),
+    steps        TEXT DEFAULT '',
     target_date  TEXT,
     completed_at TEXT,
     created_at   TEXT

@@ -109,14 +109,28 @@ export function TodayCard({ day }: { day: DaySummary }) {
 // XP Overview
 // --------------------------------------------------------------------------
 /**
- * Level and progress toward the next one.
+ * Level and progress toward the next one, and today against the daily goal.
  *
  * The level is derived from the lifetime total rather than read from
  * `stats.level`, so the bar and the number underneath it can never disagree —
  * `format.levelForTotalXp` mirrors `level_for_total_xp` in
  * backend/tracking/xp.py, and the backend stays the authority on both.
+ *
+ * The daily goal is the second line, and it is why this card takes it. The
+ * account has been asked for that number since the day it signed up — Complete
+ * Profile asks for it, Settings edits it, the database stores it — and until
+ * now nothing in the app had ever read it back. A number a person is asked to
+ * choose and then never shown is worse than one that was never asked for.
  */
-export function XpCard({ stats, xpToday }: { stats: UserStats; xpToday: number }) {
+export function XpCard({
+  stats,
+  xpToday,
+  dailyGoal,
+}: {
+  stats: UserStats;
+  xpToday: number;
+  dailyGoal: number;
+}) {
   const level = format.levelForTotalXp(stats.xp);
 
   // The bar is drawn from the XP figure beside it rather than from its own
@@ -127,6 +141,11 @@ export function XpCard({ stats, xpToday }: { stats: UserStats; xpToday: number }
   const xpInLevel = useCountUp(level.xpInLevel);
   const today = useCountUp(xpToday);
   const percent = level.xpRequired > 0 ? (xpInLevel / level.xpRequired) * 100 : 0;
+
+  // A goal of zero is not reachable and not a goal; the API floors it at 10,
+  // and this is the guard for a payload that predates that.
+  const goal = Math.max(1, Math.round(dailyGoal));
+  const goalMet = xpToday >= goal;
 
   return (
     <section className="card dash-stat">
@@ -154,6 +173,13 @@ export function XpCard({ stats, xpToday }: { stats: UserStats; xpToday: number }
           <polyline points="17 6 23 6 23 12" />
         </svg>
         <strong>+{format.number(today)} XP</strong> today
+        {/* Stated as the fraction it is, not as a percentage: the goal is a
+            number the reader chose, and showing it back is what makes the
+            choice mean something. Met is said in words — 100% and 340% would
+            both round to "done" and only one of them is a good day. */}
+        <span className="dash-xp-goal">
+          {goalMet ? 'daily goal met' : `of ${format.number(goal)} goal`}
+        </span>
       </p>
     </section>
   );

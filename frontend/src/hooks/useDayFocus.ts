@@ -111,7 +111,7 @@ export function useDayFocus(username: string | null): UseDayFocus {
     if (!username) return;
     let live = true;
 
-    void focusService.dayNotes(username).then((result) => {
+    void focusService.dayNotes().then((result) => {
       if (!live || !result.success) return;
       const fetched = result.day_focus || {};
       Object.entries(fetched).forEach(([iso, text]) => {
@@ -155,7 +155,7 @@ export function useDayFocus(username: string | null): UseDayFocus {
       if (!username) return;
       clearTimeout(timers.current[iso]);
       timers.current[iso] = setTimeout(() => {
-        void focusService.setDayNote(username, iso, text).catch(() => {
+        void focusService.setDayNote(iso, text).catch(() => {
           /* offline: the local copy stands, and the next edit retries */
         });
       }, PUSH_DELAY_MS);

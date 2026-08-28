@@ -384,6 +384,14 @@ html[data-theme='dark'] .tk-page {
 }
 .tk-menu-note button:hover { text-decoration: underline; }
 .tk-menu-item.is-bad { color: var(--tk-red); }
+
+/* ---------- The goal picker ----------------------------------------------
+   A second panel in the same slot rather than a flyout: at this width a
+   submenu opening sideways would leave the viewport on a narrow screen, and
+   the row menu is already the full width of the choice it offers. */
+.tk-menu-panel.is-goals { max-height: 300px; overflow-y: auto; }
+.tk-menu-item.is-back { color: var(--tk-muted); font-size: 12.5px; }
+.tk-menu-empty { margin: 8px 10px; font-size: 12.5px; color: var(--tk-faint); }
 .tk-menu-item.is-pick input { accent-color: var(--tk-violet); }
 .tk-menu-clear {
     margin-top: 4px;
@@ -567,6 +575,11 @@ html[data-theme='dark'] .tk-page {
 .tk-row-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .tk-row-meta span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--tk-faint); }
 .tk-row-meta span.is-late { color: var(--tk-red); }
+/* The goal a task is execution for. Violet like the XP figure, because both
+   are the row saying what the work counts toward rather than what it is. */
+.tk-row-meta span.tk-goal-chip { color: var(--tk-violet); font-weight: 600; }
+.tk-goal-chip { max-width: 240px; }
+.tk-goal-chip svg { flex: none; }
 .tk-row-meta i { display: grid; place-items: center; }
 .tk-row-meta svg { width: 13px; height: 13px; }
 

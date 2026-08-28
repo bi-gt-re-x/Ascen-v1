@@ -19,6 +19,7 @@
  * something specific to that list, which is better than a shared component
  * saying nothing in particular. Git history has it.
  */
+import { usePageEntrance } from '@/hooks';
 import '@/styles/page-state.css';
 
 export function Loading({ label = 'Loading' }: { label?: string }) {
@@ -65,8 +66,12 @@ export function NotBuilt({
   description: string;
   files?: string[];
 }) {
+  /* The arrival cascade. Nothing is fetched for a placeholder, so it is ready
+     the moment it mounts — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(true);
+
   return (
-    <div className="page-state page-state-unbuilt">
+    <div className={`page-state page-state-unbuilt${entering ? ' pg-enter' : ''}`}>
       <h1 className="page-state-title">{name}</h1>
       <p>{description}</p>
       <p className="page-state-note">This page isn’t built yet.</p>

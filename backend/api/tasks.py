@@ -16,10 +16,11 @@ scripts still call them.
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from backend.api.goals import apply_task_completion
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.api import subjects as user_subjects
 from backend.config import subjects as subject_catalogue
@@ -34,7 +35,6 @@ router = APIRouter(tags=['tasks'])
 # What the endpoints accept
 # --------------------------------------------------------------------------
 class CreateTask(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
     name: str = ''
     priority: str = 'medium'
@@ -58,7 +58,6 @@ class UpdateTask(BaseModel):
     """Every field is optional and only the ones actually sent are applied —
     which is why this uses `model_fields_set` rather than truthiness below.
     `completed: false` has to be distinguishable from "not mentioned"."""
-    username: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[str] = None
@@ -67,11 +66,17 @@ class UpdateTask(BaseModel):
     due_date: Optional[str] = None
     completed: Optional[bool] = None
     subject: Optional[str] = None
+    #: What this task is execution for. Same pair as CreateTask, and the reason
+    #: a task can be linked after the fact: the row on the tasks page is where
+    #: somebody notices that what they just wrote down is work toward a goal.
+    #: Sending `goal_id: null` clears the link — `_link` returns a pair of Nones
+    #: for a missing goal, which is the same answer it gives for a bad one.
+    goal_id: Optional[str] = None
+    milestone_id: Optional[str] = None
 
 
 class DeleteTask(BaseModel):
     id: Optional[str] = None
-    username: Optional[str] = None
 
 
 class TaskId(BaseModel):
@@ -80,32 +85,56 @@ class TaskId(BaseModel):
 
 class UpdateDueDate(BaseModel):
     id: Optional[str] = None
-    username: Optional[str] = None
     due_date: Optional[str] = None
 
 
 class CompleteTask(BaseModel):
-    username: Optional[str] = None
     task_id: Optional[str] = None
 
 
 class RateTask(BaseModel):
     """What the person thought of a task they just finished.
 
-    Both ratings are optional and independent: the prompt asks two questions
-    and a reader is allowed to answer one of them. See `rate_task`.
+    Every field is optional and independent: the prompt asks two or three
+    questions depending on the account's `rating_depth`, and a reader is
+    allowed to answer one of them. See `rate_task`.
     """
 
-    username: Optional[str] = None
     task_id: Optional[str] = None
     #: How hard it was, 1-5. Null means not answered.
     difficulty: Optional[int] = None
     #: How well it went, 1-5. Null means not answered.
     execution: Optional[int] = None
+    #: The one thing that made the difference, from REASONS below. Only asked
+    #: at rating_depth 'reasons'.
+    reason: Optional[str] = None
 
 
 #: What a star rating is allowed to be, both ends inclusive.
 RATING_RANGE = (1, 5)
+
+#: The third question's answers, and the only ones that may be stored.
+#:
+#: A fixed vocabulary rather than a text box, and that is the whole point of
+#: it. "Why did that go the way it did" is only worth asking if the answers can
+#: be counted afterwards — twelve spellings of "I got distracted" are twelve
+#: findings of one task each, which is no finding at all. Six on each side is
+#: enough to cover the usual causes and short enough to read at the moment
+#: somebody has just finished something and wants to move on.
+#:
+#: Which side is asked follows the execution star: a task that went badly is
+#: asked what made it hard, one that went well is asked what made it go well.
+#: See components/Tasks/RatePrompt.
+REASONS = {
+    'struggle': ('distracted', 'unclear', 'underestimated',
+                 'no-time', 'low-energy', 'interrupted'),
+    'went-well': ('prepared', 'deep-focus', 'momentum',
+                  'broken-down', 'fresh', 'familiar'),
+}
+
+#: Every valid answer, flat. Which side a reason belongs to is recoverable from
+#: REASONS, so the stored value is the reason alone.
+ALL_REASONS = REASONS['struggle'] + REASONS['went-well']
 
 
 # --------------------------------------------------------------------------
@@ -128,24 +157,13 @@ def _parse_dt(raw):
     return None
 
 
-def _find(tasks, task_id, username=None):
-    for task in tasks:
-        if task.get('id') != task_id:
-            continue
-        if username and task.get('user_id') != username:
-            continue
-        return task
-    return None
-
-
 def _delete(task_id, username=None):
-    tasks = db.tasks()
-    if username:
-        kept = [t for t in tasks
-                if not (t.get('id') == task_id and t.get('user_id') == username)]
-    else:
-        kept = [t for t in tasks if t.get('id') != task_id]
-    db.save_tasks(kept)
+    """Remove one task, scoped to its owner. True if there was one to remove.
+
+    A DELETE, where this was a read of every task in the table and a rewrite of
+    all of them minus one.
+    """
+    return db.delete_row('tasks', task_id, user_id=username)
 
 
 def _subject(raw, username=None):
@@ -201,18 +219,22 @@ def _link(goal_id, milestone_id, username):
     return goal['id'], (stone['id'] if stone else None)
 
 
-def _create(body: CreateTask):
-    """Shared by POST /api/tasks and its older name, /api/add_task."""
-    if not body.username:
-        return fail('Username required')
+def _create(body: CreateTask, username: str):
+    """Shared by POST /api/tasks and its older name, /api/add_task.
 
-    goal_id, milestone_id = _link(body.goal_id, body.milestone_id, body.username)
+    `username` is passed in rather than resolved here: this is a plain
+    function, and a Depends() default on one is a Depends object sitting
+    where a name should be. The two routes above own the dependency."""
 
-    tasks = db.tasks()
+    goal_id, milestone_id = _link(body.goal_id, body.milestone_id, username)
+
     task_id = body.id or db.new_id('tasks')
-    tasks.append({
+    # The row comes back carrying the id actually used: `insert_row` steps past
+    # a millisecond another writer took first, so the value handed to the
+    # client has to be read back rather than assumed.
+    task = db.insert_row('tasks', {
         "id": task_id,
-        "user_id": body.username,
+        "user_id": username,
         "title": body.name,
         "description": '',
         "priority": body.priority,
@@ -223,36 +245,50 @@ def _create(body: CreateTask):
         # Honor a client-supplied created_at (the week calendar's drag-to-create
         # task uses it to place the block on the dragged slot); default to now.
         "created_at": body.created_at or datetime.now().isoformat(),
-        "subject": _subject(body.subject, body.username),
+        "subject": _subject(body.subject, username),
         "goal_id": goal_id,
         "milestone_id": milestone_id,
     })
-    db.save_tasks(tasks)
-    return ok(task_id=task_id)
+    return ok(task_id=task['id'])
 
 
 # --------------------------------------------------------------------------
 # CRUD
 # --------------------------------------------------------------------------
 @router.get('/api/tasks')
-def list_tasks(username: str = ''):
-    if not username:
-        return fail('Username required')
-    return ok(tasks=[t for t in db.tasks() if t.get('user_id') == username])
+def list_tasks(username: str = Depends(current_username)):
+    return ok(tasks=db.tasks_for(username))
+
+
+@router.get('/api/tasks/search')
+def search_tasks(q: str = '', limit: int = 8,
+                 username: str = Depends(current_username)):
+    """Title search, for the top bar's search panel.
+
+    Registered above `PUT/DELETE /api/tasks/{task_id}` in this file but not in
+    conflict with them: those are other methods, and there is no
+    `GET /api/tasks/{task_id}` for `search` to be mistaken for.
+
+    The panel used to do this in the browser over the account's whole task
+    list, which is most of why the top bar — on every page behind the login —
+    needed that list at all. `limit` is capped rather than trusted: the panel
+    shows eight, and an endpoint that will return ten thousand rows on request
+    is the endpoint this change exists to remove.
+    """
+    return ok(tasks=db.search_tasks(username, q, max(1, min(int(limit), 50))))
 
 
 @router.post('/api/tasks')
-def create_task(body: CreateTask):
-    return _create(body)
+def create_task(body: CreateTask,
+                username: str = Depends(current_username)):
+    return _create(body, username)
 
 
 @router.put('/api/tasks/{task_id}')
-def update_task(task_id: str, body: UpdateTask):
-    if not body.username:
-        return fail('Username required')
+def update_task(task_id: str, body: UpdateTask,
+                username: str = Depends(current_username)):
 
-    tasks = db.tasks()
-    task = _find(tasks, task_id, body.username)
+    task = db.find_row('tasks', task_id, user_id=username)
     if not task:
         return fail('Task not found')
 
@@ -271,60 +307,74 @@ def update_task(task_id: str, body: UpdateTask):
     if 'due_date' in sent:
         task['due_date'] = body.due_date
     if 'subject' in sent:
-        task['subject'] = _subject(body.subject, body.username)
+        task['subject'] = _subject(body.subject, username)
+    # Resolved as a pair even when only one of them is sent, because a
+    # checkpoint is only meaningful against its own goal: re-running both
+    # through `_link` is what stops a task keeping a milestone belonging to the
+    # goal it was just moved off.
+    if 'goal_id' in sent or 'milestone_id' in sent:
+        wanted_goal = body.goal_id if 'goal_id' in sent else task.get('goal_id')
+        wanted_stone = body.milestone_id if 'milestone_id' in sent else task.get('milestone_id')
+        task['goal_id'], task['milestone_id'] = _link(wanted_goal, wanted_stone, username)
     if 'completed' in sent:
         task['status'] = 'done' if body.completed else 'todo'
         # Record the completion time (the task's "end") when finishing; clear it
         # when re-opening. A task with no due date uses this as its calendar end.
         task['completed_at'] = datetime.now().isoformat() if body.completed else None
 
-    db.save_tasks(tasks)
+    db.save_task(task, username)
     return ok()
 
 
 @router.delete('/api/tasks/{task_id}')
-def delete_task_by_id(task_id: str, username: str = ''):
-    _delete(task_id, username or None)
+def delete_task_by_id(task_id: str, username: str = Depends(current_username)):
+    if not _delete(task_id, username):
+        return fail('Task not found')
     return ok()
 
 
 @router.post('/api/add_task')
-def add_task(body: CreateTask):
+def add_task(body: CreateTask,
+             username: str = Depends(current_username)):
     """Older name for POST /api/tasks."""
-    return _create(body)
+    return _create(body, username)
 
 
 @router.post('/api/delete_task')
-def delete_task(body: DeleteTask):
+def delete_task(body: DeleteTask, username: str = Depends(current_username)):
     """Older name for DELETE /api/tasks/<id>, with the id in the body."""
-    _delete(body.id, body.username)
+    if not _delete(body.id, username):
+        return fail('Task not found')
     return ok()
 
 
 @router.post('/api/delete_task_no_tracking')
-def delete_task_no_tracking(body: DeleteTask):
+def delete_task_no_tracking(body: DeleteTask,
+                            username: str = Depends(current_username)):
     """Drop a task without any XP / streak / count side effects.
 
     Used when a timer is terminated: the task never happened, so nothing about
     the account's progression should move.
+
+    Scoped to the caller: `_delete` with no username matches on the id alone,
+    which is every task in the table and not just this account's.
     """
-    _delete(body.id)
+    if not _delete(body.id, username):
+        return fail('Task not found')
     return ok()
 
 
 @router.post('/api/update_task_due_date')
-def update_task_due_date(body: UpdateDueDate):
+def update_task_due_date(body: UpdateDueDate, username: str = Depends(current_username)):
     """Push a task's due date out — the "add more time" button."""
-    if not body.id or not body.username or not body.due_date:
+    if not body.id or not username or not body.due_date:
         return fail('Missing required fields')
 
-    tasks = db.tasks()
-    task = _find(tasks, body.id, body.username)
+    task = db.find_row('tasks', body.id, user_id=username)
     if not task:
         return fail('Task not found')
 
-    task['due_date'] = body.due_date
-    db.save_tasks(tasks)
+    db.update_row('tasks', body.id, {'due_date': body.due_date}, user_id=username)
     return ok()
 
 
@@ -332,11 +382,12 @@ def update_task_due_date(body: UpdateDueDate):
 # Status and timers
 # --------------------------------------------------------------------------
 @router.post('/api/get_task_status')
-def get_task_status(body: TaskId):
+def get_task_status(body: TaskId,
+                    username: str = Depends(current_username)):
     if not body.task_id:
         return fail('Task ID required')
 
-    task = _find(db.tasks(), body.task_id)
+    task = db.find_row('tasks', body.task_id, user_id=username)
     if not task:
         return fail('Task not found')
 
@@ -345,19 +396,17 @@ def get_task_status(body: TaskId):
 
 
 @router.post('/api/timer_expired')
-def timer_expired(body: TaskId):
+def timer_expired(body: TaskId,
+                  username: str = Depends(current_username)):
     """Record that a task's timer ran out before it was finished."""
     if not body.task_id:
         return fail('Task ID required')
 
-    tasks = db.tasks()
-    task = _find(tasks, body.task_id)
-    if not task:
+    if not db.find_row('tasks', body.task_id, user_id=username):
         return fail('Task not found')
 
-    task['timer_expired'] = True
-    task['status'] = 'expired'
-    db.save_tasks(tasks)
+    db.update_row('tasks', body.task_id,
+                  {'timer_expired': True, 'status': 'expired'}, user_id=username)
 
     return ok(message='Timer expiration recorded', task_id=body.task_id)
 
@@ -366,16 +415,15 @@ def timer_expired(body: TaskId):
 # Completion
 # --------------------------------------------------------------------------
 @router.post('/api/complete_task')
-def complete_task(body: CompleteTask):
-    if not body.username or not body.task_id:
+def complete_task(body: CompleteTask, username: str = Depends(current_username)):
+    if not username or not body.task_id:
         return fail('Username and task_id required')
 
-    tasks = db.tasks()
-    task = _find(tasks, body.task_id, body.username)
+    task = db.find_row('tasks', body.task_id, user_id=username)
     if not task:
         return fail('Task not found')
 
-    users, user = load_user(body.username)
+    _, user = load_user(username)
     if not user:
         return fail('User not found')
 
@@ -397,16 +445,20 @@ def complete_task(body: CompleteTask):
     if due_dt is not None:
         task['met_deadline'] = now <= due_dt
 
-    # XP in, level recalculated, streak extended.
+    # One row written, not a whole table. This used to be `db.save_tasks(tasks)`
+    # + `db.save_users(users)` — a DELETE and a full re-INSERT of every task in
+    # the system and every account, to mark one checkbox.
+    db.save_task(task, username)
+
+    # XP in, level recalculated, streak extended. Writes the account row itself,
+    # adding in SQL so two completions at once cannot cancel each other out —
+    # see the note on it.
     levels = xp_tracking.award_task_completion(user, xp_reward)
 
-    db.save_tasks(tasks)
-    db.save_users(users)
-
-    xp_tracking.log_event(body.username, xp_reward, 'task_completion', tasks_completed=1)
+    xp_tracking.log_event(username, xp_reward, 'task_completion', tasks_completed=1)
 
     # Count this completion toward the user's active "complete N tasks" goals.
-    apply_task_completion(body.username)
+    apply_task_completion(username)
 
     return ok(
         message='Task completed successfully!',
@@ -423,7 +475,7 @@ def complete_task(body: CompleteTask):
 
 
 @router.post('/api/rate_task')
-def rate_task(body: RateTask):
+def rate_task(body: RateTask, username: str = Depends(current_username)):
     """Record what the person said about a task they just finished.
 
     A separate call from `/api/complete_task` on purpose. Completing is the act
@@ -438,18 +490,21 @@ def rate_task(body: RateTask):
     silently filing it as a 5 would put a number in the record that nobody
     chose.
     """
-    if not body.username or not body.task_id:
+    if not username or not body.task_id:
         return fail('Username and task_id required')
 
-    if body.difficulty is None and body.execution is None:
+    # `is None` rather than falsiness, and the difference matters for exactly
+    # one case: `reason: ""` is not an empty request, it is the answer being
+    # taken back. Treating it as nothing to record made the clear below
+    # unreachable.
+    if body.difficulty is None and body.execution is None and body.reason is None:
         return fail('Nothing to record.')
 
     for name, value in (('Difficulty', body.difficulty), ('Execution', body.execution)):
         if value is not None and not (RATING_RANGE[0] <= value <= RATING_RANGE[1]):
             return fail('{} must be between {} and {}.'.format(name, *RATING_RANGE))
 
-    tasks = db.tasks()
-    task = _find(tasks, body.task_id, body.username)
+    task = db.find_row('tasks', body.task_id, user_id=username)
     if not task:
         return fail('Task not found')
 
@@ -457,22 +512,33 @@ def rate_task(body: RateTask):
         task['difficulty'] = int(body.difficulty)
     if body.execution is not None:
         task['execution'] = int(body.execution)
+    if body.reason is not None:
+        if not body.reason:
+            # An empty string is the answer being taken back — the prompt sends
+            # one when the chosen chip is clicked again.
+            task['reason'] = None
+        elif body.reason in ALL_REASONS:
+            task['reason'] = body.reason
+        # A word this build has never heard of is ignored, not stored and not
+        # treated as a clear. Dropped rather than rejected for the reason
+        # `_subject` gives — the stars the reader did answer are worth keeping
+        # — but it must not erase an answer that is already there, which is
+        # what filing it as None would do.
 
-    db.save_tasks(tasks)
+    db.save_task(task, username)
 
     return ok(
         task_id=body.task_id,
         difficulty=task.get('difficulty'),
         execution=task.get('execution'),
+        reason=task.get('reason'),
     )
 
 
 @router.get('/api/last_task_completion')
-def last_task_completion(username: str = ''):
+def last_task_completion(username: str = Depends(current_username)):
     """The most recent completed-task XP. The goals page polls this so a
     dashboard completion signals through to its console."""
-    if not username:
-        return fail('Username required')
 
     latest = xp_tracking.last_task_completion(username)
     if latest is None:

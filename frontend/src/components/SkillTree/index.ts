@@ -4,19 +4,23 @@
  * Every piece here is fed rather than deriving anything: hand them a graph in
  * the shape utils/skillGraph describes and they draw it, whatever it holds.
  * What builds the graph is somebody else's problem, deliberately — see
- * utils/skillGraphFromTrees, which is today's answer and is meant to be
- * replaceable without touching a line in this folder.
+ * `graphFromSubjectTree` in skills/subjectTrees, which is today's answer and is
+ * meant to be replaceable without touching a line in this folder.
  */
 export { SkillTree, ZOOM } from './SkillTree';
 export type { SkillTreeProps } from './SkillTree';
 export { SkillNode } from './SkillNode';
 export type { SkillNodeProps } from './SkillNode';
+export { FocusTopics } from './FocusTopics';
+export type { FocusTopicsProps } from './FocusTopics';
+export { SubjectRail } from './SubjectRail';
+export type { RailHit, SubjectRailProps } from './SubjectRail';
+export { LatticeNode } from './LatticeNode';
+export type { LatticeNodeProps } from './LatticeNode';
+export { LatticePanel } from './LatticePanel';
+export type { LatticePanelProps } from './LatticePanel';
 export { SkillConnection } from './SkillConnection';
 export type { SkillConnectionProps } from './SkillConnection';
-export { NodeDetailPanel } from './NodeDetailPanel';
-export type { NodeDetailPanelProps } from './NodeDetailPanel';
-export { SkillTreeToolbar } from './SkillTreeToolbar';
-export type { SkillTreeToolbarProps } from './SkillTreeToolbar';
 export { ProgressIndicator } from './ProgressIndicator';
 export type { ProgressIndicatorProps } from './ProgressIndicator';
 export { NodeStatusBadge } from './NodeStatusBadge';

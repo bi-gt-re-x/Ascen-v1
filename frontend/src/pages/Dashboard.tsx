@@ -31,6 +31,7 @@ import {
   DailyQuote,
   FocusCard,
   FocusPanel,
+  GoalReached,
   LevelUp,
   RecentActivity,
   StreakCard,
@@ -40,6 +41,7 @@ import {
   TopPriorities,
   WeeklyOverview,
   XpCard,
+  useCrossing,
 } from '@/components/Dashboard';
 import { RatePrompt } from '@/components/Tasks';
 import {
@@ -49,12 +51,13 @@ import {
   topPriorities,
   weekSummary,
 } from '@/components/Dashboard/summary';
-import { useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
-import { useFocusSession } from '@/hooks/useFocusSession';
+import { useDocumentTitle, usePageEntrance, useSettings, useSubjectIndex, useUserData } from '@/hooks';
+import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
-import { dates } from '@/utils';
+import { weekStartDay } from '@/services/settings';
+import { dates, format } from '@/utils';
 import { isoStamp } from '@/utils/calendarGrid';
-import type { TaskTab } from '@/components/Dashboard';
+import type { GoalNews, TaskTab } from '@/components/Dashboard';
 import type { NewTask } from '@/services/tasks';
 import type { Task } from '@/types';
 import '@/styles/dashboard.css';
@@ -66,6 +69,7 @@ export default function Dashboard() {
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const session = useFocusSession(username);
   const subjects = useSubjectIndex(username);
+  const { prefs, dailyGoal, displayName } = useSettings();
 
   const [tab, setTab] = useState<TaskTab>('today');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -74,14 +78,17 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false);
   /** The level to celebrate, set when a completion crosses a level boundary. */
   const [levelled, setLevelled] = useState<number | null>(null);
+  /** The daily goal just reached, if one has been. See GoalReached. */
+  const [news, setNews] = useState<GoalNews | null>(null);
 
   // Today is read once per render rather than per panel, so a page left open
   // across midnight moves all of its cards over on the same tick.
   const now = new Date();
   const todayIso = dates.isoDate(now);
-  const monday = dates.startOfWeek(now);
-  const mondayIso = dates.isoDate(monday);
-  const sundayIso = dates.isoDate(dates.addDays(monday, 6));
+  // The week the account counts in — Monday unless they have said Sunday.
+  const opens = dates.startOfWeek(now, weekStartDay(prefs));
+  const mondayIso = dates.isoDate(opens);
+  const sundayIso = dates.isoDate(dates.addDays(opens, 6));
 
   const tasks = useMemo(() => data?.tasks ?? [], [data]);
   const buckets = useMemo(() => bucketTasks(tasks, todayIso), [tasks, todayIso]);
@@ -93,13 +100,58 @@ export default function Dashboard() {
   const priorities = useMemo(() => topPriorities(buckets.today), [buckets.today]);
   const activity = useMemo(() => recentActivity(tasks), [tasks]);
 
+  // ---- Reaching a goal ----------------------------------------------------
+  /* The two figures the dashboard already draws against a target, watched for
+     the moment they arrive at it. Whichever gets there first has the screen:
+     `current ?? next` keeps a second crossing in the same breath — a task
+     finished while the timer runs past the hour — from stacking a card on top
+     of the one already up. See components/Dashboard/GoalReached. */
+  const announce = useCallback((next: GoalNews) => {
+    setNews((current) => current ?? next);
+  }, []);
+
+  const xpGoal = Math.max(1, Math.round(dailyGoal));
+  const focusGoal = Math.max(1, Math.round(session.goalHours * 3600));
+
+  useCrossing(
+    day.xp,
+    xpGoal,
+    // Not before the account's tasks are on the page: today's XP reads as zero
+    // until then, and the jump off that placeholder is not a day being won.
+    data !== null,
+    useCallback(
+      () =>
+        announce({
+          kind: 'xp',
+          target: `${format.number(xpGoal)} XP`,
+          reached: `${format.number(day.xp)} XP`,
+        }),
+      [announce, day.xp, xpGoal],
+    ),
+  );
+
+  useCrossing(
+    Math.round(session.focused),
+    focusGoal,
+    true,
+    useCallback(
+      () =>
+        announce({
+          kind: 'focus',
+          target: fmtHM(focusGoal),
+          reached: fmtHM(session.focused),
+        }),
+      [announce, focusGoal, session.focused],
+    ),
+  );
+
   const complete = useCallback(
     async (task: Task) => {
       if (!username) return;
       setBusyId(task.id);
       setFailure(null);
       try {
-        const result = await taskService.completeTask(username, task.id);
+        const result = await taskService.completeTask(task.id);
         if (!result.success) {
           setFailure(result.message);
           // The page can no longer vouch for what it is showing, so this is
@@ -155,9 +207,15 @@ export default function Dashboard() {
         // moves those numbers.
         window.dispatchEvent(new Event(STATS_CHANGED));
 
-        // Ask how it went, now that the work is banked. Nothing waits on the
-        // answer — see `rating` below and components/Tasks/RatePrompt.
-        setRating({ id: String(task.id), name: task.title });
+        // Ask how it went, now that the work is banked — unless the reader
+        // has turned the questions off in Settings, which this used to ignore
+        // while the tasks page honoured it. One preference, two places a task
+        // is finished, and it has to mean the same thing in both. Nothing
+        // waits on the answer — see `rating` below and
+        // components/Tasks/RatePrompt.
+        if (prefs.rating_depth !== 'none') {
+          setRating({ id: String(task.id), name: task.title });
+        }
       } catch (cause) {
         setFailure(
           cause instanceof Error ? cause.message : 'Could not complete that task.',
@@ -167,7 +225,7 @@ export default function Dashboard() {
         setBusyId(null);
       }
     },
-    [username, mutate, reload, data],
+    [username, mutate, reload, data, prefs.rating_depth],
   );
 
   // ---- Rating a finished task ---------------------------------------------
@@ -181,11 +239,11 @@ export default function Dashboard() {
   const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
 
   const saveRating = useCallback(
-    (values: { difficulty?: number; execution?: number }) => {
+    (values: { difficulty?: number; execution?: number; reason?: string }) => {
       const target = rating;
       setRating(null);
       if (!username || !target) return;
-      void taskService.rateTask(username, target.id, values).then((result) => {
+      void taskService.rateTask(target.id, values).then((result) => {
         if (!result.success) return;
         mutate((current) => ({
           ...current,
@@ -204,7 +262,7 @@ export default function Dashboard() {
       setSaving(true);
       setFailure(null);
       try {
-        const result = await taskService.createTask(username, task);
+        const result = await taskService.createTask(task);
         if (!result.success) {
           setFailure(result.message);
           return;
@@ -253,11 +311,16 @@ export default function Dashboard() {
   // re-read, and their figures travel to the new values instead of being
   // rebuilt from zero (hooks/useCountUp.ts). A reload that fails keeps the page
   // and says so in the banner below rather than replacing it.
+  /* The arrival cascade. Bound to the data rather than to `loading`, which is
+     true again on every re-read — the page arrives once, when it first has
+     something to show. See hooks/usePageEntrance. */
+  const entering = usePageEntrance(Boolean(data));
+
   if (loading && !data) return <Loading label="Loading your dashboard" />;
   if (!data) return <ErrorState message={error ?? 'No data came back.'} onRetry={reload} />;
 
   return (
-    <div className="dash">
+    <div className={`dash${entering ? ' pg-enter' : ''}`}>
       {/* The same background the landing page has, minus the glow that follows
           the pointer — see components/Ambient.tsx. */}
       <Ambient />
@@ -267,9 +330,15 @@ export default function Dashboard() {
       <header className="dash-greeting">
         <div>
           <h1 className="dash-hello">
-            {dates.greeting(now)}, {username}! <span aria-hidden="true">👋</span>
+            {/* The display name if the account has set one, the username if
+                not — the rule public_user applies in backend/tracking/auth.py.
+                This greeted people by their username whatever they had typed
+                into Settings, which made "Display name" a field that stored a
+                value and changed nothing. */}
+            {dates.greeting(now)}, {displayName || username}!{' '}
+            <span aria-hidden="true">👋</span>
           </h1>
-          <p className="dash-sub">Ready to crush your goals today?</p>
+          <p className="dash-sub">Here is your day.</p>
         </div>
         <div className="dash-datebar">
           <p className="dash-date">
@@ -290,19 +359,27 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="dash-stats">
-        <TodayCard day={day} />
-        <XpCard stats={data.stats} xpToday={day.xp} />
-        <FocusCard session={session} />
-        <StreakCard stats={data.stats} />
-      </div>
+      {/* Both rows are preferences. A reader who does not want the figures
+          gets the task list at the top of the page rather than a gap where
+          they were — see Settings, Dashboard. */}
+      {prefs.show_stats && (
+        <div className="dash-stats pg-stagger">
+          <TodayCard day={day} />
+          <XpCard stats={data.stats} xpToday={day.xp} dailyGoal={dailyGoal} />
+          <FocusCard session={session} />
+          <StreakCard stats={data.stats} />
+        </div>
+      )}
 
       {/* Whichever went wrong last: the write the reader just asked for, or the
           re-read behind it. Both are shown here, over the page they failed to
           change, rather than in place of it. */}
       {(failure ?? error) && <ErrorState message={failure ?? error ?? ''} />}
 
-      <div className="dash-main">
+      {/* The focus panel is a preference too, and hiding it widens the task
+          list rather than leaving a hole where it was — see `.is-solo` in
+          styles/dashboard-home.css. */}
+      <div className={`dash-main${prefs.show_focus ? '' : ' is-solo'}`}>
         <TaskPanel
           buckets={buckets}
           tab={tab}
@@ -312,36 +389,58 @@ export default function Dashboard() {
           onComplete={(task) => void complete(task)}
           onAdd={() => setAdding(true)}
         />
-        <FocusPanel session={session} />
+        {prefs.show_focus && <FocusPanel session={session} />}
       </div>
 
-      <div className="dash-insights">
-        <WeeklyOverview week={week} />
-        <TopPriorities tasks={priorities} />
-        <RecentActivity entries={activity} />
-      </div>
+      {prefs.show_insights && (
+        <div className="dash-insights">
+          <WeeklyOverview week={week} />
+          <TopPriorities tasks={priorities} />
+          <RecentActivity entries={activity} />
+        </div>
+      )}
 
-      <DailyQuote />
+      {prefs.show_quote && <DailyQuote />}
 
       {levelled !== null && <LevelUp level={levelled} onDone={() => setLevelled(null)} />}
+
+      {/* Behind the level-up for the same reason the rating prompt is behind
+          both: one completion can set off all three, and a day's goal being
+          reached is worth its own beat rather than a card appearing over a
+          badge that is still bursting. */}
+      {news && levelled === null && (
+        <GoalReached
+          kind={news.kind}
+          target={news.target}
+          reached={news.reached}
+          onClose={() => setNews(null)}
+        />
+      )}
 
       {/* Held behind the level-up, not raced against it. Both are triggered by
           the same completion, and a dialog that lands on top of the
           celebration would cover the one moment the app is allowed to be
           pleased with somebody. `levelled` clears itself when the animation
           finishes, and this appears then. */}
-      {rating && levelled === null && (
+      {rating && levelled === null && news === null && (
         <RatePrompt
           taskName={rating.name}
+          depth={prefs.rating_depth}
           onSubmit={saveRating}
           onClose={() => setRating(null)}
         />
       )}
 
+      {/* The same two defaults the tasks page's composer opens on. This dialog
+          used to start every task at the floor of the XP scale, which made
+          "Default XP" a preference one of the app's two Add Task forms had
+          never heard of. */}
       <TaskModal
         open={adding}
         busy={saving}
         username={username}
+        defaultXp={prefs.default_xp}
+        defaultPriority={prefs.default_priority}
         onClose={() => setAdding(false)}
         onAdd={(task) => void addTask(task)}
       />

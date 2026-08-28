@@ -23,9 +23,10 @@ back — the best is read, never stored — so there is nothing to keep honest.
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking.auth import load_user
@@ -80,7 +81,6 @@ def _number(raw):
 
 
 class SaveRecord(BaseModel):
-    username: Optional[str] = None
     #: Absent on a create, present on an edit. The row's own id, never reused.
     id: Optional[str] = None
     kind: str = 'record'
@@ -94,7 +94,6 @@ class SaveRecord(BaseModel):
 
 
 class DeleteRecord(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
 
 
@@ -106,7 +105,7 @@ def _mine(username):
     Applied here rather than in the client for the reason notes.py gives — one
     ordering, decided once.
     """
-    rows = [row for row in db.records() if row.get('user_id') == username]
+    rows = db.rows_for('records', username)
     rows.sort(
         key=lambda row: (
             0 if row.get('achieved_on') else 1,
@@ -135,7 +134,7 @@ def _clean(entry: SaveRecord):
 
 
 @router.get('/api/records')
-def list_records(username: str = ''):
+def list_records(username: str = Depends(current_username)):
     """Every record and milestone this account has, in the page's order."""
     if not _known(username):
         return fail('Sign in to see your records.')
@@ -143,54 +142,47 @@ def list_records(username: str = ''):
 
 
 @router.post('/api/records/save')
-def save_record(entry: SaveRecord):
+def save_record(entry: SaveRecord, username: str = Depends(current_username)):
     """Create a record or milestone, or replace the writable fields of one."""
-    if not _known(entry.username):
+    if not _known(username):
         return fail('Sign in to add a record.')
 
     fields = _clean(entry)
     if not fields['name']:
         return fail('A record needs a name.')
 
-    rows = db.records()
-
     if entry.id:
-        row = next((r for r in rows
-                    if r.get('id') == entry.id and r.get('user_id') == entry.username), None)
+        row = db.find_row('records', entry.id, user_id=username)
         # Not silently created: making a new row out of a failed edit is how an
         # account ends up with two of something it meant to change once.
         if not row:
             return fail('That record no longer exists.')
         row.update(fields)
         row['updated_at'] = _now()
+        db.update_row('records', row['id'],
+                      {**fields, 'updated_at': row['updated_at']}, user_id=username)
         saved = row
     else:
         saved = {
             'id': str(db.new_id('records')),
-            'user_id': entry.username,
+            'user_id': username,
             **fields,
             'created_at': _now(),
             'updated_at': _now(),
         }
-        rows.append(saved)
+        saved = db.insert_row('records', saved)
 
-    db.save_records(rows)
     return ok(record=saved)
 
 
 @router.post('/api/records/delete')
-def delete_record(body: DeleteRecord):
+def delete_record(body: DeleteRecord, username: str = Depends(current_username)):
     """Remove one row. Only ever this account's own."""
-    if not _known(body.username):
+    if not _known(username):
         return fail('Sign in to delete a record.')
     if not body.id:
         return fail('Record ID required')
 
-    rows = db.records()
-    keep = [r for r in rows
-            if not (r.get('id') == body.id and r.get('user_id') == body.username)]
-    if len(keep) == len(rows):
+    if not db.delete_row('records', body.id, user_id=username):
         return fail('Record not found')
-
-    db.save_records(keep)
     return ok(id=body.id)

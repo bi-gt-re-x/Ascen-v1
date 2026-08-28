@@ -29,8 +29,15 @@
  * inserted at the top of <body>, so it comes and goes with the page instead of
  * outliving it — leaving a canvas running behind a page that has moved on was
  * never the intent, it just could not be expressed before.
+ *
+ * **It can be turned off entirely** (Settings, Appearance). Off means nothing
+ * is rendered at all rather than a hidden layer: the point of the switch is a
+ * page with no canvas and no loop behind it, which a `display: none` would not
+ * have given. `reduced` already stops the motion; this is for a reader who
+ * wants the plain background as well.
  */
 import { useEffect, useRef, useState } from 'react';
+import { useSettings } from '@/hooks/useSettings';
 import { reduced } from '@/utils/homePlay';
 import '@/styles/ambient.css';
 
@@ -52,6 +59,8 @@ export interface AmbientProps {
 }
 
 export function Ambient({ cursor = false }: AmbientProps) {
+  const { prefs } = useSettings();
+  const on = prefs.show_ambient;
   const layer = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const glow = useRef<HTMLDivElement>(null);
@@ -63,18 +72,22 @@ export function Ambient({ cursor = false }: AmbientProps) {
     return () => clearTimeout(timer);
   }, []);
 
+  // `on` is a dependency for the same reason `cursor` is: turning the
+  // background off has to stop the loop, not just stop drawing it.
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || !on) return;
     return startParticles(canvas.current);
-  }, []);
+  }, [on]);
 
   // `cursor` is a dependency rather than a guard inside the effect, so turning
   // it off unbinds the pointer listeners instead of leaving them running over
   // an element that is no longer there.
   useEffect(() => {
-    if (reduced || !cursor) return;
+    if (reduced || !cursor || !on) return;
     return startCursorGlow(glow.current);
-  }, [cursor]);
+  }, [cursor, on]);
+
+  if (!on) return null;
 
   return (
     <div

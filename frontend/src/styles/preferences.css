@@ -1,0 +1,120 @@
+/* ==========================================================================
+   preferences.css — the two settings that are applied to the document.
+
+   Most preferences are read by the component they affect. These two are not:
+   they are attributes on <html>, written by context/SettingsProvider, and
+   everything else follows from the rules here.
+
+   That is deliberate. An accent colour threaded through components would mean
+   every card, bar and link taking a prop it does not otherwise need; and the
+   pages ported from the older stylesheets have no components to thread it
+   through at all. One attribute and a token override reaches all of them.
+   ========================================================================== */
+
+/* ---------- Accent --------------------------------------------------------
+   Each page declares its own accent token — .gx-page has --gx-violet, .st-page
+   has --st-violet, and so on — because each was written as a self-contained
+   sheet. That is a finite list, so an accent choice is one source colour per
+   accent and a block that points every one of those names at it.
+
+   **The pointing has to happen on the page's own element, not on :root.** This
+   block used to set `--gx-violet: var(--accent-mid)` on `:root[data-accent]`
+   and rely on inheritance to carry it down, and it never once changed a
+   colour: a custom property declared *directly on an element* always beats the
+   same property inherited from an ancestor, however specific the ancestor's
+   selector is. Specificity only settles a fight between declarations matching
+   the same element, and `.gx-page { --gx-violet: #6d5ae0 }` was the only
+   declaration matching .gx-page. So the selectors below name the elements that
+   declare these tokens, and each one out-specifies both that page's own
+   declaration and its dark-theme override.
+
+   `violet` is the built-in and has no block: SettingsProvider removes the
+   attribute at that value, so the pages' own defaults stand and the selectors
+   below never match. Nothing is overridden to what it already was. */
+
+/* One source colour per accent per theme, so the twenty names below are
+   written once each rather than once per accent. Named `--pref-*` rather than
+   `--accent-*` because two of the sheets this block writes into declare an
+   `--accent-soft` of their own, and a property cannot be defined in terms of
+   itself. */
+:root[data-accent="blue"]  { --pref-accent: #2f6fd0; --pref-accent-2: #6a9bff; }
+:root[data-accent="green"] { --pref-accent: #1f8a54; --pref-accent-2: #46c483; }
+:root[data-accent="amber"] { --pref-accent: #b8791f; --pref-accent-2: #e0b23c; }
+:root[data-accent="rose"]  { --pref-accent: #c0395f; --pref-accent-2: #f2778f; }
+:root[data-accent="slate"] { --pref-accent: #4a5568; --pref-accent-2: #8b97ab; }
+
+/* Dark wants the lighter of the pair as its base, for the same reason every
+   page's dark block lifts its own accent: a mid-tone that reads as colour on
+   white reads as mud on near-black. */
+html[data-theme="dark"]:root[data-accent="blue"]  { --pref-accent: #6a9bff; }
+html[data-theme="dark"]:root[data-accent="green"] { --pref-accent: #46c483; }
+html[data-theme="dark"]:root[data-accent="amber"] { --pref-accent: #e0b23c; }
+html[data-theme="dark"]:root[data-accent="rose"]  { --pref-accent: #f2778f; }
+html[data-theme="dark"]:root[data-accent="slate"] { --pref-accent: #8b97ab; }
+
+/* Every page's own name for "the accent", pointed at the chosen one.
+   Listed rather than globbed because CSS cannot glob a custom property, and
+   because the list being explicit is what makes it checkable: a page added
+   later without a line here keeps its own colour, which is a visible miss
+   rather than a silent one.
+
+   Each selector is (0,3,0) or better against a page's own (0,1,0) and its dark
+   block's (0,2,1), so it wins in both themes without !important and without
+   caring which stylesheet the bundler emits last. */
+:root[data-accent] .ac-page,
+:root[data-accent] .ax-page,
+:root[data-accent] .gx-page,
+:root[data-accent] .nt-page,
+:root[data-accent] .rc-page,
+:root[data-accent] .st-page,
+:root[data-accent] .stx-page,
+:root[data-accent] .tk-page,
+:root[data-accent] .home-main,
+:root[data-accent] .subject-picker,
+:root[data-accent] .tk-rate-backdrop,
+:root[data-accent] .gr-scope,
+:root[data-accent] #monthView {
+    --ac-violet: var(--pref-accent);
+    --ax-violet: var(--pref-accent);
+    --gx-violet: var(--pref-accent);
+    --st-violet: var(--pref-accent);
+    --stx-violet: var(--pref-accent);
+    --tk-violet: var(--pref-accent);
+    --rc-violet: var(--pref-accent);
+    --rc-accent: var(--pref-accent);
+    --rc-accent-2: var(--pref-accent-2);
+    --nt-accent: var(--pref-accent);
+    --nt-accent-2: var(--pref-accent-2);
+    --rt-accent: var(--pref-accent);
+    --sp-accent: var(--pref-accent);
+    /* The landing page's second colour is deliberately not here. --lp-accent-2
+       is the green in its charts and its "up" arrows, not a lighter accent,
+       and pointing it at one turned a green figure violet. */
+    --lp-accent: var(--pref-accent);
+    --mv-accent: var(--pref-accent);
+    /* The tints. These are backgrounds a card or a tile sits behind the
+       accent's own ink on, so they are the accent at low opacity rather than
+       one of the two source colours — which also means one value works in both
+       themes, compositing over whatever is actually behind it. */
+    --mv-accent-soft: color-mix(in srgb, var(--pref-accent) 12%, transparent);
+    --accent: var(--pref-accent);
+    --accent-deep: color-mix(in srgb, var(--pref-accent) 82%, #000);
+    --accent-soft: color-mix(in srgb, var(--pref-accent) 12%, transparent);
+}
+
+/* ---------- Reduce motion -------------------------------------------------
+   The same thing the OS-level setting does, from inside the app, for a reader
+   whose device is not set that way but whose eyes are.
+
+   Not `animation: none`: an animation that never runs also never fires its
+   `animationend`, and anything waiting on one would hang. A duration near
+   zero ends immediately and still fires, which is the standard shape of this
+   rule for exactly that reason. */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+}

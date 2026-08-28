@@ -16,27 +16,20 @@
  * utils/growthFocus, growthSkills, growthBench and growthChapters, and they
  * share their furniture through ChapterParts so the four read as one system.
  *
- * `GrowthChart` is the canvas the Overview's chart panel drew into, and its
- * drawing lives in utils/growthChart.ts, which knows nothing about React. It is
- * still exported and nothing mounts it — kept because it is the only renderer
- * for the five XP and focus series, and the analytics page's own trajectory
- * chart is a different chart rather than a replacement for it.
+ * A fifth thing used to be described here: `GrowthChart`, the canvas the
+ * Overview's chart panel drew into, kept along with its renderer in
+ * utils/growthChart.ts because it was the only drawing code for the five XP
+ * and focus series. The component was deleted with the rest of the unrendered
+ * ones and this paragraph outlived it, still saying it was "still exported" —
+ * which is how its 675-line renderer went on being kept for a caller that no
+ * longer existed. Both are gone now. If those five series are ever wanted
+ * again they are five reads of the day series, not a lost renderer.
  */
-export { GrowthChart } from './GrowthChart';
-export type { GrowthChartProps } from './GrowthChart';
-export { LongTermChapter } from './Chapters';
-export type { LongTermChapterProps } from './Chapters';
 export { FocusChapter } from './FocusChapter';
 export type { FocusChapterProps } from './FocusChapter';
 export { SkillsChapter } from './SkillsChapter';
 export type { SkillsChapterProps } from './SkillsChapter';
 export { BenchmarksChapter } from './BenchmarksChapter';
 export type { BenchmarksChapterProps } from './BenchmarksChapter';
-export { LongTermChart, Sparkline, TrendChart } from './MiniChart';
-export type {
-  LongTermChartProps,
-  SparklineProps,
-  TrendChartProps,
-} from './MiniChart';
 /** What the chapters share — see the note at the top of GrowthPanels. */
 export { CountValue, Glyph, Hint } from './GrowthPanels';

@@ -7,16 +7,42 @@
  * panel file holds the panels that share a row, because that is the unit that
  * changes together when the layout does.
  *
- * The graded report card that used to be this page — `GradeCard`,
- * `ScoringDetails`, `metrics.ts` — is still here and still exported. Nothing
- * renders it since the redesign; its five scores survive as the Growth Score
- * tile, which reads the same endpoint. Kept rather than deleted because it is
- * the only thing that explains how a score is arrived at, and the new page
- * links to that explanation in more than one place without owning it yet.
+ * The graded report card that used to be this page is gone. `GradeCard` and
+ * `MetricRow` were kept for a while on the argument that they were the only
+ * thing explaining how a score is arrived at — but nothing rendered them, and
+ * that explanation had already moved to `ScoringDetails`, which the Trajectory
+ * panel opens in place. Two files nobody could reach, justified by a job
+ * something else was doing. `metrics.ts` stays for `gradeClass`, which
+ * `Summary` colours the letter with.
+ *
+ * `ScoreBanner` went the same way for the same reason. It opened the Overview
+ * with the score, its letter, two paragraphs of derivation and five labelled
+ * bars — and the bars were the same five measures `ScorePanel` draws a few
+ * rows further down, on the same tab, from a second implementation of the same
+ * arithmetic (`./score` scores them out of ten, `utils/analyticalScore` out of
+ * a hundred). One row of bars is enough, and the one that sits with the chart
+ * of the score over time is the one that earns its place. `Summary` took the
+ * slot, kept the derivation behind a disclosure, and left the bars behind.
  */
-export { SinceLast } from './Header';
-export type { SinceLastProps } from './Header';
-export { Header, ViewTabs, Controls, VIEWS, viewFor } from './Header';
+/** The Goals tab, which replaced Trends. See ./GoalsView. */
+export {
+  PortfolioPanel as GoalPortfolioPanel,
+  PacePanel as GoalPacePanel,
+  NotesPanel as GoalNotesPanel,
+  SuggestPanel as GoalSuggestPanel,
+} from './GoalsView';
+
+export { Summary } from './Summary';
+export type { SummaryProps } from './Summary';
+export { NextActions } from './NextActions';
+export type { NextActionsProps } from './NextActions';
+export { DiagnosisCards, DiagnosisEmpty } from './Diagnosis';
+export { Patterns as DiscoveredPatterns } from './Patterns';
+export type { PatternsProps as DiscoveredPatternsProps } from './Patterns';
+
+export { scoreMovement } from './Header';
+export type { ScoreMovement, ScoreReading } from './Header';
+export { Header, ViewTabs, Controls, TabOpening, VIEWS, viewFor } from './Header';
 export type { HeaderProps, ViewTabsProps, ControlsProps, View, ViewKey } from './Header';
 
 export {
@@ -28,9 +54,19 @@ export {
   ConsistencyPanel as HabitConsistencyPanel,
   TimelinePanel,
   HabitOpening,
+  habitLead,
 } from './Habits';
 
-export { ComparePanel, DirectionPanel, TrendChart, TrendTiles } from './Trends';
+/* The Trends tab's four panels were exported from ./Trends, which is gone with
+   the tab — see ./GoalsView for what took its slot, and utils/trends went with
+   it since nothing else read it.
+
+   `CompoundingPanel`, `MilestonePanel` and Growth's `LongTermChapter` are the
+   three the removal left unrendered. They are still exported below and from
+   their own files, which have live siblings: each is a real panel about the
+   pace of the record rather than about goals, and Records is the tab that
+   would want them. Left placed rather than deleted, deliberately, and named
+   here so the next person does not have to work out why nothing draws them. */
 
 /** What a tab shows instead of inventing figures it does not have. */
 export { Locked } from './Locked';
@@ -40,26 +76,28 @@ export type { LockedProps } from './Locked';
 export { BaselinePanel, BaselineSetup } from './Baseline';
 export type { BaselinePanelProps, BaselineSetupProps, BaselineValues } from './Baseline';
 
+export { StatRow } from './StatRow';
+export type { Stat, StatRowProps } from './StatRow';
 export { Tiles } from './Tiles';
 export type { TilesProps } from './Tiles';
 
 /** The panels drawn from the one optional thing in the app. See ./Quality. */
-export { QualityPanel, QualityGridPanel, RatedTasksPanel } from './Quality';
+export { DepthPicker, QualityPanel, QualityGridPanel, RatedTasksPanel, ReasonsPanel } from './Quality';
 export type {
+  DepthPickerProps,
   QualityPanelProps,
   QualityGridPanelProps,
+  ReasonsPanelProps,
   RatedTasksPanelProps,
 } from './Quality';
 
 export { Trajectory, ScorePanel } from './Trajectory';
 export type { TrajectoryProps, ScorePanelProps } from './Trajectory';
 
-export { SubjectPanel, ConsistencyPanel, MilestonePanel } from './Breakdown';
+export { SubjectPanel, ConsistencyPanel } from './Breakdown';
 export type { SubjectPanelProps, ConsistencyPanelProps } from './Breakdown';
 
 export {
-  ComparisonPanel,
-  CompoundingPanel,
   StreaksPanel,
   InsightsPanel,
   StandingPanel,
@@ -69,8 +107,8 @@ export type { StreaksPanelProps, StandingPanelProps } from './Longterm';
 export {
   AreaChart,
   Columns,
-  GroupedBars,
   Panel,
+  PanelGroup,
   Radar,
   Scatter,
   Sparkline,
@@ -79,7 +117,7 @@ export {
   asTone,
   toneVar,
 } from './charts';
-export type { Tone, PanelProps, AreaSeries, BarPair, Column, RadarAxis, ScatterProps } from './charts';
+export type { Tone, PanelProps, AreaSeries, Column, RadarAxis, ScatterProps } from './charts';
 
 /**
  * The Growth Score — its five factors, and where a score places.
@@ -92,7 +130,6 @@ export type { Tone, PanelProps, AreaSeries, BarPair, Column, RadarAxis, ScatterP
 export {
   SCORE_SCALE,
   WEIGHT as SCORE_WEIGHT,
-  agreesWithOverall,
   formatPercentile,
   growthScore,
   percentileFor,
@@ -101,10 +138,26 @@ export {
 export type { GrowthScore, ScoreFactor } from './score';
 
 // The report card, no longer rendered. See the note at the top.
-export { GradeCard } from './GradeCard';
-export type { GradeCardProps } from './GradeCard';
-export { MetricRow } from './MetricRow';
-export type { MetricRowProps } from './MetricRow';
 export { ScoringDetails } from './ScoringDetails';
-export { gradeClass, metricLines } from './metrics';
-export type { MetricLine } from './metrics';
+export { gradeClass } from './metrics';
+
+/**
+ * The page's fetching and its arithmetic, each in one place.
+ *
+ * Exported from here so the page imports its parts the same way it imports its
+ * panels. Neither is a component; both are the page's own and are not meant to
+ * be reached from anywhere else.
+ */
+export { useAnalyticsData } from './useAnalyticsData';
+export { useAnalyticsModel, NEED_DAYS } from './useAnalyticsModel';
+export type { AnalyticsModel } from './useAnalyticsModel';
+export type { AnalyticsData } from './useAnalyticsData';
+
+/** The six tab bodies. Each lays out what the model already worked out. */
+export { OverviewTab } from './tabs/OverviewTab';
+export { GoalsTab } from './tabs/GoalsTab';
+export { HabitsTab } from './tabs/HabitsTab';
+export { InsightsTab } from './tabs/InsightsTab';
+export { RecommendationsTab } from './tabs/RecommendationsTab';
+export { RecordsTab } from './tabs/RecordsTab';
+export { SubjectsTab } from './tabs/SubjectsTab';

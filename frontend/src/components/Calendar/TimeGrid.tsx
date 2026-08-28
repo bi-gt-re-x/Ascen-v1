@@ -18,7 +18,6 @@ import {
   gridHours,
   hourLabel,
   nowLabel,
-  nowOffset,
   type Block,
 } from '@/utils/calendarGrid';
 
@@ -131,7 +130,3 @@ export function DayColumn({
   );
 }
 
-/** Where the now line goes on a day, or null when that day is not today. */
-export function nowFor(iso: string, todayIso: string, at: Date): number | null {
-  return iso === todayIso ? nowOffset(at) : null;
-}

@@ -1,16 +1,12 @@
 /**
- * The report card's five metrics, as rows.
+ * A letter grade as a class name.
  *
- * Every number here is the backend's. `backend/tracking/analytics.py` scores
- * each metric 0-100 and turns that into a letter; this file only decides how
- * the measured value behind the score reads in the table's "Raw Data" column.
- * A second copy of the grade boundaries would drift from the first.
- *
- * The order is METRIC_NAMES', which is the order the backend, the snapshot
- * table and the original markup all use.
+ * What is left of the report card's metrics module. It also built the five
+ * table rows for `GradeCard`, which nothing rendered and which is now deleted;
+ * this is the half that survived, because `ScoreBanner` colours its letter with
+ * it and `.grade-A` and its siblings only set `--grade-color`, which inherits.
  */
-import type { Grade, MetricName, Ratings } from '@/types';
-import { format } from '@/utils';
+import type { Grade } from '@/types';
 
 /**
  * The grade's colour class.
@@ -20,73 +16,8 @@ import { format } from '@/utils';
  * the original used before any data had arrived. See styles/growth.css.
  */
 export function gradeClass(grade: Grade | null | undefined): string {
-  return grade ? `grade-${grade}` : 'grade-none';
-}
-
-export interface MetricLine {
-  name: MetricName;
-  label: string;
-  emoji: string;
-  /** The measured value the score came from: "42 XP/day", "17/30 days". */
-  raw: string;
-  score: number;
-  grade: Grade;
-}
-
-/** The five rows, in table order. */
-export function metricLines(ratings: Ratings): MetricLine[] {
-  const m = ratings.metrics;
-
-  return [
-    {
-      name: 'productivity',
-      label: 'Productivity',
-      emoji: '🚀',
-      raw: `${format.number(m.productivity.avg_daily_xp)} XP/day`,
-      score: m.productivity.score,
-      grade: m.productivity.grade,
-    },
-    {
-      name: 'quality',
-      label: 'Quality',
-      emoji: '🎯',
-      // Difficulty × execution when there is anything rated, and the old XP
-      // proxy when there is not — with the row saying which, because those are
-      // two different measurements and a reader comparing this week to last
-      // needs to know if the basis changed underneath them. See the note on
-      // `basis` in types/models and the docstring in backend/tracking/analytics.
-      raw:
-        m.quality.basis === 'ratings'
-          ? `${m.quality.avg_quality.toFixed(1)}/${m.quality.max_quality} over ${m.quality.rated_tasks} rated`
-          : `${format.number(m.quality.avg_task_xp)} XP/task — none rated yet`,
-      score: m.quality.score,
-      grade: m.quality.grade,
-    },
-    {
-      name: 'consistency',
-      label: 'Consistency',
-      emoji: '🔥',
-      raw: `${m.consistency.active_days}/${m.consistency.total_days} days`,
-      score: m.consistency.score,
-      grade: m.consistency.grade,
-    },
-    {
-      name: 'efficiency',
-      label: 'Efficiency',
-      emoji: '⚡',
-      raw: `${m.efficiency.on_time_pct}% on-time`,
-      score: m.efficiency.score,
-      grade: m.efficiency.grade,
-    },
-    {
-      name: 'focus',
-      label: 'Focus',
-      emoji: '⏱️',
-      raw: `${format.minutes(m.focus.focused_minutes)} / ${format.minutes(
-        m.focus.goal_minutes,
-      )} focused`,
-      score: m.focus.score,
-      grade: m.focus.grade,
-    },
-  ];
+  // `A+` cannot go into a class name as it stands — `.grade-A+` is not a
+  // selector — so the one grade with a symbol in it spells the symbol out.
+  if (!grade) return 'grade-none';
+  return `grade-${grade === 'A+' ? 'Aplus' : grade}`;
 }

@@ -12,15 +12,16 @@
  */
 import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { Loading, Rail, Topbar } from '@/components';
+import { AppBoundary, Loading, Rail, Topbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
-import { useAuth, usePinnedViewport } from '@/hooks';
+import { useAuth, usePinnedViewport, useSettings } from '@/hooks';
 import Dashboard from '@/pages/Dashboard';
 // Not lazy, unlike every other page here: the routes below are generated from
 // `UNBUILT_PATHS`, so the module has to be loaded to build the routing table at
 // all. Splitting it would put the same few hundred bytes of strings in a second
 // chunk that is always already fetched.
 import Unbuilt, { PATHS as UNBUILT_PATHS } from '@/pages/Unbuilt';
+import type { Prefs } from '@/services/settings';
 
 const Homepage = lazy(() => import('@/pages/Homepage'));
 const Goals = lazy(() => import('@/pages/Goals'));
@@ -29,6 +30,8 @@ const Analytics = lazy(() => import('@/pages/Analytics'));
 const SkillTrees = lazy(() => import('@/pages/SkillTrees'));
 const Notes = lazy(() => import('@/pages/Notes'));
 const Records = lazy(() => import('@/pages/Records'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const Achievements = lazy(() => import('@/pages/Achievements'));
 const AboutUs = lazy(() => import('@/pages/AboutUs'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
@@ -40,16 +43,43 @@ const CalendarMonth = lazy(() => import('@/pages/Calendar/Month'));
 /**
  * The front door.
  *
- * Signed in goes to the dashboard, everyone else lands on the home page — the
- * rule the server route at '/' used to apply before React owned that path too
- * (backend/routes/spa.py). Waiting on `status` matters for the same reason it
- * does in RequireAccount: treating "still asking" as signed out would flash the
- * landing page at an account on its way to the dashboard.
+ * Signed in goes to whichever page the account opens on — the dashboard unless
+ * they have said otherwise (Settings, General) — and everyone else lands on the
+ * home page, the rule the server route at '/' used to apply before React owned
+ * that path too (backend/routes/spa.py). Waiting on `status` matters for the
+ * same reason it does in RequireAccount: treating "still asking" as signed out
+ * would flash the landing page at an account on its way in. It waits on the
+ * preferences too, and for the reason CalendarHome does: a redirect cannot be
+ * taken back, so opening on the default and correcting a moment later would
+ * make somebody who chose Tasks watch the dashboard load first.
  */
+const HOME_PATHS: Record<Prefs['home_page'], string> = {
+  dashboard: '/dashboard',
+  tasks: '/tasks',
+  calendar: '/calendar',
+  goals: '/goals',
+  analytics: '/analytics',
+  notes: '/notes',
+};
+/**
+ * `/calendar` itself, which is a redirect to whichever view the account
+ * prefers. It waits for `ready` rather than redirecting on the default and
+ * correcting: a navigation cannot be taken back, and a reader who chose Month
+ * would watch the week open and then jump.
+ */
+function CalendarHome() {
+  const { prefs, ready } = useSettings();
+  if (!ready) return <Loading />;
+  return <Navigate to={`/calendar/${prefs.calendar_view}`} replace />;
+}
+
 function FrontDoor() {
   const { status } = useAuth();
+  const { prefs, ready } = useSettings();
   if (status === 'loading') return <Loading />;
-  return <Navigate to={status === 'signed-in' ? '/dashboard' : '/home'} replace />;
+  if (status !== 'signed-in') return <Navigate to="/home" replace />;
+  if (!ready) return <Loading />;
+  return <Navigate to={HOME_PATHS[prefs.home_page] ?? '/dashboard'} replace />;
 }
 
 /**
@@ -120,9 +150,16 @@ export default function App() {
       {!landing && <Rail />}
       {/* Beside the rail rather than above it: the rail owns the full height
           and the bar starts at `--rail-w`. Outside the router with the rail,
-          so its one account read happens once for the session. */}
+          so neither is torn down and rebuilt on every navigation. The account
+          read they both show is not theirs any more — it belongs to
+          UserDataProvider above them, and happens once for the session. */}
       {!landing && <Topbar />}
       <main className="app-main">
+        {/* Inside the shell, so a page that throws loses the page and not the
+            rail, the top bar and the way back. Keyed on the path: navigating
+            away from a broken screen clears the error rather than pinning it
+            over the route the reader just chose. See components/ErrorBoundary. */}
+        <AppBoundary resetKey={pathname}>
         <Suspense fallback={<Loading />}>
           <Routes>
             {/* Public */}
@@ -145,7 +182,11 @@ export default function App() {
                   a local useState could have managed. */}
               <Route path="/recommendations" element={<Analytics />} />
               <Route path="/analytics" element={<Analytics />} />
-              <Route path="/trends" element={<Analytics />} />
+              {/* The Goals tab. `/trends` was this slot and redirects rather
+                  than 404s, because it was a tab with its own URL for long
+                  enough to be bookmarked. */}
+              <Route path="/analytics/goals" element={<Analytics />} />
+              <Route path="/trends" element={<Navigate to="/analytics/goals" replace />} />
               <Route path="/habits" element={<Analytics />} />
               <Route path="/insights" element={<Analytics />} />
               <Route path="/subjects" element={<Analytics />} />
@@ -174,8 +215,11 @@ export default function App() {
               <Route path="/skill-trees" element={<SkillTrees />} />
               <Route path="/notes" element={<Notes />} />
               <Route path="/records" element={<Records />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/:section" element={<Settings />} />
+              <Route path="/achievements" element={<Achievements />} />
               <Route path="/growth-tree" element={<Navigate to="/skill-trees" replace />} />
-              <Route path="/calendar" element={<Navigate to="/calendar/week" replace />} />
+              <Route path="/calendar" element={<CalendarHome />} />
               <Route path="/calendar/day" element={<CalendarDay />} />
               <Route path="/calendar/week" element={<CalendarWeek />} />
               <Route path="/calendar/month" element={<CalendarMonth />} />
@@ -195,6 +239,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </Suspense>
+        </AppBoundary>
       </main>
     </>
   );

@@ -1,0 +1,152 @@
+/**
+ * Recommendations — what to change, ranked by what each is worth.
+ *
+ * The tab that leads the bar, and the only one that ends in a button.
+ *
+ * Two things here are deliberately outside the gate below. The plan is gated on
+ * nothing: an account three days old still has overdue work and a goal with a
+ * deadline, and those are the days when being told what to do is worth most.
+ * And the follow-up sits above the gate because "is there anything to suggest"
+ * and "is there anything to report on" are different questions — an account
+ * that adopted three changes and then went quiet has nothing to recommend and
+ * three results waiting, and hiding those behind the same gate would lose the
+ * one thing this tab promised to come back and tell you.
+ */
+import { Link } from 'react-router-dom';
+import { AdviceCard, CategoryFilter, FollowupPanel, OutlookPanel } from '@/components/Recommendations';
+import { DiagnosisCards, DiagnosisEmpty } from '../Diagnosis';
+import { NextActions } from '../NextActions';
+import { PanelGroup } from '../charts';
+import { Locked } from '../Locked';
+import { SETTLE } from '@/utils/followup';
+import { NEED_DAYS } from '../useAnalyticsModel';
+import type { AnalyticsData } from '../useAnalyticsData';
+import type { AnalyticsModel } from '../useAnalyticsModel';
+
+/** How many recommendations get a card of their own before the rest go in a list. */
+const HEADLINE_ADVICE = 3;
+
+export function RecommendationsTab({ model, data }: { model: AnalyticsModel } & { data: AnalyticsData }) {
+  const {
+    adoptedIds, advice, category, diagnoses, goalAdvice, historyDays, plan, projection, recent, reviewSummary,
+    reviews, setBudget, setCategory, setNudge, shown, waitFor, weekLeft,
+  } = model;
+  const { adopt, adopting, dropAdopted, dropping, justAdopted, refresh } = data;
+
+  return (
+    <>
+      <section className="ax-section">
+        <NextActions
+          plan={plan}
+          onBudget={setBudget}
+          weekLeft={weekLeft}
+          /* Both halves: `refresh` re-reads the account so a task finished
+             elsewhere leaves the plan, and the nudge re-asks the clock so
+             what counts as overdue is worked out again. */
+          onRefresh={() => {
+            refresh();
+            setNudge((at) => at + 1);
+          }}
+        />
+      </section>
+
+      {/* Then the diagnosis: what the fortnight means, before what to change
+          about it. A reader who understands why the numbers are moving reads
+          the recommendations below as reasons rather than as chores. */}
+      <section className="ax-section">
+        {diagnoses.length > 0 ? (
+          <DiagnosisCards items={diagnoses} />
+        ) : (
+          <DiagnosisEmpty enoughRecord={recent.previous.length >= 7} />
+        )}
+      </section>
+
+      {/* The goals' own advice, kept separate from the ranked list below
+          rather than merged into it. `advice` is ranked by XP a year and
+          these are not comparable to that — a goal drifting past its date
+          is not worth "1,200 XP", it is worth the goal. Two rows at most:
+          this is a pointer to the goals page, not a second copy of it. */}
+      {goalAdvice.length > 0 && (
+        <section className="ax-section">
+          <PanelGroup
+            title="From your goals"
+            note="What each goal's own figures say, where they say anything. A goal that is simply going well produces nothing here."
+          >
+            <ul className="ax-goal-advice">
+              {goalAdvice.map((row) => (
+                <li key={row.id} className={`is-${row.tone}`}>
+                  <strong>{row.title}</strong>
+                  <span className="ax-muted">{row.because}</span>
+                  <Link to="/goals" className="ax-link">
+                    {row.goalTitle}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </PanelGroup>
+        </section>
+      )}
+
+      <section className="ax-section">
+        <FollowupPanel
+          reviews={reviews}
+          summary={reviewSummary}
+          onDrop={dropAdopted}
+          dropping={dropping}
+        />
+      </section>
+
+      {(waitFor('recommendations') > 0 || advice.length === 0) && (
+        <Locked
+          title="Recommendations"
+          remaining={waitFor('recommendations')}
+          need={NEED_DAYS.recommendations}
+          have={historyDays}
+          promise="Each one is priced off your own averages, and an average needs a fortnight."
+          brings={['What to change, ranked by worth', 'The arithmetic behind each', 'How hard it is', 'One tap to your task list']}
+          emptyMessage="No long gaps, no dead weekend, no late shift worth moving. Nothing to fix."
+          action={
+            <Link to="/analytics" className="ax-btn">
+              See totals
+            </Link>
+          }
+        />
+      )}
+
+      {waitFor('recommendations') === 0 && advice.length > 0 && (
+        <>
+          {/* The projection alone, across the width. It used to share the row
+              with an opening panel restating the same figures in prose, which
+              left the chart — the thing the tab opens on — squeezed into half
+              a screen beside a column of text saying what it already showed. */}
+          <section className="ax-section">
+            <OutlookPanel outlook={projection} />
+          </section>
+          {justAdopted && (
+            <p className="ax-adopted" role="status">
+              <strong>{justAdopted}</strong> is on your task list for tomorrow, and this tab will
+              tell you in {SETTLE} days whether it moved. <Link to="/tasks">Open Tasks</Link>
+            </p>
+          )}
+          <section className="ax-section">
+            <CategoryFilter items={advice} chosen={category} onChoose={setCategory} />
+            {shown.length > 0 && (
+              <div className="ax-grid ax-grid-three">
+                {shown.slice(0, HEADLINE_ADVICE).map((item, index) => (
+                  <AdviceCard
+                    key={item.id}
+                    item={item}
+                    rank={index + 1}
+                    onAdopt={adopt}
+                    adopting={adopting}
+                    adopted={adoptedIds.has(item.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+    </>
+  );
+}

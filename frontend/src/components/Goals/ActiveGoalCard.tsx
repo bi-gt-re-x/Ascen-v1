@@ -38,13 +38,25 @@
  * takes its place — rather than a figure derived from the goal's overall
  * progress, which would be the same number twice with one of them relabelled.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GoalTile, HealthChip, categoryOf } from './Outcome';
 import { GoalVisual } from './GoalVisual';
 import { formatGoalDate, goalDate, goalNumbers, goalWeight, isOverdue } from './numbers';
 import { goalHealth } from '@/utils/goalHealth';
 import { pickVisual, visualContext } from '@/utils/goalVisuals';
-import type { Goal, Task } from '@/types';
+import {
+  MAX_STEPS,
+  addStep,
+  editStep,
+  linkStep,
+  promptFor,
+  stepDue,
+  stepProgress,
+  stepWindow,
+  stepsComplete,
+  toggleStep,
+} from '@/utils/milestoneSteps';
+import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
 
 const DAY = 86_400_000;
 
@@ -54,8 +66,8 @@ const LONG_TERM_DAYS = 120;
 /** Priority at or above this wears the high-priority tag. */
 const HIGH_PRIORITY = 7;
 
-/** Actions listed before the rest are left to the task page. */
-const ACTIONS = 4;
+/** Search results offered when linking an existing task. A shortlist, not a list. */
+const MATCHES = 6;
 
 const pct = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
@@ -121,11 +133,20 @@ export interface ActiveGoalCardProps {
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
   onComplete: (task: Task) => void;
-  onAddAction: (goal: Goal, title: string, milestoneId?: string) => void;
+  /** Point a task that already exists at this goal, rather than making a new one. */
+  onLinkTask: (goal: Goal, task: Task, milestoneId?: string) => void;
   /** Ask for a checkpoint list. Resolves null when the model could not answer. */
   onSuggest: (goal: Goal) => Promise<string[] | null>;
   /** Write a whole checkpoint list. Resolves false if the write failed. */
   onSaveStones: (goal: Goal, titles: string[]) => Promise<boolean>;
+  /** Make one checkpoint the focus. */
+  onFocusMilestone: (milestone: Milestone) => void;
+  /** Tick or untick one of the focus checkpoint's steps. */
+  onMilestoneSteps: (milestone: Milestone, steps: MilestoneStep[]) => void;
+  /** Mark the focus checkpoint reached, once its checklist is clear. */
+  onMilestoneStatus: (milestone: Milestone, status: MilestoneStatus) => void;
+  /** Call the goal finished, once every checkpoint is. */
+  onCompleteGoal: (goal: Goal) => void;
   /** Turns a subject id into its name, for the charts that group by subject. */
   nameOf: (id: string) => string;
 }
@@ -138,20 +159,53 @@ export function ActiveGoalCard({
   onEdit,
   onDelete,
   onComplete,
-  onAddAction,
+  onLinkTask,
   onSuggest,
   onSaveStones,
+  onFocusMilestone,
+  onMilestoneSteps,
+  onMilestoneStatus,
+  onCompleteGoal,
   nameOf,
 }: ActiveGoalCardProps) {
-  const today = Date.now();
+  /** Midnight today, so a step due today is not drawn as late. */
+  const todayStart = new Date(new Date().toDateString()).getTime();
   const category = categoryOf(goal);
   const numbers = goalNumbers(goal);
   const health = goalHealth(goal, tasks);
   const stones = goal.milestones ?? [];
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [adding, setAdding] = useState(false);
+  /* The focus picker, closed by default. It is a disclosure rather than a
+     select because the options are checkpoint titles — full sentences, most of
+     them — and a native select would truncate every one of them to the width
+     of the panel. */
+  const [picking, setPicking] = useState(false);
+  /** Naming a step. `index` is -1 for a new one, or the row being filled in. */
+  const [stepDraft, setStepDraft] = useState<{ index: number; text: string } | null>(null);
+  /** Which step is choosing a task to link, or null. */
+  const [linkAt, setLinkAt] = useState<number | null>(null);
+  /** The card's own celebration, cleared by a timer. See `.ag-cheer`. */
+  const [cheer, setCheer] = useState<'milestone' | 'goal' | null>(null);
+
+  /* It lets go on its own. The click that starts it is also a write, and the
+     card re-renders under the reader when the reply lands — a banner that
+     needed dismissing would be a second thing to do at the moment they just
+     finished doing something. Two seconds is long enough to read four words.
+
+     Cleared on unmount as well, because completing a goal moves it out of the
+     Active tab: the card that was celebrating is gone before the timer ends,
+     and a setState after that is a leak. */
+  useEffect(() => {
+    if (!cheer) return undefined;
+    const timer = window.setTimeout(() => setCheer(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [cheer]);
   const [draft, setDraft] = useState('');
+  /* Which search result the keyboard is on. -1 is the box itself, and it is the
+     resting position: Enter on a typed title makes a new task, which is what the
+     box did before it could also search. You arrow into the list deliberately. */
+  const [pick, setPick] = useState(-1);
   /* The suggestion round trip is a model call and can take several seconds, so
      it carries its own busy state rather than the page's — the rest of the card
      stays usable while one goal is thinking. The ladder this replaced owned its
@@ -176,22 +230,60 @@ export function ActiveGoalCard({
     [stones],
   );
 
-  /** How much of the focus checkpoint's own work is finished, where any exists. */
-  const focusShare = useMemo(() => {
-    if (!focus) return null;
-    const linked = mine.filter((task) => task.milestone_id === focus.id);
-    if (linked.length === 0) return null;
-    return (linked.filter((task) => task.status === 'done').length / linked.length) * 100;
-  }, [focus, mine]);
+  /** The checkpoints the focus could be moved to — everything not yet reached. */
+  const switchable = useMemo(() => stones.filter((stone) => stone.status !== 'done'), [stones]);
 
-  const actions = useMemo(
-    () =>
-      mine
-        .filter((task) => task.status !== 'done')
-        .sort((a, b) => (time(a.due_date) || Infinity) - (time(b.due_date) || Infinity))
-        .slice(0, ACTIONS),
-    [mine],
+  /** How many of the focus checkpoint's named steps are ticked. */
+  const focusSteps = useMemo(
+    () => (focus ? stepProgress(focus.steps) : { done: 0, total: 0 }),
+    [focus],
   );
+
+  /** The three rows the card draws, and where in the list they start. */
+  const shown = useMemo(() => {
+    const window = focus ? stepWindow(focus.steps) : { from: 0, shown: [] as MilestoneStep[] };
+    return { from: window.from, steps: window.shown };
+  }, [focus]);
+
+  /** Every named step ticked — the checkpoint has nothing left in it. */
+  const readyToClose = Boolean(focus && focus.status !== 'done' && stepsComplete(focus.steps));
+
+  /** Every checkpoint reached, on a goal that has some and is still open. */
+  const readyToFinish =
+    goal.status !== 'completed' &&
+    stones.length > 0 &&
+    stones.every((stone) => stone.status === 'done');
+
+  /**
+   * The tasks already on the account that the draft could be naming.
+   *
+   * Only open ones, and only ones that are not already this goal's work —
+   * offering a task that is already linked is a row that does nothing when you
+   * click it. An empty box offers the first few rather than nothing, so the
+   * list is a way in rather than something you have to guess the opening
+   * letters of, and a title that starts with what was typed sorts above one
+   * that merely contains it.
+   */
+  const matches = useMemo(() => {
+    if (linkAt === null) return [];
+    const query = draft.trim().toLowerCase();
+    const linked = new Set(mine.map((task) => task.id));
+    return tasks
+      .filter(
+        (task) =>
+          task.status !== 'done' &&
+          !linked.has(task.id) &&
+          (!query || task.title.toLowerCase().includes(query)),
+      )
+      .sort((a, b) => {
+        if (!query) return 0;
+        return (
+          Number(b.title.toLowerCase().startsWith(query)) -
+          Number(a.title.toLowerCase().startsWith(query))
+        );
+      })
+      .slice(0, MATCHES);
+  }, [linkAt, draft, mine, tasks]);
 
   /** What the goal has cost, off the clock its finished tasks recorded. */
   const invested = useMemo(
@@ -209,15 +301,44 @@ export function ActiveGoalCard({
   const priority = goalWeight(goal);
   const overdue = isOverdue(goal);
 
-  const submit = () => {
-    const title = draft.trim();
+  const closeLink = () => {
+    setDraft('');
+    setLinkAt(null);
+    setPick(-1);
+  };
+
+  /**
+   * Point an existing task at this goal, at the checkpoint being worked on,
+   * and at the one step it is execution for.
+   *
+   * Two writes rather than one, because they say different things: the task
+   * moves to this goal (it counts here now, and it is one task, not a copy),
+   * and the step records which task that was. Either is useful without the
+   * other — a task can be a checkpoint's work without being any one step's.
+   */
+  const link = (task: Task) => {
+    const index = linkAt;
+    onLinkTask(goal, task, focus?.id);
+    if (focus && index !== null) onMilestoneSteps(focus, linkStep(focus.steps, index, task.id));
+    closeLink();
+  };
+
+  /**
+   * Write the step being named — a new row at the end, or one of the prompts
+   * filled in. Blank abandons rather than adding an empty row, since the
+   * checklist already keeps three of those.
+   */
+  const commitStep = () => {
+    if (!stepDraft || !focus) return;
+    const title = stepDraft.text.trim();
     if (!title) {
-      setAdding(false);
+      setStepDraft(null);
       return;
     }
-    onAddAction(goal, title, focus?.id);
-    setDraft('');
-    setAdding(false);
+    const list = stepDraft.index >= 0 ? focus.steps : addStep(focus.steps);
+    const at = stepDraft.index >= 0 ? stepDraft.index : list.length - 1;
+    onMilestoneSteps(focus, editStep(list, at, title));
+    setStepDraft(null);
   };
 
   return (
@@ -309,8 +430,7 @@ export function ActiveGoalCard({
                 <h4>Nothing to chart yet</h4>
               </header>
               <p className="ag-empty">
-                A goal without checkpoints is a wish with a percentage — break it into the states it
-                passes through and both the percentage and this panel start meaning something.
+                Break this into checkpoints and the percentage starts to mean something.
               </p>
               <div className="ag-empty-tools">
                 <button
@@ -341,25 +461,317 @@ export function ActiveGoalCard({
           </header>
 
           {focus ? (
-            <div className="ag-focus">
-              <span className="ag-focus-ico" aria-hidden="true">
-                <GoalTile goal={goal} size={16} />
-              </span>
-              <div className="ag-focus-text">
-                <strong>{focus.title}</strong>
-                <span>{focus.note || health.reason}</span>
-              </div>
-              {focusShare === null ? (
-                <span className="ag-focus-when">{monthYear(focus.target_date)}</span>
-              ) : (
-                <span className="ag-focus-pct">{pct(focusShare)}%</span>
-              )}
-              {focusShare !== null && (
-                <span className="ag-focus-bar">
-                  <i style={{ width: `${pct(focusShare)}%` }} />
+            <>
+              {/* The whole block is the control that changes which checkpoint
+                  this is. It used to be a plain div showing whichever one the
+                  card had guessed at — the first unfinished one — with no way
+                  to say it had guessed wrong. */}
+              <button
+                type="button"
+                className="ag-focus is-pickable"
+                disabled={busy || switchable.length < 2}
+                aria-expanded={picking}
+                title={
+                  switchable.length < 2
+                    ? 'The only checkpoint left'
+                    : 'Change which checkpoint this goal is on'
+                }
+                onClick={() => setPicking((on) => !on)}
+              >
+                <span className="ag-focus-ico" aria-hidden="true">
+                  <GoalTile goal={goal} size={16} />
                 </span>
+                <div className="ag-focus-text">
+                  <strong>{focus.title}</strong>
+                  <span>{focus.note || health.reason}</span>
+                </div>
+                <span className="ag-focus-when">{monthYear(focus.target_date)}</span>
+              </button>
+
+              {picking && (
+                <ul className="ag-focus-pick">
+                  {switchable.map((stone) => (
+                    <li key={stone.id}>
+                      <button
+                        type="button"
+                        className={stone.id === focus.id ? 'is-current' : undefined}
+                        disabled={busy}
+                        onClick={() => {
+                          if (stone.id !== focus.id) onFocusMilestone(stone);
+                          setPicking(false);
+                        }}
+                      >
+                        <span>{stone.title}</span>
+                        {stone.id === focus.id && <em>current</em>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </div>
+
+              {/* ---- the checklist ------------------------------------------
+                  Three at a time, numbered, in the shape the skill-tree panel
+                  uses for a programme — because it is the same object: a short
+                  ordered list of the work that finishes one thing. The window
+                  sits on the first undone row rather than always at the top,
+                  so a checkpoint half done opens on what is left. */}
+              <header className="ag-panel-head ag-panel-head-tight">
+                <h4>Checklist</h4>
+                <span className="ag-quiet">
+                  {focusSteps.done} of {focusSteps.total || focus.steps.length}
+                </span>
+              </header>
+
+              {/* `start` numbers a native marker; this list draws its own
+                  from a counter, so the window's offset goes in as a custom
+                  property. Both are set: the attribute keeps the list correct
+                  for anything reading the DOM rather than the stylesheet. */}
+              <ol
+                className="ag-steps"
+                start={shown.from + 1}
+                style={{ ['--ag-step-from' as string]: shown.from + 1 }}
+              >
+                {shown.steps.map((step, at) => {
+                  const index = shown.from + at;
+                  const linked = step.task_id
+                    ? tasks.find((task) => task.id === step.task_id) ?? null
+                    : null;
+                  return (
+                    <li
+                      className={`ag-step${step.done ? ' is-done' : ''}${step.placeholder ? ' is-empty' : ''}`}
+                      key={step.id}
+                    >
+                      <button
+                        type="button"
+                        className="ag-check ag-step-check"
+                        disabled={busy || step.placeholder}
+                        aria-label={
+                          step.placeholder
+                            ? 'Name this step before you can tick it'
+                            : step.done
+                              ? `Undo ${step.title}`
+                              : `Finish ${step.title}`
+                        }
+                        onClick={() => {
+                          onMilestoneSteps(focus, toggleStep(focus.steps, index));
+                          // A step pointing at a task and being ticked here
+                          // means that task is done — finishing it twice, once
+                          // on each page, is the app asking the same question
+                          // in two places. Only on the way to done: unticking a
+                          // step is not a claim that the task was never done.
+                          if (linked && !step.done && linked.status !== 'done') onComplete(linked);
+                        }}
+                      >
+                        <span aria-hidden="true" />
+                      </button>
+
+                      {step.placeholder ? (
+                        <button
+                          type="button"
+                          className="ag-step-name is-empty"
+                          disabled={busy}
+                          onClick={() => setStepDraft({ index, text: '' })}
+                          title="Name this step"
+                        >
+                          {promptFor(index)}
+                        </button>
+                      ) : (
+                        <span className="ag-step-name" title={step.title}>
+                          {step.title}
+                          {linked && <span className="ag-step-linked" title={linked.title}>· {linked.title}</span>}
+                        </span>
+                      )}
+
+                      {/* The date it is held to, wherever that is coming
+                          from — its own where it has one, the linked task's
+                          where it does not. Read-only here: naming and dating
+                          are both planning, and the drawer is where planning
+                          happens. See `stepDue`. */}
+                      {(() => {
+                        const when = stepDue(step, linked?.due_date);
+                        if (!when) return <span className="ag-step-due" />;
+                        const at = time(when);
+                        return (
+                          <span
+                            /* A finished step is never late, whenever it was
+                               due. Amber on a done row tells the reader to go
+                               and do something they have already done. */
+                            className={`ag-step-due${!step.done && at && at < todayStart ? ' is-late' : ''}`}
+                            title={step.task_id ? `From "${linked?.title ?? 'the linked task'}"` : 'Due date for this step'}
+                          >
+                            {shortDate(when)}
+                          </span>
+                        );
+                      })()}
+
+                      {/* One task per step. The button is the link and the
+                          unlink both, because a step already pointing at
+                          something has exactly one useful thing to do next. */}
+                      <button
+                        type="button"
+                        className={`ag-step-link${step.task_id ? ' is-on' : ''}`}
+                        disabled={busy || step.placeholder}
+                        aria-label={
+                          step.task_id ? `Unlink ${linked?.title ?? 'the task'}` : 'Link a task to this step'
+                        }
+                        title={
+                          step.task_id
+                            ? `Linked to "${linked?.title ?? 'a task'}" — click to unlink`
+                            : 'Link an existing task to this step'
+                        }
+                        onClick={() => {
+                          if (step.task_id) {
+                            onMilestoneSteps(focus, linkStep(focus.steps, index, null));
+                            return;
+                          }
+                          setLinkAt(linkAt === index ? null : index);
+                          setDraft('');
+                          setPick(-1);
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                          <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+                          <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+                        </svg>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              {focus.steps.length > shown.steps.length && (
+                <p className="ag-steps-rest ag-quiet">
+                  {focus.steps.length - shown.steps.length} more —{' '}
+                  <button type="button" className="ag-link-btn" onClick={() => onOpen(goal)}>
+                    open the details
+                  </button>
+                </p>
+              )}
+
+              {/* ---- naming a step ------------------------------------------- */}
+              {stepDraft ? (
+                <form
+                  className="ag-add"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    commitStep();
+                  }}
+                >
+                  <input
+                    autoFocus
+                    value={stepDraft.text}
+                    maxLength={120}
+                    placeholder="Name a small piece of work"
+                    onChange={(event) => setStepDraft({ ...stepDraft, text: event.target.value })}
+                    onBlur={commitStep}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setStepDraft(null);
+                      } else if (event.key === 'Enter') {
+                        // Explicit rather than leaning on the form's implicit
+                        // submission: this input is the form's only control
+                        // and there is no submit button, which is exactly the
+                        // shape browsers do not reliably submit.
+                        event.preventDefault();
+                        commitStep();
+                      }
+                    }}
+                  />
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  className="ag-add-btn"
+                  disabled={busy || focus.steps.length >= MAX_STEPS}
+                  title={
+                    focus.steps.length >= MAX_STEPS
+                      ? `A checkpoint needing more than ${MAX_STEPS} steps is two checkpoints`
+                      : undefined
+                  }
+                  onClick={() => setStepDraft({ index: -1, text: '' })}
+                >
+                  + Add another step
+                </button>
+              )}
+
+              {/* ---- linking a task to one step ------------------------------ */}
+              {linkAt !== null && (
+                <div className="ag-link-box">
+                  <input
+                    autoFocus
+                    value={draft}
+                    placeholder="Search your tasks"
+                    role="combobox"
+                    aria-expanded={matches.length > 0}
+                    aria-autocomplete="list"
+                    aria-controls={`ag-found-${goal.id}`}
+                    onChange={(event) => {
+                      setDraft(event.target.value);
+                      setPick(-1);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        closeLink();
+                      } else if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        setPick((at) => Math.min(at + 1, matches.length - 1));
+                      } else if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        setPick((at) => Math.max(at - 1, -1));
+                      } else if (event.key === 'Enter') {
+                        event.preventDefault();
+                        const chosen = pick >= 0 ? matches[pick] : matches[0];
+                        if (chosen) link(chosen);
+                      }
+                    }}
+                  />
+                  {matches.length > 0 ? (
+                    <ul className="ag-found" id={`ag-found-${goal.id}`} role="listbox">
+                      {matches.map((task, at) => (
+                        <li key={task.id}>
+                          <button
+                            type="button"
+                            id={`ag-found-${goal.id}-${task.id}`}
+                            role="option"
+                            aria-selected={at === pick}
+                            className={`ag-found-row${at === pick ? ' is-on' : ''}`}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onMouseEnter={() => setPick(at)}
+                            onClick={() => link(task)}
+                          >
+                            <span className="ag-found-name" title={task.title}>
+                              {task.title}
+                            </span>
+                            <span className="ag-quiet">{shortDate(task.due_date)}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="ag-quiet ag-found-none">
+                      No open task matches. Steps do not need one — a link is for work you
+                      had already written down.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ---- the checkpoint is clear --------------------------------- */}
+              {readyToClose && (
+                <button
+                  type="button"
+                  className="ag-finish"
+                  disabled={busy}
+                  onClick={() => {
+                    setCheer('milestone');
+                    onMilestoneStatus(focus, 'done');
+                  }}
+                >
+                  Complete Milestone?
+                </button>
+              )}
+            </>
           ) : (
             <p className="ag-empty">
               {/* `focus` is null in two quite different situations and one
@@ -367,78 +779,48 @@ export function ActiveGoalCard({
                   checkpoint, and a goal that never had any. The second was
                   being congratulated for it. */}
               {stones.length === 0
-                ? 'Nothing to focus on yet — this goal has no checkpoints. The panel on the left is where they start.'
+                ? 'No checkpoints yet. The panel on the left is where they start.'
                 : 'Every checkpoint is behind you. What is left is the goal itself.'}
             </p>
           )}
 
-          <header className="ag-panel-head ag-panel-head-tight">
-            <h4>Next actions</h4>
-            {mine.length > 0 && (
-              <span className="ag-quiet">
-                {mine.filter((task) => task.status === 'done').length} of {mine.length} done
-              </span>
-            )}
-          </header>
-
-          {actions.length === 0 ? (
-            <p className="ag-empty">
-              Nothing open against this goal. Add one below and it is a real task — it shows on the
-              dashboard and pays the same XP.
-            </p>
-          ) : (
-            <ul className="ag-actions">
-              {actions.map((task) => (
-                <li key={task.id}>
-                  <button
-                    type="button"
-                    className="ag-check"
-                    disabled={busy}
-                    aria-label={`Complete ${task.title}`}
-                    onClick={() => onComplete(task)}
-                  >
-                    <span aria-hidden="true" />
-                  </button>
-                  <span className="ag-action-name" title={task.title}>
-                    {task.title}
-                  </span>
-                  <span className={`ag-quiet${time(task.due_date) && time(task.due_date) < today ? ' is-late' : ''}`}>
-                    {shortDate(task.due_date)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {adding ? (
-            <form
-              className="ag-add"
-              onSubmit={(event) => {
-                event.preventDefault();
-                submit();
+          {/* Every checkpoint reached and the goal still open. For a milestone
+              goal the backend has already called it finished and this is the
+              confirmation; for the rest it is the one thing arithmetic cannot
+              decide. See `completeGoal` in pages/Goals. */}
+          {readyToFinish && (
+            <button
+              type="button"
+              className="ag-finish is-goal"
+              disabled={busy}
+              onClick={() => {
+                setCheer('goal');
+                onCompleteGoal(goal);
               }}
             >
-              <input
-                autoFocus
-                value={draft}
-                placeholder="What is the next action?"
-                onChange={(event) => setDraft(event.target.value)}
-                onBlur={submit}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') {
-                    setDraft('');
-                    setAdding(false);
-                  }
-                }}
-              />
-            </form>
-          ) : (
-            <button type="button" className="ag-add-btn" disabled={busy} onClick={() => setAdding(true)}>
-              + Add new action
+              Complete Goal?
             </button>
           )}
         </section>
       </div>
+
+      {cheer && (
+        <div className="ag-cheer" role="status">
+          <div className="ag-cheer-card">
+            <span className="ag-cheer-mark" aria-hidden="true">✓</span>
+            <strong>{cheer === 'goal' ? 'Goal complete' : 'Checkpoint reached'}</strong>
+            <span>{cheer === 'goal' ? goal.title : 'On to the next one.'}</span>
+          </div>
+          {/* Twelve pieces, placed by nth-child in the stylesheet rather than
+              by script — the burst is decoration and does not need a random
+              seed to read as one. Hidden outright under reduced motion. */}
+          <span className="ag-cheer-burst" aria-hidden="true">
+            {Array.from({ length: 12 }, (_, at) => (
+              <i key={at} />
+            ))}
+          </span>
+        </div>
+      )}
 
       {/* ---- footer ---------------------------------------------------- */}
       <footer className="ag-foot">

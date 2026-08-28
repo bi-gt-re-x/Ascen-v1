@@ -9,14 +9,18 @@
  * app. See PrivacyPolicy.tsx for the rest of the shared reasoning.
  */
 import { Link } from 'react-router-dom';
-import { useDocumentTitle } from '@/hooks';
+import { useDocumentTitle, usePageEntrance } from '@/hooks';
 import '@/styles/content-page.css';
 
 export default function TermsOfService() {
   useDocumentTitle('Terms of Service');
 
+  /* The arrival cascade. Nothing is fetched here, so the page is ready the
+     moment it mounts — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(true);
+
   return (
-    <div className="content-container">
+    <div className={`content-container${entering ? ' pg-enter' : ''}`}>
       <h1>Terms of Service</h1>
       <p className="effective-date">Effective date: July 22, 2026</p>
 

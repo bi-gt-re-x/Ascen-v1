@@ -107,9 +107,8 @@ export function SystemGoals({ counters, onEdit, onDelete, onNew }: SystemGoalsPr
   if (counters.length === 0) {
     return (
       <p className="gx-empty">
-        None set. A system goal is a target on something the app already counts for you — reach
-        50,000 XP, hold a 30-day streak, finish 500 tasks, log 100 hours of focus. You pick the
-        number; the figure underneath is whatever your record already says.
+        None set. A target on something the app already counts — 50,000 XP, a 30-day streak,
+        500 tasks, 100 hours of focus. You pick the number.
         <button type="button" className="gx-link" onClick={onNew}>
           Set one
         </button>

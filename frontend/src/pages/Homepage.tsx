@@ -66,9 +66,18 @@ import type { Theme } from '@/types';
 import '@/styles/homepage.css';
 import '@/styles/home-motion.css';
 
-/** Where the flow finishes. Only a path on this site, never somewhere else. */
+/**
+ * Where the flow finishes. Only a path on this site, never somewhere else.
+ *
+ * With nothing to go back to the answer is the front door, not the dashboard.
+ * `/` is the one route that reads the account's chosen start page (FrontDoor
+ * in App.tsx) — naming the dashboard here instead meant signing in from the
+ * landing page always landed on the dashboard, whatever the account had asked
+ * for, and the preference only appeared to work if you happened to arrive via
+ * a gated link.
+ */
 function safeNext(raw: string | null): string {
-  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/dashboard';
+  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 }
 
 export default function Homepage() {

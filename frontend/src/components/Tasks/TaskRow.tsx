@@ -12,13 +12,15 @@
  * alternative is a dialog for the single most common edit there is.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { Task } from '@/types';
+import type { Goal, Task } from '@/types';
 import { dueLine, spellDuration } from './board';
 
 export interface TaskRowProps {
   task: Task;
   /** The subject's printable name, already looked up. */
   subject: string | null;
+  /** The outcome goals this task could be linked to. Empty when there are none. */
+  goals: Goal[];
   /** Seconds set aside for it on the calendar, or null when it has no block. */
   estimate: number | null;
   selected: boolean;
@@ -30,7 +32,17 @@ export interface TaskRowProps {
   onRename: (task: Task, title: string) => void;
   onDelete: (task: Task) => void;
   onStar: (task: Task) => void;
+  /** Link the task to a goal, or `null` to unlink it. */
+  onLink: (task: Task, goalId: string | null) => void;
 }
+
+const TARGET = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="4.5" />
+    <circle cx="12" cy="12" r="1" />
+  </svg>
+);
 
 const CAL = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -49,6 +61,7 @@ const CLOCK = (
 export function TaskRow({
   task,
   subject,
+  goals,
   estimate,
   selected,
   starred,
@@ -59,8 +72,13 @@ export function TaskRow({
   onRename,
   onDelete,
   onStar,
+  onLink,
 }: TaskRowProps) {
   const done = task.status === 'done';
+  // The goal submenu is a second level on the row's overflow, opened from it
+  // and closed with it — one menu's worth of state, not two.
+  const [linking, setLinking] = useState(false);
+  const goal = goals.find((entry) => String(entry.id) === String(task.goal_id)) ?? null;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
   const [menu, setMenu] = useState(false);
@@ -72,7 +90,10 @@ export function TaskRow({
   }, [editing]);
 
   useEffect(() => {
-    if (!menu) return;
+    if (!menu) {
+      setLinking(false);
+      return;
+    }
     const away = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) setMenu(false);
     };
@@ -146,6 +167,12 @@ export function TaskRow({
               {when}
             </span>
           )}
+          {goal && (
+            <span className="tk-goal-chip" title={`Work toward ${goal.title}`}>
+              <i aria-hidden="true">{TARGET}</i>
+              {goal.title}
+            </span>
+          )}
           {estimate !== null && (
             <span title="The block you set aside for this on the calendar">
               <i aria-hidden="true">{CLOCK}</i>
@@ -183,10 +210,49 @@ export function TaskRow({
             <circle cx="19" cy="12" r="1.7" />
           </svg>
         </button>
-        {menu && (
+        {menu && linking && (
+          <div className="tk-menu-panel is-row is-goals">
+            <button
+              type="button"
+              className="tk-menu-item is-back"
+              onClick={() => setLinking(false)}
+            >
+              ← Back
+            </button>
+            {goals.length === 0 ? (
+              <p className="tk-menu-empty">No outcome goals yet.</p>
+            ) : (
+              <>
+                {goal && (
+                  <button
+                    type="button"
+                    className="tk-menu-item is-bad"
+                    onClick={() => { setMenu(false); onLink(task, null); }}
+                  >
+                    Unlink from {goal.title}
+                  </button>
+                )}
+                {goals.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className={`tk-menu-item${String(entry.id) === String(task.goal_id) ? ' is-on' : ''}`}
+                    onClick={() => { setMenu(false); onLink(task, String(entry.id)); }}
+                  >
+                    {entry.title}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+        {menu && !linking && (
           <div className="tk-menu-panel is-row">
             <button type="button" className="tk-menu-item" onClick={() => { setMenu(false); setEditing(true); }}>
               Rename
+            </button>
+            <button type="button" className="tk-menu-item" onClick={() => setLinking(true)}>
+              {goal ? 'Change goal' : 'Link to goal'}
             </button>
             <label className="tk-menu-item is-pick">
               <input

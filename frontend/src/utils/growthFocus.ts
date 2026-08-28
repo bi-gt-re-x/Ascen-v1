@@ -41,6 +41,7 @@
  * hour is stated on the card rather than passed off as the reader's own target.
  */
 import type { GrowthDay, Task } from '@/types';
+import { gradeFor as letterFor } from './analyticalScore';
 import type { Subject } from '@/services/subjects';
 
 const num = (value: unknown): number => Number(value) || 0;
@@ -65,26 +66,20 @@ export function dayName(iso: string): string {
 /**
  * A 0-100 score as a letter.
  *
- * The bands are the report card's — S/A/B/C/D/F at 95/85/72/65/40 — and the
- * modifier is which third of its band the score sits in. The base letter is
- * therefore always the letter /analytics would print for the same number.
+ * Delegates, and that is the whole point of it. This used to carry its own
+ * table — S/A/B/C/D/F at 95/85/72/65/40 — plus a modifier for which third of a
+ * band the score sat in, under a comment promising that the base letter was
+ * always the one /analytics would print. It was a promise made by two copies of
+ * the boundaries, and it broke the moment the real ones moved: the report card
+ * runs on the school scale now, with A+ at 96 and S reserved for 100.
+ *
+ * So there is one table, in utils/analyticalScore, mirroring the backend's. The
+ * thirds are gone with the second copy — an app that shows "B−" here and "B"
+ * on the analytics page for the same number is not more precise, it is
+ * disagreeing with itself in a way the reader has no way to resolve.
  */
 export function gradeFor(score: number): string {
-  const bands: Array<[number, number, string]> = [
-    [95, 101, 'S'],
-    [85, 95, 'A'],
-    [72, 85, 'B'],
-    [65, 72, 'C'],
-    [40, 65, 'D'],
-    [0, 40, 'F'],
-  ];
-  const band = bands.find(([low]) => score >= low) ?? bands[bands.length - 1]!;
-  const [low, high, letter] = band;
-  if (letter === 'S' || letter === 'F') return letter;
-  const third = (high - low) / 3;
-  if (score < low + third) return `${letter}−`;
-  if (score < low + third * 2) return letter;
-  return `${letter}+`;
+  return letterFor(score);
 }
 
 // --------------------------------------------------------------------------

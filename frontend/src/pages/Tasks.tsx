@@ -70,10 +70,11 @@ import {
   type TaskQuery,
 } from '@/components/Tasks';
 import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
-import { useDocumentTitle, useSubjects, useUserData } from '@/hooks';
-import { tasks as taskService } from '@/services';
+import { measureOf } from '@/components/Goals';
+import { useDocumentTitle, usePageEntrance, useSettings, useSubjects, useUserData } from '@/hooks';
+import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewTask } from '@/services/tasks';
-import type { Task } from '@/types';
+import type { Goal, Task } from '@/types';
 import { isoStamp } from '@/utils/calendarGrid';
 import '@/styles/tasks.css';
 
@@ -145,10 +146,73 @@ export default function Tasks() {
 
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const subjects = useSubjects(username);
+  const { prefs } = useSettings();
 
-  const [query, setQuery] = useState<TaskQuery>(EMPTY_QUERY);
+  /* The account's outcome goals, for the link control on each row. Read once
+     rather than through useApi: nothing on this page writes a goal, and a
+     failed read means the row offers no goals rather than the page failing. */
+  const [goals, setGoals] = useState<Goal[]>([]);
+  useEffect(() => {
+    if (!username) return;
+    let live = true;
+    void goalService.getGoals().then((result) => {
+      if (live && result.success) setGoals(result.goals ?? []);
+    });
+    return () => {
+      live = false;
+    };
+  }, [username]);
+
+  /** Only outcome goals: a counter goal advances itself and has no work to name. */
+  const linkable = useMemo(
+    () => goals.filter((goal) => ['number', 'milestones'].includes(measureOf(goal))),
+    [goals],
+  );
+
+  /**
+   * The view this page opens on, from the account's preferences.
+   *
+   * Four of the controls above the list have a preference behind them
+   * (Settings, Tasks) and this is where the two meet. It is what the page
+   * starts on and what "Reset the view" goes back to — not what the page stays
+   * on: every control still changes the view for this visit, and none of them
+   * writes a preference. Somebody narrowing to one subject for a minute has
+   * not changed their mind about how the page should open.
+   *
+   * `EMPTY_QUERY` still supplies the rest — the search, the subject and
+   * priority filters, the direction — because those are about one list at one
+   * moment and there is nothing to remember.
+   */
+  const opening = useMemo<TaskQuery>(
+    () => ({
+      ...EMPTY_QUERY,
+      status: prefs.task_status,
+      sort: prefs.task_sort,
+      horizon: prefs.task_horizon,
+    }),
+    [prefs.task_horizon, prefs.task_sort, prefs.task_status],
+  );
+
+  const [query, setQuery] = useState<TaskQuery>(opening);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [group, setGroup] = useState<GroupKey>('due');
+  const [group, setGroup] = useState<GroupKey>(prefs.task_group);
+
+  /* The preferences arrive a moment after the page does, so what it opened on
+     may have been the built-in defaults rather than the account's. This
+     corrects that — and stops the moment the reader touches a control, because
+     from then on what is on screen is their answer and not a stale guess. */
+  const viewChosen = useRef(false);
+  useEffect(() => {
+    if (viewChosen.current) return;
+    setQuery(opening);
+    setGroup(prefs.task_group);
+  }, [opening, prefs.task_group]);
+
+  const changeQuery = useCallback((next: TaskQuery) => {
+    viewChosen.current = true;
+    setQuery(next);
+  }, []);
+
   const [shut, setShut] = useState<Set<string>>(new Set());
   /** Per heading, how many rows it has been asked to draw. See `PAGE`. */
   const [drawn, setDrawn] = useState<Record<string, number>>({});
@@ -249,7 +313,7 @@ export default function Tasks() {
     (task: Task) => {
       if (!username) return Promise.resolve(false);
       return run(task.id, async () => {
-        const result = await taskService.completeTask(username, task.id);
+        const result = await taskService.completeTask(task.id);
         if (!result.success) {
           setFailure(result.message);
           return false;
@@ -274,12 +338,16 @@ export default function Tasks() {
         // The rail carries the level and the XP total and never re-reads on its
         // own. This is what moves them.
         window.dispatchEvent(new Event(STATS_CHANGED));
-        // Ask, now that the work is banked and nothing depends on the answer.
-        setRating({ id: String(task.id), name: task.title });
+        // Ask, now that the work is banked and nothing depends on the answer —
+        // unless the reader has turned the questions off in Settings. How many
+        // are asked is that same preference: see components/Tasks/RatePrompt.
+        if (prefs.rating_depth !== 'none') {
+          setRating({ id: String(task.id), name: task.title });
+        }
         return true;
       });
     },
-    [username, mutate, run],
+    [username, mutate, run, prefs.rating_depth],
   );
 
   // ---- Rating a finished task ---------------------------------------------
@@ -294,11 +362,11 @@ export default function Tasks() {
   const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
 
   const saveRating = useCallback(
-    (values: { difficulty?: number; execution?: number }) => {
+    (values: { difficulty?: number; execution?: number; reason?: string }) => {
       const target = rating;
       setRating(null);
       if (!username || !target) return;
-      void taskService.rateTask(username, target.id, values).then((result) => {
+      void taskService.rateTask(target.id, values).then((result) => {
         if (!result.success) return;
         // Onto the local copy, so a re-render of the row shows what was said
         // without a round trip for the whole list.
@@ -324,7 +392,7 @@ export default function Tasks() {
     (task: Task) => {
       if (!username) return;
       void run(task.id, async () => {
-        const result = await taskService.updateTask(username, task.id, { completed: false });
+        const result = await taskService.updateTask(task.id, { completed: false });
         if (!result.success) {
           setFailure(result.message);
           return false;
@@ -347,7 +415,7 @@ export default function Tasks() {
     (task: Task, title: string) => {
       if (!username) return;
       void run(task.id, async () => {
-        const result = await taskService.updateTask(username, task.id, { name: title });
+        const result = await taskService.updateTask(task.id, { name: title });
         if (!result.success) {
           setFailure(result.message);
           return false;
@@ -364,11 +432,46 @@ export default function Tasks() {
     [username, mutate, run],
   );
 
-  const drop = useCallback(
-    (task: Task) => {
+  /* Linking a task to a goal after the fact. `null` unlinks. The milestone is
+     cleared alongside it: a checkpoint only means anything against its own
+     goal, and the backend would drop a mismatched one anyway. */
+  const link = useCallback(
+    (task: Task, goalId: string | null) => {
       if (!username) return;
       void run(task.id, async () => {
-        const result = await taskService.deleteTask(username, task.id);
+        const result = await taskService.updateTask(task.id, {
+          goal_id: goalId,
+          milestone_id: null,
+        });
+        if (!result.success) {
+          setFailure(result.message);
+          return false;
+        }
+        mutate((current) => ({
+          ...current,
+          tasks: current.tasks.map((entry) =>
+            String(entry.id) === String(task.id)
+              ? { ...entry, goal_id: goalId ?? undefined, milestone_id: undefined }
+              : entry,
+          ),
+        }));
+        return true;
+      });
+    },
+    [mutate, run, username],
+  );
+
+  const drop = useCallback(
+    (task: Task, ask = true) => {
+      if (!username) return;
+      // The confirmation is a preference; off means the click is the decision.
+      // `ask` is how the bulk bar opts out of it: twelve selected rows used to
+      // mean twelve separate confirm dialogs, one per task, which is not asking
+      // a question — it is charging for the answer. It asks once, up there,
+      // for all of them.
+      if (ask && prefs.confirm_delete && !window.confirm(`Delete “${task.title}”?`)) return;
+      void run(task.id, async () => {
+        const result = await taskService.deleteTask(task.id);
         if (!result.success) {
           setFailure(result.message);
           return false;
@@ -385,7 +488,7 @@ export default function Tasks() {
         return true;
       });
     },
-    [username, mutate, run],
+    [username, mutate, run, prefs.confirm_delete],
   );
 
   const add = useCallback(
@@ -407,7 +510,7 @@ export default function Tasks() {
           //
           // The optimistic row below has always said `false`, so until the
           // next reload the page also disagreed with what it had just stored.
-          const result = await taskService.createTask(username, {
+          const result = await taskService.createTask({
             show_on_calendar: false,
             ...draft,
           });
@@ -543,19 +646,35 @@ export default function Tasks() {
    * never touched arrived shut. New headings are new sections; they open.
    */
   const chooseGroup = useCallback((key: GroupKey) => {
+    viewChosen.current = true;
     setGroup(key);
     setShut(new Set());
   }, []);
 
-  /** Quick Add's three fields, through the same create the full form uses. */
+  /** Back to the view the account opens on, not to the app's built-in one. */
+  const resetView = useCallback(() => {
+    viewChosen.current = false;
+    setQuery(opening);
+    setGroup(prefs.task_group);
+    setShut(new Set());
+  }, [opening, prefs.task_group]);
+
+  /** Quick Add's three fields, through the same create the full form uses.
+   *  The XP is the account's default rather than a number picked here: this
+   *  form does not ask for one, and 25 was a third answer to a question the
+   *  composer and both task dialogs already agreed on. */
   const quickAdd = useCallback(
     (name: string, due: string | null, priority: 'high' | 'medium' | 'low') => {
-      add({ name, priority, due_date: due, xp_reward: 25 });
+      add({ name, priority, due_date: due, xp_reward: prefs.default_xp });
     },
-    [add],
+    [add, prefs.default_xp],
   );
 
   // ---- The shell ----------------------------------------------------------
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!loading);
+
   if (loading) return <Loading label="Reading your tasks" />;
   if (!data) {
     return <ErrorState message={error ?? 'No tasks yet.'} onRetry={username ? reload : undefined} />;
@@ -564,7 +683,7 @@ export default function Tasks() {
   return (
     <div className="tk-page">
       <Ambient />
-      <div className="tk-shell page-shell">
+      <div className={`tk-shell page-shell${entering ? ' pg-enter' : ''}`}>
         <header className="tk-head">
           <div className="tk-head-title">
             <h1>
@@ -576,7 +695,7 @@ export default function Tasks() {
               </span>
               Tasks
             </h1>
-            <p className="tk-quiet">Organize your work. Focus on what matters.</p>
+            <p className="tk-quiet">What is on your plate.</p>
           </div>
           <div className="tk-head-tools">
             <button
@@ -616,7 +735,7 @@ export default function Tasks() {
                   <button
                     type="button"
                     className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); setQuery({ ...query, status: query.status === 'all' ? 'open' : 'all' }); }}
+                    onClick={() => { setPageMenu(false); changeQuery({ ...query, status: query.status === 'all' ? 'open' : 'all' }); }}
                   >
                     {query.status === 'all' ? 'Hide completed' : 'Show completed'}
                   </button>
@@ -630,7 +749,7 @@ export default function Tasks() {
                   <button
                     type="button"
                     className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); setQuery(EMPTY_QUERY); setGroup('due'); setShut(new Set()); }}
+                    onClick={() => { setPageMenu(false); resetView(); }}
                   >
                     Reset the view
                   </button>
@@ -659,12 +778,18 @@ export default function Tasks() {
             <StatCards counts={counts} series={series} />
 
             {composing && (
-              <Composer subjects={subjects} busy={saving} onAdd={add} />
+              <Composer
+                subjects={subjects}
+                busy={saving}
+                onAdd={add}
+                defaultXp={prefs.default_xp}
+                defaultPriority={prefs.default_priority}
+              />
             )}
 
             <Toolbar
               query={query}
-              onQuery={setQuery}
+              onQuery={changeQuery}
               subjects={used}
               showing={showing}
               total={list.length}
@@ -676,7 +801,19 @@ export default function Tasks() {
               count={chosen.length}
               busy={saving}
               onComplete={() => void bulk((task) => (task.status === 'done' ? Promise.resolve() : complete(task)))}
-              onDelete={() => void bulk((task) => Promise.resolve(drop(task)))}
+              onDelete={() => {
+                if (
+                  prefs.confirm_delete
+                  && !window.confirm(
+                    chosen.length === 1
+                      ? `Delete “${chosen[0]?.title}”?`
+                      : `Delete ${chosen.length} tasks?`,
+                  )
+                ) {
+                  return;
+                }
+                void bulk((task) => Promise.resolve(drop(task, false)));
+              }}
               onClear={() => setPicked(new Set())}
             />
 
@@ -684,7 +821,7 @@ export default function Tasks() {
               <p className="tk-empty">
                 {list.length === 0
                   ? 'Nothing here yet. Quick Add is the fastest way to change that.'
-                  : 'No task matches what you are looking for. Clear the filters to see the rest.'}
+                  : 'No task matches. Clear the filters to see the rest.'}
               </p>
             ) : (
               groups.map((group) => {
@@ -719,6 +856,8 @@ export default function Tasks() {
                             key={task.id}
                             task={task}
                             subject={subjectName(task.subject)}
+                            goals={linkable}
+                            onLink={link}
                             estimate={plannedSeconds(task)}
                             selected={picked.has(task.id)}
                             starred={starred.has(task.id)}
@@ -754,7 +893,7 @@ export default function Tasks() {
             {query.horizon === 'week' && beyond > 0 && (
               <p className="tk-horizon">
                 {beyond.toLocaleString()} more outside this week.{' '}
-                <button type="button" onClick={() => setQuery({ ...query, horizon: 'all' })}>
+                <button type="button" onClick={() => changeQuery({ ...query, horizon: 'all' })}>
                   Show everything
                 </button>
               </p>
@@ -766,14 +905,17 @@ export default function Tasks() {
             upcoming={nextUp}
             streaks={runs}
             busy={saving}
+            defaultPriority={prefs.default_priority}
             subjectName={subjectName}
             onAdd={quickAdd}
             onOpenFull={() => setComposing(true)}
             onShowUpcoming={() => {
-              setQuery({ ...EMPTY_QUERY, sort: 'due' });
-              setGroup('due');
+              changeQuery({ ...EMPTY_QUERY, sort: 'due' });
+              chooseGroup('due');
             }}
-            onShowStreaks={() => setQuery({ ...EMPTY_QUERY, status: 'done', sort: 'created', descending: true })}
+            onShowStreaks={() =>
+              changeQuery({ ...EMPTY_QUERY, status: 'done', sort: 'created', descending: true })
+            }
           />
         </div>
       </div>
@@ -782,6 +924,7 @@ export default function Tasks() {
       {rating && (
         <RatePrompt
           taskName={rating.name}
+          depth={prefs.rating_depth}
           onSubmit={saveRating}
           onClose={() => setRating(null)}
         />

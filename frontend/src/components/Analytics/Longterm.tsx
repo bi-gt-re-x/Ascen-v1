@@ -1,208 +1,23 @@
 /**
- * The bottom half: this period against the last, and where the pace leads.
+ * The long view: where the pace leads, what it has already reached, and how it
+ * compares to everybody else's.
  *
- * The comparison looks backwards and the projection forwards, from the same
- * daily average — so the panel that says "you did 46% more than last time" and
- * the one that says "this is 467K XP in five years" are two readings of one
- * number rather than two claims that could drift apart.
+ * It used to open with a grouped-bar `ComparisonPanel` — "This period against
+ * the last" — which was the same question the Trends tab's `ComparePanel`
+ * answers two rows above it, from the same window, with a period picker on top.
+ * Two panels, one question, one tab; the bars carried a footer link to the tab
+ * they were already on. The bars went and the picker stayed.
  */
 import type { CSSProperties } from 'react';
-import { AreaChart, GroupedBars, Panel, PanelLink, PanelNote, toneVar, type BarPair } from './charts';
+import { Panel, PanelLink, PanelNote, toneVar } from './charts';
 import { GLYPHS, type GlyphName } from './glyphs';
-import { axisSpan, datePositions } from './data';
 import { formatPercentile } from './score';
-import type { Compounding, ComparisonBar } from './data';
 import type { Standing, StandingKey } from '@/services/analytics';
-import { compact } from '@/utils/growthSummary';
 import type { Insight } from '@/utils/growthSummary';
-
-// --------------------------------------------------------------------------
-// Yearly comparison
-// --------------------------------------------------------------------------
-export function ComparisonPanel({ bars }: { bars: ComparisonBar[] }) {
-  const pairs: BarPair[] = bars.map((bar) => ({
-    label: bar.label,
-    current: bar.current,
-    previous: bar.previous,
-    currentText: bar.format(bar.current),
-    previousText: bar.previous > 0 ? bar.format(bar.previous) : '—',
-  }));
-
-  return (
-    <Panel
-      title="This period against the last"
-      note="The three rates first — they hold still when the window changes length, and the totals below them do not."
-      footer={<PanelLink to="/trends">See which way each measure is heading</PanelLink>}
-      aside={
-        <div className="ax-legend ax-legend-tight">
-          <span className="ax-legend-item">
-            <i className="ax-swatch" style={{ background: toneVar('violet') }} />
-            This Period
-          </span>
-          <span className="ax-legend-item">
-            <i className="ax-swatch ax-swatch-was" />
-            Previous Period
-          </span>
-        </div>
-      }
-    >
-      {/* The bars are a fixed height in a panel that is as tall as whatever
-          sits beside it in the row, so on a wide screen the leftover space all
-          fell below them and the chart hung off the top edge with a third of
-          the panel empty underneath. The wrapper takes the slack and centres
-          the bars in it. */}
-      <div className="ax-bars-fill">
-        <GroupedBars pairs={pairs} />
-      </div>
-    </Panel>
-  );
-}
 
 // --------------------------------------------------------------------------
 // Compounding
 // --------------------------------------------------------------------------
-/**
- * How far ahead the chart draws, in months. The figures still state five years.
- *
- * The projection runs sixty months and the three figures above the chart say
- * so, but drawing all sixty is what made this panel look broken: a window of
- * history against five years of forecast puts the real data in the bottom-left
- * sixth of the box and gives the rest to one straight diagonal, because a flat
- * XP-a-day multiplication *is* a straight diagonal. Twelve months is the
- * horizon where the two halves are comparable — the history keeps its shape,
- * the climb is still the point, and the five-year figure is a number to read
- * rather than a line to squint at.
- */
-const CHART_MONTHS = 12;
-
-export function CompoundingPanel({ data }: { data: Compounding }) {
-  // One x axis, two series, each covering half of it — history to today, then
-  // the forecast on from today. They meet at a single shared point: the last
-  // actual bucket and the projection's first entry are both the account's
-  // banked total, at the same index, so the forecast leaves the history
-  // exactly where it ends.
-  //
-  // Where a series does not reach, it is `null` rather than a number. Both
-  // halves used to be filled instead — the actual with a flat tail of its final
-  // value, the projection with a flat *head* of the account's earliest one —
-  // which drew a line sitting at the bottom of the chart for the whole of the
-  // history and then leaping vertically at the join. That leap was the bug in
-  // this panel, not a feature of the forecast.
-  // `projected` is a point a quarter for sixty months; the chart draws the
-  // first CHART_MONTHS of it. Sliced here rather than in `compounding` because
-  // the three figures above still state the whole projection — the horizon is
-  // a fact about this chart, not about the forecast.
-  const ahead = data.projected.slice(0, Math.floor(CHART_MONTHS / 3) + 1);
-  const actualValues = data.actual.map((point) => point.value);
-  const forecast = ahead.map((point) => point.value);
-  const gapBefore = Math.max(0, actualValues.length - 1);
-
-  const actualSeries: Array<number | null> = [
-    ...actualValues,
-    ...Array<null>(Math.max(0, forecast.length - 1)).fill(null),
-  ];
-  const projectedSeries: Array<number | null> = [
-    ...Array<null>(gapBefore).fill(null),
-    ...forecast,
-  ];
-  // The same curve again, whole, with nothing left out — this is what the wash
-  // under the chart is closed on. The two halves above are two lines because
-  // they are drawn at different weights, and filling under each of them
-  // separately is what put a vertical edge down the middle of the panel at
-  // today: either a cliff to the axis, or once both halves were filled, a
-  // hairline where the two areas met. One series, one path, no join. See `fill`
-  // on AreaSeries.
-  const wholeCurve: Array<number | null> = [...actualValues, ...forecast.slice(1)];
-
-  // Points are placed by date rather than by index. The history is a point a
-  // week and the forecast a point a quarter, so spacing them evenly handed
-  // two thirds of the width to the first year of a six-year chart and made the
-  // projection look like a hockey stick that the arithmetic behind it — a flat
-  // XP-a-day multiplication — never produced.
-  const dates = [
-    ...data.actual.map((point) => point.date),
-    ...ahead.slice(1).map((point) => point.date),
-  ];
-  const at = datePositions(dates);
-  const marks = axisSpan(dates[0] ?? '', dates[dates.length - 1] ?? '', 6);
-
-  const peak = Math.max(...forecast, ...actualValues, 1);
-  const ticks: string[] = [];
-  for (let step = 4; step >= 0; step--) ticks.push(compact((peak / 4) * step));
-
-  return (
-    <Panel
-      title="Compounding Growth"
-      note="Small actions, compounded"
-      footer={
-        <PanelNote label="How this is projected">
-          Your daily average across the window, multiplied by the days ahead. Nothing here
-          assumes the pace compounds, improves, or that a good month repeats — it is the
-          arithmetic of doing exactly what you already do, for longer. The line stops at
-          twelve months because a flat multiplication drawn over five years is a straight
-          diagonal that says nothing the three figures above do not.
-        </PanelNote>
-      }
-    >
-      <div className="ax-figures">
-        <div className="ax-figure">
-          <span className="ax-muted">Daily Average XP</span>
-          <strong>{data.dailyAverage.toLocaleString()}</strong>
-          <span className="ax-muted ax-small">Consistent small effort</span>
-        </div>
-        <div className="ax-figure">
-          <span className="ax-muted">Projected 1 Year</span>
-          <strong>{data.projectedYear.toLocaleString()}</strong>
-          <span className="ax-muted ax-small">If you continue this pace</span>
-        </div>
-        <div className="ax-figure">
-          <span className="ax-muted">Projected 5 Years</span>
-          <strong>{data.projectedFiveYear.toLocaleString()}</strong>
-          <span className="ax-muted ax-small">Long-term compounding</span>
-        </div>
-      </div>
-
-      <div className="ax-compound">
-        <AreaChart
-          id="ax-compound"
-          height={170}
-          // One wash across the whole span, then the two lines over it — the
-          // lighter one marking which half is measured and which is arithmetic.
-          series={[
-            { values: wholeCurve, tone: 'violet', line: false, fill: true },
-            { values: projectedSeries, tone: 'violet', muted: true, fill: false },
-            { values: actualSeries, tone: 'violet', fill: false },
-          ]}
-          ticks={ticks}
-          marks={marks}
-          at={at}
-        />
-        {/* The callout annotates the line, so it states where the line
-            actually ends. It used to carry the five-year figure over a chart
-            that stopped somewhere else entirely — and that figure is already
-            the third of the three above, where it can be read against the
-            other two rather than floating over the drawing. */}
-        <aside className="ax-callout">
-          <span className="ax-muted ax-small">You&rsquo;re on track to earn</span>
-          <strong>{compact(data.projectedYear)} XP</strong>
-          <span className="ax-muted ax-small">in the next year</span>
-        </aside>
-      </div>
-
-      <div className="ax-legend">
-        <span className="ax-legend-item">
-          <i className="ax-legend-line" style={{ background: toneVar('violet') }} />
-          Actual XP
-        </span>
-        <span className="ax-legend-item">
-          <i className="ax-legend-line ax-legend-muted" />
-          Projected XP — next {CHART_MONTHS} months at this pace
-        </span>
-      </div>
-    </Panel>
-  );
-}
-
 // --------------------------------------------------------------------------
 // Streaks
 // --------------------------------------------------------------------------
@@ -331,19 +146,34 @@ export function StandingPanel({ standing }: StandingPanelProps) {
         footer={STANDING_NOTE}
       >
         <p className="ax-empty">
-          There are not enough accounts with a comparable record yet to place you against — this
-          needs {standing.floor} others and there {standing.cohort - 1 === 1 ? 'is' : 'are'}{' '}
-          {standing.cohort - 1}. A rank out of two or three is arithmetic rather than a comparison,
-          and you would be reading it as one.
+          Not enough comparable accounts yet — this needs {standing.floor} others and there{' '}
+          {standing.cohort - 1 === 1 ? 'is' : 'are'} {standing.cohort - 1}.
         </p>
       </Panel>
     );
   }
 
+  // The claim names the measure the account places best on, because "top 12%
+  // on consistency" is a fact somebody can carry away and a column of four bars
+  // is a thing they have to read. The bars are still there, one click down.
+  const ranked = standing.rows
+    .filter((row) => row.percentile !== null && STANDING[row.key])
+    .sort((a, b) => a.percentile! - b.percentile!);
+  const best = ranked[0];
+
   return (
     <Panel
       title="Where You Stand"
       note={`Compared to ${standing.cohort.toLocaleString()} Ascen ${standing.cohort === 1 ? 'user' : 'users'} with a comparable record`}
+      claim={
+        best ? (
+          <>
+            You are in the <strong>top {formatPercentile(best.percentile!)}%</strong> on{' '}
+            {STANDING[best.key]!.label.toLowerCase()}, your strongest measure against everybody
+            else.
+          </>
+        ) : undefined
+      }
       footer={STANDING_NOTE}
     >
       <ul className="ax-standing">
@@ -376,11 +206,8 @@ export function StandingPanel({ standing }: StandingPanelProps) {
 /** One note, three states — the panel says the same thing however it renders. */
 const STANDING_NOTE = (
   <PanelNote label="How this is worked out">
-    A plain rank, not a model. Each bar counts how many other accounts you are ahead of on
-    that measure, with ties split down the middle. Only accounts with at least three days of
-    work on them are counted — an account that signed up and never came back is not somebody
-    to be measured against, and a cohort made mostly of those would put everybody in the top
-    1% of nothing. Below three comparable accounts no percentages are shown at all.
+    A <strong>plain rank</strong>, not a model — how many accounts you are ahead of on that
+    measure, ties split down the middle. Only accounts with three or more days of work count.
   </PanelNote>
 );
 

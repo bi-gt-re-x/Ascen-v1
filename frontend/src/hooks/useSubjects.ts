@@ -8,6 +8,12 @@
  * instead, keyed by account, and the in-flight promise is cached too so two
  * dialogs opening at once make one request rather than two.
  *
+ * The key is still the account even though the request no longer names one —
+ * the server reads that off the session now (backend/api/guard.py). It is a
+ * *cache* key, and it has to stay: one browser can sign out and back in as
+ * somebody else, and an unkeyed cache would hand the second account the
+ * first's catalogue.
+ *
  * The cache is deliberately not invalidated when a task is created. Creating
  * one task moves a subject up the order at most one place, and re-fetching a
  * hundred rows to reflect that in a dialog the reader has just closed is not
@@ -54,7 +60,7 @@ function load(username: string): Promise<Subject[]> {
   const running = inFlight.get(username);
   if (running) return running;
 
-  const request = listSubjects(username)
+  const request = listSubjects()
     .then((result) => {
       const list = result.success ? result.subjects : [];
       // Only a real answer is cached. An empty list from a failed request
@@ -138,7 +144,16 @@ export function useSubjects(username: string | null): Subject[] {
  * An id the catalogue does not recognise resolves to nothing, which is the
  * same thing as a task with no subject: no icon, no pill, counted under Other.
  */
-export function useSubjectIndex(username: string | null): Map<string, Subject> {
+/**
+ * The catalogue, keyed by id.
+ *
+ * Named because three call sites pass it around — the analytics model and two
+ * of its tabs — and `Map<string, Subject>` spelled out at each of them says
+ * less than the name does.
+ */
+export type SubjectIndex = Map<string, Subject>;
+
+export function useSubjectIndex(username: string | null): SubjectIndex {
   const subjects = useSubjects(username);
   return useMemo(
     () => new Map(subjects.map((subject) => [subject.id, subject])),

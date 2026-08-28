@@ -107,7 +107,7 @@ export function useCalendarTasks(): UseCalendarTasks {
       if (!username || completing) return;
       setCompleting(taskId);
       void taskService
-        .completeTask(username, taskId)
+        .completeTask(taskId)
         .then((result) => {
           // A failed completion leaves the task exactly as it was, so nothing
           // is written here — but the page can no longer vouch for what it is

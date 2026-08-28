@@ -16,7 +16,9 @@
  * **`html.focus-mode` is set here**, and that is new. A running session is
  * supposed to clear the page down to the work: the dashboard folds its
  * greeting, its stat cards, its summary row and its quote away and leaves the
- * Focus panel over the task list. Every one of those rules was written and none
+ * Focus panel over the task list. That clearing-away is a preference now
+ * (Settings, Focus): turned off, the timer runs and the page stays where it
+ * was. Every one of those rules was written and none
  * of them ever fired, because the class they hang off was set by
  * focus-theme.js — a vanilla file deleted with the rest of the old front end —
  * and what replaced it was a `focusmodechange` event dispatched to nobody.
@@ -33,17 +35,25 @@
  * recorded total, so syncing too often or with a stale value is harmless.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSettings } from '@/hooks/useSettings';
 import { focus as focusService } from '@/services';
 import { MAX_GOAL_HOURS, MIN_GOAL_HOURS } from '@/services/constants';
 
-const DEFAULT_GOAL_HOURS = 2.0;
 /** How often a running session mirrors itself to the server. */
 const SYNC_MS = 60_000;
 /** How often the display re-reads the clock while running. */
 const TICK_MS = 1000;
 
 export interface FocusState {
-  goalHours: number;
+  /**
+   * The goal this day was given, or null for one that has not been given one.
+   *
+   * The distinction is the whole reason it is nullable. A day with no goal of
+   * its own follows the account's default, so changing that default in Settings
+   * moves today as well as tomorrow — while a day the reader has actually set a
+   * goal on keeps it, which is what setting it meant.
+   */
+  goalHours: number | null;
   accumulatedSeconds: number;
   /** Epoch ms the current segment began, or null when stopped. */
   runningSince: number | null;
@@ -72,7 +82,7 @@ function load(user: string): FocusState {
     goalHours:
       typeof raw.goalHours === 'number' && !Number.isNaN(raw.goalHours)
         ? raw.goalHours
-        : DEFAULT_GOAL_HOURS,
+        : null,
     accumulatedSeconds:
       typeof raw.accumulatedSeconds === 'number' ? raw.accumulatedSeconds : 0,
     runningSince:
@@ -118,7 +128,10 @@ export interface UseFocusSession {
 
 export function useFocusSession(username: string | null): UseFocusSession {
   const user = username || 'Default';
+  const { prefs } = useSettings();
   const [state, setState] = useState<FocusState>(() => load(user));
+  /** This day's own goal, or the account's default for a day without one. */
+  const goalHours = state.goalHours ?? prefs.focus_goal_hours;
   // Bumped on a tick so the derived figures re-read the clock. The state
   // itself does not change while running — that is the point of timestamps.
   const [, setTick] = useState(0);
@@ -139,11 +152,16 @@ export function useFocusSession(username: string | null): UseFocusSession {
     [user],
   );
 
+  // The resolved goal, for the mirror to the server: a day following the
+  // account's default still has a goal, it just does not have one of its own.
+  const goal = useRef(goalHours);
+  goal.current = goalHours;
+
   const sync = useCallback(() => {
     if (!username) return;
     const s = latest.current;
     void focusService
-      .syncDay(username, todayStr(), Math.round(focusedSeconds(s)), s.goalHours)
+      .syncDay(todayStr(), Math.round(focusedSeconds(s)), goal.current)
       .catch(() => {
         /* offline — the next sync retries, and the server never lowers a total */
       });
@@ -152,10 +170,12 @@ export function useFocusSession(username: string | null): UseFocusSession {
   const running = state.runningSince !== null;
 
   // What every "while focusing" rule in the stylesheets keys off. See the note
-  // at the top for why it is set here and why it is never cleaned up.
+  // at the top for why it is set here and why it is never cleaned up. Turning
+  // the preference off has to take the class with it, which is why it is a
+  // dependency and not a guard on the way in.
   useEffect(() => {
-    document.documentElement.classList.toggle('focus-mode', running);
-  }, [running]);
+    document.documentElement.classList.toggle('focus-mode', running && prefs.focus_dim);
+  }, [prefs.focus_dim, running]);
 
   // While running: re-render every second, and mirror to the server every minute.
   useEffect(() => {
@@ -212,12 +232,12 @@ export function useFocusSession(username: string | null): UseFocusSession {
   );
 
   const focused = focusedSeconds(state);
-  const goalSec = state.goalHours * 3600;
+  const goalSec = goalHours * 3600;
   const percent =
     goalSec > 0 ? Math.min(100, Math.round((focused / goalSec) * 100)) : 0;
 
   return {
-    goalHours: state.goalHours,
+    goalHours,
     focused,
     percent,
     running,

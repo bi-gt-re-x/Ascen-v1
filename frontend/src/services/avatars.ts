@@ -33,6 +33,3 @@ export function avatarPath(name: string): string {
   return `/static/images/avatars/${name}.svg`;
 }
 
-export function isAvatarName(value: string): value is AvatarName {
-  return (AVATARS as readonly string[]).includes(value);
-}

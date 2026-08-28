@@ -227,7 +227,7 @@ export function goalActions(
       because:
         daysSinceWork === null
           ? 'No task linked to this goal has ever been finished.'
-          : `Nothing has been finished toward this in ${daysSinceWork} days, though ${reading.linked} task${reading.linked === 1 ? ' is' : 's are'} linked to it.`,
+          : `Nothing finished in ${daysSinceWork} days, though ${reading.linked} task${reading.linked === 1 ? ' is' : 's are'} linked.`,
       title: 'Put one of its tasks on this week',
       effect: 'Opens the calendar on the next free block.',
       tone: 'urgent',
@@ -238,7 +238,7 @@ export function goalActions(
     out.push({
       id: 'unlinked',
       because:
-        'No tasks are linked to this goal, so nothing on your calendar is visibly work toward it.',
+        'No linked tasks, so nothing on your calendar counts toward it.',
       title: 'Link the work that belongs to it',
       effect: 'Nothing changes until you pick the tasks.',
       tone: 'nudge',
@@ -261,7 +261,7 @@ export function goalActions(
     const unit = numbers.label || 'units';
     out.push({
       id: 'pace',
-      because: `You are moving at about ${round(pace.have)} ${unit} a day and the date on this needs ${round(pace.need)}.`,
+      because: `You are at ${round(pace.have)} ${unit} a day; the date needs ${round(pace.need)}.`,
       title: `Raise the pace to ${round(pace.need)} ${unit} a day`,
       effect: null,
       tone: daysLeft !== null && daysLeft < 30 ? 'urgent' : 'nudge',
@@ -273,7 +273,7 @@ export function goalActions(
   if (pace.drift !== null && pace.drift > 7) {
     out.push({
       id: 'drift',
-      because: `At the rate it has actually been going, this lands about ${pace.drift} days after the date on it.`,
+      because: `At this rate it lands about ${pace.drift} days late.`,
       title: 'Move the target date, or cut the target',
       effect: 'Changes the goal. You confirm which, and by how much.',
       tone: 'nudge',
@@ -399,8 +399,8 @@ export function goalNotes(
     out.push({
       tone: 'good',
       goalId: strongest.goal.id,
-      headline: `Your strongest goal this fortnight is ${strongest.goal.title}.`,
-      hint: `${strongest.reading.now} task${strongest.reading.now === 1 ? '' : 's'} finished toward it across ${strongest.reading.activeDays} day${strongest.reading.activeDays === 1 ? '' : 's'}.`,
+      headline: `Strongest this fortnight: ${strongest.goal.title}`,
+      hint: `${strongest.reading.now} task${strongest.reading.now === 1 ? '' : 's'} across ${strongest.reading.activeDays} day${strongest.reading.activeDays === 1 ? '' : 's'}`,
     });
   }
 
@@ -411,8 +411,8 @@ export function goalNotes(
     out.push({
       tone: 'watch',
       goalId: quiet.goal.id,
-      headline: `You have not worked toward ${quiet.goal.title} in ${quiet.health.signals.daysSinceWork} days.`,
-      hint: 'It is not behind yet. This is the point at which goals usually go quiet for good.',
+      headline: `Nothing on ${quiet.goal.title} for ${quiet.health.signals.daysSinceWork} days`,
+      hint: 'Not behind yet. This is where goals go quiet for good.',
     });
   }
 
@@ -424,8 +424,8 @@ export function goalNotes(
     out.push({
       tone: 'watch',
       goalId: stuck.row.goal.id,
-      headline: `Your biggest bottleneck is "${stuck.stuck.milestone.title}".`,
-      hint: `It has been the next checkpoint on ${stuck.row.goal.title} for ${stuck.stuck.waitingDays} days.`,
+      headline: `Stuck on "${stuck.stuck.milestone.title}"`,
+      hint: `Next checkpoint on ${stuck.row.goal.title} for ${stuck.stuck.waitingDays} days`,
     });
   }
 
@@ -436,8 +436,8 @@ export function goalNotes(
     out.push({
       tone: 'good',
       goalId: ahead.goal.id,
-      headline: `You are ahead of pace on ${ahead.goal.title}.`,
-      hint: `${Math.round(ahead.health.signals.progress * 100)}% done with ${Math.round((1 - (ahead.health.signals.expected ?? 0)) * 100)}% of its time still to run.`,
+      headline: `Ahead of pace on ${ahead.goal.title}`,
+      hint: `${Math.round(ahead.health.signals.progress * 100)}% done, ${Math.round((1 - (ahead.health.signals.expected ?? 0)) * 100)}% of the time left`,
     });
   }
 

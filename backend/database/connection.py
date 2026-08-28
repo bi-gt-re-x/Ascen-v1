@@ -44,6 +44,7 @@ JSON_COLUMNS = {
     ('user_settings', 'value'),
     ('setting_defaults', 'value'),
     ('library_items', 'tags'),
+    ('calendar_documents', 'data'),
 }
 
 _build_lock = threading.Lock()
@@ -63,6 +64,10 @@ _built = False
 # migration this list can carry.
 ADDED_COLUMNS = (
     ('tasks', 'subject', 'TEXT'),
+    # The third rating question's answer. Existing rows get NULL, which reads
+    # as "not asked" — which is exactly what it was, since the question did not
+    # exist. See data/sql/tasks.sql and REASONS in backend/api/tasks.py.
+    ('tasks', 'reason', 'TEXT'),
     # The ISO week a colour was claimed in, so the reservation can expire —
     # see backend/tracking/event.py. Existing rows get NULL, which reads as
     # "claimed before anyone was counting" and therefore as long expired.
@@ -97,6 +102,17 @@ ADDED_COLUMNS = (
     # cannot attach one to a table that already has rows, and rewriting the
     # table to add it is exactly the kind of migration ADDED_COLUMNS refuses to
     # carry. The range is enforced by the endpoint instead.
+    # What the badge wall needs a badge to carry beyond its threshold: which
+    # of the five headings it is filed under, what it is worth toward the
+    # achievement score, whether it is one of the five nobody is told about,
+    # and the title it confers if it is Ascended. Every one is additive with a
+    # null default, and a row written before they existed reads as an
+    # uncategorised, unweighted, visible badge — which is what it was.
+    ('achievements', 'category', 'TEXT'),
+    ('achievements', 'xp_reward', 'INTEGER'),
+    ('achievements', 'hidden', 'INTEGER'),
+    ('achievements', 'title', 'TEXT'),
+
     ('tasks', 'difficulty', 'INTEGER'),
     ('tasks', 'execution', 'INTEGER'),
 
@@ -106,6 +122,12 @@ ADDED_COLUMNS = (
     # gives existing rows NULL, and every reader here treats NULL and '' alike.
     ('notes', 'subject_ids', 'TEXT'),
     ('notes', 'notebook', 'TEXT'),
+
+    # The checklist under a checkpoint — a JSON array of {id, title, done}.
+    # Existing checkpoints get NULL, which the API reads as "no checklist yet"
+    # and fills with placeholders on first write, so a goal written before this
+    # existed is not a goal with a broken one. See data/sql/goals.sql.
+    ('goal_milestones', 'steps', 'TEXT'),
 )
 
 # Tables added to the app after the database was first created.
@@ -174,6 +196,28 @@ ADDED_TABLES = ('''
     CREATE INDEX IF NOT EXISTS records_user_idx ON records (user_id, kind)
 ''', '''
     CREATE INDEX IF NOT EXISTS records_name_idx ON records (user_id, name, achieved_on)
+''', '''
+    -- The last two account-scoped tables with nothing leading on user_id.
+    -- Every other one is covered, either by an index written with it or by a
+    -- composite primary key that starts with the column (focus_days,
+    -- user_achievements). `rows_for` reads through these, so a table without
+    -- one falls back to scanning every account's rows to find one account's.
+    CREATE INDEX IF NOT EXISTS goal_milestones_user_idx
+        ON goal_milestones (user_id, goal_id)
+''', '''
+    CREATE INDEX IF NOT EXISTS calendar_events_user_idx
+        ON calendar_events (user_id, date)
+''', '''
+    -- One account's whole calendar, as the JSON the views already hold.
+    -- Mirrors data/sql/events.sql; see the comment there for why this is a
+    -- document and not a table of events. It exists because until now the
+    -- calendar was in localStorage and nowhere else, so a cleared browser was
+    -- a deleted calendar and the server had no copy to restore from.
+    CREATE TABLE IF NOT EXISTS calendar_documents (
+        user_id     TEXT PRIMARY KEY REFERENCES users (username) ON DELETE CASCADE,
+        data        TEXT NOT NULL DEFAULT '{}',
+        updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    )
 ''')
 
 
@@ -384,26 +428,323 @@ def write_table(table, rows, columns=None):
         con.close()
 
 
+# --------------------------------------------------------------------------
+# Reading and writing one row
+# --------------------------------------------------------------------------
+# `read_table` + `write_table` is the pair the whole backend was built on, and
+# it is the wrong pair for a change to a single row. A caller that reads every
+# task, sets one field and hands the list back makes the database do this:
+#
+#     SELECT * FROM tasks            -- 10,660 rows into Python
+#     DELETE FROM tasks              -- all of them
+#     INSERT INTO tasks ...          -- 10,660 times
+#
+# measured at 245 ms on this database for one checkbox. Three things are wrong
+# with it and only the first is speed:
+#
+#   * **It scales with everybody's data, not yours.** The tables are shared, so
+#     one account ticking off a task rewrites every account's rows. Ten users
+#     and the cost is ten times, for the same click.
+#   * **It loses writes.** Two requests read the table, each changes a
+#     different row, each writes the whole thing back. The second overwrites
+#     the first with a copy that predates it. Nothing errors; the change is
+#     simply gone. Two devices, or two tabs, is enough.
+#   * **It makes deleting feel expensive**, so code stops doing it — which is
+#     how `user_achievements` came to hold rows for badges the catalogue
+#     dropped, and how "71 earned" ended up over a wall of 68.
+#
+# The five below are the targeted versions. They are additive: `write_table`
+# stays for the callers that genuinely replace a whole table (the catalogue
+# sync, the settings reset), and every caller that changes one row moves to
+# these. `_encode` and the missing-key rules are shared with `write_table`, so
+# a row written by either reads back the same.
+
+
+def _columns_for(con, table, row):
+    """The columns of `table` that `row` has something to say about.
+
+    For UPDATE, where the dict is a list of changes: a key that is not there is
+    a column this write is not about, and is left alone.
+    """
+    schema = _schema(con, table)
+    return [name for name, _, _ in schema if name in row]
+
+
+def _insert_columns(con, table, row):
+    """The columns an INSERT of `row` names — `write_table`'s rule, exactly.
+
+    A key the row does not have is stored as NULL where the column allows one,
+    so it reads back missing, and is left out where it does not so the column's
+    DEFAULT stands in. That is the convention the whole backend reads by (see
+    the note at the top of this module), and the two write paths have to agree
+    on it or a row's shape would depend on which function wrote it — an
+    `insert_row` task getting `priority: 'medium'` from a DEFAULT where a
+    `write_table` one got NULL and read back with no priority at all.
+    """
+    return [name for name, _, nullable in _schema(con, table)
+            if name in row or nullable]
+
+
+#: How many times `insert_row` will step a colliding id before giving up.
+#: Reached only if the same millisecond is contended by more than this many
+#: writers at once, which is not a situation a bigger number rescues.
+ID_RETRIES = 25
+
+
+def insert_row(table, row, key='id'):
+    """Add one row. Returns the row, with `key` set to the id actually used.
+
+    The whole-table version of this appended to a list and rewrote everything;
+    this is the INSERT that was always underneath it.
+
+    A duplicate primary key is retried rather than raised, because ids are
+    millisecond timestamps and two writers in the same millisecond is a normal
+    thing rather than an error — see `new_id`. Any other IntegrityError is a
+    real constraint being violated and is left to raise.
+    """
+    con = connect()
+    try:
+        names = _insert_columns(con, table, row)
+        if not names:
+            return row
+        sql = 'INSERT INTO "{}" ({}) VALUES ({})'.format(
+            table,
+            ', '.join('"{}"'.format(n) for n in names),
+            ', '.join('?' for _ in names))
+
+        for _ in range(ID_RETRIES):
+            try:
+                with con:
+                    con.execute(sql, [_encode(table, n, row.get(n)) for n in names])
+                return row
+            except sqlite3.IntegrityError as clash:
+                collided = ('UNIQUE constraint failed' in str(clash)
+                            and key in names
+                            and str(row.get(key, '')).isdigit())
+                if not collided:
+                    raise
+                row[key] = str(int(row[key]) + 1)
+                with _id_lock:
+                    _last_id[table] = max(_last_id.get(table, 0), int(row[key]))
+        raise sqlite3.IntegrityError(
+            'could not find a free {}.{} after {} tries'.format(
+                table, key, ID_RETRIES))
+    finally:
+        con.close()
+
+
+def update_row(table, row_id, changes, user_id=None, key='id'):
+    """Change some columns of one row. Returns True if a row was changed.
+
+    `user_id` is the ownership check and is not optional in spirit: an UPDATE
+    matched on id alone will happily edit somebody else's row, which is the
+    same hole the API had before backend/api/guard.py. Pass it wherever the
+    table has the column, and the WHERE clause carries it.
+
+    A `changes` value of None writes NULL, which is how a field is cleared —
+    unlike `read_table`, where a missing key means the column was NULL. The
+    difference is deliberate: this says what to change, not what the row is.
+    """
+    if not changes:
+        return False
+    con = connect()
+    try:
+        names = _columns_for(con, table, changes)
+        if not names:
+            return False
+        clause = 'WHERE "{}" = ?'.format(key)
+        params = [_encode(table, n, changes.get(n)) for n in names] + [row_id]
+        if user_id is not None:
+            clause += ' AND user_id = ?'
+            params.append(user_id)
+        with con:
+            cursor = con.execute(
+                'UPDATE "{}" SET {} {}'.format(
+                    table, ', '.join('"{}" = ?'.format(n) for n in names), clause),
+                params)
+        return cursor.rowcount > 0
+    finally:
+        con.close()
+
+
+def add_to_row(table, row_id, deltas, changes=None, user_id=None, key='id'):
+    """Add to some columns of one row, in SQL. Returns the row after the write.
+
+    `UPDATE ... SET xp = COALESCE(xp, 0) + ?` rather than reading the value,
+    adding to it in Python and writing it back. The difference only shows under
+    load, and then it is the whole ballgame: thirty task completions arriving
+    at once each read `tasks_completed` as 4,120 and each wrote 4,121, so
+    twenty-nine of them vanished. Measured, on this database, before this
+    existed — the ledger got all thirty rows, because appending is safe, and
+    the counter on the account moved by one.
+
+    `changes` is for the fields that are set rather than accumulated — the
+    streak, the level, `last_task_date` — and is applied in the same statement
+    so the row is never half-written. Those still race in the sense that the
+    last writer wins, but a streak is a value derived from a date rather than a
+    running total, so two writers agreeing on it is the correct outcome.
+    """
+    if not deltas and not changes:
+        return None
+    con = connect()
+    try:
+        names = _columns_for(con, table, deltas)
+        setters = ['"{0}" = COALESCE("{0}", 0) + ?'.format(n) for n in names]
+        params = [deltas[n] for n in names]
+
+        for name in _columns_for(con, table, changes or {}):
+            setters.append('"{}" = ?'.format(name))
+            params.append(_encode(table, name, changes[name]))
+
+        if not setters:
+            return None
+        clause = 'WHERE "{}" = ?'.format(key)
+        params.append(row_id)
+        if user_id is not None:
+            clause += ' AND user_id = ?'
+            params.append(user_id)
+        with con:
+            con.execute('UPDATE "{}" SET {} {}'.format(
+                table, ', '.join(setters), clause), params)
+    finally:
+        con.close()
+    return find_row(table, row_id, user_id=user_id, key=key)
+
+
+def delete_row(table, row_id, user_id=None, key='id'):
+    """Remove one row. Returns True if there was one to remove.
+
+    Scoped by `user_id` for the reason `update_row` gives.
+    """
+    con = connect()
+    try:
+        clause = 'WHERE "{}" = ?'.format(key)
+        params = [row_id]
+        if user_id is not None:
+            clause += ' AND user_id = ?'
+            params.append(user_id)
+        with con:
+            cursor = con.execute(
+                'DELETE FROM "{}" {}'.format(table, clause), params)
+        return cursor.rowcount > 0
+    finally:
+        con.close()
+
+
+def _decode_records(con, table, records):
+    """Cursor rows as the app expects to see them.
+
+    Split out of `rows_for` because the scoped task reads further down answer a
+    different WHERE clause but must hand back rows in exactly the same shape —
+    same decoding, same dropping of NULLs. Two copies of this loop would be two
+    places for a BOOLEAN to start arriving as a 0.
+    """
+    columns = _schema(con, table)
+    if not columns:
+        return []
+    types = {name: sql_type for name, sql_type, _ in columns}
+    rows = []
+    for record in records:
+        row = {}
+        for name in record.keys():
+            value = record[name]
+            if value is not None:
+                row[name] = _decode(table, name, value, types.get(name, ''))
+        rows.append(row)
+    return rows
+
+
+def rows_for(table, user_id, order='rowid'):
+    """Every row of `table` belonging to one account, in written order.
+
+    The filter the callers were all doing in Python after reading the whole
+    table. In SQL it uses the `user_id` index, so the cost is this account's
+    rows rather than everybody's.
+    """
+    con = connect()
+    try:
+        if not _schema(con, table):
+            return []
+        query = 'SELECT * FROM "{}" WHERE user_id = ? ORDER BY {}'.format(table, order)
+        return _decode_records(con, table, con.execute(query, (user_id,)))
+    finally:
+        con.close()
+
+
+def find_row(table, row_id, user_id=None, key='id'):
+    """One row by id, scoped to an account when one is given, or None."""
+    con = connect()
+    try:
+        columns = _schema(con, table)
+        if not columns:
+            return None
+        types = {name: sql_type for name, sql_type, _ in columns}
+        query = 'SELECT * FROM "{}" WHERE "{}" = ?'.format(table, key)
+        params = [row_id]
+        if user_id is not None:
+            query += ' AND user_id = ?'
+            params.append(user_id)
+        record = con.execute(query, params).fetchone()
+        if record is None:
+            return None
+        row = {}
+        for name in record.keys():
+            value = record[name]
+            if value is not None:
+                row[name] = _decode(table, name, value, types.get(name, ''))
+        return row
+    finally:
+        con.close()
+
+
+#: The last id handed out per table, so two callers in the same millisecond
+#: cannot be handed the same one. Guarded by `_id_lock`.
+_last_id = {}
+_id_lock = threading.Lock()
+
+
 def new_id(table):
     """A fresh id for `table`: the current millisecond, stepped past collisions.
 
     Ids are millisecond timestamps, and two rows created inside the same
     millisecond would collide on the primary key. Stepping forward keeps ids
     ordered, which `last_task_completion` relies on.
+
+    ## Why this holds a lock
+
+    It used to be a `SELECT id` and a step past what it found, with no memory
+    between calls — so two requests arriving in the same millisecond read the
+    same set, stepped to the same free value, and were both handed it. Under
+    `write_table` that ended as a silent lost update: each rewrote the whole
+    table from its own copy and the later write won. It is visible now only
+    because `insert_row` INSERTs, and an INSERT of a duplicate primary key
+    raises rather than quietly winning.
+
+    The lock fixes the requests inside one process. `insert_row` retries on a
+    collision, which covers the rest — a second worker, or the first call after
+    a restart, when `_last_id` is empty and the table is the only memory.
     """
-    con = connect()
-    try:
-        if not _schema(con, table):
-            taken = set()
-        else:
-            taken = {str(r[0]) for r in
-                     con.execute('SELECT id FROM "{}"'.format(table))}
-    finally:
-        con.close()
-    stamp = int(datetime.now().timestamp() * 1000)
-    while str(stamp) in taken:
-        stamp += 1
-    return str(stamp)
+    with _id_lock:
+        con = connect()
+        try:
+            if not _schema(con, table):
+                highest = 0
+            else:
+                row = con.execute(
+                    'SELECT MAX(CAST(id AS INTEGER)) FROM "{}"'.format(table)
+                ).fetchone()
+                highest = int(row[0] or 0)
+        finally:
+            con.close()
+
+        stamp = int(datetime.now().timestamp() * 1000)
+        # Past the highest id in the table and past the last one this process
+        # handed out, whichever is further along.
+        floor = max(highest, _last_id.get(table, 0))
+        if stamp <= floor:
+            stamp = floor + 1
+        _last_id[table] = stamp
+        return str(stamp)
 
 
 # --------------------------------------------------------------------------
@@ -417,12 +758,160 @@ def save_users(rows):
     write_table('users', rows)
 
 
+def save_user(user):
+    """Write back one account row, matched on its id.
+
+    The pair above rewrote the whole users table, and `refresh_streak` calls
+    into it on every page load — so a page view cost one DELETE and one INSERT
+    per account in the system, and two people loading a page at the same
+    moment could each write a copy of the table that predated the other.
+
+    Matched on `id`, and **`username` is never written here**. Every
+    account-owned table has a foreign key onto `users.username`, and SQLite
+    refuses an UPDATE that moves a parent key out from under a child row. That
+    is why `write_table` turns foreign keys off for its swap, and it is why
+    renaming an account is `tracking.auth.rename_user`'s job and not this
+    function's — it moves the children across too. Leaving the column out here
+    means an ordinary save can never trip over it.
+
+    Only the keys the dict carries are written. A field is cleared by setting
+    it to None, not by deleting the key — `read_table` leaves NULL columns out
+    of the dict, so a missing key means "was already NULL" and must not be
+    read as "set this to NULL".
+    """
+    if not user or not user.get('id'):
+        return False
+    changes = {k: v for k, v in user.items() if k not in ('id', 'username')}
+    return update_row('users', user['id'], changes)
+
+
 def tasks():
     return read_table('tasks')
 
 
 def save_tasks(rows):
     write_table('tasks', rows)
+
+
+def tasks_for(username):
+    """One account's tasks. See `rows_for`."""
+    return rows_for('tasks', username)
+
+
+def save_task(task, username):
+    """Write back one task, scoped to its owner."""
+    changes = {k: v for k, v in task.items() if k != 'id'}
+    return update_row('tasks', task['id'], changes, user_id=username)
+
+
+# --------------------------------------------------------------------------
+# Asking about the tasks without reading them
+# --------------------------------------------------------------------------
+# The two questions the top bar asks on every page. Both used to be answered in
+# the browser, by filtering the account's entire task list — which is why the
+# bar needed that list at all, and why every page paid megabytes to render a
+# bell and a search box. In SQL they are an aggregate and a LIMIT 8.
+#
+# The day is passed in rather than computed here. Stored stamps are local ISO
+# text with no zone (see backend/tracking/xp.py), so "today" is the caller's
+# day, and the caller is the only one who knows it.
+
+
+def task_alert_counts(username, day):
+    """What the top bar's bell needs, as four numbers and two titles.
+
+    Answers three questions in one round trip: how many open tasks are past
+    their date (and the oldest one's title), how many are due today (and one
+    title), and whether anything at all was finished today — the last being
+    what decides whether a live streak is still at risk.
+
+    Titles come back with the counts because the panel shows one of each, and
+    a second query to fetch two strings would be the same round trip twice.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'tasks'):
+            return {'late': 0, 'late_title': None,
+                    'due_today': 0, 'due_today_title': None,
+                    'finished_today': False}
+
+        # substr(due_date, 1, 10) rather than date(due_date): the column holds
+        # either a bare day or a full stamp, and substr treats both the same
+        # way the client's .slice(0, 10) always has.
+        late = con.execute(
+            'SELECT COUNT(*) AS n, MIN(substr(due_date, 1, 10)) AS oldest '
+            'FROM tasks WHERE user_id = ? AND status != ? '
+            "AND substr(due_date, 1, 10) != '' AND substr(due_date, 1, 10) < ?",
+            (username, 'done', day)).fetchone()
+
+        late_title = None
+        if late['n']:
+            row = con.execute(
+                'SELECT title FROM tasks WHERE user_id = ? AND status != ? '
+                'AND substr(due_date, 1, 10) = ? ORDER BY rowid LIMIT 1',
+                (username, 'done', late['oldest'])).fetchone()
+            late_title = row['title'] if row else None
+
+        due = con.execute(
+            'SELECT COUNT(*) AS n FROM tasks WHERE user_id = ? AND status != ? '
+            'AND substr(due_date, 1, 10) = ?',
+            (username, 'done', day)).fetchone()
+
+        due_title = None
+        if due['n']:
+            row = con.execute(
+                'SELECT title FROM tasks WHERE user_id = ? AND status != ? '
+                'AND substr(due_date, 1, 10) = ? ORDER BY rowid LIMIT 1',
+                (username, 'done', day)).fetchone()
+            due_title = row['title'] if row else None
+
+        finished = con.execute(
+            'SELECT 1 FROM tasks WHERE user_id = ? AND status = ? '
+            'AND substr(completed_at, 1, 10) = ? LIMIT 1',
+            (username, 'done', day)).fetchone()
+
+        return {
+            'late': late['n'] or 0,
+            'late_title': late_title,
+            'due_today': due['n'] or 0,
+            'due_today_title': due_title,
+            'finished_today': finished is not None,
+        }
+    finally:
+        con.close()
+
+
+def search_tasks(username, needle, limit=8):
+    """One account's tasks whose title contains `needle`, unfinished first.
+
+    The ordering is the one the search panel has always applied after
+    downloading everything: a search on a to-do list is nearly always somebody
+    looking for something they still have to do.
+
+    An empty needle matches nothing rather than everything — the panel shows no
+    results until something is typed, and a LIKE '%%' here would mean the one
+    query in the app that returns the whole table.
+    """
+    needle = (needle or '').strip()
+    if not needle:
+        return []
+
+    con = connect()
+    try:
+        if not _schema(con, 'tasks'):
+            return []
+        # ESCAPE, so a title search for "50%" is a search for "50%" rather than
+        # a wildcard that matches every row in the table.
+        pattern = '%' + needle.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        query = (
+            'SELECT * FROM tasks WHERE user_id = ? '
+            "AND lower(title) LIKE lower(?) ESCAPE '\\' "
+            'ORDER BY (status = ?), rowid LIMIT ?')
+        return _decode_records(
+            con, 'tasks',
+            con.execute(query, (username, pattern, 'done', int(limit))))
+    finally:
+        con.close()
 
 
 def goals():
@@ -455,6 +944,54 @@ def calendar_entries():
 
 def save_calendar_entries(rows):
     write_table('calendar_entries', rows)
+
+
+def calendar_document(username):
+    """One account's whole calendar, as the dict the client keeps.
+
+    `{}` when the account has never saved one — which, until this table
+    existed, was every account: the views wrote localStorage and nothing else.
+    A caller cannot tell "never saved" from "saved an empty calendar", and does
+    not need to; both mean there is nothing on the server to show.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'calendar_documents'):
+            return {}
+        row = con.execute(
+            'SELECT data FROM calendar_documents WHERE user_id = ?',
+            (username,)).fetchone()
+        if not row or not row['data']:
+            return {}
+        try:
+            parsed = json.loads(row['data'])
+        except (ValueError, TypeError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    finally:
+        con.close()
+
+
+def save_calendar_document(username, data):
+    """Replace one account's calendar with `data`.
+
+    A whole-document write, because that is how the client holds it: the views
+    keep one object and re-save it after every edit. Upserted on `user_id`, so
+    an account has exactly one and there is no create/update decision for a
+    caller to get wrong.
+    """
+    con = connect()
+    try:
+        con.execute(
+            'INSERT INTO calendar_documents (user_id, data, updated_at) '
+            "VALUES (?, ?, datetime('now')) "
+            'ON CONFLICT(user_id) DO UPDATE SET '
+            "data = excluded.data, updated_at = datetime('now')",
+            (username, json.dumps(data, sort_keys=True)))
+        con.commit()
+        return True
+    finally:
+        con.close()
 
 
 def calendar_events():

@@ -167,8 +167,7 @@ export function MilestoneCalendar({
   if (days.size === 0) {
     return (
       <p className="gx-empty">
-        No dated checkpoints yet. Give a milestone a date on its goal's rail above and it appears
-        here, on the day it lands.
+        No dated checkpoints yet. Date one on its rail above and it lands here.
       </p>
     );
   }

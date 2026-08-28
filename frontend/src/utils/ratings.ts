@@ -42,6 +42,67 @@ export const QUALITY_MAX = 25;
 export const DIFFICULTY_WORDS = ['Trivial', 'Easy', 'Fair', 'Hard', 'Brutal'];
 export const EXECUTION_WORDS = ['Poor', 'Patchy', 'Solid', 'Strong', 'Excellent'];
 
+// --------------------------------------------------------------------------
+// The third question
+// --------------------------------------------------------------------------
+/**
+ * Why a task went the way it did — asked only at rating_depth 'reasons'.
+ *
+ * Twelve words, six a side, and the fixed vocabulary is the entire reason this
+ * is worth asking. A text box would collect twelve spellings of "I got
+ * distracted" and produce twelve findings of one task each, which is no
+ * finding; a closed list of six can be counted, ranked, and compared against
+ * the month before it.
+ *
+ * Which six are offered follows the execution star rather than being chosen:
+ * a task rated 1 or 2 is asked what made it hard, one rated 3 or better is
+ * asked what made it go well. The same list on both sides would ask somebody
+ * who has just done something well what went wrong with it.
+ *
+ * The keys are what the database stores and must match ALL_REASONS in
+ * backend/api/tasks.py. The words are only ever read here.
+ */
+export interface Reason {
+  key: string;
+  label: string;
+  /** What it looks like in a sentence: "…because it was bigger than expected". */
+  phrase: string;
+}
+
+export const STRUGGLE_REASONS: Reason[] = [
+  { key: 'distracted', label: 'Could not focus', phrase: 'could not focus' },
+  { key: 'unclear', label: 'Did not know where to start', phrase: 'was unclear where to start' },
+  { key: 'underestimated', label: 'Bigger than it looked', phrase: 'was bigger than it looked' },
+  { key: 'no-time', label: 'Ran out of time', phrase: 'ran out of time' },
+  { key: 'low-energy', label: 'Low energy', phrase: 'was done on low energy' },
+  { key: 'interrupted', label: 'Kept getting interrupted', phrase: 'kept getting interrupted' },
+];
+
+export const WENT_WELL_REASONS: Reason[] = [
+  { key: 'prepared', label: 'Knew exactly what to do', phrase: 'was clear from the start' },
+  { key: 'deep-focus', label: 'Had a clear run at it', phrase: 'had a clear run at it' },
+  { key: 'momentum', label: 'Carried momentum in', phrase: 'carried momentum in' },
+  { key: 'broken-down', label: 'Broken into small steps', phrase: 'was broken into small steps' },
+  { key: 'fresh', label: 'Was fresh', phrase: 'was done fresh' },
+  { key: 'familiar', label: 'Had done one like it', phrase: 'was familiar work' },
+];
+
+export type ReasonSide = 'struggle' | 'went-well';
+
+/** Which six a task is offered, from the execution star it was given. */
+export function reasonsFor(execution: number): Reason[] {
+  return execution >= 3 ? WENT_WELL_REASONS : STRUGGLE_REASONS;
+}
+
+const BY_KEY = new Map<string, { reason: Reason; side: ReasonSide }>();
+STRUGGLE_REASONS.forEach((reason) => BY_KEY.set(reason.key, { reason, side: 'struggle' }));
+WENT_WELL_REASONS.forEach((reason) => BY_KEY.set(reason.key, { reason, side: 'went-well' }));
+
+/** One stored reason, or null for a word this build does not know. */
+export function reasonOf(key: string | undefined | null) {
+  return (key && BY_KEY.get(key)) || null;
+}
+
 /**
  * A task's quality score, or null when it was not rated on both rows.
  *
@@ -272,7 +333,7 @@ export function ratingFindings(summary: RatingSummary, rated: RatedTask[]): Rati
       {
         tone: 'note',
         headline: `${summary.rated} rated ${summary.rated === 1 ? 'task' : 'tasks'} in this window.`,
-        hint: `Findings here need ${FLOOR}. Rating is optional and always will be — this panel simply has nothing to work with until there are a few more.`,
+        hint: `Findings need ${FLOOR}. Rating is optional.`,
       },
     ];
   }
@@ -290,12 +351,12 @@ export function ratingFindings(summary: RatingSummary, rated: RatedTask[]): Rati
         ? {
             tone: 'watch',
             headline: 'You are executing well above the difficulty you take on.',
-            hint: `Execution averages ${execution.toFixed(1)} against difficulty ${difficulty.toFixed(1)}. That is the signature of work that is no longer stretching you — the fix is harder tasks, not better ones.`,
+            hint: `Execution ${execution.toFixed(1)} against difficulty ${difficulty.toFixed(1)}. The work has stopped stretching you — take harder tasks, not better ones.`,
           }
         : {
             tone: 'watch',
             headline: 'You are taking on more than is going well.',
-            hint: `Difficulty averages ${difficulty.toFixed(1)} against execution ${execution.toFixed(1)}. Nothing is wrong with that as a phase; it is worth watching whether it is a phase.`,
+            hint: `Difficulty ${difficulty.toFixed(1)} against execution ${execution.toFixed(1)}. Fine as a phase — worth watching that it stays one.`,
           },
     );
   } else {
@@ -345,8 +406,158 @@ export function ratingFindings(summary: RatingSummary, rated: RatedTask[]): Rati
     hint:
       summary.coverage >= 60
         ? 'A high enough share that the sample is unlikely to be flattering you.'
-        : 'A minority of your finished work, and one you chose — worth reading as an impression rather than a measurement.',
+        : 'A minority of your work, and one you chose. An impression, not a measurement.',
   });
+
+  return out;
+}
+
+// --------------------------------------------------------------------------
+// What the reasons add up to
+// --------------------------------------------------------------------------
+export interface ReasonCount {
+  key: string;
+  label: string;
+  phrase: string;
+  side: ReasonSide;
+  count: number;
+  /** Share of the answers on that side, 0-100. Not of all answers: the two
+      sides are asked of different tasks and comparing across them is
+      meaningless — "distracted 40%, prepared 60%" is not a sentence. */
+  share: number;
+}
+
+export interface ReasonSummary {
+  struggle: ReasonCount[];
+  wentWell: ReasonCount[];
+  /** How many finished tasks in the window carry a reason at all. */
+  answered: number;
+  /** Of those, how many landed on each side. */
+  struggled: number;
+  succeeded: number;
+}
+
+/**
+ * The reasons given inside a window, counted and ranked.
+ *
+ * Both lists come back ordered by count and include only the reasons actually
+ * given — unlike `qualityGrid`, which draws its empty cells on purpose. The
+ * difference is what the empty means: an empty cell in the grid says nothing
+ * ever landed there, which is a finding, while a reason nobody picked is just
+ * a word on a list and printing six zeroes under a heading is noise.
+ */
+export function summariseReasons(
+  tasks: Task[],
+  fromIso: string,
+  toIso: string,
+): ReasonSummary {
+  const counts = new Map<string, number>();
+  let answered = 0;
+
+  tasks.forEach((task) => {
+    const on = String(task.completed_at || '').slice(0, 10);
+    if (!on || on < fromIso || on > toIso) return;
+    const found = reasonOf(task.reason);
+    if (!found) return;
+    answered += 1;
+    counts.set(task.reason as string, (counts.get(task.reason as string) ?? 0) + 1);
+  });
+
+  const side = (which: ReasonSide, list: Reason[]): ReasonCount[] => {
+    const rows = list
+      .map((reason) => ({
+        key: reason.key,
+        label: reason.label,
+        phrase: reason.phrase,
+        side: which,
+        count: counts.get(reason.key) ?? 0,
+        share: 0,
+      }))
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.count - a.count);
+    const total = rows.reduce((sum, row) => sum + row.count, 0);
+    rows.forEach((row) => {
+      row.share = total ? Math.round((row.count / total) * 100) : 0;
+    });
+    return rows;
+  };
+
+  const struggle = side('struggle', STRUGGLE_REASONS);
+  const wentWell = side('went-well', WENT_WELL_REASONS);
+
+  return {
+    struggle,
+    wentWell,
+    answered,
+    struggled: struggle.reduce((sum, row) => sum + row.count, 0),
+    succeeded: wentWell.reduce((sum, row) => sum + row.count, 0),
+  };
+}
+
+/**
+ * What the reasons support saying.
+ *
+ * Guarded on a count for the same reason `ratingFindings` is, and with a
+ * higher floor: a reason is one of six, so three answers can put two on the
+ * same word by chance alone. Under `REASON_FLOOR` on a side, that side gets no
+ * claim made about it.
+ */
+export const REASON_FLOOR = 5;
+
+export function reasonFindings(summary: ReasonSummary): RatingFinding[] {
+  const out: RatingFinding[] = [];
+
+  const top = (rows: ReasonCount[]) => rows[0] ?? null;
+  const worst = top(summary.struggle);
+  const best = top(summary.wentWell);
+
+  if (summary.answered === 0) return out;
+
+  if (summary.struggled >= REASON_FLOOR && worst) {
+    out.push({
+      tone: 'watch',
+      headline: `When work goes badly, it ${worst.phrase}.`,
+      hint: `${worst.count} of the ${summary.struggled} tasks you rated below 3 for execution came back with that reason — ${worst.share}% of them. It is the one thing on this page you could change on purpose.`,
+    });
+  }
+
+  if (summary.succeeded >= REASON_FLOOR && best) {
+    out.push({
+      tone: 'good',
+      headline: `When it goes well, it ${best.phrase}.`,
+      hint: `${best.count} of the ${summary.succeeded} tasks you rated 3 or better named that — ${best.share}%. Worth arranging for rather than waiting for.`,
+    });
+  }
+
+  // The pair, when both sides have enough behind them. Two reasons that are
+  // opposite faces of the same thing — a clear run against interruptions — is
+  // the most actionable finding this data can produce, so it is stated
+  // outright rather than left for the reader to notice.
+  const OPPOSITES: Record<string, string> = {
+    distracted: 'deep-focus',
+    interrupted: 'deep-focus',
+    unclear: 'prepared',
+    underestimated: 'broken-down',
+    'low-energy': 'fresh',
+    'no-time': 'broken-down',
+  };
+  if (worst && best && summary.struggled >= REASON_FLOOR && summary.succeeded >= REASON_FLOOR) {
+    if (OPPOSITES[worst.key] === best.key) {
+      out.push({
+        tone: 'note',
+        headline: 'Your best and worst work turn on the same thing.',
+        hint: `Bad tasks ${worst.phrase}; good ones ${best.phrase}. That is one condition, not two problems, and it is the one worth protecting.`,
+      });
+    }
+  }
+
+  if (out.length === 0) {
+    out.push({
+      tone: 'note',
+      headline: `${summary.answered} ${summary.answered === 1 ? 'reason' : 'reasons'} given in this window.`,
+      hint: `A side needs ${REASON_FLOOR} before anything is claimed from it — one of six answers landing twice is chance, not a pattern.`,
+    });
+  }
 
   return out;
 }

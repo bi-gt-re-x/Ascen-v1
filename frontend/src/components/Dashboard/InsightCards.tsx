@@ -3,9 +3,17 @@
  *
  * Each one is a summary with a way out of it — the card answers the question at
  * a glance and the link at its foot goes to the page that answers it properly.
- * Two of those pages (/tasks, /history) are routed but not built yet; the links
- * point at them anyway, so they start working the day those pages do rather
- * than needing to be found and rewired.
+ *
+ * Two of the three now arrive somewhere finished: /analytics and /tasks. This
+ * note used to name /tasks as unbuilt and it has been pages/Tasks.tsx for a
+ * while — the link needed no rewiring when that happened, which is the whole
+ * argument for pointing at the real path from the start.
+ *
+ * /history is still routed-but-unbuilt and the link points at it anyway, for
+ * the same reason. That is not the dead end components/Analytics/charts.tsx
+ * argues against: those eleven footers had no handler and no href and went
+ * nowhere at all, whereas this one lands on pages/Unbuilt, which says what the
+ * page will be and which files it will be built from.
  */
 import { Link } from 'react-router-dom';
 import { priorityMeta } from './summary';

@@ -33,8 +33,8 @@ export interface Standing {
   rows: StandingRow[];
 }
 
-export function standing(username: string): Promise<ApiResult<Standing>> {
-  return get<Standing>('/api/standing', { username });
+export function standing(): Promise<ApiResult<Standing>> {
+  return get<Standing>('/api/standing');
 }
 
 /** One dated reading of a graded metric. Scores are out of 100. */
@@ -59,10 +59,9 @@ export interface MetricHistory {
  * generated shape with the real score pinned on the end.
  */
 export function metricHistory(
-  username: string,
   metric = 'overall',
 ): Promise<ApiResult<MetricHistory>> {
-  return get<MetricHistory>('/api/metric_history', { username, metric });
+  return get<MetricHistory>('/api/metric_history', { metric });
 }
 
 /**
@@ -88,15 +87,14 @@ export interface BaselineResult {
   baseline: Baseline | null;
 }
 
-export function baseline(username: string): Promise<ApiResult<BaselineResult>> {
-  return get<BaselineResult>('/api/baseline', { username });
+export function baseline(): Promise<ApiResult<BaselineResult>> {
+  return get<BaselineResult>('/api/baseline');
 }
 
 export function setBaseline(
-  username: string,
   values: Pick<Baseline, 'active_days' | 'session_minutes' | 'focus_subject'>,
 ): Promise<ApiResult<BaselineResult>> {
-  return post<BaselineResult>('/api/baseline', { username, ...values });
+  return post<BaselineResult>('/api/baseline', { ...values });
 }
 
 /** Every graded metric's readings, keyed by metric name. */
@@ -111,8 +109,8 @@ export interface MetricHistories {
  * reads. This is for the follow-up on Recommendations, which needs whichever
  * metric the reader happened to adopt a recommendation about.
  */
-export function metricHistories(username: string): Promise<ApiResult<MetricHistories>> {
-  return get<MetricHistories>('/api/metric_histories', { username });
+export function metricHistories(): Promise<ApiResult<MetricHistories>> {
+  return get<MetricHistories>('/api/metric_histories');
 }
 
 /**
@@ -135,20 +133,19 @@ export interface AdoptedResult {
   adopted: AdoptedAdvice[];
 }
 
-export function adoptedAdvice(username: string): Promise<ApiResult<AdoptedResult>> {
-  return get<AdoptedResult>('/api/adopted_advice', { username });
+export function adoptedAdvice(): Promise<ApiResult<AdoptedResult>> {
+  return get<AdoptedResult>('/api/adopted_advice');
 }
 
 /** Records the decision. Re-adopting keeps the original date. */
 export function adoptAdvice(
-  username: string,
   id: string,
   title: string,
 ): Promise<ApiResult<AdoptedResult>> {
-  return post<AdoptedResult>('/api/adopt_advice', { username, id, title });
+  return post<AdoptedResult>('/api/adopt_advice', { id, title });
 }
 
 /** Forgets the decision. Any task it created is left alone. */
-export function dropAdvice(username: string, id: string): Promise<ApiResult<AdoptedResult>> {
-  return post<AdoptedResult>('/api/drop_advice', { username, id });
+export function dropAdvice(id: string): Promise<ApiResult<AdoptedResult>> {
+  return post<AdoptedResult>('/api/drop_advice', { id });
 }

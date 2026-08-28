@@ -750,3 +750,1351 @@ html[data-theme="dark"] .stx-page {
     .stx-chip { transition: none; }
     .stx-node:hover { transform: none; }
 }
+
+
+
+/* ==========================================================================
+   Lattice variant — the subject trees.
+
+   The same canvas read a different way: not labelled cards but a grid of
+   icon tiles with their names and progress under them, joined by lines that
+   are lit along the routes you have taken and quiet where they are locked.
+
+   ## It follows the app's theme
+
+   Every colour below comes from a `--lat-*` token, declared twice — once here
+   for the light theme and once under `html[data-theme="dark"]`. Nothing in the
+   rules themselves is a literal colour, so the lattice is the app's own light
+   or dark page rather than a fixed palette dropped into it.
+
+   ## Four states, four hues
+
+   Violet is available, green is mastered, blue is in progress, grey is locked
+   — and the tile carries the state in its fill, its border and its icon at
+   once, which is what makes a lattice readable from across the room. `--tone`
+   is set once per status and everything inside the tile reads that one
+   property, the same trick the card node uses with `--state` above.
+   ========================================================================== */
+.stx-page--lattice {
+    --lat-page: #f7f8fb;
+    --lat-panel: #ffffff;
+    --lat-field: #ffffff;
+    --lat-grid: #e9ecf3;
+    --lat-line: #e6e9f0;
+    --lat-line-soft: #eff1f6;
+
+    --lat-text: #171c26;
+    --lat-muted: #6b7280;
+    --lat-faint: #9aa1ad;
+
+    --lat-violet: #5b4bde;
+    --lat-violet-soft: #efedfd;
+    --lat-green: #16a34a;
+    --lat-green-soft: #e7f8ee;
+    --lat-blue: #2563eb;
+    --lat-blue-soft: #e8f0fe;
+    --lat-grey: #94a0b0;
+    --lat-grey-soft: #f2f4f7;
+    /* The two the difficulty ladder needed at its warm end. */
+    --lat-teal: #0d9488;
+    --lat-teal-soft: #dcf5f2;
+    --lat-amber: #c2740b;
+    --lat-amber-soft: #fdf1dc;
+    --lat-rose: #d4386c;
+    --lat-rose-soft: #fdeaf1;
+
+    --lat-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 28px rgba(16, 24, 40, .06);
+    --lat-shadow-lift: 0 4px 10px rgba(16, 24, 40, .08), 0 18px 40px rgba(16, 24, 40, .1);
+    --lat-radius: 18px;
+
+    background: var(--lat-page);
+    color: var(--lat-text);
+}
+
+html[data-theme="dark"] .stx-page--lattice {
+    --lat-page: #0d1117;
+    --lat-panel: #151b24;
+    --lat-field: #121820;
+    --lat-grid: #1f2731;
+    --lat-line: #232b36;
+    --lat-line-soft: #1c232d;
+
+    --lat-text: #e6edf3;
+    --lat-muted: #8b949e;
+    --lat-faint: #6e7781;
+
+    --lat-violet: #8b7cf8;
+    --lat-violet-soft: #241f45;
+    --lat-green: #3fb950;
+    --lat-green-soft: #14301d;
+    --lat-blue: #4da3ff;
+    --lat-blue-soft: #12263f;
+    --lat-grey: #6e7781;
+    --lat-grey-soft: #1b222c;
+    --lat-teal: #2dd4bf;
+    --lat-teal-soft: #0f2e2b;
+    --lat-amber: #e8a33d;
+    --lat-amber-soft: #33260f;
+    --lat-rose: #f472a0;
+    --lat-rose-soft: #351623;
+
+    --lat-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    --lat-shadow-lift: 0 8px 28px rgba(0, 0, 0, .5);
+}
+
+/* ---- two palettes, two questions -----------------------------------------
+
+   `--tone` is **difficulty**: how hard the skill is, which is a fact about the
+   skill and does not change as you learn it. Six tiers, and they run warm as
+   they climb — teal, green, blue, violet, amber, rose — so the depth of a tree
+   is legible as colour temperature from across the canvas, and one glance at a
+   subject says how far it goes.
+
+   `--state` is **status**: where the reader stands, which changes constantly.
+   It stays on the small marks that are about progress — the percentage badge,
+   the progress bar, the state pill, the figures in the band — and never takes
+   over the tile.
+
+   Colouring the tile by status was the earlier arrangement and made four
+   colours mean four things a reader already knew from the percentage under it.
+   Difficulty is the information the canvas was not carrying, so it gets the
+   large surface, and status keeps the small ones. Locked is the single
+   exception below: an unreachable node is drained of its tier colour, because
+   at that point "how hard" is not yet the reader's question. */
+.stx-page--lattice .tier-foundation { --tone: var(--lat-teal); --tone-soft: var(--lat-teal-soft); }
+.stx-page--lattice .tier-beginner { --tone: var(--lat-green); --tone-soft: var(--lat-green-soft); }
+.stx-page--lattice .tier-intermediate { --tone: var(--lat-blue); --tone-soft: var(--lat-blue-soft); }
+.stx-page--lattice .tier-advanced { --tone: var(--lat-violet); --tone-soft: var(--lat-violet-soft); }
+.stx-page--lattice .tier-expert { --tone: var(--lat-amber); --tone-soft: var(--lat-amber-soft); }
+.stx-page--lattice .tier-mastery { --tone: var(--lat-rose); --tone-soft: var(--lat-rose-soft); }
+
+.stx-page--lattice .is-complete { --state: var(--lat-green); --state-soft: var(--lat-green-soft); }
+.stx-page--lattice .is-progress { --state: var(--lat-blue); --state-soft: var(--lat-blue-soft); }
+.stx-page--lattice .is-available { --state: var(--lat-violet); --state-soft: var(--lat-violet-soft); }
+.stx-page--lattice .is-locked { --state: var(--lat-grey); --state-soft: var(--lat-grey-soft); }
+
+/* ---- the page fills the width it is given -------------------------------
+   `body` lays its one child out centred with `align-items: center`, so #root is
+   shrink-to-fit and a page as narrow as this drawing used to pull the whole
+   column in around it. Stretching #root while this page is mounted is the one
+   line that fixes it, and `:has` keeps it scoped to this page. The rail and top
+   bar are already paid for by `body.has-rail`'s padding. */
+body:has(.stx-page--lattice) > #root { align-self: stretch; width: 100%; }
+
+.stx-page--lattice .stx-shell {
+    --shell-max: 2200px;
+    --shell-fluid: 97%;
+    gap: 14px;
+}
+
+/* ---- the shared icon mask ----
+   The drawings in utils/icons/tree_icons are stroke SVGs, so they are painted
+   as a mask: the alpha is the shape and `currentColor` is the paint. One file
+   is then grey on a locked tile and green on a mastered one without a second
+   copy of it existing. Callers set `--ico`. */
+.stx-ico {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+}
+
+/* ---- subject switcher ---- */
+
+/* ---- title ---- */
+.stx-lead { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.stx-lead h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+.stx-lead-sub { margin: 0; font-size: 13px; color: var(--lat-muted); max-width: 58ch; }
+.stx-crumbs {
+    display: flex; align-items: center; gap: 6px;
+    flex-wrap: wrap; justify-content: center;
+    font-size: 12.5px;
+}
+.stx-crumb { display: inline-flex; align-items: center; gap: 6px; color: var(--lat-faint); }
+.stx-crumb button {
+    border: 0; background: none; padding: 0;
+    color: var(--lat-muted); font: inherit; font-weight: 600; cursor: pointer;
+}
+.stx-crumb button:hover { color: var(--lat-violet); text-decoration: underline; }
+.stx-crumb [aria-current="page"] { color: var(--lat-text); font-weight: 700; }
+.stx-crumb i { color: var(--lat-faint); font-style: normal; }
+
+/* ---- the band of figures ---- */
+.stx-band {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    padding: 14px 6px;
+    border: 1px solid var(--lat-line);
+    border-radius: var(--lat-radius);
+    background: var(--lat-panel);
+    box-shadow: var(--lat-shadow);
+}
+.stx-figure {
+    --tone: var(--lat-violet);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex: 1 1 170px;
+    padding: 2px 18px;
+    border-right: 1px solid var(--lat-line-soft);
+}
+.stx-figure:last-child { border-right: 0; }
+.stx-figure--ring { flex: 1 1 200px; }
+.stx-figure-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.stx-figure-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--lat-muted);
+    white-space: nowrap;
+}
+.stx-figure-value {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.1;
+}
+.stx-figure-big { font-size: 32px; }
+.stx-figure-value em {
+    font-style: normal;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--lat-faint);
+}
+.stx-figure.is-accent .stx-figure-value { color: var(--lat-violet); }
+.stx-figure.is-level .stx-figure-value { font-size: 20px; color: var(--lat-violet); }
+.stx-figure.is-done { --tone: var(--lat-green); --tone-soft: var(--lat-green-soft); }
+.stx-figure.is-prog { --tone: var(--lat-blue); --tone-soft: var(--lat-blue-soft); }
+.stx-figure.is-lock { --tone: var(--lat-grey); --tone-soft: var(--lat-grey-soft); }
+.stx-figure.is-level { --tone: var(--lat-amber); --tone-soft: var(--lat-amber-soft); }
+.stx-figure.is-level .stx-figure-value { color: var(--lat-amber); }
+.stx-figure-badge {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--tone-soft, var(--lat-violet-soft));
+    color: var(--tone);
+}
+.stx-figure-ico { width: 19px; height: 19px; }
+
+/* ---- canvas and panel side by side ---- */
+.stx-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 14px;
+    align-items: start;
+}
+
+.stx-page--lattice .stx-canvas {
+    border: 1px solid var(--lat-line);
+    border-radius: var(--lat-radius);
+    background: var(--lat-field);
+    box-shadow: var(--lat-shadow);
+}
+/* The canvas and the panel are the same height, declared once.
+   They used to be two independent boxes — the canvas a fixed clamp, the panel
+   however tall its node happened to be — so the right column overran the left
+   by a couple of hundred pixels on any node with a long description and two
+   full lists. Both now read this, and the panel scrolls its own middle. */
+.stx-page--lattice { --lat-column-h: clamp(520px, 68vh, 900px); }
+.stx-page--lattice .stx-canvas { height: var(--lat-column-h); box-sizing: border-box; }
+.stx-page--lattice .stx-scroll {
+    height: 100%;
+    background-color: var(--lat-field);
+    background-image: radial-gradient(var(--lat-grid) 1.4px, transparent 1.4px);
+    background-size: 22px 22px;
+}
+/* Above the rail and the top bar, which are fixed at 900 — a full screen that
+   something else is painted over is not one. The z-index alone did not do it:
+   `.stx-shell` is a stacking context at z-index 1, and a child of one cannot
+   climb out of it, so the shell gives that up while a canvas inside it is
+   full screen. Written against `.stx-shell` because both feeds were stuck. */
+.stx-shell:has(.stx-canvas.is-full) { z-index: auto; }
+.stx-page--lattice .stx-canvas.is-full { z-index: 1000; background: var(--lat-field); }
+.stx-page--lattice .stx-canvas.is-full .stx-scroll { height: 100vh; }
+.stx-page--lattice .stx-hint { color: var(--lat-faint); }
+
+/* The view controls, stacked down the left as in the reference rather than
+   along the bottom right. */
+.stx-page--lattice .stx-zoom {
+    top: 14px; left: 14px;
+    right: auto; bottom: auto;
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px;
+    border-radius: 12px;
+    background: var(--lat-panel);
+    border: 1px solid var(--lat-line);
+    box-shadow: var(--lat-shadow);
+    color: var(--lat-muted);
+}
+.stx-page--lattice .stx-zoom button {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    color: var(--lat-muted);
+}
+.stx-page--lattice .stx-zoom button:hover:not(:disabled) {
+    background: var(--lat-violet-soft);
+    color: var(--lat-violet);
+}
+.stx-page--lattice .stx-zoom button svg { width: 16px; height: 16px; }
+.stx-page--lattice .stx-zoom-read {
+    order: 9;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--lat-faint);
+    padding: 2px 0 1px;
+}
+
+/* ---- connections ---- */
+.stx-page--lattice .stx-wire { stroke: var(--lat-grey); stroke-width: 2.2; opacity: .55; }
+.stx-page--lattice .stx-wire.is-available { stroke: var(--lat-violet); opacity: .85; }
+.stx-page--lattice .stx-wire.is-progress,
+.stx-page--lattice .stx-wire.is-active { stroke: var(--lat-blue); opacity: .9; }
+.stx-page--lattice .stx-wire.is-complete { stroke: var(--lat-green); opacity: .95; }
+.stx-page--lattice .stx-wire.is-locked { stroke: var(--lat-grey); opacity: .4; }
+/* A suggestion, not a gate — dashed whatever state it points at. */
+.stx-page--lattice .stx-wire.is-recommends {
+    stroke: var(--lat-grey);
+    stroke-dasharray: 5 6;
+    stroke-width: 2;
+    opacity: .6;
+}
+.stx-page--lattice .stx-wire.is-lit { stroke-width: 3.4; opacity: 1; }
+
+/* ---- tile ----
+   The button is the hitbox, the name and the percentage; the visible square is
+   `.stx-tile-face`, so a navigation tile can rotate its face into a diamond
+   without the label turning with it. */
+.stx-tile {
+    --tone: var(--lat-grey);
+    position: absolute;
+    box-sizing: border-box;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+.stx-tile-face {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    border: 2px solid var(--tone);
+    background: var(--tone-soft);
+    color: var(--tone);
+    box-shadow: var(--lat-shadow);
+    transition: transform .16s ease, box-shadow .16s ease;
+}
+.stx-tile .stx-ico { width: 46%; height: 46%; }
+/* Locked keeps its tier colour and loses its confidence: a dashed border, a
+   paler face and a dimmed icon. Draining it to grey was the first attempt and
+   it made a tree nobody has started yet — Calculus, Graph Algorithms — open as
+   a page of identical grey squares, which threw away the one thing the colour
+   was there to say. Locked is legible from the dash and the dimming; how hard
+   the node is stays readable while you are deciding whether to go there. */
+.stx-tile.is-locked .stx-tile-face {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--tone) 45%, var(--lat-line));
+    background: color-mix(in srgb, var(--tone-soft) 55%, var(--lat-panel));
+    color: color-mix(in srgb, var(--tone) 62%, var(--lat-faint));
+    box-shadow: none;
+}
+.stx-tile.is-locked .stx-ico { opacity: .75; }
+/* Complete fills solid in its own tier colour — the one place the tile is a
+   block of colour rather than an outline, so a finished run reads as a path. */
+.stx-tile.is-complete .stx-tile-face {
+    background: var(--tone);
+    border-color: var(--tone);
+    color: #fff;
+}
+html[data-theme="dark"] .stx-tile.is-complete .stx-tile-face { color: #0d1117; }
+/* In progress keeps the outline but earns a ring in the status colour. */
+.stx-tile.is-progress .stx-tile-face {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--state) 22%, transparent), var(--lat-shadow);
+}
+.stx-tile:hover .stx-tile-face { transform: translateY(-2px); box-shadow: var(--lat-shadow-lift); }
+.stx-tile:focus-visible { outline: none; }
+.stx-tile:focus-visible .stx-tile-face,
+.stx-tile.is-selected .stx-tile-face {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone) 25%, transparent), var(--lat-shadow-lift);
+}
+
+/* navigation tile — a diamond that opens a child subject */
+.stx-tile.is-nav { --tone: var(--lat-violet); --tone-soft: var(--lat-violet-soft); }
+.stx-tile.is-nav .stx-tile-face {
+    width: 78%; height: 78%;
+    border-radius: 12px;
+    transform: rotate(45deg);
+    border-style: dashed;
+}
+.stx-tile.is-nav .stx-ico { transform: rotate(-45deg); }
+.stx-tile.is-nav:hover .stx-tile-face { transform: rotate(45deg) scale(1.07); }
+.stx-tile.is-nav .stx-tile-name { color: var(--lat-violet); font-weight: 700; }
+.stx-tile.is-nav .stx-tile-name::after { content: ' ›'; }
+
+/* ---- the name and the figure under the tile ----
+   Absolute and centred, in a box wider than the tile, so a label is free to be
+   longer than 64px without any part of the lattice moving to accommodate it. */
+.stx-tile-name {
+    position: absolute;
+    top: calc(100% + 7px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(var(--stx-node-w, 64px) + 76px);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.25;
+    text-align: center;
+    color: var(--lat-text);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    pointer-events: none;
+}
+.stx-tile.is-locked .stx-tile-name { color: var(--lat-faint); }
+.stx-tile:hover .stx-tile-name { color: var(--tone); }
+
+/* The row under the name: the tier always, the percentage where there is
+   progress to report. Absolute so neither can push the lattice apart. */
+.stx-tile-meta {
+    position: absolute;
+    top: calc(100% + 7px + 2.5em);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: none;
+}
+.stx-tile-tier {
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--tone);
+    color: var(--tone);
+    background: var(--lat-panel);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+.stx-tile.is-locked .stx-tile-tier {
+    border-color: color-mix(in srgb, var(--tone) 40%, var(--lat-line));
+    color: color-mix(in srgb, var(--tone) 70%, var(--lat-faint));
+}
+.stx-tile-pct {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--state);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+html[data-theme="dark"] .stx-tile-pct { color: #0d1117; }
+
+/* ---- the detail panel ---- */
+.stx-lp {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--lat-line);
+    border-radius: var(--lat-radius);
+    background: var(--lat-panel);
+    box-shadow: var(--lat-shadow);
+    position: sticky;
+    top: calc(var(--topnav-h, 0px) + 14px);
+    box-sizing: border-box;
+    height: var(--lat-column-h);
+    overflow: hidden;
+}
+/* The header and the practice button stay put; everything between them
+   scrolls. `min-height: 0` because a flex child will not shrink below its
+   content otherwise, which is the whole reason a scroll box in a column
+   silently refuses to scroll. */
+.stx-lp-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* Room for the scrollbar so it never sits on top of the text. */
+    padding-right: 4px;
+    margin-right: -4px;
+}
+.stx-lp.is-empty { height: auto; }
+.stx-lp-blank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    padding: 40px 8px;
+    color: var(--lat-muted);
+}
+.stx-lp-blank strong { font-size: 15px; color: var(--lat-text); }
+.stx-lp-blank span { font-size: 12.5px; max-width: 32ch; }
+.stx-lp-blank-ico { width: 30px; height: 30px; color: var(--lat-faint); }
+
+.stx-lp-head { display: flex; align-items: center; gap: 13px; }
+.stx-lp-head-body { min-width: 0; flex: 1; }
+.stx-lp-head h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+
+/* ---- renaming ----
+   The heading is a button that looks like a heading. Nothing marks it until it
+   is hovered, because a permanently underlined title would be a link to
+   somewhere and there is nowhere to go — the affordance is worth less than the
+   heading reading as a heading. The field is sized to match so the swap does
+   not move the badges under it. */
+.stx-lp-name {
+    display: block;
+    max-width: 100%;
+    padding: 1px 5px;
+    margin: -1px -5px;
+    border: 0;
+    /* The same two pixels the field spends on its underline, so clicking the
+       title does not shunt the badges down by a line's worth of nothing. */
+    border-bottom: 2px solid transparent;
+    border-radius: 7px 7px 0 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: text;
+}
+.stx-lp-name:disabled { cursor: default; }
+.stx-lp-name:not(:disabled):hover { background: var(--lat-violet-soft); }
+.stx-lp-name-field {
+    width: 100%;
+    padding: 1px 5px;
+    margin: -1px -5px;
+    border: 0;
+    border-bottom: 2px solid var(--lat-violet);
+    border-radius: 0;
+    background: none;
+    color: var(--lat-text);
+    font: inherit;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+.stx-lp-name-field:focus { outline: none; }
+.stx-lp-name-reset {
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: var(--lat-faint);
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.stx-lp-name-reset:hover { color: var(--lat-rose); }
+.stx-lp-avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 52px; height: 52px;
+    border-radius: 15px;
+    border: 2px solid var(--tone);
+    background: var(--tone-soft);
+    color: var(--tone);
+}
+.stx-lp-avatar-ico { width: 24px; height: 24px; }
+.stx-lp-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
+.stx-lp-badge {
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.stx-lp-badge.is-kind { background: var(--lat-violet-soft); color: var(--lat-violet); }
+/* The tier badge wears the same colour the tile did, so the panel confirms the
+   canvas rather than introducing a second scheme. */
+.stx-lp-badge.is-tier { background: var(--tone-soft); color: var(--tone); }
+.stx-lp-badge.is-state { background: var(--state-soft); color: var(--state); }
+.stx-lp-blurb { margin: 0; font-size: 13px; line-height: 1.55; color: var(--lat-muted); }
+
+.stx-lp-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--lat-line-soft);
+}
+.stx-lp-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0;
+    font-size: 13px;
+    color: var(--lat-muted);
+}
+.stx-lp-line b { color: var(--lat-text); font-weight: 700; }
+.stx-lp-xp { padding-top: 6px; }
+.stx-page--lattice .stx-bar { background: var(--lat-line-soft); }
+.stx-page--lattice .stx-bar i { background: var(--state, var(--lat-violet)); }
+
+.stx-lp-section { display: flex; flex-direction: column; gap: 7px; padding-top: 14px; border-top: 1px solid var(--lat-line-soft); }
+.stx-lp-section h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 750;
+    letter-spacing: -.01em;
+}
+.stx-lp-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.stx-lp-row {
+    --tone: var(--lat-grey);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--lat-line);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--lat-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background .14s ease, border-color .14s ease;
+}
+.stx-lp-row:hover { background: var(--state-soft); border-color: var(--state); }
+.stx-lp-row-ico { flex: none; width: 15px; height: 15px; color: var(--state); }
+.stx-lp-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stx-lp-row-pct { flex: none; font-size: 11.5px; font-weight: 700; color: var(--state); }
+.stx-lp-row-tick { flex: none; font-size: 13px; font-weight: 800; color: var(--lat-green); }
+
+.stx-lp-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--lat-violet);
+    color: #fff;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter .14s ease;
+}
+.stx-lp-cta:hover:not(:disabled) { filter: brightness(1.08); }
+.stx-lp-cta:disabled { background: var(--lat-grey-soft); color: var(--lat-faint); cursor: not-allowed; }
+.stx-lp-cta-ico { width: 16px; height: 16px; }
+
+/* ---- legend ---- */
+.stx-legend {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 18px;
+    border: 1px solid var(--lat-line);
+    border-radius: var(--lat-radius);
+    background: var(--lat-panel);
+    box-shadow: var(--lat-shadow);
+}
+.stx-legend-keys {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--lat-muted);
+}
+.stx-legend-keys li { display: flex; align-items: center; gap: 7px; }
+.stx-legend-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tone); }
+.stx-legend-line svg {
+    width: 28px; height: 6px;
+    stroke: var(--lat-muted);
+    stroke-width: 2;
+    fill: none;
+}
+.stx-legend-tip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--lat-muted);
+}
+.stx-legend-tip b { color: var(--lat-text); font-weight: 700; }
+.stx-legend-tip-ico { width: 15px; height: 15px; flex: none; color: #d9a441; }
+
+@media (max-width: 1100px) {
+    .stx-layout { grid-template-columns: minmax(0, 1fr); }
+    .stx-lp { position: static; }
+}
+
+@media (max-width: 640px) {
+    .stx-lead h1 { font-size: 22px; }
+    .stx-figure { border-right: 0; flex-basis: 140px; padding: 6px 12px; }
+    .stx-page--lattice .stx-scroll { height: clamp(400px, 58vh, 620px); }
+    .stx-legend { justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stx-tile-face,
+    .stx-lp-row,
+    .stx-pill { transition: none; }
+    .stx-tile:hover .stx-tile-face { transform: none; }
+    .stx-tile.is-nav .stx-tile-face,
+    .stx-tile.is-nav:hover .stx-tile-face { transform: rotate(45deg); }
+}
+
+/* The "+250 XP" after a session — the acknowledgement that the click landed.
+   Beside the percentage rather than over the canvas, because that is the number
+   it just changed and the eye is already there. */
+.stx-lp-flash {
+    margin-left: 8px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--lat-green-soft);
+    color: var(--lat-green);
+    font-size: 11px;
+    font-weight: 700;
+    animation: stx-flash-in .22s ease both;
+}
+@keyframes stx-flash-in {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .stx-lp-flash { animation: none; }
+}
+
+/* ---- moving between trees ------------------------------------------------
+   One strip naming every tree adjacent to this one. The diamonds on the canvas
+   still work and still walk downward; this is the version you do not have to
+   scroll the canvas to find, and the only way to reach a sibling directly. */
+.stx-treenav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 18px;
+    padding: 9px 14px;
+    border: 1px solid var(--lat-line);
+    border-radius: 999px;
+    background: var(--lat-panel);
+    box-shadow: var(--lat-shadow);
+    align-self: center;
+    max-width: 100%;
+}
+.stx-treenav-group { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.stx-treenav-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--lat-faint);
+}
+.stx-treenav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid var(--lat-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--lat-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+.stx-treenav-link:hover {
+    background: var(--lat-violet-soft);
+    border-color: var(--lat-violet);
+    color: var(--lat-violet);
+}
+.stx-treenav-link i { font-style: normal; color: var(--lat-faint); }
+.stx-treenav-link:hover i { color: var(--lat-violet); }
+.stx-treenav-ico { width: 14px; height: 14px; color: var(--lat-faint); }
+.stx-treenav-link:hover .stx-treenav-ico { color: var(--lat-violet); }
+.stx-treenav-link.is-into { border-style: dashed; }
+
+/* ---- how to improve ------------------------------------------------------
+   The steps are the point of the panel once a skill has been chosen, so they
+   are set at reading weight rather than as caption text, and numbered: they are
+   an order to work through, not a list of attributes. */
+.stx-lp-headline {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--state, var(--lat-violet));
+}
+.stx-lp-improve .stx-lp-headline.is-locked { color: var(--lat-grey); }
+.stx-lp-steps {
+    margin: 2px 0 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--lat-muted);
+}
+.stx-lp-steps li::marker { color: var(--lat-faint); font-weight: 700; }
+
+/* ---- the three-step window and the full programme ----
+   A node carries five steps at Foundation and twenty at Mastery, and the panel
+   shows three of them: the one the reader is on and the two after. The current
+   step is set at text weight and the two ahead are dimmed, so the list has a
+   front rather than being three equal instructions. Clicking anywhere in it
+   opens the whole programme over the panel. */
+.stx-lp-steps.is-window { cursor: pointer; }
+.stx-lp-steps li.is-now { color: var(--lat-text); font-weight: 600; }
+.stx-lp-steps.is-window li:not(.is-now) { opacity: .62; }
+.stx-lp-more {
+    align-self: flex-start;
+    margin-top: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lat-violet);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.stx-lp-more:hover { text-decoration: underline; }
+
+/* The full programme, with the panel given over to it. */
+.stx-lp.is-steps { gap: 12px; }
+.stx-lp-steps-head { display: flex; flex-direction: column; gap: 8px; }
+.stx-lp-steps-head h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+.stx-lp-steps-count {
+    margin: 2px 0 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--lat-faint);
+}
+.stx-lp-back {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lat-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+}
+.stx-lp-back:hover { color: var(--lat-violet); }
+.stx-lp-steps.is-all { gap: 10px; padding-left: 22px; }
+
+/* ---- editing a step ----
+   A row is a button rather than text, because the whole of it is the target:
+   asking somebody to hit a pencil icon beside a two-line instruction is a worse
+   affordance than letting them click the instruction. It is styled as text
+   until it is hovered, so the list still reads as a list. */
+.stx-lp-programme {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+    margin-right: -4px;
+}
+/* The number is drawn rather than marked.
+   A row has to be a grid — number, step, delete — and a list item that is a
+   grid is no longer a `list-item`, so its ::marker goes with it. A counter puts
+   it back in a column of its own, which the marker never had: an editing row
+   keeps its number beside the field instead of losing it above the wrap. The
+   three-step window above is untouched and still uses real markers, because it
+   needs `start` and this list always begins at one. */
+.stx-lp-steps.is-all { counter-reset: step; list-style: none; padding-left: 0; }
+.stx-lp-step {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) 18px;
+    align-items: start;
+    gap: 2px 6px;
+    counter-increment: step;
+}
+.stx-lp-step::before {
+    content: counter(step) ".";
+    color: var(--lat-faint);
+    font-weight: 700;
+    text-align: right;
+    /* Optical alignment with the text beside it, which sits on a 1.5 line. */
+    line-height: 1.5;
+}
+.stx-lp-step.is-now::before { color: var(--lat-violet); }
+.stx-lp-step.is-done::before { text-decoration: none; }
+.stx-lp-step-text {
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: text;
+}
+.stx-lp-step-text:disabled { cursor: default; }
+.stx-lp-step-text:not(:disabled):hover { background: var(--lat-violet-soft); }
+.stx-lp-step-del {
+    width: 18px; height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: none;
+    color: var(--lat-faint);
+    font: inherit;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    /* Held back until the row is under the cursor: a column of crosses beside
+       twenty steps reads as a list of things to delete. */
+    opacity: 0;
+    transition: opacity .12s ease, color .12s ease, background .12s ease;
+}
+.stx-lp-step:hover .stx-lp-step-del,
+.stx-lp-step-del:focus-visible { opacity: 1; }
+.stx-lp-step-del:hover { background: var(--lat-rose-soft); color: var(--lat-rose); }
+
+/* Both open states put their buttons on a second row under the field, in the
+   step's own column rather than under the number. */
+.stx-lp-step.is-editing,
+.stx-lp-step.is-confirming { grid-template-columns: 20px minmax(0, 1fr); gap: 6px; }
+.stx-lp-step-acts { grid-column: 2; }
+/* Struck-through text inside an open editor would be unreadable, and a step
+   being deleted is not a step you have done. */
+.stx-lp-step.is-editing,
+.stx-lp-step.is-confirming { opacity: 1; text-decoration: none; }
+.stx-lp-step-field {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--lat-violet);
+    border-radius: 8px;
+    background: var(--lat-field);
+    color: var(--lat-text);
+    font: inherit;
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+.stx-lp-step-field:focus { outline: 2px solid var(--lat-violet-soft); outline-offset: 1px; }
+.stx-lp-step-ask { font-size: 12.5px; font-weight: 650; color: var(--lat-rose); line-height: 1.5; }
+.stx-lp-step-acts { display: flex; gap: 8px; }
+.stx-lp-step-act {
+    padding: 4px 10px;
+    border: 1px solid var(--lat-line);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--lat-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.stx-lp-step-act:hover { border-color: var(--lat-grey); color: var(--lat-text); }
+.stx-lp-step-act.is-save {
+    border-color: var(--lat-violet);
+    background: var(--lat-violet);
+    color: #fff;
+}
+.stx-lp-step-act.is-save:hover { filter: brightness(1.08); color: #fff; }
+.stx-lp-step-act.is-danger {
+    border-color: var(--lat-rose);
+    background: var(--lat-rose);
+    color: #fff;
+}
+.stx-lp-step-act.is-danger:hover { filter: brightness(1.08); color: #fff; }
+
+.stx-lp-step-add {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--lat-line-soft);
+}
+.stx-lp-more:disabled { color: var(--lat-faint); cursor: default; text-decoration: none; }
+.stx-lp-step-reset {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lat-faint);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    cursor: pointer;
+}
+.stx-lp-step-reset:hover { color: var(--lat-rose); }
+/* Steps behind the reader are struck through rather than hidden: the list is a
+   ladder, and a ladder with its bottom rungs removed reads as a shorter one. */
+.stx-lp-steps.is-all li.is-done { opacity: .45; text-decoration: line-through; }
+.stx-lp-steps.is-all li.is-now { color: var(--lat-text); font-weight: 650; }
+.stx-lp-steps.is-all li.is-now::marker { color: var(--lat-violet); }
+
+/* The three notes under the steps.
+   A definition list, because that is what it is: three questions with one
+   answer each. The label is set small and uppercase so the column of answers
+   reads as a paragraph you can skim, rather than as six lines of equal weight
+   competing with the steps above them. Each note carries a tone down its left
+   edge — done / trap / time — which is the whole of the colour coding and does
+   the work a third heading would otherwise have to do. */
+.stx-lp-notes {
+    margin: 10px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.stx-lp-note {
+    --tone: var(--lat-grey);
+    padding-left: 10px;
+    border-left: 2px solid var(--tone);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.stx-lp-note.is-proof { --tone: var(--lat-green); }
+.stx-lp-note.is-pitfall { --tone: var(--lat-amber); }
+.stx-lp-note.is-effort { --tone: var(--lat-violet); }
+.stx-lp-note dt {
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--tone);
+}
+.stx-lp-note dd {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--lat-muted);
+}
+
+
+@media (max-width: 640px) {
+    .stx-treenav { border-radius: var(--lat-radius); }
+}
+
+
+/* ===========================================================================
+   The top of the page: five focus topics, a search field, and the rail
+   ===========================================================================
+   Three controls in a column, widest reach at the bottom. The five cards are
+   the subjects somebody is on this term and are meant to be read; the search
+   finds anything at all; the rail holds the whole catalogue and is meant to be
+   scrolled past as often as it is used. The order is deliberate — the cheapest
+   thing to look at is first. */
+
+/* ---- the focus band ---- */
+.stx-focus { display: flex; flex-direction: column; gap: 10px; }
+.stx-focus-head { display: flex; flex-direction: column; gap: 2px; text-align: center; }
+.stx-focus-head h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 750;
+    letter-spacing: -.01em;
+    color: var(--lat-text);
+}
+.stx-focus-head p { margin: 0; font-size: 12px; color: var(--lat-faint); }
+
+/* Five across on a wide screen and never fewer than two, so the band reflows
+   instead of scrolling — this is the row that should always be readable. */
+.stx-focus-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+@media (max-width: 1080px) { .stx-focus-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .stx-focus-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.stx-focus-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--lat-line);
+    border-radius: 14px;
+    background: var(--lat-panel);
+    transition: border-color .16s ease, box-shadow .16s ease;
+}
+.stx-focus-card:hover { border-color: var(--lat-violet); }
+/* The card you walked in through stays lit for as long as you are inside its
+   subject, however many forks down — see `openTrail` in SubjectRail. */
+.stx-focus-card.is-here {
+    border-color: var(--lat-violet);
+    box-shadow: 0 0 0 1px var(--lat-violet) inset;
+}
+
+.stx-focus-open {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px 9px;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    min-width: 0;
+}
+.stx-focus-badge {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 10px;
+    background: var(--lat-violet-soft);
+    color: var(--lat-violet);
+}
+.stx-focus-ico { width: 19px; height: 19px; }
+.stx-focus-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.stx-focus-text strong {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--lat-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.stx-focus-text em {
+    font-style: normal;
+    font-size: 11px;
+    color: var(--lat-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.stx-focus-swap {
+    margin: 0 12px 9px;
+    padding: 3px 0 0;
+    border: 0;
+    border-top: 1px solid var(--lat-line-soft);
+    background: none;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 650;
+    color: var(--lat-muted);
+    text-align: left;
+    cursor: pointer;
+}
+.stx-focus-swap:hover { color: var(--lat-violet); }
+
+/* ---- the picker under a card ---- */
+.stx-focus-pop {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 6px);
+    left: 0;
+    width: max(240px, 100%);
+    max-height: 320px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--lat-line);
+    border-radius: 12px;
+    background: var(--lat-panel);
+    box-shadow: 0 18px 40px rgba(15, 20, 32, .16);
+    overflow: hidden;
+}
+.stx-focus-filter {
+    margin: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--lat-line);
+    border-radius: 8px;
+    background: var(--lat-page, transparent);
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--lat-text);
+}
+.stx-focus-filter:focus { outline: none; border-color: var(--lat-violet); }
+.stx-focus-list { overflow-y: auto; padding: 0 6px 8px; }
+.stx-focus-group { display: flex; flex-direction: column; }
+.stx-focus-group-name {
+    padding: 7px 6px 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--lat-faint);
+}
+.stx-focus-choice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--lat-text);
+    text-align: left;
+    cursor: pointer;
+}
+.stx-focus-choice:hover { background: var(--lat-violet-soft); color: var(--lat-violet); }
+.stx-focus-choice.is-on { color: var(--lat-violet); font-weight: 700; }
+.stx-focus-choice-ico { width: 15px; height: 15px; flex: 0 0 15px; }
+.stx-focus-none { margin: 10px 8px; font-size: 12px; color: var(--lat-faint); }
+
+/* ---- search + rail ---- */
+.stx-rail { display: flex; flex-direction: column; gap: 9px; }
+
+.stx-find { position: relative; display: flex; align-items: center; }
+.stx-find-ico {
+    position: absolute;
+    left: 12px;
+    width: 16px;
+    height: 16px;
+    color: var(--lat-faint);
+    pointer-events: none;
+}
+.stx-find-input {
+    width: 100%;
+    padding: 10px 34px 10px 36px;
+    border: 1px solid var(--lat-line);
+    border-radius: 999px;
+    background: var(--lat-panel);
+    font: inherit;
+    font-size: 13px;
+    color: var(--lat-text);
+}
+.stx-find-input::placeholder { color: var(--lat-faint); }
+.stx-find-input:focus { outline: none; border-color: var(--lat-violet); }
+/* The browser's own clear button would sit on top of ours. */
+.stx-find-input::-webkit-search-cancel-button { display: none; }
+.stx-find-clear {
+    position: absolute;
+    right: 10px;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--lat-muted);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+.stx-find-clear:hover { background: var(--lat-line-soft); color: var(--lat-text); }
+
+.stx-hits {
+    position: absolute;
+    z-index: 45;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: 340px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    border: 1px solid var(--lat-line);
+    border-radius: 12px;
+    background: var(--lat-panel);
+    box-shadow: 0 18px 40px rgba(15, 20, 32, .16);
+}
+.stx-hit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+}
+.stx-hit:hover { background: var(--lat-violet-soft); }
+.stx-hit-ico { width: 17px; height: 17px; flex: 0 0 17px; color: var(--lat-violet); }
+.stx-hit-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.stx-hit-text strong { font-size: 13px; font-weight: 650; color: var(--lat-text); }
+.stx-hit-text em { font-style: normal; font-size: 11px; color: var(--lat-faint); }
+/* What kind of thing was found, because "Statistics" is a subject, a lattice
+   and a skill, and picking the wrong one lands somewhere unexpected. */
+.stx-hit-kind {
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    background: var(--lat-line-soft);
+    color: var(--lat-muted);
+}
+.stx-hit-kind.is-subject { background: var(--lat-violet-soft); color: var(--lat-violet); }
+.stx-hit-kind.is-tree { background: var(--lat-green-soft); color: var(--lat-green); }
+.stx-hit-none { padding: 10px 8px; font-size: 12.5px; color: var(--lat-faint); }
+
+/* One row, scrolled sideways. A hundred pills wrapped would be nine rows and
+   the lattice would start below the fold. */
+.stx-pills {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+}
+.stx-pills::-webkit-scrollbar { height: 6px; }
+.stx-pills::-webkit-scrollbar-thumb { background: var(--lat-line); border-radius: 999px; }
+.stx-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    padding: 6px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--lat-line);
+    background: var(--lat-panel);
+    color: var(--lat-muted);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color .16s ease, border-color .16s ease, background .16s ease;
+}
+.stx-pill-ico { width: 14px; height: 14px; flex: 0 0 14px; }
+.stx-pill:hover { color: var(--lat-text); border-color: var(--lat-violet); }
+.stx-pill.is-on {
+    color: #fff;
+    background: var(--lat-violet);
+    border-color: var(--lat-violet);
+}

@@ -1,0 +1,35 @@
+import type { SubjectTree } from './types';
+import { open, lock } from './types';
+
+export const GRAPHS: SubjectTree = {
+  id: 'graphs',
+  title: 'Graph Algorithms',
+  blurb: 'Once trees fork into graphs, the traversals earn a tree of their own.',
+  parent: 'algorithms',
+  nodes: [
+    { id: 'g.repr', name: 'Representations', icon: 'graph-nodes', tier: 'intermediate', core: true, state: open, percent: 30, xp: 1600,
+      desc: 'Storing a graph as adjacency lists or a matrix, and knowing which the problem wants. Lists for sparse graphs, a matrix when you need instant edge lookup — the choice sets the cost of everything after it.' },
+    { id: 'g.bfs', name: 'Breadth-First Search', icon: 'traversal', tier: 'intermediate', requires: ['g.repr'], state: open, percent: 10, xp: 1900,
+      desc: 'Exploring a level at a time with a queue. Because it reaches every node at distance one before distance two, it hands you shortest paths for free on unweighted graphs.' },
+    { id: 'g.dfs', name: 'Depth-First Search', icon: 'branch', tier: 'intermediate', requires: ['g.repr'], state: lock, percent: 0, xp: 1900,
+      desc: 'Following one route as far as it goes before backing up. Natural to write recursively, and the base for cycle detection, topological order and component finding.' },
+    { id: 'g.components', name: 'Connected Components', icon: 'network', tier: 'intermediate', requires: ['g.dfs'], state: lock, percent: 0, xp: 1800,
+      desc: 'Finding the separate islands in a graph that is not fully joined up. One traversal per unvisited node, and a surprising number of grid puzzles are exactly this.' },
+    { id: 'g.cycles', name: 'Cycle Detection', icon: 'loops', tier: 'advanced', requires: ['g.dfs'], state: lock, percent: 0, xp: 2000,
+      desc: 'Deciding whether a graph contains a loop — which differs between directed and undirected graphs. In a dependency graph a cycle is the thing that makes an ordering impossible.' },
+    { id: 'g.topo', name: 'Topological Sort', icon: 'sorting', tier: 'advanced', requires: ['g.cycles'], state: lock, percent: 0, xp: 2100,
+      desc: 'An order in which dependencies always come before what needs them. This page lays its own nodes out with exactly this idea, and a cycle is what makes it fail.' },
+    { id: 'g.dijkstra', name: "Dijkstra's Algorithm", icon: 'path-route', tier: 'advanced', requires: ['g.bfs'], recommends: ['g.repr'], state: lock, percent: 0, xp: 2400,
+      desc: 'Shortest paths with weighted edges, using a priority queue to always settle the nearest unfinished node. Correct only while every weight is non-negative, which is exactly what the next node fixes.' },
+    { id: 'g.bellman', name: 'Bellman-Ford', icon: 'measurement', tier: 'expert', requires: ['g.dijkstra'], state: lock, percent: 0, xp: 2500,
+      desc: 'Shortest paths that tolerate negative edges, by relaxing every edge repeatedly. Slower than Dijkstra, and the only one of the two that can also tell you a negative cycle exists.' },
+    { id: 'g.mst', name: 'Minimum Spanning Tree', icon: 'tree-structure', tier: 'advanced', requires: ['g.dijkstra'], state: lock, percent: 0, xp: 2300,
+      desc: 'Connecting every node for the least total edge weight. Kruskal sorts edges and uses union-find; Prim grows outward from one node — same answer, different shape of problem to suit.' },
+    { id: 'g.astar', name: 'A* Search', icon: 'compass', tier: 'expert', requires: ['g.dijkstra'], state: lock, percent: 0, xp: 2600,
+      desc: 'Dijkstra with a heuristic nudging the search toward the goal. As long as the heuristic never overestimates, the answer stays optimal and the search visits far fewer nodes.' },
+    { id: 'g.bipartite', name: 'Bipartite Matching', icon: 'puzzle', tier: 'expert', requires: ['g.components'], state: lock, percent: 0, xp: 2500,
+      desc: 'Pairing two sets so as many pairs as possible are matched. Scheduling, assignment and rota problems are usually this in disguise.' },
+    { id: 'g.flow', name: 'Network Flow', icon: 'network', tier: 'mastery', requires: ['g.topo', 'g.mst', 'g.bipartite'], state: lock, percent: 0, xp: 3000,
+      desc: 'How much can be pushed through a capacitated network, and where the bottleneck is. The max-flow min-cut theorem tying those two together is one of the genuinely beautiful results in the subject.' },
+  ],
+};

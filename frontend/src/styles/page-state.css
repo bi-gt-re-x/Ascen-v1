@@ -119,3 +119,65 @@ html[data-theme="dark"] .page-state-files code { color: #8b949e; }
 @media (prefers-reduced-motion: reduce) {
     html[data-theme="dark"] .page-spinner { border-top-color: #30363d; }
 }
+
+/* ---------- A caught crash ------------------------------------------------
+   components/ErrorBoundary. Two variants of one block: `page` sits inside the
+   app shell with the rail and top bar still around it, and `root` replaces the
+   screen because the shell is what failed.
+
+   Deliberately not styled as an error banner. A red bar says "this request
+   failed, try again"; this says "the code broke", which the reader can do
+   nothing about and should not be shouted at over. Quiet card, plain words,
+   and the two buttons that are actually worth offering. */
+.page-state-crash {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 10px;
+    max-width: 520px;
+    margin: 48px auto;
+    padding: 28px 24px;
+    text-align: center;
+    border: 1px solid var(--ps-line, #e6e9ef);
+    border-radius: 16px;
+    background: var(--ps-card, #fff);
+}
+.page-state-crash.is-root {
+    /* No shell around it, so it centres in the viewport rather than in a main
+       column that does not exist. */
+    min-height: 100vh;
+    margin: 0 auto;
+    justify-content: center;
+    border: 0;
+    background: none;
+}
+.page-state-crash h2 {
+    margin: 0;
+    font-size: 17px; font-weight: 650; letter-spacing: -.01em;
+}
+.page-state-crash p {
+    margin: 0;
+    font-size: 13.5px; line-height: 1.55;
+    color: var(--ps-muted, #6b7684);
+}
+.page-state-detail {
+    display: block;
+    max-width: 100%;
+    margin-top: 2px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--ps-well, #f2f4f8);
+    color: var(--ps-muted, #6b7684);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    /* A message can be one clause or a paragraph of framework prose; it wraps
+       rather than stretching the card or clipping the half that names the
+       property that was null. */
+    overflow-wrap: anywhere;
+}
+.page-state-actions { display: flex; gap: 9px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+
+html[data-theme="dark"] .page-state-crash {
+    --ps-line: #28324a;
+    --ps-card: #161d2c;
+    --ps-muted: #8f9bb3;
+    --ps-well: #0f1523;
+}

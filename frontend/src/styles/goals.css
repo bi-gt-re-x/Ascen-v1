@@ -26,7 +26,7 @@
  * `body` other than `visible` stops it propagating to the viewport, and the
  * page then refuses to scroll at all — `overflow-y: auto` did it just as
  * surely as `hidden`. Whether this page scrolls is `body.pins-viewport`
- * (styles/navbar.css), which App.tsx sets per route and which already unpins
+ * (styles/rail.css), which App.tsx sets per route and which already unpins
  * below 1120x640 for exactly the small-viewport reason the old comment gave.
  * min-height, margin and padding are on the always-loaded body rule in
  * styles/dashboard.css. */
@@ -71,32 +71,6 @@ body:has(.goals-page) {
 
 /* Goals list section */
 
-
-/* Tab Navigation */
-.tab-navigation {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.tab-btn {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1.5px solid rgba(100, 200, 255, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    padding: 12px 24px;
-    border-radius: 20px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.tab-btn:hover, .tab-btn.active {
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border-color: rgba(100, 200, 255, 0.5);
-    border-bottom: 2px solid rgba(100, 200, 255, 0.8);
-}
 
 /* Desert Solitude Theme for Bottom Navigation */
 
@@ -510,7 +484,7 @@ body:has(.goals-page) {
 }
 
 /* Modal */
-.modal {
+.gx-page .modal {
     display: none;
     position: fixed;
     z-index: 1000;
@@ -522,7 +496,7 @@ body:has(.goals-page) {
     animation: fadeIn 0.3s ease-out;
 }
 
-.modal-content {
+.gx-page .modal-content {
     background-color: white;
     margin: 5% auto;
     padding: 40px;
@@ -534,13 +508,13 @@ body:has(.goals-page) {
     animation: fadeIn 0.4s ease-out;
 }
 
-.modal-content h2 {
+.gx-page .modal-content h2 {
     color: #1a237e;
     margin-bottom: 25px;
     font-weight: bold;
 }
 
-.close {
+.gx-page .close {
     color: #aaa;
     float: right;
     font-size: 28px;
@@ -549,12 +523,12 @@ body:has(.goals-page) {
     transition: color 0.3s ease;
 }
 
-.close:hover {
+.gx-page .close:hover {
     color: #1a237e;
 }
 
 /* Modal form */
-.modal-content label {
+.gx-page .modal-content label {
     display: block;
     margin-bottom: 8px;
     color: #333;
@@ -562,11 +536,11 @@ body:has(.goals-page) {
     font-size: 0.95em;
 }
 
-.modal-content input[type="text"],
-.modal-content input[type="number"],
-.modal-content input[type="date"],
-.modal-content textarea,
-.modal-content select {
+.gx-page .modal-content input[type="text"],
+.gx-page .modal-content input[type="number"],
+.gx-page .modal-content input[type="date"],
+.gx-page .modal-content textarea,
+.gx-page .modal-content select {
     width: 100%;
     padding: 12px;
     margin-bottom: 20px;
@@ -577,7 +551,7 @@ body:has(.goals-page) {
     transition: border-color 0.3s ease;
 }
 
-.modal-content select {
+.gx-page .modal-content select {
     background-color: white;
     color: #333;
     border: 2px solid #e0e0e0;
@@ -590,29 +564,29 @@ body:has(.goals-page) {
     transition: border-color 0.3s ease;
 }
 
-.modal-content select option {
+.gx-page .modal-content select option {
     background-color: white;
     color: #1a237e;
 }
 
-.modal-content input:focus,
-.modal-content textarea:focus,
-.modal-content select:focus {
+.gx-page .modal-content input:focus,
+.gx-page .modal-content textarea:focus,
+.gx-page .modal-content select:focus {
     outline: none;
     border-color: #1a237e;
 }
 
 /* Invalid date input styling */
-.modal-content input.invalid-date,
-.modal-content input[type="date"].invalid-date {
+.gx-page .modal-content input.invalid-date,
+.gx-page .modal-content input[type="date"].invalid-date {
     border-color: #ff0000;
     background-color: rgba(255, 0, 0, 0.1);
     animation: invalidDatePulse 0.5s ease-in-out;
 }
 
 /* Invalid input styling for title and amounts */
-.modal-content input.invalid-input,
-.modal-content textarea.invalid-input {
+.gx-page .modal-content input.invalid-input,
+.gx-page .modal-content textarea.invalid-input {
     border-color: #ff0000;
     background-color: rgba(255, 0, 0, 0.1);
     animation: invalidDatePulse 0.5s ease-in-out;
@@ -627,7 +601,7 @@ body:has(.goals-page) {
     }
 }
 
-.modal-content textarea {
+.gx-page .modal-content textarea {
     resize: vertical;
     min-height: 80px;
     background-color: white;
@@ -656,30 +630,30 @@ body:has(.goals-page) {
 
 
 /* Consistent modal styling across all themes */
-body.classic .modal-content {
+body.classic .gx-page .modal-content{
     background-color: white;
     border: 2px solid #1a237e;
 }
 
-body.classic .modal-content h2 {
+body.classic .gx-page .modal-content h2{
     color: #1a237e;
 }
 
-body.classic .modal-content label {
+body.classic .gx-page .modal-content label{
     color: #333;
 }
 
-body.classic .modal-content input,
-body.classic .modal-content textarea,
-body.classic .modal-content select {
+body.classic .gx-page .modal-content input,
+body.classic .gx-page .modal-content textarea,
+body.classic .gx-page .modal-content select{
     background-color: white;
     color: #333;
     border: 2px solid #e0e0e0;
 }
 
-body.classic .modal-content input:focus,
-body.classic .modal-content textarea:focus,
-body.classic .modal-content select:focus {
+body.classic .gx-page .modal-content input:focus,
+body.classic .gx-page .modal-content textarea:focus,
+body.classic .gx-page .modal-content select:focus{
     border-color: #1a237e;
 }
 
@@ -727,32 +701,6 @@ body.classic .add-goal-btn:hover {
 
 /* Stat boxes */
 
-
-/* Filter tabs */
-body.classic .tab-btn {
-    background: #ffffff;
-    backdrop-filter: none;
-    border: 1.5px solid #e6e8f0;
-    color: #6C757D;
-    border-radius: 999px;
-    padding: 9px 20px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-body.classic .tab-btn:hover {
-    background: #f6f2ec;
-    color: #2C302E;
-    border-color: #d8c8b4;
-    border-bottom: 1.5px solid #d8c8b4;
-}
-
-body.classic .tab-btn.active {
-    background: #f3ece2;
-    color: #2C302E;
-    border: 1.5px solid #A38A70;
-    border-bottom: 1.5px solid #A38A70;
-}
 
 /* Goals list + empty state */
 body.classic .no-goals { color: #6C757D; }
@@ -851,7 +799,7 @@ body.classic .goal-controls button:hover {
 }
 
 /* Add New Goal popup — styled like the dashboard's Add Task popup */
-body.classic .modal-content {
+body.classic .gx-page .modal-content{
     background-color: #FFFFFF;
     margin: 8% auto;
     padding: 32px;
@@ -865,14 +813,14 @@ body.classic .modal-content {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-body.classic .modal-content h2 {
+body.classic .gx-page .modal-content h2{
     margin: 0 0 24px 0;
     font-size: 1.3rem;
     font-weight: 700;
     color: #2C302E;
 }
 
-body.classic .close {
+body.classic .gx-page .close{
     color: #A0A0A0;
     position: absolute;
     top: 18px;
@@ -882,19 +830,19 @@ body.classic .close {
     font-weight: bold;
 }
 
-body.classic .close:hover { color: #2C302E; }
+body.classic .gx-page .close:hover{ color: #2C302E; }
 
-body.classic .modal-content label {
+body.classic .gx-page .modal-content label{
     color: #6C757D;
     font-weight: 500;
     text-align: left;
 }
 
-body.classic .modal-content input[type="text"],
-body.classic .modal-content input[type="number"],
-body.classic .modal-content input[type="date"],
-body.classic .modal-content textarea,
-body.classic .modal-content select {
+body.classic .gx-page .modal-content input[type="text"],
+body.classic .gx-page .modal-content input[type="number"],
+body.classic .gx-page .modal-content input[type="date"],
+body.classic .gx-page .modal-content textarea,
+body.classic .gx-page .modal-content select{
     width: 100%;
     padding: 12px;
     margin-bottom: 18px;
@@ -906,9 +854,9 @@ body.classic .modal-content select {
     background-color: #FFFFFF;
 }
 
-body.classic .modal-content input:focus,
-body.classic .modal-content textarea:focus,
-body.classic .modal-content select:focus {
+body.classic .gx-page .modal-content input:focus,
+body.classic .gx-page .modal-content textarea:focus,
+body.classic .gx-page .modal-content select:focus{
     outline: none;
     border-color: #2C302E;
 }
@@ -985,16 +933,6 @@ body.dark .goals-list::-webkit-scrollbar-thumb:hover {
            margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
 }
 
-/* ============================================================
-   THEME SELECTOR (fixed, top-right)
-   ============================================================ */
-.theme-selector-wrap {
-    position: fixed;
-    top: 18px;
-    right: 24px;
-    z-index: 300;
-}
-
 
 /* ============================================================
    DARK THEME
@@ -1018,20 +956,6 @@ body.dark .add-goal-btn {
     font-weight: 600;
 }
 body.dark .add-goal-btn:hover { background: #A38A70; border-color: #A38A70; color: #0D1117; }
-
-
-body.dark .tab-btn {
-    background: #21262D;
-    backdrop-filter: none;
-    border: 1.5px solid #30363D;
-    color: #c9d1d9;
-    border-radius: 999px;
-    padding: 9px 20px;
-    font-size: 14px;
-    font-weight: 600;
-}
-body.dark .tab-btn:hover { background: #2a3038; color: #e6e8f0; border-color: #A38A70; border-bottom: 1.5px solid #A38A70; }
-body.dark .tab-btn.active { background: #A38A70; color: #0D1117; border: 1.5px solid #A38A70; border-bottom: 1.5px solid #A38A70; }
 
 body.dark .no-goals { color: #9aa0b5; }
 
@@ -1090,42 +1014,34 @@ body.dark .goal-controls button {
 body.dark .goal-controls button:hover { background: #b89b80; border-color: #b89b80; }
 
 /* Dark modal (matches the dashboard's dark popup) */
-body.dark .modal-content {
+body.dark .gx-page .modal-content{
     background-color: #161B22;
     border: 1.5px solid #30363D;
     border-radius: 14px;
     color: #e6e8f0;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
-body.dark .modal-content h2 { color: #e6e8f0; }
-body.dark .close { color: #8b949e; }
-body.dark .close:hover { color: #e6e8f0; }
-body.dark .modal-content label { color: #9aa0b5; }
-body.dark .modal-content input[type="text"],
-body.dark .modal-content input[type="number"],
-body.dark .modal-content input[type="date"],
-body.dark .modal-content textarea,
-body.dark .modal-content select {
+body.dark .gx-page .modal-content h2{ color: #e6e8f0; }
+body.dark .gx-page .close{ color: #8b949e; }
+body.dark .gx-page .close:hover{ color: #e6e8f0; }
+body.dark .gx-page .modal-content label{ color: #9aa0b5; }
+body.dark .gx-page .modal-content input[type="text"],
+body.dark .gx-page .modal-content input[type="number"],
+body.dark .gx-page .modal-content input[type="date"],
+body.dark .gx-page .modal-content textarea,
+body.dark .gx-page .modal-content select{
     background-color: #0f141a;
     border: 1.5px solid #30363D;
     color: #e6e8f0;
 }
-body.dark .modal-content input:focus,
-body.dark .modal-content textarea:focus,
-body.dark .modal-content select:focus { border-color: #A38A70; }
+body.dark .gx-page .modal-content input:focus,
+body.dark .gx-page .modal-content textarea:focus,
+body.dark .gx-page .modal-content select:focus{ border-color: #A38A70; }
 body.dark .confirm-add-btn { background: #A38A70; color: #0D1117; }
 body.dark .confirm-add-btn:hover { background: #b89b80; }
 
 /* Theme selector in dark */
 
-/* Phone (≤480px): let the pill nav wrap instead of overflowing */
-@media (max-width: 480px) {
-    .bottom-nav {
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: calc(100% - 1.5rem);
-    }
-}
 
 /* ==========================================================================
    2026 redesign — 70/30 split: goals (left) + Milestones panel (right).
@@ -1692,7 +1608,7 @@ body.dark .goals-page .goal-description { color: #9aa0b5; }
 }
 
 /* ---- Modernized goal modal ---- */
-.modal-content.goal-modal-modern {
+.gx-page .modal-content.goal-modal-modern {
     width: min(460px, 92vw);
     border-radius: 18px;
     padding: 30px 32px;
@@ -1794,9 +1710,6 @@ body.dark .sum-total .sum-icon { background: #2a2419; color: #d8c3a5; }
 body.dark .sum-total .sum-number { color: #d8c3a5; }
 body.dark .sum-badge { background: #21262d; color: #8b949e; }
 body.dark .goal-icon { background: #2a2419; color: #d8c3a5; }
-body.dark .goals-toolbar .tab-btn { background: #161b22; border-color: #2b3242; color: #9aa0b5; }
-body.dark .goals-toolbar .tab-btn:hover { background: #1c222c; color: #e6e8f0; border-color: #3a4150; }
-body.dark .goals-toolbar .tab-btn.active { background: #A38A70; border-color: #A38A70; color: #0d1117; }
 body.dark .goals-page .goal-item { background: #161b22; border-color: #2b3242; box-shadow: none; }
 body.dark .goal-target-big { color: #e6e8f0; }
 body.dark .gs-track { color: #30363d; }
@@ -1952,7 +1865,7 @@ body:has(.gx-page) .app-main {
     min-width: 0;
 }
 
-.gx-page {
+.gx-page  {
     --gx-bg: transparent;
     --gx-card: #ffffff;
     --gx-card-2: #f7f8fa;
@@ -2081,7 +1994,7 @@ html[data-theme="dark"] .gx-page {
     color: var(--gx-faint);
 }
 
-.gx-page .gx-cat {
+.gx-page .gx-cat  {
     display: inline-block;
     font-size: 10.5px;
     font-weight: 700;
@@ -2097,14 +2010,14 @@ html[data-theme="dark"] .gx-page {
     display: inline-block;
 }
 
-.gx-page .gx-link {
+.gx-page .gx-link  {
     border: 0; background: none; padding: 0;
     color: var(--gx-violet);
     font: inherit; font-size: 12px; font-weight: 600;
     cursor: pointer;
 }
 
-.gx-page .gx-btn {
+.gx-page .gx-btn  {
     border: 1px solid var(--gx-line);
     background: var(--gx-card);
     color: var(--gx-text);
@@ -2363,7 +2276,7 @@ html[data-theme="dark"] .gx-page {
 }
 
 /* ---------- Health chip --------------------------------------------------- */
-.gx-page .gx-health {
+.gx-page .gx-health  {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -2375,7 +2288,7 @@ html[data-theme="dark"] .gx-page {
     white-space: nowrap;
     border: 1px solid transparent;
 }
-.gx-page .gx-health i {
+.gx-page .gx-health i  {
     width: 6px; height: 6px;
     border-radius: 50%;
     background: currentColor;
@@ -2947,16 +2860,32 @@ html[data-theme="dark"] .gx-page {
 .gx-dist-key strong { font-weight: 650; color: var(--gx-text); font-variant-numeric: tabular-nums; }
 .gx-dist-key strong .gx-quiet { font-weight: 400; font-size: 11.5px; }
 
-/* ---------- Insight rows -------------------------------------------------- */
+/* ---------- Insight rows --------------------------------------------------
+   Three columns on every row — mark, reading, way in — so the icons line up
+   down the left and the links down the right, and each row is the same shape
+   as the one above it. The middle column is the only one that flexes; both
+   others size to their content and then hold that width for every row, which
+   is what stops three readings of different lengths from arriving as three
+   different layouts.
+
+   `.gx-notes` and `.gx-note` used to be declared twice in this file: once
+   here, and again for a per-goal margin-notes panel that no longer exists.
+   The dead half came later and won, turning this grid into a column flex —
+   the icon stacked over the text and every row measured itself. It is gone,
+   and these names belong to this component alone. */
 .gx-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 .gx-note {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
-    padding: 12px;
+    padding: 12px 14px;
     border-radius: 12px;
+    text-align: left;
 }
+/* One width for every row's link, so the arrows sit on a line rather than
+   wherever each label happens to end. */
+.gx-note > .gx-link { justify-self: end; white-space: nowrap; }
 .gx-note:hover { background: var(--gx-card-2); }
 .gx-note-ico {
     flex: none;
@@ -3076,7 +3005,7 @@ html[data-theme="dark"] .gx-page {
 }
 .gx-drawer-head p { margin: 0; font-size: 13px; line-height: 1.55; }
 
-.gx-page .gx-close {
+.gx-page .gx-close  {
     flex: none;
     width: 32px; height: 32px;
     border: 0; border-radius: 9px;
@@ -3152,7 +3081,7 @@ html[data-theme="dark"] .gx-page {
     border-bottom: 1px solid var(--gx-line-soft);
 }
 .gx-ms:last-child { border-bottom: 0; }
-.gx-page .gx-ms-tick {
+.gx-page .gx-ms-tick  {
     width: 24px; height: 24px;
     display: grid; place-items: center;
     border-radius: 50%;
@@ -3169,7 +3098,7 @@ html[data-theme="dark"] .gx-page {
 .gx-ms-body .gx-quiet { font-size: 11px; }
 .gx-ms-tools { display: flex; gap: 2px; opacity: 0; transition: opacity .14s; }
 .gx-ms:hover .gx-ms-tools, .gx-ms:focus-within .gx-ms-tools { opacity: 1; }
-.gx-page .gx-ms-tools button {
+.gx-page .gx-ms-tools button  {
     width: 24px; height: 24px;
     border: 0; border-radius: 7px;
     background: transparent;
@@ -3179,6 +3108,190 @@ html[data-theme="dark"] .gx-page {
 }
 .gx-page .gx-ms-tools button:hover:not(:disabled) { background: var(--gx-line-soft); color: var(--gx-text); }
 .gx-page .gx-ms-tools button:disabled { opacity: .3; cursor: default; }
+
+/* The body of an unreached checkpoint is a button — clicking it makes that
+   checkpoint the focus. It has to keep looking exactly like the plain text it
+   replaced, because the row already carries a tick and two arrows and a cross,
+   and a fourth thing that looks pressable would make the row a toolbar. The
+   affordance arrives on hover instead. */
+.gx-page .gx-ms-body.is-pickable  {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 4px 7px;
+    margin: -4px -7px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+.gx-page .gx-ms-body.is-pickable:hover:not(:disabled) { background: var(--gx-card-2); }
+.gx-page .gx-ms-body.is-pickable:disabled { cursor: default; }
+.gx-ms.is-active .gx-ms-title { color: var(--gx-accent, var(--gx-text)); }
+.gx-ms-focus-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--gx-accent, var(--gx-text));
+}
+
+/* ---------- The checklist under a checkpoint ------------------------------
+   Indented under the row it belongs to and separated by nothing but that
+   indent: a bordered box per checkpoint would turn a list of four into four
+   cards, and the checkpoints are the list here — the steps are detail. */
+.gx-checklist {
+    grid-column: 2 / -1;
+    margin: 4px 0 2px;
+}
+.gx-checklist-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.gx-checklist-head .gx-quiet { font-size: 11px; }
+.gx-page .gx-checklist-add  {
+    padding: 2px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gx-muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.gx-page .gx-checklist-add:hover:not(:disabled) { background: var(--gx-line-soft); color: var(--gx-text); }
+.gx-page .gx-checklist-add:disabled { opacity: .35; cursor: default; }
+
+.gx-checklist-list { list-style: none; margin: 5px 0 0; padding: 0; }
+.gx-cstep {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto 20px;
+    align-items: center;
+    gap: 9px;
+    padding: 3px 0;
+}
+.gx-page .gx-cstep-tick  {
+    width: 16px; height: 16px;
+    display: grid; place-items: center;
+    padding: 0;
+    border: 1.5px solid var(--gx-line);
+    border-radius: 5px;
+    background: transparent;
+    color: #fff;
+    font-size: 10px; font-weight: 700;
+    cursor: pointer;
+    transition: border-color .14s ease, background .14s ease;
+}
+.gx-page .gx-cstep-tick:hover:not(:disabled)  {
+    border-color: var(--gx-good);
+    background: color-mix(in srgb, var(--gx-good) 14%, transparent);
+}
+.gx-cstep.is-done .gx-cstep-tick { background: var(--gx-good); border-color: var(--gx-good); }
+.gx-page .gx-cstep-tick:disabled { opacity: .4; cursor: default; }
+
+/* The text is a button so a click opens the editor. Styled as text, for the
+   same reason the checkpoint body above is. */
+.gx-page .gx-cstep-text  {
+    padding: 2px 5px;
+    margin: 0 -5px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-page .gx-cstep-text:hover:not(:disabled) { background: var(--gx-card-2); }
+.gx-cstep.is-done .gx-cstep-text { color: var(--gx-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+/* A row nobody has written yet. Its text is a prompt, not content. */
+.gx-cstep.is-empty .gx-cstep-text { color: var(--gx-faint); font-style: italic; }
+
+.gx-page .gx-cstep-input  {
+    width: 100%;
+    padding: 2px 5px;
+    margin: 0 -5px;
+    border: 1px solid var(--gx-accent, var(--gx-line));
+    border-radius: 6px;
+    background: var(--gx-card);
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 12.5px;
+}
+/* The checkpoint's own date, in the tools cluster beside the arrows — so it
+   is held back on hover with them. That is right here and would not be
+   anywhere else: the date itself is already printed in the row body ("due 14
+   Sep"), and this is only the control that changes it. A step's date has no
+   such second home, which is why `.gx-cstep-due` is always visible. */
+.gx-page .gx-ms-date  {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    color: var(--gx-faint);
+    font-size: 11px;
+    cursor: pointer;
+}
+.gx-page .gx-ms-date:hover { background: var(--gx-line-soft); color: var(--gx-text); }
+.gx-page .gx-ms-date input  {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    padding: 0; border: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* A step's own date. "+ date" until there is one, then the day. The input
+   covers the label, so the whole chip is the picker's hit area. */
+.gx-cstep-due {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    min-width: 54px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--gx-faint);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.gx-page .gx-cstep-due:hover { background: var(--gx-card-2); color: var(--gx-text); }
+.gx-cstep-due .is-late { color: var(--gx-amber); font-weight: 600; }
+.gx-cstep-due input {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    padding: 0; border: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+/* Borrowed from the linked task. Not a control: no hover, no pointer. */
+.gx-cstep-due.is-borrowed { cursor: default; font-style: italic; opacity: .8; }
+.gx-page .gx-cstep-due.is-borrowed:hover { background: transparent; color: var(--gx-faint); }
+
+.gx-page .gx-cstep-cut  {
+    width: 20px; height: 20px;
+    border: 0; border-radius: 6px;
+    background: transparent;
+    color: var(--gx-faint);
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .14s;
+}
+.gx-cstep:hover .gx-cstep-cut, .gx-cstep:focus-within .gx-cstep-cut { opacity: 1; }
+.gx-page .gx-cstep-cut:hover:not(:disabled) { background: var(--gx-line-soft); color: var(--gx-text); }
+.gx-page .gx-cstep-cut:disabled { opacity: 0; cursor: default; }
 
 .gx-ms-add { display: flex; gap: 9px; }
 .gx-ms-add input { flex: 1; min-width: 0; }
@@ -3245,7 +3358,7 @@ html[data-theme="dark"] .gx-page {
 .gx-page input[type="number"],
 .gx-page input[type="date"],
 .gx-page input:not([type]),
-.gx-page textarea {
+.gx-page textarea  {
     width: 100%;
     box-sizing: border-box;
     padding: 10px 13px;
@@ -3260,7 +3373,7 @@ html[data-theme="dark"] .gx-page {
 }
 .gx-page textarea { resize: vertical; line-height: 1.55; }
 .gx-page input:focus,
-.gx-page textarea:focus {
+.gx-page textarea:focus  {
     border-color: var(--gx-violet);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--gx-violet) 18%, transparent);
 }
@@ -3318,7 +3431,7 @@ html[data-theme="dark"] .gx-page {
 }
 
 .gx-chips { display: flex; flex-wrap: wrap; gap: 7px; }
-.gx-page .gx-chip {
+.gx-page .gx-chip  {
     border: 1px solid var(--gx-line);
     background: var(--gx-card-2);
     color: var(--gx-muted);
@@ -3327,14 +3440,14 @@ html[data-theme="dark"] .gx-page {
     font: inherit; font-size: 12.5px; font-weight: 600;
     cursor: pointer;
 }
-.gx-page .gx-chip.is-on {
+.gx-page .gx-chip.is-on  {
     background: color-mix(in srgb, var(--tone) 14%, transparent);
     border-color: var(--tone);
     color: var(--tone);
 }
 
 .gx-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
-.gx-page .gx-choice {
+.gx-page .gx-choice  {
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -3378,7 +3491,7 @@ html[data-theme="dark"] .gx-page {
     font-size: 10.5px; font-weight: 700;
 }
 .gx-draft-list li span { flex: 1; min-width: 0; }
-.gx-page .gx-draft-list li button {
+.gx-page .gx-draft-list li button  {
     border: 0; background: none; padding: 0;
     width: 22px; height: 22px;
     color: var(--gx-faint);
@@ -4193,48 +4306,6 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     font-variant-numeric: tabular-nums;
 }
 
-/* ---------- The margin notes ---------------------------------------------- */
-.gx-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
-.gx-note { position: relative; display: flex; flex-direction: column; gap: 5px; }
-.gx-note-goal {
-    align-self: flex-start;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--tone);
-    font: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
-.gx-note-goal:hover { text-decoration: underline; }
-.gx-note-body {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--gx-line);
-    border-radius: 10px;
-    background: var(--gx-card-2);
-    color: var(--gx-text);
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.6;
-    resize: vertical;
-    outline: none;
-    transition: border-color .15s ease;
-}
-.gx-note-body::placeholder { color: var(--gx-faint); }
-.gx-note-body:focus { border-color: color-mix(in srgb, var(--tone) 55%, transparent); }
-/* On the title row, not the box. Bottom-right put it under the textarea's own
-   resize grip, where it was both unreadable and in the way of the drag. */
-.gx-note-when {
-    position: absolute;
-    top: 0; right: 2px;
-    font-size: 10.5px;
-    line-height: 1.5;
-    color: var(--gx-faint);
-    pointer-events: none;
-}
-
 @media (max-width: 1080px) {
     .gx-two-wide { grid-template-columns: minmax(0, 1fr); }
     .gx-traj-figs { gap: 18px; }
@@ -4504,6 +4575,9 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 
 .ag-card {
     --tone: var(--gx-violet);
+    /* The containing block for `.ag-cheer`, which covers this card and no
+       more — what was finished happened here. */
+    position: relative;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--gx-line);
@@ -5010,6 +5084,348 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 }
 .ag-focus-bar i { display: block; height: 100%; border-radius: inherit; background: var(--tone); }
 
+/* The focus block is a button now. It keeps the tinted card it always was —
+   the only additions are a cursor, a hover lift on the border, and the arrow
+   that says there is something behind it. A goal with one checkpoint left has
+   nothing to switch to and gets the block back as a plain panel. */
+.ag-focus.is-pickable {
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color .14s ease;
+}
+.ag-focus.is-pickable:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--tone) 55%, transparent);
+}
+.ag-focus.is-pickable:disabled { cursor: default; }
+.ag-focus.is-pickable:not(:disabled) .ag-focus-text strong::after {
+    content: '⌄';
+    margin-left: 6px;
+    color: var(--gx-faint);
+    font-weight: 600;
+}
+
+/* The picker. Sits directly under the block it belongs to, as a list rather
+   than a floating menu: it is at most a handful of rows, the panel has the
+   width for them, and a popover here would be the third layer on a page that
+   already has a drawer over a card. */
+.ag-focus-pick {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 4px;
+    border: 1px solid var(--gx-line);
+    border-radius: 10px;
+    background: var(--gx-card);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.ag-focus-pick button {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.ag-focus-pick button:hover:not(:disabled) { background: var(--gx-card-2); }
+.ag-focus-pick button.is-current { color: var(--tone); font-weight: 650; }
+.ag-focus-pick button span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ag-focus-pick button em {
+    flex: none;
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--tone);
+}
+
+/* ---------- The checkpoint's checklist ------------------------------------
+   A numbered list, three rows at a time, in the shape styles/skilltree.css
+   gives a programme — because it is the same object: a short ordered list of
+   the work that finishes one thing. The number comes from a CSS counter in a
+   column of its own rather than from a `::marker`, so a row that wraps keeps
+   its number beside the text instead of losing it above the wrap, and `start`
+   on the <ol> still numbers a window that opens partway down. */
+.ag-steps {
+    counter-reset: ag-step calc(var(--ag-step-from, 1) - 1);
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ag-step {
+    display: grid;
+    grid-template-columns: 17px 17px minmax(0, 1fr) auto 22px;
+    align-items: center;
+    gap: 9px;
+    padding: 5px 6px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    color: var(--gx-text);
+    counter-increment: ag-step;
+    transition: background .14s ease;
+}
+.ag-step::before {
+    content: counter(ag-step) ".";
+    color: var(--gx-faint);
+    font-weight: 700;
+    font-size: 11.5px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.ag-step:hover { background: var(--gx-card-2); }
+.ag-step-check { border-radius: 5px; }
+.ag-step.is-done .ag-step-check {
+    border-color: var(--gx-good);
+    background: var(--gx-good);
+}
+.ag-step.is-done::before { color: var(--gx-good); }
+.ag-step-name {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ag-step.is-done .ag-step-name {
+    color: var(--gx-muted);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+/* The task on the other end of a link, named quietly beside the step so the
+   row says what it is pointing at without becoming two lines. */
+.ag-step-linked {
+    flex: none;
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--gx-muted);
+}
+.ag-step-name.is-empty {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--gx-faint);
+    font: inherit;
+    font-size: 12.5px;
+    font-style: italic;
+    text-align: left;
+    cursor: pointer;
+}
+.ag-step-name.is-empty:hover { color: var(--gx-muted); text-decoration: underline; }
+
+/* The date the step is held to, wherever it is coming from. Read-only on the
+   card — naming and dating are both planning, and the drawer is where
+   planning happens. */
+.ag-step-due {
+    font-size: 11px;
+    color: var(--gx-faint);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+.ag-step-due.is-late { color: var(--gx-amber); font-weight: 600; }
+
+/* The link. Held back until the row is under the cursor — a column of chain
+   icons beside every step reads as a list of things that are already linked —
+   except on the rows that actually are, which keep it on and tinted. */
+.ag-step-link {
+    width: 22px; height: 22px;
+    display: grid; place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gx-faint);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .14s ease, color .14s ease, background .14s ease;
+}
+.ag-step-link svg { width: 13px; height: 13px; }
+.ag-step:hover .ag-step-link,
+.ag-step-link:focus-visible { opacity: 1; }
+.ag-step-link.is-on { opacity: 1; color: var(--tone); }
+.ag-step-link:hover:not(:disabled) { background: var(--gx-line-soft); color: var(--gx-text); }
+.ag-step-link:disabled { opacity: 0; cursor: default; }
+
+.ag-steps-rest { margin: 7px 0 0; font-size: 11px; }
+.ag-link-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--gx-violet, var(--tone));
+    font: inherit;
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* The task search, when one step is choosing what it points at. */
+.ag-link-box {
+    margin: 8px 0 0;
+    padding: 8px;
+    border: 1px solid var(--gx-line);
+    border-radius: 10px;
+    background: var(--gx-card);
+}
+.ag-link-box input { width: 100%; }
+.ag-found-none { margin: 8px 2px 2px; font-size: 11.5px; line-height: 1.5; }
+
+/* ---------- Finishing something ------------------------------------------
+   Green, full width, and only on screen when the thing it names is genuinely
+   available — a button that is usually disabled teaches the reader to stop
+   looking at it. The question mark is deliberate: this is the app asking,
+   because the reader ticked the last box rather than saying they were done. */
+.ag-finish {
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    border: 1px solid color-mix(in srgb, var(--gx-good) 45%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--gx-good) 13%, transparent);
+    color: var(--gx-good);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .14s ease, transform .14s ease;
+    animation: ag-finish-in .22s var(--gx-ease, ease) both;
+}
+.ag-finish:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gx-good) 20%, transparent);
+    transform: translateY(-1px);
+}
+.ag-finish:disabled { opacity: .55; cursor: default; }
+/* The goal is the bigger claim and is filled rather than tinted. */
+.ag-finish.is-goal {
+    border-color: var(--gx-good);
+    background: var(--gx-good);
+    color: #fff;
+}
+.ag-finish.is-goal:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gx-good) 88%, #000);
+}
+@keyframes ag-finish-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* ---------- The celebration ----------------------------------------------
+   Over the card rather than over the page: what was finished happened here,
+   and a viewport-wide takeover for a checkpoint would be the same weight as
+   finishing the goal. It announces and lets go — see the timer in
+   ActiveGoalCard for why there is nothing to dismiss. */
+.ag-cheer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--gx-card) 82%, transparent);
+    backdrop-filter: blur(2px);
+    animation: ag-cheer-in .2s ease both;
+    pointer-events: none;
+}
+.ag-cheer-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 18px 26px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--gx-good) 40%, transparent);
+    background: var(--gx-card);
+    box-shadow: 0 18px 40px rgba(16, 24, 40, .16);
+    text-align: center;
+    animation: ag-cheer-pop .32s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.ag-cheer-mark {
+    display: grid; place-items: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--gx-good);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 800;
+}
+.ag-cheer-card strong { font-size: 14.5px; font-weight: 750; color: var(--gx-text); }
+.ag-cheer-card span:last-child {
+    max-width: 240px;
+    font-size: 12px;
+    color: var(--gx-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ag-cheer-burst { position: absolute; inset: 0; overflow: hidden; }
+.ag-cheer-burst i {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 7px; height: 7px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: ag-cheer-fly .9s ease-out both;
+}
+/* Twelve directions on a circle, coloured off the palette in fours. Placed
+   here rather than by script: a fixed spray reads as a burst just as well as
+   a seeded one, and this way it costs nothing at run time. */
+.ag-cheer-burst i:nth-child(1)  { --fx: 0px;    --fy: -120px; background: var(--gx-good); animation-delay: .00s; }
+.ag-cheer-burst i:nth-child(2)  { --fx: 60px;   --fy: -104px; background: var(--gx-violet, #6d5efc); animation-delay: .03s; }
+.ag-cheer-burst i:nth-child(3)  { --fx: 104px;  --fy: -60px;  background: var(--gx-amber, #f59e0b); animation-delay: .06s; }
+.ag-cheer-burst i:nth-child(4)  { --fx: 120px;  --fy: 0px;    background: var(--gx-good); animation-delay: .09s; }
+.ag-cheer-burst i:nth-child(5)  { --fx: 104px;  --fy: 60px;   background: var(--gx-violet, #6d5efc); animation-delay: .12s; }
+.ag-cheer-burst i:nth-child(6)  { --fx: 60px;   --fy: 104px;  background: var(--gx-amber, #f59e0b); animation-delay: .00s; }
+.ag-cheer-burst i:nth-child(7)  { --fx: 0px;    --fy: 120px;  background: var(--gx-good); animation-delay: .03s; }
+.ag-cheer-burst i:nth-child(8)  { --fx: -60px;  --fy: 104px;  background: var(--gx-violet, #6d5efc); animation-delay: .06s; }
+.ag-cheer-burst i:nth-child(9)  { --fx: -104px; --fy: 60px;   background: var(--gx-amber, #f59e0b); animation-delay: .09s; }
+.ag-cheer-burst i:nth-child(10) { --fx: -120px; --fy: 0px;    background: var(--gx-good); animation-delay: .12s; }
+.ag-cheer-burst i:nth-child(11) { --fx: -104px; --fy: -60px;  background: var(--gx-violet, #6d5efc); animation-delay: .06s; }
+.ag-cheer-burst i:nth-child(12) { --fx: -60px;  --fy: -104px; background: var(--gx-amber, #f59e0b); animation-delay: .03s; }
+
+@keyframes ag-cheer-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ag-cheer-pop {
+    from { opacity: 0; transform: scale(.9); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes ag-cheer-fly {
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(.6); }
+    70%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(1) rotate(220deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ag-focus.is-pickable, .ag-step, .ag-step-link, .ag-finish { transition: none; }
+    .ag-finish, .ag-cheer, .ag-cheer-card { animation: none; }
+    /* Forty pieces flickering in and out at a near-zero duration is not a
+       quieter version of a burst. It goes entirely — the same call
+       GoalReached makes. */
+    .ag-cheer-burst { display: none; }
+}
+
 /* ---------- Next actions -------------------------------------------------- */
 .ag-actions li {
     display: grid;
@@ -5058,6 +5474,42 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     font-size: 12.5px;
 }
 .ag-add input:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
+
+/* The existing-task search under the box. Sits in the flow rather than floating:
+   the card is tall and the list is short, so there is nothing to overlap. */
+.ag-found {
+    margin: 6px 0 0;
+    padding: 4px;
+    list-style: none;
+    border: 1px solid var(--gx-line);
+    border-radius: 9px;
+    background: var(--gx-card-2);
+}
+.ag-found-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gx-text);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.ag-found-row.is-on,
+.ag-found-row:hover {
+    background: color-mix(in srgb, var(--tone) 12%, transparent);
+}
+.ag-found-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 /* ---------- Footer -------------------------------------------------------- */
 .ag-foot {
@@ -5147,3 +5599,18 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) {
     .ag-ring-arc, .ag-check { transition: none; }
 }
+
+/* ==========================================================================
+   Arriving on the page
+   ==========================================================================
+   Moved to styles/page-enter.css, which every page loads. This page's cascade
+   was the one the shared rules were generalised from, so nothing about how it
+   arrives has changed — the shell carries `pg-enter` and `.gx-main` carries
+   `pg-stagger`, which together say exactly what the rules here used to: the
+   header, then the tab strip, then each band down the page, each a beat behind
+   the one above it. Keeping a second copy of the timing here would only have
+   given the two somewhere to drift apart.
+
+   The one thing worth repeating: the class comes off once the last band has
+   landed (hooks/usePageEntrance), so switching tabs afterwards swaps content
+   without replaying the whole page. */

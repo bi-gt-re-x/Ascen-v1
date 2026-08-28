@@ -73,7 +73,7 @@ export function Trajectory({
   return (
     <Panel
       title="Productivity, consistency and quality over time"
-      note="This period against the one before it, day for day. The three rates first; the running totals underneath them."
+      note="This period against the last, day for day"
       aside={
         <label className="ax-select-wrap">
           <span className="ax-sr">Chart grain</span>
@@ -91,13 +91,24 @@ export function Trajectory({
         </label>
       }
     >
-      <div className="ax-chips ax-chips-inline" role="tablist" aria-label="Chart series">
+      {/*
+        `aria-pressed`, not `role="tab"`.
+
+        These were tabs, and the role was a promise the markup did not keep:
+        `role="tab"` commits to a `tabpanel` named by `aria-controls` and to
+        arrow-key movement across the set, and there was neither — so a screen
+        reader announced "tab, 1 of 5" and the arrow keys did nothing. They are
+        not tabs anyway; nothing is swapped, the same chart redraws for a
+        different series. Every other chip group on this page — the window
+        picker in Header, the budget row in NextActions — is a pressed toggle,
+        and these are the same component.
+      */}
+      <div className="ax-chips ax-chips-inline" role="group" aria-label="Chart series">
         {METRICS.map((entry) => (
           <button
             key={entry.key}
             type="button"
-            role="tab"
-            aria-selected={entry.key === metric}
+            aria-pressed={entry.key === metric}
             className={`ax-chip${entry.key === metric ? ' is-on' : ''}`}
             onClick={() => onMetric(entry.key)}
           >
@@ -253,15 +264,14 @@ export function ScorePanel({ score, factors, series, marks, percentile }: ScoreP
         />
       ) : (
         <p className="ax-score-nohistory">
-          No line yet — your score is recorded each time you open this page, and two readings are
-          the fewest that can be drawn between. Come back tomorrow and this becomes a history.
+          No line yet. Your score is recorded each time you open this page, and two readings
+          are the fewest a line can be drawn between.
         </p>
       )}
 
       <p className="ax-panel-note ax-panel-note-foot">
-        The mean of the five report-card metrics — productivity, quality, consistency, efficiency
-        and focus — each worth up to 2.0 of the ten.
-        {series.length >= 2 && ' Every point on the line is a reading taken when you opened this page.'}
+        The mean of the five report-card metrics, each worth up to 2.0 of the ten.
+        {series.length >= 2 && ' Each point is a reading taken when you opened this page.'}
       </p>
     </Panel>
   );

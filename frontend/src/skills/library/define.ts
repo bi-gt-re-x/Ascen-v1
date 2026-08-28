@@ -64,15 +64,3 @@ export function defineDomain({ category, subcategory }: DomainOptions) {
   };
 }
 
-/** "2–4 hours", "45 minutes". One place, so no two screens round differently. */
-export function formatTime({ minMinutes, maxMinutes }: TimeSpan): string {
-  const one = (minutes: number) =>
-    minutes < 60
-      ? `${minutes} min`
-      : minutes % 60 === 0
-        ? `${minutes / 60} hr`
-        : `${(minutes / 60).toFixed(1)} hr`;
-  if (minMinutes === maxMinutes) return one(minMinutes);
-  const low = minMinutes < 60 && maxMinutes < 60 ? `${minMinutes}` : one(minMinutes).replace(/ (min|hr)$/, '');
-  return `${low}–${one(maxMinutes)}`;
-}

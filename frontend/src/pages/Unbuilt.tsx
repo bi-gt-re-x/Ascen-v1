@@ -11,6 +11,8 @@
  * pages/SkillTrees.tsx; its old path redirects, because the placeholder was
  * routed long enough for links to it to exist. Notes left next, into
  * pages/Notes.tsx over the table data/sql/notes.sql had been holding for it.
+ * Settings and Achievements left together, over the two schemas that had been
+ * waiting for them — three left.
  *
  * The point of these is honesty. Each route in the top bar and in the app's
  * structure resolves to something that says what it will be, rather than to a
@@ -49,15 +51,6 @@ const PAGES: Record<string, Unbuilt> = {
       'frontend/js/timer.js — the timer to port',
     ],
   },
-  '/achievements': {
-    name: 'Achievements',
-    description:
-      'Badges earned for milestones — streaks held, levels reached, goals finished.',
-    files: [
-      'backend/api/achievements.py — a stub',
-      'data/sql/achievements.sql — tables exist, schema only',
-    ],
-  },
   '/library': {
     name: 'Library',
     description: 'Saved resources and reference material.',
@@ -72,14 +65,6 @@ const PAGES: Record<string, Unbuilt> = {
     files: [
       'backend/api/history.py — a stub',
       'data/sql/history.sql — tables exist, schema only',
-    ],
-  },
-  '/settings': {
-    name: 'Settings',
-    description: 'Account preferences beyond the theme toggle and the avatar picker.',
-    files: [
-      'backend/api/settings.py — a stub',
-      'data/sql/settings.sql — user_settings already holds the avatar',
     ],
   },
 };

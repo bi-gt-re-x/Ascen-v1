@@ -1,0 +1,101 @@
+/* page-enter.css — the arrival every page shares.
+ *
+ * A page that has finished loading should assemble itself rather than appear
+ * all at once: the header, then each band down the page, each a beat behind
+ * the one above it. Before this, every page but Goals swapped its spinner for
+ * a finished screen in a single frame, which reads as a flash — the cards, the
+ * charts and their figures were simply there, with nothing to tell the eye
+ * where to start.
+ *
+ * The cascade is the one the Goals page worked out (styles/goals.css, "Arriving
+ * on the page"), lifted out so every page gets it. Goals keeps its own rules
+ * because its bands live one level deeper than the shared shape allows; the
+ * timing and the curve here are deliberately identical to it, so the two pages
+ * cannot drift apart.
+ *
+ * ## It runs once, and only once
+ *
+ * `pg-enter` is added when the page's data lands and dropped when the last band
+ * has settled (hooks/usePageEntrance). It is not left on: most of these pages
+ * re-render constantly — a tab changes, a filter moves, a task is ticked off —
+ * and a class still on the shell would replay the whole page every time.
+ *
+ * ## What animates, and what deliberately does not
+ *
+ * Only opacity and transform, both compositor properties, and both on elements
+ * already in flow — nothing here changes the height of anything, so the page
+ * does not reflow while it arrives.
+ *
+ * The ambient background is excluded. It is a sibling of the content on some
+ * pages and a child on others, and it is the one thing on screen that should
+ * already be there when the content lands rather than sliding in with it.
+ *
+ * A transform makes an element the containing block for any `position: fixed`
+ * descendant, which would move a modal. That is safe here only because the
+ * animation ends on `transform: none` and the class is then removed, and
+ * because nothing is open during a page's first three-quarters of a second.
+ * It is the reason page-fade.css animates opacity alone on <body>.
+ */
+
+@keyframes pg-arrive {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* The bands of the page: whatever the shell holds directly. */
+.pg-enter > * {
+    animation: pg-arrive .44s cubic-bezier(.22, 1, .36, 1) both;
+}
+.pg-enter > :nth-child(1) { animation-delay: 0s; }
+.pg-enter > :nth-child(2) { animation-delay: .06s; }
+.pg-enter > :nth-child(3) { animation-delay: .12s; }
+.pg-enter > :nth-child(4) { animation-delay: .18s; }
+.pg-enter > :nth-child(5) { animation-delay: .24s; }
+/* Past the fifth the delays stop growing: a band that deep is below the fold,
+   and waiting longer to start would only be visible as a gap on the way down. */
+.pg-enter > :nth-child(n+6) { animation-delay: .3s; }
+
+/* A band marked `pg-stagger` hands the cascade on to its own children, so a row
+   of stat cards or a grid of panels arrives card by card rather than as one
+   block. Marked per page rather than applied to every container, because it is
+   only right for a container whose children are peers — a row of figures, not a
+   header and its paragraph. The delays pick up where the bands left off.
+
+   The band itself then stops animating. Two fades nested inside one another
+   multiply: the card would reach half opacity behind a parent at half opacity,
+   and travel the ten pixels twice. Handing the cascade on means handing it on,
+   not doing both. */
+.pg-enter > .pg-stagger {
+    animation: none;
+}
+.pg-enter .pg-stagger > * {
+    animation: pg-arrive .44s cubic-bezier(.22, 1, .36, 1) both;
+}
+.pg-enter .pg-stagger > :nth-child(1) { animation-delay: .12s; }
+.pg-enter .pg-stagger > :nth-child(2) { animation-delay: .18s; }
+.pg-enter .pg-stagger > :nth-child(3) { animation-delay: .24s; }
+.pg-enter .pg-stagger > :nth-child(4) { animation-delay: .3s; }
+.pg-enter .pg-stagger > :nth-child(5) { animation-delay: .36s; }
+.pg-enter .pg-stagger > :nth-child(n+6) { animation-delay: .42s; }
+
+/* The background is already there. Whatever nesting a page puts it in, it does
+   not arrive with the content. */
+.pg-enter .hm-ambient {
+    animation: none;
+}
+
+/* A system-level request for less motion takes the whole cascade off. The page
+ * still renders, immediately and in full — nothing here is what makes content
+ * visible, so there is nothing left hidden when the animation is refused. */
+@media (prefers-reduced-motion: reduce) {
+    .pg-enter > *,
+    .pg-enter .pg-stagger > * {
+        animation: none;
+    }
+}

@@ -12,6 +12,7 @@
  * disagrees with the `.card` every real page already uses. Git history has
  * them if a page ever wants one back.
  */
+export { AppBoundary, ErrorBoundary, RootBoundary } from './ErrorBoundary';
 export { Ambient } from './Ambient';
 export type { AmbientProps } from './Ambient';
 export { Rail, STATS_CHANGED } from './Rail';

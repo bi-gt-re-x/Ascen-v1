@@ -6,10 +6,11 @@
  * the account is confirmed, and whether its profile is finished — the three
  * things the gate needs.
  *
- * The username in localStorage is a cache, not the truth. It exists because
- * nearly every other endpoint takes `username` as a parameter, and without it
- * every page would wait a round trip before its first real fetch. When the
- * server disagrees, the server wins.
+ * The username in localStorage is a cache and never an identity. The server
+ * reads who you are off the session cookie and nothing else — see
+ * backend/api/guard.py — so this copy cannot grant access to anything; it
+ * exists so a page can label itself before `verify_status` comes back. When
+ * the server disagrees, the server wins.
  *
  * `status` distinguishes "still asking" from "asked, nobody home" — a
  * distinction the gate depends on, or a signed-in user is bounced to the
@@ -22,7 +23,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AuthContext } from './contexts';
 import type { AuthStatus } from './contexts';
-import { auth } from '@/services';
+import { api, auth } from '@/services';
 import { FALLBACK_AVATAR, avatarPath } from '@/services/avatars';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -58,6 +59,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  /* A 401 from anywhere means the session is gone — expired, signed out in
+     another tab, or the server restarted with a different SECRET_KEY. The
+     endpoints answer it themselves now that they read the account off the
+     session rather than off a parameter (backend/api/guard.py), so this is
+     the app's one place to react: drop to signed-out, which the route gate
+     turns into the sign-in popup with `next` set to where the reader was.
+
+     Guarded on `status` so a 401 arriving while already signed out — the
+     verify_status poll on the landing page — does not re-render every
+     subscriber for no change. */
+  useEffect(() => {
+    api.onUnauthorized(() => {
+      setStatus((current) => (current === 'signed-in' ? 'signed-out' : current));
+      setUsername((current) => {
+        if (current) auth.forgetUsername();
+        return null;
+      });
+    });
+    return () => api.onUnauthorized(null);
+  }, []);
 
   const signIn = useCallback(
     async (identifier: string, password: string): Promise<string | null> => {
