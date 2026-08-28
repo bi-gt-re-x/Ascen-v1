@@ -7,18 +7,21 @@
 #
 # ## Python
 #
-# **3.12 or newer.** The venv in this checkout is on 3.9.6 — the one that ships
-# with Xcode's command line tools — and 3.9 reached end of life in October
-# 2025, so it takes no security patches at all. Nothing here needs 3.9 and
-# nothing here is written to it; the move is a new venv and one install:
+# **3.12 or newer.** The venv in this checkout is on 3.13.15, from Homebrew.
 #
-#     brew install python@3.12
-#     python3.12 -m venv .venv-fastapi
+# It used to be on 3.9.6 — the one that ships with Xcode's command line tools
+# — and 3.9 reached end of life in October 2025, so it was taking no security
+# patches at all. Nothing here needed 3.9 and nothing here was written to it,
+# so the move was a new venv and one install:
+#
+#     brew install python@3.13
+#     /opt/homebrew/bin/python3.13 -m venv .venv-fastapi
 #     .venv-fastapi/bin/python -m pip install -r requirements.txt
 #     .venv-fastapi/bin/python -m pytest
 #
-# That last line is the check that it worked. It is left undone here because
-# installing a Python is a change to the machine rather than to the project.
+# That last line is the check that it worked: 83 passed, no warnings that were
+# not there before. Rebuild the venv the same way on a fresh clone — the
+# interpreter is the one thing in this file `pip install` cannot supply.
 #
 # ## Pinned, not floored
 #
