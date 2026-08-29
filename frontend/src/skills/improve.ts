@@ -935,23 +935,43 @@ export const IMPROVE: Record<string, ImproveEntry> = {
  *
  * ## The ladder
  *
- * Twenty rungs, cheapest first: copy one, do one unaided, vary it, break it,
- * time it, use it in anger, explain it, keep it. Every skill goes up the same
- * ladder — that is what makes it a ladder — and a tier decides which stretch of
- * it you are on. Foundation takes the bottom five; Expert starts a third of the
- * way up and takes sixteen. Two nodes at different tiers therefore share almost
- * no steps.
+ * Twenty rungs, cheapest first: copy one, recall it, do it unaided, get fluent,
+ * write the method, invent your own, vary it, break it, mix it, judge it, use
+ * it in anger, teach it, keep it. Every skill goes up the same ladder — that is
+ * what makes it a ladder — and a tier decides which stretch of it you are on.
+ * Foundation takes the bottom five; Expert starts a third of the way up and
+ * takes fourteen. Two nodes at different tiers therefore share almost no steps.
  *
  * A rung is written once, generically, and overridden by the domains that do it
- * differently. "Do five in one sitting" is the same instruction in every
- * subject; "find one worked example" is not what a squat needs. Only the rungs
- * that break get an override, so the table stays readable.
+ * differently. "Change one thing and do it again" is the same instruction in
+ * every subject; "find one worked example" is not what a squat needs. Only the
+ * rungs that break get an override, so the table stays readable.
  *
- * ## The register
+ * ## The register: every rung has an object, and you can fail it
  *
  * Short, imperative, countable. "Ten by hand, no notes" beats a sentence about
  * why repetition matters — the reader is deciding what to do in the next hour,
- * not being persuaded. Every rung should be something you could fail to do.
+ * not being persuaded.
+ *
+ * Two rules the first draft of this table broke, both of which produce a rung
+ * that reads like an instruction and cannot be carried out:
+ *
+ *   **Name the object.** "Five in one sitting, no notes" — five *what*? It was
+ *   the third rung in a row that was only "do N of them" with a different N,
+ *   and it sat directly under written steps that did name their object, so the
+ *   ladder visibly went vague at exactly the point it took over. It is gone;
+ *   inventing your own example is in its place, which is a different move
+ *   rather than the same one counted higher.
+ *
+ *   **Do not ask the reader for the answer.** "Do the version with the awkward
+ *   case in it" asks somebody still learning the skill to already know where it
+ *   is hard, which is the one thing they cannot know yet. Finding the edge is
+ *   the work, so the rung now says how: push an example until it breaks, and
+ *   write down where it turned.
+ *
+ * Same test for anything added here. "Do it on a day you do not feel like it"
+ * was on this ladder and is not a step — there is no hour in which you can sit
+ * down and do it, and no way to tell afterwards whether you did.
  */
 /** A rung, and the domains that climb it differently. */
 interface Rung {
@@ -972,13 +992,24 @@ const LADDER: Rung[] = [
       'Health and fitness': (name) => `Watch ${name} done properly, then copy it unloaded.`,
       'Life and home': (name) => `Do ${name} once with instructions open in front of you.`,
       Creative: (name) => `Copy one piece that uses ${name}. Copy it exactly.`,
+      'Language and humanities': (name) => `Find one piece that uses ${name} well, and mark every place it does.`,
+      Work: (name) => `Watch someone good do ${name} once, and write down the order they did it in.`,
     },
   },
   {
-    line: () => 'Do that same one again with the answer covered.',
+    /* "Do that same one again" — the Beginner window opens on this rung, and on
+       a node with written steps it opens on it too, so "that same one" pointed
+       at a rung the reader was never shown. Every rung has to stand up as the
+       first line of a list. */
+    line: () => 'Do one from memory, with the answer covered.',
     by: {
-      'Health and fitness': () => 'Repeat it filmed from the side. Watch it back once.',
-      Computing: () => 'Retype it from memory. Do not paste.',
+      'Health and fitness': () => 'Do a set filmed from the side. Watch it back once.',
+      Computing: () => 'Write it from memory. Do not paste.',
+      'Language and humanities': () => 'Take a passage you admire and write it out from your notes, not from the page.',
+      Creative: () => 'Copy one piece from memory, then put yours beside the original.',
+      'Life and home': () => 'Do it once with the instructions shut.',
+      Work: () => 'Do it once from memory, without the notes.',
+      'Business and money': () => 'Do it once from memory, then check your figures.',
     },
   },
   {
@@ -986,27 +1017,54 @@ const LADDER: Rung[] = [
     by: {
       'Health and fitness': () => 'Three sets at a load you can hold form through.',
       Creative: () => 'Three more, rough, in one sitting.',
+      Work: () => 'Do it three times this week. Mark the one you had to think hardest about.',
+      'Life and home': () => 'Do it three more times with nothing open. Note what you forgot.',
+      'Language and humanities': () => 'Write three more. Mark every one you had to check.',
     },
   },
   {
-    line: () => 'Redo the ones you looked up, from scratch.',
+    /* The Intermediate window opens here, so this one has to name its own
+       subject rather than point back at the rung above it. "Redo the ones you
+       looked up" is a fine second sentence and an empty first one. */
+    line: (name) => `Find the last thing about ${name} you had to look up, and do it again with nothing open.`,
     by: {
-      'Health and fitness': () => 'Redo the set that fell apart.',
-      'Life and home': () => 'Do again the part you rushed.',
-      Creative: () => 'Redo the one you were least happy with.',
+      'Health and fitness': () => 'Go back to the set that fell apart last time and do it properly.',
+      'Life and home': () => 'Go back to the part you rushed last time and do it properly.',
+      Creative: () => 'Go back to the piece you were least happy with and redo it.',
+      Work: () => 'Go back to the call you got wrong, and say why you made it that way.',
+      'Language and humanities': () => 'Find the rule you keep having to check, and write a passage using it with nothing open.',
     },
   },
   {
-    line: (name) => `Write down the method for ${name} in five lines or fewer.`,
+    line: () => 'Ten in a row, timed. Note the one that slowed you down.',
     by: {
-      'Health and fitness': () => 'Write the cues down. Three of them, no more.',
+      Creative: () => 'Ten quick ones. Keep none of them.',
+      'Life and home': () => 'Do it three days running.',
+      'Health and fitness': () => 'One set against the clock, same form. Note where it slipped.',
+      'Business and money': () => 'Run it over ten real figures of your own.',
+      'Language and humanities': () => 'Ten short ones, timed. Note the one that took longest.',
     },
   },
   {
-    line: () => 'Five in one sitting, no notes.',
+    line: (name) => `Write the method for ${name} in five lines, then use it on a new one without looking.`,
     by: {
-      Creative: () => 'Five in one sitting. Finish all five, however rough.',
-      'Business and money': () => 'Run it over five real figures of your own.',
+      'Health and fitness': () => 'Write the cues down — three, no more — then film a set and check you hit them.',
+      Creative: () => 'Write down what you actually did, in five lines, so you can do it again.',
+      'Life and home': (name) => `Write your own checklist for ${name}, five lines, then run it once.`,
+      'Language and humanities': () => 'Write the rule down in five lines, then apply it to a new passage.',
+      Work: (name) => `Write down how you do ${name}, in five lines, then follow it once.`,
+    },
+  },
+  {
+    line: (name) => `Invent your own example of ${name}, do it, and check the answer holds.`,
+    by: {
+      Computing: () => 'Make up your own input, work out the answer by hand, then check the code agrees.',
+      'Health and fitness': (name) => `Set your own target for ${name} — load, reps or time — and hit exactly that.`,
+      'Life and home': () => 'Do it once for something real of your own, not a practice run.',
+      'Language and humanities': () => 'Write one of your own on a topic nobody set, then read it back cold.',
+      Creative: (name) => `Make one small piece that is only about ${name}.`,
+      'Business and money': () => 'Run it on one real figure of your own and sanity-check the result.',
+      Work: (name) => `Use ${name} on one real thing on your list this week.`,
     },
   },
   {
@@ -1014,35 +1072,43 @@ const LADDER: Rung[] = [
     by: {
       'Health and fitness': () => 'Add one increment. Weight, distance or time — one.',
       'Life and home': () => 'Do it again with one constraint you did not have.',
+      'Language and humanities': () => 'Make the same argument again for a reader who disagrees.',
+      Creative: () => 'Do it again with one thing changed — the light, the angle, the palette.',
+      Work: () => 'Do it again when the constraints have moved: less time, or more on the list.',
     },
   },
   {
-    line: () => 'Do the version with the awkward case in it.',
+    line: () => 'Push one example until it breaks. Write down the point where it turned.',
     by: {
-      Computing: () => 'Do the version with the empty input and the huge input.',
-      'Health and fitness': () => 'Do it tired, at the end of a session.',
-      'Life and home': () => 'Do it when the timing is inconvenient.',
-      Creative: () => 'Do the version you have been avoiding.',
+      Computing: () => 'Run it on the empty case, then on one a thousand times bigger than you expect.',
+      'Maths and science': () => 'Take the numbers to zero, to negative and to very large. See which breaks it.',
+      'Health and fitness': () => 'Take the load up until form goes. Note the number, then back off one step.',
+      'Life and home': () => 'Do it when the timing is bad, and see what you drop first.',
+      Creative: () => 'Take one piece too far on purpose and find where it stopped working.',
+      'Business and money': () => 'Push the assumption until the answer flips, and note what it took.',
     },
   },
   {
     line: () => 'Get one wrong on purpose. Say what the wrong answer looks like.',
     by: {
       Computing: () => 'Break it on purpose. Read the error before you guess.',
-      'Health and fitness': () => 'Have someone check your form and name one fault.',
+      'Health and fitness': () => 'Have someone watch a set and name one fault.',
+    },
+  },
+  {
+    line: (name) => `Mix ${name} in with the skills either side of it, so you do not know which one is coming.`,
+    by: {
+      Computing: (name) => `Take on work where ${name} is only sometimes the right tool, and nobody tells you when.`,
+      'Health and fitness': () => 'Train it in a session where you have not fixed the order in advance.',
+      Creative: () => 'Work on three pieces at once, so you cannot settle into one.',
+      'Life and home': () => 'Do it inside an ordinary week rather than as its own task.',
     },
   },
   {
     line: (name) => `Find the case where ${name} does not apply.`,
     by: {
-      'Health and fitness': () => 'Find the point where form goes, and stop one short of it.',
-    },
-  },
-  {
-    line: () => 'Ten in a row, timed.',
-    by: {
-      Creative: () => 'Ten quick ones. Keep none of them.',
-      'Life and home': () => 'Do it three days running.',
+      'Health and fitness': (name) => `Name one goal ${name} will not get you, and what would.`,
+      'Life and home': () => 'Name the situation where this is the wrong way to do it.',
     },
   },
   {
@@ -1070,9 +1136,6 @@ const LADDER: Rung[] = [
     },
   },
   {
-    line: () => 'Do it on a day you do not feel like it.',
-  },
-  {
     line: () => 'Come back a month later and do one cold.',
   },
   {
@@ -1089,6 +1152,22 @@ const LADDER: Rung[] = [
  * is the whole ladder and there is nowhere else for it to start. The window is
  * clamped rather than checked, so a count that overruns simply ends at the top
  * rung instead of running off it.
+ *
+ * ## Expert used to start below Advanced
+ *
+ * It was `from: 4` against Advanced's `from: 5`, so the more demanding tier got
+ * the easier opening — and the clamp hid it, because a count of 16 pins the
+ * start at 4 whatever the offset says. Sixteen rungs out of twenty cannot begin
+ * anywhere else. Expert is fourteen now, which is the length at which its own
+ * offset is the thing deciding where it starts, and it opens on inventing your
+ * own example rather than on copying somebody's.
+ *
+ * ## Nothing above Intermediate opens on repetition
+ *
+ * Rungs one to five are copy, recall and reps. They are the right first hour
+ * for Loops and they are absurd for Program Design, which is an Expert node
+ * whose programme used to include "ten in a row, timed". The reps live low
+ * enough now that the Advanced window starts past them.
  */
 /* Five at the shallowest, twenty at the deepest. A written entry and the line
    about what the node opens are both additions to the tier's count, so the
@@ -1100,7 +1179,7 @@ const TIER_WINDOW: Record<Difficulty, { from: number; count: number }> = {
   beginner: { from: 1, count: 7 },
   intermediate: { from: 3, count: 10 },
   advanced: { from: 5, count: 13 },
-  expert: { from: 4, count: 16 },
+  expert: { from: 6, count: 14 },
   mastery: { from: 0, count: 20 },
 };
 
