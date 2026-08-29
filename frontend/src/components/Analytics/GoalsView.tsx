@@ -68,7 +68,12 @@ export function PortfolioPanel({ overview }: PortfolioPanelProps) {
     { key: 'at-risk', label: 'At risk', count: overview.atRisk, tone: 'warn' },
     { key: 'off-track', label: 'Off track', count: overview.offTrack, tone: 'bad' },
     { key: 'not-started', label: 'Not started', count: overview.notStarted, tone: 'flat' },
-  ].filter((band) => band.count > 0);
+  ];
+  /* The bar drops the empty bands and the counts keep them. A zero-width
+     segment is not a segment, but "0 off track" is a reading — it is half of
+     what the reader came to the panel to find out, and dropping it made the
+     legend a caption for the bar rather than the four figures themselves. */
+  const drawn = bands.filter((band) => band.count > 0);
 
   return (
     <Panel title="The set">
@@ -94,8 +99,8 @@ export function PortfolioPanel({ overview }: PortfolioPanelProps) {
         </p>
       ) : (
         <>
-          <div className="ax-goal-bar" role="img" aria-label={bands.map((b) => `${b.count} ${b.label}`).join(', ')}>
-            {bands.map((band) => (
+          <div className="ax-goal-bar" role="img" aria-label={drawn.map((b) => `${b.count} ${b.label}`).join(', ')}>
+            {drawn.map((band) => (
               <i
                 key={band.key}
                 className={`is-${band.tone}`}
@@ -104,12 +109,14 @@ export function PortfolioPanel({ overview }: PortfolioPanelProps) {
               />
             ))}
           </div>
+          {/* Four figures rather than a caption in 12px. This is the panel's
+              answer, and it was set smaller than the footnotes underneath it. */}
           <ul className="ax-goal-legend">
             {bands.map((band) => (
-              <li key={band.key}>
+              <li key={band.key} className={band.count === 0 ? 'is-zero' : undefined}>
                 <i className={`is-${band.tone}`} aria-hidden="true" />
-                <span>{band.label}</span>
                 <strong>{band.count}</strong>
+                <span>{band.label}</span>
               </li>
             ))}
           </ul>
@@ -126,7 +133,7 @@ export function PortfolioPanel({ overview }: PortfolioPanelProps) {
               </p>
             ) : (
               <ul>
-                {overview.dueSoon.slice(0, 4).map((goal) => (
+                {overview.dueSoon.slice(0, 5).map((goal) => (
                   <li key={goal.id}>
                     <Link to="/goals" title={goal.title}>
                       {goal.title}
@@ -137,6 +144,19 @@ export function PortfolioPanel({ overview }: PortfolioPanelProps) {
               </ul>
             )}
           </div>
+
+          {/* What the four bands are, on the card that draws them. The states
+              are computed from three different signals and the page had never
+              said so anywhere — a reader who wondered why a goal was "at risk"
+              had nowhere on this tab to find out. */}
+          <p className="ax-muted ax-goal-foot">
+            Each goal's state is read from its progress against its date, how recently it
+            moved, and how much of your work is linked to it —{' '}
+            <Link to="/goals" className="ax-link">
+              the goals page
+            </Link>{' '}
+            names the weakest signal for each one.
+          </p>
         </>
       )}
     </Panel>
@@ -182,13 +202,39 @@ function driftWords(drift: number): string {
   return `${size} days ${late ? 'late' : 'early'}`;
 }
 
+/**
+ * How much of a goal's window has passed, 0-1.
+ *
+ * Null when the window is not a window — no start, or a deadline on or before
+ * it. `paceMap` computes the same share for the chart; this is the row-level
+ * one, kept here rather than exported from there because the two want
+ * different things on the edges (the chart plots past 1, a bar does not).
+ */
+function elapsedShare(goal: Goal, today: Date = new Date()): number | null {
+  const day = (value: string | null | undefined) => {
+    const at = Date.parse(`${String(value ?? '').slice(0, 10)}T00:00:00`);
+    return Number.isNaN(at) ? null : at;
+  };
+  const start = day(goal.start_date) ?? day(goal.created_at);
+  const end = day(goal.deadline);
+  if (start === null || end === null || end <= start) return null;
+  return Math.min(Math.max((today.getTime() - start) / (end - start), 0), 1);
+}
+
+/** "12 Oct". The year is dropped — every projection here is inside one. */
+function landingWords(iso: string): string {
+  const at = Date.parse(`${iso.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(at)) return '';
+  return new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
 export function PacePanel({ goals, tasks }: PacePanelProps) {
   const rows = goals
     .filter((goal) => goal.status !== 'completed' && goal.deadline)
     .map((goal) => ({ goal, pace: goalPace(goal), health: goalHealth(goal, tasks) }))
     .filter((row) => row.pace.drift !== null)
     .sort((a, b) => (b.pace.drift ?? 0) - (a.pace.drift ?? 0))
-    .slice(0, 6);
+    .slice(0, 5);
 
   if (rows.length === 0) {
     return (
@@ -204,22 +250,68 @@ export function PacePanel({ goals, tasks }: PacePanelProps) {
   return (
     <Panel title="Pace against the dates">
       <ul className="ax-goal-pace">
-        {rows.map(({ goal, pace }) => {
+        {rows.map(({ goal, pace, health }) => {
           const drift = pace.drift ?? 0;
           const late = drift > 0;
+          const progress = Math.round(goalNumbers(goal).progress);
+          /* The rate it is getting against the rate it needs. A ratio rather
+             than the two raw figures, because "units a day" is a unit the
+             reader never chose and 0.4 against 0.9 is a division to do. */
+          const ratio =
+            pace.need && pace.need > 0 && pace.have !== null ? pace.have / pace.need : null;
+          /* How much of its window has gone. This shares the bar's axis with
+             `progress` on purpose — both are shares of the same goal, one of
+             its work and one of its time, and the gap between them is exactly
+             what `driftWords` says in words above. */
+          const elapsed = elapsedShare(goal);
           return (
             <li key={goal.id} className={late ? 'is-late' : 'is-early'}>
-              <Link to="/goals" className="ax-goal-name" title={goal.title}>
-                {goal.title}
-              </Link>
-              <span className="ax-goal-drift">{driftWords(drift)}</span>
-              <span className="ax-muted">{Math.round(goalNumbers(goal).progress)}%</span>
+              <div className="ax-goal-pace-top">
+                <Link to="/goals" className="ax-goal-name" title={goal.title}>
+                  {goal.title}
+                </Link>
+                <span className="ax-goal-drift">{driftWords(drift)}</span>
+              </div>
+
+              {/* Done against the deadline still to come. The panel used to
+                  print the percentage alone, and a bare "40%" beside "12 days
+                  late" makes the reader hold both and do the comparison the
+                  bar does for them. */}
+              <div
+                className="ax-goal-pace-bar"
+                role="img"
+                aria-label={`${progress}% done${
+                  elapsed === null ? '' : `, ${Math.round(elapsed * 100)}% of the time gone`
+                }`}
+              >
+                <i style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }} />
+                {elapsed !== null && (
+                  <b
+                    style={{ left: `${Math.round(elapsed * 100)}%` }}
+                    title={`${Math.round(elapsed * 100)}% of the time is gone`}
+                  />
+                )}
+              </div>
+
+              <div className="ax-goal-pace-foot">
+                <span>
+                  <strong>{progress}%</strong> done
+                </span>
+                {ratio !== null && (
+                  <span title="Its actual rate as a share of the rate the deadline needs">
+                    {Math.round(ratio * 100)}% of the pace it needs
+                  </span>
+                )}
+                <span>{pace.lands ? `lands ${landingWords(pace.lands)}` : health.label}</span>
+              </div>
             </li>
           );
         })}
       </ul>
       <p className="ax-muted ax-goal-foot">
-        At the rate each one has actually been moving, not at the rate it would need.
+        The bar is the work done; the notch is how much of the time has gone. A bar short of
+        its notch is a goal behind — and the landing date is at the rate it has actually been
+        moving, not the rate it would need.
       </p>
     </Panel>
   );
@@ -228,18 +320,44 @@ export function PacePanel({ goals, tasks }: PacePanelProps) {
 // --------------------------------------------------------------------------
 // What the set says
 // --------------------------------------------------------------------------
+/**
+ * It used to return `null` when it had nothing, and that was wrong here.
+ *
+ * The panel sits in a two-column row, so a null second child left the row
+ * half-drawn — one card and an equal expanse of page beside it, which reads as
+ * a panel that failed to load rather than as a set with nothing remarkable in
+ * it. Silence is a real answer on this tab (see the note at the top of this
+ * file), but it has to be *said*, the way every other panel here says it.
+ */
 export function NotesPanel({ notes }: { notes: GoalNote[] }) {
-  if (notes.length === 0) return null;
   return (
     <Panel title="What stands out">
-      <ul className="ax-goal-notes">
-        {notes.map((note) => (
-          <li key={note.headline} className={`is-${note.tone}`}>
-            <strong>{note.headline}</strong>
-            <span className="ax-muted">{note.hint}</span>
-          </li>
-        ))}
-      </ul>
+      {notes.length === 0 ? (
+        <p className="ax-empty">
+          Nothing about the set stands out either way — no goal is running away from the rest
+          and none has gone quiet. This panel only speaks when the shape of your goals says
+          something the counts above do not.
+        </p>
+      ) : (
+        <>
+          <ul className="ax-goal-notes">
+            {notes.map((note) => (
+              <li key={note.headline} className={`is-${note.tone}`}>
+                <strong>{note.headline}</strong>
+                <span className="ax-muted">{note.hint}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="ax-muted ax-goal-foot">
+            Only what is true of the set rather than of one goal. Every figure about a single
+            goal is on{' '}
+            <Link to="/goals" className="ax-link">
+              its own card
+            </Link>
+            , in higher resolution than this tab can carry.
+          </p>
+        </>
+      )}
     </Panel>
   );
 }
@@ -257,6 +375,9 @@ export function SuggestPanel({ suggestions }: { suggestions: GoalSuggestion[] })
         </p>
       ) : (
         <>
+          {/* Two columns at full width. This panel spans the tab, and a single
+              file of short rows down the left of it left the right half of the
+              card empty on every screen wider than a phone. */}
           <ul className="ax-goal-suggest">
             {suggestions.map((row) => (
               <li key={row.id}>
@@ -298,6 +419,14 @@ const STATE_TONE: Record<string, string> = {
   'not-started': 'var(--ax-line)',
 };
 
+/** Reading order for the key — best to worst, then the ones not begun. */
+const STATE_LABEL: Array<[string, string]> = [
+  ['on-track', 'On track'],
+  ['at-risk', 'At risk'],
+  ['off-track', 'Off track'],
+  ['not-started', 'Not started'],
+];
+
 /**
  * Time gone against work done, with the diagonal that makes it mean something.
  *
@@ -330,6 +459,14 @@ export function PaceMapPanel({ points, undated }: PaceMapProps) {
   const DOT = 8;
   const x = (v: number) => pad.left + (v / X_MAX) * plotW;
   const y = (v: number) => pad.top + DOT + (1 - v) * (plotH - DOT * 2);
+
+  /* Only the states actually on the chart. A key listing four colours when
+     three of them are not plotted describes the palette rather than the
+     reader's goals. */
+  const counts = points.reduce<Record<string, number>>((tally, point) => {
+    tally[point.state] = (tally[point.state] ?? 0) + 1;
+    return tally;
+  }, {});
 
   if (points.length === 0) {
     return (
@@ -396,6 +533,24 @@ export function PaceMapPanel({ points, undated }: PaceMapProps) {
         <span>deadline</span>
       </div>
 
+      {/* The key. Every dot carries two variables — health in its colour and
+          priority in its area — and neither was written down anywhere on the
+          page. A reader met four colours and a spread of sizes and had to
+          infer both, which is the one thing a chart may not ask of them. */}
+      <ul className="ax-pacemap-key">
+        {STATE_LABEL.filter(([state]) => counts[state]).map(([state, label]) => (
+          <li key={state}>
+            <i style={{ background: STATE_TONE[state] }} aria-hidden="true" />
+            <span>{label}</span>
+            <strong>{counts[state]}</strong>
+          </li>
+        ))}
+        <li className="is-size">
+          <i aria-hidden="true" />
+          <span>larger dot, higher priority</span>
+        </li>
+      </ul>
+
       <p className="ax-muted ax-goal-foot">
         The diagonal is on pace. Anything under it has used more of its time than it has
         finished of its work
@@ -418,6 +573,11 @@ export function CheckpointsPanel({ months }: { months: ReachedMonth[] }) {
      month tied there is no such answer, so marking all of them paints the
      whole row in the accent and says nothing. */
   const unique = months.filter((row) => row.count === peak).length === 1;
+  /* Named only when it is the single best month — with everything tied there
+     is no "best", and the same rule that keeps `Columns` from painting the
+     whole row in the accent keeps the label off it. */
+  const best = unique ? months.find((row) => row.count === peak) : null;
+  const current = months[months.length - 1];
 
   return (
     <Panel title="Checkpoints reached">
@@ -429,6 +589,29 @@ export function CheckpointsPanel({ months }: { months: ReachedMonth[] }) {
         </p>
       ) : (
         <>
+          {/* The three readings a bar chart of six months makes the reader work
+              out by eye: the run rate, the best of them, and where the month
+              they are standing in has got to. The chart is still the panel —
+              these are the numbers it is a picture of. */}
+          <ul className="ax-goal-stats">
+            <li>
+              <strong>{total}</strong>
+              <span>in {months.length} months</span>
+            </li>
+            <li>
+              <strong>{(total / months.length).toFixed(1)}</strong>
+              <span>a month, average</span>
+            </li>
+            <li>
+              <strong>{peak}</strong>
+              <span>best month{best ? `, ${best.label}` : ''}</span>
+            </li>
+            <li>
+              <strong>{current?.count ?? 0}</strong>
+              <span>this month so far</span>
+            </li>
+          </ul>
+
           <Columns
             columns={months.map((row) => ({
               label: row.label,
@@ -439,9 +622,8 @@ export function CheckpointsPanel({ months }: { months: ReachedMonth[] }) {
             tone="green"
           />
           <p className="ax-muted ax-goal-foot">
-            <strong>{total}</strong> in {months.length} months. Empty months are kept — a gap
-            is the finding, and skipping them would draw four scattered checkpoints as a
-            rhythm.
+            Empty months are kept — a gap is the finding, and skipping them would draw four
+            scattered checkpoints as a rhythm.
           </p>
         </>
       )}
@@ -471,9 +653,18 @@ export function EffortPanel({ rows }: { rows: EffortRow[] }) {
       <ul className="ax-goal-effort">
         {rows.map((row) => (
           <li key={row.id}>
-            <span className="ax-goal-effort-name" title={row.title}>
-              {row.title}
-            </span>
+            <div className="ax-goal-effort-head">
+              <span className="ax-goal-effort-name" title={row.title}>
+                {row.title}
+              </span>
+              {/* The count the bars are a share *of*. It was in a tooltip, which
+                  is to say it was nowhere: two bars whose lengths are both
+                  proportions say nothing about whether the row is built on
+                  forty finished tasks or on one. */}
+              <span className="ax-goal-effort-count">
+                {row.finished} {row.finished === 1 ? 'task' : 'tasks'}
+              </span>
+            </div>
             <span className="ax-goal-effort-bars">
               <i className="is-said" style={{ width: `${row.priority * 100}%` }} title={`Priority ${Math.round(row.priority * 10)} of 10`} />
               <i className="is-did" style={{ width: `${row.effort * 100}%` }} title={`${row.finished} finished tasks — ${Math.round(row.effort * 100)}% of your goal work`} />
@@ -485,6 +676,7 @@ export function EffortPanel({ rows }: { rows: EffortRow[] }) {
         <span><i className="is-said" /> priority you set</span>
         <span><i className="is-did" /> share of your goal work</span>
       </p>
+
       {worst && gap >= 0.35 && (
         <p className="ax-muted ax-goal-foot">
           <strong>{worst.title}</strong> is the widest gap: you rated it{' '}

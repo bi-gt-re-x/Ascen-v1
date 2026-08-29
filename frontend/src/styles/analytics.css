@@ -4138,18 +4138,44 @@ body:has(.ax-page) .app-main {
 .ax-goal-bar i.is-bad,  .ax-goal-legend i.is-bad  { background: var(--ax-pink); }
 .ax-goal-bar i.is-flat, .ax-goal-legend i.is-flat { background: var(--ax-line); }
 
+/* The four counts, as figures. They were a wrapped row of 12px labels under
+   the bar — the panel's actual answer, set smaller than its own footnotes, and
+   leaving the card to end in an inch of nothing because the row stretches both
+   halves to the height of the pace map beside it. Read as a 2x2 they carry the
+   weight they should have had, and the card fills on content rather than on a
+   spacer. */
 .ax-goal-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
     margin: 0;
     padding: 0;
     list-style: none;
 }
-.ax-goal-legend li { display: flex; align-items: center; gap: 7px; font-size: 12px; }
-.ax-goal-legend i { width: 8px; height: 8px; border-radius: 2px; }
-.ax-goal-legend span { color: var(--ax-muted); }
-.ax-goal-legend strong { color: var(--ax-text); font-variant-numeric: tabular-nums; }
+.ax-goal-legend li {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: center;
+}
+.ax-goal-legend i {
+    grid-row: 1 / 3;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+}
+.ax-goal-legend strong {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -.02em;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-goal-legend span { font-size: 11px; line-height: 1.3; color: var(--ax-muted); }
+/* A band with nothing in it is still a reading, and still says less than the
+   ones with something in them. */
+.ax-goal-legend li.is-zero { opacity: .45; }
 
 /* Pace, and what stands out. Both are lists of a name and a reading. */
 .ax-goal-pace, .ax-goal-notes, .ax-goal-suggest {
@@ -4157,16 +4183,65 @@ body:has(.ax-page) .app-main {
     padding: 0;
     list-style: none;
 }
+/* A row is three lines now: the name and its drift, the bar, and the readings
+   under it. It was one line of name / drift / percent, which fitted the panel
+   and left the card half empty under five of them — and made the reader hold
+   "40%" and "12 days late" in their head to see that the first is why the
+   second. The bar puts the two on one axis. */
 .ax-goal-pace li {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: baseline;
-    gap: 12px;
-    padding: 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 0;
     border-bottom: 1px solid var(--ax-line-soft);
     font-size: 12.5px;
 }
 .ax-goal-pace li:last-child { border-bottom: 0; }
+.ax-goal-pace-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+/* Work done, on the same 0-100 axis as the notch. The notch is time gone, so a
+   bar short of its own notch is behind — the pace map's diagonal, per row. */
+.ax-goal-pace-bar {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--ax-card-2);
+}
+.ax-goal-pace-bar i {
+    display: block;
+    height: 100%;
+    min-width: 3px;
+    border-radius: 999px;
+    background: var(--ax-blue);
+}
+.ax-goal-pace li.is-late .ax-goal-pace-bar i { background: var(--ax-amber); }
+.ax-goal-pace li.is-early .ax-goal-pace-bar i { background: var(--ax-green); }
+.ax-goal-pace-bar b {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 12px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--ax-text);
+    opacity: .5;
+}
+.ax-goal-pace-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    font-size: 11.5px;
+    color: var(--ax-muted);
+}
+.ax-goal-pace-foot strong {
+    color: var(--ax-text);
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
 .ax-goal-name {
     min-width: 0;
     overflow: hidden;
@@ -4180,7 +4255,18 @@ body:has(.ax-page) .app-main {
 .ax-goal-drift { font-size: 12px; font-weight: 600; }
 .ax-goal-pace li.is-late .ax-goal-drift { color: var(--ax-amber); }
 .ax-goal-pace li.is-early .ax-goal-drift { color: var(--ax-green); }
-.ax-goal-foot { margin: 12px 0 0; font-size: 11.5px; line-height: 1.5; }
+/* Every one of these panels is the last line of its card, and the row they sit
+   in stretches both halves to the taller one. Left with a fixed top margin the
+   shorter card ended in a footnote and then an inch of nothing; on the floor it
+   ends where the card does. `:last-child` on the key below keeps the two from
+   splitting the slack between them when a panel has both. */
+.ax-goal-foot {
+    margin: 12px 0 0;
+    margin-top: auto;
+    padding-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
 
 .ax-goal-notes li {
     display: flex;
@@ -4199,14 +4285,26 @@ body:has(.ax-page) .app-main {
 
 /* What is missing. The kind chip is the only colour, and it names the shape of
    the goal being suggested rather than an urgency — nothing here is urgent. */
+/* This panel spans the tab, and a single file of short rows down the left of
+   it left the right half of the card empty on anything wider than a phone. As
+   tiles they fill the width, and the border that used to separate one row from
+   the next becomes the edge of each one — a rule between two columns of rows
+   would have been read as a table. */
+.ax-goal-suggest {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 10px;
+}
 .ax-goal-suggest li {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
     gap: 11px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--ax-line-soft);
+    padding: 12px 14px;
+    border: 1px solid var(--ax-line-soft);
+    border-radius: 10px;
+    background: var(--ax-card-2);
 }
-.ax-goal-suggest li:last-child { border-bottom: 0; }
 .ax-goal-suggest div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ax-goal-suggest strong { font-size: 13px; font-weight: 650; color: var(--ax-text); }
 .ax-goal-suggest span { font-size: 12px; line-height: 1.5; }
@@ -4226,6 +4324,51 @@ body:has(.ax-page) .app-main {
     color: var(--ax-violet);
 }
 
+/* The readings a six-month bar chart makes the reader work out by eye. Sat
+   above the chart rather than beside it: they are what the chart is a picture
+   of, and a column of numbers next to the bars would be the same data twice. */
+.ax-goal-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 10px 12px;
+    margin: 0 0 14px;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--ax-line-soft);
+    list-style: none;
+}
+.ax-goal-stats li { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ax-goal-stats strong {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.1;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-goal-stats span { font-size: 10.5px; line-height: 1.35; color: var(--ax-muted); }
+
+/* The key to the pace map. Its dots carry health in the colour and priority in
+   the area, and until this existed the page said neither out loud. */
+.ax-pacemap-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 11.5px;
+}
+.ax-pacemap-key li { display: flex; align-items: center; gap: 6px; color: var(--ax-muted); }
+.ax-pacemap-key i { flex: none; width: 9px; height: 9px; border-radius: 50%; }
+.ax-pacemap-key strong { color: var(--ax-text); font-variant-numeric: tabular-nums; }
+/* The size row shows the variable rather than a value of it: an outline, so it
+   is plainly not one more state in the list above. */
+.ax-pacemap-key li.is-size i {
+    width: 11px;
+    height: 11px;
+    border: 1.5px solid var(--ax-line);
+}
+
 /* The dozen words at the head of the tab. Bigger than body text and lighter
    than a heading: it is a sentence to be read once, not a title. */
 .ax-goal-lead {
@@ -4239,9 +4382,13 @@ body:has(.ax-page) .app-main {
 
 /* What lands next, under the spread. A hairline rule rather than a card: it is
    the second half of one panel, not a panel inside a panel. */
+/* No `margin-top: auto` here. It pinned the block to the floor of the card and
+   opened a canyon between it and the counts above — a gap in the middle of a
+   panel reads far worse than the same gap after its last line, and the fix for
+   the gap was to give the panel something to say, not to push it around. */
 .ax-goal-soon {
-    margin: 16px 0 0;
-    padding: 14px 0 0;
+    margin: 18px 0 0;
+    padding: 16px 0 0;
     border-top: 1px solid var(--ax-line-soft);
 }
 .ax-goal-soon h4 {
@@ -4330,6 +4477,19 @@ body:has(.ax-page) .app-main {
     border-bottom: 1px solid var(--ax-line-soft);
 }
 .ax-goal-effort li:last-child { border-bottom: 0; }
+.ax-goal-effort-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+.ax-goal-effort-count {
+    flex: none;
+    font-size: 11px;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+}
 .ax-goal-effort-name {
     font-size: 12.5px;
     font-weight: 600;
@@ -4366,6 +4526,7 @@ body:has(.ax-page) .app-main {
     font-size: 11.5px;
     color: var(--ax-muted);
 }
+.ax-goal-key:last-child { margin-top: auto; padding-top: 12px; }
 .ax-goal-key span { display: flex; align-items: center; gap: 7px; }
 .ax-goal-key i { width: 14px; height: 5px; border-radius: 999px; }
 .ax-goal-key i.is-said { background: color-mix(in srgb, var(--ax-violet) 38%, transparent); }
@@ -4414,6 +4575,10 @@ body:has(.ax-page) .app-main {
 /* On a phone the hand-off drops under the sentence it belongs to rather than
    squeezing it into a column two words wide. */
 @media (max-width: 640px) {
+    /* Four readings across a phone leave the fourth alone on a second row.
+       Two by two is the same four figures without the orphan. */
+    .ax-goal-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
     .ax-summary-head { gap: 13px; }
     .ax-summary-grade { min-width: 46px; height: 46px; font-size: 22px; }
     .ax-summary-lead { font-size: 15px; }
