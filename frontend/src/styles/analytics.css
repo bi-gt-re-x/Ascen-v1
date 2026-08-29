@@ -302,6 +302,67 @@ body:has(.ax-page) .app-main {
     .ax-collect-fill { transition: none; }
 }
 
+/* ---------- Early insight -------------------------------------------------
+   The mark a Day 4-7 panel wears, and the two panels that wear it. Set in the
+   panel's `aside` slot, so it sits on the title row where a picker would —
+   which is the right place for it: it qualifies the whole panel, not one
+   figure inside it. */
+.ax-early {
+    padding: 3px 9px;
+    border-radius: 99px;
+    border: 1px solid color-mix(in srgb, var(--ax-amber) 34%, transparent);
+    background: color-mix(in srgb, var(--ax-amber) 12%, transparent);
+    color: var(--ax-amber);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+.ax-early-foot {
+    margin-top: auto;
+    padding-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+/* What you finish, by the priority you set. Three rows at most. */
+.ax-finish { margin: 0; padding: 0; list-style: none; }
+.ax-finish li {
+    display: grid;
+    grid-template-columns: minmax(88px, auto) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+    font-size: 12.5px;
+}
+.ax-finish li:last-child { border-bottom: 0; }
+.ax-finish-name { color: var(--ax-text); font-weight: 600; }
+.ax-finish-bar {
+    display: block;
+    height: 7px;
+    border-radius: 99px;
+    background: var(--ax-card-2);
+    overflow: hidden;
+}
+.ax-finish-bar i {
+    display: block;
+    height: 100%;
+    min-width: 3px;
+    border-radius: inherit;
+    background: var(--ax-blue);
+}
+/* The priority's own tone, so the row reads as the thing it is about. */
+.ax-finish-bar i.is-high { background: var(--ax-pink); }
+.ax-finish-bar i.is-medium { background: var(--ax-amber); }
+.ax-finish-bar i.is-low { background: var(--ax-green); }
+.ax-finish-count {
+    color: var(--ax-muted);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+}
+.ax-finish-count strong { color: var(--ax-text); font-weight: 650; }
+
 .ax-locked {
     display: grid;
     place-items: center;

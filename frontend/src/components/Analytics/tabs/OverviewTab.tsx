@@ -27,6 +27,8 @@ import {
   BaselinePanel,
   Collecting,
   ConsistencyPanel,
+  FinishPanel,
+  WhenPanel,
   DepthPicker,
   QualityGridPanel,
   QualityPanel,
@@ -39,6 +41,7 @@ import {
 } from '../index';
 import type { Stat } from '../StatRow';
 import { number as fmtNumber } from '@/utils/format';
+import { partsOfDay } from '@/utils/habits';
 
 /** No earlier period to compare a subject against. Shared, so it is one object. */
 const EMPTY_PREVIOUS = new Map<string, number>();
@@ -60,9 +63,11 @@ export function OverviewTab({
     card,
     compareLabel,
     figures,
+    fromIso,
     maturity,
     streak,
     tasks,
+    toIso,
     grain,
     heatRows,
     sparks,
@@ -88,6 +93,16 @@ export function OverviewTab({
   const aim = baseline.data?.baseline ?? null;
 
   /*
+   * Day 0-7, in one path that gains panels rather than two that replace each
+   * other.
+   *
+   * The stages differ by what is added, never by what is rearranged: the
+   * heading block, the counts, the subject split and the hand-off are in the
+   * same order and the same components at every stage, and `early` puts two
+   * more panels between the counts and the split. A reader crossing from one
+   * stage to the next sees a page they recognise with something new on it,
+   * which is the point — five layouts would be five products.
+   *
    * Day 0-3: the tab, minus every panel that would be drawing a slope through
    * two points.
    *
@@ -101,7 +116,7 @@ export function OverviewTab({
    * same components underneath — see the note at the top of Collecting for why
    * this is not a second dashboard.
    */
-  if (maturity.stage === 'new') {
+  if (maturity.stage === 'new' || maturity.stage === 'early') {
     const finished = tasks.filter((task) => task.status === 'done').length;
     /* Against every task on the books, not against the ones that went well.
        Expired tasks count in the denominator — a rate that quietly drops the
@@ -161,9 +176,24 @@ export function OverviewTab({
           <Collecting
             maturity={maturity}
             stats={basics}
-            nextBrings="your first patterns open here"
+            nextBrings={
+              maturity.stage === 'new'
+                ? 'your first patterns open here'
+                : 'weekly trends and a comparison against last week open here'
+            }
           />
         </section>
+
+        {/* Day 4-7. Two tallies and nothing inferred from them — see the note
+            at the top of Early for the line these sit on the safe side of.
+            They arrive here rather than on Habits because Habits is about what
+            repeats, and four days cannot say what repeats. */}
+        {maturity.stage === 'early' && (
+          <section className="ax-section ax-grid ax-grid-halves-even">
+            <WhenPanel parts={partsOfDay(tasks, fromIso, toIso)} days={maturity.activeDays} />
+            <FinishPanel tasks={tasks} days={maturity.activeDays} />
+          </section>
+        )}
 
         {/* Where the work went. A share of a total is true on day one — it is
             a description of what is on record, not a claim about a trend — so

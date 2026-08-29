@@ -718,6 +718,7 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     all,
     slice,
     tasks,
+    fromIso,
     toIso,
     nameOf,
 

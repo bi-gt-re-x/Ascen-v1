@@ -78,6 +78,11 @@ export type { LockedProps } from './Locked';
 export { Collecting } from './Collecting';
 export type { CollectingProps } from './Collecting';
 
+/* Day 4-7. Tallies that stand up on a handful of days, and the mark that says
+   how many days that is. */
+export { EarlyMark, WhenPanel, FinishPanel } from './Early';
+export type { WhenPanelProps, FinishPanelProps } from './Early';
+
 /** The one thing on this page an account can do on its first day. */
 export { BaselinePanel, BaselineSetup } from './Baseline';
 export type { BaselinePanelProps, BaselineSetupProps, BaselineValues } from './Baseline';

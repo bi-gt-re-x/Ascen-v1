@@ -516,6 +516,49 @@ function partOfDay(hour: number): string {
   return PART_OF_DAY.find((slot) => at >= slot.from && at <= slot.to)?.label ?? 'the evening';
 }
 
+/**
+ * When the day's work actually happened, in four buckets.
+ *
+ * The plainest thing that can be said about time of day, and the only one that
+ * is honest on an account's fifth day: a count per part of day, no tendency
+ * claimed, no "you are a morning person" inferred from nine tasks. `habitPatterns`
+ * above says the stronger version once there is enough behind it — this is
+ * what the early stages of the analytics page show instead, and it shares
+ * `PART_OF_DAY` with that so the two can never disagree about where the
+ * evening ends.
+ *
+ * Tasks with no completion time are skipped rather than bucketed somewhere:
+ * `completed_at` is a date with no clock on it for tasks finished before the
+ * column carried one, and putting those in "the morning" would be inventing
+ * the very thing this is meant to report.
+ */
+export interface DayPart {
+  label: string;
+  count: number;
+}
+
+export function partsOfDay(tasks: Task[], fromIso: string, toIso: string): DayPart[] {
+  const counts = new Map<string, number>(PART_OF_DAY.map((slot) => [slot.label, 0]));
+  let seen = 0;
+
+  tasks.forEach((task) => {
+    if (task.status !== 'done') return;
+    const stamp = String(task.completed_at || '');
+    // A bare date has no hour in it. Length is the test the file already uses.
+    if (stamp.length <= 10) return;
+    const day = stamp.slice(0, 10);
+    if (day < fromIso || day > toIso) return;
+    const hour = Number(stamp.slice(11, 13));
+    if (Number.isNaN(hour)) return;
+    const label = partOfDay(hour);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+    seen += 1;
+  });
+
+  if (seen === 0) return [];
+  return PART_OF_DAY.map((slot) => ({ label: slot.label, count: counts.get(slot.label) ?? 0 }));
+}
+
 const wordFor = (share: number): HabitPattern['frequency'] =>
   share >= 75 ? 'Usually' : share >= 50 ? 'Frequently' : 'Sometimes';
 
