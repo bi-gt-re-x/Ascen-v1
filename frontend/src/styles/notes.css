@@ -55,6 +55,22 @@ body:has(.nt-page) .app-main {
     --nt-warn: #b47b18;
     --nt-bad: #c0392b;
 
+    /* The writer's nine, for `[x]{red}` and the highlighter. Named here rather
+       than given as hex in the rules, because both themes answer to the same
+       nine names — a note written in light mode has to stay legible when the
+       page turns dark, and the only way that holds is if the note stores the
+       name and the theme picks the value. The ink is darkened and the
+       highlighter is the same hue at a wash, so text on it stays readable. */
+    --nt-ink-red: #c0392b;
+    --nt-ink-orange: #b35c00;
+    --nt-ink-yellow: #9a7400;
+    --nt-ink-green: #1f8a54;
+    --nt-ink-teal: #0f7d84;
+    --nt-ink-blue: #2f6fd0;
+    --nt-ink-violet: #6c5ce7;
+    --nt-ink-pink: #c02a70;
+    --nt-ink-grey: #6b7684;
+
     --nt-radius: 16px;
     --nt-gap: 16px;
     --nt-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
@@ -88,6 +104,18 @@ html[data-theme="dark"] .nt-page {
     --nt-bad: #f0736d;
 
     --nt-shadow: 0 1px 2px rgba(0, 0, 0, .28), 0 10px 30px rgba(0, 0, 0, .22);
+
+    /* The same nine, lifted. A note that says `{red}` says it in both themes,
+       and #c0392b on the dark card is a colour you have to lean in to read. */
+    --nt-ink-red: #ff8a80;
+    --nt-ink-orange: #ffb066;
+    --nt-ink-yellow: #ecc94b;
+    --nt-ink-green: #5fd39a;
+    --nt-ink-teal: #4fd1c5;
+    --nt-ink-blue: #7fb0ff;
+    --nt-ink-violet: #b39dff;
+    --nt-ink-pink: #ff8ab8;
+    --nt-ink-grey: #9aa6bd;
 }
 
 .nt-shell {
@@ -611,29 +639,35 @@ html[data-theme="dark"] .nt-page {
 }
 
 /* ---------- The toolbar --------------------------------------------------- */
+/* Wraps rather than scrolls. It scrolled when it held thirteen buttons and a
+   strip that scrolls sideways hides the half of itself nobody thought to drag
+   to — survivable at thirteen and not at twenty-six, where alignment and the
+   list depths would have lived permanently off the right-hand edge. */
 .nt-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 6px 6px;
     padding: 8px 14px;
     border-bottom: 1px solid var(--nt-line-soft);
-    overflow-x: auto;
 }
 .nt-tool-group { display: flex; align-items: center; gap: 2px; }
 /* Hairlines between the groups, so the toolbar reads as four kinds of button
    rather than as thirteen. */
 .nt-tool-group + .nt-tool-group {
-    margin-left: 6px;
-    padding-left: 8px;
+    margin-left: 4px;
+    padding-left: 6px;
     border-left: 1px solid var(--nt-line-soft);
 }
 .nt-tool-end { margin-left: auto; border-left: 0; }
 
+/* 28px and a 5px pad rather than 30 and 6. Twice the buttons go in here now,
+   and the two rows that saves are two rows of the note. */
 .nt-tool {
     display: grid;
     place-items: center;
-    min-width: 30px; height: 30px;
-    padding: 0 6px;
+    min-width: 28px; height: 28px;
+    padding: 0 5px;
     border: 0;
     border-radius: 8px;
     background: transparent;
@@ -649,7 +683,78 @@ html[data-theme="dark"] .nt-page {
 .nt-tool[data-tool="bold"] { font-weight: 800; }
 .nt-tool[data-tool="italic"] { font-style: italic; font-family: Georgia, serif; }
 .nt-tool[data-tool="under"] { text-decoration: underline; }
+.nt-tool[data-tool="strike"] { text-decoration: line-through; }
 .nt-tool[data-tool="code"] { font-size: 11.5px; }
+.nt-tool[data-tool="face"] { font-family: Georgia, serif; font-size: 14px; }
+.nt-tool.is-on { background: var(--nt-card-2); color: var(--nt-text); }
+
+/* The two palette buttons carry a bar of the colour they last opened, the way
+   a highlighter shows its own ink. Static here — which colour is "current" is
+   a property of the selection, and the selection is in a textarea that does
+   not report one. A bar that lied would be worse than a bar that is a label. */
+.nt-tool-swatch { position: relative; }
+.nt-tool-swatch::after {
+    content: '';
+    position: absolute;
+    left: 6px; right: 6px; bottom: 4px;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg,
+        var(--nt-ink-red), var(--nt-ink-yellow), var(--nt-ink-green),
+        var(--nt-ink-blue), var(--nt-ink-violet));
+}
+.nt-tool[data-tool="mark"] { font-size: 11px; }
+
+/* Nine squares and a way out, three to a row. */
+.nt-swatches {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(3, 26px);
+    gap: 6px;
+    padding: 9px;
+    border: 1px solid var(--nt-line);
+    border-radius: 12px;
+    background: var(--nt-raised);
+    box-shadow: 0 10px 28px rgba(16, 24, 40, .14);
+}
+.nt-swatch {
+    width: 26px; height: 26px;
+    padding: 0;
+    border: 1px solid var(--nt-line);
+    border-radius: 7px;
+    background: var(--sw);
+    cursor: pointer;
+    transition: transform .12s ease;
+}
+/* The highlighter shows its wash, not its ink — that is what lands on the page. */
+.nt-swatch.is-mark { background: color-mix(in srgb, var(--sw) 30%, transparent); }
+.nt-swatch:hover { transform: scale(1.12); }
+.nt-swatch-clear {
+    grid-column: 1 / -1;
+    padding: 5px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--nt-card-2);
+    color: var(--nt-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.nt-swatch-clear:hover { color: var(--nt-text); }
+
+.nt-menu-rule { height: 1px; margin: 5px 0; background: var(--nt-line-soft); }
+
+/* The drawn glyphs. `currentColor` on both the bars and the arrowhead, so they
+   take the button's hover the way a character label does. */
+.nt-glyph { width: 16px; height: 13px; display: block; }
+.nt-glyph rect { fill: currentColor; }
+.nt-glyph .nt-glyph-fill { fill: currentColor; }
+.nt-face.is-serif span { font-family: Georgia, 'Times New Roman', serif; }
+.nt-face.is-mono span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 /* ---------- The note, and its facts --------------------------------------- */
 .nt-editor-body {
@@ -723,9 +828,22 @@ html[data-theme="dark"] .nt-page {
 .nt-preview h1 { font-size: 21px; }
 .nt-preview h2 { font-size: 17px; }
 .nt-preview h3 { font-size: 14.5px; }
+.nt-preview h4 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
 .nt-preview p { margin: 0 0 13px; }
 .nt-preview ul, .nt-preview ol { margin: 0 0 14px; padding-left: 22px; }
+/* A nested list is inside the item above it, not after it, so it loses the
+   gap a top-level list gets and keeps the indent. */
+.nt-preview :is(ul, ol) :is(ul, ol) { margin: 5px 0 2px; }
 .nt-preview li { margin-bottom: 5px; }
+/* Three depths of bullet, which is as far as an outline usefully goes. */
+.nt-preview ul { list-style: disc; }
+.nt-preview ul ul { list-style: circle; }
+.nt-preview ul ul ul { list-style: square; }
+.nt-preview hr {
+    margin: 20px 0;
+    border: 0;
+    border-top: 1px solid var(--nt-line);
+}
 .nt-preview li::marker { color: var(--nt-faint); }
 .nt-preview a { color: var(--nt-accent-2); text-decoration: underline; text-underline-offset: 2px; }
 .nt-preview strong { font-weight: 700; }
@@ -776,6 +894,64 @@ html[data-theme="dark"] .nt-page {
     background-repeat: no-repeat;
 }
 .md-done { color: var(--nt-faint); text-decoration: line-through; }
+
+/* ---------- What the writer marked ----------------------------------------
+   The nine names, twice: once as ink and once as a wash behind the text. Both
+   resolve through `--nt-ink-*`, so a note keeps its meaning when the theme
+   changes rather than keeping its exact colour — see the token block at the
+   top for why that is the trade.
+
+   The heading rule above says headings are the only thing allowed to carry
+   colour. That is still the rule for the page's own typography; these are the
+   account's own marks on their own note, which is a different thing from the
+   app deciding to colour something. */
+.md-c-red { color: var(--nt-ink-red); }
+.md-c-orange { color: var(--nt-ink-orange); }
+.md-c-yellow { color: var(--nt-ink-yellow); }
+.md-c-green { color: var(--nt-ink-green); }
+.md-c-teal { color: var(--nt-ink-teal); }
+.md-c-blue { color: var(--nt-ink-blue); }
+.md-c-violet { color: var(--nt-ink-violet); }
+.md-c-pink { color: var(--nt-ink-pink); }
+.md-c-grey { color: var(--nt-ink-grey); }
+
+/* A wash rather than the colour itself: a highlighter that paints at full
+   strength puts white text on yellow, and the text is the point. The padding
+   is asymmetric on purpose so consecutive highlights do not merge into a bar. */
+.nt-preview :is(mark, span)[class*="md-b-"] {
+    padding: 1px 3px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--md-wash) 30%, transparent);
+    color: inherit;
+}
+.md-b-red { --md-wash: var(--nt-ink-red); }
+.md-b-orange { --md-wash: var(--nt-ink-orange); }
+.md-b-yellow { --md-wash: var(--nt-ink-yellow); }
+.md-b-green { --md-wash: var(--nt-ink-green); }
+.md-b-teal { --md-wash: var(--nt-ink-teal); }
+.md-b-blue { --md-wash: var(--nt-ink-blue); }
+.md-b-violet { --md-wash: var(--nt-ink-violet); }
+.md-b-pink { --md-wash: var(--nt-ink-pink); }
+.md-b-grey { --md-wash: var(--nt-ink-grey); }
+
+/* Faces. Named stacks rather than one font, because a note is read on whatever
+   the reader has and a missing family should degrade to the right *kind*. */
+.md-f-sans { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+.md-f-serif { font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }
+.md-f-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* Sizes, relative so a marked run scales with whatever block it is in — an
+   `{lg}` inside a heading should be larger than the heading, not larger than
+   the body. */
+.md-s-sm { font-size: .84em; }
+.md-s-lg { font-size: 1.2em; }
+.md-s-xl { font-size: 1.5em; }
+
+.md-a-left { text-align: left; }
+.md-a-center { text-align: center; }
+.md-a-right { text-align: right; }
+
+.nt-preview s { color: var(--nt-faint); }
 
 
 .nt-meta {

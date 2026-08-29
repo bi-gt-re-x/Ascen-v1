@@ -37,8 +37,21 @@
  * asterisks, puts `## ` at the front of the line. That keeps the note readable
  * as itself, which is the property a notes table should not lose to a format
  * only this page can open.
+ *
+ * That rule is what decided the shape of the colours, the highlighters, the
+ * faces and the alignment when they arrived. Every one of them is a button
+ * that writes something a person could have typed — `[urgent]{red}`,
+ * `==this==`, `A title {center}` — and utils/markdown reads it back. Nothing
+ * here holds formatting state, because there is nowhere to hold it: the note
+ * is its text, and what you see in the write pane is the whole document.
+ *
+ * The one thing that shape cannot give is a live colour on the toolbar button
+ * itself. Which colour the selection currently is would have to be read out of
+ * a `<textarea>`, which does not report one — so the two palette buttons wear
+ * a fixed spectrum rather than a swatch that would be wrong half the time.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Ambient, ErrorState, Loading } from '@/components';
 import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
 import { notes as noteService } from '@/services';
@@ -137,34 +150,122 @@ const words = (body: string) => body.trim() ? body.trim().split(/\s+/).length : 
  *
  * `wrap` puts the same string either side of the selection — bold, italic,
  * code. `prefix` puts one at the front of every selected line — headings,
- * lists, quotes. Between them they cover everything the toolbar offers, which
- * is why there is no third kind.
+ * lists, quotes.
+ *
+ * Those two were once the whole vocabulary, and the comment here used to say
+ * so. Colour, highlight, font and alignment do not fit either: a colour wraps
+ * the selection in *different* strings, and an alignment belongs to the line
+ * and has to survive being applied twice. So there are four kinds now:
+ *
+ *   `span`    `[selection]{tokens}` — colour, highlight, face, size
+ *   `attr`    a `{token}` at the end of the line — alignment
+ *   `shift`   two spaces on or off the front — list depth
+ *
+ * All of them still write Markdown that reads as itself, which is the rule
+ * that decides what may be added here. See utils/markdown for the vocabulary
+ * and for why the token list is fixed.
  */
 type Tool =
-  | { id: string; label: string; hint: string; wrap: string; text?: string }
-  | { id: string; label: string; hint: string; prefix: string; text?: string };
+  | { id: string; label: ReactNode; hint: string; wrap: string; text?: string }
+  | { id: string; label: ReactNode; hint: string; prefix: string; text?: string }
+  | { id: string; label: ReactNode; hint: string; text: string }
+  | { id: string; label: ReactNode; hint: string; span: string }
+  | { id: string; label: ReactNode; hint: string; attr: string }
+  | { id: string; label: ReactNode; hint: string; shift: 1 | -1 };
+
+/**
+ * The eight buttons whose meaning is a shape rather than a character.
+ *
+ * `⬅` and `➡` are emoji on macOS and Windows both — they arrive in colour, at
+ * the wrong weight, in a toolbar where every other glyph is monochrome text.
+ * Alignment and depth are the two things here a letter cannot say, so they are
+ * drawn: four lines with the short one moved, and an arrow against a wall.
+ */
+function Lines({ at }: { at: 'left' | 'center' | 'right' }) {
+  // The second and fourth lines are short; where they sit is the whole icon.
+  const short = { left: '2 8', center: '5 8', right: '8 8' }[at];
+  return (
+    <svg viewBox="0 0 18 14" className="nt-glyph" aria-hidden="true">
+      {[2, 5.5, 9, 12.5].map((y, row) => {
+        const isShort = row % 2 === 1;
+        const [x, width] = isShort ? short.split(' ') : ['2', '14'];
+        return <rect key={y} x={x} y={y} width={width} height="1.6" rx=".8" />;
+      })}
+    </svg>
+  );
+}
+
+function Depth({ into }: { into: boolean }) {
+  return (
+    <svg viewBox="0 0 18 14" className="nt-glyph" aria-hidden="true">
+      <rect x={into ? '2' : '6'} y="2" width={into ? '14' : '10'} height="1.6" rx=".8" />
+      <rect x={into ? '2' : '6'} y="10.4" width={into ? '14' : '10'} height="1.6" rx=".8" />
+      <path
+        d={into ? 'M3 4.6 L7 7 L3 9.4 Z' : 'M15 4.6 L11 7 L15 9.4 Z'}
+        className="nt-glyph-fill"
+      />
+    </svg>
+  );
+}
 
 const TOOLS: Tool[][] = [
   [
     { id: 'h1', label: 'H1', hint: 'Heading 1', prefix: '# ' },
     { id: 'h2', label: 'H2', hint: 'Heading 2', prefix: '## ' },
     { id: 'h3', label: 'H3', hint: 'Heading 3', prefix: '### ' },
+    { id: 'h4', label: 'H4', hint: 'Heading 4', prefix: '#### ' },
   ],
   [
     { id: 'bold', label: 'B', hint: 'Bold', wrap: '**' },
     { id: 'italic', label: 'I', hint: 'Italic', wrap: '*' },
     { id: 'under', label: 'U', hint: 'Underline', wrap: '__' },
+    { id: 'strike', label: 'S', hint: 'Strikethrough', wrap: '~~' },
+    { id: 'mark', label: '▮', hint: 'Highlight', wrap: '==' },
   ],
   [
     { id: 'bullet', label: '•', hint: 'Bulleted list', prefix: '- ' },
     { id: 'number', label: '1.', hint: 'Numbered list', prefix: '1. ' },
+    { id: 'letter', label: 'a.', hint: 'Lettered list', prefix: 'a. ' },
+    { id: 'roman', label: 'i.', hint: 'Roman list', prefix: 'i. ' },
     { id: 'todo', label: '☑', hint: 'Checklist', prefix: '- [ ] ' },
+  ],
+  [
+    { id: 'outdent', label: <Depth into={false} />, hint: 'Move out one level', shift: -1 },
+    { id: 'indent', label: <Depth into />, hint: 'Move in one level', shift: 1 },
+  ],
+  [
+    { id: 'left', label: <Lines at="left" />, hint: 'Align left', attr: 'left' },
+    { id: 'centre', label: <Lines at="center" />, hint: 'Centre', attr: 'center' },
+    { id: 'right', label: <Lines at="right" />, hint: 'Align right', attr: 'right' },
   ],
   [
     { id: 'quote', label: '❝', hint: 'Quote', prefix: '> ' },
     { id: 'code', label: '</>', hint: 'Code', wrap: '`' },
-    { id: 'link', label: '🔗', hint: 'Link', wrap: '', text: '[text](https://)' },
+    { id: 'rule', label: '—', hint: 'Divider', text: '\n---\n' },
+    { id: 'link', label: '🔗', hint: 'Link', text: '[text](https://)' },
   ],
+];
+
+/**
+ * The swatches behind the two colour buttons, and the faces behind the third.
+ *
+ * The same nine names in both rows, because ink and highlighter are the same
+ * decision made twice and a reader who has learned one row has learned the
+ * other. `bg-` is the highlighter's prefix in the note text too, so what the
+ * button writes is legible in the body afterwards.
+ */
+const INKS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'violet', 'pink', 'grey'];
+
+/** Face and size, which are spans like the colours and belong in the same menu. */
+const FACES: Array<{ token: string; label: string }> = [
+  { token: 'sans', label: 'Sans' },
+  { token: 'serif', label: 'Serif' },
+  { token: 'mono', label: 'Mono' },
+];
+const SIZES: Array<{ token: string; label: string }> = [
+  { token: 'sm', label: 'Small' },
+  { token: 'lg', label: 'Large' },
+  { token: 'xl', label: 'Extra large' },
 ];
 
 /**
@@ -227,6 +328,8 @@ export default function Notes() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [tplOpen, setTplOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  /** Which toolbar palette is down: 'ink', 'mark', 'face', or none. */
+  const [paletteOpen, setPaletteOpen] = useState<'ink' | 'mark' | 'face' | null>(null);
   const [filter, setFilter] = useState<Filter>({ kind: 'all' });
   /**
    * Whether the body is being written or read.
@@ -285,15 +388,16 @@ export default function Notes() {
      in the app does — a menu that only closes on its own button is one the
      reader has to aim at twice. */
   useEffect(() => {
-    if (!menuOpen && !tplOpen && !filterOpen) return;
+    if (!menuOpen && !tplOpen && !filterOpen && !paletteOpen) return;
     const close = () => {
       setMenuOpen(false);
       setTplOpen(false);
       setFilterOpen(false);
+      setPaletteOpen(null);
     };
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
-  }, [filterOpen, menuOpen, tplOpen]);
+  }, [filterOpen, menuOpen, paletteOpen, tplOpen]);
 
   /*
    * The list is the server's ordering, filtered. Not re-sorted here: the API
@@ -417,18 +521,41 @@ export default function Notes() {
       let next: string;
       let caret: number;
 
+      /* Where the first selected line begins. Four of the five kinds work on
+         whole lines rather than on the selection, so they all start here — a
+         caret in the middle of a word still indents the line it is in. */
+      const lineStart = body.lastIndexOf('\n', from - 1) + 1;
+      /** Rewrite every line the selection touches. Returns, so `next` is provably set. */
+      const overLines = (change: (line: string) => string): [string, number] => {
+        const marked = body.slice(lineStart, to).split('\n').map(change).join('\n');
+        return [body.slice(0, lineStart) + marked + body.slice(to), lineStart + marked.length];
+      };
+
       if ('prefix' in tool) {
-        // Back to the start of the first selected line, so a caret in the
-        // middle of a word still prefixes the line it is in.
-        const lineStart = body.lastIndexOf('\n', from - 1) + 1;
-        const block = body.slice(lineStart, to);
-        const marked = block
-          .split('\n')
-          .map((line) => (line.startsWith(tool.prefix) ? line.slice(tool.prefix.length) : tool.prefix + line))
-          .join('\n');
-        next = body.slice(0, lineStart) + marked + body.slice(to);
-        caret = lineStart + marked.length;
-      } else if (tool.text) {
+        [next, caret] = overLines((line) =>
+          line.startsWith(tool.prefix) ? line.slice(tool.prefix.length) : tool.prefix + line,
+        );
+      } else if ('shift' in tool) {
+        // Two spaces is one level, which is what the renderer counts.
+        [next, caret] = overLines((line) =>
+          tool.shift === 1 ? `  ${line}` : line.replace(/^ {1,2}|^\t/, ''),
+        );
+      } else if ('attr' in tool) {
+        /* An alignment is one per line, so an existing one is replaced rather
+           than appended — pressing centre and then right twice would otherwise
+           leave a line claiming both. Pressing the one already there takes it
+           off, the way the prefix buttons do. */
+        const had = new RegExp(`\\s*\\{\\s*${tool.attr}\\s*\\}\\s*$`);
+        const any = /\s*\{\s*(left|center|centre|right)\s*\}\s*$/;
+        [next, caret] = overLines((line) =>
+          had.test(line) ? line.replace(had, '') : `${line.replace(any, '')} {${tool.attr}}`,
+        );
+      } else if ('span' in tool) {
+        const inner = picked || tool.hint.toLowerCase();
+        const written = `[${inner}]{${tool.span}}`;
+        next = body.slice(0, from) + written + body.slice(to);
+        caret = from + written.length;
+      } else if ('text' in tool && !('wrap' in tool)) {
         next = body.slice(0, from) + tool.text + body.slice(to);
         caret = from + tool.text.length;
       } else {
@@ -441,6 +568,52 @@ export default function Notes() {
       requestAnimationFrame(() => {
         field.focus();
         field.setSelectionRange(caret, caret);
+      });
+    },
+    [draft.body, mode, setBody],
+  );
+
+  /**
+   * Take the ink or the highlighter back off the selection.
+   *
+   * Unwrapping is not the same job as wrapping and cannot be a `Tool`: the
+   * text to remove is whatever colour happens to be there, which the button
+   * does not know until it looks. So this reads the selection, drops the
+   * `{...}` that holds a token of the right family, and unwraps `==` for the
+   * highlighter's shorthand.
+   *
+   * It leaves a span alone when its tokens are of the other family, so taking
+   * the highlight off `[x]{red bg-blue}` leaves the red where it was.
+   */
+  const strip = useCallback(
+    (family: 'ink' | 'mark') => {
+      const field = bodyRef.current;
+      if (!field || mode === 'read') return;
+      const from = field.selectionStart;
+      const to = field.selectionEnd;
+      const body = draft.body;
+      const wanted = family === 'ink' ? /^(?!bg-)/ : /^bg-/;
+
+      let picked = body.slice(from, to);
+      if (family === 'mark') picked = picked.replace(/==([^=]+)==/g, '$1');
+      picked = picked.replace(
+        /\[([^\]]+)\]\{([^}\n]*)\}/g,
+        (whole, label: string, raw: string) => {
+          const kept = raw
+            .trim()
+            .split(/[\s,]+/)
+            .filter(Boolean)
+            .filter((token) => !wanted.test(token));
+          if (kept.length === raw.trim().split(/[\s,]+/).filter(Boolean).length) return whole;
+          return kept.length > 0 ? `[${label}]{${kept.join(' ')}}` : label;
+        },
+      );
+
+      const next = body.slice(0, from) + picked + body.slice(to);
+      setBody(next);
+      requestAnimationFrame(() => {
+        field.focus();
+        field.setSelectionRange(from, from + picked.length);
       });
     },
     [draft.body, mode, setBody],
@@ -895,6 +1068,116 @@ export default function Notes() {
                   ))}
                 </div>
               ))}
+
+              {/* ---- Ink, highlighter and face ----
+                  Three menus rather than twenty-four more buttons. A palette is
+                  a choice from a set the reader is already looking at, and a
+                  row of nine coloured squares says that better than nine
+                  buttons in a strip that already scrolls. */}
+              <div className="nt-tool-group">
+                {([
+                  { key: 'ink', hint: 'Text colour', label: 'A' },
+                  { key: 'mark', hint: 'Highlight', label: '▮' },
+                ] as const).map((palette) => (
+                  <div className="nt-menu-wrap" key={palette.key}>
+                    <button
+                      type="button"
+                      className={`nt-tool nt-tool-swatch${paletteOpen === palette.key ? ' is-on' : ''}`}
+                      title={palette.hint}
+                      aria-label={palette.hint}
+                      aria-expanded={paletteOpen === palette.key}
+                      data-tool={palette.key}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setPaletteOpen((open) => (open === palette.key ? null : palette.key));
+                      }}
+                    >
+                      {palette.label}
+                    </button>
+                    {paletteOpen === palette.key && (
+                      <div className="nt-swatches" onClick={(event) => event.stopPropagation()}>
+                        {INKS.map((ink) => {
+                          const token = palette.key === 'ink' ? ink : `bg-${ink}`;
+                          return (
+                            <button
+                              key={ink}
+                              type="button"
+                              className={`nt-swatch is-${palette.key}`}
+                              style={{ '--sw': `var(--nt-ink-${ink})` } as CSSProperties}
+                              title={ink}
+                              aria-label={`${palette.hint}: ${ink}`}
+                              onClick={() => {
+                                setPaletteOpen(null);
+                                apply({ id: token, label: '', hint: ink, span: token });
+                              }}
+                            />
+                          );
+                        })}
+                        {/* Taking it off is a choice in the same menu as putting
+                            it on, because the reader who wants it gone is
+                            looking at the button that put it there. */}
+                        <button
+                          type="button"
+                          className="nt-swatch-clear"
+                          onClick={() => {
+                            setPaletteOpen(null);
+                            strip(palette.key === 'ink' ? 'ink' : 'mark');
+                          }}
+                        >
+                          None
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="nt-menu-wrap">
+                  <button
+                    type="button"
+                    className={`nt-tool${paletteOpen === 'face' ? ' is-on' : ''}`}
+                    title="Font and size"
+                    aria-label="Font and size"
+                    aria-expanded={paletteOpen === 'face'}
+                    data-tool="face"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPaletteOpen((open) => (open === 'face' ? null : 'face'));
+                    }}
+                  >
+                    Aa
+                  </button>
+                  {paletteOpen === 'face' && (
+                    <div className="nt-menu" onClick={(event) => event.stopPropagation()}>
+                      {FACES.map((face) => (
+                        <button
+                          key={face.token}
+                          type="button"
+                          className={`nt-face is-${face.token}`}
+                          onClick={() => {
+                            setPaletteOpen(null);
+                            apply({ id: face.token, label: '', hint: face.label, span: face.token });
+                          }}
+                        >
+                          <span>{face.label}</span>
+                        </button>
+                      ))}
+                      <div className="nt-menu-rule" />
+                      {SIZES.map((size) => (
+                        <button
+                          key={size.token}
+                          type="button"
+                          onClick={() => {
+                            setPaletteOpen(null);
+                            apply({ id: size.token, label: '', hint: size.label, span: size.token });
+                          }}
+                        >
+                          <span>{size.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div className="nt-tool-group nt-tool-end">
                 <div className="nt-mode" role="group" aria-label="Write or read">

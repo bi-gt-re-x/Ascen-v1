@@ -14,6 +14,29 @@
  * one it adds beyond them is a construct the toolbar gives nobody a way to
  * produce.
  *
+ * ## Colour, highlight and font, without leaving plain text
+ *
+ * The page grew a Google-Docs-shaped toolbar — colours, highlighters, fonts,
+ * alignment — and none of that is expressible in the six constructs this
+ * started with. The alternative was a rich-text document model, which is a
+ * migration and which throws away the property the whole design is built on:
+ * a note stays readable as itself, in the database and in any window that
+ * opens it.
+ *
+ * So the attributes go in the text, in one syntax: `[text]{tokens}`. Braces
+ * rather than the parentheses a link uses, so the two cannot collide, and
+ * space-separated tokens so one span can be red, serif and highlighted at
+ * once. It is Pandoc's bracketed span with a smaller vocabulary.
+ *
+ * **Only known tokens are honoured.** `TOKENS` is a fixed map from a word to
+ * one class, anything not in it is dropped, and nothing from the note ever
+ * reaches a class attribute unmapped. A renderer that passed tokens through
+ * would be letting a note body write its own CSS classes, which is a smaller
+ * hole than innerHTML and is still a hole.
+ *
+ * `==highlight==` and `~~strike~~` are the two marks common enough to deserve
+ * their own punctuation; both are the usual Markdown extensions for them.
+ *
  * ## Escaping comes first, always
  *
  * A note body is text the account typed, and it is about to become innerHTML.
@@ -45,6 +68,49 @@ function _href(raw: string): string {
 }
 
 /**
+ * The words a `{...}` may contain, and the one class each becomes.
+ *
+ * A fixed map rather than a pattern, because the value here is not the
+ * shortness of the table — it is that a token the account invents cannot
+ * become a class. Everything unknown is dropped silently: a note that says
+ * `{plaid}` renders as text without the mark, which is the failure a reader
+ * can see and correct.
+ *
+ * The colours are the palette the rest of the page already uses, named rather
+ * than given as hex, so a note written today still matches the theme after the
+ * palette moves and in dark mode where the same names resolve differently.
+ */
+const TOKENS: Record<string, string> = {
+  // Ink
+  red: 'md-c-red', orange: 'md-c-orange', yellow: 'md-c-yellow',
+  green: 'md-c-green', teal: 'md-c-teal', blue: 'md-c-blue',
+  violet: 'md-c-violet', pink: 'md-c-pink', grey: 'md-c-grey', gray: 'md-c-grey',
+  // Highlighter
+  'bg-red': 'md-b-red', 'bg-orange': 'md-b-orange', 'bg-yellow': 'md-b-yellow',
+  'bg-green': 'md-b-green', 'bg-teal': 'md-b-teal', 'bg-blue': 'md-b-blue',
+  'bg-violet': 'md-b-violet', 'bg-pink': 'md-b-pink', 'bg-grey': 'md-b-grey',
+  // Face
+  sans: 'md-f-sans', serif: 'md-f-serif', mono: 'md-f-mono',
+  // Size, relative to the body so the note keeps one scale
+  sm: 'md-s-sm', lg: 'md-s-lg', xl: 'md-s-xl',
+};
+
+/** The same, for a whole line: alignment is not a thing a span can be. */
+const BLOCK_TOKENS: Record<string, string> = {
+  left: 'md-a-left', center: 'md-a-center', centre: 'md-a-center', right: 'md-a-right',
+};
+
+/** `red serif plaid` → `md-c-red md-f-serif`. Unknown words are dropped. */
+function classesFor(raw: string, table: Record<string, string>): string {
+  const seen = new Set<string>();
+  for (const word of raw.trim().toLowerCase().split(/[\s,]+/)) {
+    const found = table[word];
+    if (found) seen.add(found);
+  }
+  return [...seen].join(' ');
+}
+
+/**
  * Where a stretch of code is parked while the other marks are applied.
  *
  * A control character, so it cannot appear in a note: anything the account can
@@ -53,11 +119,18 @@ function _href(raw: string): string {
 const HOLD = '\u0000';
 
 /**
- * The marks that live inside a line: bold, italic, underline, code, links.
+ * The marks that live inside a line: bold, italic, underline, strike,
+ * highlight, code, links, and the attributed span.
  *
  * Code is taken first and its content is not re-scanned, so `**x**` inside
  * backticks stays as it was typed — the one nesting rule that actually comes
  * up when somebody writes about writing.
+ *
+ * The span runs before the link, and both are anchored to their own closing
+ * punctuation — `]{...}` against `](...)` — so `[a](b)` is never read as a
+ * span and `[a]{red}` is never read as a link. A span whose tokens are all
+ * unknown emits no element at all rather than an empty one: the words come
+ * through as they were typed, which is what a reader needs to see to fix it.
  */
 function inline(text: string): string {
   const code: string[] = [];
@@ -69,7 +142,13 @@ function inline(text: string): string {
   out = out
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/__([^_]+)__/g, '<u>$1</u>')
+    .replace(/~~([^~]+)~~/g, '<s>$1</s>')
+    .replace(/==([^=]+)==/g, '<mark class="md-b-yellow">$1</mark>')
     .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\{([^}\n]*)\}/g, (whole, label: string, raw: string) => {
+      const classes = classesFor(raw, TOKENS);
+      return classes ? `<span class="${classes}">${label}</span>` : whole;
+    })
     .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (whole, label: string, target: string) => {
       const href = _href(target);
       return href
@@ -79,6 +158,41 @@ function inline(text: string): string {
 
   const holder = new RegExp(`${HOLD}(\\d+)${HOLD}`, 'g');
   return out.replace(holder, (_whole, index: string) => `<code>${code[Number(index)]}</code>`);
+}
+
+/**
+ * A line's own attributes, written at its end: `A title {center}`.
+ *
+ * Alignment cannot be a span — half a centred paragraph is not a thing — so it
+ * is read off the line before the line is classified, and the block rule that
+ * claims the line puts the class on whatever element it emits. Unknown tokens
+ * leave the braces in the text, same as a span.
+ */
+function lineAttrs(line: string): { text: string; classes: string } {
+  const found = /^(.*?)\s*\{([^}]*)\}\s*$/.exec(line);
+  if (!found) return { text: line, classes: '' };
+  const classes = classesFor(found[2]!, BLOCK_TOKENS);
+  return classes ? { text: found[1]!, classes } : { text: line, classes: '' };
+}
+
+/** ` class="..."`, or nothing at all. Keeps the emitters free of blank attrs. */
+const attr = (classes: string): string => (classes ? ` class="${classes}"` : '');
+
+/**
+ * What kind of ordered list a marker opens.
+ *
+ * Roman is tested before the single letter, so `i.` is one and `a.` is not —
+ * which is the convention every outline uses and the one thing a reader would
+ * be surprised to get wrong. `v.` and `x.` go the same way, and that is the
+ * cost of the convention rather than a bug in it.
+ */
+function orderedType(marker: string): string | null {
+  if (/^\d+$/.test(marker)) return '1';
+  if (/^[ivxlcdm]+$/.test(marker)) return 'i';
+  if (/^[IVXLCDM]+$/.test(marker)) return 'I';
+  if (/^[a-z]$/.test(marker)) return 'a';
+  if (/^[A-Z]$/.test(marker)) return 'A';
+  return null;
 }
 
 /** One list item's text, with a checkbox in front of it when it had one. */
@@ -95,84 +209,108 @@ function item(text: string): string {
 /**
  * Markdown to HTML, for the notes preview.
  *
- * Walks the lines once and keeps one piece of state — which block is open —
- * because every construct here is a line-level one, and a parser that builds a
- * tree for six rules is a parser nobody can read.
+ * One pass over the lines, and the only state is the stack of lists currently
+ * open. It was a single `open` variable, which is exactly as much state as a
+ * flat list needs and one short of what a nested one does — a sub-list has to
+ * remember what it is inside to know what to close when the indent comes back
+ * out. Depth is two spaces, or a tab, and is rounded down, so a line indented
+ * by three is a child rather than an error.
  */
 export function render(source: string): string {
   const safe = escape(source);
   const out: string[] = [];
-  /** The open block, so it can be closed before the next one opens. */
-  let open: 'ul' | 'ol' | 'pre' | null = null;
+  /** Lists currently open, outermost first. `pre` is separate — it nests in nothing. */
+  const stack: Array<{ tag: 'ul' | 'ol'; depth: number }> = [];
+  let pre = false;
 
-  const shut = () => {
-    if (open) out.push(`</${open}>`);
-    open = null;
+  /** Close lists until the innermost one is at `depth` or shallower. */
+  const closeTo = (depth: number) => {
+    while (stack.length > 0 && stack[stack.length - 1]!.depth > depth) {
+      out.push(`</${stack.pop()!.tag}>`);
+    }
   };
+  const closeAll = () => closeTo(-1);
 
-  for (const line of safe.split('\n')) {
+  for (const raw of safe.split('\n')) {
     // A fence swallows everything until the next one, formatting nothing.
-    if (/^```/.test(line.trim())) {
-      if (open === 'pre') {
-        shut();
+    if (/^\s*```/.test(raw)) {
+      if (pre) {
+        out.push('</pre>');
+        pre = false;
       } else {
-        shut();
+        closeAll();
         out.push('<pre>');
-        open = 'pre';
+        pre = true;
       }
       continue;
     }
-    if (open === 'pre') {
-      out.push(line);
+    if (pre) {
+      out.push(raw);
       continue;
     }
 
-    if (line.trim() === '') {
-      shut();
+    if (raw.trim() === '') {
+      closeAll();
       continue;
     }
 
-    const heading = /^(#{1,3})\s+(.*)$/.exec(line);
+    /* Depth before anything else: every block rule below matches on the line
+       with its indent already taken off, and only the list rules care what the
+       indent was. */
+    const indent = /^[ \t]*/.exec(raw)![0].replace(/\t/g, '  ').length;
+    const depth = Math.floor(indent / 2);
+    const line = raw.slice(/^[ \t]*/.exec(raw)![0].length);
+
+    // A rule. Three or more of one mark, and nothing else on the line.
+    if (/^([-*_])\1{2,}$/.test(line.replace(/\s+/g, ''))) {
+      closeAll();
+      out.push('<hr />');
+      continue;
+    }
+
+    const bullet = /^[-*+]\s+(.*)$/.exec(line);
+    const numbered = /^([0-9]+|[A-Za-z]+)[.)]\s+(.*)$/.exec(line);
+    const orderKind = numbered ? orderedType(numbered[1]!) : null;
+
+    if (bullet || orderKind) {
+      const tag = bullet ? 'ul' : 'ol';
+      closeTo(depth);
+      const top = stack[stack.length - 1];
+      /* A new list when there is nothing at this depth, and also when what is
+         there is the other kind — "1." directly under "-" is a second list,
+         not a numbered item in a bulleted one. */
+      if (!top || top.depth < depth || top.tag !== tag) {
+        if (top && top.depth === depth) out.push(`</${stack.pop()!.tag}>`);
+        out.push(tag === 'ul' ? '<ul>' : `<ol type="${orderKind}">`);
+        stack.push({ tag, depth });
+      }
+      const body = bullet ? bullet[1]! : numbered![2]!;
+      const { text, classes } = lineAttrs(body);
+      out.push(`<li${attr(classes)}>${bullet ? item(text) : inline(text)}</li>`);
+      continue;
+    }
+
+    // Everything below is a block of its own and ends any list it follows.
+    closeAll();
+    const { text, classes } = lineAttrs(line);
+
+    const heading = /^(#{1,4})\s+(.*)$/.exec(text);
     if (heading) {
-      shut();
       const level = heading[1]!.length;
-      out.push(`<h${level}>${inline(heading[2]!)}</h${level}>`);
+      out.push(`<h${level}${attr(classes)}>${inline(heading[2]!)}</h${level}>`);
       continue;
     }
 
-    const quote = /^&gt;\s?(.*)$/.exec(line);
+    const quote = /^&gt;\s?(.*)$/.exec(text);
     if (quote) {
-      shut();
-      out.push(`<blockquote>${inline(quote[1]!)}</blockquote>`);
+      out.push(`<blockquote${attr(classes)}>${inline(quote[1]!)}</blockquote>`);
       continue;
     }
 
-    const bullet = /^[-*]\s+(.*)$/.exec(line);
-    if (bullet) {
-      if (open !== 'ul') {
-        shut();
-        out.push('<ul>');
-        open = 'ul';
-      }
-      out.push(`<li>${item(bullet[1]!)}</li>`);
-      continue;
-    }
-
-    const numbered = /^\d+[.)]\s+(.*)$/.exec(line);
-    if (numbered) {
-      if (open !== 'ol') {
-        shut();
-        out.push('<ol>');
-        open = 'ol';
-      }
-      out.push(`<li>${inline(numbered[1]!)}</li>`);
-      continue;
-    }
-
-    shut();
-    out.push(`<p>${inline(line)}</p>`);
+    out.push(`<p${attr(classes)}>${inline(text)}</p>`);
   }
 
-  shut();
+  if (pre) out.push('</pre>');
+  closeAll();
   return out.join('\n');
 }
