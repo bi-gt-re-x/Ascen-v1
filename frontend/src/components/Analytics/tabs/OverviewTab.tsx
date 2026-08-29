@@ -25,6 +25,7 @@
 import { Link } from 'react-router-dom';
 import {
   BaselinePanel,
+  Collecting,
   ConsistencyPanel,
   DepthPicker,
   QualityGridPanel,
@@ -32,9 +33,15 @@ import {
   ScorePanel,
   StandingPanel,
   StreaksPanel,
+  SubjectPanel,
   Tiles,
   Trajectory,
 } from '../index';
+import type { Stat } from '../StatRow';
+import { number as fmtNumber } from '@/utils/format';
+
+/** No earlier period to compare a subject against. Shared, so it is one object. */
+const EMPTY_PREVIOUS = new Map<string, number>();
 import type { AnalyticsData } from '../useAnalyticsData';
 import type { AnalyticsModel } from '../useAnalyticsModel';
 
@@ -49,9 +56,13 @@ export function OverviewTab({
   onEditBaseline: () => void;
 }) {
   const {
+    breakdown,
     card,
     compareLabel,
     figures,
+    maturity,
+    streak,
+    tasks,
     grain,
     heatRows,
     sparks,
@@ -75,6 +86,98 @@ export function OverviewTab({
   } = model;
   const { account, baseline, standing } = data;
   const aim = baseline.data?.baseline ?? null;
+
+  /*
+   * Day 0-3: the tab, minus every panel that would be drawing a slope through
+   * two points.
+   *
+   * What is dropped is exactly the set that needs a *second* period to mean
+   * anything — `Tiles` prints a delta against the window before, `Trajectory`
+   * is a line, `ScorePanel` needs two readings, the quality panels need rated
+   * tasks, and `ConsistencyPanel` compares against a previous rate. What stays
+   * is what is already true: the counts, and where the work went.
+   *
+   * The tab is not replaced. It is the same file, the same sections and the
+   * same components underneath — see the note at the top of Collecting for why
+   * this is not a second dashboard.
+   */
+  if (maturity.stage === 'new') {
+    const finished = tasks.filter((task) => task.status === 'done').length;
+    /* Against every task on the books, not against the ones that went well.
+       Expired tasks count in the denominator — a rate that quietly drops the
+       ones you missed is not a completion rate. */
+    const completion = tasks.length > 0 ? Math.round((finished / tasks.length) * 100) : null;
+
+    const basics: Stat[] = [
+      {
+        key: 'tasks',
+        label: 'Tasks finished',
+        value: fmtNumber(figures.tasks.value),
+        tone: 'green',
+        glyph: 'check',
+      },
+      {
+        key: 'focus',
+        label: 'Focus time',
+        value: figures.focusHours.value.toFixed(1),
+        unit: 'h',
+        tone: 'blue',
+        glyph: 'clock',
+      },
+      {
+        key: 'xp',
+        label: 'XP earned',
+        value: fmtNumber(figures.xp.value),
+        tone: 'violet',
+        glyph: 'sparkle',
+      },
+      {
+        key: 'streak',
+        label: 'Current streak',
+        value: String(streak),
+        unit: streak === 1 ? 'day' : 'days',
+        tone: 'amber',
+        glyph: 'flame',
+      },
+      /* Only with tasks to divide by. "0%" over an empty list is not a rate,
+         it is a division nobody did. */
+      ...(completion === null
+        ? []
+        : [
+            {
+              key: 'completion',
+              label: 'Completion rate',
+              value: `${completion}%`,
+              tone: 'pink' as const,
+              glyph: 'target' as const,
+              note: `${finished} of ${tasks.length} finished`,
+            },
+          ]),
+    ];
+
+    return (
+      <>
+        <section id="overview" className="ax-section">
+          <Collecting
+            maturity={maturity}
+            stats={basics}
+            nextBrings="your first patterns open here"
+          />
+        </section>
+
+        {/* Where the work went. A share of a total is true on day one — it is
+            a description of what is on record, not a claim about a trend — so
+            this is the one panel from the mature tab that survives intact. */}
+        <section className="ax-section">
+          {/* No `previous`: there is no earlier period to compare against, and
+              an empty map is how this component is told so. */}
+          <SubjectPanel rows={breakdown.rows} previous={EMPTY_PREVIOUS} />
+        </section>
+
+        <WhereNext />
+      </>
+    );
+  }
 
   return (
     <>
@@ -175,7 +278,13 @@ export function OverviewTab({
         <StandingPanel standing={standing.data ?? null} />
       </section>
 
-      {/* Where the tab hands over.
+      <WhereNext />
+    </>
+  );
+}
+
+/**
+ * Where the tab hands over.
 
           This used to run four rows longer: a subject radar, a milestone list,
           a year-on-year bar chart, the compounding projection and four
@@ -191,24 +300,32 @@ export function OverviewTab({
           how often, and how much each piece was worth — then their trajectory
           and the score they roll up into. One screen, no scrolling past the
           part you came for, and three links out to whichever of the four
-          questions you actually have. */}
-      <section className="ax-section ax-next">
-        <p>Where to go next</p>
-        <div className="ax-next-row">
-          <Link to="/analytics/goals">
-            <strong>Goals</strong>
-            <span>Whether what you aimed at is going to happen</span>
-          </Link>
-          <Link to="/insights">
-            <strong>Insights</strong>
-            <span>Why your record looks like this, with the evidence</span>
-          </Link>
-          <Link to="/recommendations">
-            <strong>Recommendations</strong>
-            <span>What to change, ranked by what it is worth</span>
-          </Link>
-        </div>
-      </section>
-    </>
+          questions you actually have.
+ *
+ * A component rather than a block inside the tab, because both arms of the
+ * stage branch above end with it and two copies would drift. It is the same
+ * three links on day two as on day two hundred: the tabs it points at are
+ * where a reader goes with a question, and having little data is not a reason
+ * to stop telling them where the questions are answered.
+ */
+function WhereNext() {
+  return (
+    <section className="ax-section ax-next">
+      <p>Where to go next</p>
+      <div className="ax-next-row">
+        <Link to="/analytics/goals">
+          <strong>Goals</strong>
+          <span>Whether what you aimed at is going to happen</span>
+        </Link>
+        <Link to="/insights">
+          <strong>Insights</strong>
+          <span>Why your record looks like this, with the evidence</span>
+        </Link>
+        <Link to="/recommendations">
+          <strong>Recommendations</strong>
+          <span>What to change, ranked by what it is worth</span>
+        </Link>
+      </div>
+    </section>
   );
 }

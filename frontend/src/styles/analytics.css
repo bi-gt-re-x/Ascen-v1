@@ -225,6 +225,83 @@ body:has(.ax-page) .app-main {
    One card in the middle of the page rather than a grid of fake ones: the
    reader is not meant to scan it, they are meant to read one sentence and know
    when to come back. */
+/* ---------- Collecting ----------------------------------------------------
+   The stage before there is anything to gate. Deliberately *not* `.ax-locked`:
+   that one is a card in the middle of an empty page, which is the right shape
+   for a door and the wrong one for a page that is working — this sits at the
+   top of a tab that still has real figures under it, so it reads as the tab's
+   own opening rather than as a screen in front of it. */
+.ax-collect {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.ax-collect-head {
+    padding: 22px 24px 20px;
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    background:
+        radial-gradient(70% 120% at 0% 0%, color-mix(in srgb, var(--ax-violet) 9%, transparent), transparent 62%),
+        var(--ax-card);
+    box-shadow: var(--ax-shadow);
+}
+.ax-collect-eyebrow {
+    margin: 0 0 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ax-violet);
+}
+.ax-collect-head h2 {
+    margin: 0 0 10px;
+    font-size: 23px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.25;
+    color: var(--ax-text);
+}
+.ax-collect-lead {
+    margin: 0;
+    max-width: 68ch;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ax-muted);
+}
+
+/* The meter is toward the *next* stage, not toward the last one. See the note
+   on `progress` in utils/dataMaturity for why that matters on day six. */
+.ax-collect-next {
+    margin: 18px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-collect-meter {
+    height: 7px;
+    border-radius: 99px;
+    background: var(--ax-card-2);
+    overflow: hidden;
+}
+.ax-collect-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--ax-violet), var(--ax-blue));
+    transition: width .5s cubic-bezier(.22, 1, .36, 1);
+    min-width: 3px;
+}
+.ax-collect-count {
+    margin: 9px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+}
+.ax-collect-count strong { color: var(--ax-text); font-weight: 650; }
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-collect-fill { transition: none; }
+}
+
 .ax-locked {
     display: grid;
     place-items: center;

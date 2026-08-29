@@ -16,8 +16,10 @@
  * Two states, because there are two ways to have nothing to show and telling
  * them apart is the whole value:
  *
- * - **Waiting** (`remaining` > 0). The record is too short. Show the count, the
- *   date it lands, and what will be here — a promise with a deadline.
+ * - **Waiting** (`remaining` > 0). The record is too short. Show the count and
+ *   what will be here — a promise, and the condition that meets it. Not a
+ *   date: the count is in days with work on them, and how soon that is
+ *   depends on how often the reader turns up.
  * - **Nothing found** (`remaining` = 0). The record is long enough and the
  *   analysis genuinely produced nothing. That is a real result and gets said
  *   plainly rather than dressed as a wait: an account with an even week and no
@@ -49,13 +51,6 @@ export interface LockedProps {
   emptyMessage?: string;
   /** A way out of the dead end — usually a link to something to go do. */
   action?: ReactNode;
-}
-
-/** The day the tab turns on, written out. */
-function unlockDate(remaining: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + remaining);
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 }
 
 export function Locked({
@@ -92,15 +87,26 @@ export function Locked({
         <h2>
           <strong>{remaining}</strong> more {remaining === 1 ? 'day' : 'days'}
         </h2>
+        {/* No date. This used to read "Opens November 3", computed as today
+            plus `remaining` — which was only ever right for somebody who works
+            every single day, and told everybody else a date that came and went
+            with the tab still shut. `remaining` counts days with work on them
+            now (see utils/dataMaturity), so the honest sentence is the one
+            that names the condition instead of guessing when it is met. */}
         <p className="ax-locked-lead">
-          Opens {unlockDate(remaining)}. {promise}
+          {remaining === 1 ? 'One more day' : `${remaining} more days`} with work on{' '}
+          {remaining === 1 ? 'it' : 'them'}, whenever you do them. {promise}
         </p>
 
-        <div className="ax-locked-meter" role="img" aria-label={`${have} of ${need} days`}>
+        <div
+          className="ax-locked-meter"
+          role="img"
+          aria-label={`${have} of ${need} days with work on them`}
+        >
           <span className="ax-locked-fill" style={{ width: `${pct}%` }} />
         </div>
         <p className="ax-locked-count">
-          {have} / {need} days
+          {have} / {need} days with work on them
         </p>
 
         {brings.length > 0 && (

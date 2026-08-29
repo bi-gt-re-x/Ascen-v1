@@ -72,6 +72,12 @@ export {
 export { Locked } from './Locked';
 export type { LockedProps } from './Locked';
 
+/* The stage before `Locked` has anything to gate. See the note at the top of
+   Collecting for why the two are different components rather than one with a
+   flag: a door and an empty room are not the same thing to stand in front of. */
+export { Collecting } from './Collecting';
+export type { CollectingProps } from './Collecting';
+
 /** The one thing on this page an account can do on its first day. */
 export { BaselinePanel, BaselineSetup } from './Baseline';
 export type { BaselinePanelProps, BaselineSetupProps, BaselineValues } from './Baseline';

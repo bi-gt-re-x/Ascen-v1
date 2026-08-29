@@ -161,7 +161,7 @@ export default function Analytics() {
      opening sentence and the export. Everything else goes to a tab whole. */
   const {
     span, chooseSpan, option, spanText, subject, setSubject, subjectOptions, waitFor,
-    historyDays, streak, analytical, hasReportCard, figures, insights, breakdown, banked, recentSubjects,
+    historyDays, maturity, streak, analytical, hasReportCard, figures, insights, breakdown, banked, recentSubjects,
     discovered, diagnoses, advice, plan, recorded, state, goalSet, habits, summary,
   } = model;
   // ---- The shell ----------------------------------------------------------
@@ -288,6 +288,13 @@ export default function Analytics() {
   const opening = ((): React.ReactNode => {
     switch (view.key) {
       case 'overview':
+        /* Nothing, on an account that has not told us anything yet. `Summary`
+           leads with a score out of a hundred and what moved since last time,
+           and on day two both are arithmetic over an empty record — a
+           confident grade for somebody who has done nothing to be graded on.
+           The tab's own opening at that stage is `Collecting`, which says the
+           true thing instead. See utils/dataMaturity. */
+        if (maturity.stage === 'new') return null;
         /* The one tab whose opening is a block rather than a line. Everything
            it states is already in scope here — which is why it lives in this
            slot rather than inside `OverviewView`, which would need four more

@@ -92,6 +92,7 @@ import {
 } from '@/utils/ratings';
 import { outlook, recommendations } from '@/utils/advice';
 import { PATTERN_DAYS, RECENT_DAYS, daysUntilNextWeek, recentWindow, weekStamp } from '@/utils/recent';
+import { dataMaturity } from '@/utils/dataMaturity';
 import { diagnose, vitals } from '@/utils/diagnosis';
 import { analyticalScore } from '@/utils/analyticalScore';
 import { discoverPatterns } from '@/utils/patterns';
@@ -646,17 +647,41 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
    * than the one that unlocks it would be worse than the duplication.
    */
   /**
-   * How much record this account has, for the gated tabs.
+   * How much this account has actually recorded, and what that earns.
    *
-   * The whole history rather than the window on screen, because "how long have
-   * you been using Ascen" is a question about the account. Counting the window
+   * The whole history rather than the window on screen, because "how much do
+   * we know about you" is a question about the account. Counting the window
    * would mean the countdown moved when the reader touched the range picker —
    * telling somebody with four months of data that they need eleven more days
    * because they happened to be looking at a week.
    */
-  const historyDays = all.length;
+  const maturity = useMemo(() => dataMaturity(all), [all]);
 
-  /** Days still needed for a tab, or 0 once the record is long enough. */
+  /**
+   * The figure every gate on this page reads.
+   *
+   * It was `all.length`, and that was wrong in a way nothing on the page could
+   * show: `growth_data` is built by walking every calendar day since the
+   * account opened and padding the empty ones with zeros, so its length is the
+   * account's *age*. An account opened five weeks ago and used twice cleared a
+   * gate asking for three weeks of record, and got confident analysis drawn
+   * over two days of data.
+   *
+   * Active days instead — see utils/dataMaturity. This makes the existing
+   * gates stricter for anyone whose use has been patchy, which is the correct
+   * direction: the gates exist because a slope through four points is not a
+   * trend, and four points do not become a trend by being spread over a month.
+   */
+  const historyDays = maturity.activeDays;
+
+  /**
+   * Days still needed for a tab, or 0 once the record is long enough.
+   *
+   * Days with work on them, now that `historyDays` counts those — which is why
+   * `Locked` no longer names the date a tab opens on. It cannot: the answer
+   * depends on how often the reader turns up, and a date computed as if every
+   * day from here were a working one is a promise to break.
+   */
   const waitFor = useCallback(
     (key: keyof typeof NEED_DAYS) => Math.max(0, NEED_DAYS[key] - historyDays),
     [historyDays],
@@ -668,6 +693,7 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
   return {
     // The gates
     historyDays,
+    maturity,
     waitFor,
     streak,
 
