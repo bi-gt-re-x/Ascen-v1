@@ -8,15 +8,29 @@
  *     the ring and three figures   how far along the wall is, and the streak
  *     Recently Earned              the last four, largest — the news
  *     Achievement Categories       five bars, one per heading
- *     All Achievements             the wall, in two grids: Earned, then not
+ *     All Achievements             the wall, in two grids: still to earn, then
+ *                                  earned
  *
  * ## The wall is split, and neither half is behind a control
  *
- * "Earned · 68" and "Still to earn · 32", one grid each, both always drawn.
+ * "Still to earn · 32" and "Earned · 68", one grid each, both always drawn.
  * A single list sorted by difficulty answers "how hard is this badge" — a
  * question nobody arrives with — while burying the two the reader did come
- * for: what have I got, and what is next. Splitting it answers both in the
+ * for: what is next, and what have I got. Splitting it answers both in the
  * headings before a tile is read.
+ *
+ * ## What is still out there comes first
+ *
+ * The unearned half leads. Both halves are worth drawing, but only one of them
+ * can be acted on: "Still to earn" sorted easiest-and-nearest-first is a list
+ * of things to go and do, and the top of it is literally the next one. The
+ * earned half is a record — it is the more pleasant half to look at and it
+ * does not change what anybody does this afternoon, so it reads better as
+ * what the page arrives at than as what it opens with.
+ *
+ * The four largest badges on the page are still the four most recently earned,
+ * up at the top. Nothing about this ordering hides the good news; it stops the
+ * good news from standing between the reader and the wall.
  *
  * It is a split rather than a toggle for the same reason the panels on the
  * Growth page show their charts rather than offering them: a page whose job is
@@ -592,11 +606,11 @@ function BadgeTile({ badge }: { badge: Badge }) {
 /**
  * One half of the wall, headed by what it is and how many are in it.
  *
- * Earned and locked are drawn as two grids rather than one, and neither is
- * behind a control: a toggle would make the reader ask twice for a page whose
- * whole job is to answer "where am I" once. The heading carries the count, so
- * the split is also the tally — "Earned · 71" is the sentence the ring at the
- * top of the page draws as an arc.
+ * Locked and earned are drawn as two grids rather than one, in that order, and
+ * neither is behind a control: a toggle would make the reader ask twice for a
+ * page whose whole job is to answer "where am I" once. The heading carries the
+ * count, so the split is also the tally — "Earned · 71" is the sentence the
+ * ring at the top of the page draws as an arc.
  */
 function Wall({ title, note, badges }: { title: string; note: string; badges: Badge[] }) {
   if (badges.length === 0) return null;
@@ -731,9 +745,9 @@ export default function Achievements() {
       );
   }, [badges, filter, query]);
 
-  /* Earned, hardest first. The wall's news is at the top of it, and on a page
-     that opens with "71 of 100" the interesting seventy-one are the Legendary
-     ones, not the first afternoon's Starters. */
+  /* Earned, hardest first — within its own half, which is the second one. On
+     a page that says "71 of 100" the interesting seventy-one are the Legendary
+     ones, not the first afternoon's Starters, so the half opens on those. */
   const won = useMemo(
     () => shown.filter((badge) => badge.earned).sort((a, b) => b.tier - a.tier || a.name.localeCompare(b.name)),
     [shown],
@@ -926,14 +940,14 @@ export default function Achievements() {
           ) : (
             <>
               <Wall
-                title="Earned"
-                note="Hardest first"
-                badges={won}
-              />
-              <Wall
                 title="Still to earn"
                 note="Easiest first, then nearest"
                 badges={left}
+              />
+              <Wall
+                title="Earned"
+                note="Hardest first"
+                badges={won}
               />
             </>
           )}
