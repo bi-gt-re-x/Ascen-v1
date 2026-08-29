@@ -45,10 +45,18 @@
  * here holds formatting state, because there is nowhere to hold it: the note
  * is its text, and what you see in the write pane is the whole document.
  *
- * The one thing that shape cannot give is a live colour on the toolbar button
- * itself. Which colour the selection currently is would have to be read out of
- * a `<textarea>`, which does not report one — so the two palette buttons wear
- * a fixed spectrum rather than a swatch that would be wrong half the time.
+ * This file used to claim that shape could not give a live toolbar — that
+ * knowing what the caret is standing in would mean reading formatting out of a
+ * `<textarea>`, which reports none. That was wrong, and worth writing down
+ * because it is the kind of wrong that looks like a constraint: the textarea is
+ * not the document. The text is, a span is `[...]{...}`, and the caret is an
+ * offset into it. `tokensAt` reads it, so the font and size selectors show what
+ * is under the caret and the two palette buttons wear the colour that is
+ * actually there.
+ *
+ * It matters more than a nicety. A control whose label never changes when you
+ * use it is indistinguishable from one that does nothing — which is how the
+ * font selector came to be reported as missing while it was on the screen.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -98,6 +106,38 @@ const asDraft = (note: Note): Draft => ({
  */
 export function subjectIds(value: string | undefined | null): string[] {
   return (value ?? '').split(',').map((id) => id.trim()).filter(Boolean);
+}
+
+/**
+ * The tokens of the `[...]{...}` span the caret is sitting in, if it is in one.
+ *
+ * The font and size buttons used to be labels: "Font" and "14", whatever you
+ * had picked and wherever the caret was. Press one, pick Lora, and the button
+ * still said "Font" — which is indistinguishable from a control that does
+ * nothing, and is what "the font selector is gone" turned out to mean.
+ *
+ * A `<textarea>` reports no formatting, and that is what the docstring at the
+ * top of this file said made a live label impossible. It was wrong: the
+ * textarea is not the document. The *text* is, and the text is right here — a
+ * span is `[...]{...}` and the caret is an offset into it. So the label reads
+ * what is actually under the caret rather than what was last pressed, and is
+ * right after an undo, after clicking somewhere else, and on a note opened
+ * fresh.
+ *
+ * Exported for its tests: it is the one piece of this page that is a pure
+ * function of two arguments, and the one worth pinning down.
+ */
+export function tokensAt(body: string, at: number): string[] {
+  const spans = /\[([^\]\n]+)\]\{([^}\n]*)\}/g;
+  let found: RegExpExecArray | null;
+  while ((found = spans.exec(body)) !== null) {
+    // Inside, not merely touching: a caret resting against the `[` belongs to
+    // the text before the span, which is what you are about to type into.
+    if (at > found.index && at < found.index + found[0].length) {
+      return found[2]!.trim().toLowerCase().split(/[\s,]+/).filter(Boolean);
+    }
+  }
+  return [];
 }
 
 /** How many body edits back the toolbar's undo can reach. */
@@ -251,12 +291,19 @@ const TOOLS: Tool[][] = [
 const INKS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'violet', 'pink', 'grey'];
 
 /** Face and size, which are spans like the colours and belong in the same menu. */
-const FACES: Array<{ token: string; label: string }> = [
-  { token: 'sans', label: 'Inter' },
-  { token: 'serif', label: 'Lora' },
-  { token: 'mono', label: 'JetBrains Mono' },
-  { token: 'display', label: 'Playfair Display' },
-  { token: 'hand', label: 'Caveat' },
+/**
+ * `label` names the face in the menu, `short` on the button.
+ *
+ * "JetBrains Mono" in a toolbar control sets the width of everything beside
+ * it, and the button is read at a glance by somebody who already knows which
+ * five there are — the menu is where the full name earns its room.
+ */
+const FACES: Array<{ token: string; label: string; short: string }> = [
+  { token: 'sans', label: 'Inter', short: 'Inter' },
+  { token: 'serif', label: 'Lora', short: 'Lora' },
+  { token: 'mono', label: 'JetBrains Mono', short: 'Mono' },
+  { token: 'display', label: 'Playfair Display', short: 'Playfair' },
+  { token: 'hand', label: 'Caveat', short: 'Caveat' },
 ];
 
 /**
@@ -337,6 +384,8 @@ export default function Notes() {
   const [filterOpen, setFilterOpen] = useState(false);
   /** Which toolbar palette is down: 'ink', 'mark', 'face', or none. */
   const [paletteOpen, setPaletteOpen] = useState<'ink' | 'mark' | 'face' | 'size' | null>(null);
+  /** Where the caret is, so the two selectors can say what is under it. */
+  const [caret, setCaret] = useState(0);
   const [filter, setFilter] = useState<Filter>({ kind: 'all' });
   /**
    * Whether the body is being written or read.
@@ -595,6 +644,24 @@ export default function Notes() {
     },
     [draft.body, mode, setBody],
   );
+
+  /**
+   * What the caret is standing in, as the two selectors show it.
+   *
+   * Falls back to the note's own defaults rather than to a blank: text with no
+   * span on it *is* Inter at 14, so saying so is not a guess.
+   */
+  const marks = useMemo(() => {
+    const tokens = tokensAt(draft.body, caret);
+    return {
+      face: FACES.find((entry) => tokens.includes(entry.token)) ?? FACES[0]!,
+      size: SIZES.find((value) => tokens.includes(`s${value}`)) ?? BASE_SIZE,
+      /* The two palette buttons wore a fixed spectrum because the caret's own
+         colour was thought to be unreadable. It is not — it is in the text. */
+      ink: INKS.find((name) => tokens.includes(name)) ?? null,
+      mark: INKS.find((name) => tokens.includes(`bg-${name}`)) ?? null,
+    };
+  }, [caret, draft.body]);
 
   /**
    * Take the ink or the highlighter back off the selection.
@@ -1091,7 +1158,7 @@ export default function Notes() {
                       setPaletteOpen((open) => (open === 'face' ? null : 'face'));
                     }}
                   >
-                    <span>Font</span>
+                    <span>{marks.face.short}</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
                       <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -1102,7 +1169,7 @@ export default function Notes() {
                         <button
                           key={face.token}
                           type="button"
-                          className={`nt-face is-${face.token}`}
+                          className={`nt-face is-${face.token}${face.token === marks.face.token ? ' is-on' : ''}`}
                           onClick={() => {
                             setPaletteOpen(null);
                             apply({ id: face.token, label: '', hint: 'text', span: face.token });
@@ -1127,7 +1194,7 @@ export default function Notes() {
                       setPaletteOpen((open) => (open === 'size' ? null : 'size'));
                     }}
                   >
-                    <span>{BASE_SIZE}</span>
+                    <span>{marks.size}</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
                       <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -1138,7 +1205,7 @@ export default function Notes() {
                         <button
                           key={size}
                           type="button"
-                          className={size === BASE_SIZE ? 'is-base' : undefined}
+                          className={size === marks.size ? 'is-on' : undefined}
                           onClick={() => {
                             setPaletteOpen(null);
                             apply({ id: `s${size}`, label: '', hint: 'text', span: `s${size}` });
@@ -1184,8 +1251,17 @@ export default function Notes() {
                   <div className="nt-menu-wrap" key={palette.key}>
                     <button
                       type="button"
-                      className={`nt-tool nt-tool-swatch${paletteOpen === palette.key ? ' is-on' : ''}`}
-                      title={palette.hint}
+                      className={`nt-tool nt-tool-swatch${paletteOpen === palette.key ? ' is-on' : ''}${
+                        marks[palette.key] ? ' is-set' : ''
+                      }`}
+                      style={
+                        marks[palette.key]
+                          ? ({ '--sw': `var(--nt-ink-${marks[palette.key]})` } as CSSProperties)
+                          : undefined
+                      }
+                      title={
+                        marks[palette.key] ? `${palette.hint}: ${marks[palette.key]}` : palette.hint
+                      }
                       aria-label={palette.hint}
                       aria-expanded={paletteOpen === palette.key}
                       data-tool={palette.key}
@@ -1296,7 +1372,15 @@ export default function Notes() {
                   placeholder="Write it here. Nothing on this page is counted, graded or shown anywhere else."
                   value={draft.body}
                   maxLength={20000}
-                  onChange={(event) => setBody(event.target.value)}
+                  onChange={(event) => {
+                    setBody(event.target.value);
+                    setCaret(event.target.selectionStart);
+                  }}
+                  /* Fires on every caret move and every selection change,
+                     which is exactly when the two selectors' labels can go
+                     stale. `onKeyUp` would miss a click and `onClick` would
+                     miss the arrow keys. */
+                  onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
                 />
               )}
 

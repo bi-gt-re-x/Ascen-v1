@@ -698,6 +698,9 @@ html[data-theme="dark"] .nt-page {
    a highlighter shows its own ink. Static here — which colour is "current" is
    a property of the selection, and the selection is in a textarea that does
    not report one. A bar that lied would be worse than a bar that is a label. */
+/* The bar under each palette button is the colour that is actually under the
+   caret, read out of the note's own text by `tokensAt`. The spectrum is what it
+   shows when there is none — an unset button rather than a wrong swatch. */
 .nt-tool-swatch { position: relative; }
 .nt-tool-swatch::after {
     content: '';
@@ -708,6 +711,12 @@ html[data-theme="dark"] .nt-page {
     background: linear-gradient(90deg,
         var(--nt-ink-red), var(--nt-ink-yellow), var(--nt-ink-green),
         var(--nt-ink-blue), var(--nt-ink-violet));
+}
+.nt-tool-swatch.is-set::after { background: var(--sw); }
+/* The highlighter shows its wash here too, for the same reason the swatches in
+   its menu do: the wash is what lands on the page. */
+.nt-tool-swatch.is-set[data-tool="mark"]::after {
+    background: color-mix(in srgb, var(--sw) 45%, transparent);
 }
 .nt-tool[data-tool="mark"] { font-size: 11px; }
 
