@@ -230,15 +230,23 @@ html[data-theme="dark"] .ac-page {
     gap: 12px;
 }
 .ac-recent-card {
+    position: relative;
     display: flex; flex-direction: column; align-items: center; gap: 7px;
     padding: 20px 16px 14px;
     text-align: center;
-    border: 1px solid color-mix(in srgb, var(--t) 30%, var(--ac-line));
+    border: 1px solid color-mix(in srgb, var(--t) 46%, var(--ac-line));
     border-radius: var(--ac-radius);
+    /* Two lights rather than one: a tight one behind the medal, and a broad
+       faint one filling the card behind it. The single 14% wash spread over
+       120% of the card was too diffuse to read as anything — but the first
+       try at fixing it went the other way and fogged the medal it was meant
+       to be lighting. The core is tight enough to sit *behind* the hexagon
+       rather than across the top third of the card. */
     background:
-        radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--t) 14%, transparent), transparent 70%),
+        radial-gradient(34% 26% at 50% 17%, color-mix(in srgb, var(--t) 26%, transparent), transparent 76%),
+        radial-gradient(130% 92% at 50% 0%, color-mix(in srgb, var(--t) 11%, transparent), transparent 74%),
         var(--ac-card);
-    box-shadow: var(--ac-shadow);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--t) 15%, transparent), var(--ac-shadow);
 }
 .ac-recent-card strong { font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; }
 .ac-recent-card .ac-quiet { font-size: 11.5px; line-height: 1.5; }
@@ -256,22 +264,53 @@ html[data-theme="dark"] .ac-page {
 .ac-mark {
     position: relative;
     display: grid; place-items: center;
-    width: 46px; height: 46px;
+    width: 50px; height: 50px;
     flex: none;
     color: var(--t, var(--ac-violet));
 }
-.ac-mark.is-lg { width: 66px; height: 66px; }
+.ac-mark.is-lg { width: 72px; height: 72px; }
 
+/* ---- The plate ----
+   The hexagon was a flat 22% wash inside a hairline, which is a shape rather
+   than a medal: at that strength five tiers side by side differ by hue alone
+   and the wall reads as one texture. The fill is a lit face now — bright at
+   the top-left corner, dark through the middle, catching again at the lower
+   edge, which is what a struck piece of metal does and what makes it read as
+   an object rather than as a coloured hexagon.
+
+   Clipped rather than drawn, because the gradient has to follow the same six
+   sides the SVG rim does: the polygon below is that path's own points, read
+   off `M16 1.6 29 9v14L16 30.4 3 23V9z` in a 32-unit box. */
+.ac-mark::before {
+    content: '';
+    position: absolute; inset: 0;
+    clip-path: polygon(50% 5%, 90.6% 28.1%, 90.6% 71.9%, 50% 95%, 9.4% 71.9%, 9.4% 28.1%);
+    background: linear-gradient(155deg,
+        color-mix(in srgb, currentColor 28%, transparent) 0%,
+        color-mix(in srgb, currentColor 7%, transparent) 52%,
+        color-mix(in srgb, currentColor 18%, transparent) 100%);
+}
+.ac-mark.is-earned::before {
+    background: linear-gradient(155deg,
+        color-mix(in srgb, currentColor 55%, transparent) 0%,
+        color-mix(in srgb, currentColor 17%, transparent) 50%,
+        color-mix(in srgb, currentColor 42%, transparent) 100%);
+}
+
+/* The rim only — the plate above carries the fill now. */
 .ac-mark-hex {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
-    fill: color-mix(in srgb, currentColor 13%, transparent);
+    fill: none;
     stroke: color-mix(in srgb, currentColor 45%, transparent);
     stroke-width: 1.4;
 }
-.ac-mark.is-earned .ac-mark-hex {
-    fill: color-mix(in srgb, currentColor 22%, transparent);
-    stroke: currentColor;
+.ac-mark.is-earned .ac-mark-hex { stroke: currentColor; stroke-width: 1.7; }
+
+/* An earned badge is lit. This is the single biggest reason the wall read as
+   flat: seventy trophies drawn with no light on any of them. */
+.ac-mark.is-earned {
+    filter: drop-shadow(0 2px 7px color-mix(in srgb, var(--t) 42%, transparent));
 }
 .ac-mark-glyph {
     position: relative;
@@ -327,8 +366,11 @@ html[data-theme="dark"] .ac-mark-tick svg { color: #10151f; }
    thing nobody has been told. */
 .ac-mark.is-secret { color: var(--ac-faint); }
 
-/* Locked is quieter, not hidden: the drawing still says what the badge wants. */
-.ac-mark:not(.is-earned):not(.is-secret) { opacity: .82; }
+/* Locked is quieter, not hidden: the drawing still says what the badge wants.
+   Desaturated as well as dimmed, because opacity alone against a pale card
+   barely moves it — and the earned badges only look won next to something
+   that plainly is not. */
+.ac-mark:not(.is-earned):not(.is-secret) { opacity: .8; filter: saturate(.5); }
 
 /* ---------- Categories ----------------------------------------------------
    Five chips, and each is the filter it names — see the note in the page. */
@@ -443,6 +485,8 @@ html[data-theme="dark"] .ac-mark-tick svg { color: #10151f; }
 }
 
 .ac-tile {
+    position: relative;
+    overflow: hidden;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-content: start;
@@ -453,17 +497,59 @@ html[data-theme="dark"] .ac-mark-tick svg { color: #10151f; }
     background: var(--ac-card);
     transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
-.ac-tile:hover { transform: translateY(-2px); box-shadow: var(--ac-shadow); }
+/* The lift takes the tier's colour with it. A grey shadow under a gold badge
+   is the same hover every card in the app has; this one belongs to the badge. */
+.ac-tile:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--t) 55%, var(--ac-line));
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--t) 20%, transparent), var(--ac-shadow);
+}
 
-/* Earned carries its tier across the whole card. A wash rather than a flat
-   fill so the tile still reads as paper the badge sits on, and 9% rather than
-   more because five of these tones beside each other at any strength becomes
-   a colour chart. */
+/* Earned carries its tier across the whole card — but as light falling on it
+   from the corner the medal sits in, not as a flat wash over the whole face.
+   The old rule was a 11%-to-4% vertical fade, which is a tint so even that the
+   eye reads it as paper colour and not as anything happening; the tile had no
+   focal point and neither did the wall.
+
+   The gradient still starts under 25%, so the "five tones side by side become
+   a colour chart" worry the old note raised holds: what changed is where the
+   colour is, not how much of it there is. */
 .ac-tile.is-earned {
-    border-color: color-mix(in srgb, var(--t) 38%, var(--ac-line));
+    border-color: color-mix(in srgb, var(--t) 40%, var(--ac-line));
     background:
-        linear-gradient(180deg, color-mix(in srgb, var(--t) 11%, transparent), color-mix(in srgb, var(--t) 4%, transparent)),
+        radial-gradient(78% 118% at 7% 0%, color-mix(in srgb, var(--t) 22%, transparent), transparent 64%),
+        linear-gradient(180deg, color-mix(in srgb, var(--t) 9%, transparent), color-mix(in srgb, var(--t) 2%, transparent)),
         var(--ac-card);
+}
+
+/* ---- Rarity has to be visible without reading a word --------------------
+   Every tier was the same card in a different hue, so Legendary and Steady
+   were the same object and the wall had no peaks. The top two get a brighter
+   rim and a sheen that crosses the tile when the pointer does — on hover only,
+   because seventy tiles animating at rest is a page that never settles. */
+.ac-tile.is-earned:is(.tier-4, .tier-5) {
+    border-color: color-mix(in srgb, var(--t) 62%, var(--ac-line));
+}
+.ac-tile.is-earned:is(.tier-4, .tier-5)::after {
+    content: '';
+    position: absolute;
+    top: -20%; bottom: -20%; left: -60%;
+    width: 42%;
+    pointer-events: none;
+    background: linear-gradient(
+        100deg,
+        transparent,
+        color-mix(in srgb, var(--t) 30%, transparent),
+        transparent);
+    transform: skewX(-18deg);
+    opacity: 0;
+}
+.ac-tile.is-earned:is(.tier-4, .tier-5):hover::after { animation: ac-sheen .8s ease-out; }
+
+@keyframes ac-sheen {
+    from { left: -60%; opacity: 0; }
+    28% { opacity: 1; }
+    to { left: 118%; opacity: 0; }
 }
 
 /* Locked is the plain card — no tint, and its own drawing at slightly less
@@ -487,14 +573,28 @@ html[data-theme="dark"] .ac-mark-tick svg { color: #10151f; }
 .ac-tile-text .ac-quiet { font-size: 11.5px; line-height: 1.5; }
 
 /* The tier in words, for the reader who has not yet learned the colours or
-   the pips. Quiet on a locked tile and in the tier's tone once it is won. */
+   the pips. A chip rather than 9.5px of faint uppercase floating beside the
+   name: it is the one word on the tile that says how hard this was, and it was
+   set smaller and quieter than the description under it. */
 .ac-rank {
     flex: none;
-    font-size: 9.5px; font-weight: 700;
-    letter-spacing: .07em; text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--ac-faint) 15%, transparent);
+    font-size: 9px; font-weight: 800;
+    letter-spacing: .08em; text-transform: uppercase;
     color: var(--ac-faint);
 }
-.ac-tile.is-earned .ac-rank { color: var(--t); }
+.ac-tile.is-earned .ac-rank {
+    background: color-mix(in srgb, var(--t) 17%, transparent);
+    color: var(--t);
+}
+/* Legendary and Elite wear theirs filled. Two of a hundred badges are worth a
+   chip nobody has to look twice at. */
+.ac-tile.is-earned:is(.tier-4, .tier-5) .ac-rank {
+    background: color-mix(in srgb, var(--t) 88%, transparent);
+    color: var(--ac-card);
+}
 
 .ac-title {
     align-self: flex-start;
@@ -556,7 +656,10 @@ html[data-theme="dark"] .ac-mark-tick svg { color: #10151f; }
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
-.ac-xp.is-earned { background: color-mix(in srgb, var(--t) 22%, transparent); }
+.ac-xp.is-earned {
+    background: color-mix(in srgb, var(--t) 20%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t) 32%, transparent);
+}
 
 /* ---------- Feet ---------------------------------------------------------- */
 .ac-empty {
@@ -608,4 +711,8 @@ html[data-theme="dark"] .ac-mark-tick svg { color: #10151f; }
     .ac-bar > i, .ac-ring-arc { transition: none; }
     .ac-tile, .ac-tile:hover,
     .ac-cat button, .ac-cat button:hover { transition: none; transform: none; }
+    /* The sheen is the one thing here that moves on its own. Off entirely
+       rather than shortened — a sweep across a card is exactly the kind of
+       motion this setting is asking not to see. */
+    .ac-tile.is-earned:is(.tier-4, .tier-5):hover::after { animation: none; }
 }
