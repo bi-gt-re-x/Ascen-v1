@@ -89,10 +89,14 @@ const TOKENS: Record<string, string> = {
   'bg-red': 'md-b-red', 'bg-orange': 'md-b-orange', 'bg-yellow': 'md-b-yellow',
   'bg-green': 'md-b-green', 'bg-teal': 'md-b-teal', 'bg-blue': 'md-b-blue',
   'bg-violet': 'md-b-violet', 'bg-pink': 'md-b-pink', 'bg-grey': 'md-b-grey',
-  // Face
+  // Face. Each is a real family fetched in index.html, not a system fallback.
   sans: 'md-f-sans', serif: 'md-f-serif', mono: 'md-f-mono',
-  // Size, relative to the body so the note keeps one scale
-  sm: 'md-s-sm', lg: 'md-s-lg', xl: 'md-s-xl',
+  display: 'md-f-display', hand: 'md-f-hand',
+  // Size, in points, the way a size selector states one. `sm`/`lg`/`xl` were
+  // here first and are kept: notes written against them still read back.
+  s12: 'md-s-12', s14: 'md-s-14', s16: 'md-s-16', s18: 'md-s-18',
+  s20: 'md-s-20', s24: 'md-s-24', s30: 'md-s-30', s36: 'md-s-36', s48: 'md-s-48',
+  sm: 'md-s-14', lg: 'md-s-20', xl: 'md-s-30',
 };
 
 /** The same, for a whole line: alignment is not a thing a span can be. */

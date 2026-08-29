@@ -620,6 +620,12 @@ html[data-theme="dark"] .nt-page {
     background: var(--nt-raised);
     box-shadow: 0 14px 34px rgba(0, 0, 0, .3);
 }
+/* Anchored to the left edge of its control instead of the right. `right: 0` is
+   correct for the "..." at the end of the header and wrong for anything at the
+   start of the toolbar — the font list is the leftmost control on the page, and
+   right-aligning a 232px menu under it puts most of it off the window. */
+.nt-menu.is-left { right: auto; left: 0; }
+
 .nt-menu button {
     padding: 9px 11px;
     border: 0;
@@ -753,8 +759,56 @@ html[data-theme="dark"] .nt-page {
 .nt-glyph { width: 16px; height: 13px; display: block; }
 .nt-glyph rect { fill: currentColor; }
 .nt-glyph .nt-glyph-fill { fill: currentColor; }
-.nt-face.is-serif span { font-family: Georgia, 'Times New Roman', serif; }
-.nt-face.is-mono span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+/* Every face names itself in itself. A list of five font names all set in the
+   same font is a list of five words. */
+.nt-face.is-sans span { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+.nt-face.is-serif span { font-family: 'Lora', Georgia, serif; }
+.nt-face.is-mono span { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; }
+.nt-face.is-display span { font-family: 'Playfair Display', Georgia, serif; font-size: 15px; }
+.nt-face.is-hand span { font-family: 'Caveat', cursive; font-size: 17px; }
+
+/* ---------- Font and size, where the headings were ------------------------
+   Wider than a `.nt-tool` because both carry a word or a number and a chevron,
+   and a 28px square cannot say "Playfair Display". */
+.nt-pick {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 6px 0 9px;
+    border: 1px solid var(--nt-line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--nt-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .13s ease;
+}
+.nt-pick:hover, .nt-pick.is-on { background: var(--nt-card-2); }
+.nt-pick svg { width: 13px; height: 13px; flex: none; opacity: .65; }
+.nt-pick-face { min-width: 74px; }
+/* Tabular, so 12 and 48 are the same width and the chevron does not shuffle. */
+.nt-pick-size { min-width: 52px; font-variant-numeric: tabular-nums; }
+.nt-pick-size > span { flex: 1; text-align: left; }
+
+/* Nine numbers, each set at the size it names — the only honest way to draw a
+   size list, and the reason it is a list rather than a row of buttons. */
+.nt-sizes { max-height: 320px; overflow-y: auto; }
+.nt-sizes button { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.nt-sizes button > span { font-variant-numeric: tabular-nums; }
+.nt-sizes button em { font-size: 10.5px; font-style: normal; color: var(--nt-faint); }
+.nt-sizes button:nth-child(1) > span { font-size: 12px; }
+.nt-sizes button:nth-child(2) > span { font-size: 13px; }
+.nt-sizes button:nth-child(3) > span { font-size: 14px; }
+.nt-sizes button:nth-child(4) > span { font-size: 15px; }
+.nt-sizes button:nth-child(5) > span { font-size: 16px; }
+.nt-sizes button:nth-child(6) > span { font-size: 18px; }
+.nt-sizes button:nth-child(7) > span { font-size: 20px; }
+.nt-sizes button:nth-child(8) > span { font-size: 22px; }
+.nt-sizes button:nth-child(9) > span { font-size: 24px; }
 
 /* ---------- The note, and its facts --------------------------------------- */
 .nt-editor-body {
@@ -934,18 +988,34 @@ html[data-theme="dark"] .nt-page {
 .md-b-pink { --md-wash: var(--nt-ink-pink); }
 .md-b-grey { --md-wash: var(--nt-ink-grey); }
 
-/* Faces. Named stacks rather than one font, because a note is read on whatever
-   the reader has and a missing family should degrade to the right *kind*. */
+/* Faces. The named family is fetched in index.html; the stack behind it is
+   what renders in the second before it arrives and on the machine where it
+   never does — always to the right *kind*, so a `{mono}` that has not loaded
+   is still monospaced. */
 .md-f-sans { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
-.md-f-serif { font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }
-.md-f-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.md-f-serif { font-family: 'Lora', Georgia, 'Iowan Old Style', 'Times New Roman', serif; }
+.md-f-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+.md-f-display { font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; }
+/* Caveat draws small for its point size, and every other face would look like
+   a different size at the same number — the one thing a size selector may not
+   allow. */
+.md-f-hand { font-family: 'Caveat', 'Segoe Script', cursive; font-size: 1.25em; }
 
-/* Sizes, relative so a marked run scales with whatever block it is in — an
-   `{lg}` inside a heading should be larger than the heading, not larger than
-   the body. */
-.md-s-sm { font-size: .84em; }
-.md-s-lg { font-size: 1.2em; }
-.md-s-xl { font-size: 1.5em; }
+/* Sizes, in points, because the selector says a number and has to mean it.
+   `line-height` comes with the big ones: a 36px run on the body's 1.75 leading
+   sits in a line half again too tall and pushes its neighbours apart. */
+.md-s-12 { font-size: 12px; }
+.md-s-14 { font-size: 14px; }
+.md-s-16 { font-size: 16px; }
+.md-s-18 { font-size: 18px; }
+.md-s-20 { font-size: 20px; line-height: 1.5; }
+.md-s-24 { font-size: 24px; line-height: 1.4; }
+.md-s-30 { font-size: 30px; line-height: 1.3; }
+.md-s-36 { font-size: 36px; line-height: 1.25; }
+.md-s-48 { font-size: 48px; line-height: 1.15; }
+/* A run set larger than the line it sits in needs to be its own box to get the
+   leading it asked for. */
+.nt-preview :is(.md-s-30, .md-s-36, .md-s-48) { display: inline-block; }
 
 .md-a-left { text-align: left; }
 .md-a-center { text-align: center; }

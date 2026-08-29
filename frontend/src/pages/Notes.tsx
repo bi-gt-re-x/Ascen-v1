@@ -210,12 +210,6 @@ function Depth({ into }: { into: boolean }) {
 
 const TOOLS: Tool[][] = [
   [
-    { id: 'h1', label: 'H1', hint: 'Heading 1', prefix: '# ' },
-    { id: 'h2', label: 'H2', hint: 'Heading 2', prefix: '## ' },
-    { id: 'h3', label: 'H3', hint: 'Heading 3', prefix: '### ' },
-    { id: 'h4', label: 'H4', hint: 'Heading 4', prefix: '#### ' },
-  ],
-  [
     { id: 'bold', label: 'B', hint: 'Bold', wrap: '**' },
     { id: 'italic', label: 'I', hint: 'Italic', wrap: '*' },
     { id: 'under', label: 'U', hint: 'Underline', wrap: '__' },
@@ -258,15 +252,28 @@ const INKS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'violet', 'pin
 
 /** Face and size, which are spans like the colours and belong in the same menu. */
 const FACES: Array<{ token: string; label: string }> = [
-  { token: 'sans', label: 'Sans' },
-  { token: 'serif', label: 'Serif' },
-  { token: 'mono', label: 'Mono' },
+  { token: 'sans', label: 'Inter' },
+  { token: 'serif', label: 'Lora' },
+  { token: 'mono', label: 'JetBrains Mono' },
+  { token: 'display', label: 'Playfair Display' },
+  { token: 'hand', label: 'Caveat' },
 ];
-const SIZES: Array<{ token: string; label: string }> = [
-  { token: 'sm', label: 'Small' },
-  { token: 'lg', label: 'Large' },
-  { token: 'xl', label: 'Extra large' },
-];
+
+/**
+ * The size selector, which replaced the four heading buttons.
+ *
+ * A number is a thing everybody already knows how to read, and H1 against H3
+ * is a question about this app rather than about the writing. Headings did not
+ * go anywhere — `# ` still makes one, and the preview still styles four levels
+ * — they are just no longer the only way to make a line bigger.
+ *
+ * Points rather than a scale relative to the body: a size selector that says
+ * "18" and produces something other than 18 is a selector nobody can aim.
+ */
+const SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 48];
+
+/** What the body is set at, so the menu can show which entry is the plain one. */
+const BASE_SIZE = 14;
 
 /**
  * What the New Note chevron offers.
@@ -329,7 +336,7 @@ export default function Notes() {
   const [tplOpen, setTplOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   /** Which toolbar palette is down: 'ink', 'mark', 'face', or none. */
-  const [paletteOpen, setPaletteOpen] = useState<'ink' | 'mark' | 'face' | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState<'ink' | 'mark' | 'face' | 'size' | null>(null);
   const [filter, setFilter] = useState<Filter>({ kind: 'all' });
   /**
    * Whether the body is being written or read.
@@ -520,6 +527,9 @@ export default function Notes() {
 
       let next: string;
       let caret: number;
+      /* Where the selection lands afterwards. Equal to `caret` for everything
+         that has no placeholder — which is what a collapsed caret is. */
+      let anchor: number | null = null;
 
       /* Where the first selected line begins. Four of the five kinds work on
          whole lines rather than on the selection, so they all start here — a
@@ -551,10 +561,19 @@ export default function Notes() {
           had.test(line) ? line.replace(had, '') : `${line.replace(any, '')} {${tool.attr}}`,
         );
       } else if ('span' in tool) {
-        const inner = picked || tool.hint.toLowerCase();
+        /* Pressing a font with nothing selected used to write `[sans]{sans}`:
+           the placeholder was the button's own hint, so the word the reader
+           got was the name of the thing they had pressed. It is "text" now,
+           and it arrives selected — the next keystroke replaces it, which is
+           what pressing a font before typing was meant to do. */
+        const inner = picked || tool.hint;
         const written = `[${inner}]{${tool.span}}`;
         next = body.slice(0, from) + written + body.slice(to);
         caret = from + written.length;
+        if (!picked) {
+          anchor = from + 1;
+          caret = anchor + inner.length;
+        }
       } else if ('text' in tool && !('wrap' in tool)) {
         next = body.slice(0, from) + tool.text + body.slice(to);
         caret = from + tool.text.length;
@@ -562,12 +581,16 @@ export default function Notes() {
         const inner = picked || tool.hint.toLowerCase();
         next = body.slice(0, from) + tool.wrap + inner + tool.wrap + body.slice(to);
         caret = from + tool.wrap.length + inner.length + tool.wrap.length;
+        if (!picked) {
+          anchor = from + tool.wrap.length;
+          caret = anchor + inner.length;
+        }
       }
 
       setBody(next);
       requestAnimationFrame(() => {
         field.focus();
-        field.setSelectionRange(caret, caret);
+        field.setSelectionRange(anchor ?? caret, caret);
       });
     },
     [draft.body, mode, setBody],
@@ -1051,6 +1074,85 @@ export default function Notes() {
 
             {/* ---- What the buttons write ---- */}
             <div className="nt-toolbar">
+              {/* Face and size lead, where H1..H4 used to. They are the two
+                  controls a writer reaches for before they have written
+                  anything, and both are lists rather than buttons because
+                  five faces and nine sizes is fourteen buttons nobody wants. */}
+              <div className="nt-tool-group">
+                <div className="nt-menu-wrap">
+                  <button
+                    type="button"
+                    className={`nt-pick nt-pick-face${paletteOpen === 'face' ? ' is-on' : ''}`}
+                    title="Font"
+                    aria-label="Font"
+                    aria-expanded={paletteOpen === 'face'}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPaletteOpen((open) => (open === 'face' ? null : 'face'));
+                    }}
+                  >
+                    <span>Font</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+                      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {paletteOpen === 'face' && (
+                    <div className="nt-menu is-wide is-left" onClick={(event) => event.stopPropagation()}>
+                      {FACES.map((face) => (
+                        <button
+                          key={face.token}
+                          type="button"
+                          className={`nt-face is-${face.token}`}
+                          onClick={() => {
+                            setPaletteOpen(null);
+                            apply({ id: face.token, label: '', hint: 'text', span: face.token });
+                          }}
+                        >
+                          <span>{face.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="nt-menu-wrap">
+                  <button
+                    type="button"
+                    className={`nt-pick nt-pick-size${paletteOpen === 'size' ? ' is-on' : ''}`}
+                    title="Font size"
+                    aria-label="Font size"
+                    aria-expanded={paletteOpen === 'size'}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPaletteOpen((open) => (open === 'size' ? null : 'size'));
+                    }}
+                  >
+                    <span>{BASE_SIZE}</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+                      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {paletteOpen === 'size' && (
+                    <div className="nt-menu nt-sizes is-left" onClick={(event) => event.stopPropagation()}>
+                      {SIZES.map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          className={size === BASE_SIZE ? 'is-base' : undefined}
+                          onClick={() => {
+                            setPaletteOpen(null);
+                            apply({ id: `s${size}`, label: '', hint: 'text', span: `s${size}` });
+                          }}
+                        >
+                          <span>{size}</span>
+                          {size === BASE_SIZE && <em>normal</em>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {TOOLS.map((group, index) => (
                 <div className="nt-tool-group" key={index}>
                   {group.map((tool) => (
@@ -1131,52 +1233,6 @@ export default function Notes() {
                   </div>
                 ))}
 
-                <div className="nt-menu-wrap">
-                  <button
-                    type="button"
-                    className={`nt-tool${paletteOpen === 'face' ? ' is-on' : ''}`}
-                    title="Font and size"
-                    aria-label="Font and size"
-                    aria-expanded={paletteOpen === 'face'}
-                    data-tool="face"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setPaletteOpen((open) => (open === 'face' ? null : 'face'));
-                    }}
-                  >
-                    Aa
-                  </button>
-                  {paletteOpen === 'face' && (
-                    <div className="nt-menu" onClick={(event) => event.stopPropagation()}>
-                      {FACES.map((face) => (
-                        <button
-                          key={face.token}
-                          type="button"
-                          className={`nt-face is-${face.token}`}
-                          onClick={() => {
-                            setPaletteOpen(null);
-                            apply({ id: face.token, label: '', hint: face.label, span: face.token });
-                          }}
-                        >
-                          <span>{face.label}</span>
-                        </button>
-                      ))}
-                      <div className="nt-menu-rule" />
-                      {SIZES.map((size) => (
-                        <button
-                          key={size.token}
-                          type="button"
-                          onClick={() => {
-                            setPaletteOpen(null);
-                            apply({ id: size.token, label: '', hint: size.label, span: size.token });
-                          }}
-                        >
-                          <span>{size.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="nt-tool-group nt-tool-end">
