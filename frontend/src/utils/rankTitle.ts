@@ -65,7 +65,7 @@ export function chooseTitle(username: string, title: string): void {
  * list — and the bands follow from the highest reached downwards, which is the
  * order somebody scanning for "the good one" reads in.
  */
-export function titlesFor(level: number, earned = earnedTitle()): string[] {
+export function titlesFor(level: number, earned: string | null): string[] {
   const reached = TIERS.filter((tier) => level >= tier.from)
     .map((tier) => tier.name)
     .reverse();
@@ -76,8 +76,8 @@ export function titlesFor(level: number, earned = earnedTitle()): string[] {
  * What to print. A chosen title the account can no longer justify — the secret
  * one, cleared out of storage — falls back to the band rather than to nothing.
  */
-export function titleShown(username: string, rank: string, level: number): string {
-  const chosen = chosenTitle(username);
+export function titleShown(account: string, rank: string, level: number): string {
+  const chosen = chosenTitle(account);
   if (!chosen) return rank;
-  return titlesFor(level).includes(chosen) ? chosen : rank;
+  return titlesFor(level, earnedTitle(account)).includes(chosen) ? chosen : rank;
 }

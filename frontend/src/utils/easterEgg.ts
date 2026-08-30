@@ -10,11 +10,27 @@
  * here and the pentagon stops waking up, silently, because it is still looking
  * for the old one.
  *
- * `currentUser` is only ever *written* by frontend/secret/engine.html. Nothing
- * in the React app sets it, so `user()` reads 'Default' here — which is also
- * what the scripts read when nobody has been through the engine, so both
- * halves still agree on the key. It is the day that gates the clue anyway, not
- * the account.
+ * ## `currentUser`, and why React writes it
+ *
+ * Every one of those files identifies the account the same way: a localStorage
+ * key called `currentUser`. Six readers — the four scripts, this file, and
+ * frontend/secret/void.js — and until now exactly one writer:
+ * frontend/secret/engine.html, which is the *last* page in the chain.
+ *
+ * That is one writer in the wrong place, and it made the account meaningless
+ * in both directions. Before anybody reached the engine, `currentUser` was
+ * unset and every account on a browser shared one progression under
+ * 'Default'. After somebody reached it, the name was pinned to whoever that
+ * was and never moved again — so the next person to sign in on that browser
+ * was read as *them*: their day's unlock, and, fatally, their earned title.
+ * A title retires the chain (`earnedTitle` below), so a second account found
+ * the whole thing already over — ten clicks on the rail's title doing
+ * nothing, no unlock written, and the pentagon on the landing page inert
+ * because it had no unlock to find. Dead, with no symptom to read.
+ *
+ * So `rememberAccount` writes it, from the session React already knows about,
+ * on every load and every sign-in. The scripts go on reading the key they
+ * always read; it is simply true now. See hooks/useChainAccount.ts.
  *
  * Every read is wrapped: localStorage throws outright in a Safari private
  * window and where site data is blocked, and a secret is not worth a blank
@@ -32,12 +48,27 @@
  */
 export const EGG_UNLOCKED = 'ascen:egg-unlocked';
 
-/** Whose chain this is. See the note above about 'Default'. */
-function user(): string {
+/** Nobody signed in — the landing page's own door still works signed out. */
+export const ANON = 'Default';
+
+/**
+ * Tell the chain who is signed in.
+ *
+ * Called with the account on every load and every change of it, so that the
+ * four scripts in frontend/secret/ — which cannot ask React anything — read
+ * the right person out of the only place they know to look.
+ *
+ * Signing out clears it rather than leaving the last name behind: a shared
+ * machine should not hand the next person the previous one's progress, and
+ * 'Default' is a real state, not a fallback, because the landing page's own
+ * way in (frontend/secret/quote-egg.js) is open to visitors with no account.
+ */
+export function rememberAccount(username: string | null): void {
   try {
-    return localStorage.getItem('currentUser') || 'Default';
+    if (username) localStorage.setItem('currentUser', username);
+    else localStorage.removeItem('currentUser');
   } catch {
-    return 'Default';
+    /* storage blocked: everyone is 'Default', which is the signed-out chain */
   }
 }
 
@@ -54,23 +85,32 @@ function today(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-function dayKey(): string {
-  return `easterEgg:${user()}:${today()}`;
+function dayKey(account: string): string {
+  return `easterEgg:${account}:${today()}`;
 }
 
-/** Has the clue already been found today? */
-export function unlockedToday(): boolean {
+/**
+ * Has this account found the clue today?
+ *
+ * The account is passed in rather than read back out of `currentUser`, and
+ * that is not tidiness. React writes that key from an effect above the router,
+ * and effects run child-first — so a component asking this question in the
+ * same commit that the session resolved would read the *previous* name, and
+ * there is no later commit to put it right. hooks/useChainAccount.ts hands
+ * every caller the answer instead, and holds them off until there is one.
+ */
+export function unlockedToday(account: string): boolean {
   try {
-    return localStorage.getItem(dayKey()) === '1';
+    return localStorage.getItem(dayKey(account)) === '1';
   } catch {
     return false;
   }
 }
 
 /** Remember it, so a reload keeps the clue rather than asking for ten more clicks. */
-export function markUnlockedToday(): void {
+export function markUnlockedToday(account: string): void {
   try {
-    localStorage.setItem(dayKey(), '1');
+    localStorage.setItem(dayKey(account), '1');
   } catch {
     /* storage blocked: the clue is on screen, it just will not survive a reload */
   }
@@ -83,9 +123,9 @@ export function markUnlockedToday(): void {
  * It is the chain's terminator: once a title has been earned the clue has done
  * its job and the dashboard goes back to reading normally.
  */
-export function earnedTitle(): string | null {
+export function earnedTitle(account: string): string | null {
   try {
-    return localStorage.getItem(`ascenTitle:${user()}`);
+    return localStorage.getItem(`ascenTitle:${account}`);
   } catch {
     return null;
   }

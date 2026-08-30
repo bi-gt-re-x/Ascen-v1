@@ -32,6 +32,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
+import { useChainAccount } from '@/hooks/useChainAccount';
 import {
   EGG_UNLOCKED,
   earnedTitle,
@@ -146,24 +147,34 @@ export function useQuoteEgg(): UseQuoteEgg {
 
   /* On arrival: play the reveal if one is owed, show the clue if it was found
      earlier today, and otherwise leave the line alone. The clue is retired for
-     good once the chain has paid out its title. */
+     good once the chain has paid out its title.
+
+     Both of those questions are about an account, so neither can be asked
+     until there is one. On a cold load the session check is still in flight
+     when this first runs, and answering then means answering about the wrong
+     person: a reader who found the clue an hour ago would get the ordinary
+     quote back. `null` is hooks/useChainAccount.ts saying "not yet", and it is
+     the account and not merely the status, so switching accounts inside one
+     session asks again for the new one. */
+  const account = useChainAccount();
   useEffect(() => {
-    if (earnedTitle()) return;
+    if (account === null) return;
+    if (earnedTitle(account)) return;
     if (takeReveal()) reveal();
-    else if (unlockedToday()) setClue(CLUE);
-  }, [reveal]);
+    else if (unlockedToday(account)) setClue(CLUE);
+  }, [reveal, account]);
 
   /* The other way in: the reader was already on the dashboard when the tenth
      click landed, so nothing remounted and the effect above has long since
      run. `takeReveal` is what keeps these two from both firing. */
   useEffect(() => {
     const onUnlocked = () => {
-      if (earnedTitle()) return;
+      if (account === null || earnedTitle(account)) return;
       if (takeReveal()) reveal();
     };
     window.addEventListener(EGG_UNLOCKED, onUnlocked);
     return () => window.removeEventListener(EGG_UNLOCKED, onUnlocked);
-  }, [reveal]);
+  }, [reveal, account]);
 
   const containerClass =
     (clue ? ' quote-ominous' : '') + (spotlight ? ' quote-spotlight' : '');

@@ -47,9 +47,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth, useMediaQuery, useSettings, useStats } from '@/hooks';
+import { useChainAccount } from '@/hooks/useChainAccount';
 import { useTitleEgg } from '@/hooks/useTitleEgg';
 import { format } from '@/utils';
 import { rankFor } from '@/utils/mastery';
+import { earnedTitle } from '@/utils/easterEgg';
 import { AUTOMATIC, chooseTitle, chosenTitle, titlesFor } from '@/utils/rankTitle';
 import '@/styles/rail.css';
 
@@ -359,9 +361,11 @@ export function Rail() {
   );
 
   /* Every band reached, best first — and the secret title if the chain has
-     handed one out. Empty until the account read lands, which is also when
-     the whole plate below appears. */
-  const titles = level ? titlesFor(level.level) : [];
+     handed one out, which is a question about *this* account and so waits for
+     one. Empty until the account read lands, which is also when the whole
+     plate below appears. */
+  const account = useChainAccount();
+  const titles = level && account ? titlesFor(level.level, earnedTitle(account)) : [];
   /* A pick the account can no longer justify falls back to the band. See
      `titleShown` in utils/rankTitle for the case that causes. */
   const title = picked && titles.includes(picked) ? picked : rank;

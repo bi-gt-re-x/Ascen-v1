@@ -84,19 +84,33 @@ function safeNext(raw: string | null): string {
 export default function Homepage() {
   useDocumentTitle('Home');
 
+  const [params] = useSearchParams();
+  const { status, username, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const signedIn = status === 'signed-in';
+
   /* The two stages of the hidden chain this page carries, and the void they
      both lead into. They are the original scripts, bound to markup rendered
      below — the testimonial card in components/Home/sections.tsx and the
      pentagon in the Growth Rating preview beside it — and hooks/useSecretScripts
      explains why they are loaded rather than ported. Nothing here is reachable
      without the clue from the dashboard, except the testimonial, which is the
-     short way in for a visitor who has no account to put a dashboard behind. */
-  useSecretScripts(['void.css', 'void.js', 'quote-egg.js', 'pentagon-egg.js']);
+     short way in for a visitor who has no account to put a dashboard behind.
 
-  const [params] = useSearchParams();
-  const { status, username, signOut } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const signedIn = status === 'signed-in';
+     **Not until the account is known**, which is why this sits below `status`
+     rather than at the top with the other page-wide hooks.
+     frontend/secret/pentagon-egg.js reads whose unlock to look for once, at
+     load, and binds nothing at all if it does not find one — so loading it
+     while the session check is still in flight asks it about 'Default' and
+     leaves a pentagon that is inert for the rest of the visit. The session is
+     a round trip and the script is in cache, so that race is not close: it
+     loses almost every time. 'loading' is the only state worth waiting on —
+     signed out is an answer, and the testimonial's door is open to it. */
+  useSecretScripts(
+    status === 'loading'
+      ? []
+      : ['void.css', 'void.js', 'quote-egg.js', 'pentagon-egg.js'],
+  );
 
   const page = useRef<HTMLDivElement>(null);
   useIntro(page);

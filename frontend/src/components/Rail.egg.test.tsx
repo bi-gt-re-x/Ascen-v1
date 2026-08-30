@@ -29,7 +29,11 @@ const PHONE = '(max-width: 640px)';
 const LEVEL_12 = 6600;
 
 const TODAY = new Date('2026-08-30T21:00:00');
-const KEY = 'easterEgg:Default:2026-08-30';
+
+/* The signed-in account, not 'Default'. Two accounts on one browser get two
+   chains, which is the whole point of the key carrying a name — see
+   hooks/useChainAccount.ts. */
+const KEY = 'easterEgg:myles:2026-08-30';
 
 const navigate = vi.hoisted(() => vi.fn());
 vi.mock('react-router-dom', async () => ({
@@ -127,13 +131,41 @@ describe('the way into the hidden chain', () => {
 
   it('is retired once the chain has handed out a title', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('ascenTitle:Default', 'Admin');
+    localStorage.setItem('ascenTitle:myles', 'Admin');
     draw();
 
     await click(user, 12);
 
     expect(localStorage.getItem(KEY)).toBeNull();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('is not retired by somebody else’s title', async () => {
+    // The bug this replaced: one account finishing the chain closed it for
+    // everybody who signed in on that browser afterwards, and the only symptom
+    // was a rank that did nothing and a pentagon that did nothing either.
+    const user = userEvent.setup();
+    localStorage.setItem('ascenTitle:ada', 'Admin');
+    localStorage.setItem('ascenTitle:Default', 'Admin');
+    draw();
+
+    await click(user, 10);
+
+    expect(localStorage.getItem(KEY)).toBe('1');
+    expect(navigate).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('tells the scripts whose chain this is', async () => {
+    // frontend/secret/pentagon-egg.js has no way to ask React, so the unlock
+    // has to be written where it will go looking: `easterEgg:<currentUser>:<day>`.
+    const user = userEvent.setup();
+    draw();
+    await click(user, 10);
+
+    expect(localStorage.getItem('currentUser')).toBe('myles');
+    const asTheScriptReadsIt =
+      'easterEgg:' + (localStorage.getItem('currentUser') || 'Default') + ':2026-08-30';
+    expect(localStorage.getItem(asTheScriptReadsIt)).toBe('1');
   });
 
   it('leaves no shake on the page when the rail goes', async () => {
@@ -197,7 +229,7 @@ describe('choosing a title', () => {
 
   it('offers the title the hidden chain hands out, ahead of the bands', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('ascenTitle:Default', 'Admin');
+    localStorage.setItem('ascenTitle:myles', 'Admin');
     draw();
 
     await user.click(screen.getByRole('button', { name: 'Choose your title' }));

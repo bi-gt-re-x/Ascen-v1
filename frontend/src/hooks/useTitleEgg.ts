@@ -27,6 +27,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useChainAccount } from '@/hooks/useChainAccount';
 import {
   EGG_UNLOCKED,
   armReveal,
@@ -65,6 +66,10 @@ function isDark(): boolean {
 export function useTitleEgg(): UseTitleEgg {
   const titleRef = useRef<HTMLSpanElement>(null);
   const navigate = useNavigate();
+  /* Whose ten clicks these are. `null` until the session check lands, which is
+     also the only state in which this door stays shut for a reason that is not
+     about the reader — see hooks/useChainAccount.ts. */
+  const account = useChainAccount();
 
   /* Not state: the count is read and written inside one click and never
      rendered, so putting it in state would re-render the whole rail nine
@@ -115,9 +120,11 @@ export function useTitleEgg(): UseTitleEgg {
   }, []);
 
   const onTitleClick = useCallback(() => {
-    /* Nothing to find: the clue is out for today, or the chain has already
-       paid out its title. Either way the rank is just a rank. */
-    if (unlockedToday() || earnedTitle()) return;
+    /* Nothing to find: nobody is known yet, the clue is out for today, or the
+       chain has already paid out this account's title. Either way the rank is
+       just a rank. */
+    if (account === null) return;
+    if (unlockedToday(account) || earnedTitle(account)) return;
     // In the light it is a rank too. The count does not survive the trip.
     if (!isDark()) {
       clicks.current = 0;
@@ -131,7 +138,7 @@ export function useTitleEgg(): UseTitleEgg {
     }
 
     clicks.current = 0;
-    markUnlockedToday();
+    markUnlockedToday(account);
     armReveal();
     /* The order matters. Navigating first means a dashboard that has to mount
        finds the latch already armed; announcing after means a dashboard that
@@ -139,7 +146,7 @@ export function useTitleEgg(): UseTitleEgg {
        remounts — hears about it. Exactly one of the two claims the latch. */
     navigate('/dashboard');
     window.dispatchEvent(new CustomEvent(EGG_UNLOCKED));
-  }, [navigate, tremble]);
+  }, [account, navigate, tremble]);
 
   return { titleRef, onTitleClick };
 }
