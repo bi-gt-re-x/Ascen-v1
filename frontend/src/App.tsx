@@ -67,11 +67,21 @@ const HOME_PATHS: Record<Prefs['home_page'], string> = {
  * prefers. It waits for `ready` rather than redirecting on the default and
  * correcting: a navigation cannot be taken back, and a reader who chose Month
  * would watch the week open and then jump.
+ *
+ * **The query and the fragment come along.** This path is an alias for one of
+ * the three views, not a different destination, so everything the reader
+ * arrived with has to survive the hop — and a redirect that quietly drops half
+ * a URL is the kind of bug that only shows up in whatever needed the half it
+ * dropped. What needed it here was `/calendar#void`, the far end of the hidden
+ * chain (hooks/useVoid.ts): the void opened on arrival and then closed again a
+ * frame later, because the redirect handed the router the same path with no
+ * `#void` on it and the hook does what the URL says.
  */
-function CalendarHome() {
+export function CalendarHome() {
   const { prefs, ready } = useSettings();
+  const { hash, search } = useLocation();
   if (!ready) return <Loading />;
-  return <Navigate to={`/calendar/${prefs.calendar_view}`} replace />;
+  return <Navigate to={`/calendar/${prefs.calendar_view}${search}${hash}`} replace />;
 }
 
 function FrontDoor() {
