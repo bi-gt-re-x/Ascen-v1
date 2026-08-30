@@ -41,8 +41,9 @@
 }
 
 /* --- Brand ------------------------------------------------------------- */
-/* Two elements, not one: the mark (a span, and the easter egg's target) and
-   the wordmark (the only link home). The collapse toggle rides with them. */
+/* Two elements, not one, and both of them link home: the mark and the
+   wordmark. The mark was a span for as long as the easter egg counted clicks
+   on it — see components/Rail.tsx. The collapse toggle rides with them. */
 .rail-brand {
     display: flex;
     align-items: center;

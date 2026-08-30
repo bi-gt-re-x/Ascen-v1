@@ -70,6 +70,8 @@ const GONE = new Map([
   ['utils/skillTree', 'Task-derived skill trees. Nothing rendered them.'],
   ['utils/growthChart.ts', 'The growth canvas renderer, kept for a component already gone.'],
   ['utils/trends', "The Trends tab's arithmetic, removed with the tab."],
+  ['frontend/secret/easter-egg.js',
+   'The hidden quote, when it hung off the nav logo. Ported to hooks/useQuoteEgg.'],
 ]);
 
 const REF =

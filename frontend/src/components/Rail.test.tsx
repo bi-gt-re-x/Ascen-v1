@@ -60,6 +60,18 @@ describe('on a desktop', () => {
     renderWithProviders(<Rail />);
     expect(screen.getByRole('link', { name: 'Ascen' })).toHaveAttribute('href', '/home');
   });
+
+  /* The mark spent a while as a bare span so the easter egg could count clicks
+     on it, which meant the logo stopped going home in dark mode. The egg lives
+     on the dashboard's quote now; this is the assertion that keeps the mark a
+     link if anything ever wants to borrow it again. */
+  it('sends the mark home too, and not only the wordmark', () => {
+    renderWithProviders(<Rail />);
+    expect(screen.getByRole('link', { name: 'Ascen home' })).toHaveAttribute(
+      'href',
+      '/home',
+    );
+  });
 });
 
 describe('on a phone', () => {

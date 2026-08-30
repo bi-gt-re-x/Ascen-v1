@@ -341,8 +341,13 @@ export function Rail() {
 
   return (
     <nav className="rail" aria-label="Main">
-      {/* The mark is a span, not a link: secret/easter-egg.js counts clicks on
-          it. The wordmark beside it is the link home.
+      {/* Mark and wordmark are both the link home. The mark used to be a bare
+          span, because the easter egg counted clicks on it and had to cancel
+          the navigation to do so — a logo that quietly stopped going home in
+          dark mode. The egg's ten clicks live on the dashboard's daily quote
+          now (hooks/useQuoteEgg.ts), which is not a link and has nothing to
+          cancel, so the mark is a link again and behaves like one in both
+          themes.
 
           The mark is drawn inline rather than loaded from /static/images: the
           file is a one-colour near-black glyph, which needed `mix-blend-mode:
@@ -352,7 +357,7 @@ export function Rail() {
           lighten in dark like everything else. Same geometry as the file, so
           the two marks are still the same mark. */}
       <div className="rail-brand">
-        <span className="rail-brand-mark" id="topnavBrandMark">
+        <NavLink className="rail-brand-mark" to="/home" aria-label="Ascen home">
           <svg viewBox="0 0 100 100" aria-hidden="true">
             <path
               className="rail-mark-body"
@@ -369,7 +374,7 @@ export function Rail() {
               transform="rotate(30 72.5 64.5)"
             />
           </svg>
-        </span>
+        </NavLink>
         <NavLink className="rail-brand-name" to="/home">
           Ascen
         </NavLink>

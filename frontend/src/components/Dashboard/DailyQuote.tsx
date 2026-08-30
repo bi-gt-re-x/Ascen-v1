@@ -8,15 +8,19 @@
  * cost more than they buy. So the built-in line is the first paint and the
  * fetched one is an improvement on it.
  *
- * The markup keeps `.quote-container` and `#dailyQuote` because the easter egg
- * in frontend/secret/easter-egg.js is written against exactly those, and the
- * slide-out animation it drives lives in styles/dashboard.css under that id.
- * Same reason for `window.__mysteriousQuoteActive`: once the hidden chain has
- * been unlocked, the egg owns this line and the daily fetch must not overwrite
- * what it put there. That contract predates the React port and is kept so the
- * egg still works when it is ported.
+ * The markup keeps `.quote-container` and `#dailyQuote` because the hidden
+ * quote's stylesheet is written against exactly those — the HIDDEN QUOTE
+ * EASTER EGG block in styles/dashboard.css — and because this line is the
+ * chain's front door: ten clicks on it in the dark bring out the clue. See
+ * hooks/useQuoteEgg.ts, which owns everything about that.
+ *
+ * The quote element deliberately takes no `className`. The egg restarts CSS
+ * animations on it by hand, and React must not be holding the other end of the
+ * class attribute while it does — see the note in the hook.
  */
 import { useEffect, useState } from 'react';
+
+import { useQuoteEgg } from '@/hooks/useQuoteEgg';
 import { quote as quoteService } from '@/services';
 
 /** Shown on first paint, and if the call never lands. */
@@ -25,15 +29,9 @@ const PLACEHOLDER = {
   author: 'Mark Twain',
 };
 
-declare global {
-  interface Window {
-    /** Set by the easter egg while it owns the quote line. */
-    __mysteriousQuoteActive?: boolean;
-  }
-}
-
 export function DailyQuote() {
   const [line, setLine] = useState(PLACEHOLDER);
+  const { clue, containerClass, quoteRef, onQuoteClick } = useQuoteEgg();
 
   useEffect(() => {
     let live = true;
@@ -41,10 +39,11 @@ export function DailyQuote() {
     void quoteService
       .daily()
       .then((result) => {
-        // `live` guards a fetch that lands after the page has moved on;
-        // `__mysteriousQuoteActive` guards one that lands after the egg has
-        // claimed the line.
-        if (!live || window.__mysteriousQuoteActive) return;
+        // Guards a fetch that lands after the page has moved on. A fetch that
+        // lands after the egg has claimed the line needs no guard: `clue`
+        // below wins over `line` whenever it is set, so the daily quote can
+        // arrive whenever it likes and simply not be the thing on screen.
+        if (!live) return;
         if (!result.success || !result.quote) return;
         setLine({ quote: result.quote, author: result.author });
       })
@@ -58,9 +57,9 @@ export function DailyQuote() {
   }, []);
 
   return (
-    <div className="quote-container">
-      <p id="dailyQuote">
-        &ldquo;{line.quote}&rdquo; - {line.author}
+    <div className={`quote-container${containerClass}`}>
+      <p id="dailyQuote" ref={quoteRef} onClick={onQuoteClick}>
+        {clue ?? `“${line.quote}” - ${line.author}`}
       </p>
     </div>
   );
