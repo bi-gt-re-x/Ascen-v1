@@ -35,6 +35,37 @@ export interface CollectingProps {
   nextBrings: string;
 }
 
+/**
+ * The same thing said in one line, for the stages that no longer need a block.
+ *
+ * From day seven the tab is the real tab — trends, comparisons, the lot — and
+ * a card explaining that Ascen is still learning would be sitting on top of a
+ * page that plainly is not waiting for anything. What is still true is that
+ * the readings are thinner than they will be, and that something specific
+ * opens next. That is a line, not a card.
+ *
+ * It is the same component family and the same tokens as `Collecting`, so
+ * crossing from one to the other reads as the same voice getting quieter
+ * rather than as a different notice appearing.
+ */
+export function StageNote({ maturity, brings }: { maturity: Maturity; brings: string }) {
+  const { activeDays, next, toNext } = maturity;
+  if (!next || toNext === null) return null;
+
+  return (
+    <p className="ax-stage-note">
+      <span className="ax-stage-chip">{STAGE_LABEL[maturity.stage]}</span>
+      <span>
+        Read from <strong>{activeDays} days</strong> of your work.{' '}
+        <strong>
+          {toNext} more {toNext === 1 ? 'day' : 'days'}
+        </strong>{' '}
+        and {brings}
+      </span>
+    </p>
+  );
+}
+
 export function Collecting({ maturity, stats, nextBrings }: CollectingProps) {
   const { activeDays, spanDays, toNext, next, progress } = maturity;
 

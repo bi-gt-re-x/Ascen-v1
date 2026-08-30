@@ -302,6 +302,38 @@ body:has(.ax-page) .app-main {
     .ax-collect-fill { transition: none; }
 }
 
+/* The one-line version of the block above, for the stages that no longer need
+   a card. A rule and a sentence rather than a panel: from day seven the page
+   is the real page, and a card explaining that it is still learning would sit
+   on top of something that is plainly not waiting. */
+.ax-stage-note {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 11px;
+    margin: 0;
+    padding: 11px 15px;
+    border: 1px solid var(--ax-line);
+    border-left: 3px solid var(--ax-violet);
+    border-radius: 11px;
+    background: var(--ax-card);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ax-muted);
+}
+.ax-stage-note strong { color: var(--ax-text); font-weight: 650; }
+.ax-stage-chip {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--ax-violet) 13%, transparent);
+    color: var(--ax-violet);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
 /* ---------- Early insight -------------------------------------------------
    The mark a Day 4-7 panel wears, and the two panels that wear it. Set in the
    panel's `aside` slot, so it sits on the title row where a picker would —

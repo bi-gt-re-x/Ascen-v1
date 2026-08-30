@@ -27,6 +27,7 @@ import {
   BaselinePanel,
   Collecting,
   ConsistencyPanel,
+  StageNote,
   FinishPanel,
   WhenPanel,
   DepthPicker,
@@ -65,6 +66,7 @@ export function OverviewTab({
     figures,
     fromIso,
     maturity,
+    waitFor,
     streak,
     tasks,
     toIso,
@@ -209,8 +211,43 @@ export function OverviewTab({
     );
   }
 
+  /*
+   * Day 7 and up: the real tab.
+   *
+   * Everything from here is the analytics page as it always was, and the one
+   * stage flag below decides only *when* part of it starts rather than what
+   * any of it looks like. That is the line this whole feature is built on —
+   * five stages of one page, not five pages.
+   *
+   * Reaching this point already means a week of recorded work, so the panels
+   * that are *about the record* — what happened, how often, where it went, and
+   * how that compares with the period before — all draw from here. A week is
+   * where those stop being noise, and the components already refuse the
+   * comparison when the two windows are different lengths; see
+   * `summaryFigures`.
+   *
+   * `judgement` holds back the ones that grade the *person*: the score, its
+   * letter, the percentile against everybody else, the quality readings. A
+   * fortnight is the floor for those, because being told you are a C-minus on
+   * your ninth day is a claim about somebody the app has barely met.
+   */
+  const judgement = maturity.stage === 'developing' || maturity.stage === 'full';
+
   return (
     <>
+      {maturity.stage !== 'full' && (
+        <section className="ax-section">
+          <StageNote
+            maturity={maturity}
+            brings={
+              maturity.stage === 'weekly'
+                ? 'your Growth Rating and how you compare open here'
+                : 'the last of the long-range readings open here'
+            }
+          />
+        </section>
+      )}
+
       {/* The score, its letter and what moved used to open here, in a banner
           of their own. They open the tab still — but as `Summary`, in the
           shared opening slot a few lines up in this file, alongside the two
@@ -225,7 +262,14 @@ export function OverviewTab({
         />
       </section>
 
-      <section id="trajectory" className="ax-section ax-grid ax-grid-trajectory">
+      {/* The line on its own until the score has something to say. `ax-grid-
+          trajectory` is 1.85fr to 1fr, so dropping the second child would
+          leave the chart in two thirds of the row with a third of it empty —
+          the class comes off with the panel. */}
+      <section
+        id="trajectory"
+        className={`ax-section${judgement ? ' ax-grid ax-grid-trajectory' : ''}`}
+      >
         <Trajectory
           current={slice.current}
           previous={slice.previous}
@@ -236,6 +280,7 @@ export function OverviewTab({
           spanLabel={spanText}
           previousSpanLabel={previousSpanText}
         />
+        {judgement && (
         <ScorePanel
           score={score}
           factors={card.factors}
@@ -245,6 +290,7 @@ export function OverviewTab({
           // on "Where You Stand" are one figure rather than two that disagree.
           percentile={standing.data?.rows.find((row) => row.key === 'score')?.percentile ?? null}
         />
+        )}
       </section>
 
       {/* The reader's own target, before the panels that measure against
@@ -281,6 +327,7 @@ export function OverviewTab({
           panels: what they said, and where the tasks they said it about
           actually landed. Both are self-effacing when nothing has been rated;
           see components/Analytics/Quality. */}
+      {judgement && (
       <section className="ax-section ax-grid ax-grid-halves-even">
         <QualityPanel
           summary={qualitySummary}
@@ -292,8 +339,17 @@ export function OverviewTab({
         />
         <QualityGridPanel cells={ratingGrid} summary={qualitySummary} depth={ratingDepth} />
       </section>
+      )}
 
-      <section id="standing" className="ax-section ax-grid ax-grid-three">
+      {/* Consistency and streaks are counts of this account's own days and
+          belong to `trends`. Standing is a placement against everybody else,
+          which is the most confident claim on the page — it waits. Three
+          columns with the third missing would leave a gap, so the grid narrows
+          with it. */}
+      <section
+        id="standing"
+        className={`ax-section ax-grid ${judgement ? 'ax-grid-three' : 'ax-grid-halves-even'}`}
+      >
         <ConsistencyPanel
           rate={rhythmRate.rate}
           previousRate={rhythmRate.previousRate}
@@ -305,8 +361,19 @@ export function OverviewTab({
           best={account.data?.stats?.best_streak ?? 0}
           bestMonth={rhythmRate.bestMonth}
         />
-        <StandingPanel standing={standing.data ?? null} />
+        {judgement && <StandingPanel standing={standing.data ?? null} />}
       </section>
+
+      {/* The two tallies stay until Habits can do the stronger version of the
+          same question. Tied to that tab's own gate rather than to a stage, so
+          there is never a stretch where the page has stopped answering "when
+          do you work" and nothing else has started. */}
+      {waitFor('habits') > 0 && (
+        <section className="ax-section ax-grid ax-grid-halves-even">
+          <WhenPanel parts={partsOfDay(tasks, fromIso, toIso)} days={maturity.activeDays} />
+          <FinishPanel tasks={tasks} days={maturity.activeDays} />
+        </section>
+      )}
 
       <WhereNext />
     </>

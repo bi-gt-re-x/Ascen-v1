@@ -288,13 +288,21 @@ export default function Analytics() {
   const opening = ((): React.ReactNode => {
     switch (view.key) {
       case 'overview':
-        /* Nothing, on an account that has not told us anything yet. `Summary`
-           leads with a score out of a hundred and what moved since last time,
-           and on day two both are arithmetic over an empty record — a
-           confident grade for somebody who has done nothing to be graded on.
-           The tab's own opening at that stage is `Collecting`, which says the
-           true thing instead. See utils/dataMaturity. */
-        if (maturity.stage === 'new') return null;
+        /* Nothing until a fortnight of recorded work. `Summary` leads with a
+           score out of a hundred and a letter grade, and that is the most
+           confident claim the page makes about a person — on day two it is
+           arithmetic over an empty record, and on day nine it is a verdict
+           passed on somebody the app has barely met.
+           
+           Suppressed for the same three stages that hold `ScorePanel` and
+           `StandingPanel` back on the tab itself, so the grade, its chart and
+           its percentile all arrive together rather than one of them turning
+           up a week before the other two. The tab's own opening below a
+           fortnight is `Collecting` or `StageNote`, which say the true thing
+           instead. See utils/dataMaturity. */
+        if (maturity.stage === 'new' || maturity.stage === 'early' || maturity.stage === 'weekly') {
+          return null;
+        }
         /* The one tab whose opening is a block rather than a line. Everything
            it states is already in scope here — which is why it lives in this
            slot rather than inside `OverviewView`, which would need four more
