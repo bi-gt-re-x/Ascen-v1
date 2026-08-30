@@ -122,6 +122,10 @@ export function markUnlockedToday(account: string): void {
  *
  * It is the chain's terminator: once a title has been earned the clue has done
  * its job and the dashboard goes back to reading normally.
+ *
+ * That script writes a second key at the same moment — the rail's chosen
+ * title, so the prize is worn and not merely offered. utils/rankTitle.ts owns
+ * that one and explains it.
  */
 export function earnedTitle(account: string): string | null {
   try {

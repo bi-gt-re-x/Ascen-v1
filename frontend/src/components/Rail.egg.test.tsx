@@ -240,6 +240,32 @@ describe('choosing a title', () => {
     expect(names[1]).toBe('Admin');
   });
 
+  it('wears the chain’s title, rather than filing it in the menu', () => {
+    // What frontend/secret/hidden-engine.js writes when the ADMIN ROOM's
+    // button is pressed, spelled the way that script spells it. Both keys, and
+    // the second is the point: the room says TITLE EQUIPPED, so the rail has to
+    // have changed by the time the reader is looking at it again.
+    localStorage.setItem('ascenTitle:myles', 'Admin');
+    localStorage.setItem('ascenRankTitle:myles', 'Admin');
+    draw();
+
+    expect(title()).toHaveTextContent('Admin');
+  });
+
+  it('lets a worn secret title be traded back for a band', async () => {
+    // Equipped on arrival is a default, not a sentence.
+    const user = userEvent.setup();
+    localStorage.setItem('ascenTitle:myles', 'Admin');
+    localStorage.setItem('ascenRankTitle:myles', 'Admin');
+    draw();
+
+    await user.click(screen.getByRole('button', { name: 'Choose your title' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Novice' }));
+
+    expect(title()).toHaveTextContent('Novice');
+    expect(localStorage.getItem('ascenRankTitle:myles')).toBe('Novice');
+  });
+
   it('falls back to the band when a chosen title is no longer held', () => {
     // The secret title was picked and then cleared out of storage — by the
     // engine, or by a browser wipe. The rail says what is true now.

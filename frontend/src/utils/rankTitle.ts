@@ -18,6 +18,18 @@
  * same reason the rest are: it was earned, and there is nowhere else in the
  * app it could be worn.
  *
+ * That one arrives already picked. frontend/secret/hidden-engine.js writes
+ * *this file's* key alongside its own when the ADMIN ROOM hands the title
+ * over, so the reader walks back to a rail that has changed. Anything else
+ * makes a button that says TITLE EQUIPPED and equips nothing — the rail goes
+ * on printing the band, and the prize is a menu entry the reader has no reason
+ * to go looking for. It is a default, not a sentence: the bands are still in
+ * the menu, and picking one back is the ordinary thing this file does.
+ *
+ * So `key()` below is a contract with that script, in the way the keys in
+ * utils/easterEgg.ts are. Rename it here and the room still says the words,
+ * but the rail stops listening.
+ *
  * ## Why localStorage and not a preference
  *
  * Every other rail setting is on the account — `nav_collapsed` is, and the
