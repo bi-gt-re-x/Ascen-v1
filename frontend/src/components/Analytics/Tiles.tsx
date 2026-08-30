@@ -19,6 +19,8 @@
  * printing a rise from nothing as an infinite one.
  */
 import { StatRow, type Stat } from './StatRow';
+import { showsSessionVolume, showsTaskVolume } from '@/utils/analyticsPrefs';
+import type { LogStyle } from '@/services/settings';
 import type { GrowthSummaryFigures, TileSeries } from '@/utils/growthSummary';
 
 export interface TilesProps {
@@ -29,9 +31,27 @@ export interface TilesProps {
   scoreSeries: number[];
   /** "vs previous 2 years" — the window's own words for its baseline. */
   compareLabel: string;
+  /**
+   * Which volume the row prints behind the three rates.
+   *
+   * The three rates never move: they are the argument, and they are the same
+   * three at every setting. What the account said it records decides what sits
+   * behind them — a count of tasks for somebody who ticks things off, hours for
+   * somebody who logs the time, both for somebody who does both. A reader who
+   * never finishes a task and works four hours a day was being shown a volume
+   * of zero as the fourth figure on the page. See utils/analyticsPrefs.
+   */
+  logStyle?: LogStyle;
 }
 
-export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: TilesProps) {
+export function Tiles({
+  figures,
+  sparks,
+  score,
+  scoreSeries,
+  compareLabel,
+  logStyle,
+}: TilesProps) {
   const stats: Stat[] = [
     {
       key: 'productivity',
@@ -72,16 +92,35 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
           ? 'Difficulty × execution, from the star rows after a task. Optional.'
           : `Difficulty × execution out of 25, over the ${figures.ratedTasks} of ${figures.finishedTasks} tasks you rated.`,
     },
-    {
-      key: 'tasks',
-      glyph: 'check',
-      label: 'Tasks Completed',
-      value: figures.tasks.value.toLocaleString(),
-      delta: figures.tasks.delta,
-      series: sparks.tasks,
-      tone: 'green',
-      hint: 'The volume behind the three rates beside it, counted on the day each task was finished.',
-    },
+    ...(showsTaskVolume(logStyle)
+      ? [
+          {
+            key: 'tasks',
+            glyph: 'check' as const,
+            label: 'Tasks Completed',
+            value: figures.tasks.value.toLocaleString(),
+            delta: figures.tasks.delta,
+            series: sparks.tasks,
+            tone: 'green' as const,
+            hint: 'The volume behind the three rates beside it, counted on the day each task was finished.',
+          },
+        ]
+      : []),
+    ...(showsSessionVolume(logStyle)
+      ? [
+          {
+            key: 'focus',
+            glyph: 'clock' as const,
+            label: 'Focus Time',
+            value: figures.focusHours.value.toFixed(1),
+            unit: 'h',
+            delta: figures.focusHours.delta,
+            series: sparks.focusHours,
+            tone: 'blue' as const,
+            hint: 'The hours logged in the window — the other volume behind the three rates.',
+          },
+        ]
+      : []),
     {
       key: 'score',
       glyph: 'sparkle',

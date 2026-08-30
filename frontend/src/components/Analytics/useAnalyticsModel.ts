@@ -93,6 +93,7 @@ import {
 import { outlook, recommendations } from '@/utils/advice';
 import { PATTERN_DAYS, RECENT_DAYS, daysUntilNextWeek, recentWindow, weekStamp } from '@/utils/recent';
 import { dataMaturity } from '@/utils/dataMaturity';
+import { detailRules, toneRules } from '@/utils/analyticsPrefs';
 import { diagnose, vitals } from '@/utils/diagnosis';
 import { analyticalScore } from '@/utils/analyticalScore';
 import { discoverPatterns } from '@/utils/patterns';
@@ -132,6 +133,21 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     spanChosen.current = true;
     setSpan(next);
   }, []);
+
+  /*
+   * The four analytics preferences the page reads, resolved once.
+   *
+   * The stored values are words; what a word *means* is utils/analyticsPrefs'
+   * business, and resolving here rather than in each panel is the same
+   * argument the rest of this file is built on — a tab holding its own copy of
+   * "what does gentle mean" is a second implementation waiting to disagree
+   * with the first. Tone changes no arithmetic below it; see that module.
+   */
+  const tone = prefs.analytics_tone;
+  const rules = useMemo(() => toneRules(tone), [tone]);
+  const detail = useMemo(() => detailRules(prefs.analytics_detail), [prefs.analytics_detail]);
+  const logStyle = prefs.analytics_log_style;
+  const showStanding = prefs.analytics_standing;
   // Productivity rather than total XP, and weekly rather than daily. The pair
   // is one decision: the chart opens on a rate, and a rate at daily grain over
   // a year is scatter. See METRICS in components/Analytics/data.
@@ -378,6 +394,15 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
   const diagnoses = useMemo(
     () => diagnose(nowVitals, beforeVitals),
     [beforeVitals, nowVitals],
+  );
+
+  /* How many of them the tab actually draws. `diagnoses` stays whole because
+     the export writes all of them — a downloaded report is read once, at
+     leisure, and is the wrong place to be protecting somebody from the third
+     tension in their own fortnight. The screen is where the cap belongs. */
+  const shownDiagnoses = useMemo(
+    () => diagnoses.slice(0, rules.diagnoses),
+    [diagnoses, rules.diagnoses],
   );
 
   // ---- Discovered patterns ------------------------------------------------
@@ -691,6 +716,13 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
   const streak = account.data?.stats?.current_streak ?? 0;
 
   return {
+    // What the account asked this page to be. See utils/analyticsPrefs.
+    tone,
+    toneRules: rules,
+    detail,
+    logStyle,
+    showStanding,
+
     // The gates
     historyDays,
     maturity,
@@ -761,6 +793,7 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     recent,
     weekLeft,
     diagnoses,
+    shownDiagnoses,
     discovered,
     plan,
     setBudget,

@@ -32,6 +32,7 @@ import {
   FinishPanel,
   WhenPanel,
   DepthPicker,
+  InsightsPanel,
   QualityGridPanel,
   QualityPanel,
   ScorePanel,
@@ -95,6 +96,16 @@ export function OverviewTab({
     setMetric,
     slice,
     spanText,
+    /* What the account asked this page to be — see utils/analyticsPrefs. Four
+       reads on this tab: which volume the tiles print, which panels are drawn
+       at all, whether the comparison against everybody else is allowed, and
+       how blunt the baseline's verdict is. */
+    detail,
+    logStyle,
+    showStanding,
+    tone,
+    insights,
+    previousBySubject,
   } = model;
   const { account, baseline, standing } = data;
   const aim = baseline.data?.baseline ?? null;
@@ -283,6 +294,7 @@ export function OverviewTab({
           score={score}
           scoreSeries={scoreLine}
           compareLabel={compareLabel}
+          logStyle={logStyle}
         />
       </section>
 
@@ -329,6 +341,7 @@ export function OverviewTab({
             activeRate={rhythm.activeRate}
             typicalSession={rhythm.typicalSession}
             span={spanText}
+            tone={tone}
             onEdit={onEditBaseline}
           />
         ) : (
@@ -351,7 +364,7 @@ export function OverviewTab({
           panels: what they said, and where the tasks they said it about
           actually landed. Both are self-effacing when nothing has been rated;
           see components/Analytics/Quality. */}
-      {judgement && (
+      {judgement && detail.quality && (
       <section className="ax-section ax-grid ax-grid-halves-even">
         <QualityPanel
           summary={qualitySummary}
@@ -372,7 +385,9 @@ export function OverviewTab({
           with it. */}
       <section
         id="standing"
-        className={`ax-section ax-grid ${judgement ? 'ax-grid-three' : 'ax-grid-halves-even'}`}
+        className={`ax-section ax-grid ${
+          judgement && showStanding ? 'ax-grid-three' : 'ax-grid-halves-even'
+        }`}
       >
         <ConsistencyPanel
           rate={rhythmRate.rate}
@@ -385,18 +400,40 @@ export function OverviewTab({
           best={account.data?.stats?.best_streak ?? 0}
           bestMonth={rhythmRate.bestMonth}
         />
-        {judgement && <StandingPanel standing={standing.data ?? null} />}
+        {/* Two conditions, and they refuse for different reasons. The stage
+            holds it back because a percentile is the most confident claim the
+            page makes and a fortnight is the floor for making it; the
+            preference holds it back because some readers do not want to be
+            ranked against strangers at all, which is a different question and
+            is theirs to answer. See `analytics_standing`. */}
+        {judgement && showStanding && <StandingPanel standing={standing.data ?? null} />}
       </section>
 
       {/* The two tallies stay until Habits can do the stronger version of the
           same question. Tied to that tab's own gate rather than to a stage, so
           there is never a stretch where the page has stopped answering "when
           do you work" and nothing else has started. */}
-      {waitFor('habits') > 0 && (
+      {waitFor('habits') > 0 && detail.tallies && (
         <section className="ax-section ax-grid ax-grid-halves-even">
           <WhenPanel parts={partsOfDay(tasks, fromIso, toIso)} days={maturity.activeDays} />
           <FinishPanel tasks={tasks} days={maturity.activeDays} />
         </section>
+      )}
+
+      {/* The two panels an account on 'everything' asked to have here rather
+          than a tab away. Both are already computed for the tabs that own them
+          — Subjects draws the split in full, Insights draws the findings — so
+          this costs no request and no second arithmetic, which is the only
+          reason repeating a panel is acceptable at all. */}
+      {detail.extras && (
+        <>
+          <section className="ax-section">
+            <SubjectPanel rows={breakdown.rows} previous={previousBySubject} />
+          </section>
+          <section className="ax-section">
+            <InsightsPanel insights={insights} />
+          </section>
+        </>
       )}
 
       <WhereNext />

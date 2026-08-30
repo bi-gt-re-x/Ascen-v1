@@ -152,7 +152,37 @@ FIELDS: Dict[str, Any] = {
     'focus_dim':         (True, _boolean),
 
     # Analytics.
+    #
+    # The first is where the page opens; the six below it are the answers to
+    # the setup questions a new account is asked before the page will draw
+    # anything (frontend/src/components/Analytics/Setup.tsx). Every one of them
+    # is read by the page — see the note on each — because a preference nothing
+    # looks at is worse than no preference at all.
     'analytics_window':  ('1y', _one_of('7d', '30d', '90d', '1y', '2y', 'all')),
+    #: Whether the question phase has been answered. False is a real state and
+    #: not a missing one: it is what puts the setup screen in front of the page.
+    #: An account that set a baseline before this key existed is treated as done
+    #: by the page rather than by a migration here.
+    'analytics_setup_done': (False, _boolean),
+    #: Which tab the page opens on. The same seven keys as VIEWS in
+    #: frontend/src/components/Analytics/Header.tsx.
+    'analytics_home_tab': ('overview', _one_of('recommendations', 'overview', 'goals',
+                                               'habits', 'insights', 'subjects', 'records')),
+    #: How the account records work, and therefore which figure leads the row
+    #: of tiles: the tasks it finished, the hours it sat, or both.
+    'analytics_log_style': ('both', _one_of('tasks', 'sessions', 'both')),
+    #: How blunt the page is allowed to be. It never changes an arithmetic —
+    #: the score is the score — but it changes how much of a shortfall is
+    #: called a shortfall, and how many problems are put in front of the reader
+    #: at once. See frontend/src/utils/analyticsPrefs.ts.
+    'analytics_tone':    ('balanced', _one_of('gentle', 'balanced', 'harsh')),
+    #: How many panels the page draws. 'essentials' is the shortest honest
+    #: answer, 'everything' adds the panels a reader has to visit another tab
+    #: for.
+    'analytics_detail':  ('standard', _one_of('essentials', 'standard', 'everything')),
+    #: Whether the page is allowed to rank this account against everybody
+    #: else. Off hides the percentile panel outright.
+    'analytics_standing': (True, _boolean),
 }
 
 

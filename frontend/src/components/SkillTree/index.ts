@@ -13,6 +13,9 @@ export { SkillNode } from './SkillNode';
 export type { SkillNodeProps } from './SkillNode';
 export { FocusTopics } from './FocusTopics';
 export type { FocusTopicsProps } from './FocusTopics';
+/** The screen a new account meets before the lattice. See ./FocusSetup. */
+export { FocusSetup } from './FocusSetup';
+export type { FocusSetupProps } from './FocusSetup';
 export { SubjectRail } from './SubjectRail';
 export type { RailHit, SubjectRailProps } from './SubjectRail';
 export { LatticeNode } from './LatticeNode';

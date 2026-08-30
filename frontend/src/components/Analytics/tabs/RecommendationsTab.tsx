@@ -23,14 +23,27 @@ import { NEED_DAYS } from '../useAnalyticsModel';
 import type { AnalyticsData } from '../useAnalyticsData';
 import type { AnalyticsModel } from '../useAnalyticsModel';
 
-/** How many recommendations get a card of their own before the rest go in a list. */
-const HEADLINE_ADVICE = 3;
-
 export function RecommendationsTab({ model, data }: { model: AnalyticsModel } & { data: AnalyticsData }) {
   const {
-    adoptedIds, advice, category, diagnoses, goalAdvice, historyDays, plan, projection, recent, reviewSummary,
-    reviews, setBudget, setCategory, setNudge, shown, waitFor, weekLeft,
+    adoptedIds, advice, category, goalAdvice, historyDays, plan, projection, recent, reviewSummary,
+    reviews, setBudget, setCategory, setNudge, shown, shownDiagnoses, toneRules, waitFor, weekLeft,
   } = model;
+
+  /*
+   * How many problems this tab puts in front of the reader at once.
+   *
+   * Both numbers come from the harshness setting rather than from a constant
+   * here — two cards and two tensions on gentle, five and eight on blunt. What
+   * does *not* change is which recommendations exist or how they are ranked:
+   * every rule the record supports still fires, and the list under the cards
+   * is the same list. This is how much of it leads the tab.
+   *
+   * `shownDiagnoses` is capped in the model rather than here, because the
+   * export writes the uncapped set and both have to come off one decision.
+   * See utils/analyticsPrefs.
+   */
+  const headlines = toneRules?.headlines ?? 3;
+  const diagnoses = shownDiagnoses ?? [];
   const { adopt, adopting, dropAdopted, dropping, justAdopted, refresh } = data;
 
   return (
@@ -132,7 +145,7 @@ export function RecommendationsTab({ model, data }: { model: AnalyticsModel } & 
             <CategoryFilter items={advice} chosen={category} onChoose={setCategory} />
             {shown.length > 0 && (
               <div className="ax-grid ax-grid-three">
-                {shown.slice(0, HEADLINE_ADVICE).map((item, index) => (
+                {shown.slice(0, headlines).map((item, index) => (
                   <AdviceCard
                     key={item.id}
                     item={item}

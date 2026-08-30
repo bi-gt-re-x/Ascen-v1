@@ -58,11 +58,14 @@ import { Link } from 'react-router-dom';
 import { gradeClass } from './metrics';
 import type { ScoreMovement } from './Header';
 import {
+  GRADE_BANDS,
   GRADE_MEANING,
   bandLabel,
   howItIsCalculated,
   type AnalyticalScore,
 } from '@/utils/analyticalScore';
+import { toneRules } from '@/utils/analyticsPrefs';
+import type { AnalyticsTone } from '@/services/settings';
 
 export interface SummaryProps {
   /** The score, its letter and its five parts. */
@@ -86,6 +89,29 @@ export interface SummaryProps {
    * beside it rather than in a tooltip. See utils/dataMaturity.
    */
   basis?: string | null;
+  /**
+   * How blunt the block is allowed to be about the five measures.
+   *
+   * It reorders one pair of rows and adds one clause. Everything stated is
+   * stated at every setting — the score, the letter, the weakest measure and
+   * its figure are the same three sentences — but a reader who asked for a
+   * gentle page is told what is carrying the score before what is holding it
+   * back, and a reader who asked for a blunt one is told how far the weak
+   * measure is from the next grade. See utils/analyticsPrefs.
+   */
+  tone?: AnalyticsTone;
+}
+
+/**
+ * How many points to the next letter up, or null at the top.
+ *
+ * Read off the same band table the letter itself comes from, so the clause and
+ * the grade beside it cannot disagree about where a boundary is.
+ */
+function toNextGrade(value: number): { points: number; grade: string } | null {
+  const above = [...GRADE_BANDS].reverse().find(([floor]) => floor > value);
+  if (!above) return null;
+  return { points: above[0] - value, grade: above[1] };
 }
 
 /** Five is the cap. See the note at the top for why, and `goals` for how. */
@@ -107,8 +133,10 @@ export function Summary({
   phase,
   goals,
   basis = null,
+  tone,
 }: SummaryProps) {
-  const { value, grade, weakest } = score;
+  const { value, grade, weakest, strongest } = score;
+  const { leadWithStrength } = toneRules(tone);
 
   /* No score is not a broken panel — it is a new account, and it deserves the
      same answer the banner gave it: what the score needs before it exists.
@@ -152,13 +180,45 @@ export function Summary({
     });
   }
 
+  /* On a gentle page, what is working comes first. Only when there is a real
+     gap between the two: five measures within a point of each other produce
+     "focus is carrying it at 61, focus is holding it back at 61", which is the
+     sentence pattern talking rather than the record. The same guard
+     `howItIsCalculated` applies, and for the same reason. */
+  const spread = strongest && weakest ? strongest.score - weakest.score : 0;
+  if (leadWithStrength && strongest && weakest && strongest.name !== weakest.name && spread >= 5) {
+    rows.push({
+      key: 'strongest',
+      text: (
+        <>
+          What is carrying it is <strong>{strongest.label.toLowerCase()}</strong>, at{' '}
+          <strong>{Math.round(strongest.score)}</strong> out of 100 — {strongest.raw}.
+        </>
+      ),
+      href: '#trajectory',
+      label: 'See all five',
+    });
+  }
+
   if (weakest) {
+    /* The blunt page's one extra clause: how far the weak measure has to move
+       for the letter to change. It is arithmetic off the same band table the
+       letter came from, not a judgement — which is what makes it safe to print
+       at one tone and not another. */
+    const next = !leadWithStrength && value !== null ? toNextGrade(value) : null;
     rows.push({
       key: 'weakest',
       text: (
         <>
           The measure holding it back is <strong>{weakest.label.toLowerCase()}</strong>, at{' '}
           <strong>{Math.round(weakest.score)}</strong> out of 100 — {weakest.raw}.
+          {next && (
+            <>
+              {' '}
+              The score is <strong>{next.points}</strong>{' '}
+              {next.points === 1 ? 'point' : 'points'} below {next.grade}.
+            </>
+          )}
         </>
       ),
       href: '#trajectory',

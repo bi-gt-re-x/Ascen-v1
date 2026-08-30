@@ -19,6 +19,16 @@
  * Changing tree clears the selection, or the panel would be describing a node
  * no longer on the canvas.
  *
+ * ## The first visit is a question, not a page
+ *
+ * An account that has never chosen its five focus topics is shown `FocusSetup`
+ * instead of the lattice — the whole page, not a banner on it. The five have
+ * always been derivable, and they are still derived where somebody skips; what
+ * they were not was *asked*, so a new reader met a band of five subjects picked
+ * by a tie-break between zeroes and no indication that the band was theirs. The
+ * gate is "has this account ever chosen", which is `loadFocus` returning null,
+ * and the answer being written is what closes it. See components/SkillTree/FocusSetup.
+ *
  * ## The figures are counted, not stored
  *
  * Every number in the band is `tallyGraph` on the tree that is open — there is
@@ -29,6 +39,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ambient } from '@/components';
 import {
+  FocusSetup,
   FocusTopics,
   LatticeNode,
   LatticePanel,
@@ -175,8 +186,24 @@ export default function SkillTrees() {
      lets the band follow the subjects they actually use until the moment they
      say otherwise — see utils/focusTopics. */
   const [chosenFocus, setChosenFocus] = useState<string[] | null>(null);
+  /* Whether the read above has happened for *this* account, which is a
+     different question from whether it found anything. Both states are null in
+     `chosenFocus`, and the setup screen below is gated on "never chosen" — so
+     without this the screen would flash in front of every reader for the tick
+     between mount and the effect running. */
+  const [focusRead, setFocusRead] = useState(false);
   useEffect(() => {
+    setFocusRead(false);
     setChosenFocus(loadFocus(username));
+    setFocusRead(true);
+  }, [username]);
+
+  /* Set when the reader chose "Decide later". Held for the visit rather than
+     stored: skipping is not an answer, so the screen is offered again next
+     time, and the band goes back to being derived in the meantime. */
+  const [skippedSetup, setSkippedSetup] = useState(false);
+  useEffect(() => {
+    setSkippedSetup(false);
   }, [username]);
 
   const focus = useMemo(
@@ -250,6 +277,27 @@ export default function SkillTrees() {
     },
     [subjects, username],
   );
+
+  /* All five at once — what the setup screen and the band's "Choose again"
+     both write. Same store and same rule as `setFocusAt`: a stored set is
+     always the whole five, never a partial one topped up from usage. */
+  const chooseFocus = useCallback(
+    (ids: string[]) => {
+      const next = ids.slice(0, FOCUS_COUNT);
+      saveFocus(username, next);
+      setChosenFocus(next);
+      setSkippedSetup(false);
+    },
+    [username],
+  );
+
+  /** Back to the question, from the band. Clears the stored answer so the
+   *  screen's own gate — "has this account ever chosen" — is true again. */
+  const reopenSetup = useCallback(() => {
+    saveFocus(username, []);
+    setChosenFocus(null);
+    setSkippedSetup(false);
+  }, [username]);
 
   const selected = useMemo(
     () => graph.nodes.find((node) => node.id === selectedId) ?? null,
@@ -346,6 +394,35 @@ export default function SkillTrees() {
   const entering = usePageEntrance(true);
   const unlocked = totals.total - totals.locked;
 
+  /*
+   * The first visit: five questions' worth of one question, before the page.
+   *
+   * Three conditions, and each is doing something. The read has to have
+   * happened for this account, or the screen flashes in front of everybody for
+   * a tick. There has to be a catalogue to choose from, or the screen is a
+   * heading over nothing — and an account whose subjects have not arrived yet
+   * gets the page it always got rather than a blank chooser. And the reader
+   * must not have said "later" this visit.
+   */
+  if (focusRead && chosenFocus === null && !skippedSetup && subjects.length > 0) {
+    return (
+      <div className="stx-page stx-page--lattice">
+        <Ambient />
+        <div className={`stx-shell page-shell${entering ? ' pg-enter' : ''}`}>
+          <FocusSetup
+            subjects={subjects}
+            /* What the band would have shown on its own — the account's own
+               usage order, which is what `resolveFocus` tops an empty choice
+               up from. Offered as a button inside the screen. */
+            suggested={resolveFocus(null, subjects.map((subject) => subject.id))}
+            onDone={chooseFocus}
+            onSkip={() => setSkippedSetup(true)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="stx-page stx-page--lattice">
       <Ambient />
@@ -356,6 +433,7 @@ export default function SkillTrees() {
           openTrail={trail}
           onOpen={openSubject}
           onChange={setFocusAt}
+          onChooseAll={reopenSetup}
         />
 
         <SubjectRail subjects={subjects} openTrail={trail} onOpen={openTree} />

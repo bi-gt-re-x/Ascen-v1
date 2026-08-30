@@ -85,8 +85,20 @@ export { EarlyMark, WhenPanel, FinishPanel } from './Early';
 export type { WhenPanelProps, FinishPanelProps } from './Early';
 
 /** The one thing on this page an account can do on its first day. */
-export { BaselinePanel, BaselineSetup } from './Baseline';
-export type { BaselinePanelProps, BaselineSetupProps, BaselineValues } from './Baseline';
+export { BaselinePanel } from './Baseline';
+export type { BaselinePanelProps, BaselineValues } from './Baseline';
+
+/**
+ * The questions that produce it, and the three preferences asked alongside.
+ *
+ * `BaselineSetup` used to live in ./Baseline and ask three of these on one
+ * card. It is gone rather than kept beside its replacement — see the header of
+ * ./Setup for the argument, which is that the four questions added to it are
+ * choices rather than recollections and a choice needs its consequence stated
+ * beside it.
+ */
+export { AnalyticsSetup } from './Setup';
+export type { AnalyticsSetupProps, SetupAnswers, SetupPrefs } from './Setup';
 
 export { StatRow } from './StatRow';
 export type { Stat, StatRowProps } from './StatRow';

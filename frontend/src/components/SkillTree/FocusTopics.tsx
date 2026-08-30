@@ -41,9 +41,24 @@ export interface FocusTopicsProps {
   /** The open tree and its ancestors, so the card you walked in through stays
    *  lit while you are inside it. */
   openTrail: readonly string[];
+  /**
+   * Back to the screen that asked for all five at once.
+   *
+   * The per-card picker is right for changing one and wrong for changing the
+   * set: five popovers to redo a term's focus is five decisions made without
+   * being able to see the other four. See components/SkillTree/FocusSetup.
+   */
+  onChooseAll?: () => void;
 }
 
-export function FocusTopics({ subjects, focus, onOpen, onChange, openTrail }: FocusTopicsProps) {
+export function FocusTopics({
+  subjects,
+  focus,
+  onOpen,
+  onChange,
+  openTrail,
+  onChooseAll,
+}: FocusTopicsProps) {
   const [picking, setPicking] = useState<number | null>(null);
   const [filter, setFilter] = useState('');
   const wrap = useRef<HTMLDivElement>(null);
@@ -107,7 +122,18 @@ export function FocusTopics({ subjects, focus, onOpen, onChange, openTrail }: Fo
     <section className="stx-focus" aria-label="Your focus topics" ref={wrap}>
       <header className="stx-focus-head">
         <h2>Your Focus Topics</h2>
-        <p>Five subjects to keep in front of you. Change any of them at any time.</p>
+        <p>
+          Five subjects to keep in front of you. Change any of them at any time
+          {onChooseAll && (
+            <>
+              , or{' '}
+              <button type="button" className="stx-focus-redo" onClick={onChooseAll}>
+                pick all five again
+              </button>
+            </>
+          )}
+          .
+        </p>
       </header>
 
       <ol className="stx-focus-row">

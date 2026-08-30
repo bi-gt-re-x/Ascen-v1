@@ -1,0 +1,192 @@
+/**
+ * What the analytics preferences actually do.
+ *
+ * The values themselves are declared in services/settings, beside every other
+ * preference, and validated in backend/api/settings.py. This module is the
+ * other half: the one place that turns a stored word into a decision the page
+ * makes. Nothing here fetches, renders or remembers anything.
+ *
+ * ## Why the rules are a table and not an `if` in each panel
+ *
+ * Three preferences — tone, detail and log style — are each read in four or
+ * five places. Written inline they would be fifteen conditions spread across
+ * the tabs, and the failure mode is the one the page has been bitten by
+ * before: two surfaces disagreeing about the same reader's setting, one of
+ * them softening a shortfall that the other has just called a shortfall. A
+ * table means a level is defined once and every surface reads the same row.
+ *
+ * ## The line tone does not cross
+ *
+ * **Tone never changes an arithmetic.** The score is the mean of five
+ * measures at every setting, a percentage against a baseline is the same
+ * percentage, and no rule stops producing a recommendation because the reader
+ * asked for a gentle page. What it changes is editorial: how much of a miss
+ * is worth calling a miss, how many problems are put in front of somebody at
+ * once, and which half of a comparison the sentence leads with.
+ *
+ * That distinction is the whole reason a harshness setting is safe to offer.
+ * A setting that quietly moved the numbers would make the page's figures a
+ * function of the reader's mood, and the one thing this page sells is that
+ * its figures are not.
+ */
+import type { AnalyticsDetail, AnalyticsTone, LogStyle } from '@/services/settings';
+
+// --------------------------------------------------------------------------
+// Harshness
+// --------------------------------------------------------------------------
+
+export interface ToneRules {
+  /**
+   * How much under a target still reads as met, in percentage points.
+   *
+   * A baseline is a stated intention rather than a contract, and 96% of a
+   * five-day aim is five days in most weeks and four in one. Gentle gives that
+   * a fortnight's worth of slack, harsh gives it none.
+   */
+  grace: number;
+  /** Recommendations given a card of their own before the rest go in a list. */
+  headlines: number;
+  /** Diagnosis cards drawn at once. The list is already worst-first. */
+  diagnoses: number;
+  /**
+   * Whether a comparison leads with what went well.
+   *
+   * Gentle states the strongest measure first and the weakest second; harsh
+   * does the reverse and names the gap. Both sentences contain both figures —
+   * this is the order, not the content.
+   */
+  leadWithStrength: boolean;
+}
+
+export const TONE_RULES: Record<AnalyticsTone, ToneRules> = {
+  gentle: { grace: 15, headlines: 2, diagnoses: 2, leadWithStrength: true },
+  balanced: { grace: 5, headlines: 3, diagnoses: 4, leadWithStrength: false },
+  harsh: { grace: 0, headlines: 5, diagnoses: 8, leadWithStrength: false },
+};
+
+export const TONE_LABEL: Record<AnalyticsTone, string> = {
+  gentle: 'Gentle',
+  balanced: 'Balanced',
+  harsh: 'Blunt',
+};
+
+/** What each level changes, in the words the setup screen and settings use. */
+export const TONE_HINT: Record<AnalyticsTone, string> = {
+  gentle:
+    'Near enough counts. A target missed by under 15% reads as met, two changes are put in '
+    + 'front of you at a time, and a comparison names what is working before what is not.',
+  balanced:
+    'A miss is a miss past 5%. Three changes at a time, and the weak measure is named first.',
+  harsh:
+    'No rounding in your favour. Every shortfall is stated as one, every change the record '
+    + 'supports is shown at once, and the sentence leads with what is worst.',
+};
+
+export function toneRules(tone: AnalyticsTone | undefined): ToneRules {
+  return TONE_RULES[tone ?? 'balanced'] ?? TONE_RULES.balanced;
+}
+
+/**
+ * Whether a figure counts as having met its target, and what to call it.
+ *
+ * `pct` is the actual as a percentage of the aim — the same number the
+ * baseline rows already print, so the verdict and the bar beside it cannot
+ * disagree. The only thing tone moves is where the line is drawn, and the word
+ * chosen says which side of it the reader is on rather than how to feel.
+ */
+export interface Verdict {
+  met: boolean;
+  label: string;
+}
+
+export function verdict(tone: AnalyticsTone | undefined, pct: number): Verdict {
+  const { grace } = toneRules(tone);
+  if (pct >= 100) return { met: true, label: 'Met' };
+  if (pct >= 100 - grace) return { met: true, label: 'Near enough' };
+  // The gap, not a grade. A reader who set the target is the one qualified to
+  // say whether missing it by nine points matters.
+  return { met: false, label: `${Math.max(1, Math.round(100 - pct))}% short` };
+}
+
+// --------------------------------------------------------------------------
+// How much of the page is drawn
+// --------------------------------------------------------------------------
+
+export interface DetailRules {
+  /** The quality pair on the Overview — what the reader said about the work. */
+  quality: boolean;
+  /** The two tallies that say when the work happens and what gets finished. */
+  tallies: boolean;
+  /** Panels that live in full on another tab, repeated here for convenience. */
+  extras: boolean;
+}
+
+/**
+ * Three levels, and only the middle one is the page as it was.
+ *
+ * `essentials` removes panels rather than shortening them: the figures that
+ * are left are the same figures. What goes is what a reader can get in full
+ * one tab away — the quality pair belongs to the ratings, the two tallies hand
+ * over to Habits anyway. What stays is the row of tiles, the trajectory, the
+ * baseline and the consistency pair, which is the shortest set that still
+ * answers "how am I doing".
+ *
+ * `everything` goes the other way and pulls two panels *onto* the Overview
+ * that otherwise need a second tab: where the work went, and the findings
+ * list. Both are already computed for other tabs, so this costs no request and
+ * no second arithmetic.
+ */
+export const DETAIL_RULES: Record<AnalyticsDetail, DetailRules> = {
+  essentials: { quality: false, tallies: false, extras: false },
+  standard: { quality: true, tallies: true, extras: false },
+  everything: { quality: true, tallies: true, extras: true },
+};
+
+export const DETAIL_LABEL: Record<AnalyticsDetail, string> = {
+  essentials: 'Essentials',
+  standard: 'Standard',
+  everything: 'Everything',
+};
+
+export const DETAIL_HINT: Record<AnalyticsDetail, string> = {
+  essentials:
+    'The four panels that answer the question on their own: the figures, the trajectory, your '
+    + 'baseline, and how often you turn up. Everything else is still one tab away.',
+  standard: 'Those, plus what you said about the work and the two tallies about when you do it.',
+  everything:
+    'All of the above, and the subject split and findings list pulled onto the Overview so you '
+    + 'do not have to open another tab for them.',
+};
+
+export function detailRules(detail: AnalyticsDetail | undefined): DetailRules {
+  return DETAIL_RULES[detail ?? 'standard'] ?? DETAIL_RULES.standard;
+}
+
+// --------------------------------------------------------------------------
+// What the account actually records
+// --------------------------------------------------------------------------
+
+export const LOG_STYLE_LABEL: Record<LogStyle, string> = {
+  tasks: 'Tasks',
+  sessions: 'Sessions',
+  both: 'Both',
+};
+
+export const LOG_STYLE_HINT: Record<LogStyle, string> = {
+  tasks:
+    'You tick things off. The volume figure beside the three rates is the number of tasks you '
+    + 'finished.',
+  sessions:
+    'You log the time. The volume figure is the hours you sat, and the tiles lead with that '
+    + 'rather than with a count of tasks.',
+  both: 'Both figures get a tile of their own.',
+};
+
+/** Whether the tile row prints a task count, focus hours, or both. */
+export function showsTaskVolume(style: LogStyle | undefined): boolean {
+  return (style ?? 'both') !== 'sessions';
+}
+
+export function showsSessionVolume(style: LogStyle | undefined): boolean {
+  return (style ?? 'both') !== 'tasks';
+}

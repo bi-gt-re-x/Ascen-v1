@@ -78,6 +78,20 @@
  * What is left here is the shell: the window picker, the gates, the one-sentence
  * opening every tab shares, the baseline screen, and the export.
  *
+ * ## The question phase
+ *
+ * A new account answers six or seven questions before this page draws
+ * anything: the three that make a baseline, and the four that decide what the
+ * page is — how the reader records work, how blunt it may be, how much of it
+ * to draw, and which tab opens. See ./components/Analytics/Setup for why that
+ * is a sequence of screens rather than a card, utils/analyticsPrefs for what
+ * each answer changes, and `firstRun` below for the three conditions that
+ * decide somebody has genuinely never answered.
+ *
+ * Every one of the four is read by something on this page. That is the rule
+ * the settings page is held to and it holds here: a question that stored a
+ * value nothing looked at would be worse than not asking it.
+ *
  * **Every figure on this page is this account's own.** There is no sample data
  * and no placeholder mode. Four tabs used to fall back to invented figures
  * behind a small chip when the record was too short to fill them; that made a
@@ -85,18 +99,17 @@
  * somebody who does not exist, and taught the reader to discount the real ones
  * that arrived later. A tab that cannot be filled now says what it is waiting
  * for and when it opens — see `Locked` — and a new account is offered the one
- * thing it can actually do here, which is `BaselineSetup`.
+ * thing it can actually do here, which is answer the questions above.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Ambient, ErrorState, Loading } from '@/components';
 import { stageShows } from '@/utils/dataMaturity';
 import {
-  BaselineSetup,
+  AnalyticsSetup,
   Controls,
   GoalsTab,
   habitLead,
-  NEED_DAYS,
   HabitsTab,
   Header,
   InsightsTab,
@@ -109,12 +122,13 @@ import {
   TabOpening,
   useAnalyticsData,
   useAnalyticsModel,
+  VIEWS,
   ViewTabs,
   viewFor,
-  type BaselineValues,
+  type SetupAnswers,
   type View,
 } from '@/components/Analytics';
-import { useDocumentTitle, useSubjectIndex } from '@/hooks';
+import { useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
 import { PATTERN_DAYS, RECENT_DAYS } from '@/utils/recent';
 import { buildReport, reportFilename } from '@/utils/report';
 import '@/styles/analytics.css';
@@ -158,11 +172,52 @@ export default function Analytics() {
    */
   const subjects = useSubjectIndex(username);
   const model = useAnalyticsModel(data, subjects);
+
+  /**
+   * Which tab a bare visit lands on.
+   *
+   * `/analytics` is the Overview's own path, so an account that asked to open
+   * on Recommendations has to be sent there — once, replacing the entry rather
+   * than pushing one, or the back button would bounce off this page forever.
+   *
+   * Three guards. `ready` is what makes "opens on" true at all: preferences
+   * arrive a moment after this page mounts, so acting on the built-in default
+   * would send everybody to the Overview and then, for anyone who had chosen
+   * otherwise, somewhere else a tick later. The ref makes it once per mount,
+   * so a reader who navigates back to the Overview on purpose stays there. And
+   * it only fires on the Overview's own path — the other six were asked for.
+   *
+   * The same shape as FrontDoor's redirect for `home_page`, and for the same
+   * reason: a redirect cannot be taken back.
+   */
+  const { prefs, ready, update } = useSettings();
+  /**
+   * Whether the reader asked for the questions outright.
+   *
+   * `/analytics?setup=1`, which is what the settings page links to. A query
+   * rather than a preference because there is nothing to store: "show me the
+   * questions" is a request, not a setting, and storing it would mean
+   * remembering to unstore it. It also makes the flow linkable, which the
+   * baseline panel's Edit button never was.
+   */
+  const askedSetup = new URLSearchParams(location.search).get('setup') !== null;
+
+  const landed = useRef(false);
+  useEffect(() => {
+    if (landed.current || !ready) return;
+    landed.current = true;
+    // Somebody who followed a link *to the questions* is not making a bare
+    // visit, and sending them to their opening tab would drop the request.
+    if (askedSetup || view.key !== 'overview') return;
+    if (prefs.analytics_home_tab === 'overview') return;
+    const target = VIEWS.find((entry) => entry.key === prefs.analytics_home_tab);
+    if (target) navigate(target.path, { replace: true });
+  }, [askedSetup, navigate, prefs.analytics_home_tab, ready, view.key]);
   /* The page reads a dozen of the model's eighty figures — the gates, the
      opening sentence and the export. Everything else goes to a tab whole. */
   const {
     span, chooseSpan, option, spanText, subject, setSubject, subjectOptions, waitFor,
-    historyDays, maturity, streak, analytical, hasReportCard, figures, insights, breakdown, banked, recentSubjects,
+    maturity, streak, analytical, hasReportCard, figures, insights, breakdown, banked, recentSubjects,
     discovered, diagnoses, advice, plan, recorded, state, goalSet, habits, summary,
   } = model;
   // ---- The shell ----------------------------------------------------------
@@ -221,48 +276,71 @@ export default function Analytics() {
 
   const openView = useCallback((next: View) => navigate(next.path), [navigate]);
 
-  // ---- The baseline -------------------------------------------------------
+  // ---- The question phase -------------------------------------------------
   /**
    * Whether the setup screen is showing.
    *
-   * Three states rather than two, which is why this is not just
-   * `baseline.data?.baseline === null`. A first-run account is shown the screen
-   * because it has nothing else to do here; an account that skipped is shown
-   * the page, because insisting would be a wall rather than an offer; and an
-   * account with a baseline can open the screen again from the panel to change
-   * it. `null` means "decide from the record", which is the first-run case.
+   * Three states rather than two, which is why this is not just a boolean off
+   * the stored flag. A first-run account is shown the screen because it has
+   * nothing else to do here; an account that skipped is shown the page,
+   * because insisting would be a wall rather than an offer; and an account
+   * that has answered can open the screen again from the baseline panel to
+   * change its answers. `null` means "decide from the record", which is the
+   * first-run case.
    */
-  const [editingBaseline, setEditingBaseline] = useState<boolean | null>(null);
+  const [editingSetup, setEditingSetup] = useState<boolean | null>(null);
   const aim = baseline.data?.baseline ?? null;
 
-  /* The write lives in ./useAnalyticsData, beside the read it invalidates.
-     Closing the screen stays here: `editingBaseline` has three states and two
-     of them are nothing to do with a write having landed. */
-  const saveBaseline = useCallback(
-    async (values: BaselineValues) => {
-      const saved = await data.saveBaseline(values);
-      if (saved) setEditingBaseline(false);
-      return saved;
+  /**
+   * The one write the screen makes, and it is deliberately one.
+   *
+   * Seven questions, two stores — the baseline is a table of its own
+   * (backend/api/analytics.py) and the four preferences are keyed rows beside
+   * every other preference. Both go out from here, and the flag that closes
+   * the screen for good travels with the preferences rather than as a third
+   * write: an account whose preferences landed and whose flag did not would be
+   * asked the whole thing again next visit.
+   *
+   * The baseline is the required half. It is what the panels measure against,
+   * so if it fails there is nothing to show and the screen says so; the
+   * preferences all have defaults that are already in force, so losing them
+   * costs the reader a trip to settings rather than the page.
+   */
+  const saveSetup = useCallback(
+    async (answers: SetupAnswers) => {
+      const saved = await data.saveBaseline(answers.baseline);
+      if (!saved) return false;
+      await update({ ...answers.prefs, analytics_setup_done: true });
+      setEditingSetup(false);
+      return true;
     },
-    [data],
+    [data, update],
   );
 
 
   /**
    * Whether the setup screen takes the page over.
    *
-   * Only when there is no baseline *and* the record is too short for the
-   * shortest tab to say anything — an established account that never set one
-   * gets the offer inside the Overview rather than a screen in front of the
-   * analysis it came for. Held until the call answers, so the page does not
-   * flash the setup screen at somebody who has a baseline.
+   * Only on an account that has genuinely never answered. Three conditions,
+   * and each rules out a different way of being wrong about that:
+   *
+   * - the preferences have to have arrived, or the flag being false is the
+   *   built-in default rather than this account's answer, and every reader
+   *   gets the wizard for a tick on the way in;
+   * - the baseline call has to have answered, for the same reason;
+   * - an account that set a baseline *before* the flag existed has answered
+   *   the questions that matter and is left alone. That is the whole of the
+   *   migration, and it lives here rather than in a backfill because the
+   *   condition is a statement about what the page knows rather than about
+   *   what is in the table.
    */
   const firstRun =
+    ready &&
+    !prefs.analytics_setup_done &&
     !baseline.loading &&
     baseline.data !== null &&
-    aim === null &&
-    historyDays < NEED_DAYS.recommendations;
-  const showSetup = editingBaseline ?? firstRun;
+    aim === null;
+  const showSetup = editingSetup ?? (firstRun || askedSetup);
 
   if (series.loading) return <Loading label="Reading your history" />;
   if (!series.data) {
@@ -310,6 +388,9 @@ export default function Analytics() {
           <Summary
             score={analytical}
             movement={scoreMovement(recorded)}
+            /* Reorders one pair of rows and adds one clause — see the prop's
+               own note. No figure in the block changes with it. */
+            tone={model.tone}
             topAdvice={advice[0]?.title ?? null}
             adviceCount={advice.length}
             phase={waitFor('insights') === 0 ? state.phase : null}
@@ -407,12 +488,13 @@ export default function Analytics() {
             that does nothing — and the one thing this screen is for is being
             the only thing on it. */}
         {showSetup ? (
-          <BaselineSetup
+          <AnalyticsSetup
             subjects={subjectOptions}
             current={aim}
             setOn={aim?.set_on ?? ''}
-            onSave={saveBaseline}
-            onSkip={() => setEditingBaseline(false)}
+            prefs={prefs}
+            onSave={saveSetup}
+            onSkip={() => setEditingSetup(false)}
           />
         ) : (
           <>
@@ -429,7 +511,7 @@ export default function Analytics() {
         {opening}
 
         {view.key === 'overview' && (
-          <OverviewTab model={model} data={data} onEditBaseline={() => setEditingBaseline(true)} />
+          <OverviewTab model={model} data={data} onEditBaseline={() => setEditingSetup(true)} />
         )}
 
         {view.key === 'goals' && <GoalsTab model={model} />}

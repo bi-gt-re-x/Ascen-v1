@@ -59,6 +59,14 @@ import { Ambient, ErrorState, Loading, STATS_CHANGED } from '@/components';
 import { GROUPS, SORTS } from '@/components/Tasks';
 import { useApi, useAuth, useDocumentTitle, usePageEntrance, useSettings, useTheme } from '@/hooks';
 import { settings as service } from '@/services';
+import {
+  DETAIL_HINT,
+  DETAIL_LABEL,
+  LOG_STYLE_HINT,
+  TONE_HINT,
+  TONE_LABEL,
+} from '@/utils/analyticsPrefs';
+import { VIEWS } from '@/components/Analytics';
 import type {
   Accent,
   Prefs,
@@ -145,7 +153,7 @@ interface Section {
   label: string;
   group: string;
   items: Item[];
-  /** A line under the heading, for a section that needs one. Only one does. */
+  /** A line under the heading, for a section that needs one. Two do. */
   note?: string;
 }
 
@@ -1060,6 +1068,15 @@ export default function Settings() {
         id: 'analytics',
         label: 'Analytics',
         group: 'Data',
+        /* The answers to the setup questions a new account is asked, plus the
+           two the wizard never puts (the period, and whether to be ranked
+           against strangers). Everything here is read by something on the
+           page — see utils/analyticsPrefs, which is where a stored word is
+           turned into a decision, and the header of
+           components/Analytics/Setup for why the questions exist at all. */
+        note:
+          'These are the answers you gave when you first opened Analytics. Every one of them '
+          + 'changes what that page draws or how it says it — none of them changes a figure.',
         items: [
           {
             id: 'window',
@@ -1084,6 +1101,128 @@ export default function Settings() {
                 <option value="2y">2 years</option>
                 <option value="all">All time</option>
               </select>
+            ),
+          },
+          {
+            id: 'analytics-home',
+            label: 'Analytics opens on',
+            hint:
+              'Which of the seven tabs you land on. Recommendations is the one that ends in a '
+              + 'button; Overview is the long view.',
+            control: (
+              <select
+                className="st-input"
+                value={prefs.analytics_home_tab}
+                disabled={busy}
+                onChange={(event) =>
+                  void savePref(
+                    { analytics_home_tab: event.target.value as Prefs['analytics_home_tab'] },
+                    'Opening tab',
+                  )
+                }
+              >
+                {/* The same seven the page's own tab bar draws, from the same
+                    list — a select here that had drifted from VIEWS would offer
+                    a tab that no longer exists. */}
+                {VIEWS.map((view) => (
+                  <option key={view.key} value={view.key}>
+                    {view.label}
+                  </option>
+                ))}
+              </select>
+            ),
+          },
+          {
+            id: 'analytics-log',
+            label: 'What you mostly record',
+            hint: LOG_STYLE_HINT[prefs.analytics_log_style],
+            control: (
+              <Seg
+                value={prefs.analytics_log_style}
+                busy={busy}
+                onPick={(next) => void savePref({ analytics_log_style: next }, 'What you record')}
+                options={[
+                  { key: 'tasks', label: 'Tasks' },
+                  { key: 'sessions', label: 'Sessions' },
+                  { key: 'both', label: 'Both' },
+                ]}
+              />
+            ),
+          },
+          {
+            id: 'analytics-tone',
+            label: 'How blunt Analytics is',
+            hint:
+              'It never changes a figure — the score is the mean of the same five measures at '
+              + 'every setting. It changes where a shortfall starts being called one, and how '
+              + 'many problems are put in front of you at once.',
+            control: (
+              <Seg
+                value={prefs.analytics_tone}
+                busy={busy}
+                onPick={(next) => void savePref({ analytics_tone: next }, 'Tone')}
+                options={[
+                  { key: 'gentle', label: TONE_LABEL.gentle },
+                  { key: 'balanced', label: TONE_LABEL.balanced },
+                  { key: 'harsh', label: TONE_LABEL.harsh },
+                ]}
+              />
+            ),
+          },
+          {
+            id: 'analytics-tone-what',
+            label: 'What that setting does',
+            hint: TONE_HINT[prefs.analytics_tone],
+            control: <span className="st-fixed">{TONE_LABEL[prefs.analytics_tone]}</span>,
+          },
+          {
+            id: 'analytics-detail',
+            label: 'How much of the page is drawn',
+            hint: DETAIL_HINT[prefs.analytics_detail],
+            control: (
+              <Seg
+                value={prefs.analytics_detail}
+                busy={busy}
+                onPick={(next) => void savePref({ analytics_detail: next }, 'Detail')}
+                options={[
+                  { key: 'essentials', label: DETAIL_LABEL.essentials },
+                  { key: 'standard', label: DETAIL_LABEL.standard },
+                  { key: 'everything', label: DETAIL_LABEL.everything },
+                ]}
+              />
+            ),
+          },
+          {
+            id: 'analytics-standing',
+            label: 'Rank me against other accounts',
+            hint:
+              'The percentile panel on the Overview. Off removes it; nothing else on the page '
+              + 'reads anybody else\'s record.',
+            control: (
+              <Toggle
+                on={prefs.analytics_standing}
+                busy={busy}
+                label="Rank me against other accounts"
+                onFlip={() =>
+                  void savePref({ analytics_standing: !prefs.analytics_standing }, 'Standing')
+                }
+              />
+            ),
+          },
+          {
+            id: 'analytics-setup',
+            label: 'Answer the setup questions again',
+            hint:
+              'The same seven questions, opened on the answers you already gave. Nothing is '
+              + 'cleared by going back to them.',
+            /* A link rather than a switch, because there is no preference to
+               write: the questions are a screen on the analytics page and this
+               is the way to it. The page reads `?setup` and opens on the
+               wizard — see `askedSetup` in pages/Analytics. */
+            control: (
+              <Link className="st-btn" to="/analytics?setup=1">
+                Open the questions
+              </Link>
             ),
           },
         ],

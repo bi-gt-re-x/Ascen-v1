@@ -19,6 +19,29 @@ export type Accent = 'violet' | 'blue' | 'green' | 'amber' | 'rose' | 'slate';
 export type Priority = 'low' | 'medium' | 'high';
 export type CalendarView = 'day' | 'week' | 'month';
 export type AnalyticsWindow = '7d' | '30d' | '90d' | '1y' | '2y' | 'all';
+
+/**
+ * The analytics preferences the setup questions write, and the settings page
+ * edits afterwards. What each one actually changes is in
+ * utils/analyticsPrefs — this file only says what the values are.
+ *
+ * `AnalyticsHomeTab` is the same seven keys as `ViewKey` in
+ * components/Analytics/Header. Written out rather than imported for the reason
+ * the four task unions below are: a service reaching into a component is the
+ * dependency the wrong way round. The page assigns one to the other, so a key
+ * added on one side and not the other fails to compile.
+ */
+export type AnalyticsHomeTab =
+  | 'recommendations'
+  | 'overview'
+  | 'goals'
+  | 'habits'
+  | 'insights'
+  | 'subjects'
+  | 'records';
+export type LogStyle = 'tasks' | 'sessions' | 'both';
+export type AnalyticsTone = 'gentle' | 'balanced' | 'harsh';
+export type AnalyticsDetail = 'essentials' | 'standard' | 'everything';
 /** Where signing in lands, and where `/` sends an account that is already in. */
 export type HomePage = 'dashboard' | 'tasks' | 'calendar' | 'goals' | 'analytics' | 'notes';
 export type WeekStart = 'monday' | 'sunday';
@@ -73,6 +96,12 @@ export interface Prefs {
   focus_goal_hours: number;
   focus_dim: boolean;
   analytics_window: AnalyticsWindow;
+  analytics_setup_done: boolean;
+  analytics_home_tab: AnalyticsHomeTab;
+  analytics_log_style: LogStyle;
+  analytics_tone: AnalyticsTone;
+  analytics_detail: AnalyticsDetail;
+  analytics_standing: boolean;
 }
 
 export interface Settings extends Prefs {
@@ -122,6 +151,15 @@ export const DEFAULTS: Prefs = {
   focus_goal_hours: 2,
   focus_dim: true,
   analytics_window: '1y',
+  /* False is the first-run state, and it is what puts the question phase in
+     front of the page. An account that already set a baseline is treated as
+     having answered — see `firstRun` in pages/Analytics. */
+  analytics_setup_done: false,
+  analytics_home_tab: 'overview',
+  analytics_log_style: 'both',
+  analytics_tone: 'balanced',
+  analytics_detail: 'standard',
+  analytics_standing: true,
 };
 
 /** What the API gives an account that has never set one. */

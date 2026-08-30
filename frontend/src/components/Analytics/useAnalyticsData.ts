@@ -108,9 +108,10 @@ export function useAnalyticsData() {
   const goals = useApi(goalsCall, [username]);
 
   // What the account said it was aiming at — the only thing on this page it
-  // states rather than the page measuring, and the only thing a first-day
-  // account can do here. `baseline: null` is a real answer and is what opens
-  // the setup screen; see `BaselineSetup`.
+  // states rather than the page measuring, and the one half of the setup
+  // questions that is not a preference. `baseline: null` is a real answer and
+  // is half of what opens the question phase; see `AnalyticsSetup` in ./Setup
+  // and `firstRun` in pages/Analytics for the other half.
   const baselineCall = useCallback(
     () =>
       username

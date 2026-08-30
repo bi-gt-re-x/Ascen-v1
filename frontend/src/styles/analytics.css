@@ -579,17 +579,25 @@ body:has(.ax-page) .app-main {
    is still coming when it has already arrived. */
 .ax-locked-empty .ax-locked-body { text-align: left; }
 
-/* ---------- The baseline ------------------------------------------------- */
-/* The one screen on this page a first-day account can finish. Same card as
-   `.ax-locked` and deliberately so — they are the two things a young account
-   sees here, and they should read as one idea rather than two designs. */
-.ax-baseline {
+/* ---------- The question phase ------------------------------------------- */
+/* The screen a new account answers before this page draws anything — see
+   src/components/Analytics/Setup.tsx. Same card as `.ax-locked` and
+   deliberately so: they are the two things a young account sees here, and they
+   should read as one idea rather than two designs.
+
+   These rules were `.ax-baseline-*` when the screen was three questions on one
+   card. They were renamed rather than duplicated when the card became a
+   sequence: the panel further down is still `.ax-baseline-*` and is a
+   different thing — one asks, the other reports — so sharing a prefix between
+   them was the collision waiting to happen that this file's own header warns
+   about. */
+.ax-setup {
     display: grid;
     place-items: start center;
     padding: 24px 0 40px;
 }
 
-.ax-baseline-body {
+.ax-setup-body {
     width: min(620px, 100%);
     background: var(--ax-card);
     border: 1px solid var(--ax-line);
@@ -598,7 +606,7 @@ body:has(.ax-page) .app-main {
     padding: 30px 32px 28px;
 }
 
-.ax-baseline-eyebrow {
+.ax-setup-eyebrow {
     margin: 0 0 6px;
     font-size: 11px;
     font-weight: 700;
@@ -607,7 +615,7 @@ body:has(.ax-page) .app-main {
     color: var(--ax-violet);
 }
 
-.ax-baseline-body h2 {
+.ax-setup-body h2 {
     margin: 0 0 12px;
     font-size: 32px;
     font-weight: 700;
@@ -616,16 +624,16 @@ body:has(.ax-page) .app-main {
     color: var(--ax-text);
 }
 
-.ax-baseline-lead {
+.ax-setup-lead {
     margin: 0;
     font-size: 16px;
     line-height: 1.5;
     color: var(--ax-muted);
 }
 
-.ax-baseline-q { margin-top: 26px; }
+.ax-setup-q { margin-top: 26px; }
 
-.ax-baseline-q h3 {
+.ax-setup-q h3 {
     margin: 0 0 12px;
     font-size: 13px;
     font-weight: 650;
@@ -634,7 +642,7 @@ body:has(.ax-page) .app-main {
     color: var(--ax-faint);
 }
 
-.ax-baseline-q h3 em {
+.ax-setup-q h3 em {
     font-style: normal;
     font-weight: 500;
     font-size: 12px;
@@ -643,9 +651,9 @@ body:has(.ax-page) .app-main {
 
 /* Seven buttons rather than a number input — the answer has seven possible
    values and a spinner would be three interactions for one of them. */
-.ax-baseline-days { display: flex; gap: 8px; flex-wrap: wrap; }
+.ax-setup-days { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.ax-baseline-day {
+.ax-setup-day {
     width: 52px;
     height: 50px;
     border-radius: 10px;
@@ -659,21 +667,21 @@ body:has(.ax-page) .app-main {
     transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
 
-.ax-baseline-day:hover { border-color: var(--ax-violet); }
+.ax-setup-day:hover { border-color: var(--ax-violet); }
 
-.ax-baseline-day.is-on {
+.ax-setup-day.is-on {
     background: var(--ax-violet);
     border-color: var(--ax-violet);
     color: #fff;
 }
 
-.ax-baseline-sessions {
+.ax-setup-sessions {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 8px;
 }
 
-.ax-baseline-session {
+.ax-setup-session {
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -687,17 +695,17 @@ body:has(.ax-page) .app-main {
     transition: background .12s ease, border-color .12s ease;
 }
 
-.ax-baseline-session:hover { border-color: var(--ax-violet); }
+.ax-setup-session:hover { border-color: var(--ax-violet); }
 
-.ax-baseline-session strong { font-size: 14px; font-weight: 650; color: var(--ax-text); }
-.ax-baseline-session span { font-size: 11.5px; color: var(--ax-faint); }
+.ax-setup-session strong { font-size: 14px; font-weight: 650; color: var(--ax-text); }
+.ax-setup-session span { font-size: 11.5px; color: var(--ax-faint); }
 
-.ax-baseline-session.is-on {
+.ax-setup-session.is-on {
     border-color: var(--ax-violet);
     background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
 }
 
-.ax-baseline-select {
+.ax-setup-select {
     width: 100%;
     height: 40px;
     padding: 0 12px;
@@ -710,13 +718,13 @@ body:has(.ax-page) .app-main {
     cursor: pointer;
 }
 
-.ax-baseline-sum {
+.ax-setup-sum {
     margin: 26px 0 0;
     font-size: 15px;
     color: var(--ax-faint);
 }
 
-.ax-baseline-sum strong {
+.ax-setup-sum strong {
     color: var(--ax-text);
     font-weight: 700;
     font-size: 28px;
@@ -724,13 +732,13 @@ body:has(.ax-page) .app-main {
     margin-right: 4px;
 }
 
-.ax-baseline-failed {
+.ax-setup-failed {
     margin: 14px 0 0;
     font-size: 13px;
     color: var(--ax-bad);
 }
 
-.ax-baseline-actions {
+.ax-setup-actions {
     margin-top: 22px;
     display: flex;
     align-items: center;
@@ -750,7 +758,7 @@ body:has(.ax-page) .app-main {
     filter: brightness(1.08);
 }
 
-.ax-baseline-skip {
+.ax-setup-skip {
     border: 0;
     background: none;
     padding: 0;
@@ -761,11 +769,113 @@ body:has(.ax-page) .app-main {
     text-decoration: underline;
 }
 
-.ax-baseline-set-on {
+.ax-setup-set-on {
     margin: 16px 0 0;
     font-size: 12px;
     color: var(--ax-faint);
 }
+
+/* ---- the parts one card never needed ---- */
+/* The rail, the choice cards and the tab grid: three controls that only exist
+   because the questions are now a sequence. Everything above this line is the
+   old single card's own styling, kept because the questions inside a step are
+   the same questions. */
+
+.ax-setup-rail {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+}
+
+/* Clickable, so a reader on step six can go back to step two without pressing
+   Back four times. Sized to be a target rather than a decoration. */
+.ax-setup-pip {
+    width: 26px;
+    height: 5px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ax-line);
+    cursor: pointer;
+    transition: background .16s ease, width .16s ease;
+}
+
+.ax-setup-pip.is-done { background: color-mix(in srgb, var(--ax-violet) 45%, transparent); }
+.ax-setup-pip.is-on { width: 40px; background: var(--ax-violet); }
+
+/* One question's answers, stacked. A column rather than a row because each
+   answer carries the sentence saying what it does, and three of those side by
+   side is three columns of small print. */
+.ax-setup-choices { display: grid; gap: 8px; }
+
+.ax-setup-choice {
+    display: grid;
+    gap: 4px;
+    padding: 13px 15px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+
+.ax-setup-choice:hover { border-color: var(--ax-violet); }
+
+.ax-setup-choice strong { font-size: 14.5px; font-weight: 650; color: var(--ax-text); }
+.ax-setup-choice span { font-size: 12.5px; line-height: 1.5; color: var(--ax-faint); }
+
+.ax-setup-choice.is-on {
+    border-color: var(--ax-violet);
+    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+}
+
+/* Seven tabs, so a grid rather than the stack above — the purpose lines here
+   are one line each and the reader is comparing destinations, not weighing
+   consequences. */
+.ax-setup-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px;
+}
+
+.ax-setup-tab {
+    display: grid;
+    gap: 3px;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+
+.ax-setup-tab:hover { border-color: var(--ax-violet); }
+.ax-setup-tab strong { font-size: 13.5px; font-weight: 650; color: var(--ax-text); }
+.ax-setup-tab span { font-size: 11.5px; line-height: 1.45; color: var(--ax-faint); }
+
+.ax-setup-tab.is-on {
+    border-color: var(--ax-violet);
+    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+}
+
+/* The verdict beside a baseline row, and the only thing on that panel the
+   harshness setting moves. The percentage and the bar are identical at every
+   tone — see src/utils/analyticsPrefs.ts. */
+.ax-baseline-row-said {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    font-weight: 650;
+    color: var(--ax-bad);
+}
+
+.ax-baseline-row-said.is-met { color: var(--ax-good); }
 
 /* ---- The panel that pays the setup screen off ---- */
 .ax-baseline-edit {
