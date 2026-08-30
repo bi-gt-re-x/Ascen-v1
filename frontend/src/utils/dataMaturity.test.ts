@@ -7,7 +7,7 @@
  * weeks of record. Everything else pins the ladder's shape.
  */
 import { describe, expect, it } from 'vitest';
-import { dataMaturity, isActiveDay, stageFor, STAGE_FLOOR } from './dataMaturity';
+import { dataMaturity, isActiveDay, stageFor, stageShows, STAGE_FLOOR, STAGES } from './dataMaturity';
 import type { GrowthDay } from '@/types';
 
 /** A row of the series. Zero on every measure unless the test says otherwise. */
@@ -117,5 +117,82 @@ describe('the ladder', () => {
   it('is finished at full', () => {
     const found = dataMaturity(series(60, 45));
     expect(found).toMatchObject({ stage: 'full', next: null, toNext: null, progress: 1 });
+  });
+});
+
+describe('what each stage draws', () => {
+  it('gives the mature page everything, and adds nothing to it', () => {
+    // Step five of the progressive system is this line. `full` is every panel
+    // on and the staging notice off — the analytics page exactly as it was,
+    // with no separate full-analytics mode to transition into.
+    expect(stageShows('full')).toEqual({
+      counts: true,
+      trends: true,
+      judgement: true,
+      note: false,
+    });
+  });
+
+  it('never takes a panel away as the account matures', () => {
+    // The one invariant the whole feature rests on: crossing a stage boundary
+    // may add, and may never remove. A reader who saw a chart yesterday and
+    // cannot find it today has been told the app is broken.
+    const families = ['counts', 'trends', 'judgement'] as const;
+    STAGES.slice(1).forEach((stage, index) => {
+      const before = stageShows(STAGES[index]!);
+      const after = stageShows(stage);
+      families.forEach((family) => {
+        if (before[family]) {
+          expect(after[family], `${family} vanished between ${STAGES[index]} and ${stage}`).toBe(true);
+        }
+      });
+    });
+  });
+
+  it('shows the notice at every stage except the last', () => {
+    STAGES.forEach((stage) => {
+      expect(stageShows(stage).note).toBe(stage !== 'full');
+    });
+  });
+
+  it('holds judgement back until a fortnight, and trends until a week', () => {
+    expect(stageShows('new')).toMatchObject({ trends: false, judgement: false });
+    expect(stageShows('early')).toMatchObject({ trends: false, judgement: false });
+    expect(stageShows('weekly')).toMatchObject({ trends: true, judgement: false });
+    expect(stageShows('developing')).toMatchObject({ trends: true, judgement: true });
+  });
+
+  it('always has something to count, so no stage is a blank page', () => {
+    STAGES.forEach((stage) => expect(stageShows(stage).counts).toBe(true));
+  });
+
+  it('agrees with the ladder, so a day count decides one thing', () => {
+    // The page reads `stageShows(maturity.stage)`; these are the two halves of
+    // that expression and they have to line up on the boundary itself.
+    expect(stageShows(stageFor(STAGE_FLOOR.developing - 1)).judgement).toBe(false);
+    expect(stageShows(stageFor(STAGE_FLOOR.developing)).judgement).toBe(true);
+    expect(stageShows(stageFor(STAGE_FLOOR.full)).note).toBe(false);
+  });
+});
+
+describe('the hand-off to the gated tabs', () => {
+  it('is complete by the time the page is mature', async () => {
+    /*
+     * The two Early tallies are drawn while `waitFor('habits') > 0`, which is
+     * how they hand over to the tab that answers the same question properly
+     * rather than vanishing on a day number. That only works while the Habits
+     * gate opens at or before `full` — raise `NEED_DAYS.habits` past 30 and
+     * the mature analytics page grows two panels it is not supposed to have,
+     * silently, with nothing else in the suite noticing.
+     *
+     * Imported here rather than in the module, because `dataMaturity` has no
+     * business knowing what any tab needs.
+     */
+    const { NEED_DAYS } = await import('@/components/Analytics/useAnalyticsModel');
+    Object.entries(NEED_DAYS).forEach(([tab, need]) => {
+      expect(need, `${tab} opens after the page is already mature`).toBeLessThanOrEqual(
+        STAGE_FLOOR.full,
+      );
+    });
   });
 });

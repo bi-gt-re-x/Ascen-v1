@@ -45,6 +45,7 @@ import type { Stat } from '../StatRow';
 import { number as fmtNumber } from '@/utils/format';
 import { partsOfDay } from '@/utils/habits';
 import { NEED_DAYS } from '../useAnalyticsModel';
+import { stageShows } from '@/utils/dataMaturity';
 import type { LearningItem } from '../index';
 
 /** No earlier period to compare a subject against. Shared, so it is one object. */
@@ -234,8 +235,14 @@ export function OverviewTab({
    * letter, the percentile against everybody else, the quality readings. A
    * fortnight is the floor for those, because being told you are a C-minus on
    * your ninth day is a claim about somebody the app has barely met.
+   *
+   * Read from `stageShows` rather than spelled out here. The page's opening
+   * slot makes the same call about `Summary`, and when the two were written
+   * separately they were the same rule from opposite ends — the kind of pair
+   * that drifts silently into a grade on the page opening above a tab still
+   * holding the panel it came from.
    */
-  const judgement = maturity.stage === 'developing' || maturity.stage === 'full';
+  const { judgement, note } = stageShows(maturity.stage);
 
   /* The three gated tabs, from their own `NEED_DAYS` rather than from a table
      here — one source for what each needs, so a threshold changed there shows
@@ -248,7 +255,7 @@ export function OverviewTab({
 
   return (
     <>
-      {maturity.stage !== 'full' && (
+      {note && (
         <section className="ax-section">
           <StageNote
             maturity={maturity}

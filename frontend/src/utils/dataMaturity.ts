@@ -26,6 +26,29 @@
  * below it is the same page with the parts that cannot be honest yet replaced
  * by the reason they cannot. Nothing here computes an analysis; it decides
  * which analyses have enough behind them to be worth drawing.
+ *
+ * ## The whole progression, in one place
+ *
+ *   0-2 active days    `Collecting`, and the counts that are already true:
+ *                      tasks, focus, XP, streak, completion rate, where the
+ *                      work went. No trend, no comparison, no grade.
+ *   3-6                the two Early tallies — when you worked, what you
+ *                      finish — each wearing the day count it was read from.
+ *   7-13               the real tab. Delta tiles, the trajectory line, the
+ *                      consistency and streak panels, the subject split with
+ *                      its per-row change.
+ *   14-29              the readings that grade a person: the score, its
+ *                      letter, the percentile, quality. Plus a line saying how
+ *                      much record they rest on, and a strip naming the tabs
+ *                      still filling.
+ *   30+                exactly the above with the staging notice off. There is
+ *                      no separate mature component to transition into, which
+ *                      is the point — see `stageShows`.
+ *
+ * The gates the tabs already had land inside that ladder on their own, once
+ * they count active days: Recommendations at 14, Habits at 21, Insights at 28.
+ * None of those numbers were chosen for this feature; they were in the
+ * codebase and were being read against the wrong denominator.
  */
 import type { GrowthDay } from '@/types';
 
@@ -59,6 +82,49 @@ export const STAGE_LABEL: Record<Stage, string> = {
   developing: 'Developing profile',
   full: 'Full analytics',
 };
+
+/**
+ * What a stage is allowed to draw.
+ *
+ * The five decisions the page makes about a stage, in one place, because they
+ * were made in two and disagreed in shape: the Overview tab asked "is this
+ * developing or full" and the page asked "is this new, early or weekly", which
+ * are the same rule written from opposite ends. Two places to change when a
+ * threshold moves is one place too many, and the failure mode is silent — a
+ * grade appearing on the page opening while the panel it belongs to is still
+ * held back on the tab.
+ *
+ * `full` is every flag on and `note` off, which is the whole of step five: the
+ * mature analytics page with nothing added to it and nothing taken away. There
+ * is no separate full-analytics component and nothing to transition into.
+ *
+ * ## Not everything staged is decided here
+ *
+ * The two Early tallies follow `waitFor('habits')` rather than a stage, so
+ * they hand over to the tab that answers the same question better rather than
+ * disappearing on a day number. That is a rule about two tabs agreeing, not a
+ * rule about maturity, and putting it here would make this table lie.
+ */
+export interface StageShows {
+  /** The counts that are true immediately. Every stage. */
+  counts: boolean;
+  /** Panels about the record: trends, comparisons, where the work went. */
+  trends: boolean;
+  /** Panels that grade the person: the score, its letter, the percentile. */
+  judgement: boolean;
+  /** The "still learning" line and the strip under it. */
+  note: boolean;
+}
+
+export function stageShows(stage: Stage): StageShows {
+  const at = STAGES.indexOf(stage);
+  return {
+    counts: true,
+    trends: at >= STAGES.indexOf('weekly'),
+    judgement: at >= STAGES.indexOf('developing'),
+    note: stage !== 'full',
+  };
+}
 
 export interface Maturity {
   /** Days with something recorded on them. The figure every gate reads. */

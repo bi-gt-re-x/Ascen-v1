@@ -90,6 +90,7 @@
 import { useCallback, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Ambient, ErrorState, Loading } from '@/components';
+import { stageShows } from '@/utils/dataMaturity';
 import {
   BaselineSetup,
   Controls,
@@ -300,9 +301,7 @@ export default function Analytics() {
            up a week before the other two. The tab's own opening below a
            fortnight is `Collecting` or `StageNote`, which say the true thing
            instead. See utils/dataMaturity. */
-        if (maturity.stage === 'new' || maturity.stage === 'early' || maturity.stage === 'weekly') {
-          return null;
-        }
+        if (!stageShows(maturity.stage).judgement) return null;
         /* The one tab whose opening is a block rather than a line. Everything
            it states is already in scope here — which is why it lives in this
            slot rather than inside `OverviewView`, which would need four more
@@ -319,9 +318,9 @@ export default function Analytics() {
                one good week at this length — a fact about the number rather
                than a hedge, so it sits beside it. */
             basis={
-              maturity.stage === 'full'
-                ? null
-                : `Read from ${maturity.activeDays} days of your work. It will settle as you record more.`
+              stageShows(maturity.stage).note
+                ? `Read from ${maturity.activeDays} days of your work. It will settle as you record more.`
+                : null
             }
             goals={
               goalSet.active > 0
