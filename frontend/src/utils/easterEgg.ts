@@ -22,6 +22,16 @@
  * first-time reader is in.
  */
 
+/**
+ * Announced when the tenth click lands, for a dashboard that is already open.
+ *
+ * The same device as `ascen:stats-changed` in components/Rail.tsx, for the
+ * same reason: one fact, one direction, no reply. The door (the rail's title)
+ * and the room (the dashboard's quote) are in two components that never share
+ * a parent below the router.
+ */
+export const EGG_UNLOCKED = 'ascen:egg-unlocked';
+
 /** Whose chain this is. See the note above about 'Default'. */
 function user(): string {
   try {
@@ -79,4 +89,36 @@ export function earnedTitle(): string | null {
   } catch {
     return null;
   }
+}
+
+/* --------------------------------------------------------------------------
+ * The reveal latch
+ * ------------------------------------------------------------------------ */
+
+/**
+ * One bit, in memory, saying the reveal is owed a performance.
+ *
+ * The tenth click can land on any page, because the rail is on all of them —
+ * so it sends the reader to the dashboard, and the theatrics have to survive
+ * that trip. `unlockedToday()` cannot carry them: it is also true tomorrow
+ * morning, when the clue should simply be sitting there rather than crashing
+ * in again.
+ *
+ * A module variable and not sessionStorage, because the trip is a client-side
+ * navigation and this is the same JavaScript context on the other side of it.
+ * If a reload somehow intervenes the latch is lost, which is the right way to
+ * fail: the clue is still there, it just arrives quietly.
+ */
+let owed = false;
+
+/** The tenth click landed: the next quote to mount owes a reveal. */
+export function armReveal(): void {
+  owed = true;
+}
+
+/** Claim the reveal, if one is owed. Answers true at most once per arming. */
+export function takeReveal(): boolean {
+  const was = owed;
+  owed = false;
+  return was;
 }

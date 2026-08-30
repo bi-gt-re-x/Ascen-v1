@@ -15,6 +15,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppBoundary, Loading, Rail, Topbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
 import { useAuth, usePinnedViewport, useSettings } from '@/hooks';
+import { useVoid } from '@/hooks/useVoid';
 import Dashboard from '@/pages/Dashboard';
 // Not lazy, unlike every other page here: the routes below are generated from
 // `UNBUILT_PATHS`, so the module has to be loaded to build the routing table at
@@ -144,6 +145,11 @@ export default function App() {
     document.body.classList.toggle('has-rail', !landing);
     return () => document.body.classList.add('has-rail');
   }, [landing]);
+
+  /* `/calendar#void` is the far end of the hidden chain, and it is read here
+     rather than on the calendar because the calendar's own route redirects and
+     a redirect drops the fragment. See hooks/useVoid.ts. */
+  useVoid();
 
   return (
     <>

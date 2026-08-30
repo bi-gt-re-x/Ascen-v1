@@ -61,6 +61,7 @@ import {
   useReveals,
 } from '@/components/Home';
 import { useAuth, useDocumentTitle, useTheme } from '@/hooks';
+import { useSecretScripts } from '@/hooks/useSecretScripts';
 import type { AuthStep } from '@/components/Home';
 import type { Theme } from '@/types';
 import '@/styles/homepage.css';
@@ -82,6 +83,15 @@ function safeNext(raw: string | null): string {
 
 export default function Homepage() {
   useDocumentTitle('Home');
+
+  /* The two stages of the hidden chain this page carries, and the void they
+     both lead into. They are the original scripts, bound to markup rendered
+     below — the testimonial card in components/Home/sections.tsx and the
+     pentagon in the Growth Rating preview beside it — and hooks/useSecretScripts
+     explains why they are loaded rather than ported. Nothing here is reachable
+     without the clue from the dashboard, except the testimonial, which is the
+     short way in for a visitor who has no account to put a dashboard behind. */
+  useSecretScripts(['void.css', 'void.js', 'quote-egg.js', 'pentagon-egg.js']);
 
   const [params] = useSearchParams();
   const { status, username, signOut } = useAuth();

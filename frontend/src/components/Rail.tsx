@@ -47,8 +47,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth, useMediaQuery, useSettings, useStats } from '@/hooks';
+import { useTitleEgg } from '@/hooks/useTitleEgg';
 import { format } from '@/utils';
 import { rankFor } from '@/utils/mastery';
+import { AUTOMATIC, chooseTitle, chosenTitle, titlesFor } from '@/utils/rankTitle';
 import '@/styles/rail.css';
 
 const COLLAPSE_KEY = 'topnavCollapsed';
@@ -269,7 +271,7 @@ const TABS: Tab[] = [
 ];
 
 export function Rail() {
-  const { status } = useAuth();
+  const { status, username } = useAuth();
   const { stats, reload } = useStats();
   // Only for `Tab.also` — NavLink handles its own path on every other entry.
   const { pathname } = useLocation();
@@ -338,6 +340,36 @@ export function Rail() {
      sheet the reader has to dismiss to see what they asked for. */
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => setMoreOpen(false), [pathname]);
+
+  /* The title, and the three dots beside it. `picked` is held here rather than
+     read from storage on every render so that choosing one repaints the rail
+     immediately; utils/rankTitle is where it is written down. */
+  const [titlesOpen, setTitlesOpen] = useState(false);
+  const [picked, setPicked] = useState(() => chosenTitle(username ?? ''));
+  useEffect(() => setPicked(chosenTitle(username ?? '')), [username]);
+  useEffect(() => setTitlesOpen(false), [pathname]);
+
+  const pick = useCallback(
+    (name: string) => {
+      chooseTitle(username ?? '', name);
+      setPicked(name);
+      setTitlesOpen(false);
+    },
+    [username],
+  );
+
+  /* Every band reached, best first — and the secret title if the chain has
+     handed one out. Empty until the account read lands, which is also when
+     the whole plate below appears. */
+  const titles = level ? titlesFor(level.level) : [];
+  /* A pick the account can no longer justify falls back to the band. See
+     `titleShown` in utils/rankTitle for the case that causes. */
+  const title = picked && titles.includes(picked) ? picked : rank;
+
+  /* Ten clicks on that title open the hidden chain. The rail is the only
+     thing on screen from every page, which is why the door is here and the
+     room is on the dashboard — see hooks/useTitleEgg.ts. */
+  const { titleRef, onTitleClick } = useTitleEgg();
 
   return (
     <nav className="rail" aria-label="Main">
@@ -483,12 +515,76 @@ export function Rail() {
               {/* The whole name when the rail is open, the level's number when
                   it is a strip. "Grand Champion" in 54px of usable width is an
                   ellipsis, and an ellipsis is not a rank. */}
-              <span className="rail-rank-title" title={`${rank} · Level ${level.level}`}>
-                {rank}
-              </span>
+              <div className="rail-rank-head">
+                {/* No role, no tabIndex, no cursor: this is where the hidden
+                    chain starts, and a title that announced itself as a button
+                    would be advertising it. What it looks like is a label, and
+                    for anybody not counting to ten that is all it is. */}
+                <span
+                  className="rail-rank-title"
+                  title={`${title} · Level ${level.level}`}
+                  ref={titleRef}
+                  onClick={onTitleClick}
+                >
+                  {title}
+                </span>
+                <button
+                  type="button"
+                  className={`rail-rank-more${titlesOpen ? ' is-open' : ''}`}
+                  aria-label="Choose your title"
+                  aria-expanded={titlesOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setTitlesOpen((was) => !was)}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="5" cy="12" r="1.7" />
+                    <circle cx="12" cy="12" r="1.7" />
+                    <circle cx="19" cy="12" r="1.7" />
+                  </svg>
+                </button>
+              </div>
               <span className="rail-rank-num" aria-hidden="true">
                 {level.level}
               </span>
+
+              {titlesOpen && (
+                <>
+                  {/* Anywhere else closes it. A button rather than a document
+                      listener, for the same reason the More sheet uses one:
+                      the scrim is also what stops a stray click landing on the
+                      page behind a menu the reader has finished with. */}
+                  <button
+                    type="button"
+                    className="rail-title-scrim"
+                    aria-label="Close title menu"
+                    onClick={() => setTitlesOpen(false)}
+                  />
+                  <div className="rail-title-menu" role="menu">
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={picked === AUTOMATIC}
+                      className={`rail-title-opt${picked === AUTOMATIC ? ' active' : ''}`}
+                      onClick={() => pick(AUTOMATIC)}
+                    >
+                      <span>Automatic</span>
+                      <small>{rank}</small>
+                    </button>
+                    {titles.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={picked === name}
+                        className={`rail-title-opt${picked === name ? ' active' : ''}`}
+                        onClick={() => pick(name)}
+                      >
+                        <span>{name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
 
               <div className="rail-xp-row">
                 <span>Level {level.level}</span>
