@@ -334,6 +334,83 @@ body:has(.ax-page) .app-main {
     text-transform: uppercase;
 }
 
+/* What the rest of the page is still filling in. A quiet list, not a wall of
+   padlocks: each row is a link to the tab it names, so a reader can go and see
+   what it will say while it is still filling. */
+.ax-learning {
+    margin: 10px 0 0;
+    padding: 13px 15px 9px;
+    border: 1px solid var(--ax-line);
+    border-radius: 11px;
+    background: var(--ax-card-2);
+}
+.ax-learning-head {
+    margin: 0 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+.ax-learning ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 4px 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+/* Packed left rather than spread. The grid track this sits in is as wide as
+   the column allows, and a 1fr name column turned a three-word row into a name
+   at one end and a meter at the other with a hand-span between them. */
+.ax-learning a {
+    display: grid;
+    grid-template-columns: auto 62px auto;
+    justify-content: start;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    color: inherit;
+    text-decoration: none;
+}
+.ax-learning-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ax-learning a:hover .ax-learning-name { color: var(--ax-text); }
+.ax-learning-meter {
+    display: block;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--ax-line);
+    overflow: hidden;
+}
+.ax-learning-meter i {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: var(--ax-violet);
+}
+.ax-learning-left {
+    font-size: 11px;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* What the score is read from, under the rows it explains. */
+.ax-summary-basis {
+    margin: 14px 0 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ax-faint);
+}
+
 /* ---------- Early insight -------------------------------------------------
    The mark a Day 4-7 panel wears, and the two panels that wear it. Set in the
    panel's `aside` slot, so it sits on the title row where a picker would —

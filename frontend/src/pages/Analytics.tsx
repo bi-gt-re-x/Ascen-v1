@@ -314,6 +314,15 @@ export default function Analytics() {
             topAdvice={advice[0]?.title ?? null}
             adviceCount={advice.length}
             phase={waitFor('insights') === 0 ? state.phase : null}
+            /* What it is read from, until "enough" is the honest answer. The
+               score is the mean of five measures and it swings a long way on
+               one good week at this length — a fact about the number rather
+               than a hedge, so it sits beside it. */
+            basis={
+              maturity.stage === 'full'
+                ? null
+                : `Read from ${maturity.activeDays} days of your work. It will settle as you record more.`
+            }
             goals={
               goalSet.active > 0
                 ? { active: goalSet.active, behind: goalSet.atRisk + goalSet.offTrack }

@@ -77,6 +77,15 @@ export interface SummaryProps {
   phase: string | null;
   /** Live goals and how many of them are behind, or null when there are none. */
   goals: { active: number; behind: number } | null;
+  /**
+   * How much record the score rests on, while that is still worth saying.
+   *
+   * Null once the account is past the point where the answer is "enough". The
+   * score is the mean of five measures and it moves a long way on one good
+   * week early on — which is a fact about the score, not a hedge, and belongs
+   * beside it rather than in a tooltip. See utils/dataMaturity.
+   */
+  basis?: string | null;
 }
 
 /** Five is the cap. See the note at the top for why, and `goals` for how. */
@@ -90,7 +99,15 @@ interface Row {
   label: string;
 }
 
-export function Summary({ score, movement, topAdvice, adviceCount, phase, goals }: SummaryProps) {
+export function Summary({
+  score,
+  movement,
+  topAdvice,
+  adviceCount,
+  phase,
+  goals,
+  basis = null,
+}: SummaryProps) {
   const { value, grade, weakest } = score;
 
   /* No score is not a broken panel — it is a new account, and it deserves the
@@ -242,6 +259,12 @@ export function Summary({ score, movement, topAdvice, adviceCount, phase, goals 
           ))}
         </ul>
       )}
+
+      {/* What it is read from, on an account young enough for that to change
+          the answer. Above the workings rather than inside them: a reader who
+          never opens the disclosure is exactly the reader who should be told
+          how much is behind the number. */}
+      {basis && <p className="ax-summary-basis">{basis}</p>}
 
       <details className="ax-summary-how">
         <summary>How this is worked out</summary>

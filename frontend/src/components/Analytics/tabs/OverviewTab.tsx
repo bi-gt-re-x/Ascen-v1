@@ -27,6 +27,7 @@ import {
   BaselinePanel,
   Collecting,
   ConsistencyPanel,
+  LearningStrip,
   StageNote,
   FinishPanel,
   WhenPanel,
@@ -43,6 +44,8 @@ import {
 import type { Stat } from '../StatRow';
 import { number as fmtNumber } from '@/utils/format';
 import { partsOfDay } from '@/utils/habits';
+import { NEED_DAYS } from '../useAnalyticsModel';
+import type { LearningItem } from '../index';
 
 /** No earlier period to compare a subject against. Shared, so it is one object. */
 const EMPTY_PREVIOUS = new Map<string, number>();
@@ -65,6 +68,7 @@ export function OverviewTab({
     compareLabel,
     figures,
     fromIso,
+    historyDays,
     maturity,
     waitFor,
     streak,
@@ -233,6 +237,15 @@ export function OverviewTab({
    */
   const judgement = maturity.stage === 'developing' || maturity.stage === 'full';
 
+  /* The three gated tabs, from their own `NEED_DAYS` rather than from a table
+     here — one source for what each needs, so a threshold changed there shows
+     up in this strip without anybody remembering to update it. */
+  const learning: LearningItem[] = [
+    { label: 'Recommendations', have: historyDays, need: NEED_DAYS.recommendations, href: '/recommendations' },
+    { label: 'Habits', have: historyDays, need: NEED_DAYS.habits, href: '/analytics/habits' },
+    { label: 'Insights', have: historyDays, need: NEED_DAYS.insights, href: '/insights' },
+  ];
+
   return (
     <>
       {maturity.stage !== 'full' && (
@@ -245,6 +258,10 @@ export function OverviewTab({
                 : 'the last of the long-range readings open here'
             }
           />
+          {/* What the rest of the page is still working on. Named rather than
+              left silent: a reader who does not know Habits exists cannot look
+              forward to it. See the note at the top of LearningStrip. */}
+          <LearningStrip items={learning} />
         </section>
       )}
 

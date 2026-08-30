@@ -24,6 +24,7 @@
  * rule `Locked` was written for — see the note there about what invented
  * figures cost — applied a stage earlier.
  */
+import { Link } from 'react-router-dom';
 import { StatRow, type Stat } from './StatRow';
 import { STAGE_LABEL, type Maturity } from '@/utils/dataMaturity';
 
@@ -63,6 +64,67 @@ export function StageNote({ maturity, brings }: { maturity: Maturity; brings: st
         and {brings}
       </span>
     </p>
+  );
+}
+
+export interface LearningItem {
+  label: string;
+  /** Active days recorded against this one's requirement. */
+  have: number;
+  need: number;
+  href: string;
+}
+
+/**
+ * What Ascen has not worked out yet, and how close it is.
+ *
+ * The brief for this whole feature says not to make analytics feel locked, and
+ * the instinct that follows from that is to say nothing at all about the parts
+ * that have not opened. That instinct is wrong: a reader who does not know
+ * Habits exists cannot look forward to it, and finds it by accident three
+ * weeks later. Silence is not the opposite of a paywall.
+ *
+ * What makes it not a paywall is that nothing is being withheld — the tab is
+ * empty because the answer does not exist yet, and there is no version of this
+ * product where paying, or clicking, produces it sooner. So the strip states
+ * the position in the present tense and points at the thing that closes the
+ * gap, which is doing the work. No padlocks, no counts of what is "left", and
+ * every row links to the tab it names so a reader can go and look at what it
+ * says while it is still filling.
+ *
+ * Rows that are already open are dropped rather than ticked. A checklist of
+ * things you have finished is a different page from this one.
+ */
+export function LearningStrip({ items }: { items: LearningItem[] }) {
+  const waiting = items.filter((item) => item.have < item.need);
+  if (waiting.length === 0) return null;
+
+  return (
+    <section className="ax-learning">
+      <p className="ax-learning-head">Still filling in</p>
+      <ul>
+        {waiting.map((item) => {
+          const left = item.need - item.have;
+          return (
+            <li key={item.label}>
+              <Link to={item.href}>
+                <span className="ax-learning-name">{item.label}</span>
+                <span
+                  className="ax-learning-meter"
+                  role="img"
+                  aria-label={`${item.have} of ${item.need} days`}
+                >
+                  <i style={{ width: `${Math.round((item.have / item.need) * 100)}%` }} />
+                </span>
+                <span className="ax-learning-left">
+                  {left} {left === 1 ? 'day' : 'days'}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
