@@ -16,6 +16,7 @@
  * here is invented, and where the record cannot answer a question the function
  * says so with a null rather than guessing.
  */
+import { isActiveDay } from './activeDay';
 import type { GrowthDay, Task } from '@/types';
 
 const num = (value: unknown) => Number(value) || 0;
@@ -55,7 +56,7 @@ export function weekdayProfile(days: GrowthDay[]): WeekdayStat[] {
     bucket.xp += num(day.xp_earned);
     bucket.focus += num(day.focus_minutes);
     bucket.days += 1;
-    if (num(day.xp_earned) > 0) bucket.active += 1;
+    if (isActiveDay(day)) bucket.active += 1;
   });
 
   return buckets.map((bucket, index) => ({
@@ -220,7 +221,7 @@ export interface RhythmShape {
  * single-day gap would report a healthy routine as hundreds of interruptions.
  */
 export function rhythmShape(days: GrowthDay[]): RhythmShape {
-  const worked = days.filter((day) => num(day.xp_earned) > 0 || num(day.focus_minutes) > 0);
+  const worked = days.filter(isActiveDay);
   const focusDays = days.filter((day) => num(day.focus_minutes) > 0);
 
   const typicalSession = focusDays.length
@@ -247,8 +248,13 @@ export function rhythmShape(days: GrowthDay[]): RhythmShape {
     run = 0;
   };
 
+  /* A gap is broken by *any* day that had work on it, not only one that
+     earned XP. Focus sessions earn none — see utils/activeDay — so counting
+     XP here told somebody who sat down every day of a fortnight and logged it
+     that they had taken a fourteen-day break, and then priced a
+     "fill the three-day gaps" recommendation off the fiction. */
   days.forEach((day) => {
-    if (num(day.xp_earned) > 0) {
+    if (isActiveDay(day)) {
       close(day.date);
       return;
     }
@@ -314,7 +320,9 @@ export function momentum(days: GrowthDay[], window = 90): Momentum[] {
     build('Focus hours', (day) => num(day.focus_minutes) / 60, (v) => `${Math.round(v)}h`),
     build(
       'Days worked',
-      (day) => (num(day.xp_earned) > 0 ? 1 : 0),
+      // The row is called "Days worked", so it counts days worked — all three
+      // ways of doing it. See utils/activeDay.
+      (day) => (isActiveDay(day) ? 1 : 0),
       (v) => `${Math.round(v)}`,
     ),
   ];

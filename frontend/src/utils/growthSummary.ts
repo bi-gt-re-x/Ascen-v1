@@ -26,6 +26,7 @@
  *   window is the same length as the current one or there is no percentage to
  *   quote.
  */
+import { isActiveDay } from './activeDay';
 import type { GrowthDay } from '@/types';
 
 // --------------------------------------------------------------------------
@@ -709,7 +710,7 @@ export function longTermProgress(
   days.forEach((day, index) => {
     const at = new Date(`${day.date}T00:00:00`);
     tasks += Number(day.tasks_completed) || 0;
-    if ((Number(day.xp_earned) || 0) > 0) activeDays += 1;
+    if (isActiveDay(day)) activeDays += 1;
 
     // The last day of a bucket, and always the last day there is — a window
     // that does not divide evenly ends on a short bucket rather than losing it.

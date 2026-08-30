@@ -14,6 +14,12 @@
  * on them. Calendar age is still computed, as `spanDays`, because "you have
  * been here five weeks" is worth saying — but it is context, never a gate.
  *
+ * A day is active when **any one** of three things happened on it: a task was
+ * finished, a focus session was logged, or any XP was earned. One of them, of
+ * any size. That definition is utils/activeDay's, shared with every other
+ * count of "days worked" in the app so the gates and the consistency figures
+ * beside them cannot describe the same Tuesday differently.
+ *
  * ## Stages, and why they are floors rather than ranges
  *
  * Five, and a stage is simply the highest floor an account has reached. That
@@ -50,7 +56,14 @@
  * None of those numbers were chosen for this feature; they were in the
  * codebase and were being read against the wrong denominator.
  */
+import { countActiveDays, isActiveDay } from './activeDay';
 import type { GrowthDay } from '@/types';
+
+/* Re-exported because this module is where the concept was first written down
+   and half the app still reaches for it here. The definition itself moved to
+   utils/activeDay when it turned out four other modules were each counting
+   "days worked" their own way — see the header there. */
+export { isActiveDay };
 
 /**
  * The five stages, and the active-day count each one starts at.
@@ -60,6 +73,11 @@ import type { GrowthDay } from '@/types';
  * deliberately the same figures a reader would have been told, because the
  * promise "a week of use" is a promise about their effort, not about the
  * Earth's rotation.
+ *
+ * So `full` at 30 means thirty days that had work on them, however long those
+ * thirty took: thirty days on the trot, or thirty across four months. A day
+ * counts on one finished task, one logged focus session, or any XP at all —
+ * see utils/activeDay, which is the only place that decides.
  */
 export const STAGE_FLOOR = {
   new: 0,
@@ -147,23 +165,6 @@ export interface Maturity {
   lastActive: string | null;
 }
 
-/**
- * Whether a day counts.
- *
- * Any of the three, because they are three ways of doing the same thing and an
- * account that logs focus without finishing tasks is still telling us about
- * itself. `rated_tasks` is deliberately *not* here: the rating prompt is
- * optional, so requiring it would make a gate out of a question the reader is
- * allowed to ignore.
- */
-export function isActiveDay(day: GrowthDay): boolean {
-  return (
-    (Number(day.tasks_completed) || 0) > 0 ||
-    (Number(day.focus_minutes) || 0) > 0 ||
-    (Number(day.xp_earned) || 0) > 0
-  );
-}
-
 /** The highest floor `activeDays` has reached. */
 export function stageFor(activeDays: number): Stage {
   for (let index = STAGES.length - 1; index >= 0; index -= 1) {
@@ -183,7 +184,7 @@ function daysBetween(from: string, to: string): number {
 
 export function dataMaturity(days: GrowthDay[]): Maturity {
   const active = days.filter(isActiveDay);
-  const activeDays = active.length;
+  const activeDays = countActiveDays(days);
   const stage = stageFor(activeDays);
 
   const at = STAGES.indexOf(stage);

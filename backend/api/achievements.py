@@ -402,6 +402,19 @@ def _figures(username, user):
         if day:
             xp_per_day[day] = xp_per_day.get(day, 0) + float(event.get('amount') or 0)
 
+    # Days with work on them, for the "Do work on N separate days" badges. Any
+    # one of the three counts: a finished task, a logged focus session, or any
+    # XP. `per_day` alone is finished tasks, which quietly told somebody whose
+    # habit is the focus timer that they had never worked a day — see
+    # frontend/src/utils/activeDay.ts, which is the same rule on the client and
+    # is what the analytics gates read.
+    worked_days = set(per_day)
+    worked_days |= {day for day, amount in xp_per_day.items() if amount > 0}
+    worked_days |= {
+        str(row.get('date') or '')[:10] for row in focus_rows
+        if float(row.get('seconds') or 0) > 0 and row.get('date')
+    }
+
     return {
         'tasks': int(user.get('tasks_completed') or 0),
         'priority': priority,
@@ -416,7 +429,7 @@ def _figures(username, user):
         # happened, and reading `current_streak` would un-earn it every time a
         # day was missed.
         'streak': int(user.get('best_streak') or 0),
-        'active_days': len(per_day),
+        'active_days': len(worked_days),
         'perfect_days': perfect,
         'early': early,
         'weekend': weekend,

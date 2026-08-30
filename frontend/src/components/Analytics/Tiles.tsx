@@ -72,7 +72,9 @@ export function Tiles({
       delta: figures.consistency.delta,
       series: sparks.consistency,
       tone: 'amber',
-      hint: 'Share of days with any work on them. This measures showing up.',
+      hint:
+        'Share of days you finished a task, logged a focus session, or earned any XP. '
+        + 'This measures showing up.',
     },
     {
       key: 'quality',

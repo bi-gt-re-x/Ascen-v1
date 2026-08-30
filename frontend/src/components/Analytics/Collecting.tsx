@@ -26,7 +26,29 @@
  */
 import { Link } from 'react-router-dom';
 import { StatRow, type Stat } from './StatRow';
+import { ACTIVE_DAY_MEANS } from '@/utils/activeDay';
 import { STAGE_LABEL, type Maturity } from '@/utils/dataMaturity';
+
+/**
+ * What a day has to have on it to be counted.
+ *
+ * Every countdown on this page is in days *worked*, never days on the
+ * calendar, and a reader watching a number go up is owed the rule behind it —
+ * otherwise "4 more days" reads as a wait of four days, and somebody who
+ * skips two of them thinks the page has stalled. It appears wherever a
+ * countdown does, which is here, in the strip below, and in `Locked`.
+ *
+ * The words come from utils/activeDay, beside the predicate that enforces
+ * them, so the sentence on screen cannot drift from the rule behind it.
+ */
+export function ActiveDayNote() {
+  return (
+    <p className="ax-active-note">
+      A day counts as soon as you {ACTIVE_DAY_MEANS} — any one of the three, however small. Days
+      you do none of them are not counted against you; they are simply not counted.
+    </p>
+  );
+}
 
 export interface CollectingProps {
   maturity: Maturity;
@@ -124,6 +146,7 @@ export function LearningStrip({ items }: { items: LearningItem[] }) {
           );
         })}
       </ul>
+      <ActiveDayNote />
     </section>
   );
 }
@@ -174,6 +197,7 @@ export function Collecting({ maturity, stats, nextBrings }: CollectingProps) {
               </strong>{' '}
               and {nextBrings}
             </p>
+            <ActiveDayNote />
           </div>
         )}
       </header>

@@ -46,6 +46,7 @@
  * rule with the thresholds relaxed until something fired.
  */
 import type { GrowthDay, Task } from '@/types';
+import { isActiveDay } from './activeDay';
 import { RECENT_FLOOR, mean, pctChange } from './recent';
 
 /** Fewest finished tasks in a window before a per-task mean is worth taking. */
@@ -120,7 +121,7 @@ export function vitals(days: GrowthDay[], tasks: Task[]): Vitals {
   const from = days[0]?.date ?? '';
   const to = days[days.length - 1]?.date ?? '';
 
-  const active = days.filter((day) => num(day.xp_earned) > 0 || num(day.tasks_completed) > 0);
+  const active = days.filter(isActiveDay);
   const activeDays = active.length;
 
   /* The longest silence in the window. Counted over every day rather than the
@@ -129,7 +130,7 @@ export function vitals(days: GrowthDay[], tasks: Task[]): Vitals {
   let longestGap = 0;
   let run = 0;
   days.forEach((day) => {
-    if (num(day.xp_earned) > 0 || num(day.tasks_completed) > 0) {
+    if (isActiveDay(day)) {
       run = 0;
     } else {
       run += 1;

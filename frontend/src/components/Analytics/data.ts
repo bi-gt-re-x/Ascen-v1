@@ -17,6 +17,7 @@ import {
   compact,
   type RangeSlice,
 } from '@/utils/growthSummary';
+import { activeRate, isActiveDay } from '@/utils/activeDay';
 import type { GrowthDay } from '@/types';
 
 // --------------------------------------------------------------------------
@@ -238,7 +239,9 @@ export const METRICS: MetricOption[] = [
     // — the grain picker is right there, and weekly is where it becomes a line.
     key: 'consistency',
     label: 'Consistency',
-    read: (day) => (num(day.xp_earned) > 0 ? 100 : 0),
+    /* The same test the tile and the panel use, so the chart of consistency
+       and the figure above it cannot describe different days. */
+    read: (day) => (isActiveDay(day) ? 100 : 0),
     cumulative: false,
     format: (value) => `${Math.round(value)}% of days`,
     axis: (value) => `${Math.round(value)}%`,
@@ -391,7 +394,7 @@ export function bucketed(
 // Consistency
 // --------------------------------------------------------------------------
 export interface Consistency {
-  /** Share of the window's days with any XP on them, 0-100. */
+  /** Share of the window's days that had work on them, 0-100. */
   rate: number;
   /** The same for the period before, or null when there is none. */
   previousRate: number | null;
@@ -399,11 +402,9 @@ export interface Consistency {
   bestMonth: { label: string; rate: number } | null;
 }
 
-function activeRate(days: GrowthDay[]): number {
-  if (days.length === 0) return 0;
-  const active = days.filter((day) => num(day.xp_earned) > 0).length;
-  return (active / days.length) * 100;
-}
+/* Was `xp_earned > 0` here, which is a narrower thing than the same figure
+   meant three files away. See utils/activeDay: a focus session earns no XP, so
+   this panel and the gates on the page were counting different Tuesdays. */
 
 /**
  * How much of the window was worked, and which calendar month was worked most.

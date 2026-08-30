@@ -7,7 +7,8 @@ and the focus history.
 
     productivity   XP earned per day since the account was made
     quality        how well the work was done, times how hard it was
-    consistency    share of days the user showed up at all
+    consistency    share of days the user showed up at all — a finished task,
+                   a logged focus session, or any XP earned
     efficiency     half deadlines met, half how fast tasks were finished
     focus          tracked focus time against the daily focus goal
 
@@ -244,18 +245,46 @@ def ratings(username, record=True):
         parsed = xp_tracking.parse_day(day_iso)
         return parsed is not None and window_start <= parsed <= today
 
-    # --- XP earned + distinct active days in the window, from the ledger ---
+    # --- XP earned + distinct earning days in the window, from the ledger ---
     events = xp_tracking.events_for(username)
     total_xp = 0
-    active_day_set = set()
+    earning_day_set = set()
     for event in events:
         day = xp_tracking.event_day(event)
         if not within(day):
             continue
         total_xp += event.get('amount', 0) or 0
         if day:
-            active_day_set.add(day)
-    active_days = min(len(active_day_set), total_days)
+            earning_day_set.add(day)
+    earning_days = min(len(earning_day_set), total_days)
+
+    # --- Days worked, which is a wider thing than days that earned ---
+    #
+    # A focus session earns no XP — there is no ledger event behind a timer —
+    # so somebody who sat down for two hours and logged it, without ticking a
+    # task off, had a day the ledger cannot see. Consistency asks whether they
+    # showed up, and they did.
+    #
+    # Two sets rather than one, because the two figures below are answering
+    # different questions and sharing a denominator made one of them wrong.
+    # `earning_days` divides the XP, so it has to be the days that produced
+    # XP — averaging a total over days that contributed nothing to it is not an
+    # average of anything. `worked_days` counts turning up, and every way of
+    # turning up counts. Same definition as `isActiveDay` in
+    # frontend/src/utils/activeDay.ts, which is what the gates on the analytics
+    # page read; the two are deliberately in step so the page cannot grade a
+    # Tuesday the client counted.
+    worked_day_set = set(earning_day_set)
+    for day, record in focus_tracking.history_for(username).items():
+        if within(day) and (record.get('seconds') or 0) > 0:
+            worked_day_set.add(day)
+    for finished in db.tasks_for(username):
+        if finished.get('status') != 'done':
+            continue
+        day = str(finished.get('completed_at') or '')[:10]
+        if within(day):
+            worked_day_set.add(day)
+    active_days = min(len(worked_day_set), total_days)
 
     # --- Tasks finished in the window: difficulty + efficiency inputs ---
     done = [t for t in db.tasks_for(username)
@@ -263,11 +292,13 @@ def ratings(username, record=True):
     total_tasks = len(done)
     total_task_xp = sum(t.get('xp_value', 0) or 0 for t in done)
 
-    # Per day *worked*, not per day on the calendar. Turning up is what
+    # Per day that *earned*, not per day on the calendar. Turning up is what
     # consistency measures, and scoring the same absence twice is why a
     # five-day-a-week account was marked down for its weekends in two metrics
-    # at once. This is "how much do you get done when you work".
-    avg_daily_xp = (total_xp / active_days) if active_days else 0
+    # at once. This is "how much do you get done when you work", so the divisor
+    # is the days that produced the XP rather than every day worked — see the
+    # note on the two sets above.
+    avg_daily_xp = (total_xp / earning_days) if earning_days else 0
     avg_task_xp = (total_task_xp / total_tasks) if total_tasks else 0
 
     # 1. Productivity — a day's work against the day's goal the account set
@@ -292,7 +323,9 @@ def ratings(username, record=True):
         quality_score = round(_clamp((rated['avg_quality'] ** 0.5) / 5 * 100))
     else:
         quality_score = round(_clamp(avg_task_xp * 1.75))
-    # 3. Consistency — share of the window's days the account showed up on.
+    # 3. Consistency — share of the window's days the account showed up on, on
+    #    any of the three counts: a finished task, a logged focus session, or
+    #    any XP at all.
     consistency_rate = (active_days / total_days) * 100
     consistency_score = round(_clamp(consistency_rate))
 
@@ -362,19 +395,29 @@ def ratings(username, record=True):
     overall_score = round(_clamp(sum(parts.values()) / len(parts)))
 
     # --- Week-over-week momentum, for the hero and every card ---
+    def in_window(day_iso, lo_days, hi_days):
+        parsed = xp_tracking.parse_day(day_iso)
+        return parsed is not None and lo_days <= (today - parsed).days <= hi_days
+
     def window_stats(lo_days, hi_days):
-        """XP, task count and distinct active days from events in a window."""
+        """XP, task count and days worked in a window.
+
+        `active_days` counts the same three things the metric it is the trend
+        of counts — a finished task, a logged focus session, or any XP. It was
+        the ledger's days alone, which made the consistency card's arrow the
+        derivative of a different figure than the one printed above it.
+        """
         xp = 0
         tasks = 0
         days = set()
         for event in events:
             day = xp_tracking.event_day(event)
-            parsed = xp_tracking.parse_day(day)
-            if parsed is None:
-                continue
-            if lo_days <= (today - parsed).days <= hi_days:
+            if in_window(day, lo_days, hi_days):
                 xp += event.get('amount', 0) or 0
                 tasks += event.get('tasks_completed', 1) or 0
+                days.add(day)
+        for day in worked_day_set:
+            if in_window(day, lo_days, hi_days):
                 days.add(day)
         return {'xp': xp, 'tasks': tasks, 'active_days': len(days)}
 

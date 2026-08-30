@@ -25,6 +25,7 @@
  * against.
  */
 import type { GrowthDay, Task } from '@/types';
+import { activeRate } from './activeDay';
 import type { BalanceShape, ClockShape, RhythmShape, WeekShape } from './behaviour';
 import { hourLabel } from './behaviour';
 
@@ -153,6 +154,11 @@ export function whyFindings(days: GrowthDay[], window = 30): Finding[] {
   const before = days.slice(-window * 2, -window);
   if (now.length < 7 || before.length !== now.length) return out;
 
+  /* Days that *earned*, not days worked — narrower than `isActiveDay` on
+     purpose. The finding below states an identity: a period's total is working
+     days times XP on a working day. That only holds if the days counted are
+     the ones the XP came from, so a focus-only day does not belong in this
+     particular denominator. See utils/activeDay. */
   const activeOf = (rows: GrowthDay[]) => rows.filter((day) => num(day.xp_earned) > 0);
   const sum = (rows: GrowthDay[]) => rows.reduce((total, day) => total + num(day.xp_earned), 0);
 
@@ -260,6 +266,9 @@ export function howFindings(
   const out: Finding[] = [];
 
   // ---- how long a productive sitting runs --------------------------------
+  /* Both, and an `&&` rather than the usual `||`: this finding correlates one
+     against the other, so a day missing either has no point to plot. Not the
+     shared "day worked" test — see utils/activeDay. */
   const focusDays = days.filter((day) => num(day.focus_minutes) > 0 && num(day.xp_earned) > 0);
   if (focusDays.length >= 12) {
     const sorted = [...focusDays].sort((a, b) => num(a.focus_minutes) - num(b.focus_minutes));
@@ -433,8 +442,7 @@ export function whatsWorking(
       'blue',
     );
 
-    const rate = (rows: GrowthDay[]) =>
-      (rows.filter((day) => num(day.xp_earned) > 0).length / rows.length) * 100;
+    const rate = activeRate;
     const nowRate = rate(now);
     const wasRate = rate(before);
     if (nowRate - wasRate >= 4) {
@@ -524,6 +532,9 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
     });
   };
 
+  /* Days that earned, because XP is an axis on every chart below and a day
+     with none of it is a point at zero rather than a point. Narrower than
+     `isActiveDay` on purpose; see utils/activeDay. */
   const active = days.filter((day) => num(day.xp_earned) > 0);
 
   add(
@@ -643,8 +654,7 @@ export function currentState(
 ): CurrentState {
   const now = days.slice(-window);
   const before = days.slice(-window * 2, -window);
-  const rate = (rows: GrowthDay[]) =>
-    rows.length ? (rows.filter((day) => num(day.xp_earned) > 0).length / rows.length) * 100 : 0;
+  const rate = activeRate;
 
   const nowRate = rate(now);
   const wasRate = rate(before);

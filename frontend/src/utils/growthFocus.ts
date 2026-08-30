@@ -41,6 +41,7 @@
  * hour is stated on the card rather than passed off as the reader's own target.
  */
 import type { GrowthDay, Task } from '@/types';
+import { activeRate, countActiveDays } from './activeDay';
 import { gradeFor as letterFor } from './analyticalScore';
 import type { Subject } from '@/services/subjects';
 
@@ -692,11 +693,10 @@ export const COMPARE_BACK_DAYS = 90;
 /** The reference focus day the focus score is measured against. */
 export const FOCUS_REFERENCE_MINUTES = 60;
 
-/** Days with any XP, over days — the plainest consistency there is. */
+/** Days worked, over days — the plainest consistency there is. */
 function consistencyScore(window: GrowthDay[]): number | null {
   if (window.length === 0) return null;
-  const active = window.filter((day) => num(day.xp_earned) > 0).length;
-  return Math.round((active / window.length) * 100);
+  return Math.round(activeRate(window));
 }
 
 /** Average focus minutes a day, against the stated reference hour. */
@@ -784,7 +784,9 @@ export function scoreCards(all: GrowthDay[], tasks: Task[], days = 30): ScoreCar
     };
   };
 
-  const active = now.filter((day) => num(day.xp_earned) > 0).length;
+  // Printed as "N of M days had work on them" a few lines down, so it counts
+  // what that sentence says it counts. See utils/activeDay.
+  const active = countActiveDays(now);
   let planned = 0;
   let met = 0;
   now.forEach((day) => {

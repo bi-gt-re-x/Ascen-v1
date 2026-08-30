@@ -25,6 +25,7 @@
  * ones it cannot see and points at the one place they can be tracked, which is
  * a goal with a number on it.
  */
+import { countActiveDays } from './activeDay';
 import type { Goal, GrowthDay, Task } from '@/types';
 import { goalNumbers } from '@/components/Goals/numbers';
 
@@ -192,7 +193,12 @@ export function benchCategories(all: GrowthDay[], tasks: Task[], streak: number)
     };
   };
 
-  const activeDays = (days: GrowthDay[]) => days.filter((day) => xp(day) > 0).length;
+  /* `countActiveDays` rather than a local "had XP" test: a focus session earns
+     none, and the row this feeds is labelled "days worked". See
+     utils/activeDay. The streak below stays on XP — it is the backend's own
+     streak rule mirrored, and changing that here would put two different
+     streaks on one page. */
+  const activeDays = countActiveDays;
   const bestStreak = (() => {
     let best = 0;
     let run = 0;
@@ -411,6 +417,11 @@ export function personalRecords(all: GrowthDay[], tasks: Task[], streak: number)
     return { value, on };
   };
 
+  /* XP, not `isActiveDay`, and that is on purpose in both streak loops here:
+     this mirrors the backend's own streak rule (`refresh_streak` in
+     backend/tracking/xp.py), and a streak computed one way on this row and
+     another way on the dashboard would be two streaks on one account. See
+     utils/activeDay for the wider definition every "days worked" figure uses. */
   let best = 0;
   let run = 0;
   all.forEach((day) => {

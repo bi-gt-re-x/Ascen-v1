@@ -32,6 +32,7 @@
  * `unit` is the field; `cadence` is the word for a reader.
  */
 import type { GrowthDay, Task } from '@/types';
+import { countActiveDays } from './activeDay';
 
 const num = (value: unknown) => Number(value) || 0;
 
@@ -812,7 +813,7 @@ export interface HabitSummary {
 }
 
 export function habitSummary(habits: Habit[], days: GrowthDay[]): HabitSummary {
-  const worked = days.filter((day) => num(day.xp_earned) > 0 || num(day.focus_minutes) > 0).length;
+  const worked = countActiveDays(days);
   const declining = habits
     .filter((habit) => habit.trend !== null && habit.trend < 0)
     .sort((a, b) => (a.trend ?? 0) - (b.trend ?? 0));

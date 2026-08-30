@@ -25,6 +25,7 @@
  *   plainly rather than dressed as a wait: an account with an even week and no
  *   gaps has nothing to fix on those counts, and deserves to hear it.
  */
+import { ActiveDayNote } from './Collecting';
 import type { ReactNode } from 'react';
 
 export interface LockedProps {
@@ -108,6 +109,10 @@ export function Locked({
         <p className="ax-locked-count">
           {have} / {need} days with work on them
         </p>
+        {/* What "with work on them" means, spelled out. The count above is the
+            only number on this screen and a reader has no way to check it
+            against their own week without the rule. See ./Collecting. */}
+        <ActiveDayNote />
 
         {brings.length > 0 && (
           <ul className="ax-locked-list">
