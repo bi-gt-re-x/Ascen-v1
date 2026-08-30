@@ -38,6 +38,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Ambient } from '@/components';
 import {
+  Analytics,
   AuthModal,
   CalendarDemo,
   DashboardDemo,
@@ -263,6 +264,20 @@ export default function Homepage() {
               blurb="Break large goals into achievable steps. Every completed task earns XP toward your next level."
             />
             <StreakLevel />
+          </section>
+
+          {/* The end of the feature tour, and the only section about the app
+              thinking rather than about the reader working. It comes last of
+              the seven because it is the one that needs the other six to have
+              happened: a score made of productivity, consistency and focus
+              means nothing to someone who has not yet been shown the tasks,
+              the streak and the calendar those are measured from. */}
+          <section className="lp-section">
+            <SectionHead
+              title="Analytics that do the thinking"
+              blurb="Five measures become one Growth Score, and the score becomes a ranked list of what to change next. Every figure shows the arithmetic it came from."
+            />
+            <Analytics />
           </section>
 
           <Philosophy />

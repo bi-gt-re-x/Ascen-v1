@@ -975,6 +975,45 @@ html[data-theme="dark"] .lp-final::before {
 }
 
 /* ============================================================
+   Analytics — the bars fill and the tab strip lights up
+   ============================================================
+   The armed/unarmed shape the demos use: the plain rules below are the
+   *finished* panel, and `.ax-armed` is the only thing that empties it. The
+   markup ships with that class on (as the task and dashboard demos do) so the
+   panel cannot flash filled before it is armed; components/Home/Analytics.tsx
+   takes it off a paint later, and puts it back when the panel scrolls away.
+
+   Writing the start state as the override rather than the default is what makes
+   the reduced-motion block at the foot of this file a short one: it re-states
+   the finished values under `.ax-armed` and nothing has to be re-derived.
+
+   `--ax-to` is each bar's real width, written onto the element by
+   components/Home/Analytics.tsx along with the delay that staggers it. Width is
+   the transitioned property rather than a transform because these bars sit in a
+   `overflow: hidden` track with rounded ends: scaleX would stretch the rounding
+   and slide the gradient, and the gradient is the point. Five short bars is not
+   a case where the layout cost is worth the pixel-perfect argument. */
+.lp-ax-track i {
+    width: var(--ax-to, 0%);
+    transition: width 1100ms var(--hm-ease);
+}
+.ax-armed .lp-ax-track i { width: 0; }
+
+/* The values and the score are counted, not transitioned — but they must not
+   sit at their finished figure for the frame before the count starts. */
+.lp-ax-val { transition: opacity 420ms var(--hm-ease); }
+.ax-armed .lp-ax-val { opacity: 0; }
+
+/* The strip stays dark until the numbers have settled; .ax-lit releases it and
+   the per-chip delay walks it left to right. */
+.lp-ax-tab {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 380ms var(--hm-ease), transform 380ms var(--hm-ease);
+}
+.lp-ax.ax-lit .lp-ax-tab { opacity: 1; transform: none; }
+
+/* ============================================================
    Less motion, please
    ============================================================
    Nothing drifts, nothing draws, nothing waits its turn. The curtain is not
@@ -1011,6 +1050,13 @@ html[data-theme="dark"] .lp-final::before {
     .td-armed .td-task { opacity: 1; transform: none; }
     .cal-armed .lp-ev { opacity: 1; transform: none; }
     .td-task, .td-box, .td-box svg, .td-xp-bar i, .lp-ev, .lp-cal-body { transition: none; }
+
+    /* Analytics: bars at their widths, values and tabs shown, nothing staged.
+       The component's `still` puts the score straight at its figure. */
+    .ax-armed .lp-ax-track i { width: var(--ax-to, 0%); }
+    .ax-armed .lp-ax-val { opacity: 1; }
+    .lp-ax .lp-ax-tab { opacity: 1; transform: none; }
+    .lp-ax-track i, .lp-ax-val, .lp-ax-tab { transition: none; }
 
     /* Charts, gauge, streak and timeline: drawn, filled and counted already. */
     .sk-flames span,

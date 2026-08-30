@@ -692,8 +692,34 @@ html[data-theme="dark"] .lp-trend.up { color: #4ade80; }
 .lp-chip { font-size: .74rem; color: var(--lp-muted); background: var(--lp-surface-2); border: 1px solid var(--lp-border); border-radius: 999px; padding: 4px 10px; }
 .lp-chip b { color: var(--lp-heading); }
 
+/* ---- Analytics: the score, its five factors, and the tab strip ---- */
+/* The mirror of .lp-perf — score card narrow, the thing it is made of wide —
+   so the two analysis sections read as a pair rather than as two layouts.
+   Everything that moves in here is in styles/home-motion.css under .ax-armed. */
+.lp-ax { display: grid; grid-template-columns: 1fr 1.35fr; gap: 18px; align-items: stretch; }
+.lp-ax-score { display: flex; flex-direction: column; }
+.lp-ax-num { display: flex; align-items: baseline; gap: 3px; color: var(--lp-heading); font-size: 3.1rem; font-weight: 800; line-height: 1; margin: 10px 0 8px; letter-spacing: -.03em; }
+/* The number is its own element because countThrough rewrites textContent, and
+   a "/10" living inside it would be rewritten away on the first frame. */
+.lp-ax-num em { font-style: normal; font-variant-numeric: tabular-nums; }
+.lp-ax-num small { font-size: .3em; font-weight: 700; color: var(--lp-muted); }
+
+.lp-ax-factors { display: flex; flex-direction: column; }
+.lp-ax-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 13px; flex: 1; justify-content: center; }
+.lp-ax-row { display: grid; grid-template-columns: 92px 1fr 28px; align-items: center; gap: 12px; }
+.lp-ax-name { color: var(--lp-muted); font-size: .82rem; font-weight: 600; }
+.lp-ax-track { height: 8px; border-radius: 999px; background: var(--lp-surface-2); border: 1px solid var(--lp-border); overflow: hidden; }
+.lp-ax-track i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--lp-accent), var(--lp-accent-2)); }
+.lp-ax-val { color: var(--lp-heading); font-size: .82rem; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* The seven tabs, as the analytics page's own bar orders them. */
+.lp-ax-tabs { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: auto 0 0; padding: 14px 0 0; }
+.lp-ax-tab { font-size: .72rem; font-weight: 600; color: var(--lp-muted); background: var(--lp-surface-2); border: 1px solid var(--lp-border); border-radius: 999px; padding: 4px 10px; }
+.lp-ax-tab.is-lead { color: #fff; background: var(--lp-accent); border-color: var(--lp-accent); }
+
 @media (max-width: 900px) {
     .lp-perf { grid-template-columns: 1fr; }
+    .lp-ax { grid-template-columns: 1fr; }
     .lp-cal-legend { display: none; }
 }
 @media (max-width: 560px) {
