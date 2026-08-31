@@ -65,11 +65,11 @@ export function Hero({
           </span>
         </span>
         <h1 className="lp-hero-title">
-          Ascen: The <em>“Only”</em> App for Unstoppable Growth and Productivity
+          Ascen turns finished work into <em>numbers you can check</em>
         </h1>
         <p className="lp-hero-sub hm-rise">
-          Master every hour. Crush every goal. Ascen turns your study sessions into
-          measurable momentum — tasks, streaks, growth analytics and goals in one place.
+          Plan the work, finish it, and see where it went: tasks and a calendar,
+          streaks and XP, and a growth score you can add up yourself.
         </p>
         {/* Every call to action on this page is a pitch to a visitor who has no
             account yet. Someone already signed in has nothing left to be sold,
@@ -86,7 +86,7 @@ export function Hero({
               className="lp-btn lp-btn-primary"
               onClick={onGetStarted}
             >
-              Claim Your Productivity Breakthrough <span className="lp-chevd">▾</span>
+              Create a free account <span className="lp-chevd">▾</span>
             </button>
           )}
           <Link to="/calendar" className="lp-btn lp-btn-ghost" id="calendarBtn">
@@ -304,32 +304,52 @@ export function TaskStats() {
           </span>
         </div>
       </div>
+      {/* Three things a task actually has, rather than three things a task
+          manager is generally said to have.
+
+          The middle one used to be "Sub-tasks — break big tasks into smaller
+          checkable steps", and a `Task` has never had any. Steps belong to a
+          milestone under a goal, and types/models.ts is explicit that a step
+          has no XP, no due date, no timer and no priority and "never reaches
+          the tasks page". So this was not soft copy, it was a feature the page
+          was inventing, in the one section devoted to the thing it was
+          inventing it about. Subjects are what actually sits in that slot: a
+          real field on a task, and the one the analytics breakdown is built
+          from.
+
+          "Reminders" went the same way for a smaller reason — nothing here
+          reminds anybody of anything. There are due dates, and there is a
+          timer, and what the timer does when it runs out is worth a sentence
+          of its own. */}
       <ul className="lp-list">
         <li>
           <span className="lp-list-ico">⭐</span>
           <div>
-            <h4>Prioritization</h4>
+            <h4>Priority</h4>
             <p>
-              Flag high-priority tasks so the most important work rises to the top and never
-              slips through.
+              Low, medium or high. The list sorts by it, so what you flagged stays at the
+              top until it is done.
             </p>
           </div>
         </li>
         <li>
-          <span className="lp-list-ico">✅</span>
+          <span className="lp-list-ico">🗂</span>
           <div>
-            <h4>Sub-tasks</h4>
+            <h4>Subjects</h4>
             <p>
-              Break big tasks into smaller checkable steps and watch each one add to your
-              momentum.
+              File a task under a subject and the XP it earns is tallied there. That tally is
+              the per-subject breakdown on the analytics page.
             </p>
           </div>
         </li>
         <li>
-          <span className="lp-list-ico">🔔</span>
+          <span className="lp-list-ico">⏱</span>
           <div>
-            <h4>Reminders</h4>
-            <p>Due dates and timers keep you accountable and on schedule for every session.</p>
+            <h4>Due dates and timers</h4>
+            <p>
+              A date puts a task on a day in the calendar. A timer runs the session, and a
+              task whose timer runs out is marked expired rather than left open.
+            </p>
           </div>
         </li>
       </ul>
@@ -371,7 +391,7 @@ const PHILOSOPHY = [
     ico: 'lp-ico-purple',
     path: <path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z" />,
     title: 'Simplicity First',
-    body: 'No clutter. Just the few tools that actually move the needle.',
+    body: 'No clutter. The few tools that change what you do tomorrow, and nothing else.',
   },
 ];
 
@@ -602,7 +622,15 @@ export function Footer() {
           <Link to="/terms-of-service">Terms of Service</Link>
           <a href="/careers">Careers</a>
         </nav>
-        <div className="copyright">© 2032 Study Dashboard Inc. All rights reserved.</div>
+        {/* Was "© 2032 Study Dashboard Inc." — a year six ahead of this one,
+            under a company that does not exist and a product name this app
+            stopped using. The Terms page is the one that has to be right about
+            ownership and it says the name and software belong to the project's
+            authors, so this agrees with it. The year is computed, because a
+            hardcoded one is only ever correct for twelve months. */}
+        <div className="copyright">
+          © {new Date().getFullYear()} Ascen. All rights reserved.
+        </div>
       </div>
     </footer>
   );

@@ -233,8 +233,8 @@ export default function Homepage() {
 
           <section className="lp-section">
             <SectionHead
-              title="Deep Dive on Task Management"
-              blurb="Organize your study schedule with an intuitive task manager, set priorities, and track progress effortlessly."
+              title="One list, worked through"
+              blurb="Priorities, subjects and due dates on a single list. Check something off and the XP it earned lands on the bar."
             />
             {/* The workflow, played out: a task gets checked off, the list
                 closes over it, and the XP it earned lands on the bar. */}
@@ -244,8 +244,8 @@ export default function Homepage() {
 
           <section className="lp-section">
             <SectionHead
-              title="Performance Metrics"
-              blurb="See your growth and achievements — hours logged, completion rates, and daily XP visualized."
+              title="What the hours add up to"
+              blurb="Hours logged, completion rate and efficiency, by day or by week — counted from the days you worked, not the days that passed."
             />
             <Performance />
           </section>
@@ -253,15 +253,15 @@ export default function Homepage() {
           <section className="lp-section">
             <SectionHead
               title="A calendar that works with you"
-              blurb="Organize your study schedule with simple drag-and-drop. Tasks sync onto the day you plan them."
+              blurb="Drag a task onto a day and it is scheduled there. It is the same task either way — the calendar is a second view of your list, not a second copy of it."
             />
             <CalendarDemo />
           </section>
 
           <section className="lp-section">
             <SectionHead
-              title="Streak & Level System"
-              blurb="Break large goals into achievable steps. Every completed task earns XP toward your next level."
+              title="Showing up, counted"
+              blurb="Every finished task earns XP toward the next level. The streak counts consecutive days with at least one task done — miss a day and it goes back to zero."
             />
             <StreakLevel />
           </section>
