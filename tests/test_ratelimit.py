@@ -211,6 +211,15 @@ def test_the_ai_endpoint_is_limited(app):
     assert '/api/suggest_milestones' in limit.LIMITS
 
 
+def test_the_other_ai_endpoint_is_limited(app):
+    """Same money, and reached without anybody pressing a button.
+
+    A checkpoint drafts its own checklist as it is created, so this one is
+    spent by ordinary use rather than by a button somebody chose to press.
+    """
+    assert '/api/suggest_steps' in limit.LIMITS
+
+
 def test_signup_is_limited(app, anon):
     """Account creation is a write a stranger can do. It gets a budget."""
     policy = limit.LIMITS['/api/auth/signup']

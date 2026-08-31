@@ -17,9 +17,9 @@ session cookie is signed with a key that is no longer guessable, so the front
 door was the only way in and it was unlocked.
 
 Three other endpoints are here for a different reason. Sign-up creates rows,
-resend sends e-mail, and `/api/suggest_milestones` spends money at Anthropic —
-none of them is a way *in*, and all three are a way to make the app expensive
-or noisy for somebody else.
+resend sends e-mail, and `/api/suggest_milestones` and `/api/suggest_steps`
+spend money at Anthropic — none of them is a way *in*, and all of them are a
+way to make the app expensive or noisy for somebody else.
 
 ## Two keys, on purpose
 
@@ -99,6 +99,14 @@ LIMITS = {
     '/api/suggest_milestones': Policy(
         limit=20, seconds=3600,
         message='Too many suggestions for now. Try again in a little while.'),
+    # The same money, and now spent without anybody pressing anything: a
+    # checkpoint drafts its checklist as it is created, so this is reached by
+    # ordinary use rather than by a button. Higher than the ladder's limit
+    # because there are five checkpoints under every goal and each one asks
+    # once — twenty would stop a single afternoon's planning.
+    '/api/suggest_steps': Policy(
+        limit=60, seconds=3600,
+        message='Too many checklists drafted for now. Try again in a little while.'),
 }
 
 #: The per-account budget for login, which is looser than the per-IP one — see

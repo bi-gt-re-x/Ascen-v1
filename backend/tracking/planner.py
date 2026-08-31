@@ -76,6 +76,15 @@ ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL') or 'claude-opus-5'
 # JSON parse rejects.
 ANTHROPIC_MAX_TOKENS = 16000
 
+# Sent as `anthropic-workspace-id` when set.
+#
+# An identity-linked key belongs to a person rather than to a workspace, and
+# the API refuses it with a 400 saying so until the request names the
+# workspace it acts in. A key that is not identity-linked does not need this
+# and is not sent it — an empty value here means the header is omitted
+# entirely rather than sent blank, which is its own 400.
+ANTHROPIC_WORKSPACE_ID = os.environ.get('ANTHROPIC_WORKSPACE_ID') or ''
+
 # ---------------------------------------------------------------------------
 # Hugging Face
 # ---------------------------------------------------------------------------
@@ -143,6 +152,56 @@ Answer with JSON and nothing else — no explanation, no markdown fence:
 {"milestones": ["first", "second", "third", "fourth", "fifth"]}
 """
 
+# ---------------------------------------------------------------------------
+# The second job: one checkpoint's checklist
+# ---------------------------------------------------------------------------
+# What a checkpoint's checklist holds, and so what is asked for. Between
+# MIN_STEPS and MAX_STEPS in backend/api/goals.py, because the column is
+# padded up to the first and cut at the second — asking for a number outside
+# that range means asking for rows that will be silently added or dropped.
+STEP_COUNT = 5
+
+# The distinction the milestone prompt spends its words keeping apart is the
+# one this prompt spends its words inverting. A checkpoint is a state; a step
+# is the work that gets there, and here the actions are exactly what is
+# wanted. Said plainly, because a model that has been told "not an action"
+# about milestones will otherwise hedge toward states here too.
+SYSTEM_STEPS = """\
+You break one checkpoint of a long-term goal into the actions that reach it, \
+for a study-planning app.
+
+A step is an ACTION SOMEBODY DOES — a piece of work that can be sat down to \
+and finished. This is the opposite of the checkpoint above it, which is a \
+state being reached:
+
+  Checkpoint: "Solving Silver DP problems unassisted"
+  Step (right): "Work through the knapsack chapter"
+  Step (wrong): "Confident with knapsack problems"
+
+The second is a state. States are what checkpoints are; you are writing the \
+work underneath one.
+
+Rules for the set you return:
+- Exactly five, in the order they would be done.
+- Each is a single sitting or a small run of them, not a term's project.
+- Concrete to this checkpoint and its subject. "Practise more" says nothing.
+- Ten words or fewer each, starting with a verb.
+- Together they are enough that finishing all five reaches the checkpoint.
+"""
+
+STEPS_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'steps': {
+            'type': 'array',
+            'items': {'type': 'string'},
+            'description': 'The five steps, in the order they would be done.',
+        },
+    },
+    'required': ['steps'],
+    'additionalProperties': False,
+}
+
 
 class PlannerUnavailable(RuntimeError):
     """The model could not be reached, or was not configured.
@@ -201,9 +260,15 @@ NO_KEY = (
 # ---------------------------------------------------------------------------
 # The brief
 # ---------------------------------------------------------------------------
-def _ask(goal: str) -> str:
-    """The user turn. Everything the account has said about the goal."""
-    return ('Break this goal into its five checkpoints.\n\n' + goal)
+def _ask(goal: str, instruction: str = '') -> str:
+    """The user turn. Everything the account has said about the thing.
+
+    `instruction` is what to do with it, and it differs between the two jobs
+    this module does — five checkpoints for a goal, or a checklist for one
+    checkpoint. The brief underneath is built the same way for both.
+    """
+    lead = instruction or 'Break this goal into its five checkpoints.'
+    return (lead + '\n\n' + goal)
 
 
 def _brief(title: str, why: str = '', description: str = '',
@@ -248,7 +313,7 @@ def _strings(value) -> List[str]:
                              if isinstance(inner, str))
         return found
     if isinstance(value, dict):
-        for key in ('milestones', 'checkpoints', 'result', 'items'):
+        for key in ('milestones', 'checkpoints', 'steps', 'result', 'items'):
             if key in value:
                 return _strings(value[key])
         # A single-key object wrapping the list under a name we did not guess.
@@ -321,7 +386,8 @@ SCHEMA = {
 }
 
 
-def _from_anthropic(brief: str) -> str:
+def _from_anthropic(brief: str, system: str = None, schema: dict = None,
+                    instruction: str = '') -> str:
     try:
         import anthropic
     except ImportError as exc:  # pragma: no cover - dependency is in requirements
@@ -330,19 +396,35 @@ def _from_anthropic(brief: str) -> str:
             '.venv-fastapi/bin/python -m pip install -r requirements.txt'
         ) from exc
 
-    client = anthropic.Anthropic()
+    # The header is omitted rather than sent empty when there is no workspace
+    # to name: a blank one is refused the same way a missing one is.
+    client = anthropic.Anthropic(
+        default_headers=({'anthropic-workspace-id': ANTHROPIC_WORKSPACE_ID}
+                         if ANTHROPIC_WORKSPACE_ID else None))
     try:
         response = client.messages.create(
             model=ANTHROPIC_MODEL,
             max_tokens=ANTHROPIC_MAX_TOKENS,
-            system=SYSTEM,
+            system=system or SYSTEM,
             output_config={
                 'effort': 'medium',
-                'format': {'type': 'json_schema', 'schema': SCHEMA},
+                'format': {'type': 'json_schema', 'schema': schema or SCHEMA},
             },
-            messages=[{'role': 'user', 'content': _ask(brief)}],
+            messages=[{'role': 'user', 'content': _ask(brief, instruction)}],
         )
     except Exception as exc:  # noqa: BLE001 - every failure reads the same here
+        # One exception to "every failure reads the same": a key that belongs
+        # to a person rather than to a workspace is refused until the request
+        # names one, and the raw 400 for it is the API talking to a developer.
+        # This module's errors are shown on the goals page, so it says what to
+        # do instead of what happened.
+        if 'anthropic-workspace-id' in str(exc):
+            raise PlannerUnavailable(
+                'This Anthropic key is identity-linked, so it has to name the '
+                'workspace it acts in. Put the workspace id in '
+                'ANTHROPIC_WORKSPACE_ID in .env and restart the server — it '
+                'is in the Anthropic console URL when the workspace is open, '
+                'and on Settings → Workspaces.') from exc
         raise PlannerUnavailable(
             'Could not reach the model: {}'.format(exc)) from exc
 
@@ -351,13 +433,14 @@ def _from_anthropic(brief: str) -> str:
     # sentence on the page.
     if response.stop_reason == 'refusal':
         raise PlannerUnavailable(
-            'The model declined to plan this goal. Try rewording the title.')
+            'The model declined to plan this. Try rewording the title.')
 
     return next((block.text for block in response.content
                  if block.type == 'text'), '')
 
 
-def _from_huggingface(brief: str) -> str:
+def _from_huggingface(brief: str, system: str = None,
+                      instruction: str = '') -> str:
     try:
         import httpx
     except ImportError as exc:  # pragma: no cover - arrives with anthropic
@@ -371,8 +454,8 @@ def _from_huggingface(brief: str) -> str:
         'max_tokens': HF_MAX_TOKENS,
         'temperature': HF_TEMPERATURE,
         'messages': [
-            {'role': 'system', 'content': SYSTEM + JSON_RULE},
-            {'role': 'user', 'content': _ask(brief)},
+            {'role': 'system', 'content': (system or SYSTEM) + JSON_RULE},
+            {'role': 'user', 'content': _ask(brief, instruction)},
         ],
         # Honoured by some providers behind the router and ignored by the
         # rest, which is why `_titles` does not depend on it. Asking costs
@@ -448,3 +531,41 @@ def suggest_milestones(title, why='', description='', category='',
             'The model returned {} checkpoints instead of {}. Try again.'.format(
                 len(cleaned), COUNT))
     return cleaned[:COUNT]
+
+
+def suggest_steps(milestone, goal='', why='', description='', category='',
+                  unit='', target='') -> List[str]:
+    """Five steps for one checkpoint, in the order they would be done.
+
+    The goal is passed as well as the checkpoint because a checkpoint title is
+    six words and frequently meaningless alone: "Silver DP unassisted" is a
+    different checklist under "Reach USACO Gold" than it would be under a
+    goal about teaching. The model gets both and is asked about the one.
+
+    Raises `PlannerUnavailable` on everything the page should say out loud,
+    exactly as `suggest_milestones` does — a checklist that cannot be drafted
+    is a checkpoint with the blank rows it would have had anyway.
+    """
+    if not (milestone or '').strip():
+        raise PlannerUnavailable('A checkpoint needs a title before it can be broken down.')
+
+    using = provider()
+    if not using:
+        raise PlannerUnavailable(NO_KEY)
+
+    brief = _brief(goal or milestone, why, description, category, unit, target)
+    if goal.strip():
+        brief += '\n\nCheckpoint to break down: {}'.format(milestone.strip())
+    else:
+        brief = 'Checkpoint to break down: {}'.format(milestone.strip())
+    instruction = 'Break this checkpoint into the five steps that reach it.'
+
+    text = (_from_huggingface(brief, SYSTEM_STEPS, instruction) if using == 'huggingface'
+            else _from_anthropic(brief, SYSTEM_STEPS, STEPS_SCHEMA, instruction))
+
+    cleaned = [str(entry).strip() for entry in _titles(text) if str(entry).strip()]
+    if len(cleaned) < STEP_COUNT:
+        raise PlannerUnavailable(
+            'The model returned {} steps instead of {}. Try again.'.format(
+                len(cleaned), STEP_COUNT))
+    return cleaned[:STEP_COUNT]

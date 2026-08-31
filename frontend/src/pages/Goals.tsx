@@ -75,6 +75,7 @@ import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewGoal } from '@/services/goals';
 import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
 import type { TabId } from '@/components/Goals';
+import { fromTitles } from '@/utils/milestoneSteps';
 import '@/styles/goals.css';
 
 /** How often to re-read while a focus goal is running. */
@@ -103,6 +104,12 @@ export default function Goals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* The goal or checkpoint the model is currently drafting a plan under, so
+     the card it belongs to can say so. Its own flag rather than `busy`: a
+     model call runs for seconds and holding the page's busy flag for it would
+     disable every other goal's buttons while one of them thinks — the same
+     reason `suggestMilestones` below is not routed through `write`. */
+  const [planning, setPlanning] = useState<string | null>(null);
   /* The arrival cascade, which runs once — the shared one every page uses now.
      It has to stop: the bands remount when the tab changes, and a class still
      on the shell would replay the whole page every time somebody switched tab.
@@ -243,13 +250,43 @@ export default function Goals() {
   );
 
   // ---- Goal writes --------------------------------------------------------
+  /**
+   * Make the goal, then have the model fill in the plan under it.
+   *
+   * The two halves are deliberately not one `write`. The goal is saved and the
+   * wizard closes on the first, because a new goal appearing should not wait
+   * several seconds on a model call — and if the call fails, or there is no
+   * key configured, what is left behind is a perfectly ordinary goal with an
+   * empty ladder, which is what creating a goal did before this existed.
+   *
+   * The plan it writes is a draft like any other: the ladder's fields are
+   * editable and `saveMilestones` overwrites the lot. The model proposes; the
+   * account owns it — the rule the planner module has always stated.
+   */
   const createGoal = useCallback(
     async (draft: NewGoal) => {
       if (!username) return;
-      const ok = await write(() => goalService.addGoal(draft));
-      if (ok) setWizardOpen(false);
+      const created = await goalService.addGoal(draft);
+      if (!created.success) {
+        setError(created.message ?? 'That did not work.');
+        return;
+      }
+      setWizardOpen(false);
+      await load(true);
+
+      const goalId = created.id;
+      if (!goalId) return;
+      setPlanning(goalId);
+      try {
+        const drafted = await goalService.suggestMilestones({ goalId });
+        if (!drafted.success || !drafted.milestones?.length) return;
+        await goalService.setMilestones(goalId, drafted.milestones);
+        await load(true);
+      } finally {
+        setPlanning(null);
+      }
     },
-    [username, write],
+    [username, load],
   );
 
   const saveGoal = useCallback(
@@ -296,12 +333,39 @@ export default function Goals() {
   }, [username, pendingDelete, write]);
 
   // ---- Milestone writes ---------------------------------------------------
+  /**
+   * Add the checkpoint, then have the model draft its checklist.
+   *
+   * Same shape as `createGoal` above and for the same reasons: the checkpoint
+   * lands immediately, the checklist arrives after, and a failure anywhere in
+   * the second half leaves the three empty rows `add_milestone` seeds — which
+   * is exactly what a checkpoint used to be created with.
+   */
   const addMilestone = useCallback(
-    (goal: Goal, title: string) => {
+    async (goal: Goal, title: string) => {
       if (!username) return;
-      void write(() => goalService.addMilestone(goal.id, { title }));
+      const created = await goalService.addMilestone(goal.id, { title });
+      if (!created.success) {
+        setError(created.message ?? 'That did not work.');
+        return;
+      }
+      await load(true);
+
+      const milestoneId = created.id;
+      if (!milestoneId) return;
+      setPlanning(milestoneId);
+      try {
+        const drafted = await goalService.suggestSteps({ milestoneId });
+        if (!drafted.success || !drafted.steps?.length) return;
+        await goalService.updateMilestone(milestoneId, {
+          steps: fromTitles(drafted.steps),
+        });
+        await load(true);
+      } finally {
+        setPlanning(null);
+      }
     },
-    [username, write],
+    [username, load],
   );
 
   const setMilestoneStatus = useCallback(
@@ -540,6 +604,12 @@ export default function Goals() {
                       void linkTask(entry, task, milestoneId)
                     }
                     onSuggest={suggestMilestones}
+                    /* The goal itself, or any checkpoint under it: the ladder
+                       being drafted is the same ladder either way. */
+                    planning={
+                      planning === goal.id ||
+                      (goal.milestones ?? []).some((stone) => stone.id === planning)
+                    }
                     onSaveStones={saveMilestones}
                     onFocusMilestone={focusMilestone}
                     onMilestoneSteps={setMilestoneSteps}

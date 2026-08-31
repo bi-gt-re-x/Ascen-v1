@@ -97,6 +97,26 @@ export function normalise(steps: MilestoneStep[] | undefined | null): MilestoneS
   return out;
 }
 
+/**
+ * A checklist from a list of titles, which is what the model hands back.
+ *
+ * Through `normalise` like everything else here, so a model that returned six
+ * words of nothing on one row gets a placeholder rather than a written step
+ * that cannot be ticked, and a model that returned nine gets eight.
+ */
+export function fromTitles(titles: string[]): MilestoneStep[] {
+  return normalise(
+    titles.map((title, i) => ({
+      id: `s${i + 1}`,
+      title: cleanStepTitle(title),
+      done: false,
+      placeholder: false,
+      task_id: null,
+      due: null,
+    })),
+  );
+}
+
 /** How many of the written rows are done, and how many there are. */
 export function stepProgress(steps: MilestoneStep[]): { done: number; total: number } {
   const real = steps.filter((step) => !step.placeholder);

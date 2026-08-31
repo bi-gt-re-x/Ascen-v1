@@ -137,6 +137,16 @@ export interface ActiveGoalCardProps {
   onLinkTask: (goal: Goal, task: Task, milestoneId?: string) => void;
   /** Ask for a checkpoint list. Resolves null when the model could not answer. */
   onSuggest: (goal: Goal) => Promise<string[] | null>;
+  /**
+   * The page is drafting a plan under this goal right now — it was just
+   * created, or a checkpoint under it was, and the model is being asked.
+   *
+   * Separate from the card's own `thinking`, which is the Suggest button being
+   * pressed by hand, because the two start in different places. They show the
+   * same thing, so the button reads as busy either way rather than looking
+   * pressable while a plan is already on its way to the same ladder.
+   */
+  planning?: boolean;
   /** Write a whole checkpoint list. Resolves false if the write failed. */
   onSaveStones: (goal: Goal, titles: string[]) => Promise<boolean>;
   /** Make one checkpoint the focus. */
@@ -161,6 +171,7 @@ export function ActiveGoalCard({
   onComplete,
   onLinkTask,
   onSuggest,
+  planning = false,
   onSaveStones,
   onFocusMilestone,
   onMilestoneSteps,
@@ -211,6 +222,8 @@ export function ActiveGoalCard({
      stays usable while one goal is thinking. The ladder this replaced owned its
      spinner for the same reason. */
   const [thinking, setThinking] = useState(false);
+  /** Either route to the same model call. See `planning` in the props. */
+  const drafting = thinking || planning;
 
   /* The goal, its linked work, and the one chart that work can support. Both
      memoised on the same inputs, so a card only re-picks when something it is
@@ -436,7 +449,7 @@ export function ActiveGoalCard({
                 <button
                   type="button"
                   className="ag-more is-primary"
-                  disabled={thinking}
+                  disabled={drafting}
                   onClick={() => {
                     setThinking(true);
                     void onSuggest(goal)
@@ -444,7 +457,7 @@ export function ActiveGoalCard({
                       .finally(() => setThinking(false));
                   }}
                 >
-                  {thinking ? 'Thinking…' : 'Suggest checkpoints'}
+                  {drafting ? 'Thinking…' : 'Suggest checkpoints'}
                 </button>
                 <button type="button" className="ag-more" onClick={() => onOpen(goal)}>
                   Add them myself

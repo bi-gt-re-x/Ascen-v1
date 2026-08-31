@@ -123,8 +123,29 @@ export function deleteGoal(
 export function addMilestone(
   goalId: string,
   milestone: { title: string; note?: string; target_date?: string },
-): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/add_milestone', { goal_id: goalId, ...milestone });
+): Promise<ApiResult<{ id: string }>> {
+  return post<{ id: string }>('/api/add_milestone', { goal_id: goalId, ...milestone });
+}
+
+/**
+ * Five step titles for one checkpoint, from the model. Writes nothing.
+ *
+ * The checklist counterpart of `suggestMilestones`, with the same contract:
+ * a draft, and every failure back as `success: false` with a message meant to
+ * be shown. `updateMilestone` is what saves them, exactly as it saves a
+ * checklist typed by hand.
+ *
+ * Identify the checkpoint with `milestoneId` — it carries its goal with it —
+ * or pass a `title` and the `goalId` it sits under, for one not yet written.
+ */
+export function suggestSteps(
+  step: { milestoneId?: string; goalId?: string; title?: string },
+): Promise<ApiResult<{ steps: string[] }>> {
+  return post<{ steps: string[] }>('/api/suggest_steps', {
+    milestone_id: step.milestoneId,
+    goal_id: step.goalId,
+    title: step.title,
+  });
 }
 
 export function updateMilestone(

@@ -345,3 +345,87 @@ def test_choosing_an_avatar_replaces_the_previous_pick(client):
     rows = [r for r in db.rows_for('user_settings', 'tester') if r['key'] == 'avatar']
     assert len(rows) == 1
     assert client.get('/api/auth/verify_status').json()['avatar'].endswith('/penguin.svg')
+
+
+# --------------------------------------------------------------------------
+# Drafting a plan with the model
+# --------------------------------------------------------------------------
+# The model itself is never called here. `planner.suggest_steps` is the seam:
+# these prove the endpoint reads the right rows, hands the planner what it
+# needs and turns a refusal into a sentence — which is all of it that is ours.
+def test_adding_a_checkpoint_hands_back_its_id(client):
+    """The caller's next move is to draft a checklist onto the row it made.
+
+    Finding it again by title is a guess the moment two checkpoints are named
+    the same thing, which is why this returns an id the way add_goal does.
+    """
+    goal = client.post('/api/add_goal', json={'title': 'Reach USACO Gold', 'target_xp': 500}).json()
+    made = client.post('/api/add_milestone',
+                       json={'goal_id': goal['id'], 'title': 'Silver DP unassisted'}).json()
+
+    assert made['success']
+    assert made['id']
+    stones = client.get('/api/get_goals').json()['goals'][0]['milestones']
+    assert [s['id'] for s in stones] == [made['id']]
+
+
+def test_a_checkpoint_is_broken_down_against_the_goal_it_sits_under(client, monkeypatch):
+    """A six-word checkpoint title alone is frequently not enough to plan.
+
+    "Silver DP unassisted" is a different checklist under a coding goal than
+    under one about teaching, so the goal's own words go to the planner
+    alongside the checkpoint's.
+    """
+    from backend.tracking import planner
+
+    seen = {}
+
+    def fake(milestone, goal='', why='', description='', category='', unit='', target=''):
+        seen.update(milestone=milestone, goal=goal, why=why, category=category)
+        return ['Read the chapter', 'Do ten problems', 'Redo the failures',
+                'Time a contest', 'Review the editorial']
+
+    monkeypatch.setattr(planner, 'suggest_steps', fake)
+
+    goal = client.post('/api/add_goal', json={
+        'title': 'Reach USACO Gold', 'target_xp': 500,
+        'why': 'College applications', 'category': 'coding'}).json()
+    made = client.post('/api/add_milestone',
+                       json={'goal_id': goal['id'], 'title': 'Silver DP unassisted'}).json()
+
+    out = client.post('/api/suggest_steps', json={'milestone_id': made['id']}).json()
+
+    assert out['success']
+    assert len(out['steps']) == 5
+    assert seen['milestone'] == 'Silver DP unassisted'
+    assert seen['goal'] == 'Reach USACO Gold'
+    assert seen['why'] == 'College applications'
+    assert seen['category'] == 'coding'
+
+
+def test_a_checklist_that_cannot_be_drafted_is_a_sentence_not_a_500(client, monkeypatch):
+    """The page shows this on the checkpoint. A failure to plan is not a broken
+    request — the checkpoint keeps the empty rows it was seeded with."""
+    from backend.tracking import planner
+
+    def fake(*args, **kwargs):
+        raise planner.PlannerUnavailable('No key configured.')
+
+    monkeypatch.setattr(planner, 'suggest_steps', fake)
+
+    goal = client.post('/api/add_goal', json={'title': 'Reach USACO Gold', 'target_xp': 500}).json()
+    made = client.post('/api/add_milestone',
+                       json={'goal_id': goal['id'], 'title': 'Silver DP unassisted'}).json()
+
+    response = client.post('/api/suggest_steps', json={'milestone_id': made['id']})
+
+    assert response.status_code == 200
+    assert not response.json()['success']
+    assert 'No key configured.' in response.json()['message']
+
+
+def test_breaking_down_a_checkpoint_that_is_not_yours_is_not_found(client):
+    """The row is looked up scoped to the account, like every other read here."""
+    out = client.post('/api/suggest_steps', json={'milestone_id': 'm999'}).json()
+    assert not out['success']
+    assert 'not found' in out['message'].lower()

@@ -189,6 +189,20 @@ class SuggestMilestones(BaseModel):
     category: str = ''
 
 
+class SuggestSteps(BaseModel):
+    """Ask the model for one checkpoint's checklist. Writes nothing.
+
+    `milestone_id` is the ordinary case and carries its goal with it. `title`
+    is for a checkpoint being drafted that has no row yet, and takes
+    `goal_id` alongside it so the model is told what the checkpoint is for —
+    a six-word checkpoint title on its own is frequently not enough to break
+    down.
+    """
+    milestone_id: Optional[str] = None
+    goal_id: Optional[str] = None
+    title: Optional[str] = None
+
+
 class SetMilestones(BaseModel):
     goal_id: Optional[str] = None
     # The checkpoint titles the goal should have, in execution order.
@@ -885,8 +899,9 @@ def add_milestone(body: AddMilestone, username: str = Depends(current_username))
 
     rows = db.rows_for('goal_milestones', username)
     mine = _milestones_of(rows, body.goal_id)
+    new_id = _fresh_milestone_id(rows)
     db.insert_row('goal_milestones', {
-        "id": _fresh_milestone_id(rows),
+        "id": new_id,
         "goal_id": body.goal_id,
         "user_id": username,
         "title": body.title,
@@ -901,7 +916,10 @@ def add_milestone(body: AddMilestone, username: str = Depends(current_username))
         "created_at": datetime.now().isoformat(),
     })
     _recompute_goal(body.goal_id, username)
-    return ok()
+    # The id goes back for the same reason `/api/add_goal` returns one: the
+    # caller's next move is usually about the row it just made, and finding it
+    # again by title is a guess when two checkpoints are named the same thing.
+    return ok(id=new_id)
 
 
 @router.post('/api/update_milestone')
@@ -1040,6 +1058,51 @@ def suggest_milestones(body: SuggestMilestones, username: str = Depends(current_
     except planner.PlannerUnavailable as exc:
         return fail(str(exc))
     return ok(milestones=titles)
+
+
+@router.post('/api/suggest_steps')
+def suggest_steps(body: SuggestSteps, username: str = Depends(current_username)):
+    """Five step titles for one checkpoint, from the model. Writes nothing.
+
+    The same contract as `/api/suggest_milestones` above and for the same
+    reasons: a draft the page puts in editable rows, and every failure back as
+    a readable message rather than an error status. `/api/update_milestone`
+    is what saves them, exactly as it saves a checklist typed by hand.
+    """
+    title = (body.title or '').strip()
+    goal_id = body.goal_id
+
+    if body.milestone_id:
+        row = db.find_row('goal_milestones', body.milestone_id, user_id=username)
+        if not row:
+            return fail('Checkpoint not found')
+        title = title or (row.get('title') or '')
+        goal_id = goal_id or row.get('goal_id')
+
+    if not title:
+        return fail('A checkpoint title is required')
+
+    # What the goal says about itself, so the checkpoint is broken down for
+    # the thing it belongs to rather than in the abstract.
+    goal_title = why = description = category = unit = target = ''
+    if goal_id:
+        goal = db.find_row('goals', goal_id, user_id=username)
+        if goal:
+            goal_title = goal.get('title') or ''
+            why = goal.get('why') or ''
+            description = goal.get('description') or ''
+            category = goal.get('category') or ''
+            unit = goal.get('unit') or ''
+            if _measure_of(goal) == 'number' and goal.get('target_number'):
+                target = str(goal.get('target_number'))
+
+    try:
+        titles = planner.suggest_steps(
+            title, goal=goal_title, why=why, description=description,
+            category=category, unit=unit, target=target)
+    except planner.PlannerUnavailable as exc:
+        return fail(str(exc))
+    return ok(steps=titles)
 
 
 @router.post('/api/set_milestones')
