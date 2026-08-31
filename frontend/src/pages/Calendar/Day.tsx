@@ -23,6 +23,7 @@ import {
   minutesToTime,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
+import { RatePrompt } from '@/components/Tasks';
 import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
   useCalendarStore,
@@ -95,6 +96,10 @@ export default function Day() {
     refresh,
     completing,
     complete,
+    rating,
+    ratingDepth,
+    saveRating,
+    closeRating,
   } = account;
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
@@ -572,6 +577,20 @@ export default function Day() {
           ]}
           onReveal={revealConflict}
           onDelete={(which) => openFor(conflict[which], 'delete')}
+        />
+      )}
+
+      {/* The same question the dashboard and the tasks page ask after a
+          completion, from the same component — a task finished on a grid
+          block goes into the record with the same two numbers against it as
+          one ticked off a list. Raised by useCalendarTasks, which honours the
+          account's rating_depth and never opens this at 'none'. */}
+      {rating && (
+        <RatePrompt
+          taskName={rating.name}
+          depth={ratingDepth}
+          onSubmit={saveRating}
+          onClose={closeRating}
         />
       )}
     </CalendarShell>

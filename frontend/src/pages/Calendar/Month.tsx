@@ -34,6 +34,7 @@ import {
   dayEntries,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
+import { RatePrompt } from '@/components/Tasks';
 import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
   useCalendarStore,
@@ -68,8 +69,21 @@ export default function Month() {
   useDocumentTitle('Calendar · Month');
 
   const account = useCalendarTasks();
-  const { tasks, username, loading, hasData, refreshing, error, refresh, completing, complete } =
-    account;
+  const {
+    tasks,
+    username,
+    loading,
+    hasData,
+    refreshing,
+    error,
+    refresh,
+    completing,
+    complete,
+    rating,
+    ratingDepth,
+    saveRating,
+    closeRating,
+  } = account;
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
@@ -330,6 +344,20 @@ export default function Month() {
       </div>
 
       <BlockDialogs actions={actions} username={username} />
+
+      {/* The same question the dashboard and the tasks page ask after a
+          completion, from the same component — a task finished on a grid
+          block goes into the record with the same two numbers against it as
+          one ticked off a list. Raised by useCalendarTasks, which honours the
+          account's rating_depth and never opens this at 'none'. */}
+      {rating && (
+        <RatePrompt
+          taskName={rating.name}
+          depth={ratingDepth}
+          onSubmit={saveRating}
+          onClose={closeRating}
+        />
+      )}
     </CalendarShell>
   );
 }
