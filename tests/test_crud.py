@@ -234,6 +234,63 @@ def test_a_focus_day_is_never_lowered_by_a_stale_client(client):
     assert row['seconds'] == 3600
 
 
+def test_the_catch_up_stamp_takes_a_date_and_refuses_anything_else(client):
+    """`catchup_seen_on` is state, and the only preference here holding a date.
+
+    Empty is a real answer — an account the prompt has never met — so the
+    validator has to let it through while still rejecting junk. Nothing else in
+    FIELDS had that shape, which is why it is worth a test of its own.
+    """
+    client.post('/api/settings', json={'values': {'catchup_seen_on': '2026-08-28'}})
+    assert client.get('/api/settings').json()['settings']['catchup_seen_on'] == '2026-08-28'
+
+    # Refused, and the stored answer is left alone rather than cleared.
+    client.post('/api/settings', json={'values': {'catchup_seen_on': 'last tuesday'}})
+    assert client.get('/api/settings').json()['settings']['catchup_seen_on'] == '2026-08-28'
+
+    client.post('/api/settings', json={'values': {'catchup_seen_on': ''}})
+    assert client.get('/api/settings').json()['settings']['catchup_seen_on'] == ''
+
+
+def test_hand_entered_focus_adds_to_the_day_rather_than_replacing_it(client):
+    """The catch-up prompt is a person, not a mirror.
+
+    `focus_sync` takes the larger of the two values because a stale tab must
+    not be able to shrink a day. That rule is wrong for somebody typing "I did
+    two hours on Tuesday" into the dashboard: a Tuesday holding twenty tracked
+    minutes plus two typed hours is two hours twenty, and under the max rule it
+    would silently be two.
+    """
+    client.post('/api/focus_sync', json={'date': '2026-08-02', 'focused_seconds': 1200,
+                                         'goal_hours': 2})
+    client.post('/api/focus_log', json={'date': '2026-08-02', 'minutes': 120,
+                                        'goal_hours': 3})
+
+    row = db.find_row('focus_days', '2026-08-02', user_id='tester', key='date')
+    assert row['seconds'] == 1200 + 120 * 60
+    # And the goal the day was actually measured against is not rewritten by
+    # a backfill arriving with a different default behind it.
+    assert row['goal_hours'] == 2
+
+
+def test_hand_entered_focus_opens_a_day_that_had_no_record(client):
+    client.post('/api/focus_log', json={'date': '2026-08-03', 'minutes': 45,
+                                        'goal_hours': 2.5})
+    row = db.find_row('focus_days', '2026-08-03', user_id='tester', key='date')
+    assert (row['seconds'], row['goal_hours']) == (2700, 2.5)
+
+
+def test_hand_entered_focus_refuses_nothing_and_bounds_the_rest(client):
+    """An empty answer is not a zero-second day, and a slip is not a week."""
+    assert not client.post('/api/focus_log', json={'date': '2026-08-04',
+                                                   'minutes': 0}).json()['success']
+    assert db.find_row('focus_days', '2026-08-04', user_id='tester', key='date') is None
+
+    client.post('/api/focus_log', json={'date': '2026-08-05', 'minutes': 99999})
+    row = db.find_row('focus_days', '2026-08-05', user_id='tester', key='date')
+    assert row['seconds'] == 1440 * 60
+
+
 def test_day_focus_note_upserts_and_an_empty_one_deletes(client):
     client.post('/api/day_focus', json={'date': '2026-08-01', 'text': 'deep work'})
     assert db.find_row('day_focus_notes', '2026-08-01',

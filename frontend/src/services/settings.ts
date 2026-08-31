@@ -95,6 +95,20 @@ export interface Prefs {
   week_starts_on: WeekStart;
   focus_goal_hours: number;
   focus_dim: boolean;
+  /**
+   * Whether the dashboard asks, once a day, about the days since the last
+   * visit — work that was done and never tracked. Off removes the prompt
+   * entirely; see components/Dashboard/CatchUp.
+   */
+  catchup_prompt: boolean;
+  /**
+   * The last day the prompt was put, ISO, or '' for never.
+   *
+   * State rather than taste — nothing in Settings edits it — and it is what
+   * makes the prompt once a day rather than once a page load, as well as what
+   * defines the stretch of days it asks about.
+   */
+  catchup_seen_on: string;
   analytics_window: AnalyticsWindow;
   analytics_setup_done: boolean;
   analytics_home_tab: AnalyticsHomeTab;
@@ -150,6 +164,11 @@ export const DEFAULTS: Prefs = {
   week_starts_on: 'monday',
   focus_goal_hours: 2,
   focus_dim: true,
+  catchup_prompt: true,
+  /* Empty is a real state: an account with no recorded visit is not one with
+     a week of unlogged days, it is one the prompt has never met. The first
+     visit records the day and asks nothing. */
+  catchup_seen_on: '',
   analytics_window: '1y',
   /* False is the first-run state, and it is what puts the question phase in
      front of the page. An account that already set a baseline is treated as

@@ -17,7 +17,12 @@
  * Backend: backend/api/focus.py, backend/api/calendar.py.
  */
 import { get, post } from './api';
-import { MAX_FOCUS_SECONDS, MAX_GOAL_HOURS, MIN_GOAL_HOURS } from './constants';
+import {
+  MAX_FOCUS_SECONDS,
+  MAX_GOAL_HOURS,
+  MAX_LOG_MINUTES,
+  MIN_GOAL_HOURS,
+} from './constants';
 import type { ApiResult, DayFocusNotes, FocusDay, FocusHistory } from '@/types';
 
 /**
@@ -34,6 +39,30 @@ export function syncDay(
   return post<{ focus: FocusDay }>('/api/focus_sync', {
     date,
     focused_seconds: Math.max(0, Math.min(MAX_FOCUS_SECONDS, focusedSeconds)),
+    goal_hours: Math.max(MIN_GOAL_HOURS, Math.min(MAX_GOAL_HOURS, goalHours)),
+  });
+}
+
+/**
+ * Add work that was done and never tracked to one past day.
+ *
+ * The other write is `syncDay`, which is the timer mirroring itself and takes
+ * the larger of the two values. This one **adds**, because it is a person
+ * saying what they did rather than a client saying what it holds — a day with
+ * twenty tracked minutes and two typed hours is two hours twenty. See
+ * `log_day` in backend/tracking/focus.py.
+ *
+ * `goalHours` is only used on a day that has no record yet; a day that already
+ * had a goal keeps it.
+ */
+export function logDay(
+  date: string,
+  minutes: number,
+  goalHours: number,
+): Promise<ApiResult<{ focus: FocusDay }>> {
+  return post<{ focus: FocusDay }>('/api/focus_log', {
+    date,
+    minutes: Math.max(0, Math.min(MAX_LOG_MINUTES, minutes)),
     goal_hours: Math.max(MIN_GOAL_HOURS, Math.min(MAX_GOAL_HOURS, goalHours)),
   });
 }

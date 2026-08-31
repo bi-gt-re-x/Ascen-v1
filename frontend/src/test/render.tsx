@@ -33,9 +33,9 @@ import type { Prefs } from '@/services/settings';
 import type { UserData } from '@/services/tasks';
 
 /**
- * `prefs` is loosened to a partial: there are twenty-nine preferences and a
+ * `prefs` is loosened to a partial: there are thirty-one preferences and a
  * test that cares about one of them should not have to restate the other
- * twenty-eight. Everything else stays `Partial<…>` of the real context value,
+ * thirty. Everything else stays `Partial<…>` of the real context value,
  * so a field renamed in `contexts.ts` still breaks this file.
  */
 export interface Options {
@@ -62,7 +62,7 @@ export function authValue(overrides: Partial<AuthValue> = {}): AuthValue {
 
 export function settingsValue(overrides: Options['settings'] = {}): SettingsValue {
   // `prefs` is pulled out and merged over the defaults rather than spread with
-  // the rest, so passing one preference leaves the other twenty-eight at theirs.
+  // the rest, so passing one preference leaves the other thirty at theirs.
   const { prefs, ...rest } = overrides;
   return {
     dailyGoal: DEFAULT_DAILY_GOAL,

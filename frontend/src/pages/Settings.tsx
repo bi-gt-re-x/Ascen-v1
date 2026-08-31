@@ -1062,6 +1062,26 @@ export default function Settings() {
               />
             ),
           },
+          {
+            id: 'catchup',
+            label: 'Ask about untracked days',
+            hint:
+              'Once a day, on the first load of the dashboard: the days since you were last '
+              + 'here that have no focus time on them, and two boxes to say how long you '
+              + 'worked. What you enter counts exactly as tracked time does — consistency, '
+              + 'the focus score, the growth chart, every "days you worked" figure. Days you '
+              + 'did track are never asked about, and a day you leave blank is left alone.',
+            control: (
+              <Toggle
+                on={prefs.catchup_prompt}
+                busy={busy}
+                label="Ask about untracked days"
+                onFlip={() =>
+                  void savePref({ catchup_prompt: !prefs.catchup_prompt }, 'Catch-up prompt')
+                }
+              />
+            ),
+          },
         ],
       },
       {

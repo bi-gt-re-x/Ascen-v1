@@ -5,6 +5,8 @@ export { useCalendarStore } from './useCalendarStore';
 export type { EventDraft, Scope, UseCalendarStore } from './useCalendarStore';
 export { useCalendarTasks } from './useCalendarTasks';
 export type { TaskPatch, UseCalendarTasks } from './useCalendarTasks';
+export { useCatchUp } from './useCatchUp';
+export type { UseCatchUp } from './useCatchUp';
 export { useCountUp } from './useCountUp';
 export { useDayFocus } from './useDayFocus';
 export type { UseDayFocus } from './useDayFocus';

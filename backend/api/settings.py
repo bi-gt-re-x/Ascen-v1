@@ -45,6 +45,7 @@ exists, and the *next* write of the notes table fails its integrity check. So
 `_forget_tasks` and `_forget_goals` below unpick the references first, in
 order, and the delete is the last step rather than the only one.
 """
+import re
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Request
@@ -105,6 +106,22 @@ def _fraction(low, high, step=0.25):
     return check
 
 
+_ISO_DAY = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
+
+def _iso_day(value):
+    """An ISO date, or the empty string for "never".
+
+    The empty string is a real answer and not a missing one: it is what an
+    account that has never opened the dashboard holds, and it is what tells the
+    catch-up prompt it has no gap to ask about yet.
+    """
+    text = str(value or '').strip()
+    if not text:
+        return ''
+    return text if _ISO_DAY.match(text) else None
+
+
 #: Every preference kept in user_settings: default, and what a valid value is.
 #: A key absent from the table is a real state — see `db.user_setting` — so the
 #: default is applied on read rather than written at signup.
@@ -150,6 +167,17 @@ FIELDS: Dict[str, Any] = {
     # that has not been given one of its own starts from.
     'focus_goal_hours':  (2.0, _fraction(0.5, 12)),
     'focus_dim':         (True, _boolean),
+    #: Whether the dashboard asks, on the first visit of a day, about the days
+    #: since the last one — hours the reader worked and never tracked. Off is
+    #: a supported answer and the whole prompt disappears; see
+    #: frontend/src/components/Dashboard/CatchUp.tsx.
+    'catchup_prompt':    (True, _boolean),
+    #: The last day the prompt was put (or found nothing to put), ISO. This is
+    #: what makes it once a day rather than once a page load, and what defines
+    #: the gap it asks about. Written by the dashboard, never by the reader —
+    #: it is state rather than a preference, and it is here because
+    #: `user_settings` is where an account's small facts already live.
+    'catchup_seen_on':   ('', _iso_day),
 
     # Analytics.
     #

@@ -63,6 +63,41 @@ def record_day(username, day, seconds, goal_hours):
     return {'seconds': kept, 'goal_hours': goal_hours}
 
 
+def log_day(username, day, seconds, goal_hours):
+    """Add hand-entered time to a day's total. Returns the record, or None.
+
+    The other way in is `record_day`, which is the timer mirroring itself and
+    therefore takes the *larger* of what it holds and what it is sent — an old
+    tab with cleared localStorage must not be able to erase real work.
+
+    A person typing "I did two hours on Tuesday" into the dashboard's catch-up
+    prompt is not a mirror and the max rule is wrong for them: a Tuesday that
+    already holds twenty tracked minutes plus two typed hours is two hours and
+    twenty minutes, not two hours. So this one adds, and the two callers stay
+    separate rather than sharing a function with a mode flag — they are
+    different claims about what the number means.
+
+    `goal_hours` is only written on a day that has no row yet. A day the reader
+    actually lived through had whatever goal it had, and backfilling time onto
+    it is not a reason to rewrite the target it was measured against.
+    """
+    if not find_user(db.users(), username=username):
+        return None
+
+    row = db.find_row('focus_days', day, user_id=username, key='date')
+    total = round(_seconds(row or {}) + max(0.0, float(seconds)), 1)
+
+    if row is None:
+        db.insert_row('focus_days', {'user_id': username, 'date': day,
+                                     'seconds': total, 'goal_hours': goal_hours})
+        return {'seconds': total, 'goal_hours': goal_hours}
+
+    kept = _goal_hours(row) or goal_hours
+    db.update_row('focus_days', day, {'seconds': total, 'goal_hours': kept},
+                  user_id=username, key='date')
+    return {'seconds': total, 'goal_hours': kept}
+
+
 def history_range(username, start='', end=''):
     """{iso: {seconds, goal_hours}} within a date range, or None if no user.
 
