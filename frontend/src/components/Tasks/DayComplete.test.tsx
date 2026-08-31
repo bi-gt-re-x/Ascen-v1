@@ -120,15 +120,15 @@ describe('the finish-the-day button', () => {
     expect(onConfirm).toHaveBeenCalledWith(false);
   });
 
-  it('says so when the filters are hiding some of what it will complete', async () => {
+  it('says so when some of what it will complete is off screen', async () => {
     const { user } = setup({ hidden: 2 });
     await user.click(screen.getByRole('button', { name: /today/i }));
-    expect(screen.getByText('2 of these are hidden by your current filters.')).toBeInTheDocument();
+    expect(screen.getByText('2 of these are not shown in the list.')).toBeInTheDocument();
   });
 
   it('keeps quiet when nothing is hidden', async () => {
     const { user } = setup({ hidden: 0 });
     await user.click(screen.getByRole('button', { name: /today/i }));
-    expect(screen.queryByText(/hidden by your current filters/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/not shown in the list/)).not.toBeInTheDocument();
   });
 });

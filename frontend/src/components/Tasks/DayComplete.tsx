@@ -1,23 +1,32 @@
 /**
- * "Complete today's tasks" — the one button on this page that acts on the day
- * rather than on a selection.
+ * "Complete today's tasks" — one press for the whole day.
+ *
+ * Used in both places a task is finished: at the head of the tasks page's list,
+ * and under the dashboard's Tasks card. It holds no opinion about which tasks
+ * are today's — `tasks` is whatever the caller means by the day, and the two
+ * callers do not mean quite the same thing. The tasks page means what is *due*
+ * today, because overdue work is grouped and labelled apart there. The
+ * dashboard means what its Today tab holds, which is the plate: due today,
+ * overdue, and undated. Each button sits directly under the list it acts on,
+ * which is what makes both readings the obvious one where they are.
  *
  * ## Why it is not the bulk bar
  *
  * The bulk bar already completes many tasks at once, and this could have been
  * "select all, then press it". It is separate because the two answer different
  * questions. The bulk bar acts on *what the reader picked*, whatever that is;
- * this acts on *what today was*, which is a fact about the account and not
- * about the current selection or the current filters. Making it a selection
- * shortcut would mean the day's meaning changed when a subject chip was
- * pressed, and a button called "today" that completes four of the day's seven
- * tasks because three are filtered out is a button that lies.
+ * this acts on *what today is*, which is a fact about the account and not about
+ * the current selection or the current filters. Making it a selection shortcut
+ * would mean the day's meaning changed when a subject chip was pressed, and a
+ * button called "today" that completes four of the day's seven tasks because
+ * three are filtered out is a button that lies.
  *
- * So it reaches past the filters deliberately — the one place on this page that
- * does — and pays for it by saying so. `hidden` is how many of the tasks it is
- * about are not on screen, and the dialog prints that line whenever it is not
- * zero. The rule this page is built on is that a reader is never surprised by
- * what an action touched, and disclosure satisfies it; silence would not.
+ * So it reaches past what is on screen deliberately, and pays for it by saying
+ * so. `hidden` is how many of the tasks it is about the reader cannot see — the
+ * tasks page's filters keeping them out, or the dashboard card's row cap — and
+ * the dialog prints that line whenever it is not zero. The rule both surfaces
+ * are built on is that a reader is never surprised by what an action touched,
+ * and disclosure satisfies it; silence would not.
  *
  * ## Two questions in one dialog
  *
@@ -40,6 +49,7 @@
  */
 import { useEffect, useState } from 'react';
 import type { Task } from '@/types';
+import '@/styles/day-complete.css';
 
 /** How many titles the confirmation lists before it starts counting instead. */
 const NAMED = 4;
@@ -115,9 +125,9 @@ export function DayComplete({ tasks, hidden, busy, canReview, onConfirm }: DayCo
               {count === 1 ? 'Complete this task?' : `Complete all ${count} tasks?`}
             </h3>
             <p className="tk-day-blurb">
-              Everything due today, marked done — with the XP, the streak and any
-              goals they count toward. Reopening a task afterwards does not give
-              the XP back.
+              All of these marked done — with the XP, the streak and any goals
+              they count toward. Reopening a task afterwards does not give the
+              XP back.
             </p>
 
             <ul className="tk-day-list">
@@ -132,8 +142,8 @@ export function DayComplete({ tasks, hidden, busy, canReview, onConfirm }: DayCo
             {hidden > 0 && (
               <p className="tk-day-warn">
                 {hidden === 1
-                  ? '1 of these is hidden by your current filters.'
-                  : `${hidden} of these are hidden by your current filters.`}
+                  ? '1 of these is not shown in the list.'
+                  : `${hidden} of these are not shown in the list.`}
               </p>
             )}
 

@@ -13,6 +13,7 @@
  */
 import { Link } from 'react-router-dom';
 import { TaskRow } from './TaskRow';
+import { DayComplete } from '@/components/Tasks';
 import { isCalendarTask } from './summary';
 import { subjectOf } from '@/hooks/useSubjects';
 import type { TaskBuckets } from './summary';
@@ -45,6 +46,12 @@ export interface TaskPanelProps {
   subjects: Map<string, Subject>;
   onComplete: (task: Task) => void;
   onAdd: () => void;
+  /** Whether the account rates its work, so whether the day button offers it. */
+  canReview: boolean;
+  /** Finish everything on the Today tab. `review` is the dialog's checkbox. */
+  onCompleteDay: (review: boolean) => void;
+  /** Mid-write: the day button says so and refuses a second press. */
+  busy: boolean;
 }
 
 function Section({
@@ -93,6 +100,9 @@ export function TaskPanel({
   subjects,
   onComplete,
   onAdd,
+  canReview,
+  onCompleteDay,
+  busy,
 }: TaskPanelProps) {
   // Upcoming is the calendar's list. Everything in it is scheduled onto a day
   // and drawn on the week grid, which is what makes "the next ten" a sentence
@@ -168,6 +178,21 @@ export function TaskPanel({
           </>
         )}
       </div>
+
+      {/* Today only: the other two tabs are histories rather than plates, and
+          there is nothing to finish in a list of what is already done or of
+          what is not due yet. `hidden` is the card's row cap rather than a
+          filter, but it is the same disclosure — the button completes the
+          whole tab, including the rows this card had no room for. */}
+      {tab === 'today' && (
+        <DayComplete
+          tasks={all}
+          hidden={hidden}
+          busy={busy}
+          canReview={canReview}
+          onConfirm={onCompleteDay}
+        />
+      )}
 
       <Link className="dash-panel-link" to="/tasks">
         {hidden > 0 ? `View all tasks (${hidden} more)` : 'View all tasks'}

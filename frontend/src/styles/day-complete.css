@@ -1,0 +1,148 @@
+/* day-complete.css — the finish-the-day button and its confirmation.
+ *
+ * Its own sheet, and self-contained, for the same reason rate-prompt.css is:
+ * components/Tasks/DayComplete is used on two pages that load nothing else in
+ * common. tasks.css is imported only by pages/Tasks.tsx, and its `--tk-*`
+ * tokens are declared on `.tk-page`, which does not wrap the dashboard — so
+ * rules living there would have reached the dashboard's copy of this button
+ * with neither the rules nor the colours. The component imports this itself and
+ * carries its palette with it.
+ *
+ * The `--dc-*` values are the same greys the rest of the app is drawn from
+ * (`--tk-*` in tasks.css, `--ax-*` on analytics); restated here rather than
+ * referenced so that this sheet is complete on any page that mounts it.
+ */
+.tk-day-all,
+.tk-day-backdrop {
+    --dc-card: #ffffff;
+    --dc-card-2: #f8f9fc;
+    --dc-line: #e6e9f0;
+    --dc-line-soft: #eef0f6;
+    --dc-text: #111827;
+    --dc-muted: #6b7280;
+    --dc-faint: #9aa3b2;
+    --dc-violet: #6c5ce7;
+    --dc-green: #27ae60;
+    --dc-amber: #b26b00;
+    --dc-radius: 14px;
+    --dc-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+}
+html[data-theme="dark"] .tk-day-all,
+html[data-theme="dark"] .tk-day-backdrop {
+    --dc-card: #161b22;
+    --dc-card-2: #1b212b;
+    --dc-line: #263041;
+    --dc-line-soft: #1f2733;
+    --dc-text: #e6edf3;
+    --dc-muted: #9aa7b8;
+    --dc-faint: #6e7d90;
+    --dc-violet: #8b7bf0;
+    --dc-green: #3fb950;
+    --dc-amber: #e3a008;
+    --dc-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+}
+
+/* Solid rather than the dashed outline `.tk-more-rows` wears: that one reveals
+   more of a list and this one changes it, and two controls in the same strip of
+   page should not look like the same kind of thing. */
+.tk-day-all {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+    margin: 0 0 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--dc-green);
+    border-radius: var(--dc-radius);
+    background: color-mix(in srgb, var(--dc-green) 8%, transparent);
+    color: var(--dc-green);
+    font: inherit; font-size: 13.5px; font-weight: 650;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+.tk-day-all:hover:not(:disabled) { background: color-mix(in srgb, var(--dc-green) 16%, transparent); }
+.tk-day-all:disabled { opacity: .55; cursor: default; }
+.tk-day-tick { display: inline-flex; width: 16px; height: 16px; }
+.tk-day-tick svg { width: 100%; height: 100%; }
+
+.tk-day-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(17, 24, 39, .45);
+}
+html[data-theme="dark"] .tk-day-backdrop { background: rgba(0, 0, 0, .6); }
+
+.tk-day-popup {
+    width: min(420px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    padding: 22px;
+    border: 1px solid var(--dc-line);
+    border-radius: var(--dc-radius);
+    background: var(--dc-card);
+    box-shadow: var(--dc-shadow);
+}
+.tk-day-title { margin: 0 0 8px; font-size: 17px; font-weight: 700; color: var(--dc-text); }
+.tk-day-blurb { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--dc-muted); }
+
+.tk-day-list {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    list-style: none;
+    border: 1px solid var(--dc-line-soft);
+    border-radius: 10px;
+    background: var(--dc-card-2);
+    font-size: 12.5px;
+    color: var(--dc-text);
+}
+.tk-day-list li {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    padding: 2px 0;
+}
+.tk-day-list .tk-day-rest { color: var(--dc-faint); }
+
+.tk-day-warn {
+    margin: 0 0 14px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--dc-amber);
+}
+
+.tk-day-review {
+    display: flex; align-items: flex-start; gap: 9px;
+    margin-bottom: 16px;
+    padding: 11px 12px;
+    border: 1px solid var(--dc-line-soft);
+    border-radius: 10px;
+    font-size: 13px; font-weight: 600; color: var(--dc-text);
+    cursor: pointer;
+}
+.tk-day-review input { margin: 1px 0 0; accent-color: var(--dc-violet); cursor: pointer; }
+.tk-day-review small {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px; font-weight: 500; color: var(--dc-muted);
+}
+
+.tk-day-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.tk-day-cancel, .tk-day-go {
+    padding: 9px 16px;
+    border-radius: 10px;
+    font: inherit; font-size: 13px; font-weight: 650;
+    cursor: pointer;
+}
+.tk-day-cancel {
+    border: 1px solid var(--dc-line);
+    background: none;
+    color: var(--dc-muted);
+}
+.tk-day-cancel:hover { color: var(--dc-text); border-color: var(--dc-faint); }
+.tk-day-go {
+    border: 1px solid var(--dc-green);
+    background: var(--dc-green);
+    color: #ffffff;
+}
+.tk-day-go:hover:not(:disabled) { filter: brightness(1.06); }
+.tk-day-go:disabled { opacity: .55; cursor: default; }

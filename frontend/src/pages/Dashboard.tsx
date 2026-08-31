@@ -28,6 +28,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
 import {
+  CatchUp,
   DailyQuote,
   FocusCard,
   FocusPanel,
@@ -51,7 +52,14 @@ import {
   topPriorities,
   weekSummary,
 } from '@/components/Dashboard/summary';
-import { useDocumentTitle, usePageEntrance, useSettings, useSubjectIndex, useUserData } from '@/hooks';
+import {
+  useCatchUp,
+  useDocumentTitle,
+  usePageEntrance,
+  useSettings,
+  useSubjectIndex,
+  useUserData,
+} from '@/hooks';
 import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
 import { tasks as taskService } from '@/services';
 import { weekStartDay } from '@/services/settings';
@@ -70,6 +78,10 @@ export default function Dashboard() {
   const session = useFocusSession(username);
   const subjects = useSubjectIndex(username);
   const { prefs, dailyGoal, displayName } = useSettings();
+  /* The days this page was not told about — see hooks/useCatchUp. Usually
+     nothing: an account that runs the timer has no unrecorded days, and one
+     that has already been asked today is not asked again. */
+  const catchUp = useCatchUp(username);
 
   const [tab, setTab] = useState<TaskTab>('today');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -145,9 +157,19 @@ export default function Dashboard() {
     ),
   );
 
+  /**
+   * Finish one task.
+   *
+   * `ask` is how the day button borrows this without a prompt firing on every
+   * row: it completes the card's list one task at a time like everything else,
+   * and raises the whole day's prompts at the end as one queue. Says whether
+   * the completion landed, which is what lets that queue hold only the tasks
+   * the server actually recorded. Every other caller leaves `ask` alone and
+   * ignores the answer.
+   */
   const complete = useCallback(
-    async (task: Task) => {
-      if (!username) return;
+    async (task: Task, ask = true): Promise<boolean> => {
+      if (!username) return false;
       setBusyId(task.id);
       setFailure(null);
       try {
@@ -157,7 +179,7 @@ export default function Dashboard() {
           // The page can no longer vouch for what it is showing, so this is
           // one of the two times it asks the server again on its own.
           reload();
-          return;
+          return false;
         }
         // The response carries the new level, so the backend still decides what
         // the level is. Comparing against the one it replaces only notices that
@@ -213,14 +235,16 @@ export default function Dashboard() {
         // is finished, and it has to mean the same thing in both. Nothing
         // waits on the answer — see `rating` below and
         // components/Tasks/RatePrompt.
-        if (prefs.rating_depth !== 'none') {
-          setRating({ id: String(task.id), name: task.title });
+        if (ask && prefs.rating_depth !== 'none') {
+          setReviews([{ id: String(task.id), name: task.title }]);
         }
+        return true;
       } catch (cause) {
         setFailure(
           cause instanceof Error ? cause.message : 'Could not complete that task.',
         );
         reload();
+        return false;
       } finally {
         setBusyId(null);
       }
@@ -230,18 +254,27 @@ export default function Dashboard() {
 
   // ---- Rating a finished task ---------------------------------------------
   /**
-   * The task the prompt is asking about, or null when it is closed.
+   * The tasks still to be asked about. The prompt shows the head of the queue.
    *
    * The same prompt the tasks page raises, from the same component, because a
    * task completed here and one completed there have to ask the same question —
    * two dialogs would become two slightly different questions inside a month.
+   *
+   * A queue rather than the single task it used to be, for the same reason it
+   * is one there: clearing the day can finish a dozen at once, and they have to
+   * be asked one after another rather than each replacing the last. A single
+   * completion puts exactly one thing in it, which is what it always did.
    */
-  const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
+  const [reviews, setReviews] = useState<{ id: string; name: string }[]>([]);
+  const rating = reviews[0] ?? null;
+
+  /** Done with the head, however it was dismissed. */
+  const nextReview = useCallback(() => setReviews((queue) => queue.slice(1)), []);
 
   const saveRating = useCallback(
     (values: { difficulty?: number; execution?: number; reason?: string }) => {
       const target = rating;
-      setRating(null);
+      nextReview();
       if (!username || !target) return;
       void taskService.rateTask(target.id, values).then((result) => {
         if (!result.success) return;
@@ -253,7 +286,39 @@ export default function Dashboard() {
         }));
       });
     },
-    [mutate, rating, username],
+    [mutate, nextReview, rating, username],
+  );
+
+  /**
+   * Clear today's plate: everything the Today tab holds, in order.
+   *
+   * `buckets.today` and not "what is due today" — on this card the two are
+   * different, and the card's meaning is the one that has to win. Its Today tab
+   * is the plate: due today, overdue, and undated, all the things not held to a
+   * later day. The button sits directly under those rows, so completing exactly
+   * them is the only reading that does not surprise. The tasks page's copy of
+   * this button means the narrower thing, because there overdue work is grouped
+   * and labelled apart. See components/Tasks/DayComplete.
+   *
+   * One call per task, like every other completion here — there is no batch
+   * endpoint, and ten completions really are ten XP awards with a streak and a
+   * level recalculation behind them. The prompts are held back and raised
+   * together at the end, and only for the tasks that actually landed.
+   */
+  const completeDay = useCallback(
+    async (review: boolean) => {
+      const todo = buckets.today;
+      if (todo.length === 0) return;
+      setSaving(true);
+      const done: { id: string; name: string }[] = [];
+      for (const task of todo) {
+        if (await complete(task, false)) done.push({ id: String(task.id), name: task.title });
+      }
+      setSaving(false);
+      if (review && prefs.rating_depth !== 'none' && done.length > 0) setReviews(done);
+      reload();
+    },
+    [buckets.today, complete, prefs.rating_depth, reload],
   );
 
   const addTask = useCallback(
@@ -388,6 +453,9 @@ export default function Dashboard() {
           subjects={subjects}
           onComplete={(task) => void complete(task)}
           onAdd={() => setAdding(true)}
+          canReview={prefs.rating_depth !== 'none'}
+          onCompleteDay={(review) => void completeDay(review)}
+          busy={saving}
         />
         {prefs.show_focus && <FocusPanel session={session} />}
       </div>
@@ -401,6 +469,21 @@ export default function Dashboard() {
       )}
 
       {prefs.show_quote && <DailyQuote />}
+
+      {/* Last in the queue of overlays, and deliberately: the other three are
+          all reactions to something the reader just did, and this one is the
+          page asking for something. It only ever appears on the first load of
+          a day, when none of the others can have been triggered yet, but the
+          ordering says which would give way if that ever stopped being true. */}
+      {catchUp.days && levelled === null && news === null && rating === null && (
+        <CatchUp
+          days={catchUp.days}
+          busy={catchUp.saving}
+          failure={catchUp.failure}
+          onSubmit={catchUp.submit}
+          onClose={catchUp.dismiss}
+        />
+      )}
 
       {levelled !== null && <LevelUp level={levelled} onDone={() => setLevelled(null)} />}
 
@@ -427,7 +510,7 @@ export default function Dashboard() {
           taskName={rating.name}
           depth={prefs.rating_depth}
           onSubmit={saveRating}
-          onClose={() => setRating(null)}
+          onClose={nextReview}
         />
       )}
 

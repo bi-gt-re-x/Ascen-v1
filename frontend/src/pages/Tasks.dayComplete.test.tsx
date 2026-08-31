@@ -36,11 +36,19 @@ vi.mock('@/hooks/useSubjects', () => ({ useSubjects: () => [] }));
 
 import Tasks from './Tasks';
 
-/** A `YYYY-MM-DD` a given number of days from today, local. */
+/**
+ * A `YYYY-MM-DD` a given number of days from today, local.
+ *
+ * Built from the local date parts, not `toISOString`, which is UTC and is a day
+ * ahead for the last hours of every evening west of Greenwich — the same trap
+ * `midnight` in components/Tasks/board.ts documents.
+ */
 function dayFromNow(offset: number): string {
   const at = new Date();
   at.setDate(at.getDate() + offset);
-  return at.toISOString().slice(0, 10);
+  const month = String(at.getMonth() + 1).padStart(2, '0');
+  const day = String(at.getDate()).padStart(2, '0');
+  return `${at.getFullYear()}-${month}-${day}`;
 }
 
 const TODAY = dayFromNow(0);

@@ -894,6 +894,19 @@ export default function Tasks() {
               onClear={() => setPicked(new Set())}
             />
 
+            {/* Above the list rather than under it: it is the offer you want
+                before you start working down the day, not after you already
+                have. It sits below the bulk bar so the two actions that change
+                many rows at once are together, and above the first heading so
+                it is never mistaken for belonging to one. */}
+            <DayComplete
+              tasks={dayTasks}
+              hidden={dayHidden}
+              busy={saving}
+              canReview={prefs.rating_depth !== 'none'}
+              onConfirm={(review) => void completeDay(review)}
+            />
+
             {groups.length === 0 ? (
               <p className="tk-empty">
                 {list.length === 0
@@ -963,17 +976,6 @@ export default function Tasks() {
                 );
               })
             )}
-
-            {/* Under the last row, because it is about the whole day rather
-                than about any heading above it — the same reason the horizon
-                line below sits here and not inside a section. */}
-            <DayComplete
-              tasks={dayTasks}
-              hidden={dayHidden}
-              busy={saving}
-              canReview={prefs.rating_depth !== 'none'}
-              onConfirm={(review) => void completeDay(review)}
-            />
 
             {/* The horizon, stated where the list stops rather than only in
                 the menu that set it — a list that quietly ends seven days out

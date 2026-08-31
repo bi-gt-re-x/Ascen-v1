@@ -16,6 +16,7 @@
  * read the same tasks through the same service; only the questions differ.
  */
 import type { Task, TaskPriority } from '@/types';
+import { isoDate } from '@/utils/dates';
 import { XP_BANDS, xpToBand, type XpBand } from '@/utils/priority';
 
 const DAY = 86_400_000;
@@ -200,7 +201,7 @@ export function bucketOf(task: Task, today = new Date()): Bucket {
   if (task.status === 'done') return 'done';
   const due = dayOf(task.due_date);
   if (due === null) return 'none';
-  const midnight = dayOf(today.toISOString().slice(0, 10)) ?? today.getTime();
+  const midnight = dayOf(isoDate(today)) ?? today.getTime();
   const days = Math.round((due - midnight) / DAY);
   if (days < 0) return 'overdue';
   if (days === 0) return 'today';
@@ -212,7 +213,7 @@ export function bucketOf(task: Task, today = new Date()): Bucket {
 export function dueLabel(task: Task, today = new Date()): string | null {
   const due = dayOf(task.due_date);
   if (due === null) return null;
-  const midnight = dayOf(today.toISOString().slice(0, 10)) ?? today.getTime();
+  const midnight = dayOf(isoDate(today)) ?? today.getTime();
   const days = Math.round((due - midnight) / DAY);
   if (days === 0) return 'Today';
   if (days === 1) return 'Tomorrow';
@@ -506,7 +507,7 @@ export interface TaskCounts {
  * not three survived the current search.
  */
 export function taskCounts(tasks: Task[], today = new Date()): TaskCounts {
-  const stamp = today.toISOString().slice(0, 10);
+  const stamp = isoDate(today);
   const counts: TaskCounts = {
     open: 0, done: 0, overdue: 0, today: 0, openXp: 0, todayXp: 0, todayHigh: 0, completionRate: 0,
   };
@@ -619,8 +620,26 @@ export const TREND_DAYS = 14;
 /** The window the completion rate is measured over, in days. */
 const RATE_WINDOW = 7;
 
+/**
+ * Local midnight today — and `isoDate` rather than `toISOString`, deliberately.
+ *
+ * All four places in this file that ask what day it is used to slice
+ * `today.toISOString()`, which is the *UTC* date. West of Greenwich those
+ * disagree for the last hours of every evening: at 8pm in UTC-5 it is already
+ * tomorrow in UTC, so "today" jumped a day and took the whole page with it —
+ * the Due Today group emptied and filled with tomorrow's work, everything
+ * actually due today moved to Overdue, the row labels read "Today" against the
+ * wrong date, and the today count on the stat card followed. It came back on
+ * its own overnight, which is the worst shape a bug can have.
+ *
+ * `instantOf` below already carries the warning for the other half of this trap
+ * — reading a bare `YYYY-MM-DD` through `new Date` treats it as UTC — and the
+ * same mistake was sitting on the writing side the whole time. utils/dates
+ * `isoDate` builds the stamp from `getFullYear`/`getMonth`/`getDate`, so it is
+ * the local day by construction.
+ */
 function midnight(today: Date): number {
-  return dayOf(today.toISOString().slice(0, 10)) ?? today.getTime();
+  return dayOf(isoDate(today)) ?? today.getTime();
 }
 
 export function statSeries(tasks: Task[], today = new Date(), days = TREND_DAYS): StatSeries {
