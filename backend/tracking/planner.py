@@ -65,15 +65,17 @@ COUNT = 5
 # ---------------------------------------------------------------------------
 # Anthropic
 # ---------------------------------------------------------------------------
-# Opus 5 — the checkpoints are the whole value of the feature and a weaker
-# plan is worse than none. Thinking is on by default on this model, which is
-# what we want here: the five have to be sequential and non-overlapping, and
-# that is a reasoning problem rather than a recall one.
-ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL') or 'claude-opus-5'
+# Sonnet 5. Thinking is on by default here as it was on Opus, which is the
+# property this actually depends on: the five have to be sequential and
+# non-overlapping, and that is a reasoning problem rather than a recall one.
+# `thinking` is left unset because omitting it on this model runs adaptive.
+ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL') or 'claude-sonnet-5'
 
-# Room for the thinking as well as the answer — on Opus 5 `max_tokens` caps
-# both together, and five titles that arrive truncated are five titles the
-# JSON parse rejects.
+# Room for the thinking as well as the answer — `max_tokens` is a hard limit
+# on the two together, and five titles that arrive truncated are five titles
+# the JSON parse rejects. 16k is the recommended ceiling for a request that
+# does not stream, which this one does not: it is one short answer and the
+# page is holding a spinner for it.
 ANTHROPIC_MAX_TOKENS = 16000
 
 # Sent as `anthropic-workspace-id` when set.
@@ -406,8 +408,15 @@ def _from_anthropic(brief: str, system: str = None, schema: dict = None,
             model=ANTHROPIC_MODEL,
             max_tokens=ANTHROPIC_MAX_TOKENS,
             system=system or SYSTEM,
+            # `high` is this model's own default, and the level its guidance
+            # calls the balance of cost against intelligence. It was 'medium'
+            # under Opus, and carrying that down a tier would have been two
+            # step-downs at once — medium here is described as comparable to
+            # the *previous* Sonnet at high, and a weak plan is worse than no
+            # plan. Raise to 'xhigh' if the checkpoints come back shallow;
+            # that is the documented lever, rather than prompting around it.
             output_config={
-                'effort': 'medium',
+                'effort': 'high',
                 'format': {'type': 'json_schema', 'schema': schema or SCHEMA},
             },
             messages=[{'role': 'user', 'content': _ask(brief, instruction)}],
