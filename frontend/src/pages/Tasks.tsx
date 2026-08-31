@@ -53,6 +53,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BulkBar,
   Composer,
+  DayComplete,
   EMPTY_QUERY,
   RatePrompt,
   Sidebar,
@@ -62,6 +63,7 @@ import {
   plannedSeconds,
   groupTasks,
   beyondHorizon,
+  bucketOf,
   statSeries,
   streaks,
   taskCounts,
@@ -262,6 +264,32 @@ export default function Tasks() {
   );
 
   /**
+   * Today's still-open tasks, and how many of them the filters are hiding.
+   *
+   * Counted off `list` rather than off `groups`, which is the one place on this
+   * page that deliberately looks past the reader's filters: "today" is a fact
+   * about the account, and a button offering to finish the day has to mean the
+   * whole day or it means nothing. What keeps that honest is `dayHidden`, which
+   * the dialog prints — see components/Tasks/DayComplete.
+   *
+   * Overdue work is not today's. It is a real question whether a button called
+   * "finish today" should sweep up what was due on Tuesday, and the answer here
+   * is no: those tasks are already grouped and labelled apart on this page, and
+   * quietly banking XP and a streak for them under a heading that says "today"
+   * is the kind of surprise this page is built to avoid.
+   */
+  const dayTasks = useMemo(
+    () => list.filter((task) => task.status !== 'done' && bucketOf(task) === 'today'),
+    [list],
+  );
+  const dayHidden = useMemo(() => {
+    if (dayTasks.length === 0) return 0;
+    const onPage = new Set<string>();
+    groups.forEach((entry) => entry.tasks.forEach((task) => onPage.add(String(task.id))));
+    return dayTasks.reduce((sum, task) => sum + (onPage.has(String(task.id)) ? 0 : 1), 0);
+  }, [dayTasks, groups]);
+
+  /**
    * The subjects worth a chip, the ones on the current list first.
    *
    * `subject.used` is a lifetime count, and ordering the chips by it put an
@@ -309,8 +337,16 @@ export default function Tasks() {
     [reload],
   );
 
+  /**
+   * Finish one task.
+   *
+   * `ask` is how the day button borrows this without the dialog firing on every
+   * row: it completes the day one task at a time like everything else, and puts
+   * the whole day's prompts up at the end as one queue instead of a dozen that
+   * overwrite each other. Every other caller leaves it alone.
+   */
   const complete = useCallback(
-    (task: Task) => {
+    (task: Task, ask = true) => {
       if (!username) return Promise.resolve(false);
       return run(task.id, async () => {
         const result = await taskService.completeTask(task.id);
@@ -341,8 +377,8 @@ export default function Tasks() {
         // Ask, now that the work is banked and nothing depends on the answer —
         // unless the reader has turned the questions off in Settings. How many
         // are asked is that same preference: see components/Tasks/RatePrompt.
-        if (prefs.rating_depth !== 'none') {
-          setRating({ id: String(task.id), name: task.title });
+        if (ask && prefs.rating_depth !== 'none') {
+          setReviews([{ id: String(task.id), name: task.title }]);
         }
         return true;
       });
@@ -352,19 +388,28 @@ export default function Tasks() {
 
   // ---- Rating a finished task ---------------------------------------------
   /**
-   * The task the prompt is asking about, or null when it is closed.
+   * The tasks still to be asked about. The dialog shows the head of the queue.
    *
-   * Set *after* the completion has landed, so the dialog is never open over a
+   * Filled *after* a completion has landed, so the dialog is never open over a
    * task that failed to complete. Nothing downstream waits on it: the row is
    * already done, the XP is already banked, and every route out of the dialog —
-   * Save, Skip, Escape, the backdrop — simply clears this.
+   * Save, Skip, Escape, the backdrop — drops the head and moves on.
+   *
+   * A queue rather than the single task it used to be, because finishing the
+   * day can produce a dozen of these at once and they have to be asked one
+   * after another rather than each replacing the last. A single completion puts
+   * exactly one thing in it, which is what it always did.
    */
-  const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
+  const [reviews, setReviews] = useState<{ id: string; name: string }[]>([]);
+  const rating = reviews[0] ?? null;
+
+  /** Done with the head, however it was dismissed. */
+  const nextReview = useCallback(() => setReviews((queue) => queue.slice(1)), []);
 
   const saveRating = useCallback(
     (values: { difficulty?: number; execution?: number; reason?: string }) => {
       const target = rating;
-      setRating(null);
+      nextReview();
       if (!username || !target) return;
       void taskService.rateTask(target.id, values).then((result) => {
         if (!result.success) return;
@@ -378,7 +423,7 @@ export default function Tasks() {
         }));
       });
     },
-    [mutate, rating, username],
+    [mutate, nextReview, rating, username],
   );
 
   /**
@@ -613,6 +658,38 @@ export default function Tasks() {
       reload();
     },
     [chosen, reload],
+  );
+
+  /**
+   * Finish the day: every task due today, in order, then the reviews.
+   *
+   * The same one-call-per-task shape as `bulk` and for the same reasons — there
+   * is no batch endpoint, and ten completions really are ten XP awards with a
+   * streak behind them. What it does differently is hold the prompts back
+   * (`complete(task, false)`) and raise them together at the end, so the reader
+   * confirms once, watches the list empty, and is then asked about the tasks
+   * that actually landed. A task whose completion failed is not in the queue:
+   * there is nothing to rate about work the server did not record.
+   *
+   * `reload` at the end for the same reason `bulk` does it — the page has
+   * applied every change already and this is the cheap way to be sure.
+   */
+  const completeDay = useCallback(
+    async (review: boolean) => {
+      const todo = dayTasks;
+      if (todo.length === 0) return;
+      setSaving(true);
+      const done: { id: string; name: string }[] = [];
+      for (const task of todo) {
+        if (await complete(task, false)) {
+          done.push({ id: String(task.id), name: task.title });
+        }
+      }
+      setSaving(false);
+      if (review && prefs.rating_depth !== 'none' && done.length > 0) setReviews(done);
+      reload();
+    },
+    [complete, dayTasks, prefs.rating_depth, reload],
   );
 
   const toggleGroup = useCallback((key: string) => {
@@ -887,6 +964,17 @@ export default function Tasks() {
               })
             )}
 
+            {/* Under the last row, because it is about the whole day rather
+                than about any heading above it — the same reason the horizon
+                line below sits here and not inside a section. */}
+            <DayComplete
+              tasks={dayTasks}
+              hidden={dayHidden}
+              busy={saving}
+              canReview={prefs.rating_depth !== 'none'}
+              onConfirm={(review) => void completeDay(review)}
+            />
+
             {/* The horizon, stated where the list stops rather than only in
                 the menu that set it — a list that quietly ends seven days out
                 is a list a reader assumes is all of it. */}
@@ -926,7 +1014,7 @@ export default function Tasks() {
           taskName={rating.name}
           depth={prefs.rating_depth}
           onSubmit={saveRating}
-          onClose={() => setRating(null)}
+          onClose={nextReview}
         />
       )}
     </div>
