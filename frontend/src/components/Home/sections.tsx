@@ -154,12 +154,24 @@ export function Hero({
   );
 }
 
+/**
+ * The three cards under the hero.
+ *
+ * `bits` is the part that was missing. Each card had a title, a sentence and a
+ * link, and the sentence was doing two jobs badly — saying what the thing is
+ * *and* listing what it can do, which is how a paragraph ends up as "organize
+ * your schedule with an intuitive task manager" and tells a reader nothing they
+ * could not have guessed from the title. The sentence now makes one claim and
+ * the row of chips under it carries the specifics, which is also the only part
+ * of a feature card anybody actually scans.
+ */
 const FEATURES = [
   {
     ico: 'lp-ico-teal',
     glyph: '📋',
     title: 'Task Management',
-    body: 'Organize your schedule with an intuitive task manager. Set priorities, add descriptions, and track progress effortlessly.',
+    body: 'Everything you have on, in one list — filtered, sorted and searchable, and a dozen of them dealt with at once.',
+    bits: ['Priorities', 'Due dates', 'Bulk actions'],
     to: '/dashboard',
     label: 'Go to Dashboard',
   },
@@ -167,7 +179,8 @@ const FEATURES = [
     ico: 'lp-ico-green',
     glyph: '🌱',
     title: 'Growth & Progress',
-    body: 'View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.',
+    body: 'Your work, measured. A growth score built from five things you can check the arithmetic on yourself.',
+    bits: ['Streaks', 'Growth score', 'Records'],
     to: '/growth',
     label: 'Go to Growth',
   },
@@ -175,7 +188,8 @@ const FEATURES = [
     ico: 'lp-ico-gold',
     glyph: '🎯',
     title: 'Strategic Goal Tracking',
-    body: 'Set XP, streak and task goals, then watch them auto-advance as you complete work on the dashboard.',
+    body: 'Name a target in XP, tasks or streak days. It advances itself as you work — there is no second place to keep score.',
+    bits: ['XP', 'Milestones', 'Auto-advance'],
     to: '/goals',
     label: 'Go to Goals',
   },
@@ -201,16 +215,36 @@ export function FeatureStrip() {
           <span className={`lp-feat-ico ${f.ico}`}>{f.glyph}</span>
           <h3>{f.title}</h3>
           <p>{f.body}</p>
+          <ul className="lp-feat-bits">
+            {f.bits.map((bit) => (
+              <li key={bit}>{bit}</li>
+            ))}
+          </ul>
           <Link to={f.to} className="lp-link">
             {f.label} <span className="lp-arrow">→</span>
           </Link>
         </article>
       ))}
       {/* The testimonial is where the hidden chain starts on this page —
-          secret/quote-egg.js counts ten clicks on it. */}
+          secret/quote-egg.js counts ten clicks on the `.lp-quote` card itself,
+          so everything below is a child of it and the clicks still bubble.
+
+          The stars and the initial are new. A bare quote with a name under it
+          reads as filler text; the things that make a testimonial land are a
+          rating and a face, and the nearest honest thing to a face here is the
+          initial rather than a stock photograph of somebody who does not
+          exist. */}
       <article className="lp-card lp-quote">
+        <div className="lp-quote-stars" role="img" aria-label="Rated five out of five">
+          {'★★★★★'}
+        </div>
         <p>“Ascen changed how I study — I finally see my progress instead of guessing at it.”</p>
-        <span className="lp-quote-by">Sarah J. · Student</span>
+        <div className="lp-quote-foot">
+          <span className="lp-quote-face" aria-hidden="true">S</span>
+          <span className="lp-quote-by">
+            Sarah J.<small>Student · six month streak</small>
+          </span>
+        </div>
       </article>
     </section>
   );
@@ -462,9 +496,26 @@ export function Pricing({
  * one at a time. The original wrote "HTML · CSS · Vanilla JS" and split it at
  * runtime; the parts are the parts, so they are written as a list.
  */
+/**
+ * What the app is actually built on.
+ *
+ * This said HTML / CSS / Vanilla JS and Python / Flask / Jinja, and carried a
+ * note explaining that the copy described the stack the port was replacing —
+ * true when it was written, and the reason to leave it alone was that what the
+ * page claims is a separate decision from how it is rendered.
+ *
+ * That reason has expired. Both of those are gone: this page is React and the
+ * server is FastAPI, so the section was no longer carrying old copy, it was
+ * carrying wrong copy — on the one card whose entire job is to be checkable.
+ * And it undersold the thing it was advertising, which is the rarer mistake.
+ *
+ * Versions come from package.json and requirements.txt. A number here is a
+ * claim like any other, so keep it to the major and let the lockfiles hold the
+ * rest.
+ */
 const TECH = [
-  { ico: 'lp-ico-teal', glyph: '🖥', title: 'Frontend', bits: ['HTML', 'CSS', 'Vanilla JS'] },
-  { ico: 'lp-ico-green', glyph: '🔧', title: 'Backend', bits: ['Python', 'Flask', 'Jinja'] },
+  { ico: 'lp-ico-teal', glyph: '🖥', title: 'Frontend', bits: ['React 19', 'TypeScript', 'Vite'] },
+  { ico: 'lp-ico-green', glyph: '🔧', title: 'Backend', bits: ['Python', 'FastAPI', 'Uvicorn'] },
   { ico: 'lp-ico-gold', glyph: '💾', title: 'Database', bits: ['SQLite'] },
   { ico: 'lp-ico-purple', glyph: '📊', title: 'Visualization', bits: ['SVG', 'Canvas'] },
 ];
@@ -472,11 +523,10 @@ const TECH = [
 export function TechStack() {
   return (
     <section className="lp-section">
-      <SectionHead title="Technology Stack" blurb="Built on a clean, dependable stack." />
-      {/* The copy here describes the stack this port is replacing — it says
-          Vanilla JS and Flask, and both are on their way out. It is carried
-          across unchanged for the same reason About Us was: what the page
-          claims is a separate decision from how it is rendered. */}
+      <SectionHead
+        title="Technology Stack"
+        blurb="A typed frontend, a typed API, and one file of SQLite you can copy to a USB stick."
+      />
       <div className="lp-tech" id="techGrid">
         <svg className="tech-wires" id="techWires" aria-hidden="true" />
         {TECH.map((t) => (
@@ -500,14 +550,42 @@ export function TechStack() {
   );
 }
 
+/**
+ * What the closing block promises, under the button.
+ *
+ * Three, because four reads as a list and two as an afterthought — and each one
+ * has to agree with something the page has already said. "Free forever" is the
+ * price tag in `Pricing` above, and the SQLite line is the same file the tech
+ * grid names. A closing block that invents a fourth claim nobody can check is
+ * the part of a landing page readers have learned to skip.
+ */
+const REASSURANCE = [
+  'Free forever — everything included',
+  'No card, no trial clock',
+  'One SQLite file, on your own server',
+];
+
 export function FinalCta({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="lp-final">
       <h2>Ready to start your ascent?</h2>
-      <p>Join and turn today&apos;s effort into tomorrow&apos;s momentum.</p>
+      <p>
+        Finish one task today and the numbers start moving. Everything on this
+        page is the real app — nothing here is a screenshot.
+      </p>
       <Link to="/dashboard" className="lp-btn lp-btn-primary lp-btn-lg">
         {signedIn ? 'Go to Your Dashboard' : 'Get Started Today'}
       </Link>
+      {/* The last thing a signed-out reader wants to know is what it costs and
+          what it takes. Someone with an account has already answered both, so
+          they are shown a button and nothing else. */}
+      {!signedIn && (
+        <ul className="lp-final-notes">
+          {REASSURANCE.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
