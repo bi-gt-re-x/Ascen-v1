@@ -10,8 +10,9 @@
  * questions* and it does not survive what is being asked now.
  *
  * The three were all facts the reader already knew without thinking — how many
- * days, how long, which subject. What has been added is not more of those. It
- * is the four decisions that were previously made *for* the reader and buried:
+ * days, how many hours, which subject. What has been added is not more of
+ * those. It is the four decisions that were previously made *for* the reader
+ * and buried:
  * how they record work, how blunt the page is allowed to be about a shortfall,
  * how much of the page they want drawn, and which tab it opens on. Those are
  * choices rather than recollections, and a choice needs its options laid out
@@ -34,6 +35,20 @@
  * is what makes it reasonable to ask at all: none of this is a commitment, it
  * is the difference between the page measuring against an assumption and the
  * page measuring against something the reader said.
+ *
+ * ## The week is asked for; the sitting is worked out
+ *
+ * The middle question used to be "how long is a normal sitting?", answered
+ * from four buttons. It was the one question here nobody can actually answer:
+ * a sitting length is a figure you would have to average to know, and the
+ * four buttons made that worse by offering a shape rather than a number — a
+ * reader whose week is nine hours over three days had no button.
+ *
+ * So the account states the week, in a field, and `sessionFor` divides. The
+ * stored baseline is unchanged — `active_days` and `session_minutes`, the same
+ * two the panel and the server have always read — because the change is to
+ * which of the three related figures the reader is asked for, not to what a
+ * baseline is.
  *
  * ## One write, at the end
  *
@@ -86,18 +101,41 @@ export interface AnalyticsSetupProps {
 const DAY_CHOICES = [1, 2, 3, 4, 5, 6, 7];
 
 /**
- * Sitting lengths, as the four a person actually thinks in.
+ * What a sitting is allowed to come to, in minutes.
  *
- * Not a slider: the difference between 45 and 50 minutes is noise against how
- * accurately anybody can answer this, and a slider invites a precision the
- * answer does not have.
+ * The same bounds the server holds (SESSION_MINUTES in backend/api/analytics.py),
+ * repeated here because this screen derives the figure rather than asking for
+ * it: a week of 40 hours over one day is a 40-hour sitting, and something has
+ * to say so before the save does.
  */
-const SESSION_CHOICES = [
-  { minutes: 25, label: '25 min', hint: 'A pomodoro' },
-  { minutes: 45, label: '45 min', hint: 'A class hour' },
-  { minutes: 60, label: '1 hour', hint: 'A solid block' },
-  { minutes: 120, label: '2 hours', hint: 'A deep session' },
-];
+const SESSION_MIN = 5;
+const SESSION_MAX = 480;
+
+/** As many hours as a week has. Beyond that the answer is not an answer. */
+const WEEK_HOURS_MAX = 168;
+
+/** Minutes as the reader would say them: 25 min, 1h, 2h 30m. */
+function sittingLabel(minutes: number): string {
+  const whole = Math.floor(minutes / 60);
+  const rest = Math.round(minutes - whole * 60);
+  if (!whole) return `${rest} min`;
+  if (!rest) return whole === 1 ? '1 hour' : `${whole} hours`;
+  return `${whole}h ${rest}m`;
+}
+
+/**
+ * The sitting a week's hours come to, once it is spread over the days.
+ *
+ * Clamped rather than refused, for the same reason `_whole` clamps in
+ * backend/api/settings.py: somebody who typed 90 hours a week over five days
+ * meant "as much as it goes", and the alternative is a save that fails on the
+ * last screen of a seven-screen flow.
+ */
+function sessionFor(weekHours: number, days: number): number {
+  if (!(weekHours > 0) || days <= 0) return SESSION_MIN;
+  const raw = Math.round((weekHours * 60) / days);
+  return Math.max(SESSION_MIN, Math.min(SESSION_MAX, raw));
+}
 
 const LOG_CHOICES: LogStyle[] = ['tasks', 'sessions', 'both'];
 const TONE_CHOICES: AnalyticsTone[] = ['gentle', 'balanced', 'harsh'];
@@ -158,7 +196,15 @@ export function AnalyticsSetup({
 }: AnalyticsSetupProps) {
   const [at, setAt] = useState(0);
   const [days, setDays] = useState(current?.active_days ?? 5);
-  const [minutes, setMinutes] = useState(current?.session_minutes ?? 60);
+  /* The week's hours, held as the string that was typed rather than as a
+     number. A number would make "1." unrepresentable and so unreachable, and
+     a field that deletes the decimal point out from under the cursor is a
+     field nobody can type 1.5 into. Parsed where it is read. */
+  const [hours, setHours] = useState(() =>
+    String(
+      Math.round((((current?.active_days ?? 5) * (current?.session_minutes ?? 60)) / 60) * 10) / 10,
+    ),
+  );
   const [focus, setFocus] = useState(current?.focus_subject ?? '');
   const [logStyle, setLogStyle] = useState<LogStyle>(prefs.analytics_log_style);
   const [tone, setTone] = useState<AnalyticsTone>(prefs.analytics_tone);
@@ -169,11 +215,23 @@ export function AnalyticsSetup({
 
   const editing = Boolean(current);
 
-  /* What the two numbers come to over a week, printed as they are chosen. The
-     point of showing it is that a baseline is easy to set carelessly and this
-     is the line that makes an unrealistic one obvious while it is still being
-     chosen rather than three weeks later. */
-  const weeklyHours = Math.round(((days * minutes) / 60) * 10) / 10;
+  /* The week's hours as a number, and the sitting they come to once spread
+     over the days. The week is the answer and the sitting is derived, which is
+     the way round the reader thinks: nobody knows their average sitting to the
+     minute, and everybody knows roughly what a week of theirs holds.
+
+     Printed under both questions as they are answered, because a baseline is
+     easy to set carelessly and this is the line that makes an unrealistic one
+     obvious while it is still being chosen rather than three weeks later. */
+  const typed = Number.parseFloat(hours);
+  const weeklyHours = Number.isFinite(typed)
+    ? Math.max(0, Math.min(WEEK_HOURS_MAX, typed))
+    : 0;
+  const minutes = sessionFor(weeklyHours, days);
+  /* True when the week asked for cannot be spread over the days at a sitting
+     the server will accept, so the line below can say what will be stored
+     instead of quietly storing something else. */
+  const clamped = weeklyHours > 0 && Math.round((weeklyHours * 60) / days) !== minutes;
 
   const steps: Step[] = useMemo(() => {
     const list: Step[] = [
@@ -219,35 +277,55 @@ export function AnalyticsSetup({
               ))}
             </div>
             <p className="ax-setup-sum">
-              <strong>{weeklyHours}h</strong> a week at your current answers
+              <strong>{weeklyHours}h</strong> a week at your current answers, about{' '}
+              {sittingLabel(minutes)} a sitting
             </p>
           </>
         ),
       },
       {
-        key: 'session',
-        title: 'How long is a normal sitting?',
+        key: 'hours',
+        title: 'How many hours a week does that come to?',
         lead:
-          'Roughly. The difference between 45 and 50 minutes is noise against how accurately '
-          + 'anybody can answer this, which is why these are four buttons and not a slider.',
+          'Roughly, and typed rather than picked: a week is the unit people actually know their '
+          + 'own answer in, and no list of four is going to hold yours. The sitting underneath '
+          + 'is this figure spread over the days you just gave — it is what the page measures '
+          + 'your sittings against, and you never have to work it out.',
         body: (
           <>
-            <div className="ax-setup-sessions" role="group" aria-label="Session length">
-              {SESSION_CHOICES.map((choice) => (
-                <button
-                  key={choice.minutes}
-                  type="button"
-                  className={`ax-setup-session${choice.minutes === minutes ? ' is-on' : ''}`}
-                  aria-pressed={choice.minutes === minutes}
-                  onClick={() => setMinutes(choice.minutes)}
-                >
-                  <strong>{choice.label}</strong>
-                  <span>{choice.hint}</span>
-                </button>
-              ))}
+            <div className="ax-setup-hours">
+              <input
+                className="ax-setup-hours-field"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                max={WEEK_HOURS_MAX}
+                step={0.5}
+                value={hours}
+                aria-label="Hours a week"
+                aria-describedby="ax-setup-hours-note"
+                onChange={(event) => setHours(event.target.value)}
+                /* Emptied, or left as a lone minus or decimal point, on the
+                   way out of the field. Nothing is stored until Finish, so
+                   the repair belongs here rather than in the keystroke — see
+                   `hours` above on why the typed string is what is held. */
+                onBlur={() => setHours(String(weeklyHours || 0))}
+              />
+              <span className="ax-setup-hours-unit">hours a week</span>
             </div>
-            <p className="ax-setup-sum">
-              <strong>{weeklyHours}h</strong> a week, against {days} {days === 1 ? 'day' : 'days'}
+            <p className="ax-setup-sum" id="ax-setup-hours-note">
+              <strong>{sittingLabel(minutes)}</strong> a sitting, across {days}{' '}
+              {days === 1 ? 'day' : 'days'}
+              {/* Said out loud rather than silently applied. A week that will
+                  not fit the days at a sitting the server accepts is stored
+                  at the bound, and a reader who is about to be measured
+                  against that figure is owed the sentence. */}
+              {clamped && (
+                <em>
+                  {' '}— a sitting is held between {SESSION_MIN} minutes and{' '}
+                  {sittingLabel(SESSION_MAX)}, so that is what is stored.
+                </em>
+              )}
             </p>
           </>
         ),
@@ -349,7 +427,7 @@ export function AnalyticsSetup({
     );
 
     return list;
-  }, [days, detail, focus, homeTab, logStyle, minutes, subjects, tone, weeklyHours]);
+  }, [clamped, days, detail, focus, homeTab, hours, logStyle, minutes, subjects, tone, weeklyHours]);
 
   const total = steps.length;
   // Clamped rather than trusted: the subject step disappears when a catalogue

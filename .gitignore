@@ -4,6 +4,9 @@ __pycache__/
 .pytest_cache/
 .venv/
 .venv-fastapi/
+# Superseded interpreters kept around by hand. Same rule as the live one:
+# a virtualenv is 44MB of built wheels that requirements.txt already describes.
+.venv-fastapi.old*/
 
 # Node
 node_modules/

@@ -92,7 +92,54 @@ describe('the analytics question phase', () => {
     // Untouched questions still travel, at the value they were shown at —
     // a partial write would leave the page half-configured.
     expect(answers.prefs.analytics_tone).toBe(DEFAULTS.analytics_tone);
-    expect(answers.baseline.session_minutes).toBe(60);
+    // The week is what was asked for and it did not move: five hours, now
+    // over three days rather than five, which is a hundred-minute sitting.
+    expect(answers.baseline.session_minutes).toBe(100);
+  });
+
+  it('takes the week in hours and stores the sitting it comes to', async () => {
+    const user = userEvent.setup();
+    const { onSave } = draw();
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: '4' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    const field = screen.getByRole('spinbutton', { name: /hours a week/i });
+    await user.clear(field);
+    await user.type(field, '10');
+    // The sitting is derived and printed rather than asked for: ten hours
+    // over four days is two and a half.
+    expect(screen.getByText(/2h 30m/)).toBeInTheDocument();
+
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+
+    const answers = onSave.mock.calls[0]![0];
+    expect(answers.baseline.active_days).toBe(4);
+    expect(answers.baseline.session_minutes).toBe(150);
+  });
+
+  it('holds the sitting inside what the server will take', async () => {
+    const user = userEvent.setup();
+    const { onSave } = draw();
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: '1' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    const field = screen.getByRole('spinbutton', { name: /hours a week/i });
+    await user.clear(field);
+    await user.type(field, '40');
+    // Forty hours on one day is a forty-hour sitting, which the server would
+    // refuse. It is clamped, and the screen says so rather than saving
+    // something the reader was never shown.
+    expect(screen.getByText(/that is what is stored/i)).toBeInTheDocument();
+
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+
+    expect(onSave.mock.calls[0]![0].baseline.session_minutes).toBe(480);
   });
 
   it('can be left from any step, not only the first', async () => {
@@ -122,5 +169,10 @@ describe('the analytics question phase', () => {
     // change one, not to start again.
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('button', { name: '2', pressed: true })).toBeInTheDocument();
+
+    // Including the week, which is the stored pair read back the way it is
+    // asked: two days of 25 minutes is 0.8 of an hour.
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByRole('spinbutton', { name: /hours a week/i })).toHaveValue(0.8);
   });
 });

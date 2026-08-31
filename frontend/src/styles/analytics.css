@@ -689,34 +689,43 @@ body:has(.ax-page) .app-main {
     color: #fff;
 }
 
-.ax-setup-sessions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 8px;
+/* The week's hours, typed. This was four buttons — 25 min, 45 min, 1h, 2h —
+   and the buttons were the wrong question as well as the wrong control: they
+   asked for a sitting length, which is the figure a reader is least able to
+   state and the one the page can derive from the two it can. The field is
+   sized to the answer it takes, not to the card, so a two-character number
+   does not sit in a box the width of the page. */
+.ax-setup-hours {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-.ax-setup-session {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 11px 12px;
-    border-radius: 10px;
+.ax-setup-hours-field {
+    width: 140px;
+    height: 62px;
+    padding: 0 14px;
+    border-radius: 12px;
     border: 1px solid var(--ax-line);
     background: var(--ax-card);
-    text-align: left;
+    color: var(--ax-text);
     font-family: inherit;
-    cursor: pointer;
-    transition: background .12s ease, border-color .12s ease;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    transition: border-color .12s ease, box-shadow .12s ease;
 }
 
-.ax-setup-session:hover { border-color: var(--ax-violet); }
-
-.ax-setup-session strong { font-size: 14px; font-weight: 650; color: var(--ax-text); }
-.ax-setup-session span { font-size: 11.5px; color: var(--ax-faint); }
-
-.ax-setup-session.is-on {
+.ax-setup-hours-field:focus {
+    outline: none;
     border-color: var(--ax-violet);
-    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ax-violet) 18%, transparent);
+}
+
+.ax-setup-hours-unit {
+    font-size: 15px;
+    color: var(--ax-muted);
 }
 
 .ax-setup-select {
@@ -744,6 +753,12 @@ body:has(.ax-page) .app-main {
     font-size: 28px;
     letter-spacing: -.03em;
     margin-right: 4px;
+}
+
+.ax-setup-sum em {
+    font-style: normal;
+    font-size: 13px;
+    color: var(--ax-faint);
 }
 
 .ax-setup-failed {
