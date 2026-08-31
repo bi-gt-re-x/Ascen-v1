@@ -692,30 +692,144 @@ html[data-theme="dark"] .lp-trend.up { color: #4ade80; }
 .lp-chip { font-size: .74rem; color: var(--lp-muted); background: var(--lp-surface-2); border: 1px solid var(--lp-border); border-radius: 999px; padding: 4px 10px; }
 .lp-chip b { color: var(--lp-heading); }
 
-/* ---- Analytics: the score, its five factors, and the tab strip ---- */
-/* The mirror of .lp-perf — score card narrow, the thing it is made of wide —
-   so the two analysis sections read as a pair rather than as two layouts.
-   Everything that moves in here is in styles/home-motion.css under .ax-armed. */
+/* ---- Analytics: the dial, its five factors, and the tab rail ---- */
+/* The mirror of .lp-perf — the reading on the left, what it is made of on the
+   right — so the two analysis sections read as a pair rather than as two
+   layouts. Everything that moves is in styles/home-motion.css under .ax-armed.
+
+   It began as two flat cards and a large number, which is the shape a panel
+   takes when nobody has decided what the eye should land on first. The dial is
+   that decision: one figure, drawn rather than typed, with the parts it is the
+   mean of alongside it and the six weeks behind it underneath. */
+.lp-ax-wrap { display: flex; flex-direction: column; gap: 16px; }
 .lp-ax { display: grid; grid-template-columns: 1fr 1.35fr; gap: 18px; align-items: stretch; }
-.lp-ax-score { display: flex; flex-direction: column; }
-.lp-ax-num { display: flex; align-items: baseline; gap: 3px; color: var(--lp-heading); font-size: 3.1rem; font-weight: 800; line-height: 1; margin: 10px 0 8px; letter-spacing: -.03em; }
-/* The number is its own element because countThrough rewrites textContent, and
+
+.lp-ax-score { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.lp-ax-score .lp-card-top { width: 100%; }
+.lp-ax-rank {
+    color: var(--lp-accent);
+    background: color-mix(in srgb, var(--lp-accent) 12%, transparent);
+    border-color: color-mix(in srgb, var(--lp-accent) 32%, transparent);
+    font-weight: 700;
+}
+
+/* The dial. The glow behind it is a soft radial rather than a box-shadow so it
+   sits under the ring's own colour instead of ringing the card. */
+.lp-ax-dial { position: relative; width: 178px; max-width: 100%; margin: 8px 0 2px; }
+.lp-ax-dial::before {
+    content: '';
+    position: absolute;
+    inset: 12%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--lp-accent) 22%, transparent), transparent 68%);
+    filter: blur(6px);
+}
+.lp-ax-ring { position: relative; display: block; width: 100%; height: auto; }
+.lp-ax-ring-bed { fill: none; stroke: var(--lp-border); stroke-width: 11; }
+.lp-ax-ring-arc {
+    fill: none;
+    stroke: url(#lpAxRing);
+    stroke-width: 11;
+    stroke-linecap: round;
+}
+
+.lp-ax-dial-mid {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.lp-ax-num {
+    display: flex; align-items: baseline; gap: 2px;
+    color: var(--lp-heading);
+    font-size: 2.7rem; font-weight: 800; line-height: 1; letter-spacing: -.03em;
+}
+/* The figure is its own element because countThrough rewrites textContent, and
    a "/10" living inside it would be rewritten away on the first frame. */
 .lp-ax-num em { font-style: normal; font-variant-numeric: tabular-nums; }
-.lp-ax-num small { font-size: .3em; font-weight: 700; color: var(--lp-muted); }
+.lp-ax-num small { font-size: .32em; font-weight: 700; color: var(--lp-muted); }
 
+.lp-ax-note {
+    margin: 12px 0 0;
+    color: var(--lp-muted);
+    font-size: .82rem; line-height: 1.5;
+}
+
+/* Six weeks under the dial: the curve, and the rise it adds up to. */
+.lp-ax-trend {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 14px;
+}
+.lp-ax-spark { flex: 1; min-width: 0; height: 42px; color: var(--lp-accent); }
+.lp-ax-spark polyline {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.lp-ax-rise {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: var(--lp-accent-2);
+    font-size: .74rem; font-weight: 700; white-space: nowrap;
+}
+.lp-ax-rise i { font-style: normal; font-size: .8em; }
+
+/* ---- The five measures ---- */
 .lp-ax-factors { display: flex; flex-direction: column; }
-.lp-ax-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 13px; flex: 1; justify-content: center; }
-.lp-ax-row { display: grid; grid-template-columns: 92px 1fr 28px; align-items: center; gap: 12px; }
-.lp-ax-name { color: var(--lp-muted); font-size: .82rem; font-weight: 600; }
-.lp-ax-track { height: 8px; border-radius: 999px; background: var(--lp-surface-2); border: 1px solid var(--lp-border); overflow: hidden; }
-.lp-ax-track i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--lp-accent), var(--lp-accent-2)); }
-.lp-ax-val { color: var(--lp-heading); font-size: .82rem; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+.lp-ax-list {
+    list-style: none; margin: 16px 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 16px;
+    flex: 1; justify-content: center;
+}
+.lp-ax-row { display: grid; grid-template-columns: 96px 1fr 30px; align-items: center; gap: 13px; }
+.lp-ax-name { color: var(--lp-muted); font-size: .84rem; font-weight: 600; }
+.lp-ax-track {
+    position: relative;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--lp-surface-2);
+    border: 1px solid var(--lp-border);
+    overflow: hidden;
+}
+.lp-ax-track i {
+    position: relative;
+    display: block; height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--lp-accent), var(--lp-accent-2));
+}
+.lp-ax-val {
+    color: var(--lp-heading);
+    font-size: .84rem; font-weight: 800; text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.lp-ax-val em { font-style: normal; }
 
-/* The seven tabs, as the analytics page's own bar orders them. */
-.lp-ax-tabs { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: auto 0 0; padding: 14px 0 0; }
-.lp-ax-tab { font-size: .72rem; font-weight: 600; color: var(--lp-muted); background: var(--lp-surface-2); border: 1px solid var(--lp-border); border-radius: 999px; padding: 4px 10px; }
-.lp-ax-tab.is-lead { color: #fff; background: var(--lp-accent); border-color: var(--lp-accent); }
+/* ---- The seven tabs, across the foot of the section ---- */
+.lp-ax-tabs {
+    list-style: none;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+    margin: 0; padding: 0;
+}
+.lp-ax-tab {
+    font-size: .78rem; font-weight: 600;
+    color: var(--lp-muted);
+    background: var(--lp-surface);
+    border: 1px solid var(--lp-border);
+    border-radius: 999px;
+    padding: 7px 15px;
+}
+.lp-ax-tab:hover {
+    color: var(--lp-heading);
+    border-color: color-mix(in srgb, var(--lp-accent) 45%, var(--lp-border));
+    transform: translateY(-2px);
+}
+.lp-ax-tab.is-lead {
+    color: #fff;
+    background: var(--lp-accent);
+    border-color: var(--lp-accent);
+}
+.lp-ax-tab.is-lead:hover { color: #fff; }
 
 @media (max-width: 900px) {
     .lp-perf { grid-template-columns: 1fr; }

@@ -975,7 +975,7 @@ html[data-theme="dark"] .lp-final::before {
 }
 
 /* ============================================================
-   Analytics — the bars fill and the tab strip lights up
+   Analytics — the dial sweeps, the bars fill, the rail lights
    ============================================================
    The armed/unarmed shape the demos use: the plain rules below are the
    *finished* panel, and `.ax-armed` is the only thing that empties it. The
@@ -985,33 +985,76 @@ html[data-theme="dark"] .lp-final::before {
 
    Writing the start state as the override rather than the default is what makes
    the reduced-motion block at the foot of this file a short one: it re-states
-   the finished values under `.ax-armed` and nothing has to be re-derived.
+   the finished values under `.ax-armed` and nothing has to be re-derived. */
 
-   `--ax-to` is each bar's real width, written onto the element by
+/* The dial. Its dash offset is written into the markup at the finished score,
+   so the sweep is one transition from a closed ring — and editing a factor
+   moves where it stops without touching this file. The slight overshoot in the
+   easing is what makes it read as a needle settling rather than a bar filling. */
+.lp-ax-ring-arc {
+    transition: stroke-dashoffset 1500ms cubic-bezier(.22, .84, .3, 1);
+}
+.ax-armed .lp-ax-ring-arc { stroke-dashoffset: var(--ax-ring-len, 340); }
+
+/* The glow behind it comes up with the sweep rather than being there first. */
+.lp-ax-dial::before { transition: opacity 900ms var(--hm-ease) 300ms; }
+.ax-armed .lp-ax-dial::before { opacity: 0; }
+
+/* `--ax-to` is each bar's real width, written onto the element by
    components/Home/Analytics.tsx along with the delay that staggers it. Width is
-   the transitioned property rather than a transform because these bars sit in a
-   `overflow: hidden` track with rounded ends: scaleX would stretch the rounding
-   and slide the gradient, and the gradient is the point. Five short bars is not
-   a case where the layout cost is worth the pixel-perfect argument. */
+   the transitioned property rather than a transform because these bars sit in
+   an `overflow: hidden` track with rounded ends: scaleX would stretch the
+   rounding and slide the gradient, and the gradient is the point. */
 .lp-ax-track i {
     width: var(--ax-to, 0%);
-    transition: width 1100ms var(--hm-ease);
+    transition: width 1200ms var(--hm-ease);
 }
 .ax-armed .lp-ax-track i { width: 0; }
 
-/* The values and the score are counted, not transitioned — but they must not
-   sit at their finished figure for the frame before the count starts. */
-.lp-ax-val { transition: opacity 420ms var(--hm-ease); }
-.ax-armed .lp-ax-val { opacity: 0; }
+/* A light travelling the length of each bar as it fills, once. Purely a
+   highlight: it is on a pseudo-element inside the clipped track, so it cannot
+   reach past the bar's own end. */
+.lp-ax-track i::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .55), transparent 80%);
+    transform: translateX(-100%);
+}
+.lp-ax-wrap:not(.ax-armed) .lp-ax-track i::after {
+    animation: axSheen 1400ms var(--hm-ease-soft) forwards;
+}
+@keyframes axSheen {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(100%); }
+}
 
-/* The strip stays dark until the numbers have settled; .ax-lit releases it and
+/* The curve draws itself left to right, after the dial has committed. */
+.lp-ax-spark polyline {
+    stroke-dasharray: 260;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1100ms var(--hm-ease) 400ms;
+}
+.ax-armed .lp-ax-spark polyline { stroke-dashoffset: 260; }
+
+.lp-ax-rise { transition: opacity 500ms var(--hm-ease) 1100ms, transform 500ms var(--hm-ease) 1100ms; }
+.ax-armed .lp-ax-rise { opacity: 0; transform: translateX(-6px); }
+
+/* The values are counted, not transitioned — but they must not sit at their
+   finished figure for the frame before the count starts. */
+.lp-ax-val, .lp-ax-num { transition: opacity 420ms var(--hm-ease); }
+.ax-armed .lp-ax-val, .ax-armed .lp-ax-num { opacity: 0; }
+
+/* The rail stays dark until the numbers have settled; .ax-lit releases it and
    the per-chip delay walks it left to right. */
 .lp-ax-tab {
     opacity: 0;
-    transform: translateY(6px);
-    transition: opacity 380ms var(--hm-ease), transform 380ms var(--hm-ease);
+    transform: translateY(8px);
+    transition: opacity 380ms var(--hm-ease), transform 380ms var(--hm-ease),
+                color .18s ease, border-color .18s ease;
 }
-.lp-ax.ax-lit .lp-ax-tab { opacity: 1; transform: none; }
+.lp-ax-wrap.ax-lit .lp-ax-tab { opacity: 1; transform: none; }
 
 /* ============================================================
    Less motion, please
@@ -1051,12 +1094,20 @@ html[data-theme="dark"] .lp-final::before {
     .cal-armed .lp-ev { opacity: 1; transform: none; }
     .td-task, .td-box, .td-box svg, .td-xp-bar i, .lp-ev, .lp-cal-body { transition: none; }
 
-    /* Analytics: bars at their widths, values and tabs shown, nothing staged.
-       The component's `still` puts the score straight at its figure. */
+    /* Analytics: dial round, bars at their widths, curve drawn, rail shown.
+       The component's `still` puts the figures straight at their values. */
+    .ax-armed .lp-ax-ring-arc { stroke-dashoffset: var(--ax-ring-end, 0); }
     .ax-armed .lp-ax-track i { width: var(--ax-to, 0%); }
-    .ax-armed .lp-ax-val { opacity: 1; }
-    .lp-ax .lp-ax-tab { opacity: 1; transform: none; }
-    .lp-ax-track i, .lp-ax-val, .lp-ax-tab { transition: none; }
+    .ax-armed .lp-ax-spark polyline { stroke-dashoffset: 0; }
+    .ax-armed .lp-ax-val,
+    .ax-armed .lp-ax-num,
+    .ax-armed .lp-ax-rise,
+    .ax-armed .lp-ax-dial::before { opacity: 1; }
+    .ax-armed .lp-ax-rise { transform: none; }
+    .lp-ax-wrap .lp-ax-tab { opacity: 1; transform: none; }
+    .lp-ax-track i::after { animation: none; }
+    .lp-ax-ring-arc, .lp-ax-track i, .lp-ax-spark polyline,
+    .lp-ax-val, .lp-ax-num, .lp-ax-rise, .lp-ax-tab, .lp-ax-dial::before { transition: none; }
 
     /* Charts, gauge, streak and timeline: drawn, filled and counted already. */
     .sk-flames span,

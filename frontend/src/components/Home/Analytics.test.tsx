@@ -88,7 +88,7 @@ describe('the landing page analytics panel', () => {
   it('ships armed, unarms a paint after it is scrolled to, and re-arms when it leaves', async () => {
     const io = stubIO();
     render(<Analytics />);
-    const panel = document.querySelector('.lp-ax') as HTMLElement;
+    const panel = document.querySelector('.lp-ax-wrap') as HTMLElement;
     expect(panel.classList.contains('ax-armed')).toBe(true);
 
     await act(async () => {
@@ -109,12 +109,44 @@ describe('the landing page analytics panel', () => {
     expect(panel.classList.contains('ax-armed')).toBe(true);
   });
 
+  it('sweeps the dial to the score, and hands both ends of it to the CSS', () => {
+    render(<Analytics />);
+    const arc = document.querySelector<SVGCircleElement>('.lp-ax-ring-arc');
+    const len = Number(arc!.style.getPropertyValue('--ax-ring-len'));
+    const end = Number(arc!.style.getPropertyValue('--ax-ring-end'));
+    // The closed ring is the whole circumference; the open one stops where the
+    // score does. 8.28/10 of the way round leaves 17.2% unpainted.
+    expect(len).toBeCloseTo(2 * Math.PI * 54, 1);
+    expect(end / len).toBeCloseTo(1 - 8.28 / 10, 3);
+    // The attribute and the custom property are the same rounded number.
+    expect(Number(arc!.getAttribute('stroke-dashoffset'))).toBe(end);
+  });
+
+  it('ends the trend curve exactly on the score it is a history of', () => {
+    render(<Analytics />);
+    const points = document.querySelector('.lp-ax-spark polyline')!
+      .getAttribute('points')!
+      .split(' ');
+    expect(points).toHaveLength(6);
+    // Last point: full width, and the height the score maps to.
+    const last = points[points.length - 1]!.split(',').map(Number);
+    expect(last[0]).toBeCloseTo(190, 1);
+    const span = 42 - 5 * 2;
+    expect(last[1]).toBeCloseTo(42 - 5 - (8.28 / 10) * span, 1);
+  });
+
+  it('states the rise as the trend’s own two ends subtracted', () => {
+    render(<Analytics />);
+    // 8.28 - 6.2 = 2.08 -> "+2.1"
+    expect(screen.getByText(/\+2\.1 in six weeks/)).toBeInTheDocument();
+  });
+
   it('with no IntersectionObserver, shows the finished panel at once', () => {
     const had = Reflect.get(window, 'IntersectionObserver');
     Reflect.deleteProperty(window, 'IntersectionObserver');
     render(<Analytics />);
     Reflect.set(window, 'IntersectionObserver', had);
-    const panel = document.querySelector('.lp-ax') as HTMLElement;
+    const panel = document.querySelector('.lp-ax-wrap') as HTMLElement;
     expect(panel.classList.contains('ax-armed')).toBe(false);
     expect(panel.classList.contains('ax-lit')).toBe(true);
     expect(screen.getByText('8.3')).toBeInTheDocument();
