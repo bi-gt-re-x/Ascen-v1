@@ -4570,7 +4570,14 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 .ag-list {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    /* Comfortably more than the 18px a card pads itself by, and more than the
+       hairlines that split one card into its three bands. At 20px it was neither:
+       the space between two goals measured the same as the space between one
+       goal's body and its own footer, so the strongest horizontal lines on the
+       page were the ones *inside* a card and the boundary between two of them
+       was the weakest. Scrolling, that reads as one unbroken run of bands
+       rather than as a stack of separate goals. */
+    gap: 34px;
 }
 
 .ag-card {
