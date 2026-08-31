@@ -4738,9 +4738,19 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     background: var(--gx-card);
 }
 /* The two panels are independent columns of a grid, so they are already the same
-   height; this stops the shorter one's content from stretching to fill it and
-   lets the caption sit on the floor instead. */
+   height; this stops the shorter one's content from stretching to fill it, and
+   leaves whatever is left over at the foot of the column. */
 .ag-panel > * { flex: none; }
+/* ...except the plot, which is the one visual that reads better bigger. A line
+   over time says the same thing at any height, so on a goal whose focus list
+   runs long it takes the leftover rather than leaving it under the chart.
+
+   Nothing else grows, and nothing centres. A roadmap of one checkpoint centred
+   in a tall panel looks like a card that failed to load; the same row sitting
+   under its heading with the space trailing below just looks like a goal with
+   one checkpoint, which is what it is. The slack belongs at the bottom of the
+   column, in one piece, not wrapped around the content. */
+.ag-chart { flex: 1 1 auto; }
 
 .ag-panel-head {
     display: flex;
@@ -4805,7 +4815,12 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     position: relative;
     display: grid;
     grid-template-columns: 30px minmax(0, 1fr);
-    grid-template-rows: 118px 16px;
+    /* 118px is the floor every visual shares, not a fixed height — see the note
+       over `.ag-caption`. The panel is a grid column beside the focus list, so
+       it is already as tall as whatever that list came to, and pinning the plot
+       to its minimum left the difference as a void between chart and caption.
+       Row one takes the slack, so the space is spent on the picture. */
+    grid-template-rows: minmax(118px, 1fr) 16px;
     column-gap: 6px;
 }
 .ag-chart-scale {
@@ -4821,7 +4836,7 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     /* Half a line up, so each label sits on its gridline rather than under it. */
     transform: translateY(-4px);
 }
-.ag-chart-plot { grid-column: 2; width: 100%; height: 118px; overflow: visible; }
+.ag-chart-plot { grid-column: 2; width: 100%; height: 100%; overflow: visible; }
 .ag-chart-grid { stroke: var(--gx-line-soft); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .ag-chart-area { fill: color-mix(in srgb, var(--tone) 16%, transparent); }
 .ag-chart-line {
@@ -4931,10 +4946,11 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
    have to sit at the same weight as each other. A card whose goal earned the
    heatmap must not look busier than one that earned the roadmap; they are the
    same panel answering the same question with what each goal actually has.
-   Hence one height for all of them, one caption treatment, and `--tone` spent in
-   the same three places. */
+   Hence one starting height for all of them, one caption treatment, and `--tone`
+   spent in the same three places. The plot is the single exception to the
+   height, and only upwards — see `.ag-chart` by `.ag-panel > *`. */
 .ag-caption {
-    margin: auto 0 0;
+    margin: 0;
     padding-top: 2px;
     font-size: 11px;
     line-height: 1.5;
