@@ -69,7 +69,12 @@ COUNT = 5
 # property this actually depends on: the five have to be sequential and
 # non-overlapping, and that is a reasoning problem rather than a recall one.
 # `thinking` is left unset because omitting it on this model runs adaptive.
-ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL') or 'claude-sonnet-5'
+ANTHROPIC_MODEL_DEFAULT = 'claude-sonnet-5'
+
+
+def model() -> str:
+    """Which model answers. Read per call, for the reason `provider()` is."""
+    return os.environ.get('ANTHROPIC_MODEL') or ANTHROPIC_MODEL_DEFAULT
 
 # Room for the thinking as well as the answer — `max_tokens` is a hard limit
 # on the two together, and five titles that arrive truncated are five titles
@@ -78,14 +83,24 @@ ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL') or 'claude-sonnet-5'
 # page is holding a spinner for it.
 ANTHROPIC_MAX_TOKENS = 16000
 
-# Sent as `anthropic-workspace-id` when set.
-#
-# An identity-linked key belongs to a person rather than to a workspace, and
-# the API refuses it with a 400 saying so until the request names the
-# workspace it acts in. A key that is not identity-linked does not need this
-# and is not sent it — an empty value here means the header is omitted
-# entirely rather than sent blank, which is its own 400.
-ANTHROPIC_WORKSPACE_ID = os.environ.get('ANTHROPIC_WORKSPACE_ID') or ''
+def workspace_id() -> str:
+    """The workspace a request acts in, or '' when there is none to name.
+
+    Sent as `anthropic-workspace-id`. An identity-linked key belongs to a
+    person rather than to a workspace, and the API refuses it with a 400 until
+    the request names one. A key that is not identity-linked neither needs
+    this nor is sent it — empty means the header is omitted entirely rather
+    than sent blank, which is its own 400.
+
+    **Read per call, and that is the whole point.** This was a module constant
+    for one commit, and a constant is evaluated at import — which is before
+    `load_dotenv()` runs in any of the three entry points. The result was that
+    setting ANTHROPIC_WORKSPACE_ID in .env did nothing at all: the header was
+    never sent, the API kept asking for the workspace, and the error kept
+    telling the reader to do the thing they had already done. `provider()`
+    says the same thing three functions down and has since it was written.
+    """
+    return os.environ.get('ANTHROPIC_WORKSPACE_ID') or ''
 
 # ---------------------------------------------------------------------------
 # Hugging Face
@@ -400,12 +415,13 @@ def _from_anthropic(brief: str, system: str = None, schema: dict = None,
 
     # The header is omitted rather than sent empty when there is no workspace
     # to name: a blank one is refused the same way a missing one is.
+    workspace = workspace_id()
     client = anthropic.Anthropic(
-        default_headers=({'anthropic-workspace-id': ANTHROPIC_WORKSPACE_ID}
-                         if ANTHROPIC_WORKSPACE_ID else None))
+        default_headers=({'anthropic-workspace-id': workspace}
+                         if workspace else None))
     try:
         response = client.messages.create(
-            model=ANTHROPIC_MODEL,
+            model=model(),
             max_tokens=ANTHROPIC_MAX_TOKENS,
             system=system or SYSTEM,
             # `high` is this model's own default, and the level its guidance
@@ -428,12 +444,26 @@ def _from_anthropic(brief: str, system: str = None, schema: dict = None,
         # This module's errors are shown on the goals page, so it says what to
         # do instead of what happened.
         if 'anthropic-workspace-id' in str(exc):
+            # Two different failures reach here and the reader can only act on
+            # the right one if they are told apart: nothing set, or something
+            # set that the API would not take. Saying "put it in .env" to
+            # somebody who has already put it in .env is how the last version
+            # of this message sent a reader in a circle.
+            if workspace_id():
+                raise PlannerUnavailable(
+                    'Anthropic would not accept the workspace id in '
+                    'ANTHROPIC_WORKSPACE_ID ({!r}). Check it against the id in '
+                    'the console URL with the workspace open.'.format(
+                        workspace_id())) from exc
             raise PlannerUnavailable(
-                'This Anthropic key is identity-linked, so it has to name the '
-                'workspace it acts in. Put the workspace id in '
-                'ANTHROPIC_WORKSPACE_ID in .env and restart the server — it '
-                'is in the Anthropic console URL when the workspace is open, '
-                'and on Settings → Workspaces.') from exc
+                'This Anthropic key is identity-linked: it belongs to a person '
+                'rather than to a workspace, so every request has to name the '
+                'workspace it acts in. Two ways out, and the second is less to '
+                'maintain: set ANTHROPIC_WORKSPACE_ID in .env to the id in the '
+                'console URL with the workspace open, or make a workspace API '
+                'key in that workspace and use it instead — a key that already '
+                'belongs to a workspace needs none of this. Restart whatever '
+                'read .env either way.') from exc
         raise PlannerUnavailable(
             'Could not reach the model: {}'.format(exc)) from exc
 
