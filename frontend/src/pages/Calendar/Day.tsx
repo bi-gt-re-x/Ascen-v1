@@ -38,6 +38,7 @@ import {
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import { planFamilies, weekOf } from '@/utils/calendarFamilies';
+import { dayShape } from '@/utils/dayShape';
 import {
   useGridDrag,
   type DraggedSlot,
@@ -374,6 +375,23 @@ export default function Day() {
     [blocks],
   );
 
+  /**
+   * What the day comes to, for the sidebar's two new panels.
+   *
+   * `now` is a grid hour on today and null on any other day — see
+   * utils/dayShape, which is where the arithmetic lives. The minute is in the
+   * dependency by way of `now`, so "in 25 minutes" counts down rather than
+   * standing still until something else re-renders the page.
+   */
+  const shape = useMemo(
+    () =>
+      dayShape(
+        blocks,
+        isToday ? now.getHours() + now.getMinutes() / 60 : null,
+      ),
+    [blocks, isToday, now],
+  );
+
   const openFor = useCallback(
     (block: Block, intent: 'edit' | 'delete') => {
       if (block.kind === 'event') {
@@ -630,6 +648,8 @@ export default function Day() {
             xp: xpEarned,
             streak: Number(stats.current_streak) || 0,
           }}
+          shape={shape}
+          isToday={isToday}
           pending={pending}
           onComplete={complete}
           completingId={completing}
