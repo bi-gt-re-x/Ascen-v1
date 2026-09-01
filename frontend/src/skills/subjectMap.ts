@@ -127,7 +127,10 @@ export const SUBJECT_TARGETS: Record<string, SubjectTarget> = {
   cybersecurity: { tree: 'cybersecurity' },
   databases: { tree: 'databases' },
   networking: { tree: 'networking' },
-  robotics: { tree: 'systems', node: 's.processes' },
+  /* Was systems/s.processes, which was the closest thing that existed rather
+     than an answer — process scheduling is not what somebody filing a task
+     under Robotics is doing. It has its own lattice now. */
+  robotics: { tree: 'robotics', node: 'ro.mech' },
   engineering: { tree: 'physics', node: 'ph.fbd' },
 
   // ---- Business and money ----
@@ -206,6 +209,33 @@ export function subjectsForTree(treeId: string): string[] {
   return Object.entries(SUBJECT_TARGETS)
     .filter(([, target]) => target.tree === treeId)
     .map(([id]) => id);
+}
+
+/**
+ * The subjects that actually have a lattice behind them.
+ *
+ * `treeForSubject` never fails — an id it has not heard of falls back to its
+ * group's root, which is deliberate and right for the case it was written for:
+ * a *catalogue* row added to backend/config/subjects.py that this file has not
+ * caught up with yet. That subject genuinely belongs somewhere near its group's
+ * root, and it lands there rather than vanishing until somebody edits a map.
+ *
+ * A subject the account invented is the other case entirely, and the same
+ * fallback is wrong for it. There is no tree, there will never be a tree, and
+ * nothing about the name gives the fallback anything to work with — so it
+ * routes on `group` alone and opens a full lattice belonging to something else.
+ * "Fantasy Football" filed under Business opened the Business tree, with that
+ * title, that breadcrumb and twenty nodes about unit economics. A confident
+ * wrong answer, which is worse than no answer, because nothing on the page
+ * tells the reader the routing was a guess.
+ *
+ * So the skill tree page filters with this before it offers anything: what it
+ * cannot route, it does not list. Every other surface in the app — the task
+ * filters, the calendar, the library — keeps custom subjects, because a label
+ * to file work under is all those need and a custom one is as real as any.
+ */
+export function latticeSubjects<T extends { custom: boolean }>(subjects: T[]): T[] {
+  return subjects.filter((subject) => !subject.custom);
 }
 
 /** Every tree id, for the checks and for anything enumerating targets. */

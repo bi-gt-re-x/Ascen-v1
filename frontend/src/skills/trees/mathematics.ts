@@ -55,5 +55,7 @@ export const MATH: SubjectTree = {
       desc: 'A subject of its own: reasoning about what you cannot see all of, and saying how sure you are.' },
     { id: 'm.disc', name: 'Discrete Mathematics', icon: 'logic', tier: 'expert', requires: ['m.proof'], navTo: 'discrete', state: lock,
       desc: 'A subject of its own: logic, sets, counting and proof — the maths computing is written in.' },
+    { id: 'm.compmath', name: 'Competition Mathematics', icon: 'trophy', tier: 'expert', requires: ['m.proof', 'm.combinatorics'], navTo: 'competition-math', state: lock,
+      desc: 'A subject of its own: AMC, AIME and olympiad — choosing the method, against a clock.' },
   ],
 };

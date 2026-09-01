@@ -63,5 +63,7 @@ export const CODING: SubjectTree = {
       desc: 'A subject of its own: where the data lives, how it is shaped, and how to ask it things.' },
     { id: 'c.sec', name: 'Cybersecurity', icon: 'shield', tier: 'advanced', requires: ['c.err', 'c.git'], navTo: 'cybersecurity', state: lock,
       desc: 'A subject of its own: what breaks, why it breaks, and the habits that stop it breaking here.' },
+    { id: 'c.robotics', name: 'Competitive Robotics', icon: 'automation', tier: 'advanced', requires: ['c.oop', 'c.debug'], navTo: 'robotics', state: lock,
+      desc: 'A subject of its own: FRC and VEX — build season, and the robot that never stops working.' },
   ],
 };

@@ -64,5 +64,7 @@ export const SCIENCE: SubjectTree = {
       desc: 'A subject of its own: from one cell to a whole ecosystem, and the idea that ties them together.' },
     { id: 'sc.earth', name: 'Earth & Space', icon: 'planet', tier: 'intermediate', requires: ['sc.scale'], navTo: 'earth-space', state: lock,
       desc: 'A subject of its own: rocks, weather, oceans and everything past the atmosphere.' },
+    { id: 'sc.olympiad', name: 'Science Olympiad', icon: 'trophy', tier: 'expert', requires: ['sc.evidence', 'sc.stats'], navTo: 'olympiad-science', state: lock,
+      desc: 'A subject of its own: F=ma, USNCO and USABO — selection exams and what separates them.' },
   ],
 };

@@ -49,7 +49,7 @@ import {
 } from '@/components/SkillTree';
 import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
 import { iconForName } from '@/skills/iconMatch';
-import { treeForSubject } from '@/skills/subjectMap';
+import { latticeSubjects, treeForSubject } from '@/skills/subjectMap';
 import {
   DEFAULT_TREE,
   childrenOf,
@@ -153,7 +153,14 @@ export default function SkillTrees() {
   // The account's own catalogue, usage-ordered by the endpoint. Everything at
   // the top of this page is drawn from it: the five focus cards, the rail, and
   // half of what the search can find.
-  const subjects = useSubjects(username);
+  const catalogue = useSubjects(username);
+  /* The hundred, without the ones this account invented — there is no lattice
+     to route a custom subject to, and `treeForSubject`'s group fallback opens a
+     confident wrong one. Dropped once here rather than at each of the four
+     places below, so the setup screen cannot offer one, the band cannot hold
+     one, the rail does not list one and the search cannot reach one. See
+     `latticeSubjects` in skills/subjectMap for the whole argument. */
+  const subjects = useMemo(() => latticeSubjects(catalogue), [catalogue]);
   const [treeId, setTreeId] = useState<string>(DEFAULT_TREE.id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 

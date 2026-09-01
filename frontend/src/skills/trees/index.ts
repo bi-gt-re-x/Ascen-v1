@@ -4,7 +4,7 @@
  * ## Why this is a folder rather than a file
  *
  * It was one file, and one file was right while there were nine trees. There are
- * fifty-five, which is several thousand lines of authored description, and a
+ * sixty-one, which is several thousand lines of authored description, and a
  * single file that size cannot be reviewed a subject at a time — a change to the
  * Guitar tree and a change to the Chemistry tree land in the same hunk of the
  * same diff. One file per tree keeps a subject to a subject, the way
@@ -96,6 +96,13 @@ import { ENDURANCE } from './endurance';
 import { NUTRITION } from './nutrition';
 import { MINDFULNESS } from './mindfulness';
 
+import { COMPETITIVE_PROGRAMMING } from './competitive-programming';
+import { ROBOTICS } from './robotics';
+import { COMPETITION_MATH } from './competition-math';
+import { OLYMPIAD_SCIENCE } from './olympiad-science';
+import { DEBATE } from './debate';
+import { PERFORMANCE } from './performance';
+
 import { LIFE } from './life';
 import { COOKING } from './cooking';
 import { TRAVEL } from './travel';
@@ -105,19 +112,20 @@ export const TREES: readonly SubjectTree[] = [
   // Computing
   CODING, WEB, ALGO, GRAPHS, SYSTEMS, NETWORKING,
   DATA_SCIENCE, MACHINE_LEARNING, DATABASES, CYBERSECURITY,
+  COMPETITIVE_PROGRAMMING, ROBOTICS,
   // Maths and science
-  MATH, CALCULUS, STATISTICS, LINEAR_ALGEBRA, DISCRETE,
-  SCIENCE, PHYSICS, CHEMISTRY, BIOLOGY, EARTH_SPACE,
+  MATH, CALCULUS, STATISTICS, LINEAR_ALGEBRA, DISCRETE, COMPETITION_MATH,
+  SCIENCE, PHYSICS, CHEMISTRY, BIOLOGY, EARTH_SPACE, OLYMPIAD_SCIENCE,
   // Language and humanities
   LANGUAGE, WRITING, LITERATURE, FOREIGN_LANGUAGE,
-  HUMANITIES, HISTORY, PHILOSOPHY, PSYCHOLOGY,
+  HUMANITIES, HISTORY, PHILOSOPHY, PSYCHOLOGY, DEBATE,
   // Business and money
   BUSINESS, FINANCE, ECONOMICS, MARKETING, MANAGEMENT,
   // Work and studying
   PRODUCTIVITY, FOCUS, STUDY, CAREER,
   // Creative
   ART, DRAWING, DESIGN, PHOTOGRAPHY, FILM,
-  MUSIC, GUITAR, PIANO, VOICE, PRODUCTION,
+  MUSIC, GUITAR, PIANO, VOICE, PRODUCTION, PERFORMANCE,
   // Health and fitness
   FITNESS, STRENGTH, ENDURANCE, NUTRITION, MINDFULNESS,
   // Life and home

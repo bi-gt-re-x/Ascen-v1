@@ -51,5 +51,7 @@ export const MUSIC: SubjectTree = {
       desc: 'A subject of its own: breath, pitch and the instrument you cannot see or put down.' },
     { id: 'mu.prod', name: 'Music Production', icon: 'daw', tier: 'advanced', requires: ['mu.form'], navTo: 'production', state: lock,
       desc: 'A subject of its own: turning parts into a record — arrangement, sound, and the mix coming last.' },
+    { id: 'mu.stage', name: 'Performance & Auditions', icon: 'audience', tier: 'advanced', requires: ['mu.performance', 'mu.sightread'], navTo: 'performance', state: lock,
+      desc: 'A subject of its own: recitals, juries and competitions — playing it once, in front of people.' },
   ],
 };
