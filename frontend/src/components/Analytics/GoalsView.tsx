@@ -26,6 +26,7 @@
  */
 import { Link } from 'react-router-dom';
 import { Columns, Panel } from './charts';
+import { StatRow, type Stat } from './StatRow';
 import type { GoalNote, GoalsOverview } from '@/utils/goalAnalytics';
 import type {
   EffortRow,
@@ -49,6 +50,81 @@ function dueWords(deadline: string, today: Date = new Date()): string {
   if (days === 0) return 'today';
   if (days === 1) return 'tomorrow';
   return `in ${days} days`;
+}
+
+// --------------------------------------------------------------------------
+// The row the tab opens with
+// --------------------------------------------------------------------------
+/**
+ * The whole set in five figures, above everything that explains them.
+ *
+ * The Overview opens on `Tiles` and every other tab on a `StatRow`, and this
+ * one opened on a paragraph and a panel — so the tab a reader came to for
+ * "are my goals going to happen" made them read a sentence and then find the
+ * answer inside a card. Same component as every other tab now, which is the
+ * whole argument for StatRow existing (see the note at its head).
+ *
+ * It is deliberately the same figures `PortfolioPanel` breaks down underneath.
+ * The tile is the reading and the panel is the working — the Overview does
+ * exactly this with the score, which is a tile above and `ScorePanel` below.
+ * What is not repeated is the words: the notes here are two or three each,
+ * because a tile a reader has to read a sentence off is a paragraph in a box.
+ */
+export function GoalTiles({ overview }: { overview: GoalsOverview }) {
+  const behind = overview.atRisk + overview.offTrack;
+
+  const stats: Stat[] = [
+    {
+      key: 'live',
+      label: 'Live',
+      value: String(overview.active),
+      tone: 'violet',
+      glyph: 'target',
+      ...(overview.completed > 0 ? { note: `${overview.completed} finished` } : {}),
+    },
+    {
+      key: 'on-track',
+      label: 'On track',
+      value: String(overview.onTrack),
+      tone: 'green',
+      glyph: 'check',
+    },
+    {
+      key: 'behind',
+      label: 'Behind',
+      value: String(behind),
+      /* No glyph, so the row draws a tone dot — none of the nine says "behind"
+         and a wrong drawing is worse than none. The tone carries it: pink while
+         there is something to answer for, green once there is not. */
+      tone: behind > 0 ? 'pink' : 'green',
+      ...(behind > 0 ? { note: `${overview.offTrack} off track` } : {}),
+    },
+    /* The weighted mean, which is the one figure here that is not a count.
+       Guarded for the reason `PortfolioPanel` guards it: a mean across no live
+       goals is a mean of nothing, and a large 0% reads as a score. */
+    ...(overview.active > 0
+      ? [
+          {
+            key: 'progress',
+            label: 'Progress',
+            value: `${Math.round(overview.overall)}%`,
+            tone: 'blue' as const,
+            glyph: 'sparkle' as const,
+            note: 'weighted by priority',
+          },
+        ]
+      : []),
+    {
+      key: 'due-soon',
+      label: 'Due soon',
+      value: String(overview.dueSoon.length),
+      tone: 'amber',
+      glyph: 'clock',
+      note: 'next 14 days',
+    },
+  ];
+
+  return <StatRow stats={stats} />;
 }
 
 export interface PortfolioPanelProps {
@@ -365,7 +441,23 @@ export function NotesPanel({ notes }: { notes: GoalNote[] }) {
 // --------------------------------------------------------------------------
 // What is missing
 // --------------------------------------------------------------------------
-export function SuggestPanel({ suggestions }: { suggestions: GoalSuggestion[] }) {
+/**
+ * `limit` is `toneRules().headlines` — how many changes this account asked to
+ * be shown at once. Two on gentle, three on balanced, everything the record
+ * supports on blunt. It drops rows off an already-ranked list rather than
+ * rewriting any of them: the suggestion a gentle reader is shown is the same
+ * suggestion, and the ones held back are the weakest, never the worst.
+ */
+export function SuggestPanel({
+  suggestions,
+  limit,
+}: {
+  suggestions: GoalSuggestion[];
+  limit?: number;
+}) {
+  const shown = limit === undefined ? suggestions : suggestions.slice(0, Math.max(1, limit));
+  const held = suggestions.length - shown.length;
+
   return (
     <Panel title="Worth setting">
       {suggestions.length === 0 ? (
@@ -379,7 +471,7 @@ export function SuggestPanel({ suggestions }: { suggestions: GoalSuggestion[] })
               file of short rows down the left of it left the right half of the
               card empty on every screen wider than a phone. */}
           <ul className="ax-goal-suggest">
-            {suggestions.map((row) => (
+            {shown.map((row) => (
               <li key={row.id}>
                 <span className={`ax-goal-kind is-${row.kind}`}>{row.kind}</span>
                 <div>
@@ -390,6 +482,7 @@ export function SuggestPanel({ suggestions }: { suggestions: GoalSuggestion[] })
             ))}
           </ul>
           <p className="ax-muted ax-goal-foot">
+            {held > 0 && `${held} more held back at this tone. `}
             Each one is drawn from your own record, and nothing here creates a goal —{' '}
             <Link to="/goals" className="ax-link">
               the goals page

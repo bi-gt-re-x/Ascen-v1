@@ -565,8 +565,10 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
       completed: goalSet.completed,
       focusSubject: leads && top ? (top.name ?? top.label) : null,
       aimedShare: aimedShare ? aimedShare.share : null,
+      // Which half of the count it opens on. See utils/analyticsPrefs.
+      leadWithStrength: rules.leadWithStrength,
     });
-  }, [aimedShare, breakdown, goalSet]);
+  }, [aimedShare, breakdown, goalSet, rules.leadWithStrength]);
 
   /** How many of the window's live subjects a goal actually names. */
   const namedSubjects = useMemo(() => {

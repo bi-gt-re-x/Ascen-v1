@@ -198,8 +198,19 @@ export function goalHeadline(input: {
   focusSubject: string | null;
   /** Share of finished work aimed at any goal, 0-1, or null. */
   aimedShare: number | null;
+  /**
+   * Which half of the count the sentence opens on — `toneRules().leadWithStrength`.
+   *
+   * The same rule Summary follows on the Overview, applied to the one sentence
+   * this tab opens with: gentle names what is holding and then what is not,
+   * blunt names the shortfall first. **Both orders carry both figures**, and
+   * neither changes what `goalsOverview` counted — a goal that is behind is
+   * behind at every setting. Default is the blunt order, which is what this
+   * sentence did before the setting reached it.
+   */
+  leadWithStrength?: boolean;
 }): string {
-  const { active, behind, completed, focusSubject, aimedShare } = input;
+  const { active, behind, completed, focusSubject, aimedShare, leadWithStrength } = input;
 
   if (active === 0) {
     return completed > 0
@@ -208,13 +219,21 @@ export function goalHeadline(input: {
   }
 
   const one = active === 1;
-  const head = `${active} ${one ? 'goal' : 'goals'} live`;
+  /* Nothing behind reads the same either way — there is no weak half to lead
+     with — so the order only does anything when there is something to order. */
+  const holding = active - behind;
+  const head =
+    leadWithStrength && behind > 0
+      ? `${holding} of ${active} holding`
+      : `${active} ${one ? 'goal' : 'goals'} live`;
   const state =
     behind === 0
       ? one
         ? 'and on track'
         : 'and none behind'
-      : `and ${behind} behind`;
+      : leadWithStrength
+        ? `and ${behind} ${behind === 1 ? 'is' : 'are'} not`
+        : `and ${behind} behind`;
 
   /* The third clause is whichever of the two is the more useful thing to know,
      never both — two trailing clauses is how a dozen words becomes twenty.

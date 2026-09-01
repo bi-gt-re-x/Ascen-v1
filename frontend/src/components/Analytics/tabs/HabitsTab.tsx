@@ -27,6 +27,11 @@ import type { SubjectIndex } from '@/hooks/useSubjects';
 export function HabitsTab({ model, subjects }: { model: AnalyticsModel } & { subjects: SubjectIndex }) {
   const {
     all, habits, historyDays, patterns, shifts, spanText, streak, summary, tasks, toIso, byDate, waitFor,
+    /* What the account asked this page to be — see utils/analyticsPrefs. Two
+       reads on this tab: which of the two habits the opening names first, and
+       how many patterns are put in front of somebody at once. Neither moves a
+       figure; `habitSummary` counts the same days at every setting. */
+    toneRules,
   } = model;
 
   return (
@@ -54,8 +59,12 @@ export function HabitsTab({ model, subjects }: { model: AnalyticsModel } & { sub
             <HabitTiles summary={summary} span={spanText} />
           </section>
           <section className="ax-section ax-grid ax-grid-halves-even">
-            <HabitOpening summary={summary} span={spanText} />
-            <PatternsPanel patterns={patterns} />
+            <HabitOpening
+              summary={summary}
+              span={spanText}
+              leadWithStrength={toneRules.leadWithStrength}
+            />
+            <PatternsPanel patterns={patterns} limit={toneRules.diagnoses} />
           </section>
           <section className="ax-section">
             <h2 className="ax-band">Your habits</h2>

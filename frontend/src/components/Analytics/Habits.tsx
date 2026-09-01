@@ -61,33 +61,37 @@ function since(iso: string | null, todayIso: string): string {
 // The headline
 // --------------------------------------------------------------------------
 export function HabitTiles({ summary, span }: { summary: HabitSummary; span: string }) {
+  /* Two or three words a note, not a clause. These are read at a glance beside
+     a figure, and "nothing repeats often enough yet to count as a habit" under
+     a 0 is a sentence doing the work the 0 already did. The long-form versions
+     of all four live in the panels underneath. */
   const stats: Stat[] = [
     {
       key: 'tracked',
-      label: 'Habits found',
+      label: 'Habits',
       value: String(summary.tracked),
-      note: summary.tracked ? 'recurring things in this range' : 'nothing recurring yet',
+      note: span,
       tone: 'violet',
     },
     {
       key: 'strong',
-      label: 'Running strong',
+      label: 'Holding',
       value: String(summary.strong),
-      note: summary.strong ? 'appearing in most weeks' : 'none holding every week yet',
+      note: summary.strong ? 'in most weeks' : 'none yet',
       tone: 'green',
     },
     {
       key: 'active',
-      label: 'Days with work',
+      label: 'Days worked',
       value: `${summary.activeRate}%`,
-      note: span,
+      note: 'of this range',
       tone: 'blue',
     },
     {
       key: 'anchor',
-      label: 'Your anchor',
+      label: 'Anchor',
       value: summary.anchor?.name ?? '—',
-      note: summary.anchor ? `${summary.anchor.consistency}% of weeks` : 'no habit steady enough yet',
+      note: summary.anchor ? `${summary.anchor.consistency}% of weeks` : 'none steady yet',
       tone: 'amber',
     },
   ];
@@ -352,7 +356,20 @@ export function HabitCalendarPanel({ byDate, lastIso, accountDays }: HabitCalend
  * and "Sometimes" is under half — and the count it was read off is printed
  * underneath, because a tendency stated without its denominator is an assertion.
  */
-export function PatternsPanel({ patterns }: { patterns: HabitPattern[] }) {
+/**
+ * `limit` is `toneRules().diagnoses` — how many findings this account asked to
+ * see at once. The list arrives ranked, so this drops the weakest rows and
+ * never the strongest, and it rewrites none of them.
+ */
+export function PatternsPanel({
+  patterns,
+  limit,
+}: {
+  patterns: HabitPattern[];
+  limit?: number;
+}) {
+  const shown = limit === undefined ? patterns : patterns.slice(0, Math.max(1, limit));
+
   return (
     <Panel
       title="Patterns in what you do"
@@ -364,7 +381,7 @@ export function PatternsPanel({ patterns }: { patterns: HabitPattern[] }) {
         </p>
       ) : (
         <ul className="ax-patterns">
-          {patterns.map((pattern) => (
+          {shown.map((pattern) => (
             <li key={pattern.id}>
               <span className="ax-dot" style={{ background: toneVar(pattern.tone) }} />
               <div>
@@ -578,7 +595,44 @@ export function habitLead(summary: HabitSummary, span: string): string {
 }
 
 /** What the routine looks like underneath the sentence at the top of the tab. */
-export function HabitOpening({ summary, span }: { summary: HabitSummary; span: string }) {
+/**
+ * `leadWithStrength` is `toneRules().leadWithStrength`, and it decides which of
+ * the two habits this panel names goes first — the anchor that is holding, or
+ * the one falling fastest.
+ *
+ * Both are named at every setting. This is the order and not the content, the
+ * same line Summary draws on the Overview: a gentle page states what is working
+ * before what is not, a blunt one names the slip and then what is left. Nothing
+ * here moves `habitSummary`'s arithmetic — the slipping habit is slipping by
+ * the same percentage whichever sentence comes first.
+ */
+export function HabitOpening({
+  summary,
+  span,
+  leadWithStrength = false,
+}: {
+  summary: HabitSummary;
+  span: string;
+  leadWithStrength?: boolean;
+}) {
+  const slip =
+    summary.slipping && summary.slipping.trend !== null ? (
+      <p className="ax-prose" key="slip">
+        <strong>{summary.slipping.name}</strong> is moving the wrong way — down{' '}
+        <strong>{Math.abs(summary.slipping.trend)}%</strong> against its own earlier rate.
+      </p>
+    ) : null;
+
+  /* Only worth stating beside the slip. On its own it is the Anchor tile again,
+     four inches lower and in a full sentence. */
+  const hold =
+    leadWithStrength && slip && summary.anchor ? (
+      <p className="ax-prose" key="hold">
+        <strong>{summary.anchor.name}</strong> is holding at{' '}
+        <strong>{summary.anchor.consistency}%</strong> of weeks.
+      </p>
+    ) : null;
+
   return (
     <Panel title="What you actually do" note={span}>
       <p className="ax-prose ax-prose-lead">
@@ -589,12 +643,7 @@ export function HabitOpening({ summary, span }: { summary: HabitSummary; span: s
             ? 'A real routine with holes in it. What is missing is frequency, not effort.'
             : 'Most of the calendar is empty. How often you turn up matters more than what you do.'}
       </p>
-      {summary.slipping && summary.slipping.trend !== null && (
-        <p className="ax-prose">
-          <strong>{summary.slipping.name}</strong> is moving the wrong way — down{' '}
-          <strong>{Math.abs(summary.slipping.trend)}%</strong> against its own earlier rate.
-        </p>
-      )}
+      {leadWithStrength ? [hold, slip] : [slip, hold]}
     </Panel>
   );
 }

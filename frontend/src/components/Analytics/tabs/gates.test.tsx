@@ -26,6 +26,7 @@ import { InsightsTab } from './InsightsTab';
 import { RecommendationsTab } from './RecommendationsTab';
 import { SubjectsTab } from './SubjectsTab';
 import { NEED_DAYS } from '../useAnalyticsModel';
+import { TONE_RULES } from '@/utils/analyticsPrefs';
 import { balanceShape, clockShape, rhythmShape, weekShape } from '@/utils/behaviour';
 import { buildHabits, habitSummary } from '@/utils/habits';
 import { currentState } from '@/utils/insight';
@@ -93,6 +94,11 @@ function fakeModel(over: Partial<AnalyticsModel> = {}): AnalyticsModel {
     category: '', setCategory: vi.fn(), setBudget: vi.fn(), setNudge: vi.fn(),
     // Subjects
     namedSubjects: { total: 0, named: 0 },
+    /* The real model sets this on every render — `useAnalyticsModel` derives it
+       from the stored tone and `toneRules()` falls back to balanced — so a fake
+       without it is a fake of a model that cannot exist. It went unnoticed while
+       no tab here read it; Habits and Goals do now. See ./tone.test.tsx. */
+    toneRules: TONE_RULES.balanced,
   };
   return { ...base, ...over } as unknown as AnalyticsModel;
 }
