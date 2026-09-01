@@ -3315,16 +3315,20 @@ html[data-theme="dark"] #monthView {
     flex: 1 1 auto;
     min-height: 0;
 }
+/* The grid is the page and the panel beside it is the annotation, so the split
+   is weighted that way rather than nearly evenly. At 1280 this is about 130px
+   of extra width for the month — one more line of room in every cell — and the
+   panel is still wider than the card it draws. */
 .mv-left {
-    flex: 1 1 63%;
+    flex: 1 1 70%;
     min-width: 0;
     display: flex;
     flex-direction: column;
 }
 .mv-side {
-    flex: 1 1 33%;
-    min-width: 320px;
-    max-width: 560px;
+    flex: 0 1 380px;
+    min-width: 288px;
+    max-width: 460px;
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -3338,7 +3342,7 @@ html[data-theme="dark"] #monthView {
     display: flex;
     align-items: center;
     gap: 14px;
-    margin-bottom: 22px;
+    margin-bottom: 14px;
     min-height: 42px;
 }
 .mv-title {
@@ -3397,39 +3401,80 @@ html[data-theme="dark"] #monthView {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
 }
-.mv-daynames { margin-bottom: 10px; }
+
+/* ---- The card ------------------------------------------------------------
+   The headings and the cells are one object. They were two, with a gap in
+   between, which read as a table somebody had dropped a row of labels above.
+   The card owns the outer border and the corners; the grid inside it draws
+   nothing but its own hairlines. */
+.mv-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--mv-line);
+    border-radius: 16px;
+    background: var(--mv-surface);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+    overflow: hidden;
+}
+
+.mv-daynames {
+    flex: none;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--mv-line);
+    background: var(--mv-surface-soft);
+}
 .mv-dayname {
     text-align: center;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.09em;
     color: var(--mv-ink-soft);
 }
+/* The two days most months are read around. A shade lighter than the rest, so
+   the eye finds the week boundaries without a rule being drawn for them. */
+.mv-dayname.is-weekend { color: var(--mv-ink-faint); }
 
 /* ---- The grid ------------------------------------------------------------
    Six rows always, so stepping between a five-row month and a six-row one
    does not resize the grid under the reader's cursor — and `1fr` rows rather
    than a fixed height, so the whole month fits whatever the card gives it
    without a scrollbar appearing inside a view whose job is to be looked at.
-   The hairlines are drawn by each cell's top and left border with the outer
-   edges closed by the container, which is one border per line instead of two
-   overlapping ones. */
+   The hairlines are drawn by each cell's top and left border; the card around
+   them closes the outer edges, which is one border per line instead of two
+   overlapping ones.
+
+   The rows have **no minimum by default**, and that is deliberate rather than
+   lazy. This page is pinned (`PINNED` in App.tsx), so there is no scrollbar to
+   rescue a grid that outgrows its column — a row minimum that does not fit
+   pushes the summary strip below the fold and there is no way to reach it.
+   Six equal shares of whatever is left is the only rule that is always safe.
+
+   Room is then given back by height, where there is height to give: a cell of
+   three short lines wants about 90px and reads badly under 70. Both breakpoints
+   are chosen against what the column actually costs — the header, the day
+   names and the summary strip come off the viewport first. */
 .mv-grid {
     grid-template-rows: repeat(6, minmax(0, 1fr));
     flex: 1 1 auto;
     min-height: 0;
-    border: 1px solid var(--mv-line);
-    border-radius: 10px;
-    overflow: hidden;
+}
+@media (min-height: 800px) {
+    .mv-grid { grid-template-rows: repeat(6, minmax(78px, 1fr)); }
+}
+@media (min-height: 940px) {
+    .mv-grid { grid-template-rows: repeat(6, minmax(96px, 1fr)); }
 }
 .mv-cell {
-    border-top: 1px solid var(--mv-line);
-    border-left: 1px solid var(--mv-line);
-    padding: 10px 12px;
+    position: relative;
+    border-top: 1px solid var(--mv-line-soft);
+    border-left: 1px solid var(--mv-line-soft);
+    padding: 8px 10px 12px;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+    align-items: stretch;
+    gap: 6px;
     min-width: 0;
     overflow: hidden;
     cursor: pointer;
@@ -3439,6 +3484,73 @@ html[data-theme="dark"] #monthView {
 .mv-cell:nth-child(-n + 7) { border-top: none; }
 .mv-cell:nth-child(7n + 1) { border-left: none; }
 .mv-cell:hover { background: var(--mv-surface-soft); }
+/* Saturday and Sunday, barely. Enough that the grid has a rhythm and the eye
+   can count weeks off it; not enough to read as a state. */
+.mv-cell.is-weekend { background: color-mix(in srgb, var(--mv-surface-soft) 55%, transparent); }
+.mv-cell.is-weekend:hover { background: var(--mv-surface-soft); }
+/* A day with nothing on it is the number and nothing else. Thirty cells each
+   saying "0 events / 0 XP" is a paragraph of noise between the reader and the
+   four days that are not empty. */
+.mv-cell.is-empty .mv-daynum { color: var(--mv-ink-soft); font-weight: 600; }
+
+.mv-cell-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+}
+
+/* Everything on the day is done. */
+.mv-cell-clear {
+    flex: none;
+    width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--mv-good-soft);
+    color: var(--mv-good);
+}
+.mv-cell-clear svg {
+    width: 10px;
+    height: 10px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Wraps rather than clips. A cell is a seventh of whatever the month is given,
+   and on a narrow window "9" and "475 XP" do not fit on one line — the choice
+   is between two lines and an ellipsis eating the figure the line exists for. */
+.mv-cell-meta {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 1px 8px;
+    min-width: 0;
+}
+
+/* Done against scheduled, along the cell's foot. A rule rather than a figure:
+   forty-two of anything has to be readable without being read. */
+.mv-cell-bar {
+    margin-top: auto;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--mv-line);
+    overflow: hidden;
+}
+.mv-cell-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--mv-accent);
+    transition: width .2s ease;
+}
+.mv-cell.is-settled .mv-cell-bar-fill { background: var(--mv-good); }
 
 .mv-daynum {
     display: inline-flex;
@@ -3464,35 +3576,52 @@ html[data-theme="dark"] #monthView {
     align-items: center;
     gap: 5px;
     font-size: 12.5px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--mv-ink-soft);
     white-space: nowrap;
+    flex: none;
 }
 .mv-cell-dot {
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: currentColor;
     flex: 0 0 auto;
 }
 .mv-cell-xp {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--mv-accent);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
 }
-/* A day worth nothing is not worth reading as a number in the accent colour. */
-.mv-cell-xp.is-zero { color: var(--mv-ink-faint); font-weight: 500; }
 
-/* Today is the one tinted cell, and the tint carries through to its figures. */
-.mv-cell.is-today { background: var(--mv-warm); }
-.mv-cell.is-today:hover { background: var(--mv-warm); }
+/* Today is the one tinted cell, and the tint carries through to its figures.
+   It beats the weekend shade, which is why it is written after it. */
+.mv-cell.is-today,
+.mv-cell.is-today.is-weekend { background: var(--mv-warm); }
+.mv-cell.is-today:hover,
+.mv-cell.is-today.is-weekend:hover { background: var(--mv-warm); }
 .mv-cell.is-today .mv-cell-events,
 .mv-cell.is-today .mv-cell-xp { color: var(--mv-warm-ink); }
+.mv-cell.is-today .mv-cell-bar { background: var(--mv-warm-line); }
 /* The day the panel on the right is showing. A ring rather than a fill, so it
    can sit on top of today's tint and on top of the load shading without
-   arguing with either. */
-.mv-cell.is-selected { box-shadow: inset 0 0 0 2px var(--mv-accent); }
+   arguing with either. Inset, so it is not clipped by the card's overflow at
+   the grid's edges — which is what happened to the four corner cells. */
+.mv-cell.is-selected { box-shadow: inset 0 0 0 2px var(--mv-accent); z-index: 1; }
+
+/* Dark. Every colour above is a token and swaps itself; the two things that
+   are not are the card's shadow — which is cast in near-black and disappears
+   on a near-black page — and the weekend tint, which `color-mix` makes too
+   faint to see once the surfaces are within a few percent of each other. */
+html[data-theme="dark"] .mv-card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+}
+html[data-theme="dark"] .mv-cell.is-weekend { background: var(--mv-surface-soft); }
+html[data-theme="dark"] .mv-cell.is-weekend:hover { background: #171b23; }
 
 /* ---- The summary strip under the grid ----------------------------------- */
 .mv-summary {
