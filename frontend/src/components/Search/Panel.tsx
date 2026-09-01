@@ -26,6 +26,44 @@
  * Enter still works. It closes the panel, because by then you are already
  * where it would have sent you.
  *
+ * ## The keyboard is the whole control, not a shortcut for it
+ *
+ * Focus never leaves the box, so every key has to work from there:
+ *
+ *   Down / Up      the next and previous match
+ *   Right / Left   the same, but only from the end and the start of the text,
+ *                  so typing and correcting still own the caret. They are here
+ *                  because the buttons on screen are `›` and `‹`, and a
+ *                  control the eye is told to use should answer to the key it
+ *                  is drawn as.
+ *   Enter          close; you are already there
+ *   Escape         close, and put the reader back where they started
+ *
+ * It is a combobox in the ARIA sense — `role="combobox"` on the box, a listbox
+ * of options beneath it, and `aria-activedescendant` naming the one the cursor
+ * is on. That last part is what makes this usable with a screen reader at all:
+ * the reader's focus is in a text field the entire time, so nothing would be
+ * announced as they stepped without it.
+ *
+ * Escape is handled here as well as by the bar's own listener
+ * (components/Topbar.tsx). A `type="search"` box treats Escape as "clear me"
+ * and stops it there, so the panel would empty and stay open — and a reader
+ * pressing Escape twice would find themselves somewhere they never chose,
+ * because clearing the box empties the matches.
+ *
+ * ## Where a task actually is
+ *
+ * A task the calendar knows about — `show_on_calendar` with a date on it —
+ * lives on a day, so that is where the reader is taken: the Day view, opened
+ * on that day, scrolled to the block. Everything else is a list item nobody
+ * chose a time for, and lives on the tasks page. Sending both to `/tasks`
+ * would be sending half of them to the page they are *not* on, which is the
+ * one thing a search must not do.
+ *
+ * Only unfinished tasks are searched (`searchTasks(..., true)`). This panel's
+ * answer to a match is to go there, and there is nothing to go to on a task
+ * that is done.
+ *
  * ## Why the navigation is an effect on the cursor
  *
  * Every path into this — typing, the arrows, the keyboard, clicking a row —
@@ -42,6 +80,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { tasks as taskService } from '@/services';
+import { isCalendarPlaced } from '@/utils/calendarGrid';
+import { isoDate } from '@/utils/dates';
 import { findPlaces, placePoints, score } from '@/utils/siteIndex';
 import type { Place } from '@/utils/siteIndex';
 import type { Task } from '@/types';
@@ -52,6 +92,12 @@ const PER_CATEGORY = 6;
 
 /** How long the typing has to settle before the server is asked. */
 const SETTLE_MS = 180;
+
+/* The listbox and its options need ids for `aria-controls` and
+   `aria-activedescendant` to point at. There is one search panel in the app
+   and it is mounted only while open, so a fixed prefix is enough. */
+const LIST_ID = 'sf-matches';
+const optionId = (hit: Hit) => `sf-option-${hit.key.replace(/[^\w-]/g, '-')}`;
 
 export interface Hit {
   key: string;
@@ -64,18 +110,40 @@ export interface Hit {
   points: number;
 }
 
+/**
+ * Where a task is, which is not the same question as where tasks are.
+ *
+ * `isCalendarPlaced` is the calendar's own rule for what it will draw
+ * (utils/calendarGrid, and the note on `useCalendarTasks` for why it is the
+ * only door): flagged `show_on_calendar`, and dated. Those sit on a day, and
+ * the Day view opened on that day is where the reader means. The rest are list
+ * items nobody chose a time for, and the tasks page is where they are.
+ *
+ * The id rides along either way, so stepping between two task matches is a
+ * move rather than the same page twice: pages/Tasks reveals the row and marks
+ * it, pages/Calendar/Day scrolls the grid to the block.
+ */
+export function taskTo(task: Task): string {
+  const id = encodeURIComponent(task.id);
+  if (isCalendarPlaced(task) && task.due_date) {
+    const day = new Date(task.due_date);
+    if (!Number.isNaN(day.getTime())) {
+      return `/calendar/day?date=${isoDate(day)}&task=${id}`;
+    }
+  }
+  return `/tasks?task=${id}`;
+}
+
 function taskHit(needle: string, task: Task): Hit {
   return {
     key: `task:${task.id}`,
     kind: 'task',
     name: task.title,
-    meta: task.status === 'done'
-      ? 'Done'
-      : `${(Number(task.xp_value) || 0).toLocaleString()} XP`,
-    /* The task's own id in the query, so stepping between two task matches is
-       a move rather than the same page twice — pages/Tasks reads it, reveals
-       the row and marks it. */
-    to: `/tasks?task=${encodeURIComponent(task.id)}`,
+    /* Where it will take you, said out loud. Two tasks with the same words in
+       them can live on two different screens, and the reader is entitled to
+       know which one the arrow is about to open. */
+    meta: isCalendarPlaced(task) ? 'Calendar' : 'Tasks',
+    to: taskTo(task),
     points: score(needle, task.title),
   };
 }
@@ -126,7 +194,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
     }
     const mine = ++ticket.current;
     const timer = window.setTimeout(() => {
-      void taskService.searchTasks(needle).then((result) => {
+      void taskService.searchTasks(needle, true).then((result) => {
         if (mine !== ticket.current) return;
         setFound(result.success ? result.tasks.slice(0, PER_CATEGORY) : []);
       });
@@ -218,19 +286,56 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
     [all.length],
   );
 
+  /**
+   * Go somewhere now, and close.
+   *
+   * Clicking a row cannot go through the settled effect above: closing the
+   * panel unmounts it, which clears the pending timer, so the click would
+   * choose a destination and then never arrive at it. The cursor is moved as
+   * well, so the two agree for the frame before the panel goes.
+   */
+  const goNow = useCallback(
+    (hit: Hit) => {
+      sent.current = hit.to;
+      setCursor(all.indexOf(hit));
+      onClose();
+      if (hit.to !== here) navigate(hit.to, { replace: true });
+    },
+    [all, here, navigate, onClose],
+  );
+
   const onKey = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
+      const box = event.currentTarget;
+
+      if (event.key === 'Escape') {
+        // Handled here as well as by the bar, because a `type="search"` box
+        // swallows Escape to clear itself — which would empty the panel and
+        // leave it open, and a second Escape would then be a jump to nowhere.
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+
       if (event.key === 'Enter') {
         event.preventDefault();
         onClose();
         return;
       }
-      // Down and Up rather than Right and Left: the arrows on screen are
-      // buttons, and Right in a text field belongs to the caret.
-      if (event.key === 'ArrowDown') {
+
+      // Down and Up always step. Right and Left step only from the ends of the
+      // text, so the caret keeps them everywhere it could still use them —
+      // and the two buttons on screen have the keys they are drawn as.
+      const caret = box.selectionStart ?? 0;
+      const spread = (box.selectionEnd ?? caret) !== caret;
+      const atEnd = !spread && caret === box.value.length;
+      const atStart = !spread && caret === 0;
+
+      if (event.key === 'ArrowDown' || (event.key === 'ArrowRight' && atEnd)) {
         event.preventDefault();
         step(1);
-      } else if (event.key === 'ArrowUp') {
+      } else if (event.key === 'ArrowUp' || (event.key === 'ArrowLeft' && atStart)) {
         event.preventDefault();
         step(-1);
       }
@@ -242,11 +347,19 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
 
   return (
     <div className="sf-panel">
+      {/* A combobox in the ARIA sense: focus stays in the box the whole time,
+          so `aria-activedescendant` is the only thing that can tell a screen
+          reader which match the arrows have landed on. */}
       <input
         ref={inputRef}
         type="search"
         className="sf-input"
         placeholder="Search tasks and pages"
+        role="combobox"
+        aria-expanded={all.length > 0}
+        aria-controls={LIST_ID}
+        aria-autocomplete="list"
+        aria-activedescendant={current ? optionId(current) : undefined}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={onKey}
@@ -263,18 +376,20 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
         <p className="sf-empty">Nothing matches “{needle}”.</p>
       ) : (
         <>
-          {/* Where you are, and the two controls that move it. */}
+          {/* Where you are, and the two controls that move it. `aria-live`
+              rather than a label, because this line is the only announcement a
+              step makes for a reader watching the page rather than the list. */}
           <div className="sf-cursor">
             <button
               type="button"
               className="sf-step"
-              aria-label="Previous match"
+              aria-label="Previous match (Up or Left arrow)"
               disabled={all.length < 2}
               onClick={() => step(-1)}
             >
               ‹
             </button>
-            <span className="sf-at">
+            <span className="sf-at" aria-live="polite">
               <strong>{current?.name}</strong>
               <em>
                 {at + 1} of {all.length} ·{' '}
@@ -284,7 +399,7 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
             <button
               type="button"
               className="sf-step is-next"
-              aria-label="Next match"
+              aria-label="Next match (Down or Right arrow)"
               disabled={all.length < 2}
               onClick={() => step(1)}
             >
@@ -292,22 +407,20 @@ export function SearchPanel({ onClose }: SearchPanelProps) {
             </button>
           </div>
 
-          <Group
-            label="Components"
-            rows={components}
-            current={current}
-            all={all}
-            onPick={setCursor}
-            onClose={onClose}
-          />
-          <Group
-            label="Tasks"
-            rows={hits}
-            current={current}
-            all={all}
-            onPick={setCursor}
-            onClose={onClose}
-          />
+          {/* One listbox over both groups, because the cursor is one cursor:
+              two would mean two `aria-activedescendant` targets and a reader
+              being told they are in the second list when they are not. The
+              headings are `role="presentation"` inside it for the same
+              reason — they are a visual grouping, not a level of navigation. */}
+          <div id={LIST_ID} role="listbox" aria-label="Matches" className="sf-groups">
+            <Group
+              label="Components"
+              rows={components}
+              current={current}
+              onGo={goNow}
+            />
+            <Group label="Tasks" rows={hits} current={current} onGo={goNow} />
+          </div>
         </>
       )}
     </div>
@@ -318,42 +431,42 @@ function Group({
   label,
   rows,
   current,
-  all,
-  onPick,
-  onClose,
+  onGo,
 }: {
   label: string;
   rows: Hit[];
   current: Hit | undefined;
-  all: Hit[];
-  onPick: (index: number) => void;
-  onClose: () => void;
+  onGo: (hit: Hit) => void;
 }) {
   if (!rows.length) return null;
 
   return (
-    <div className="sf-group">
-      <div className="sf-group-head">{label}</div>
-      <ul className="sf-list">
+    <div className="sf-group" role="presentation">
+      <div className="sf-group-head" role="presentation">
+        {label}
+      </div>
+      <div className="sf-list" role="presentation">
         {rows.map((hit) => (
-          <li key={hit.key}>
-            <button
-              type="button"
-              className={`sf-row${hit.key === current?.key ? ' is-at' : ''}`}
-              /* Moving the cursor rather than navigating, so a click goes
-                 through the same one place every other path does. */
-              onClick={() => {
-                onPick(all.indexOf(hit));
-                onClose();
-              }}
-            >
-              <span className={`sf-mark is-${hit.kind}`} aria-hidden="true" />
-              <span className="sf-row-name">{hit.name}</span>
-              <span className="sf-row-meta">{hit.meta}</span>
-            </button>
-          </li>
+          <div
+            key={hit.key}
+            id={optionId(hit)}
+            role="option"
+            aria-selected={hit.key === current?.key}
+            tabIndex={-1}
+            className={`sf-row${hit.key === current?.key ? ' is-at' : ''}`}
+            /* A div with `role="option"` rather than a button: a button inside
+               a listbox is two things claiming to be the control, and a screen
+               reader announces it as a button rather than as one of N options.
+               Nothing is lost — focus never comes here, the keyboard drives it
+               from the box, and the click still goes. */
+            onClick={() => onGo(hit)}
+          >
+            <span className={`sf-mark is-${hit.kind}`} aria-hidden="true" />
+            <span className="sf-row-name">{hit.name}</span>
+            <span className="sf-row-meta">{hit.meta}</span>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@
  * rather than "since something last recomputed".
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CalendarShell,
   ConflictDialog,
@@ -108,10 +109,27 @@ export default function Day() {
   const now = useNow();
   const { prefs } = useSettings();
 
+  /**
+   * `?date=` and `?task=` — the day somebody was sent to, and what for.
+   *
+   * The top bar's search takes a task to where the task actually *is*, and for
+   * a task the calendar draws that is a day rather than a list
+   * (components/Search/Panel.tsx). So this view has to be openable on a day
+   * that is not today, and has to be able to find one block in a grid
+   * twenty-four hours tall.
+   *
+   * `date` is read on every change rather than only at mount, because stepping
+   * between two task matches in the search is two dates on one mounted page.
+   */
+  const [params, setParams] = useSearchParams();
+  const asked = params.get('date');
+  const wanted = params.get('task');
+
   const [cursor, setCursor] = useState(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
+    const start = asked ? new Date(`${asked}T00:00:00`) : new Date();
+    const day = Number.isNaN(start.getTime()) ? new Date() : start;
+    day.setHours(0, 0, 0, 0);
+    return day;
   });
   /** The mini-month's own cursor: paging it does not move the day. */
   const [mini, setMini] = useState(() => ({
@@ -197,6 +215,34 @@ export default function Day() {
     setMini({ year: next.getFullYear(), month: next.getMonth() });
   }, []);
 
+  /* A `?date=` that arrives, or changes, after this page is already mounted —
+     which is what stepping between two task matches in the top bar's search
+     looks like from here. */
+  useEffect(() => {
+    if (!asked) return;
+    const day = new Date(`${asked}T00:00:00`);
+    if (Number.isNaN(day.getTime()) || dates.isoDate(day) === iso) return;
+    goTo(day);
+  }, [asked, goTo, iso]);
+
+  /**
+   * `?task=` — scroll the grid to the block and mark it for a moment.
+   *
+   * The grid is twenty-four hours tall and opens on the current hour
+   * (hooks/useNowScroll), so arriving on the right *day* is not the same as
+   * arriving at the thing. The block is found by the attributes it already
+   * carries — `data-kind` and `data-id` on components/Calendar/GridBlock —
+   * rather than by threading a ref down through the column.
+   *
+   * The scroll itself is below the day's blocks, because it has to wait for
+   * them — see the note there.
+   */
+  const [marked, setMarked] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMarked(wanted);
+  }, [wanted, iso]);
+
   // XP is the ledger's answer for this date, re-asked whenever the day
   // changes or a completion has just moved the total.
   useEffect(() => {
@@ -228,6 +274,52 @@ export default function Day() {
       ]),
     [iso, plan, store.data, subjects, tasks],
   );
+
+  /**
+   * The `?task=` half: scroll the grid to the block, then let the mark go.
+   *
+   * `blocks` is a dependency and that is the whole reason this sits below
+   * them: the day's blocks arrive with the account's tasks, a frame or several
+   * after the page does, so the first run finds nothing in the grid to scroll
+   * to. Depending on them means it runs again when there is — and the two and
+   * a half seconds the ring is up start from then rather than from an empty
+   * grid.
+   */
+  useEffect(() => {
+    if (!marked || !scroller.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      const block = scroller.current?.querySelector<HTMLElement>(
+        `[data-kind="task"][data-id="${CSS.escape(marked)}"]`,
+      );
+      if (!block || !scroller.current) return;
+      /* Centred in the scroller by hand rather than with `scrollIntoView`: the
+         grid is a scroll container inside a page that also scrolls, and asking
+         the element to bring itself into view moves both. */
+      scroller.current.scrollTop = Math.max(
+        0,
+        block.offsetTop - scroller.current.clientHeight / 2 + block.offsetHeight / 2,
+      );
+    });
+    const timer = window.setTimeout(() => {
+      setMarked(null);
+      /* The parameters go with the mark. Left in the URL they would re-scroll
+         on every reload, and `date` would pin the view to a day the reader has
+         since walked away from. Replaced, so neither becomes a history entry. */
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.delete('task');
+          next.delete('date');
+          return next;
+        },
+        { replace: true },
+      );
+    }, 2400);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [blocks, marked, setParams]);
 
   /**
    * Scroll the clashing pair into the middle of the window.
@@ -508,6 +600,7 @@ export default function Day() {
               onComplete={complete}
               completingId={completing}
               flagged={conflict}
+              markedTaskId={marked}
             />
           </div>
         </div>

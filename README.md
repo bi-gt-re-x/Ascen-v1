@@ -145,8 +145,21 @@ is usually no help with: reaching a control without knowing which screen it is
 on. Typing "dark mode" lands on Settings → Appearance; "percentile" lands on
 the Records tab of Analytics.
 
-A task match goes to the row itself — the board opens the heading it is under,
-scrolls to it and marks it for a moment.
+Focus never leaves the box, so the keyboard is the whole control:
+
+| Key | Does |
+| --- | --- |
+| Down / Up | the next and previous match |
+| Right / Left | the same, from the end and the start of the text |
+| Enter | close; you are already there |
+| Escape | close, and stay where you were |
+
+A task match goes to where the task actually is. One the calendar draws opens
+the Day view on its day, scrolled to the block and ringed for a moment; one
+nobody put on the calendar opens the tasks page, which reveals the row — the
+heading it is under, past the draw limit, or behind a filter — and marks it.
+Only unfinished tasks are searched: what this panel does with a match is take
+you to it, and a finished task is not somewhere to be taken.
 
 ---
 

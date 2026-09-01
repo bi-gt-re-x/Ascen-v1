@@ -85,9 +85,22 @@ export function getAlerts(day: string): Promise<ApiResult<{ alerts: Alerts }>> {
  * Was a `.filter()` over the account's whole task list, which is most of why
  * the top bar needed that list. Unfinished results come first, which is the
  * ordering the panel has always applied.
+ *
+ * @param openOnly Drop the finished ones. The top bar passes this: what it
+ *                 does with a result is take the reader to it, and a finished
+ *                 task is not somewhere anybody needs taking. It also matters
+ *                 because the server caps the answer at eight — without it a
+ *                 word appearing in nine done tasks and one live one comes
+ *                 back without the live one.
  */
-export function searchTasks(query: string): Promise<ApiResult<{ tasks: Task[] }>> {
-  return get<{ tasks: Task[] }>('/api/tasks/search', { q: query });
+export function searchTasks(
+  query: string,
+  openOnly = false,
+): Promise<ApiResult<{ tasks: Task[] }>> {
+  return get<{ tasks: Task[] }>('/api/tasks/search', {
+    q: query,
+    open: openOnly ? 1 : undefined,
+  });
 }
 
 export function listTasks(): Promise<ApiResult<{ tasks: Task[] }>> {

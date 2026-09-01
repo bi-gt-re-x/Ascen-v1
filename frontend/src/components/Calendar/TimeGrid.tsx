@@ -77,6 +77,8 @@ export interface DayColumnProps {
    * and the pair it reports are two of them.
    */
   flagged?: readonly Block[] | null;
+  /** A task block to paint for a moment — see `marked` on GridBlockProps. */
+  markedTaskId?: string | null;
 }
 
 export function DayColumn({
@@ -91,6 +93,7 @@ export function DayColumn({
   onComplete,
   completingId,
   flagged,
+  markedTaskId = null,
 }: DayColumnProps) {
   return (
     <div
@@ -122,6 +125,7 @@ export function DayColumn({
           onComplete={onComplete}
           completing={block.kind === 'task' && completingId === block.id}
           flagged={flagged?.includes(block)}
+          marked={block.kind === 'task' && markedTaskId === block.id}
         />
       ))}
 

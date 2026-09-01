@@ -109,6 +109,16 @@
 .sf-step.is-next:hover:not(:disabled) { background: #A38A70; color: #FFFFFF; }
 
 /* --- The two categories -------------------------------------------------- */
+/* The listbox holds both groups, because the cursor is one cursor — see the
+   note in components/Search/Panel.tsx. It is what scrolls when there are more
+   matches than the panel is tall. */
+.sf-groups {
+    min-height: 0;
+    overflow-y: auto;
+    margin: 0 -2px;
+    padding: 0 2px;
+}
+
 .sf-group { margin-top: 10px; min-height: 0; }
 
 .sf-group-head {
@@ -121,16 +131,12 @@
 }
 
 .sf-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
 .sf-row {
-    width: 100%;
     box-sizing: border-box;
     display: flex;
     align-items: center;

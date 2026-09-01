@@ -116,6 +116,17 @@ All in `routes/auth.py`, except the theme (`routes/theme.py`).
 | `GET /api/get_growth_ratings?username=` | The five-metric report card + weekly trends |
 | `GET /api/get_xp_data?username=` | The ledger rolled up: level, totals, series |
 
+## Task search — `api/tasks.py`
+
+| Endpoint | Does |
+| --- | --- |
+| `GET /api/tasks/search?q=&limit=&open=` | Title search, unfinished first |
+
+`open=1` drops the finished ones. The top bar's search passes it: what that
+panel does with a result is take the reader to it, and the cap means a word
+appearing in more finished tasks than the limit would otherwise come back with
+the live ones missing.
+
 ## Notifications — `api/notifications.py`
 
 | Endpoint | Does |

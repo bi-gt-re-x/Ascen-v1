@@ -919,12 +919,18 @@ def task_alert_counts(username, day):
         con.close()
 
 
-def search_tasks(username, needle, limit=8):
+def search_tasks(username, needle, limit=8, open_only=False):
     """One account's tasks whose title contains `needle`, unfinished first.
 
     The ordering is the one the search panel has always applied after
     downloading everything: a search on a to-do list is nearly always somebody
     looking for something they still have to do.
+
+    `open_only` takes that from an ordering to a rule. The top bar's search
+    passes it, because what that panel does with a result is take the reader
+    to it — and a finished task is not somewhere anybody needs taking. It is a
+    parameter rather than the behaviour because the endpoint is a title search
+    and a caller wanting the whole record is entitled to it.
 
     An empty needle matches nothing rather than everything — the panel shows no
     results until something is typed, and a LIKE '%%' here would mean the one
@@ -943,11 +949,14 @@ def search_tasks(username, needle, limit=8):
         pattern = '%' + needle.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
         query = (
             'SELECT * FROM tasks WHERE user_id = ? '
-            "AND lower(title) LIKE lower(?) ESCAPE '\\' "
-            'ORDER BY (status = ?), rowid LIMIT ?')
-        return _decode_records(
-            con, 'tasks',
-            con.execute(query, (username, pattern, 'done', int(limit))))
+            "AND lower(title) LIKE lower(?) ESCAPE '\\' ")
+        params = [username, pattern]
+        if open_only:
+            query += 'AND status != ? '
+            params.append('done')
+        query += 'ORDER BY (status = ?), rowid LIMIT ?'
+        params.extend(['done', int(limit)])
+        return _decode_records(con, 'tasks', con.execute(query, params))
     finally:
         con.close()
 

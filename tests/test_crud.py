@@ -429,3 +429,24 @@ def test_breaking_down_a_checkpoint_that_is_not_yours_is_not_found(client):
     out = client.post('/api/suggest_steps', json={'milestone_id': 'm999'}).json()
     assert not out['success']
     assert 'not found' in out['message'].lower()
+
+
+def test_search_can_be_asked_for_open_tasks_only(client):
+    """`open=1` is what the top bar's search passes, and why.
+
+    The endpoint caps its answer, so an ordering that merely puts unfinished
+    first is not enough: a word appearing in more finished tasks than the cap
+    comes back with the live ones missing. What the panel does with a result is
+    take the reader to it, and a finished task is not somewhere to be taken.
+    """
+    for index in range(3):
+        made = client.post('/api/tasks', json={'name': 'audit step %d' % index}).json()
+        client.post('/api/complete_task', json={'task_id': made['task_id']})
+    client.post('/api/tasks', json={'name': 'audit the last step'})
+
+    everything = client.get('/api/tasks/search', params={'q': 'audit'}).json()['tasks']
+    assert len(everything) == 4
+
+    live = client.get('/api/tasks/search',
+                      params={'q': 'audit', 'open': 1}).json()['tasks']
+    assert [row['title'] for row in live] == ['audit the last step']

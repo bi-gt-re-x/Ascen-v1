@@ -3,5 +3,5 @@
  * utils/siteIndex, which is a plain module so that nothing has to load a
  * component to know what pages exist.
  */
-export { SearchPanel } from './Panel';
+export { SearchPanel, taskTo } from './Panel';
 export type { Hit, SearchPanelProps } from './Panel';

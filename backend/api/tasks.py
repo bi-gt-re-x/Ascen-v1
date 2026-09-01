@@ -261,7 +261,7 @@ def list_tasks(username: str = Depends(current_username)):
 
 
 @router.get('/api/tasks/search')
-def search_tasks(q: str = '', limit: int = 8,
+def search_tasks(q: str = '', limit: int = 8, open: bool = False,
                  username: str = Depends(current_username)):
     """Title search, for the top bar's search panel.
 
@@ -274,8 +274,16 @@ def search_tasks(q: str = '', limit: int = 8,
     needed that list at all. `limit` is capped rather than trusted: the panel
     shows eight, and an endpoint that will return ten thousand rows on request
     is the endpoint this change exists to remove.
+
+    `open` drops the finished ones. The top bar passes it, because what that
+    panel does with a result is take the reader to it and a finished task is
+    not somewhere anybody needs taking — and because the cap is eight, so
+    without it a search that matches nine done tasks and one live one comes
+    back with the live one missing.
     """
-    return ok(tasks=db.search_tasks(username, q, max(1, min(int(limit), 50))))
+    return ok(tasks=db.search_tasks(username, q,
+                                    max(1, min(int(limit), 50)),
+                                    open_only=bool(open)))
 
 
 @router.post('/api/tasks')
