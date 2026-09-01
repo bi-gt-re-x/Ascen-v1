@@ -15,6 +15,13 @@
  * coming up. That is the behaviour the button promises and it is the whole
  * reason the delete had to be a server round trip rather than a filter.
  *
+ * ## The unread mark, and what the badge counts
+ *
+ * A row that has arrived since the bell was last opened carries a bar in its
+ * tone. That is what `unread` is for — the badge on the bell counts the whole
+ * list instead, because "you have four notifications" should stop being true
+ * by them being dealt with rather than by being looked at once.
+ *
  * ## Clear all does not ask
  *
  * Nothing here is data the account made, and everything here will be raised

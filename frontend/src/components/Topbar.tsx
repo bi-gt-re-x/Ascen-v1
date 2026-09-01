@@ -13,9 +13,11 @@
  * offender — a red 3 that is always 3 trains people to ignore every badge you
  * will ever show them. So:
  *
- *   **Search** reads the account's own tasks and goes to the one you pick. Not
- *   a global search over a corpus that does not exist; the placeholder says
- *   which, so nobody types a subject into it and concludes the app is broken.
+ *   **Search** looks in two places: the account's own tasks, and the
+ *   containers this app is made of — every page, tab and settings section
+ *   (utils/siteIndex). It takes you to the closest match as you type and the
+ *   arrows walk the rest, so nobody has to know which screen a control is on
+ *   to reach it. The panel is components/Search/Panel.tsx.
  *   **Notifications** are read from the record — late work, today's calendar,
  *   a goal's date coming up, how the week went, a streak that will break
  *   tonight. Nothing is generated on a schedule, so an account in good order
@@ -37,13 +39,14 @@
  *   deleted feature with extra steps.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { NotificationPanel } from './Notifications';
+import { SearchPanel } from './Search';
 import { useAuth, useNotifications, useSettings, useStats, useTheme } from '@/hooks';
 import { AVATARS, avatarPath } from '@/services/avatars';
-import { auth, tasks as taskService } from '@/services';
+import { auth } from '@/services';
 import { format } from '@/utils';
-import type { Task, Theme } from '@/types';
+import type { Theme } from '@/types';
 import '@/styles/topbar.css';
 
 const stroke = {
@@ -54,9 +57,6 @@ const stroke = {
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
 };
-
-/** How many matches the search drops down. Enough to choose from, few enough to scan. */
-const RESULTS = 6;
 
 // --------------------------------------------------------------------------
 // The bar
@@ -74,14 +74,11 @@ export function Topbar() {
   // integers, read once for the session — this used to be the account's whole
   // task list, twice, because the bar and the rail each asked for it.
   const { stats } = useStats();
-  const navigate = useNavigate();
 
   const level = stats ? format.levelForTotalXp(stats.xp) : null;
 
   const [open, setOpen] = useState<'search' | 'alerts' | 'account' | null>(null);
-  const [query, setQuery] = useState('');
   const barRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // A click anywhere else closes whatever is open. One listener for all three
   // panels, because only one is ever open at a time.
@@ -101,53 +98,22 @@ export function Topbar() {
     };
   }, [open]);
 
-  useEffect(() => {
-    if (open === 'search') inputRef.current?.focus();
-  }, [open]);
-
   /*
-   * The bell's list, and how many of it is new.
+   * The bell's list.
    *
-   * Neither is worked out here any more. The list is rows the server wrote
-   * (context/NotificationsProvider reads and polls it), which is what lets a
+   * Not worked out here any more. These are rows the server wrote
+   * (context/NotificationsProvider reads and polls them), which is what lets a
    * notification be deleted and stay deleted — the three counts this bar used
    * to derive could not be, because there was nothing to delete.
    *
-   * Opening the panel is what marks them read, so the badge is "arrived since
-   * you last looked" rather than "still true".
+   * The badge counts the list rather than the unread part of it: it is "you
+   * have N notifications", and it goes back to nothing by them being dealt
+   * with rather than by being glanced at. `unread` still has a job — it is
+   * what marks the new rows inside the panel — and opening the bell is what
+   * settles it.
    */
-  const { unread, markRead } = useNotifications();
-
-  /*
-   * Search results, from the server.
-   *
-   * This was a `.filter()` over the account's whole task list, and that list is
-   * the single largest thing the app fetches — several megabytes for the
-   * largest account here. Holding it on every page so that a panel most
-   * sessions never open could filter it was the wrong trade by a wide margin.
-   *
-   * Debounced rather than sent per keystroke, and the guard is a ticket rather
-   * than a cancel: replies can arrive out of order, and the one that matters is
-   * the one for the text currently in the box.
-   */
-  const [matches, setMatches] = useState<Task[]>([]);
-  const searchTicket = useRef(0);
-
-  useEffect(() => {
-    const needle = query.trim();
-    if (!needle) {
-      setMatches([]);
-      return;
-    }
-    const mine = ++searchTicket.current;
-    const timer = window.setTimeout(() => {
-      void taskService.searchTasks(needle).then((result) => {
-        if (mine !== searchTicket.current) return;
-        setMatches(result.success ? result.tasks.slice(0, RESULTS) : []);
-      });
-    }, 180);
-    return () => window.clearTimeout(timer);
-  }, [query]);
+  const { items, markRead } = useNotifications();
+  const waiting = items.length;
 
   const toggle = useCallback(
     (panel: 'search' | 'alerts' | 'account') =>
@@ -193,7 +159,7 @@ export function Topbar() {
           <button
             type="button"
             className={`topbar-btn${open === 'search' ? ' is-on' : ''}`}
-            aria-label="Search your tasks"
+            aria-label="Search tasks and pages"
             aria-expanded={open === 'search'}
             onClick={() => toggle('search')}
           >
@@ -203,43 +169,14 @@ export function Topbar() {
             </svg>
           </button>
 
+          {/* Mounted only while open, and that is load-bearing rather than
+              tidy: the panel navigates as the reader types, so a copy kept
+              alive behind a `display: none` would be a copy still steering the
+              router. Its query resets with it, which is also the right
+              behaviour — a search is a question, not a setting. */}
           {open === 'search' && (
             <div className="topbar-panel topbar-search">
-              <input
-                ref={inputRef}
-                type="search"
-                className="topbar-search-input"
-                placeholder="Search your tasks"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && matches[0]) {
-                    setOpen(null);
-                    navigate('/tasks');
-                  }
-                }}
-              />
-              {query.trim() === '' ? (
-                <p className="topbar-empty">
-                  Find a task by name.
-                </p>
-              ) : matches.length === 0 ? (
-                <p className="topbar-empty">No task matches “{query.trim()}”.</p>
-              ) : (
-                <ul className="topbar-results">
-                  {matches.map((task) => (
-                    <li key={task.id}>
-                      <Link to="/tasks" onClick={() => setOpen(null)}>
-                        <span className={`topbar-dot is-${task.status === 'done' ? 'done' : 'open'}`} />
-                        <span className="topbar-result-name">{task.title}</span>
-                        <span className="topbar-result-meta">
-                          {task.status === 'done' ? 'Done' : `${task.xp_value} XP`}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <SearchPanel onClose={() => setOpen(null)} />
             </div>
           )}
         </div>
@@ -250,7 +187,9 @@ export function Topbar() {
             type="button"
             className={`topbar-btn${open === 'alerts' ? ' is-on' : ''}`}
             aria-label={
-              unread === 0 ? 'Notifications: nothing new' : `Notifications: ${unread} new`
+              waiting === 0
+                ? 'Notifications: nothing waiting'
+                : `Notifications: ${waiting} waiting`
             }
             aria-expanded={open === 'alerts'}
             onClick={() => openAlerts()}
@@ -259,11 +198,20 @@ export function Topbar() {
               <path d="M18 8a6 6 0 1 0-12 0c0 6-3 7-3 7h18s-3-1-3-7" />
               <path d="M13.7 21a2 2 0 0 1-3.4 0" />
             </svg>
-            {/* No badge at zero. A count that is always showing is furniture —
-                and it counts what has *arrived* since the panel was last
-                opened, not what is still true, so it goes back to nothing by
-                being read rather than by the reader fixing five things. */}
-            {unread > 0 && <span className="topbar-badge">{unread}</span>}
+            {/* How many are in the bell, in a red circle at its corner. No
+                badge at zero: a count that is always showing is furniture, and
+                an account in good order genuinely has none.
+
+                It counts the list rather than the unread part of it, so it
+                goes away by the notifications being dealt with — read, or
+                deleted — rather than by being glanced at. A badge that clears
+                itself on a glance is a badge that stops meaning anything.
+
+                Past 99 it says 99+. Three digits do not fit in a circle, and
+                nobody with that many is counting. */}
+            {waiting > 0 && (
+              <span className="topbar-badge">{waiting > 99 ? '99+' : waiting}</span>
+            )}
           </button>
 
           {open === 'alerts' && (

@@ -50,6 +50,7 @@
  * than on the account, because the task record has no field for one.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   BulkBar,
   Composer,
@@ -709,6 +710,108 @@ export default function Tasks() {
     setDrawn({});
   }, [query, group]);
 
+  /**
+   * `?task=<id>` — a row somebody was sent to, from the top bar's search.
+   *
+   * Getting them to the page is the easy half. The row may be inside a heading
+   * they collapsed, past the sixty a heading draws, or filtered out of the
+   * board entirely by the status and horizon this page opened on — and a
+   * search that lands on a screen where the thing it found is not visible has
+   * not answered anything.
+   *
+   * So this opens the heading, raises that heading's draw count past the row,
+   * and — only when the task is genuinely not on the board — widens the query
+   * enough for it to be. The widening is deliberately the last resort and
+   * deliberately total (`status: 'all'`, `horizon: 'all'`): a half-widened
+   * board is one where the reader cannot tell why they are looking at what
+   * they are looking at.
+   *
+   * `marked` is what the row is painted with once it is found. It clears on a
+   * timer rather than on a click, because the reader has already done the
+   * clicking; what they need is a second of "there it is".
+   */
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get('task');
+  const [marked, setMarked] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!wanted) {
+      setMarked(null);
+      return;
+    }
+    // Not this account's, or not loaded yet. Nothing to reveal either way.
+    if (!list.some((task) => task.id === wanted)) return;
+
+    const holding = groups.find((entry) =>
+      entry.tasks.some((task) => task.id === wanted),
+    );
+
+    if (!holding) {
+      // Filtered off the board. The only fix that always works is to stop
+      // filtering; see the note above on why it is all or nothing.
+      viewChosen.current = true;
+      setQuery((current) =>
+        current.status === 'all' && current.horizon === 'all'
+          ? current
+          : { ...EMPTY_QUERY, sort: current.sort, status: 'all', horizon: 'all' },
+      );
+      return;
+    }
+
+    setShut((current) => {
+      if (!current.has(holding.key)) return current;
+      const next = new Set(current);
+      next.delete(holding.key);
+      return next;
+    });
+
+    const index = holding.tasks.findIndex((task) => task.id === wanted);
+    setDrawn((current) => {
+      const cap = current[holding.key] ?? PAGE;
+      return index < cap ? current : { ...current, [holding.key]: index + 1 };
+    });
+
+    setMarked(wanted);
+  }, [wanted, list, groups]);
+
+  /* Scroll to it once it is actually rendered, and drop the mark a moment
+     later. The frame matters: the effect above may have just opened a heading,
+     and the row does not exist until that render has happened.
+
+     `behavior: 'auto'` — an instant jump — rather than a smooth one, and that
+     is not a style preference. A smooth scroll is silently a no-op in some
+     engines (it is one in the browser this was tested in), which turns "we
+     took you to the row" into "we took you to the page and the row is
+     somewhere below" with nothing to show for it. The ring the row is painted
+     with is what draws the eye; the scroll only has to land. */
+  useEffect(() => {
+    if (!marked) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-task="${CSS.escape(marked)}"]`)
+        ?.scrollIntoView({ block: 'center', behavior: 'auto' });
+    });
+    const timer = window.setTimeout(() => {
+      setMarked(null);
+      /* The parameter goes with the highlight. Left in the URL it would
+         re-reveal the row on every reload, and would still be there long after
+         the search that put it there was closed. Replaced, so it does not
+         become a history entry of its own. */
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.delete('task');
+          return next;
+        },
+        { replace: true },
+      );
+    }, 2200);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [marked, setParams]);
+
   const drawMore = useCallback((key: string, from: number) => {
     setDrawn((current) => ({ ...current, [key]: from + PAGE }));
   }, []);
@@ -945,6 +1048,7 @@ export default function Tasks() {
                           <TaskRow
                             key={task.id}
                             task={task}
+                            marked={task.id === marked}
                             subject={subjectName(task.subject)}
                             goals={linkable}
                             onLink={link}

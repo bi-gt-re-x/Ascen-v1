@@ -177,7 +177,14 @@ export const StatsContext = createContext<StatsValue | null>(null);
 export interface NotificationsValue {
   /** Newest first. Empty while signed out, or while the master switch is off. */
   items: Notification[];
-  /** How many have arrived since the bell was last opened. The badge. */
+  /**
+   * How many have arrived since the bell was last opened.
+   *
+   * Not the badge — that counts `items`, because "you have N notifications"
+   * should go away by them being dealt with rather than by being glanced at.
+   * This is the finer state: it is what marks the new rows inside the panel,
+   * and what `markRead` settles.
+   */
   unread: number;
   /**
    * The ones that should be on screen right now.

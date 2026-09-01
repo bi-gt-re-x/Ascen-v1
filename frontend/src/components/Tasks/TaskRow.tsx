@@ -26,6 +26,14 @@ export interface TaskRowProps {
   selected: boolean;
   starred: boolean;
   busy: boolean;
+  /**
+   * Painted for a couple of seconds, for a row somebody was *sent* to.
+   *
+   * The top bar's search navigates to `/tasks?task=<id>` and that page reveals
+   * the row — see the note on it. Without the mark the reader arrives at a
+   * board that scrolled somewhere for no visible reason.
+   */
+  marked?: boolean;
   onSelect: (task: Task, on: boolean) => void;
   onComplete: (task: Task) => void;
   onReopen: (task: Task) => void;
@@ -66,6 +74,7 @@ export function TaskRow({
   selected,
   starred,
   busy,
+  marked = false,
   onSelect,
   onComplete,
   onReopen,
@@ -111,7 +120,17 @@ export function TaskRow({
   const when = dueLine(task);
 
   return (
-    <li className={`tk-row is-${task.priority}${done ? ' is-done' : ''}${busy ? ' is-busy' : ''}`}>
+    /* `data-task` is how the top bar's search finds this row on the page:
+       it navigates to /tasks?task=<id> and pages/Tasks scrolls to whatever
+       carries the id. An attribute rather than a DOM id because a row is
+       rendered once per grouping and an id has to be unique on the page. */
+    <li
+      className={
+        `tk-row is-${task.priority}${done ? ' is-done' : ''}`
+        + `${busy ? ' is-busy' : ''}${marked ? ' is-found' : ''}`
+      }
+      data-task={task.id}
+    >
       <label className="tk-check">
         <input
           type="checkbox"

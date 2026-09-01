@@ -543,6 +543,26 @@ html[data-theme='dark'] .tk-page {
 .tk-row.is-done .tk-title { text-decoration: line-through; }
 .tk-row.is-busy { opacity: .6; pointer-events: none; }
 
+/* A row somebody was *sent* to — the top bar's search navigates to
+   /tasks?task=<id> and the page reveals it. It fades out on its own after a
+   couple of seconds (see the note in pages/Tasks.tsx), so this is a moment of
+   "there it is" rather than a state the reader has to clear.
+
+   Painted with a ring rather than a fill: the row already carries a priority
+   stripe and a done state, and a background would argue with both. */
+.tk-row.is-found {
+    border-color: var(--tk-violet);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tk-violet) 22%, transparent);
+    animation: tk-found .5s ease-out;
+}
+@keyframes tk-found {
+    from { box-shadow: 0 0 0 9px color-mix(in srgb, var(--tk-violet) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .tk-row.is-found { animation: none; }
+}
+html[data-motion="reduced"] .tk-row.is-found { animation: none; }
+
 .tk-check { display: grid; place-items: center; cursor: pointer; }
 .tk-check input { position: absolute; opacity: 0; width: 0; height: 0; }
 .tk-check span {

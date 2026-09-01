@@ -130,6 +130,26 @@ Features include:
 
 ---
 
+## Search
+
+The magnifier in the top bar searches two things at once:
+
+* **Tasks** — the account's own work, matched on the server
+* **Components** — the containers the app is made of: every page, every tab
+  inside Analytics and the Calendar, and every section of Settings
+
+It takes you to the closest match as you type, and the `›` arrow walks the
+rest — each step moves the page behind the panel, so nothing has to be
+confirmed with Enter. That is what makes it useful for the thing a search box
+is usually no help with: reaching a control without knowing which screen it is
+on. Typing "dark mode" lands on Settings → Appearance; "percentile" lands on
+the Records tab of Analytics.
+
+A task match goes to the row itself — the board opens the heading it is under,
+scrolls to it and marks it for a moment.
+
+---
+
 ## Notifications
 
 The bell in the top bar is the one part of Ascen that speaks first. Nothing is
