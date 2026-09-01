@@ -3283,6 +3283,16 @@ body:has(.calendar-container) *::-webkit-scrollbar {
     --mv-warm: #fbf6ea;
     --mv-warm-line: #ecdcbb;
     --mv-warm-ink: #8a6d3a;
+
+    /* The five XP bands. Fixed thresholds — see XP_BANDS in
+       utils/monthSummary — so a colour means the same thing in every month
+       and the legend under the grid can name it. */
+    --mv-band-exceptional: #17a34a;
+    --mv-band-great: #1e2b52;
+    --mv-band-good: #7c6ce0;
+    --mv-band-low: #e05a4f;
+    --mv-band-none: #eceef3;
+    --mv-band-none-ink: #98a0ad;
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     color: var(--mv-ink);
 }
@@ -3303,6 +3313,13 @@ html[data-theme="dark"] #monthView {
     --mv-warm: #1b1913;
     --mv-warm-line: #3a3327;
     --mv-warm-ink: #d3b077;
+
+    --mv-band-exceptional: #2ea043;
+    --mv-band-great: #5878d6;
+    --mv-band-good: #8b7bf0;
+    --mv-band-low: #e0605a;
+    --mv-band-none: #232a35;
+    --mv-band-none-ink: #6b7480;
 }
 
 /* The two columns. The grid takes the width it needs to stay a grid; the
@@ -3318,12 +3335,21 @@ html[data-theme="dark"] #monthView {
 /* The grid is the page and the panel beside it is the annotation, so the split
    is weighted that way rather than nearly evenly. At 1280 this is about 130px
    of extra width for the month — one more line of room in every cell — and the
-   panel is still wider than the card it draws. */
+   panel is still wider than the card it draws.
+
+   It scrolls its own contents, the way the column beside it always has. The
+   month, the progress strip and the three cards under them do not fit one
+   viewport and were never going to: this page is pinned (`PINNED` in App.tsx)
+   so there is no document scrollbar, and without one of its own everything
+   below the grid would be unreachable rather than merely below the fold. */
 .mv-left {
     flex: 1 1 70%;
     min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 .mv-side {
     flex: 0 1 380px;
@@ -3336,6 +3362,20 @@ html[data-theme="dark"] #monthView {
     overflow-y: auto;
     padding-right: 2px;
 }
+
+/* Thin, rounded and theme-aware — the same scrollbar the rest of the app
+   uses, on both of the view's two scrollers. */
+.mv-left, .mv-side { scrollbar-width: thin; scrollbar-color: #c3c9d4 transparent; }
+.mv-left::-webkit-scrollbar,
+.mv-side::-webkit-scrollbar { width: 8px; }
+.mv-left::-webkit-scrollbar-track,
+.mv-side::-webkit-scrollbar-track { background: transparent; }
+.mv-left::-webkit-scrollbar-thumb,
+.mv-side::-webkit-scrollbar-thumb { background: #c3c9d4; border-radius: 8px; }
+html[data-theme="dark"] .mv-left,
+html[data-theme="dark"] .mv-side { scrollbar-color: #39414d transparent; }
+html[data-theme="dark"] .mv-left::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .mv-side::-webkit-scrollbar-thumb { background: #39414d; }
 
 /* ---- Header: what month it is, how to move through it, how to look at it -- */
 .mv-header {
@@ -3408,8 +3448,7 @@ html[data-theme="dark"] #monthView {
    The card owns the outer border and the corners; the grid inside it draws
    nothing but its own hairlines. */
 .mv-card {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--mv-line);
@@ -3445,26 +3484,14 @@ html[data-theme="dark"] #monthView {
    them closes the outer edges, which is one border per line instead of two
    overlapping ones.
 
-   The rows have **no minimum by default**, and that is deliberate rather than
-   lazy. This page is pinned (`PINNED` in App.tsx), so there is no scrollbar to
-   rescue a grid that outgrows its column — a row minimum that does not fit
-   pushes the summary strip below the fold and there is no way to reach it.
-   Six equal shares of whatever is left is the only rule that is always safe.
-
-   Room is then given back by height, where there is height to give: a cell of
-   three short lines wants about 90px and reads badly under 70. Both breakpoints
-   are chosen against what the column actually costs — the header, the day
-   names and the summary strip come off the viewport first. */
+   The rows are a definite height rather than six shares of what is left, now
+   that the column scrolls: a `1fr` row inside a scroller has nothing to be a
+   fraction *of*. `clamp` is what keeps it from being a magic number — a cell
+   of three short lines reads badly under about 76px and gains nothing past
+   about 108, and between those it tracks the window. */
 .mv-grid {
-    grid-template-rows: repeat(6, minmax(0, 1fr));
-    flex: 1 1 auto;
-    min-height: 0;
-}
-@media (min-height: 800px) {
-    .mv-grid { grid-template-rows: repeat(6, minmax(78px, 1fr)); }
-}
-@media (min-height: 940px) {
-    .mv-grid { grid-template-rows: repeat(6, minmax(96px, 1fr)); }
+    grid-template-rows: repeat(6, clamp(76px, 9.5vh, 108px));
+    flex: 0 0 auto;
 }
 .mv-cell {
     position: relative;
@@ -3491,7 +3518,7 @@ html[data-theme="dark"] #monthView {
 /* A day with nothing on it is the number and nothing else. Thirty cells each
    saying "0 events / 0 XP" is a paragraph of noise between the reader and the
    four days that are not empty. */
-.mv-cell.is-empty .mv-daynum { color: var(--mv-ink-soft); font-weight: 600; }
+.mv-cell.is-empty { cursor: pointer; }
 
 .mv-cell-top {
     display: flex;
@@ -3501,27 +3528,29 @@ html[data-theme="dark"] #monthView {
     min-width: 0;
 }
 
-/* Everything on the day is done. */
-.mv-cell-clear {
+/* The corner mark: a tick on a day where everything got done, a star on today.
+   Never both — today is not finished until it is, and on the day it is the
+   tick is the better news. */
+.mv-cell-flag {
     flex: none;
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--mv-good-soft);
-    color: var(--mv-good);
 }
-.mv-cell-clear svg {
-    width: 10px;
-    height: 10px;
+.mv-cell-flag svg { width: 11px; height: 11px; }
+.mv-cell-flag.is-clear { background: var(--mv-good-soft); color: var(--mv-good); }
+.mv-cell-flag.is-clear svg {
     fill: none;
     stroke: currentColor;
     stroke-width: 3.4;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
+.mv-cell-flag.is-today { color: #e8992c; }
+.mv-cell-flag.is-today svg { fill: currentColor; stroke: none; width: 15px; height: 15px; }
 
 /* Wraps rather than clips. A cell is a seventh of whatever the month is given,
    and on a narrow window "9" and "475 XP" do not fit on one line — the choice
@@ -3534,41 +3563,95 @@ html[data-theme="dark"] #monthView {
     min-width: 0;
 }
 
-/* Done against scheduled, along the cell's foot. A rule rather than a figure:
-   forty-two of anything has to be readable without being read. */
-.mv-cell-bar {
+/* The day's things, one segment each, along the cell's foot. A row of marks
+   rather than a figure: forty-two of anything has to be readable without being
+   read, and this way the same strip says how many, how big and how many are
+   done at once. */
+.mv-cell-marks {
     margin-top: auto;
-    height: 3px;
-    border-radius: 999px;
-    background: var(--mv-line);
-    overflow: hidden;
+    display: flex;
+    gap: 3px;
+    min-height: 4px;
 }
-.mv-cell-bar-fill {
-    display: block;
-    height: 100%;
+.mv-mark {
+    flex: 1 1 0;
+    height: 4px;
     border-radius: 999px;
-    background: var(--mv-accent);
-    transition: width .2s ease;
+    /* Unfinished: the band's colour, faint. Finished: the band's colour. The
+       row is the day's progress without being a second thing to read. */
+    background: currentColor;
+    opacity: .28;
 }
-.mv-cell.is-settled .mv-cell-bar-fill { background: var(--mv-good); }
+.mv-mark.is-done { opacity: 1; }
+.mv-mark.band-exceptional { color: var(--mv-band-exceptional); }
+.mv-mark.band-great       { color: var(--mv-band-great); }
+.mv-mark.band-good        { color: var(--mv-band-good); }
+.mv-mark.band-low         { color: var(--mv-band-low); }
+.mv-mark.band-none        { color: var(--mv-band-none-ink); }
 
+/* ---- The legend ----------------------------------------------------------
+   A colour that cannot be looked up is decoration. */
+.mv-legend {
+    flex: none;
+    list-style: none;
+    margin: 0;
+    padding: 11px 14px;
+    border-top: 1px solid var(--mv-line);
+    background: var(--mv-surface-soft);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 20px;
+    font-size: 11.5px;
+    color: var(--mv-ink-soft);
+}
+.mv-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.mv-legend-dot { width: 8px; height: 8px; border-radius: 999px; background: currentColor; }
+.mv-legend-dot.band-exceptional { background: var(--mv-band-exceptional); }
+.mv-legend-dot.band-great       { background: var(--mv-band-great); }
+.mv-legend-dot.band-good        { background: var(--mv-band-good); }
+.mv-legend-dot.band-low         { background: var(--mv-band-low); }
+.mv-legend-dot.band-none        { background: var(--mv-band-none); border: 1px solid var(--mv-line); }
+.mv-legend-note { color: var(--mv-ink-faint); }
+
+/* The day, as a filled badge in the band it earned. A circle rather than a
+   bare number because it is the one thing in the cell the eye lands on first,
+   and because a colour needs a shape to live in — a tinted digit is a digit
+   somebody has to squint at. */
 .mv-daynum {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 30px;
-    height: 30px;
-    padding: 0 6px;
-    border-radius: 50%;
-    font-size: 16px;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 14.5px;
     font-weight: 700;
     line-height: 1;
-    color: var(--mv-ink);
+    color: #ffffff;
+    background: var(--mv-band-great);
+    font-variant-numeric: tabular-nums;
 }
-/* Neighbouring months are context, not content: dimmed, and carrying no
-   counts at all. Clicking one still steps there. */
+.mv-daynum.band-exceptional { background: var(--mv-band-exceptional); }
+.mv-daynum.band-great       { background: var(--mv-band-great); }
+.mv-daynum.band-good        { background: var(--mv-band-good); }
+.mv-daynum.band-low         { background: var(--mv-band-low); }
+/* A day with nothing on it wears no colour at all. It is the commonest cell in
+   most months and it should be the quietest thing on the grid. */
+.mv-daynum.band-none {
+    background: transparent;
+    color: var(--mv-band-none-ink);
+    font-weight: 600;
+}
+/* Neighbouring months are context, not content: dimmed, carrying no counts and
+   wearing no band. Clicking one still steps there. */
 .mv-cell.is-outside { cursor: pointer; background: transparent; }
-.mv-cell.is-outside .mv-daynum { color: var(--mv-ink-faint); font-weight: 500; }
+.mv-cell.is-outside .mv-daynum {
+    background: transparent;
+    color: var(--mv-ink-faint);
+    font-weight: 500;
+}
 .mv-cell.is-outside:hover { background: var(--mv-surface-soft); }
 
 .mv-cell-events {
@@ -3606,7 +3689,7 @@ html[data-theme="dark"] #monthView {
 .mv-cell.is-today.is-weekend:hover { background: var(--mv-warm); }
 .mv-cell.is-today .mv-cell-events,
 .mv-cell.is-today .mv-cell-xp { color: var(--mv-warm-ink); }
-.mv-cell.is-today .mv-cell-bar { background: var(--mv-warm-line); }
+
 /* The day the panel on the right is showing. A ring rather than a fill, so it
    can sit on top of today's tint and on top of the load shading without
    arguing with either. Inset, so it is not clipped by the card's overflow at
@@ -3622,6 +3705,21 @@ html[data-theme="dark"] .mv-card {
 }
 html[data-theme="dark"] .mv-cell.is-weekend { background: var(--mv-surface-soft); }
 html[data-theme="dark"] .mv-cell.is-weekend:hover { background: #171b23; }
+
+/* The pastel chips. Every one of them is a light tint of its own colour, which
+   is exactly the thing that does not survive being put on a dark page — the
+   tint has to come from the same hue at low alpha instead. The inks are left
+   alone; they were chosen to read on either. */
+html[data-theme="dark"] .mv-fig-ico { background: rgba(255, 255, 255, .06); }
+html[data-theme="dark"] .mv-quick.tone-task  .mv-quick-ico,
+html[data-theme="dark"] .mv-upcoming-ico.tone-task { background: rgba(94, 128, 255, .14); color: #8fa8ff; }
+html[data-theme="dark"] .mv-quick.tone-event .mv-quick-ico,
+html[data-theme="dark"] .mv-upcoming-ico.tone-event { background: rgba(46, 160, 67, .16); color: #56d364; }
+html[data-theme="dark"] .mv-quick.tone-goal  .mv-quick-ico,
+html[data-theme="dark"] .mv-goal-ico { background: rgba(224, 96, 90, .15); color: #f08b85; }
+html[data-theme="dark"] .mv-quick.tone-note  .mv-quick-ico { background: rgba(224, 160, 60, .15); color: #e0b062; }
+html[data-theme="dark"] .dp-goal-ico { background: rgba(127, 156, 255, .14); }
+html[data-theme="dark"] .mv-analytics { background: transparent; }
 
 /* ---- The summary strip under the grid ----------------------------------- */
 .mv-summary {
@@ -3660,8 +3758,11 @@ html[data-theme="dark"] .mv-cell.is-weekend:hover { background: #171b23; }
     color: var(--mv-ink);
 }
 .mv-summary-lead { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.mv-summary-title { font-size: 15px; font-weight: 700; color: var(--mv-ink); }
+.mv-summary-title { font-size: 16px; font-weight: 800; color: var(--mv-ink); }
 .mv-summary-sub { font-size: 13px; color: var(--mv-ink-soft); }
+/* One line of verdict, read off the same ratio the ring draws. */
+.mv-summary-verdict { font-size: 12.5px; font-weight: 600; color: var(--mv-ink-soft); }
+.mv-summary-verdict.is-good { color: var(--mv-good); }
 
 /* The three figures, each in its own column with a hairline between them. */
 .mv-summary-figs {
@@ -3670,55 +3771,283 @@ html[data-theme="dark"] .mv-cell.is-weekend:hover { background: #171b23; }
     gap: clamp(14px, 1.6vw, 26px);
     margin-left: auto;
 }
+/* Each figure is a chip and a stack. The chip is what makes four numbers in a
+   row scannable: without it they are a paragraph of numerals in one weight and
+   the eye has nothing to land on between them. */
 .mv-summary-fig {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: flex-start;
+    gap: 10px;
     padding-left: clamp(14px, 1.6vw, 26px);
     border-left: 1px solid var(--mv-warm-line);
     min-width: 0;
 }
+.mv-fig-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mv-fig-ico {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+}
+.mv-fig-ico svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mv-fig-ico.tone-xp     { color: #5b6ee0; }
+.mv-fig-ico.tone-days   { color: #3d8bd6; }
+.mv-fig-ico.tone-goal   { color: #d98a2b; }
+.mv-fig-ico.tone-streak { color: #e0603f; }
+/* The flame is a shape, not an outline. */
+.mv-fig-ico.tone-streak svg { fill: currentColor; stroke: none; }
+/* Label above the figure, which is the order the eye wants when the numbers
+   are different shapes — "24,750" and "23 days" line up on their labels and
+   not on their first digit. */
 .mv-fig-value {
-    font-size: 21px;
+    font-size: 20px;
     font-weight: 800;
     letter-spacing: -0.01em;
     color: var(--mv-ink);
-    line-height: 1.1;
+    line-height: 1.15;
 }
-.mv-fig-label { font-size: 12.5px; color: var(--mv-ink-soft); white-space: nowrap; }
+.mv-fig-label { font-size: 12px; color: var(--mv-ink-soft); white-space: nowrap; }
 .mv-delta { font-size: 12px; font-weight: 600; white-space: nowrap; }
 .mv-delta.is-up { color: var(--mv-good); }
 .mv-delta.is-down { color: var(--mv-bad); }
 .mv-delta.is-flat { color: var(--mv-ink-faint); font-weight: 500; }
 
-.mv-analytics {
-    flex: 0 0 auto;
+/* ---- The day panel's head and its daily goal ----------------------------
+   "+ Add" is a button rather than a span with a click handler, which is what
+   it was — a control the keyboard could not reach and a screen reader called
+   nothing at all. See components/Calendar/DayPanel.tsx. */
+.dp-add {
+    flex: none;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--mv-accent);
+    color: #ffffff;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.dp-add:hover { filter: brightness(1.06); }
+.dp-add:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
+
+/* Begin the next thing. On the one card that is next, in place of the hint
+   the others carry — see components/Calendar/DayPanel.tsx. */
+.dp-start {
+    position: absolute;
+    right: 14px;
+    bottom: 12px;
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    padding: 10px 14px;
-    border: 1px solid var(--mv-line);
-    border-radius: 12px;
-    background: var(--mv-surface);
-    color: var(--mv-ink);
-    font-family: inherit;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--mv-accent);
+    color: #ffffff;
+    font: inherit;
     font-size: 12.5px;
-    font-weight: 600;
-    line-height: 1.25;
-    text-align: left;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s ease;
 }
-.mv-analytics:hover { background: var(--mv-surface-soft); }
-.mv-analytics svg {
+.dp-start svg { width: 13px; height: 13px; fill: currentColor; }
+.dp-start:hover { filter: brightness(1.06); }
+.dp-start:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
+
+/* What the day is worth against what it is meant to be worth. */
+.dp-goal {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 14px;
+}
+.dp-goal-ico {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--mv-accent-soft);
+    color: var(--mv-accent);
+}
+.dp-goal-ico svg {
     width: 17px;
     height: 17px;
-    flex: 0 0 auto;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
+    stroke-width: 1.7;
 }
+.dp-goal-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.dp-goal-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.dp-goal-label { font-size: 13px; font-weight: 650; color: var(--mv-ink); }
+.dp-goal-figs { font-size: 12.5px; color: var(--mv-ink-soft); white-space: nowrap; }
+.dp-goal-figs strong { font-size: 14px; font-weight: 800; color: var(--mv-ink); }
+.dp-goal-track { height: 8px; border-radius: 999px; background: var(--mv-line); overflow: hidden; }
+.dp-goal-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--mv-accent);
+    transition: width .25s ease;
+}
+/* Met is the one state worth its own colour — it is the only thing on this
+   panel that can be finished. */
+.dp-goal-fill.is-met { background: var(--mv-good); }
+
+/* ---- The tools row under the strip ---------------------------------------
+   Three cards: what to add, what is coming, and what it is all for. The grid
+   and the strip above are both retrospective; this is the half of a month view
+   you can work from. See components/Calendar/MonthTools.tsx. */
+.mv-tools {
+    flex: 0 0 auto;
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.15fr) minmax(0, 1.15fr);
+    gap: 14px;
+}
+/* Below this the three sit badly side by side — Next Up's names ellipsise to
+   nothing long before the cards do. */
+@media (max-width: 1180px) {
+    .mv-tools { grid-template-columns: minmax(0, 1fr); }
+}
+
+.mv-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+.mv-quick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 4px;
+    border: 1px solid var(--mv-line);
+    border-radius: 14px;
+    background: var(--mv-surface);
+    color: var(--mv-ink-soft);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color .15s ease, transform .15s ease;
+}
+.mv-quick:hover { border-color: var(--mv-ink-faint); transform: translateY(-1px); }
+.mv-quick:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
+.mv-quick-ico {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.mv-quick-ico svg {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+/* One tone per kind, and the same four everywhere they appear on this page. */
+.mv-quick.tone-task  .mv-quick-ico { background: #eef2fd; color: #3d5cc0; }
+.mv-quick.tone-event .mv-quick-ico { background: #eaf7ef; color: #16a34a; }
+.mv-quick.tone-goal  .mv-quick-ico { background: #fdeeef; color: #d0453f; }
+.mv-quick.tone-note  .mv-quick-ico { background: #fdf4e6; color: #c07f22; }
+
+/* ---- Next Up and Goals Progress ---- */
+.mv-upcoming,
+.mv-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.mv-upcoming li,
+.mv-goals li { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.mv-upcoming-ico,
+.mv-goal-ico {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.mv-upcoming-ico svg,
+.mv-goal-ico svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mv-upcoming-ico.tone-task  { background: #eef2fd; color: #3d5cc0; }
+.mv-upcoming-ico.tone-event { background: #eaf7ef; color: #16a34a; }
+.mv-goal-ico { background: #fdeeef; color: #d0453f; }
+
+.mv-upcoming-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mv-upcoming-name {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--mv-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mv-upcoming-when { font-size: 12px; color: var(--mv-ink-soft); }
+.mv-upcoming-away { flex: none; font-size: 12px; color: var(--mv-ink-soft); white-space: nowrap; }
+
+.mv-goal-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mv-goal-name {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--mv-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mv-goal-track { height: 7px; border-radius: 999px; background: var(--mv-line); overflow: hidden; }
+.mv-goal-fill { display: block; height: 100%; border-radius: 999px; background: var(--mv-good); }
+.mv-goal-figs { flex: none; font-size: 12px; color: var(--mv-ink-soft); white-space: nowrap; }
+.mv-goal-figs strong { color: var(--mv-ink); font-weight: 700; }
+
+/* A link under the sentence it belongs to. It used to be a two-line square
+   button on the strip's far end, which ran out of room the moment a fourth
+   figure joined the row. */
+.mv-analytics {
+    align-self: flex-start;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--mv-warm-line);
+    border-radius: 999px;
+    background: var(--mv-surface);
+    color: var(--mv-accent);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 650;
+    cursor: pointer;
+}
+.mv-analytics:hover { border-color: var(--mv-accent); }
+.mv-analytics:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
 
 /* ---- The overview column's cards ---------------------------------------- */
 .mv-card {
@@ -3956,7 +4285,7 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
 @media (max-width: 1180px) {
     .mv-body { flex-direction: column; overflow-y: auto; }
     .mv-side { max-width: none; min-width: 0; overflow: visible; }
-    .mv-grid { min-height: 520px; }
+    .mv-left { overflow: visible; padding-right: 0; }
     .mv-summary { flex-wrap: wrap; }
     .mv-summary-figs { margin-left: 0; }
 }
@@ -4056,17 +4385,4 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
 .mv-summary-figs { gap: clamp(9px, 1vw, 20px); }
 .mv-summary-fig { padding-left: clamp(9px, 1vw, 20px); }
 .mv-summary-title { font-size: 14px; }
-.mv-analytics { margin-left: auto; }
 
-/* Below about 1600px the strip has more in it than the column is wide, and
-   something has to give. It is the Analytics button's words: it is the one
-   thing on the row that is a way *out* of the view rather than a fact about
-   the month, the chart icon is the same one the rest of the app uses for
-   analytics, and the button keeps its title and aria-label so nothing is lost
-   to anyone reading it any other way. The alternative was shaving a point off
-   every figure on the row, which makes the numbers harder to read in order to
-   protect a link. */
-@media (max-width: 1600px) {
-    .mv-analytics { padding: 10px 12px; }
-    .mv-analytics > span { display: none; }
-}

@@ -36,6 +36,35 @@ import type { CalendarData } from './calendarStore';
 import type { FocusHistory, Task } from '@/types';
 
 /** One day of the month, with everything the grid and the panels need. */
+/**
+ * How good a day was, by what it was worth.
+ *
+ * The month grid used to shade a day by its priority-weighted load measured
+ * against the busiest day *on screen* — which meant the same Tuesday changed
+ * colour when you stepped to a month with a heavier day in it, and no colour
+ * meant anything you could write down. These are fixed thresholds, so a green
+ * day is a green day in January and in July, and the legend under the grid can
+ * say what each one is.
+ */
+export type XpBandKey = 'exceptional' | 'great' | 'good' | 'low' | 'none';
+
+/** The bands, richest first — the order the legend prints them in. */
+export const XP_BANDS: { key: XpBandKey; label: string; note: string }[] = [
+  { key: 'exceptional', label: 'Exceptional', note: '800+ XP' },
+  { key: 'great', label: 'Great', note: '500–799 XP' },
+  { key: 'good', label: 'Good', note: '200–499 XP' },
+  { key: 'low', label: 'Low', note: 'under 200 XP' },
+  { key: 'none', label: 'Nothing on it', note: '' },
+];
+
+export function xpBand(xp: number): XpBandKey {
+  if (xp >= 800) return 'exceptional';
+  if (xp >= 500) return 'great';
+  if (xp >= 200) return 'good';
+  if (xp > 0) return 'low';
+  return 'none';
+}
+
 export interface MonthDay {
   /** The store's key, unpadded: "2026-8-6". */
   key: string;
@@ -54,7 +83,19 @@ export interface MonthDay {
   done: number;
   /** Everything scheduled got done, and there was something to do. */
   settled: boolean;
+  /**
+   * One band per thing on the day, in the order they were counted, capped.
+   *
+   * The cell draws these as segments along its foot, so a day reads as "four
+   * things, two of them big" at a glance rather than as a number that has to
+   * be converted into an impression. Capped because a cell is a seventh of a
+   * grid and eleven segments is a texture rather than a count.
+   */
+  marks: XpBandKey[];
 }
+
+/** How many segments a cell's foot will draw. Past this it is a texture. */
+export const MAX_MARKS = 6;
 
 /** A month, as the Month view reads it. */
 export interface MonthFigures {
@@ -120,6 +161,7 @@ export function monthDays(
       tasks: 0,
       done: 0,
       settled: false,
+      marks: [],
     };
     byKey.set(key, entry);
     return entry;
@@ -134,6 +176,7 @@ export function monthDays(
     entry.events += 1;
     entry.tasks += 1;
     entry.xp += xp;
+    if (entry.marks.length < MAX_MARKS) entry.marks.push(xpBand(xp));
     if (task.status === 'done') {
       entry.done += 1;
       entry.earned += xp;
@@ -149,7 +192,9 @@ export function monthDays(
     day.timestamps.forEach((section) => {
       if (section.isDashboardTask) return;
       entry.events += 1;
-      entry.xp += Number(section.xp) || 0;
+      const xp = Number(section.xp) || 0;
+      entry.xp += xp;
+      if (entry.marks.length < MAX_MARKS) entry.marks.push(xpBand(xp));
     });
   });
 

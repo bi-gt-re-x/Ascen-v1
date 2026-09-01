@@ -25,6 +25,8 @@ export type { MonthGridProps } from './MonthGrid';
 export { MonthSidebar } from './MonthSidebar';
 export type { MonthSidebarProps } from './MonthSidebar';
 export { MonthSummaryBar } from './MonthSummaryBar';
+export { MonthTools } from './MonthTools';
+export type { MonthToolsProps, Upcoming } from './MonthTools';
 export type { MonthSummaryBarProps } from './MonthSummaryBar';
 export { ConflictDialog, CreateChooser, DeleteConfirm } from './Prompts';
 export type {

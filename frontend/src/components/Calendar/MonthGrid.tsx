@@ -20,10 +20,16 @@
  * rather than a figure because forty-two of anything has to be readable
  * without being read.
  *
- * The number itself keeps its shading: light blue for a light day through to
- * navy for a heavy one, weighted by priority and measured against the busiest
- * day on screen (see utils/calendarIntensity). Today is the one cell with a
- * tinted background, and the day the panel is showing carries a ring.
+ * The number is a filled badge, coloured by what the day is worth. It used to
+ * be shaded by priority-weighted load measured against the busiest day *on
+ * screen*, which meant the same Tuesday changed colour when you stepped to a
+ * month with a heavier day in it and no colour meant anything you could write
+ * down. The bands are fixed now (`XP_BANDS` in utils/monthSummary) and the
+ * legend under the grid says what each one is — which is the difference
+ * between a heat map and a key.
+ *
+ * Today is the one cell with a tinted background and carries a star; the day
+ * the panel is showing carries a ring.
  *
  * The rows always add to six, so stepping between a five-row month and a
  * six-row one does not resize the grid under the reader's cursor. The days
@@ -32,12 +38,7 @@
  * content. Clicking one still goes there.
  */
 import { useMemo } from 'react';
-import {
-  intensityBlue,
-  intensityFor,
-  type IntensityIndex,
-} from '@/utils/calendarIntensity';
-import type { MonthDay } from '@/utils/monthSummary';
+import { XP_BANDS, xpBand, type MonthDay } from '@/utils/monthSummary';
 import { dates } from '@/utils';
 
 /** Six rows of seven — the grid never changes height between months. */
@@ -54,7 +55,6 @@ export interface MonthGridProps {
   /** 1 for a Monday-first grid (the default), 0 for Sunday-first. From the
       account's preferences — see MiniMonth, which takes the same. */
   weekStart?: 0 | 1;
-  intensity: IntensityIndex;
   /** Every day of the month, counted — see utils/monthSummary. */
   days: MonthDay[];
   onStep: (delta: number) => void;
@@ -87,7 +87,6 @@ export function MonthGrid({
   month,
   selectedKey,
   weekStart = 1,
-  intensity,
   days,
   onStep,
   onToday,
@@ -198,17 +197,18 @@ export function MonthGrid({
           }
 
           const day = byKey.get(cell.key);
-          const load = intensityFor(intensity, cell.key).percentage;
           const count = day?.events ?? 0;
           const xp = day?.xp ?? 0;
           const tasks = day?.tasks ?? 0;
           const done = day?.done ?? 0;
           const settled = Boolean(day?.settled);
           const weekend = cell.date.getDay() === 0 || cell.date.getDay() === 6;
+          const band = xpBand(xp);
+          const isToday = cell.key === todayKey;
 
           const classes = [
             'mv-cell',
-            cell.key === todayKey ? 'is-today' : '',
+            isToday ? 'is-today' : '',
             cell.key === selectedKey ? 'is-selected' : '',
             count === 0 ? 'is-empty' : '',
             settled ? 'is-settled' : '',
@@ -245,29 +245,28 @@ export function MonthGrid({
               }}
             >
               <span className="mv-cell-top">
-                <span
-                  className="mv-daynum"
-                  style={
-                    load > 0
-                      ? {
-                          background: intensityBlue(load),
-                          color: load >= 45 ? '#ffffff' : '#0b1b3a',
-                        }
-                      : undefined
-                  }
-                >
-                  {cell.date.getDate()}
-                </span>
-                {/* A day that got finished. The one piece of good news a month
-                    grid can carry, and it is worth a mark of its own rather
-                    than being left to a full bar the reader has to measure. */}
-                {settled && (
-                  <span className="mv-cell-clear" aria-hidden="true" title="Everything on this day is done">
+                <span className={`mv-daynum band-${band}`}>{cell.date.getDate()}</span>
+
+                {/* Today wears a star and a finished day wears a tick, and no
+                    day wears both — today is not finished until it is, and on
+                    the day it is the tick is the better news. */}
+                {settled ? (
+                  <span
+                    className="mv-cell-flag is-clear"
+                    aria-hidden="true"
+                    title="Everything on this day is done"
+                  >
                     <svg viewBox="0 0 24 24">
                       <path d="m5 12.5 4.5 4.5L19 7.5" />
                     </svg>
                   </span>
-                )}
+                ) : isToday ? (
+                  <span className="mv-cell-flag is-today" aria-hidden="true" title="Today">
+                    <svg viewBox="0 0 24 24">
+                      <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1.1 5.9-5.3-2.8-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z" />
+                    </svg>
+                  </span>
+                ) : null}
               </span>
 
               {count > 0 && (
@@ -282,18 +281,43 @@ export function MonthGrid({
                 </span>
               )}
 
-              {tasks > 0 && (
-                <span className="mv-cell-bar" aria-hidden="true">
-                  <span
-                    className="mv-cell-bar-fill"
-                    style={{ width: `${Math.round((done / tasks) * 100)}%` }}
-                  />
+              {/* The day's things, one segment each, in their own bands — so a
+                  day reads as "four things, two of them big" without the reader
+                  having to turn a number back into an impression. A finished
+                  task's segment is filled; an unfinished one is the same colour
+                  at a quarter strength, which is how the row doubles as the
+                  day's progress. */}
+              {day && day.marks.length > 0 && (
+                <span className="mv-cell-marks" aria-hidden="true">
+                  {day.marks.map((mark, index) => (
+                    <i
+                      key={index}
+                      className={`mv-mark band-${mark}${index < done ? ' is-done' : ''}`}
+                    />
+                  ))}
                 </span>
+              )}
+              {!day?.marks.length && tasks > 0 && (
+                <span className="mv-cell-marks" aria-hidden="true" />
               )}
             </div>
           );
         })}
         </div>
+
+        {/* The key. A colour that cannot be looked up is decoration, and the
+            whole point of moving off "shaded against the busiest day on
+            screen" was that these bands are fixed enough to be written down.
+            Inside the card, under the cells it explains. */}
+        <ul className="mv-legend">
+          {XP_BANDS.map((entry) => (
+            <li key={entry.key}>
+              <i className={`mv-legend-dot band-${entry.key}`} aria-hidden="true" />
+              {entry.label}
+              {entry.note && <span className="mv-legend-note">({entry.note})</span>}
+            </li>
+          ))}
+        </ul>
       </div>
 
       {children}
