@@ -130,6 +130,34 @@ Features include:
 
 ---
 
+## Notifications
+
+The bell in the top bar is the one part of Ascen that speaks first. Nothing is
+sent on a schedule — the app reads your own record when you open it and says
+what is true, so a quiet week is a quiet bell.
+
+Six kinds, each with its own switch in Settings:
+
+* **Tasks** — work past its date, work due today, work due tomorrow
+* **Calendar** — what is on today, and the block about to start within the hour
+* **Analytics** — a weekly summary against the week before, a gap of four days
+  or more with nothing on it, and the day you beat your own best
+* **Goals** — a goal past its date, one due inside a week, one finished but
+  still open
+* **Streak** — a live streak with nothing on the board yet today, and the days
+  worth marking
+* **Progress** — a level reached, a badge earned, a record set
+
+They arrive as a pop-up at the corner of the page and stay in the bell. Each
+one can be deleted, and there is a Delete all — and a deleted notification does
+not come back: the situation behind it is remembered as answered, so the bell
+stays quiet until something genuinely new happens.
+
+Everything can be turned off: the whole feature, the on-screen pop-ups alone,
+or any one of the six kinds.
+
+---
+
 ## Themes & Personalization
 
 Users can customize the appearance of the application.
@@ -313,7 +341,8 @@ Planned features include:
 * AI-powered productivity recommendations
 * Achievement system
 * Habit tracking
-* Notifications and reminders
+* Scheduled reminders (the app has no job runner; notifications are read from
+  the record when you open it rather than sent at a time)
 * Data export
 * Team workspaces
 * Enhanced analytics dashboard

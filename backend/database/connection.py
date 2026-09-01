@@ -218,6 +218,44 @@ ADDED_TABLES = ('''
         data        TEXT NOT NULL DEFAULT '{}',
         updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
     )
+''', '''
+    -- The bell's list. Mirrors data/sql/notifications.sql, which only ever
+    -- reaches a database that does not exist yet.
+    --
+    -- `fingerprint` is what makes this a list rather than a firehose: it names
+    -- the *situation* ('overdue:2026-09-01'), not the moment, so a sweep that
+    -- finds the same situation again inserts nothing. See
+    -- backend/tracking/notify.py.
+    --
+    -- `deleted_at` is why the delete is soft. A deleted row is the memory that
+    -- its situation was already answered for, and dropping it outright would
+    -- let the next sweep put the same notification straight back — which is
+    -- exactly what "delete" has to mean it will not do.
+    --
+    -- `for_day` is the day a notification is *about*, or '' for one that is
+    -- about no particular day. Yesterday's "3 tasks are late" is not news and
+    -- is not today's count either, so it retires itself when the day turns.
+    CREATE TABLE IF NOT EXISTS notifications (
+        id           TEXT PRIMARY KEY,
+        user_id      TEXT NOT NULL REFERENCES users (username) ON DELETE CASCADE,
+        fingerprint  TEXT NOT NULL,
+        channel      TEXT NOT NULL DEFAULT 'tasks',
+        tone         TEXT NOT NULL DEFAULT 'info',
+        title        TEXT NOT NULL DEFAULT '',
+        body         TEXT NOT NULL DEFAULT '',
+        link         TEXT NOT NULL DEFAULT '',
+        for_day      TEXT NOT NULL DEFAULT '',
+        created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        shown_at     TEXT,
+        read_at      TEXT,
+        deleted_at   TEXT
+    )
+''', '''
+    CREATE UNIQUE INDEX IF NOT EXISTS notifications_print_idx
+        ON notifications (user_id, fingerprint)
+''', '''
+    CREATE INDEX IF NOT EXISTS notifications_live_idx
+        ON notifications (user_id, deleted_at)
 ''')
 
 
@@ -1110,3 +1148,385 @@ def set_user_setting(username, key, value):
     rows.append({'user_id': username, 'key': key, 'value': value})
     write_table('user_settings', rows, columns=['user_id', 'key', 'value'])
     return value
+
+
+# --------------------------------------------------------------------------
+# Notifications
+# --------------------------------------------------------------------------
+# The one table in the app the reader does not create rows in. Every row is
+# written by the sweep in backend/tracking/notify.py, keyed on a fingerprint
+# that names the situation rather than the moment, and removed by the reader
+# clicking the ✕ on it.
+#
+# Written out here rather than through `read_table` / `write_table` for two
+# reasons the generic pair cannot serve: the insert has to be an INSERT OR
+# IGNORE on the fingerprint (that dedupe *is* the feature), and every read is
+# scoped by `deleted_at` as well as `user_id`, which `rows_for` does not do.
+#
+# The delete is soft. See data/sql/notifications.sql for why it has to be.
+
+#: How long a thrown-away notification is remembered. Long enough that no
+#: fingerprint it could block is still live — the day-scoped ones age out in a
+#: day, and the rest name a thing that happens once (a level, a badge, a goal's
+#: deadline) — and short enough that the table does not accumulate forever.
+TOMBSTONE_DAYS = 60
+
+#: The most live rows one account keeps. The bell is a list of what is worth
+#: acting on now, not an archive; past this the oldest are dropped outright.
+NOTIFICATION_CAP = 60
+
+NOTIFICATION_COLUMNS = (
+    'id', 'user_id', 'fingerprint', 'channel', 'tone', 'title', 'body',
+    'link', 'for_day', 'created_at', 'shown_at', 'read_at', 'deleted_at',
+)
+
+
+def notifications_for(username, channels=None):
+    """One account's live notifications, newest first.
+
+    `channels` filters to the ones whose switch in Settings is on. Passing an
+    empty collection is a real answer — every channel is off — and returns
+    nothing, which is not the same as passing None for "no filter".
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return []
+        sql = ('SELECT * FROM notifications '
+               'WHERE user_id = ? AND deleted_at IS NULL')
+        params = [username]
+        if channels is not None:
+            channels = list(channels)
+            if not channels:
+                return []
+            sql += ' AND channel IN ({})'.format(
+                ', '.join('?' for _ in channels))
+            params.extend(channels)
+        sql += ' ORDER BY rowid DESC LIMIT ?'
+        params.append(NOTIFICATION_CAP)
+        return _decode_records(con, 'notifications', con.execute(sql, params))
+    finally:
+        con.close()
+
+
+def live_fingerprints(username):
+    """Every fingerprint this account already holds, deleted ones included.
+
+    The sweep asks for this once and then decides in Python what to write,
+    rather than attempting an insert per candidate and letting most of them
+    collide. Tombstones are in it on purpose: a fingerprint that was thrown
+    away must not be offered again.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return set()
+        return {row[0] for row in con.execute(
+            'SELECT fingerprint FROM notifications WHERE user_id = ?',
+            (username,))}
+    finally:
+        con.close()
+
+
+def add_notifications(username, rows):
+    """Write new notifications. Returns the ones that were actually inserted.
+
+    `INSERT OR IGNORE` on (user_id, fingerprint), so a sweep that finds the
+    same situation again writes nothing — including when what it collides with
+    is a tombstone, which is what makes a deleted notification stay deleted.
+
+    Ids come from `new_id`, which is a millisecond stamp, so `rowid` order and
+    id order agree and "newest" means the same thing either way.
+    """
+    if not rows:
+        return []
+
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return []
+        written = []
+        stamp = datetime.now().isoformat(timespec='seconds')
+        with con:
+            for row in rows:
+                record = {
+                    'id': new_id('notifications'),
+                    'user_id': username,
+                    'fingerprint': row['fingerprint'],
+                    'channel': row.get('channel', 'tasks'),
+                    'tone': row.get('tone', 'info'),
+                    'title': row.get('title', ''),
+                    'body': row.get('body', ''),
+                    'link': row.get('link', ''),
+                    'for_day': row.get('for_day', ''),
+                    'created_at': stamp,
+                }
+                names = [n for n in NOTIFICATION_COLUMNS if n in record]
+                cursor = con.execute(
+                    'INSERT OR IGNORE INTO notifications ({}) VALUES ({})'.format(
+                        ', '.join('"{}"'.format(n) for n in names),
+                        ', '.join('?' for _ in names)),
+                    [record[n] for n in names])
+                if cursor.rowcount:
+                    written.append(record)
+        return written
+    finally:
+        con.close()
+
+
+def refresh_notification(username, fingerprint, title, body):
+    """Bring a live notification's words up to date, leaving its place alone.
+
+    The day-scoped ones describe a count that moves — three tasks are late this
+    morning and five are late this afternoon — and the alternative to editing
+    the row is putting the count in the fingerprint, which would mean a fresh
+    notification every time somebody finished a task. A deleted row is never
+    touched: it has been answered, and rewriting it would be a way of bringing
+    it back.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return False
+        with con:
+            cursor = con.execute(
+                'UPDATE notifications SET title = ?, body = ? '
+                'WHERE user_id = ? AND fingerprint = ? AND deleted_at IS NULL '
+                'AND (title != ? OR body != ?)',
+                (title, body, username, fingerprint, title, body))
+        return cursor.rowcount > 0
+    finally:
+        con.close()
+
+
+def mark_notifications(username, ids, column):
+    """Stamp `shown_at` or `read_at` on some of one account's notifications.
+
+    `column` is picked from a fixed pair rather than interpolated from the
+    caller's string — it goes into the SQL text, which is the one place in this
+    module where a caller's value would be more than a parameter.
+    """
+    if column not in ('shown_at', 'read_at'):
+        raise ValueError('mark_notifications: {!r} is not stampable'.format(column))
+    ids = [str(i) for i in (ids or [])]
+    if not ids:
+        return 0
+
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return 0
+        with con:
+            cursor = con.execute(
+                'UPDATE notifications SET "{}" = ? WHERE user_id = ? '
+                'AND "{}" IS NULL AND id IN ({})'.format(
+                    column, column, ', '.join('?' for _ in ids)),
+                [datetime.now().isoformat(timespec='seconds'), username] + ids)
+        return cursor.rowcount
+    finally:
+        con.close()
+
+
+def delete_notifications(username, ids=None):
+    """Throw notifications away. `ids` None means every live one.
+
+    Soft, and permanently so — see data/sql/notifications.sql. What the reader
+    gets is a bell that stays empty until something genuinely new happens,
+    which is only true because the row survives to say this one was answered.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return 0
+        sql = ('UPDATE notifications SET deleted_at = ? '
+               'WHERE user_id = ? AND deleted_at IS NULL')
+        params = [datetime.now().isoformat(timespec='seconds'), username]
+        if ids is not None:
+            ids = [str(i) for i in ids]
+            if not ids:
+                return 0
+            sql += ' AND id IN ({})'.format(', '.join('?' for _ in ids))
+            params.extend(ids)
+        with con:
+            cursor = con.execute(sql, params)
+        return cursor.rowcount
+    finally:
+        con.close()
+
+
+def retire_notifications(username, day):
+    """Retire live notifications about a day that has passed. Returns how many.
+
+    Yesterday's "3 tasks are past their dates" is not today's count and is not
+    news either, and a bell that keeps one per day accumulates a week of them
+    while the reader is looking at the same three late tasks. The day-scoped
+    ones therefore end with their day.
+
+    A retirement is the same soft delete the reader's ✕ performs, and that is
+    right rather than convenient: the fingerprint it leaves behind names a day
+    that cannot come round again, so it blocks nothing and it is pruned with
+    the rest.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return 0
+        with con:
+            cursor = con.execute(
+                'UPDATE notifications SET deleted_at = ? WHERE user_id = ? '
+                "AND deleted_at IS NULL AND for_day != '' AND for_day < ?",
+                (datetime.now().isoformat(timespec='seconds'), username, day))
+        return cursor.rowcount
+    finally:
+        con.close()
+
+
+def prune_notifications(username, before_day):
+    """Drop tombstones older than `before_day`, and anything past the cap.
+
+    Both halves are the same idea: this table is a working list, not a record
+    of everything the app has ever had to say. A tombstone whose fingerprint
+    can no longer recur is holding nothing back, and a live row sixty deep is
+    below the fold of a panel nobody scrolls.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return 0
+        with con:
+            gone = con.execute(
+                'DELETE FROM notifications WHERE user_id = ? '
+                'AND deleted_at IS NOT NULL AND deleted_at < ?',
+                (username, before_day)).rowcount
+            gone += con.execute(
+                'DELETE FROM notifications WHERE user_id = ? '
+                'AND deleted_at IS NULL AND id NOT IN ('
+                '  SELECT id FROM notifications WHERE user_id = ? '
+                '  AND deleted_at IS NULL ORDER BY rowid DESC LIMIT ?)',
+                (username, username, NOTIFICATION_CAP)).rowcount
+        return gone
+    finally:
+        con.close()
+
+
+def notification_facts(username, day, tomorrow, week_ago, fortnight_ago):
+    """Everything the notification sweep needs, in one round trip.
+
+    Same argument as `task_alert_counts` above, one size up: the sweep asks
+    about tasks, XP, focus, goals, badges and records, and doing that as six
+    reads through `read_table` would mean pulling six whole tables across every
+    account in the database to answer questions about one. Every figure here is
+    an aggregate or a LIMIT, and the four days are passed in for the reason the
+    day always is — stored stamps carry no zone, so the reader's day is the
+    only right one.
+
+    The rules that turn these facts into sentences are not here. They are in
+    backend/tracking/notify.py, which is where the wording and the thresholds
+    belong.
+    """
+    facts = {
+        'late': 0, 'late_title': None,
+        'due_today': 0, 'due_today_title': None,
+        'due_tomorrow': 0, 'due_tomorrow_title': None,
+        'finished_today': 0,
+        'done_this_week': 0, 'done_last_week': 0,
+        'xp_today': 0, 'xp_this_week': 0, 'xp_last_week': 0, 'xp_best_day': 0,
+        'focus_this_week': 0, 'focus_last_week': 0,
+        'last_active_day': None,
+        'goals': [], 'badges': [], 'records': [],
+    }
+
+    con = connect()
+    try:
+        if _schema(con, 'tasks'):
+            # substr(due_date, 1, 10) rather than date(due_date): the column
+            # holds either a bare day or a full stamp, exactly as
+            # `task_alert_counts` above explains.
+            for key, clause, params in (
+                ('late', "substr(due_date, 1, 10) != '' "
+                         'AND substr(due_date, 1, 10) < ?', (day,)),
+                ('due_today', 'substr(due_date, 1, 10) = ?', (day,)),
+                ('due_tomorrow', 'substr(due_date, 1, 10) = ?', (tomorrow,)),
+            ):
+                row = con.execute(
+                    'SELECT COUNT(*) AS n, MIN(title) AS one FROM tasks '
+                    'WHERE user_id = ? AND status != ? AND ' + clause,
+                    (username, 'done') + params).fetchone()
+                facts[key] = row['n'] or 0
+                facts[key + '_title'] = row['one']
+
+            facts['finished_today'] = con.execute(
+                'SELECT COUNT(*) AS n FROM tasks WHERE user_id = ? '
+                'AND status = ? AND substr(completed_at, 1, 10) = ?',
+                (username, 'done', day)).fetchone()['n'] or 0
+
+            for key, since, until in (('done_this_week', week_ago, day),
+                                      ('done_last_week', fortnight_ago, week_ago)):
+                facts[key] = con.execute(
+                    'SELECT COUNT(*) AS n FROM tasks WHERE user_id = ? '
+                    'AND status = ? AND substr(completed_at, 1, 10) > ? '
+                    'AND substr(completed_at, 1, 10) <= ?',
+                    (username, 'done', since, until)).fetchone()['n'] or 0
+
+        if _schema(con, 'xp_events'):
+            facts['xp_today'] = con.execute(
+                'SELECT COALESCE(SUM(amount), 0) AS n FROM xp_events '
+                'WHERE user_id = ? AND date = ?',
+                (username, day)).fetchone()['n'] or 0
+            for key, since, until in (('xp_this_week', week_ago, day),
+                                      ('xp_last_week', fortnight_ago, week_ago)):
+                facts[key] = con.execute(
+                    'SELECT COALESCE(SUM(amount), 0) AS n FROM xp_events '
+                    'WHERE user_id = ? AND date > ? AND date <= ?',
+                    (username, since, until)).fetchone()['n'] or 0
+            # The best single day the ledger has ever recorded, today
+            # excluded — the question the sweep asks is whether today has
+            # beaten it, and a day cannot beat itself.
+            facts['xp_best_day'] = con.execute(
+                'SELECT COALESCE(MAX(total), 0) AS n FROM ('
+                '  SELECT SUM(amount) AS total FROM xp_events '
+                '  WHERE user_id = ? AND date != ? GROUP BY date)',
+                (username, day)).fetchone()['n'] or 0
+            last = con.execute(
+                'SELECT MAX(date) AS d FROM xp_events WHERE user_id = ?',
+                (username,)).fetchone()
+            facts['last_active_day'] = last['d'] if last else None
+
+        if _schema(con, 'focus_days'):
+            for key, since, until in (('focus_this_week', week_ago, day),
+                                      ('focus_last_week', fortnight_ago, week_ago)):
+                facts[key] = con.execute(
+                    'SELECT COALESCE(SUM(seconds), 0) AS n FROM focus_days '
+                    'WHERE user_id = ? AND date > ? AND date <= ?',
+                    (username, since, until)).fetchone()['n'] or 0
+
+        if _schema(con, 'goals'):
+            # Only what a notification can be written about: an active goal
+            # that has a date on it, or one whose arithmetic is finished but
+            # which nobody has closed.
+            facts['goals'] = [dict(row) for row in con.execute(
+                'SELECT id, title, deadline, progress, goal_type FROM goals '
+                'WHERE user_id = ? AND status = ? '
+                "AND (deadline != '' OR progress >= 100) "
+                'ORDER BY deadline LIMIT 40',
+                (username, 'active'))]
+
+        if _schema(con, 'user_achievements') and _schema(con, 'achievements'):
+            facts['badges'] = [dict(row) for row in con.execute(
+                'SELECT a.id AS id, a.name AS name, a.description AS description, '
+                'u.earned_at AS earned_at FROM user_achievements u '
+                'JOIN achievements a ON a.id = u.achievement_id '
+                'WHERE u.user_id = ? AND substr(u.earned_at, 1, 10) >= ? '
+                'ORDER BY u.earned_at DESC LIMIT 10',
+                (username, week_ago))]
+
+        if _schema(con, 'records'):
+            facts['records'] = [dict(row) for row in con.execute(
+                'SELECT id, name, value, unit, achieved_on FROM records '
+                'WHERE user_id = ? AND achieved_on >= ? '
+                'ORDER BY achieved_on DESC LIMIT 10',
+                (username, week_ago))]
+
+        return facts
+    finally:
+        con.close()

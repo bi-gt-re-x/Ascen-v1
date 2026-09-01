@@ -14,6 +14,7 @@ import { createContext } from 'react';
 import type { Theme, UserStats } from '@/types';
 import type { UseApiResult } from '@/hooks/useApi';
 import type { Prefs } from '@/services/settings';
+import type { Notification } from '@/services/notifications';
 import type { UserData } from '@/services/tasks';
 
 // --------------------------------------------------------------------------
@@ -157,3 +158,47 @@ export interface StatsValue {
 }
 
 export const StatsContext = createContext<StatsValue | null>(null);
+
+// --------------------------------------------------------------------------
+// Notifications
+// --------------------------------------------------------------------------
+/**
+ * The bell's list, held once for the app.
+ *
+ * Above the components for the same reason the stats are: two things read it —
+ * the bell in the top bar and the stack of pop-ups over the page — and they
+ * must never disagree about what is in it. A notification deleted in the panel
+ * has to vanish from the pop-up over it in the same frame, and that is only
+ * true while there is one list.
+ *
+ * It is also the only provider that writes on a timer. The server has no job
+ * runner, so asking for the list is what produces it (services/notifications).
+ */
+export interface NotificationsValue {
+  /** Newest first. Empty while signed out, or while the master switch is off. */
+  items: Notification[];
+  /** How many have arrived since the bell was last opened. The badge. */
+  unread: number;
+  /**
+   * The ones that should be on screen right now.
+   *
+   * A subset of `items`: those the account has not been shown yet, and only
+   * while it still wants the on-screen half. Cleared as they are dismissed,
+   * which is a thing that happens to the pop-up rather than to the
+   * notification — closing one leaves it in the bell.
+   */
+  popups: Notification[];
+  loading: boolean;
+  /** Ask again now. Worth calling after anything that changes the record. */
+  reload: () => void;
+  /** The bell was opened: everything in it stops counting toward the badge. */
+  markRead: () => void;
+  /** Take a pop-up off the screen. The notification itself is untouched. */
+  dismissPopup: (id: string) => void;
+  /** Throw one away for good. */
+  remove: (id: string) => Promise<void>;
+  /** Throw all of them away for good. */
+  clear: () => Promise<void>;
+}
+
+export const NotificationsContext = createContext<NotificationsValue | null>(null);

@@ -21,6 +21,7 @@ import App from './App';
 import { RootBoundary } from '@/components';
 import {
   AuthProvider,
+  NotificationsProvider,
   SettingsProvider,
   StatsProvider,
   ThemeProvider,
@@ -59,7 +60,16 @@ createRoot(container).render(
                     that never opens a task page never reads it at all. See
                     context/UserDataProvider. */}
                 <UserDataProvider>
-                  <App />
+                  {/* The bell. Inside the preferences, because which
+                      notifications exist at all is decided by eight switches
+                      on that page, and inside the stats for the same reason
+                      the top bar is: they are read together and a completion
+                      moves both. It holds no task list of its own — what it
+                      reads is six numbers' worth of aggregates counted in SQL.
+                      See context/NotificationsProvider. */}
+                  <NotificationsProvider>
+                    <App />
+                  </NotificationsProvider>
                 </UserDataProvider>
               </StatsProvider>
             </SettingsProvider>

@@ -18,6 +18,7 @@ export * as focus from './focus';
 export * as goals from './goals';
 export * as growth from './growth';
 export * as notes from './notes';
+export * as notifications from './notifications';
 export * as quote from './quote';
 export * as records from './records';
 export * as settings from './settings';

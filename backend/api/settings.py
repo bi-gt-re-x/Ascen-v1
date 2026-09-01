@@ -23,10 +23,15 @@ stale value the client happened to hold for every other preference.
 
 ## What is deliberately not here
 
-No integrations, API keys, webhooks, notification schedules or leaderboards.
-This app has no OAuth broker, no job runner and no second account to compare
-against, so each of those would be a control that stores a value nothing reads.
-A settings page whose switches do nothing is worse than a shorter one.
+No integrations, API keys, webhooks or leaderboards. This app has no OAuth
+broker, no job runner and no second account to compare against, so each of
+those would be a control that stores a value nothing reads. A settings page
+whose switches do nothing is worse than a shorter one.
+
+The notification switches are the counter-example that proves the rule. They
+are here because there is something to switch: the sweep in
+backend/tracking/notify.py reads every one of them, and a channel that is off
+is not swept rather than being swept and hidden.
 
 ## Undoing things
 
@@ -211,6 +216,33 @@ FIELDS: Dict[str, Any] = {
     #: Whether the page is allowed to rank this account against everybody
     #: else. Off hides the percentile panel outright.
     'analytics_standing': (True, _boolean),
+
+    # Notifications.
+    #
+    # One master switch, one switch for the on-screen half, and one per
+    # channel. Every one of them is read by the sweep rather than by the panel:
+    # a channel that is off is not swept at all (`CHANNELS` in
+    # backend/tracking/notify.py), so turning it off stops the rows being
+    # written rather than hiding rows that were written anyway. That is the
+    # difference between a preference and a filter, and it is why turning a
+    # channel back on starts from what is true then instead of replaying a
+    # fortnight of backlog.
+    #: The master. Off means nothing is swept, nothing is raised, and the bell
+    #: shows the account's own list as empty — the switches below are still
+    #: honoured the moment it comes back on.
+    'notifications_enabled': (True, _boolean),
+    #: Whether a new notification also appears on screen when it arrives. Off
+    #: leaves the bell doing its job and takes away the interruption, which is
+    #: the half of this feature people actually turn off.
+    'notify_popups': (True, _boolean),
+    #: The six channels. See the candidate functions in
+    #: backend/tracking/notify.py for exactly what each one can say.
+    'notify_tasks': (True, _boolean),
+    'notify_calendar': (True, _boolean),
+    'notify_analytics': (True, _boolean),
+    'notify_goals': (True, _boolean),
+    'notify_streak': (True, _boolean),
+    'notify_progress': (True, _boolean),
 }
 
 
@@ -430,6 +462,12 @@ ACCOUNT_TABLES = (
     'day_focus_notes', 'calendar_entries', 'calendar_events', 'notes',
     'records', 'metric_snapshots', 'user_achievements', 'activity_log',
     'library_items', 'user_subjects', 'user_settings',
+    # Not content the account made, but entirely derived from content it made:
+    # every row is a sentence about a task, a goal or a badge that is being
+    # removed here. Left behind they would be notifications about a record that
+    # no longer exists — and their tombstones would go on suppressing the ones
+    # the emptied account earns next.
+    'notifications',
 )
 
 #: What `progress` puts an account's counters back to. The XP ledger and the

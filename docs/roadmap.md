@@ -47,6 +47,10 @@ anywhere else.
 
 ## Later
 
-Cloud sync and cross-device support · notifications and reminders · habit
-tracking · data export · AI-assisted productivity suggestions · team
-workspaces.
+Cloud sync and cross-device support · habit tracking · data export ·
+AI-assisted productivity suggestions · team workspaces.
+
+Notifications landed — see backend/tracking/notify.py. *Reminders* did not, and
+are a different thing: they need something running when nobody is looking at
+the app, and there is no job runner here. The bell is read from the record on
+each visit, which is why an account in good order gets nothing.

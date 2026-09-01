@@ -16,10 +16,18 @@
  *   **Search** reads the account's own tasks and goes to the one you pick. Not
  *   a global search over a corpus that does not exist; the placeholder says
  *   which, so nobody types a subject into it and concludes the app is broken.
- *   **Alerts** are counted from the record — work that is late, work due today,
- *   and a streak that will break tonight. Nothing is generated on a schedule,
- *   so an account in good order gets no badge at all, which is what makes the
- *   badge worth looking at on the day it appears.
+ *   **Notifications** are read from the record — late work, today's calendar,
+ *   a goal's date coming up, how the week went, a streak that will break
+ *   tonight. Nothing is generated on a schedule, so an account in good order
+ *   gets no badge at all, which is what makes the badge worth looking at on
+ *   the day it appears.
+ *
+ *   That list used to be counted right here, on every render, from three
+ *   numbers `/api/alerts` returned — and a count cannot be deleted. There was
+ *   nothing to delete; the next render brought it back, so the bell told you
+ *   the same three things until you fixed them. They are rows now
+ *   (data/sql/notifications.sql), each one can be thrown away for good, and
+ *   the panel is components/Notifications/Panel.tsx.
  *   **Dark mode** is a switch, not a two-option dropdown — it stood in the
  *   rail's foot until the foot became the rank and the XP bar, and it belongs
  *   with the rest of the app's controls anyway.
@@ -28,16 +36,14 @@
  *   rail, whose account plate is gone — a picker with no way to open it is a
  *   deleted feature with extra steps.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { STATS_CHANGED } from './Rail';
-import { useAuth, useSettings, useStats, useTheme } from '@/hooks';
+import { NotificationPanel } from './Notifications';
+import { useAuth, useNotifications, useSettings, useStats, useTheme } from '@/hooks';
 import { AVATARS, avatarPath } from '@/services/avatars';
 import { auth, tasks as taskService } from '@/services';
 import { format } from '@/utils';
-import { isoDate } from '@/utils/dates';
 import type { Task, Theme } from '@/types';
-import type { Alerts } from '@/services/tasks';
 import '@/styles/topbar.css';
 
 const stroke = {
@@ -51,83 +57,6 @@ const stroke = {
 
 /** How many matches the search drops down. Enough to choose from, few enough to scan. */
 const RESULTS = 6;
-
-// --------------------------------------------------------------------------
-// Alerts
-// --------------------------------------------------------------------------
-interface Alert {
-  id: string;
-  tone: 'late' | 'today' | 'streak';
-  title: string;
-  detail: string;
-  to: string;
-}
-
-/**
- * What the record says is worth interrupting somebody about.
- *
- * Three kinds, and each is a fact rather than a nudge: a task whose deadline
- * has passed, a task due today, and a streak with nothing on the board yet.
- * The last one is the only one with any urgency built in, and it earns it —
- * a streak is the one thing in the app that can be lost by doing nothing, and
- * it is lost at midnight rather than gradually.
- *
- * Deliberately not here: anything about how much was done, how it compared to
- * last week, or what the reader could be doing better. That is what the
- * analytics page is for, it is never urgent, and a bell that rings about it is
- * a bell people turn off.
- *
- * The three of them used to be counted here, by filtering the account's entire
- * task list — which is why this bar, on every page behind the login, needed
- * that list at all. They are counted in SQL now (`/api/alerts`), and what
- * arrives is four numbers and two titles.
- */
-function alertsFrom(counts: Alerts | null, streak: number): Alert[] {
-  const out: Alert[] = [];
-  if (!counts) return out;
-
-  if (counts.late > 0) {
-    out.push({
-      id: 'late',
-      tone: 'late',
-      title:
-        counts.late === 1
-          ? '1 task is past its date'
-          : `${counts.late} tasks are past their dates`,
-      detail:
-        counts.late === 1
-          ? (counts.late_title ?? '')
-          : `Oldest: ${counts.late_title ?? ''}`,
-      to: '/tasks',
-    });
-  }
-
-  if (counts.due_today > 0) {
-    out.push({
-      id: 'today',
-      tone: 'today',
-      title: `${counts.due_today} ${counts.due_today === 1 ? 'task is' : 'tasks are'} due today`,
-      detail:
-        counts.due_today === 1
-          ? (counts.due_today_title ?? '')
-          : `Including ${counts.due_today_title ?? ''}`,
-      to: '/tasks',
-    });
-  }
-
-  // Nothing finished today, and something to lose by leaving it that way.
-  if (streak > 0 && !counts.finished_today) {
-    out.push({
-      id: 'streak',
-      tone: 'streak',
-      title: `Your ${streak}-day streak has nothing on it yet`,
-      detail: 'Anything finished today keeps it. It resets at midnight.',
-      to: '/dashboard',
-    });
-  }
-
-  return out;
-}
 
 // --------------------------------------------------------------------------
 // The bar
@@ -147,7 +76,6 @@ export function Topbar() {
   const { stats } = useStats();
   const navigate = useNavigate();
 
-  const streak = stats?.current_streak ?? 0;
   const level = stats ? format.levelForTotalXp(stats.xp) : null;
 
   const [open, setOpen] = useState<'search' | 'alerts' | 'account' | null>(null);
@@ -178,37 +106,17 @@ export function Topbar() {
   }, [open]);
 
   /*
-   * The bell's three facts, counted by the server.
+   * The bell's list, and how many of it is new.
    *
-   * Read when the bar mounts and again whenever a completion moves the numbers
-   * — the same `ascen:stats-changed` event the rail listens to, because
-   * finishing a task is exactly what clears a "due today" or a streak warning.
+   * Neither is worked out here any more. The list is rows the server wrote
+   * (context/NotificationsProvider reads and polls it), which is what lets a
+   * notification be deleted and stay deleted — the three counts this bar used
+   * to derive could not be, because there was nothing to delete.
    *
-   * The day is sent rather than left to the server: stored stamps carry no
-   * timezone, so "today" is the reader's day.
+   * Opening the panel is what marks them read, so the badge is "arrived since
+   * you last looked" rather than "still true".
    */
-  const [alertCounts, setAlertCounts] = useState<Alerts | null>(null);
-
-  useEffect(() => {
-    if (!username) {
-      setAlertCounts(null);
-      return;
-    }
-    let live = true;
-    const read = () => {
-      void taskService.getAlerts(isoDate()).then((result) => {
-        if (live && result.success) setAlertCounts(result.alerts);
-      });
-    };
-    read();
-    window.addEventListener(STATS_CHANGED, read);
-    return () => {
-      live = false;
-      window.removeEventListener(STATS_CHANGED, read);
-    };
-  }, [username]);
-
-  const alerts = useMemo(() => alertsFrom(alertCounts, streak), [alertCounts, streak]);
+  const { unread, markRead } = useNotifications();
 
   /*
    * Search results, from the server.
@@ -246,6 +154,23 @@ export function Topbar() {
       setOpen((current) => (current === panel ? null : panel)),
     [],
   );
+
+  /* Opening the bell is what marks its contents read, which is why this one
+     is not just `toggle('alerts')`. Reading is not deleting: the list is
+     exactly as long afterwards, the badge is simply no longer counting it.
+
+     `open` is read rather than updated with a function, because `markRead`
+     sets state in the provider above and a state updater is not the place to
+     do that — React runs it while rendering, and updating another component
+     from there is the warning it is right to give. */
+  const openAlerts = useCallback(() => {
+    if (open === 'alerts') {
+      setOpen(null);
+      return;
+    }
+    setOpen('alerts');
+    markRead();
+  }, [open, markRead]);
 
   const chooseAvatar = useCallback(
     async (name: string) => {
@@ -319,47 +244,31 @@ export function Topbar() {
           )}
         </div>
 
-        {/* ---- Alerts ---- */}
+        {/* ---- Notifications ---- */}
         <div className="topbar-slot">
           <button
             type="button"
             className={`topbar-btn${open === 'alerts' ? ' is-on' : ''}`}
             aria-label={
-              alerts.length === 0 ? 'Notifications: nothing waiting' : `Notifications: ${alerts.length}`
+              unread === 0 ? 'Notifications: nothing new' : `Notifications: ${unread} new`
             }
             aria-expanded={open === 'alerts'}
-            onClick={() => toggle('alerts')}
+            onClick={() => openAlerts()}
           >
             <svg {...stroke}>
               <path d="M18 8a6 6 0 1 0-12 0c0 6-3 7-3 7h18s-3-1-3-7" />
               <path d="M13.7 21a2 2 0 0 1-3.4 0" />
             </svg>
-            {/* No badge at zero. A count that is always showing is furniture. */}
-            {alerts.length > 0 && <span className="topbar-badge">{alerts.length}</span>}
+            {/* No badge at zero. A count that is always showing is furniture —
+                and it counts what has *arrived* since the panel was last
+                opened, not what is still true, so it goes back to nothing by
+                being read rather than by the reader fixing five things. */}
+            {unread > 0 && <span className="topbar-badge">{unread}</span>}
           </button>
 
           {open === 'alerts' && (
             <div className="topbar-panel topbar-alerts">
-              <div className="topbar-panel-head">Needs you</div>
-              {alerts.length === 0 ? (
-                <p className="topbar-empty">
-                  Nothing late, nothing due today, streak safe.
-                </p>
-              ) : (
-                <ul className="topbar-alert-list">
-                  {alerts.map((alert) => (
-                    <li key={alert.id}>
-                      <Link to={alert.to} onClick={() => setOpen(null)}>
-                        <span className={`topbar-alert-dot is-${alert.tone}`} aria-hidden="true" />
-                        <span>
-                          <strong>{alert.title}</strong>
-                          <em>{alert.detail}</em>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <NotificationPanel onClose={() => setOpen(null)} />
             </div>
           )}
         </div>

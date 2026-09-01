@@ -35,6 +35,7 @@ API_MODULES = (
     'records',
     'settings',
     'achievements',
+    'notifications',
 )
 
 SHARED_MODULES = (

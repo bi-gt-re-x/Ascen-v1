@@ -16,6 +16,10 @@ export { AppBoundary, ErrorBoundary, RootBoundary } from './ErrorBoundary';
 export { Ambient } from './Ambient';
 export type { AmbientProps } from './Ambient';
 export { Rail, STATS_CHANGED } from './Rail';
+/* The bell's two faces. In this list rather than behind their own path
+   because neither belongs to a page: the panel is drawn inside the top bar and
+   the pop-ups float over whatever is open. See components/Notifications. */
+export { NotificationPanel, Toasts } from './Notifications';
 export { Topbar } from './Topbar';
 export { ErrorState, Loading, NotBuilt } from './PageState';
 export { RefreshButton } from './RefreshButton';

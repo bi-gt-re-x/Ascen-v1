@@ -116,6 +116,25 @@ export interface Prefs {
   analytics_tone: AnalyticsTone;
   analytics_detail: AnalyticsDetail;
   analytics_standing: boolean;
+  /**
+   * The notification switches. One master, one for the on-screen half, and one
+   * per channel — the same six as `NotificationChannel` in
+   * services/notifications.
+   *
+   * Every one of them is read by the server's sweep rather than by the panel:
+   * a channel that is off is not swept at all, so turning it off stops rows
+   * being written instead of hiding rows that were written anyway. Turning it
+   * back on therefore starts from what is true then, not from a fortnight of
+   * backlog. See backend/tracking/notify.py.
+   */
+  notifications_enabled: boolean;
+  notify_popups: boolean;
+  notify_tasks: boolean;
+  notify_calendar: boolean;
+  notify_analytics: boolean;
+  notify_goals: boolean;
+  notify_streak: boolean;
+  notify_progress: boolean;
 }
 
 export interface Settings extends Prefs {
@@ -179,6 +198,18 @@ export const DEFAULTS: Prefs = {
   analytics_tone: 'balanced',
   analytics_detail: 'standard',
   analytics_standing: true,
+  /* Every channel on. The bell is quiet when the record is quiet — nothing is
+     generated on a schedule (backend/tracking/notify.py) — so the honest
+     default is on, and the switches are here for the reader who decides one
+     kind of thing is not worth being told about. */
+  notifications_enabled: true,
+  notify_popups: true,
+  notify_tasks: true,
+  notify_calendar: true,
+  notify_analytics: true,
+  notify_goals: true,
+  notify_streak: true,
+  notify_progress: true,
 };
 
 /** What the API gives an account that has never set one. */

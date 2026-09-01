@@ -12,7 +12,7 @@
  */
 import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { AppBoundary, Loading, Rail, Topbar } from '@/components';
+import { AppBoundary, Loading, Rail, Toasts, Topbar } from '@/components';
 import { RequireAccount } from './RequireAccount';
 import { useAuth, usePinnedViewport, useSettings } from '@/hooks';
 import { useChainAccount } from '@/hooks/useChainAccount';
@@ -262,6 +262,12 @@ export default function App() {
         </Suspense>
         </AppBoundary>
       </main>
+      {/* Over the page rather than in it, and outside the router with the rail
+          and the bar: a notification that arrived while you were on Tasks
+          should not be torn down by navigating to Goals. Nothing is drawn when
+          there is nothing waiting, or when the account has turned the
+          on-screen half off — see components/Notifications/Toasts.tsx. */}
+      {!landing && <Toasts />}
     </>
   );
 }

@@ -46,7 +46,19 @@ export function getStats(): Promise<ApiResult<{ stats: UserStats }>> {
   return get<{ stats: UserStats }>('/api/stats');
 }
 
-/** What the top bar's bell shows. Counted in SQL, not by filtering a list. */
+/**
+ * Three counts about the account's tasks. Counted in SQL, not by filtering a
+ * list.
+ *
+ * **The bell no longer reads this.** It is a list of rows now — see
+ * services/notifications and backend/tracking/notify.py — because a count
+ * cannot be deleted, and being able to throw a notification away is the whole
+ * of what the bell was missing.
+ *
+ * Kept for the reason the calendar entry wrappers in services/events are: the
+ * endpoint is real, cheap and correct, and this file is the shape of the API
+ * rather than a list of what happens to be called this week.
+ */
 export interface Alerts {
   /** Open tasks whose date has passed, and the oldest one's title. */
   late: number;

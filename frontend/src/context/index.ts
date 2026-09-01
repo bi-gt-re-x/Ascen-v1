@@ -5,11 +5,13 @@
 export { AuthProvider } from './AuthContext';
 export { SettingsProvider } from './SettingsProvider';
 export { ThemeProvider } from './ThemeContext';
+export { NotificationsProvider } from './NotificationsProvider';
 export { StatsProvider } from './StatsProvider';
 export { UserDataProvider } from './UserDataProvider';
 export type {
   AuthStatus,
   AuthValue,
+  NotificationsValue,
   SettingsValue,
   StatsValue,
   ThemeValue,

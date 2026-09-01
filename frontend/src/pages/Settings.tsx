@@ -67,6 +67,7 @@ import {
   TONE_LABEL,
 } from '@/utils/analyticsPrefs';
 import { VIEWS } from '@/components/Analytics';
+import type { NotificationChannel } from '@/services/notifications';
 import type {
   Accent,
   Prefs,
@@ -128,6 +129,76 @@ function hoursLabel(hours: number): string {
   if (!minutes) return whole === 1 ? '1 hour' : `${whole} hours`;
   return `${whole}h ${minutes}m`;
 }
+
+/**
+ * The six kinds of thing the app can tell you about, and what each one covers.
+ *
+ * Declared rather than written out nine times, because the rows differ only in
+ * their words — and the words are the part that matters here. A reader turning
+ * one off is entitled to know exactly what they will stop hearing, which is
+ * why each hint lists the actual notifications rather than naming a category.
+ *
+ * `pref` is spelled as `notify_${channel}` rather than as a free string, so
+ * the key and the preference cannot drift: `NotificationChannel` is the same
+ * six as `CHANNELS` in backend/tracking/notify.py, and a channel added on one
+ * side and not the other fails to compile here.
+ */
+const NOTIFY_CHANNELS: {
+  key: NotificationChannel;
+  pref: `notify_${NotificationChannel}`;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    key: 'tasks',
+    pref: 'notify_tasks',
+    label: 'Overdue and due tasks',
+    hint:
+      'Work that is past its date, work due today, and work due tomorrow — one of each a day, '
+      + 'kept current as you finish things.',
+  },
+  {
+    key: 'calendar',
+    pref: 'notify_calendar',
+    label: 'Calendar',
+    hint:
+      'What is on today’s calendar and what time the first block starts, plus the one that is '
+      + 'about to begin within the hour.',
+  },
+  {
+    key: 'analytics',
+    pref: 'notify_analytics',
+    label: 'Analytics',
+    hint:
+      'Once a week: what you finished, how it compares to the week before, and the hours you '
+      + 'focused. Also a gap of four days or more with nothing on it, and the day you beat your '
+      + 'own best.',
+  },
+  {
+    key: 'goals',
+    pref: 'notify_goals',
+    label: 'Goals',
+    hint:
+      'A goal whose date has passed, one due inside a week, and one whose arithmetic is '
+      + 'finished but which is still open.',
+  },
+  {
+    key: 'streak',
+    pref: 'notify_streak',
+    label: 'Streak',
+    hint:
+      'A live streak with nothing on the board yet today — the one thing here that is lost by '
+      + 'doing nothing — and the days it passes worth marking.',
+  },
+  {
+    key: 'progress',
+    pref: 'notify_progress',
+    label: 'Levels, badges and records',
+    hint:
+      'A level reached, a badge earned, a record set. Never the backlog: an account that has '
+      + 'been here a year is not told about its first sixty levels.',
+  },
+];
 
 const ACCENTS: { key: Accent; label: string; swatch: string }[] = [
   { key: 'violet', label: 'Violet', swatch: '#6d5ae0' },
@@ -1082,6 +1153,80 @@ export default function Settings() {
               />
             ),
           },
+        ],
+      },
+      {
+        id: 'notifications',
+        label: 'Notifications',
+        group: 'Notifications',
+        /* Nine switches, and every one of them is read by the server rather
+           than by the panel. A channel that is off is not swept at all — see
+           CHANNELS in backend/tracking/notify.py — so turning one off stops
+           the rows being written instead of writing them and hiding them, and
+           turning it back on starts from what is true then rather than
+           replaying a fortnight of backlog. */
+        note:
+          'Nothing here is sent on a schedule. The app looks at your own record when you open '
+          + 'it and says what is true — so a quiet week is a quiet bell, and a notification you '
+          + 'delete stays deleted until the situation behind it is genuinely new.',
+        items: [
+          {
+            id: 'notify-master',
+            label: 'Notifications',
+            hint:
+              'The master switch. Off stops everything below it: nothing new is written, '
+              + 'nothing pops up, and the bell reads empty. Anything already in it is kept and '
+              + 'comes back the moment you turn this on again.',
+            control: (
+              <Toggle
+                on={prefs.notifications_enabled}
+                busy={busy}
+                label="Notifications"
+                onFlip={() =>
+                  void savePref(
+                    { notifications_enabled: !prefs.notifications_enabled },
+                    'Notifications',
+                  )
+                }
+              />
+            ),
+          },
+          {
+            id: 'notify-popups',
+            label: 'Show them on screen',
+            hint:
+              'A new notification slides in at the corner of the page for a few seconds. Off '
+              + 'takes away the interruption and leaves the bell doing its job — everything '
+              + 'still arrives, you just go and look at it.',
+            control: (
+              <Toggle
+                on={prefs.notify_popups}
+                busy={busy || !prefs.notifications_enabled}
+                label="Show them on screen"
+                onFlip={() =>
+                  void savePref({ notify_popups: !prefs.notify_popups }, 'Pop-ups')
+                }
+              />
+            ),
+          },
+          ...NOTIFY_CHANNELS.map((channel) => ({
+            id: `notify-${channel.key}`,
+            label: channel.label,
+            hint: channel.hint,
+            control: (
+              <Toggle
+                on={prefs[channel.pref]}
+                busy={busy || !prefs.notifications_enabled}
+                label={channel.label}
+                onFlip={() =>
+                  void savePref(
+                    { [channel.pref]: !prefs[channel.pref] } as Partial<Prefs>,
+                    channel.label,
+                  )
+                }
+              />
+            ),
+          })),
         ],
       },
       {

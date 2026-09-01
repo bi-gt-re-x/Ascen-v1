@@ -1,0 +1,279 @@
+/* Notifications — the bell's list, and the stack of pop-ups over the page.
+ *
+ * One sheet for both because they are one component seen twice: the same
+ * notification, the same four tones, the same dot. Splitting them would mean
+ * two definitions of `.nf-dot` and the two drifting apart, which is exactly
+ * the failure scripts/check_css.mjs exists to catch.
+ *
+ * Everything here is `nf-`. The panel sits inside `.topbar-panel`, which
+ * styles/topbar.css owns and dresses — the box, the shadow and the placement
+ * are that sheet's; what is inside the box is this one's.
+ *
+ * The four tones are the whole colour system. Only `is-urgent` is painted as a
+ * problem: a bell where every line is red is a bell nobody opens, which is the
+ * argument components/Topbar.tsx has been making about its badge all along.
+ */
+
+.nf-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: min(70vh, 520px);
+}
+
+.nf-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #9297A3;
+}
+
+.nf-clear {
+    border: 0;
+    background: none;
+    padding: 3px 6px;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    color: #C0392B;
+    cursor: pointer;
+}
+.nf-clear:hover { background: #FCEFEC; }
+.nf-clear:focus-visible { outline: 2px solid #C0392B; outline-offset: 1px; }
+
+.nf-empty {
+    margin: 10px 2px 2px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #6C757D;
+}
+
+.nf-list {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+}
+
+/* The row is the link plus the ✕, and the ✕ must not be inside the link — a
+   delete button that also navigates is a delete nobody trusts. */
+.nf-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 2px;
+    border-radius: 9px;
+}
+.nf-row:hover { background: #F4F6F8; }
+
+/* Unread carries a bar in its tone rather than a second dot. The dot says what
+   kind of thing this is; the bar says you have not looked at it yet. */
+.nf-row.is-new { box-shadow: inset 2px 0 0 currentColor; }
+.nf-row.is-new.is-urgent { color: #C0392B; }
+.nf-row.is-new.is-warn   { color: #E69500; }
+.nf-row.is-new.is-info   { color: #A38A70; }
+.nf-row.is-new.is-good   { color: #27AE60; }
+
+.nf-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 9px 4px 9px 9px;
+    color: #2C302E;
+    text-decoration: none;
+}
+
+.nf-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+    margin-top: 5px;
+}
+.nf-dot.is-urgent { background: #C0392B; }
+.nf-dot.is-warn   { background: #E69500; }
+.nf-dot.is-info   { background: #A38A70; }
+.nf-dot.is-good   { background: #27AE60; }
+
+.nf-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.nf-text strong { font-size: 13px; font-weight: 650; line-height: 1.35; }
+.nf-text em {
+    font-style: normal;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #6C757D;
+}
+.nf-text small {
+    font-size: 10.5px;
+    letter-spacing: .02em;
+    color: #9297A3;
+    margin-top: 1px;
+}
+
+.nf-drop {
+    flex: none;
+    margin: 7px 5px 0 0;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: #9297A3;
+    cursor: pointer;
+    /* Hidden until the row is hovered, so a list of six is a list of six
+       sentences rather than six sentences and six buttons. Always visible to a
+       keyboard, which has no hover to offer. */
+    opacity: 0;
+}
+.nf-row:hover .nf-drop,
+.nf-drop:focus-visible { opacity: 1; }
+.nf-drop:hover { background: #F1D9D4; color: #C0392B; }
+.nf-drop:focus-visible { outline: 2px solid #C0392B; outline-offset: 1px; }
+.nf-drop svg { width: 13px; height: 13px; }
+
+/* --- The pop-ups --------------------------------------------------------- */
+/* Bottom right, above everything, and out of the way of the rail on the left
+   and the top bar above. Fixed rather than absolute: they belong to the screen
+   and not to whichever page happens to be under them. */
+.nf-toasts {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(360px, calc(100vw - 36px));
+    pointer-events: none;
+}
+
+.nf-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 12px 12px 14px;
+    box-sizing: border-box;
+    background: #FFFFFF;
+    border: 1px solid #EAEAEA;
+    border-left: 3px solid #A38A70;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(16, 24, 40, .16);
+    animation: nf-slide .28s cubic-bezier(.22, 1, .36, 1) both;
+}
+.nf-toast.is-urgent { border-left-color: #C0392B; }
+.nf-toast.is-warn   { border-left-color: #E69500; }
+.nf-toast.is-info   { border-left-color: #A38A70; }
+.nf-toast.is-good   { border-left-color: #27AE60; }
+
+@keyframes nf-slide {
+    from { opacity: 0; transform: translateY(10px) scale(.98); }
+    to   { opacity: 1; transform: none; }
+}
+
+.nf-toast .nf-dot { margin-top: 6px; }
+
+.nf-toast-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.nf-toast-text small {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #9297A3;
+}
+.nf-toast-text strong { font-size: 13.5px; font-weight: 650; line-height: 1.35; color: #2C302E; }
+.nf-toast-text p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #6C757D;
+}
+
+.nf-toast-go {
+    align-self: flex-start;
+    margin-top: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #A38A70;
+    text-decoration: none;
+}
+.nf-toast-go:hover { text-decoration: underline; }
+
+.nf-toast-close {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: #9297A3;
+    cursor: pointer;
+}
+.nf-toast-close:hover { background: #F4F6F8; color: #2C302E; }
+.nf-toast-close:focus-visible { outline: 2px solid #2C302E; outline-offset: 1px; }
+.nf-toast-close svg { width: 13px; height: 13px; }
+
+/* --- Dark ---------------------------------------------------------------- */
+html[data-theme="dark"] .nf-head,
+html[data-theme="dark"] .nf-empty,
+html[data-theme="dark"] .nf-text small,
+html[data-theme="dark"] .nf-toast-text small { color: #8B949E; }
+html[data-theme="dark"] .nf-text em,
+html[data-theme="dark"] .nf-toast-text p { color: #8B949E; }
+html[data-theme="dark"] .nf-body,
+html[data-theme="dark"] .nf-toast-text strong { color: #E6EDF3; }
+html[data-theme="dark"] .nf-row:hover { background: #1C2430; }
+html[data-theme="dark"] .nf-clear { color: #F85149; }
+html[data-theme="dark"] .nf-clear:hover { background: #2A1B1B; }
+html[data-theme="dark"] .nf-drop:hover { background: #2A1B1B; color: #F85149; }
+html[data-theme="dark"] .nf-toast {
+    background: #161B22;
+    border-color: #30363D;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .55);
+}
+html[data-theme="dark"] .nf-toast-close:hover { background: #1C2430; color: #E6EDF3; }
+html[data-theme="dark"] .nf-row.is-new.is-urgent { color: #F85149; }
+html[data-theme="dark"] .nf-row.is-new.is-good   { color: #3FB950; }
+
+/* --- Narrow -------------------------------------------------------------- */
+/* Full width along the bottom. A 360px card floating in a 375px viewport reads
+   as a mistake, and the rail is a strip at this size so there is nothing on
+   the left to stay clear of. */
+@media (max-width: 640px) {
+    .nf-toasts { left: 12px; right: 12px; bottom: 12px; width: auto; }
+    /* No hover on a touch screen, so the delete cannot be hidden behind one. */
+    .nf-drop { opacity: 1; }
+}
+
+/* Reduced motion: the pop-up still arrives, it just does not slide in.
+   `data-motion` is set on <html> from the account's own preference — see
+   styles/preferences.css and context/SettingsProvider.tsx. */
+@media (prefers-reduced-motion: reduce) {
+    .nf-toast { animation: none; }
+}
+html[data-motion="reduced"] .nf-toast { animation: none; }
