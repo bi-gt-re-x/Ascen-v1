@@ -35,6 +35,7 @@ import {
   GoalReached,
   GoalsCard,
   LevelUp,
+  NextMove,
   NextUp,
   RecentActivity,
   StreakCard,
@@ -51,8 +52,10 @@ import {
   bucketTasks,
   dayPlan,
   daySummary,
+  daysIntoWeek,
   recentActivity,
   typicalDay,
+  weekBefore,
   weekSummary,
 } from '@/components/Dashboard/summary';
 import {
@@ -115,6 +118,12 @@ export default function Dashboard() {
   const week = useMemo(
     () => weekSummary(tasks, mondayIso, sundayIso),
     [tasks, mondayIso, sundayIso],
+  );
+  /* The same week before, counted to the same depth — three days of this week
+     against three of last, not against seven. See `weekBefore`. */
+  const weekAgo = useMemo(
+    () => weekBefore(tasks, mondayIso, daysIntoWeek(mondayIso, todayIso)),
+    [tasks, mondayIso, todayIso],
   );
   const activity = useMemo(() => recentActivity(tasks), [tasks]);
 
@@ -548,10 +557,26 @@ export default function Dashboard() {
           card of its own. */}
       {prefs.show_insights && (
         <div className="dash-insights">
-          <WeeklyOverview week={week} />
+          <WeeklyOverview week={week} before={weekAgo.total > 0 ? weekAgo : undefined} />
           <GoalsCard goals={goals} />
           <RecentActivity entries={activity} />
         </div>
+      )}
+
+      {/* One line about what to change, under the row that reports. It goes
+          last of the page's own content because it is the only thing here the
+          reader has not already asked for — everything above answers a
+          question they came with. Drawn only when the record has something to
+          say; see components/Dashboard/NextMove. */}
+      {prefs.show_insights && (
+        <NextMove
+          tasks={tasks}
+          goals={goals}
+          todayIso={todayIso}
+          doneToday={day.done}
+          xpToday={day.xp}
+          nameOf={(id) => subjects.get(id)?.label ?? id}
+        />
       )}
 
       {prefs.show_quote && <DailyQuote />}

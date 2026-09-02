@@ -34,7 +34,39 @@ import type { Activity, WeekSummary } from './summary';
  * whatever week the task was scheduled for; see `weekSummary` for why that is
  * the only reading of those two labels that is true.
  */
-export function WeeklyOverview({ week }: { week: WeekSummary }) {
+/**
+ * "+2 on last week" — one figure against the same point of the week before.
+ *
+ * A count is compared as a count and a percentage as points, because "20% more
+ * than 20%" is a sentence with two readings and only one of them is right. No
+ * arrow: four of these sit in a small grid and four arrows is a texture, so
+ * the sign carries it.
+ *
+ * Silent when there is nothing on the other side — a first week is not an
+ * infinite improvement on the void before it — and when nothing moved, because
+ * "+0" is a fact nobody needs.
+ */
+function Against({ now, was, unit }: { now: number; was?: number; unit?: string }) {
+  if (was === undefined) return null;
+  const change = Math.round(now - was);
+  if (change === 0) return null;
+  return (
+    <span className={`dash-week-vs${change > 0 ? ' is-up' : ' is-down'}`}>
+      {change > 0 ? '+' : '−'}
+      {Math.abs(change)}
+      {unit ?? ''} on last week
+    </span>
+  );
+}
+
+export function WeeklyOverview({
+  week,
+  before,
+}: {
+  week: WeekSummary;
+  /** The same week before, to the same depth. Absent on a first week. */
+  before?: WeekSummary;
+}) {
   // Counted up on arrival and travelled between values after, like the stat row
   // above — completing one task moves all four of these at once, and four
   // figures that jump together are four figures nobody watches. One hook call
@@ -44,11 +76,16 @@ export function WeeklyOverview({ week }: { week: WeekSummary }) {
   const rate = useCountUp(week.rate);
   const xp = useCountUp(week.xp);
 
+  /* Each figure carries what it was last week at the same point. That is the
+     whole difference between this card and the four at the top of the page:
+     those are today, this is the stretch today sits in, and a stretch is only
+     worth reporting against the one before it. A cell with nothing to compare
+     to shows the figure alone rather than "up ∞%". */
   const figures = [
-    { value: format.number(total), label: 'Total Tasks' },
-    { value: format.number(done), label: 'Completed' },
-    { value: `${Math.round(rate)}%`, label: 'Completion Rate' },
-    { value: format.number(xp), label: 'XP Earned' },
+    { value: format.number(total), label: 'Total Tasks', now: week.total, was: before?.total },
+    { value: format.number(done), label: 'Completed', now: week.done, was: before?.done },
+    { value: `${Math.round(rate)}%`, label: 'Completion Rate', now: week.rate, was: before?.rate, unit: 'pt' },
+    { value: format.number(xp), label: 'XP Earned', now: week.xp, was: before?.xp },
   ];
 
   return (
@@ -63,10 +100,11 @@ export function WeeklyOverview({ week }: { week: WeekSummary }) {
       </h2>
 
       <dl className="dash-week-grid">
-        {figures.map(({ value, label }) => (
+        {figures.map(({ value, label, now, was, unit }) => (
           <div className="dash-week-cell" key={label}>
             <dd>{value}</dd>
             <dt>{label}</dt>
+            <Against now={now} was={was} unit={unit} />
           </div>
         ))}
       </dl>

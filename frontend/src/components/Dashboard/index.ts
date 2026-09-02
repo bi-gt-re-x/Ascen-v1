@@ -22,6 +22,8 @@ export { GoalsCard } from './GoalsCard';
 export type { GoalsCardProps } from './GoalsCard';
 export { LevelUp } from './LevelUp';
 export type { LevelUpProps } from './LevelUp';
+export { NextMove } from './NextMove';
+export type { NextMoveProps } from './NextMove';
 export { NextUp } from './NextUp';
 export type { NextUpProps } from './NextUp';
 export { TaskModal } from './TaskModal';

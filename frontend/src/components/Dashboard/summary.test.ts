@@ -19,7 +19,9 @@ import {
   isCalendarTask,
   priorityMeta,
   recentActivity,
+  daysIntoWeek,
   typicalDay,
+  weekBefore,
   weekSummary,
 } from './summary';
 
@@ -525,5 +527,61 @@ describe('typicalDay', () => {
       TODAY,
     );
     expect(usual.xp).toBeCloseTo(60);
+  });
+});
+
+// --------------------------------------------------------------------------
+// The week before, to the same depth
+// --------------------------------------------------------------------------
+/**
+ * The comparison that turns Weekly Overview from four figures into a card.
+ * The trap it exists to avoid is the one the month view already hit: three
+ * days of this week held against seven of last is not a fall in output, it is
+ * a fall in *days*, and every figure would read as a collapse until Sunday.
+ */
+describe('weekBefore', () => {
+  const MONDAY = '2026-09-07';
+
+  const done = (day: string, xp = 30) =>
+    task({ id: `${day}-${xp}-${Math.random()}`, status: 'done', completed_at: `${day}T18:00:00`, xp_value: xp });
+
+  it('counts only as far into the previous week as this one has got', () => {
+    /* Last week: Monday, Tuesday, and a Friday. Three days into this week, the
+       Friday is not part of the comparison. */
+    const tasks = [done('2026-08-31'), done('2026-09-01'), done('2026-09-04')];
+    expect(weekBefore(tasks, MONDAY, 3).done).toBe(2);
+  });
+
+  it('counts the whole of it once the week is over', () => {
+    const tasks = [done('2026-08-31'), done('2026-09-01'), done('2026-09-04')];
+    expect(weekBefore(tasks, MONDAY, 7).done).toBe(3);
+  });
+
+  it('reaches back exactly seven days, not into the week before that', () => {
+    expect(weekBefore([done('2026-08-24')], MONDAY, 7).done).toBe(0);
+    expect(weekBefore([done('2026-08-31')], MONDAY, 7).done).toBe(1);
+  });
+
+  it('adds up the XP of the days it counts', () => {
+    const tasks = [done('2026-08-31', 100), done('2026-09-06', 500)];
+    expect(weekBefore(tasks, MONDAY, 1).xp).toBe(100);
+  });
+});
+
+describe('daysIntoWeek', () => {
+  it('counts from the week’s own Monday, inclusive', () => {
+    expect(daysIntoWeek('2026-09-07', '2026-09-07')).toBe(1);
+    expect(daysIntoWeek('2026-09-07', '2026-09-09')).toBe(3);
+    expect(daysIntoWeek('2026-09-07', '2026-09-13')).toBe(7);
+  });
+
+  it('treats a week already behind you as a whole one', () => {
+    /* And never more than one: a month-old week is still seven days, not
+       thirty, or the comparison would reach back into other weeks. */
+    expect(daysIntoWeek('2026-08-03', '2026-09-09')).toBe(7);
+  });
+
+  it('never returns less than a day', () => {
+    expect(daysIntoWeek('2026-09-07', '2026-09-01')).toBe(1);
   });
 });

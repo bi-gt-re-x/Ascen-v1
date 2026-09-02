@@ -219,6 +219,13 @@ export interface WeekSummary {
  * not a question the view can ask. Same words, two honest answers, because the
  * two views are asking about different things.
  */
+/**
+ * @param mondayIso The week's first day.
+ * @param sundayIso Its last. Pass an earlier day to stop the count short —
+ *                  which is what the previous-week comparison does, so that
+ *                  three days of this week are held against three of last
+ *                  rather than against seven. See `weekBefore`.
+ */
 export function weekSummary(
   tasks: Task[],
   mondayIso: string,
@@ -444,4 +451,48 @@ export function typicalDay(
   const days = Math.max(1, Math.round((end - start) / 86_400_000));
 
   return { tasks: count / days, xp: xp / days, days };
+}
+
+/**
+ * The same week, one week earlier, counted to the same depth.
+ *
+ * The card said "10 Total Tasks" and left the reader to decide whether ten was
+ * a lot. It is a comparison now — but only an honest one if both sides cover
+ * the same stretch: on a Wednesday, three days of this week against a full
+ * seven of last is not a fall in output, it is a fall in *days*, and every
+ * figure would read as a collapse until Sunday. The month view solved this
+ * for months (`throughDay` in utils/monthSummary); this is the week's version.
+ *
+ * `daysIn` is how far into the week the reader has actually got, 1-7. A week
+ * already behind them is compared in full.
+ */
+export function weekBefore(
+  tasks: Task[],
+  mondayIso: string,
+  daysIn: number,
+): WeekSummary {
+  const monday = new Date(`${mondayIso}T00:00:00`);
+  const from = new Date(monday);
+  from.setDate(from.getDate() - 7);
+  const until = new Date(from);
+  until.setDate(until.getDate() + Math.max(0, Math.min(6, daysIn - 1)));
+
+  return weekSummary(
+    tasks,
+    from.toISOString().slice(0, 10),
+    until.toISOString().slice(0, 10),
+  );
+}
+
+/**
+ * How far into the week `todayIso` is, 1-7 — or 7 for a week already over.
+ *
+ * Counted from the week's own Monday rather than from a weekday number, so it
+ * is right for an account whose week opens on Sunday.
+ */
+export function daysIntoWeek(mondayIso: string, todayIso: string): number {
+  const monday = new Date(`${mondayIso}T00:00:00`).getTime();
+  const today = new Date(`${todayIso}T00:00:00`).getTime();
+  const gap = Math.round((today - monday) / 86_400_000);
+  return Math.max(1, Math.min(7, gap + 1));
 }
