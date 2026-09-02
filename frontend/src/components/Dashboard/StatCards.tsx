@@ -17,7 +17,7 @@
 import { useCountUp } from '@/hooks';
 import { format } from '@/utils';
 import type { UseFocusSession } from '@/hooks/useFocusSession';
-import type { DaySummary } from './summary';
+import type { DaySummary, Typical } from './summary';
 import type { UserStats } from '@/types';
 
 // --------------------------------------------------------------------------
@@ -74,7 +74,15 @@ function ProgressRing({ percent, label }: { percent: number; label: string }) {
  * something to be on track with: a day with nothing on it reads "Nothing due",
  * not 0% On Track.
  */
-export function TodayCard({ day, xpLeft }: { day: DaySummary; xpLeft: number }) {
+export function TodayCard({
+  day,
+  xpLeft,
+  usual,
+}: {
+  day: DaySummary;
+  xpLeft: number;
+  usual: Typical;
+}) {
   const caption = day.total === 0 ? 'Nothing due' : day.percent >= 60 ? 'On Track' : 'In Progress';
 
   const total = useCountUp(day.total);
@@ -84,6 +92,7 @@ export function TodayCard({ day, xpLeft }: { day: DaySummary; xpLeft: number }) 
   return (
     <section className="card dash-stat dash-stat-today">
       <h2 className="dash-stat-title">Today&apos;s Progress</h2>
+      <Trend now={day.done} usual={{ ...usual, value: usual.tasks }} />
       <div className="dash-today-body">
         <ProgressRing percent={day.percent} label={caption} />
         <dl className="dash-today-figures">
@@ -110,6 +119,43 @@ export function TodayCard({ day, xpLeft }: { day: DaySummary; xpLeft: number }) 
   );
 }
 
+/**
+ * "↑ 24% vs usual" — today held against the account's own average day.
+ *
+ * The comparison, not the figure, is what makes a number about today mean
+ * anything: nobody knows off-hand whether 60 XP is a lot *for them*. The
+ * baseline is `typicalDay` in ./summary, and the arrow carries the same claim
+ * as the colour so the line still reads without it — the same rule the month
+ * view's `Delta` follows.
+ *
+ * Silent in the two cases where a comparison would be a lie: an account with
+ * no history behind it, and a baseline of zero, which every number is
+ * infinitely better than.
+ */
+function Trend({ now, usual }: { now: number; usual: Typical & { value: number } }) {
+  /* Rendered as a line of its own rather than beside the heading. Inline it
+     fitted three cards and wrapped "Today's Progress" onto two, and a row of
+     four cards where one heading is taller than the others reads as a mistake
+     — while the line below costs height the cards already had, being stretched
+     to the tallest of them anyway. */
+  if (usual.days === 0 || usual.value <= 0) return <span className="dash-trend is-none" />;
+
+  const change = Math.round(((now - usual.value) / usual.value) * 100);
+  /* Within a tenth either way is not a change, it is the same day. Saying
+     "↑ 3%" about a normal Tuesday is how a comparison stops being read. */
+  if (Math.abs(change) < 10) {
+    return <span className="dash-trend is-flat">About usual for you</span>;
+  }
+
+  const up = change > 0;
+  return (
+    <span className={`dash-trend${up ? ' is-up' : ' is-down'}`}>
+      <span aria-hidden="true">{up ? '↑' : '↓'}</span> {Math.abs(change)}%{' '}
+      {up ? 'above' : 'below'} your usual day
+    </span>
+  );
+}
+
 // --------------------------------------------------------------------------
 // XP Overview
 // --------------------------------------------------------------------------
@@ -131,10 +177,12 @@ export function XpCard({
   stats,
   xpToday,
   dailyGoal,
+  usual,
 }: {
   stats: UserStats;
   xpToday: number;
   dailyGoal: number;
+  usual: Typical;
 }) {
   const level = format.levelForTotalXp(stats.xp);
 
@@ -155,6 +203,7 @@ export function XpCard({
   return (
     <section className="card dash-stat">
       <h2 className="dash-stat-title">XP Overview</h2>
+      <Trend now={xpToday} usual={{ ...usual, value: usual.xp }} />
       <div className="dash-xp-head">
         <span className="dash-xp-level">Level {level.level}</span>
         <span className="dash-xp-count">
@@ -201,7 +250,16 @@ export function XpCard({
  * each hold their own copy of the day's localStorage record, and pressing + on
  * the panel would move its goal while this card went on showing the old one.
  */
-export function FocusCard({ session }: { session: UseFocusSession }) {
+export function FocusCard({
+  session,
+  usualHours,
+}: {
+  session: UseFocusSession;
+  /** Hours focused on an average day, or null while the record is still
+      being read. The figure comes from the focus history rather than from the
+      task list, which is why it arrives separately from `Typical`. */
+  usualHours: number | null;
+}) {
   // Rounded to the tenth it is shown at *before* it is animated. The session
   // ticks every second, but this reading only moves every six minutes, and
   // feeding the hook the raw total would leave it tweening all day for changes
@@ -226,7 +284,12 @@ export function FocusCard({ session }: { session: UseFocusSession }) {
         {hours.toFixed(1)} <span className="dash-big-unit">hrs</span>
       </p>
       <p className="dash-stat-sub">Today</p>
-      <p className="dash-stat-foot">Daily Goal: {session.goalHours.toFixed(1)} hrs</p>
+      <p className="dash-stat-foot">
+        Daily Goal: {session.goalHours.toFixed(1)} hrs
+        {usualHours !== null && usualHours > 0 && (
+          <span className="dash-stat-usual">· usually {usualHours.toFixed(1)}</span>
+        )}
+      </p>
       <div className="dash-bar dash-bar-green">
         <div
           className="dash-bar-fill"
@@ -261,6 +324,12 @@ export function StreakCard({ stats }: { stats: UserStats }) {
   const shownCurrent = Math.round(useCountUp(current));
   const shownBest = Math.round(useCountUp(best));
 
+  /* No percentage here, and that is not an omission. A streak is a count of
+     consecutive days, so "up 40% on usual" is not a sentence about one — what
+     it has instead is a target it can actually be measured against, which is
+     the reader's own record. */
+  const toBeat = best > current ? best - current : 0;
+
   return (
     <section className="card dash-stat">
       <h2 className="dash-stat-title">
@@ -274,7 +343,17 @@ export function StreakCard({ stats }: { stats: UserStats }) {
       <p className="dash-big">
         {shownCurrent} <span className="dash-big-unit">{current === 1 ? 'day' : 'days'}</span>
       </p>
-      <p className="dash-stat-sub">{current === 0 ? 'Keep it going!' : 'Nice run — keep it up.'}</p>
+      {/* The line under the figure is where the target goes, because it is the
+          only thing on this card the reader can act on. "Nice run" is what a
+          streak already at its own record gets — there is nothing left to
+          chase and saying so is the whole reward. */}
+      <p className="dash-stat-sub">
+        {current === 0
+          ? 'Keep it going!'
+          : toBeat > 0
+            ? `${toBeat} ${toBeat === 1 ? 'day' : 'days'} to your best`
+            : 'Your best run yet.'}
+      </p>
       <p className="dash-stat-foot">
         Best Streak: {shownBest} {best === 1 ? 'day' : 'days'}
       </p>

@@ -47,10 +47,12 @@ import {
 } from '@/components/Dashboard';
 import { RatePrompt } from '@/components/Tasks';
 import {
+  TYPICAL_DAYS,
   bucketTasks,
   dayPlan,
   daySummary,
   recentActivity,
+  typicalDay,
   weekSummary,
 } from '@/components/Dashboard/summary';
 import {
@@ -63,7 +65,7 @@ import {
   useUserData,
 } from '@/hooks';
 import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
-import { goals as goalService, tasks as taskService } from '@/services';
+import { focus as focusService, goals as goalService, tasks as taskService } from '@/services';
 import { weekStartDay } from '@/services/settings';
 import { dates, format } from '@/utils';
 import { isoStamp } from '@/utils/calendarGrid';
@@ -120,11 +122,53 @@ export default function Dashboard() {
      minute, so the countdown counts down rather than standing still until
      something else re-renders the page. */
   const plan = useMemo(() => dayPlan(tasks, todayIso), [tasks, todayIso]);
+
+  /* The account's own average day, so the figures at the top of the page have
+     something to be measured against — see `typicalDay` in Dashboard/summary
+     for why every calendar day counts and today does not. */
+  const usual = useMemo(() => typicalDay(tasks, todayIso), [tasks, todayIso]);
   const nowHour = useMemo(() => {
     const hours = now.getHours() + now.getMinutes() / 60;
     // The grid's day runs 6 AM to 5 AM — see `gridHour` in Dashboard/summary.
     return hours < 6 ? hours + 24 : hours;
   }, [now]);
+
+  /**
+   * Hours focused on an average day, from the record rather than the task list.
+   *
+   * The one figure on this page that cannot be counted off the tasks — focus is
+   * its own table — so it is its own read, over the same fortnight `typicalDay`
+   * uses. Null until it lands, and the card simply does not draw the line
+   * until then rather than showing a zero it would have to take back.
+   */
+  const [usualFocus, setUsualFocus] = useState<number | null>(null);
+  useEffect(() => {
+    if (!username) return;
+    let live = true;
+    const from = dates.addDays(now, -TYPICAL_DAYS);
+    const until = dates.addDays(now, -1);
+    void focusService
+      .history(dates.isoDate(from), dates.isoDate(until))
+      .then((result) => {
+        if (!live || !result.success) return;
+        const days = Object.values(result.days);
+        if (!days.length) {
+          setUsualFocus(null);
+          return;
+        }
+        const seconds = days.reduce((sum, day) => sum + (Number(day.seconds) || 0), 0);
+        // Over the window rather than over the days that came back: a day with
+        // nothing tracked is a day, and averaging only the tracked ones would
+        // compare today against the reader's good days alone.
+        setUsualFocus(seconds / 3600 / TYPICAL_DAYS);
+      });
+    return () => {
+      live = false;
+    };
+    // `now` ticks every minute and this window only moves at midnight, so the
+    // day is the dependency rather than the clock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayIso, username]);
 
   /* The account's goals, for the card that says what the day's work is for.
      Read once per account rather than with the task list: a goal is not a fact
@@ -432,7 +476,9 @@ export default function Dashboard() {
             {dates.greeting(now)}, {displayName || username}!{' '}
             <span aria-hidden="true">👋</span>
           </h1>
-          <p className="dash-sub">Here is your day.</p>
+          {/* "Here is your day." stood here and said nothing — a sentence
+              under a greeting, on a page that does not fit one screen. The
+              greeting keeps its line; the filler under it does not. */}
         </div>
         <div className="dash-datebar">
           <p className="dash-date">
@@ -458,9 +504,9 @@ export default function Dashboard() {
           they were — see Settings, Dashboard. */}
       {prefs.show_stats && (
         <div className="dash-stats pg-stagger">
-          <TodayCard day={day} xpLeft={plan.xp} />
-          <XpCard stats={data.stats} xpToday={day.xp} dailyGoal={dailyGoal} />
-          <FocusCard session={session} />
+          <TodayCard day={day} xpLeft={plan.xp} usual={usual} />
+          <XpCard stats={data.stats} xpToday={day.xp} dailyGoal={dailyGoal} usual={usual} />
+          <FocusCard session={session} usualHours={usualFocus} />
           <StreakCard stats={data.stats} />
         </div>
       )}

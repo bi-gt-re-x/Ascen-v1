@@ -61,6 +61,7 @@ function Section({
   busyId,
   subjects,
   onComplete,
+  empty,
 }: {
   heading: string;
   items: Task[];
@@ -68,26 +69,37 @@ function Section({
   busyId: string | null;
   subjects: Map<string, Subject>;
   onComplete: (task: Task) => void;
+  /** What to say when there is nothing. Omitted, the section draws nothing. */
+  empty?: string;
 }) {
+  /* An empty bucket draws nothing at all — not a heading over the words
+     "Nothing here yet", which is a label for an absence and takes up as much
+     room as two real rows. The Today tab shows two of these side by side, so
+     an account keeping only calendar tasks was reading a heading and an
+     apology above every list it had.
+
+     `empty` is the exception: the tab that has *no* rows anywhere still has to
+     say so, and its caller passes it. Otherwise the whole panel would go
+     blank with nothing to explain it. */
+  if (items.length === 0) {
+    return empty ? <p className="dash-task-empty">{empty}</p> : null;
+  }
+
   return (
     <div className="dash-task-group">
       <h3 className="dash-task-head">{heading}</h3>
-      {items.length === 0 ? (
-        <p className="dash-task-empty">Nothing here yet.</p>
-      ) : (
-        <ul className="dash-task-list">
-          {items.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              done={done}
-              busy={busyId === task.id}
-              subject={subjectOf(subjects, task.subject)}
-              onComplete={onComplete}
-            />
-          ))}
-        </ul>
-      )}
+      <ul className="dash-task-list">
+        {items.map((task) => (
+          <TaskRow
+            key={task.id}
+            task={task}
+            done={done}
+            busy={busyId === task.id}
+            subject={subjectOf(subjects, task.subject)}
+            onComplete={onComplete}
+          />
+        ))}
+      </ul>
     </div>
   );
 }
@@ -137,6 +149,8 @@ export function TaskPanel({
       </header>
 
       <div className="dash-task-scroll">
+        {/* A tab with nothing in it anywhere says so once, here, rather than
+            once per empty section — see the note on `Section`. */}
         {tab === 'completed' ? (
           <Section
             heading="Completed Tasks"
@@ -145,6 +159,7 @@ export function TaskPanel({
             busyId={busyId}
             subjects={subjects}
             onComplete={onComplete}
+            empty="Nothing finished yet today."
           />
         ) : tab === 'upcoming' ? (
           /* One list, because the filter above already made it one kind. The
@@ -156,7 +171,10 @@ export function TaskPanel({
             busyId={busyId}
             subjects={subjects}
             onComplete={onComplete}
+            empty="Nothing scheduled ahead."
           />
+        ) : shown.length === 0 ? (
+          <p className="dash-task-empty">Nothing on today&rsquo;s plate.</p>
         ) : (
           <>
             <Section

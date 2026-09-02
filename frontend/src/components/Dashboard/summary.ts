@@ -372,3 +372,76 @@ export function dayPlan(tasks: Task[], todayIso: string): DayPlan {
 
   return { spans, left, xp };
 }
+
+// --------------------------------------------------------------------------
+// What a usual day looks like
+// --------------------------------------------------------------------------
+/**
+ * The account's own average day, so today has something to be measured against.
+ *
+ * The four stat cards were bare numbers: `6 days`, `Level 10`, `60 XP`. None of
+ * them said whether that was a good day or a bad one, which is the only thing
+ * a figure about today is actually for — nobody knows off-hand whether 60 XP is
+ * a lot for them. The month view has made this comparison for a while
+ * (`percentChange` in utils/monthSummary); the dashboard had no baseline to
+ * make it against.
+ *
+ * **Every calendar day in the window counts, including the empty ones.** A mean
+ * over "days you did something" is a mean over your good days, and measuring
+ * today against it tells almost everybody that they are behind. The honest
+ * baseline is the one that includes the days off.
+ *
+ * **Today is excluded.** A day half-lived would otherwise drag its own
+ * baseline down and read as a slump at nine in the morning.
+ *
+ * A window shorter than the account is old is left alone: the mean is over the
+ * days actually in the record, so a three-day-old account is compared against
+ * its own three days rather than against eleven days of zero it never lived.
+ */
+export interface Typical {
+  /** Tasks finished on an average day. */
+  tasks: number;
+  /** XP banked on an average day. */
+  xp: number;
+  /** How many days went into it. Zero means there is nothing to compare to. */
+  days: number;
+}
+
+/** The default window: a fortnight is two of every weekday. */
+export const TYPICAL_DAYS = 14;
+
+export function typicalDay(
+  tasks: Task[],
+  todayIso: string,
+  window = TYPICAL_DAYS,
+): Typical {
+  /* The earliest day the window reaches, as a string — every comparison in
+     this module is string-on-string so nothing here can drift a timezone. */
+  const from = new Date(`${todayIso}T00:00:00`);
+  from.setDate(from.getDate() - window);
+  const fromIso = from.toISOString().slice(0, 10);
+
+  let count = 0;
+  let xp = 0;
+  let earliest = todayIso;
+
+  tasks.forEach((task) => {
+    if (task.status !== 'done') return;
+    const day = dayOf(task.completed_at);
+    if (!day || day >= todayIso || day < fromIso) return;
+    count += 1;
+    xp += xpOf(task);
+    if (day < earliest) earliest = day;
+  });
+
+  if (count === 0) return { tasks: 0, xp: 0, days: 0 };
+
+  /* Days actually covered: the window, or the account's own history if that is
+     shorter. `earliest` is the first day with anything on it, which is the
+     closest this module can get to "when they started" without another read. */
+  const start = new Date(`${earliest}T00:00:00`).getTime();
+  const end = new Date(`${todayIso}T00:00:00`).getTime();
+  const days = Math.max(1, Math.round((end - start) / 86_400_000));
+
+  return { tasks: count / days, xp: xp / days, days };
+}

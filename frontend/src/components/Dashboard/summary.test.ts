@@ -19,6 +19,7 @@ import {
   isCalendarTask,
   priorityMeta,
   recentActivity,
+  typicalDay,
   weekSummary,
 } from './summary';
 
@@ -458,5 +459,71 @@ describe('dayPlan', () => {
     );
     expect(plan.left).toBe(2);
     expect(plan.xp).toBe(75);
+  });
+});
+
+// --------------------------------------------------------------------------
+// A usual day
+// --------------------------------------------------------------------------
+/**
+ * The baseline the stat cards compare today against. Two of its rules are the
+ * whole reason it is honest, and both are invisible when they break: empty
+ * days count, and today does not.
+ */
+describe('typicalDay', () => {
+  const TODAY = '2026-09-15';
+
+  const done = (day: string, xp: number) =>
+    task({ id: `${day}-${xp}`, status: 'done', completed_at: `${day}T18:00:00`, xp_value: xp });
+
+  it('averages over the days lived, not the days worked', () => {
+    /* Four tasks across two days, six days apart. A mean over "days you did
+       something" would say two a day; the honest answer is what the stretch
+       actually held. */
+    const usual = typicalDay(
+      [done('2026-09-08', 100), done('2026-09-08', 100), done('2026-09-14', 50), done('2026-09-14', 50)],
+      TODAY,
+    );
+    expect(usual.days).toBe(7);
+    expect(usual.tasks).toBeCloseTo(4 / 7);
+    expect(usual.xp).toBeCloseTo(300 / 7);
+  });
+
+  it('leaves today out of its own baseline', () => {
+    /* A day half-lived would otherwise drag the mean down and read as a slump
+       at nine in the morning. */
+    const usual = typicalDay([done('2026-09-14', 60), done(TODAY, 900)], TODAY);
+    expect(usual.xp).toBeCloseTo(60);
+  });
+
+  it('ignores anything older than the window', () => {
+    const usual = typicalDay([done('2026-08-01', 500), done('2026-09-14', 60)], TODAY);
+    expect(usual.xp).toBeCloseTo(60);
+  });
+
+  it('says it has nothing rather than guessing, on a new account', () => {
+    /* `days: 0` is what stops the card drawing "↑ ∞% vs usual" over a baseline
+       of nothing. */
+    expect(typicalDay([], TODAY)).toEqual({ tasks: 0, xp: 0, days: 0 });
+    expect(typicalDay([task({ status: 'todo' })], TODAY).days).toBe(0);
+  });
+
+  it('measures a young account against its own history, not against zeroes', () => {
+    /* Three days old, all of them worked: the answer is one a day, not
+       three-fourteenths of one. */
+    const usual = typicalDay(
+      [done('2026-09-12', 30), done('2026-09-13', 30), done('2026-09-14', 30)],
+      TODAY,
+    );
+    expect(usual.days).toBe(3);
+    expect(usual.tasks).toBeCloseTo(1);
+  });
+
+  it('does not count an unfinished task toward a day’s work', () => {
+    const usual = typicalDay(
+      [done('2026-09-14', 60), task({ id: 'x', status: 'todo', due_date: '2026-09-14T09:00:00', xp_value: 500 })],
+      TODAY,
+    );
+    expect(usual.xp).toBeCloseTo(60);
   });
 });
