@@ -80,6 +80,23 @@ function difficulty(xp: number, priority?: string): { band: XpBand; tone: TaskPr
   return { band: xpToDifficulty(xp), tone };
 }
 
+/**
+ * "07:30 AM" — a stored `HH:MM` as the card prints it.
+ *
+ * The card used to hand the string to a disabled `<input type="time">` and let
+ * the browser format it, which draws its own spinner chrome and clips the
+ * meridiem off the end in a narrow column. Empty in, empty out: a to-do that
+ * reached the day by being finished has no start and shows only an end.
+ */
+function clockLabel(value: string): string {
+  const [hours, minutes] = String(value || '').split(':');
+  const hour = Number(hours);
+  if (!Number.isFinite(hour) || minutes === undefined) return '';
+  const suffix = hour < 12 ? 'AM' : 'PM';
+  const clock = hour % 12 === 0 ? 12 : hour % 12;
+  return `${String(clock).padStart(2, '0')}:${minutes.slice(0, 2)} ${suffix}`;
+}
+
 function EventIcon() {
   return (
     <span className="event-icon">
@@ -250,43 +267,113 @@ export function DayPanel({
                       </div>
                     )}
 
-                    <input
-                      type="text"
-                      className="task-input-inline"
-                      value={entry.name}
-                      placeholder="What will you do..."
-                      readOnly={isTask}
-                      role={canComplete ? 'button' : undefined}
-                      title={canComplete ? 'Click to mark complete' : undefined}
-                      onClick={() => {
-                        if (canComplete && entry.taskId) onComplete(entry.taskId);
-                      }}
-                      onChange={(event) => onRenameEvent(entry, event.target.value)}
-                    />
+                    {/* A task's name is text and an event's is a field, which
+                        is what each of them actually is. The task's was an
+                        `<input readOnly>` — a box with a caret and no ellipsis,
+                        pretending to be editable and looking like a form on a
+                        card that is not one. */}
+                    {isTask ? (
+                      <span
+                        className="task-title"
+                        role={canComplete ? 'button' : undefined}
+                        tabIndex={canComplete ? 0 : undefined}
+                        title={canComplete ? 'Click to mark complete' : entry.name}
+                        onClick={() => {
+                          if (canComplete && entry.taskId) onComplete(entry.taskId);
+                        }}
+                        onKeyDown={(event) => {
+                          if (!canComplete || !entry.taskId) return;
+                          if (event.key !== 'Enter' && event.key !== ' ') return;
+                          event.preventDefault();
+                          onComplete(entry.taskId);
+                        }}
+                      >
+                        {entry.name}
+                      </span>
+                    ) : (
+                      <input
+                        type="text"
+                        className="task-input-inline"
+                        value={entry.name}
+                        placeholder="What will you do..."
+                        onChange={(event) => onRenameEvent(entry, event.target.value)}
+                      />
+                    )}
 
-                    <div className="timestamp-section">
-                      {entry.startTime && (
-                        <input
-                          type="time"
-                          className="start-time"
-                          value={entry.startTime}
-                          disabled={isTask}
-                          onChange={(event) =>
-                            onRetimeEvent(entry, 'startTime', event.target.value)
-                          }
-                        />
+                    {/* The card's foot: the times on the left, what to do
+                        about it on the right. Both used to float over this row
+                        absolutely, which meant every card carried a
+                        `padding-right` guessed against the width of a word —
+                        and a card in a narrower column ran one under the
+                        other. A row cannot overlap itself. */}
+                    <div className="card-foot">
+                      <div className="timestamp-section">
+                        {/* A task's times are plain text, because a task's
+                            times are not editable here — a disabled
+                            `<input type="time">` draws the browser's own
+                            spinner chrome and clips "07:30 AM" to "07:30 A"
+                            the moment the column narrows. An event's stay
+                            fields, because an event's times *are* editable. */}
+                        {isTask ? (
+                          <span className="task-times">
+                            {clockLabel(entry.startTime)}
+                            {entry.startTime && entry.endTime && (
+                              <span className="task-times-dash">–</span>
+                            )}
+                            {clockLabel(entry.endTime)}
+                          </span>
+                        ) : (
+                          <>
+                            {entry.startTime && (
+                              <input
+                                type="time"
+                                className="start-time"
+                                value={entry.startTime}
+                                onChange={(event) =>
+                                  onRetimeEvent(entry, 'startTime', event.target.value)
+                                }
+                              />
+                            )}
+                            {entry.startTime && entry.endTime && <span>-</span>}
+                            {entry.endTime && (
+                              <input
+                                type="time"
+                                className="end-time"
+                                value={entry.endTime}
+                                onChange={(event) =>
+                                  onRetimeEvent(entry, 'endTime', event.target.value)
+                                }
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {isTask && entry.completed && (
+                        <span className="completed-badge">
+                          Completed <CheckIcon className="completed-check" />
+                        </span>
                       )}
-                      {entry.startTime && entry.endTime && <span>-</span>}
-                      {entry.endTime && (
-                        <input
-                          type="time"
-                          className="end-time"
-                          value={entry.endTime}
-                          disabled={isTask}
-                          onChange={(event) =>
-                            onRetimeEvent(entry, 'endTime', event.target.value)
-                          }
-                        />
+                      {isNext && onStart ? (
+                        <button
+                          type="button"
+                          className="dp-start"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onStart();
+                          }}
+                        >
+                          {focusRunning ? 'Focusing' : 'Start'}
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 5.5v13l11-6.5z" />
+                          </svg>
+                        </button>
+                      ) : (
+                        canComplete && (
+                          <span className="complete-hint">
+                            Mark complete <CheckIcon className="completed-check" />
+                          </span>
+                        )
                       )}
                     </div>
                   </div>
@@ -324,35 +411,6 @@ export function DayPanel({
                       </button>
                     </div>
                   </div>
-
-                  {isTask && entry.completed && (
-                    <span className="completed-badge">
-                      Completed <CheckIcon className="completed-check" />
-                    </span>
-                  )}
-                  {/* The next thing gets a way to begin it; everything else
-                      gets the hint that its name is a way to finish it. */}
-                  {isNext && onStart ? (
-                    <button
-                      type="button"
-                      className="dp-start"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onStart();
-                      }}
-                    >
-                      {focusRunning ? 'Focusing' : 'Start'}
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M8 5.5v13l11-6.5z" />
-                      </svg>
-                    </button>
-                  ) : (
-                    canComplete && (
-                      <span className="complete-hint">
-                        Mark complete <CheckIcon className="completed-check" />
-                      </span>
-                    )
-                  )}
 
                   {entry.subtasks && entry.subtasks.length > 0 && (
                     <ul className="subtasks-list">

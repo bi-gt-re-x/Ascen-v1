@@ -2303,8 +2303,11 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     gap: 18px;
     border-bottom: none;
     border: 1px solid var(--fx-card-border);
-    border-radius: 24px;
-    padding: 18px 62px 18px 22px;
+    border-radius: 18px;
+    /* The right gutter used to be 62px, held open for a badge that floated
+       over the card. The badge is in the foot's row now and only the ⋮ needs
+       clearing, which is 40px of it. */
+    padding: 16px 40px 16px 20px;
     background: var(--fx-card-bg);
     color: #eef0f6;
     box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42);
@@ -2349,8 +2352,8 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
 #dailyTasks .card-tags {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 2px;
+    gap: 10px;
+    margin-bottom: 4px;
 }
 #dailyTasks .task-kind-badge {
     background: rgba(0, 0, 0, 0.28);
@@ -2362,18 +2365,38 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     padding: 3px 9px;
     border-radius: 6px;
 }
+/* The band, as a word rather than a second pill. Two pills side by side make
+   the row look like a form of tags and give equal weight to "TASK 1", which is
+   only an index, and to the band, which is a fact about the work. One chip and
+   one label reads as "task 1, and it is a light one". */
 #dailyTasks .difficulty-badge {
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
-    padding: 3px 9px;
-    border-radius: 6px;
-    border: 1px solid transparent;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    opacity: .72;
 }
 
 
-/* Title — follows the card's own colour so it flips with the theme */
+/* Title — follows the card's own colour so it flips with the theme.
+   A task's is a `<span>` and an event's is still a field, which is what each
+   of them actually is: see components/Calendar/DayPanel.tsx. They share every
+   rule below so the two never drift apart by a pixel. */
+#dailyTasks .task-title {
+    display: block;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 #dailyTasks .task-input,
 #dailyTasks .task-input-inline,
 #dailyTasks .task-section .task-input-inline {
@@ -2393,13 +2416,43 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
 #dailyTasks .task-input::placeholder,
 #dailyTasks .task-input-inline::placeholder { color: rgba(255, 255, 255, 0.4); }
 
+/* ---- The card's foot ------------------------------------------------------
+   The times on the left and what to do about it on the right, as one row.
+   Both halves used to float over this line absolutely, which meant every card
+   carried a `padding-right` guessed against the width of a word — three
+   different guesses for three states, and a card in a narrower column ran one
+   under the other anyway. A row cannot overlap itself. */
+#dailyTasks .card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+    min-height: 26px;
+}
+
 /* Time row (start – end). Tasks keep BOTH times even though they're read-only. */
 #dailyTasks .timestamp-section {
     display: flex;
     align-items: center;
     gap: 6px;
     margin: 0;
+    min-width: 0;
 }
+/* A task's times, as text. The disabled `<input type="time">` they used to be
+   drew the browser's own spinner chrome and clipped "07:30 AM" to "07:30 A"
+   the moment the column narrowed. */
+#dailyTasks .task-times {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 9px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #9a9ca6;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+#dailyTasks .task-times-dash { opacity: .6; }
 #dailyTasks .task-section .timestamp-section input[type="time"] {
     background: transparent;
     border: none;
@@ -2469,32 +2522,27 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
 }
 #dailyTasks .card-menu-item:hover { background: rgba(255, 255, 255, 0.1); }
 
-/* "Completed" badge (bottom-right) with a green check */
+/* "Completed", on the right of the card's foot. Green rather than grey: it is
+   the one word on a card that reports a result, and a result said in the same
+   colour as the times beside it is a result nobody reads. */
 #dailyTasks .completed-badge {
-    position: absolute;
-    right: 18px;
-    bottom: 16px;
+    flex: none;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     background: transparent;
     border: none;
-    color: #9a9ca6;
+    color: #3fb950;
     text-transform: none;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
     padding: 0;
     margin: 0;
-}
-/* The badge floats over the bottom line of the card, which is also where the
-   time row sits. A card showing a full start–end range reaches under it, so
-   hold the times clear of the badge's width. */
-#dailyTasks .task-section.task-completed .timestamp-section {
-    padding-right: 56px;
+    white-space: nowrap;
 }
 #dailyTasks .completed-badge .completed-check {
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
     padding: 2px;
     border-radius: 50%;
     background: #2ea043;
@@ -2512,16 +2560,18 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     transition: color 0.15s ease;
 }
 #dailyTasks .task-section.can-complete .task-input-inline:hover { color: #3fb950 !important; }
+/* The hint keeps the slot the badge will occupy once the task is done, so the
+   card does not change shape at the moment it is finished. `visibility` rather
+   than `display`, for the same reason: a hidden hint still holds the width. */
 #dailyTasks .complete-hint {
-    position: absolute;
-    right: 18px;
-    bottom: 16px;
+    flex: none;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     color: #9a9ca6;
     font-weight: 600;
     font-size: 13px;
+    white-space: nowrap;
     opacity: 0;
     pointer-events: none;   /* the title is what's clickable, not the hint */
     transition: opacity 0.15s ease;
@@ -2537,9 +2587,6 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     color: inherit;
     box-sizing: border-box;
 }
-/* Hold the time row clear of the hint, exactly as a done card holds it clear
-   of the badge — otherwise a full start–end range runs under it on hover. */
-#dailyTasks .task-section.can-complete .timestamp-section { padding-right: 128px; }
 /* Mid-request: dimmed and inert until the server answers, so a second click
    can't land while the first is still in the air. */
 #dailyTasks .task-section.is-completing { opacity: 0.55; pointer-events: none; }
@@ -2802,8 +2849,12 @@ html[data-theme="light"] #dailyTasks .task-kind-badge {
 }
 html[data-theme="light"] #dailyTasks .task-section .timestamp-section input[type="time"],
 html[data-theme="light"] #dailyTasks .timestamp-section span,
-html[data-theme="light"] #dailyTasks .completed-badge,
+html[data-theme="light"] #dailyTasks .task-times,
 html[data-theme="light"] #dailyTasks .complete-hint { color: #7a6650 !important; }
+/* Completed keeps its green on the warm card. It is the one word here that is
+   a result rather than a detail, and the brown the rest of the chrome takes
+   would bury it. */
+html[data-theme="light"] #dailyTasks .completed-badge { color: #2e7d52; }
 html[data-theme="light"] #dailyTasks .task-section.can-complete .task-input-inline:hover { color: #2e7d52 !important; }
 html[data-theme="light"] #dailyTasks .card-menu-btn { color: #5c4630; }
 html[data-theme="light"] #dailyTasks .card-menu-btn:hover { background: rgba(92, 66, 39, 0.16); color: #2c2013; }
@@ -3843,12 +3894,11 @@ html[data-theme="dark"] .mv-analytics { background: transparent; }
 .dp-add:hover { filter: brightness(1.06); }
 .dp-add:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
 
-/* Begin the next thing. On the one card that is next, in place of the hint
-   the others carry — see components/Calendar/DayPanel.tsx. */
+/* Begin the next thing. On the one card that is next, in the foot's right-hand
+   slot in place of the hint the others carry — see
+   components/Calendar/DayPanel.tsx. */
 .dp-start {
-    position: absolute;
-    right: 14px;
-    bottom: 12px;
+    flex: none;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -4284,6 +4334,12 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
    its scroll back because a stacked month cannot fit a viewport. */
 @media (max-width: 1180px) {
     .mv-body { flex-direction: column; overflow-y: auto; }
+    /* `flex: 1 1 70%` is a *width* while the body is a row and a *height* the
+       moment it is a column, so both columns were being squeezed to a share of
+       the window and their contents drawn over each other. Stacked, each takes
+       the height its content needs and the body scrolls past them. */
+    .mv-left,
+    .mv-side { flex: 0 0 auto; }
     .mv-side { max-width: none; min-width: 0; overflow: visible; }
     .mv-left { overflow: visible; padding-right: 0; }
     .mv-summary { flex-wrap: wrap; }
@@ -4339,20 +4395,20 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
 .mv-tile-value { font-size: 16px; }
 .mv-tile-sub { font-size: 10.5px; }
 
-/* The plan cards are in a narrower column than the one they were drawn for,
-   and their bottom line carries both the day's times and the hover hint that
-   finishes the task. Reserve less for the hint and set the times a size
-   smaller, so a full start–end range still reads in full. */
+/* The plan cards are in a narrower column than the one they were drawn for, so
+   the type comes down a size. Nothing has to be reserved for the badge any
+   more — the foot is a row and the two halves share it. */
 .mv-side #dailyTasks .task-section { padding: 14px 16px; }
 .mv-side #dailyTasks .task-section .timestamp-section input[type="time"] {
     font-size: 13px;
     min-width: 74px;
 }
+.mv-side #dailyTasks .task-times { font-size: 13px; gap: 7px; }
+.mv-side #dailyTasks .task-title { font-size: 17px; }
 .mv-side #dailyTasks .completed-badge,
-.mv-side #dailyTasks .complete-hint { font-size: 12px; right: 14px; bottom: 13px; }
-.mv-side #dailyTasks .task-section.can-complete .timestamp-section { padding-right: 106px; }
-.mv-side #dailyTasks .task-section.task-completed .timestamp-section { padding-right: 48px; }
+.mv-side #dailyTasks .complete-hint { font-size: 12px; }
 .mv-side #dailyTasks .card-menu-wrap { top: 11px; right: 11px; }
+.mv-side #dailyTasks .task-section { padding-right: 36px; }
 
 /* The strip is a row until it cannot be one. Without the wrap the figures ran
    over the title when the column was narrow — an overlap is the one failure a
