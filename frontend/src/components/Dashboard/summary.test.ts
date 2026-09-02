@@ -19,7 +19,6 @@ import {
   isCalendarTask,
   priorityMeta,
   recentActivity,
-  topPriorities,
   weekSummary,
 } from './summary';
 
@@ -283,49 +282,6 @@ describe('weekSummary', () => {
   });
 });
 
-describe('topPriorities', () => {
-  it('ranks high before medium before low', () => {
-    const low = task({ title: 'low', priority: 'low' });
-    const high = task({ title: 'high', priority: 'high' });
-    const medium = task({ title: 'medium', priority: 'medium' });
-
-    expect(topPriorities([low, medium, high]).map((t) => t.title)).toEqual([
-      'high',
-      'medium',
-      'low',
-    ]);
-  });
-
-  it('breaks a tie on XP, heaviest first', () => {
-    const lighter = task({ title: 'lighter', priority: 'high', xp_value: 40 });
-    const heavier = task({ title: 'heavier', priority: 'high', xp_value: 200 });
-
-    expect(topPriorities([lighter, heavier]).map((t) => t.title)).toEqual([
-      'heavier',
-      'lighter',
-    ]);
-  });
-
-  it('returns three by default — a list to act on now is short', () => {
-    expect(topPriorities(Array.from({ length: 10 }, () => task()))).toHaveLength(3);
-    expect(topPriorities(Array.from({ length: 10 }, () => task()), 5)).toHaveLength(5);
-  });
-
-  it('does not reorder the caller\'s array', () => {
-    const list = [task({ priority: 'low' }), task({ priority: 'high' })];
-    const before = list.map((t) => t.id);
-    topPriorities(list);
-    expect(list.map((t) => t.id)).toEqual(before);
-  });
-
-  it('ranks an unrecognised priority last rather than first', () => {
-    const odd = task({ title: 'odd', priority: 'urgent' as never });
-    const low = task({ title: 'low', priority: 'low', xp_value: 10 });
-    // Both fall to rank 2, so XP decides — and 'odd' must not sort above high.
-    const high = task({ title: 'high', priority: 'high', xp_value: 10 });
-    expect(topPriorities([odd, low, high])[0]!.title).toBe('high');
-  });
-});
 
 describe('recentActivity', () => {
   it('lists the most recent completions first', () => {

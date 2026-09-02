@@ -74,12 +74,12 @@ function ProgressRing({ percent, label }: { percent: number; label: string }) {
  * something to be on track with: a day with nothing on it reads "Nothing due",
  * not 0% On Track.
  */
-export function TodayCard({ day }: { day: DaySummary }) {
+export function TodayCard({ day, xpLeft }: { day: DaySummary; xpLeft: number }) {
   const caption = day.total === 0 ? 'Nothing due' : day.percent >= 60 ? 'On Track' : 'In Progress';
 
   const total = useCountUp(day.total);
   const done = useCountUp(day.done);
-  const xp = useCountUp(day.xp);
+  const left = useCountUp(xpLeft);
 
   return (
     <section className="card dash-stat dash-stat-today">
@@ -95,9 +95,14 @@ export function TodayCard({ day }: { day: DaySummary }) {
             <dt>Completed</dt>
             <dd>{format.number(done)}</dd>
           </div>
+          {/* Not "XP Earned". That figure is the card immediately to the
+              right of this one — `+60 XP today` — and having the same number
+              twice on two adjacent cards spent one of four slots restating a
+              neighbour. This is the other half of it: what finishing the rest
+              of today is worth, which nothing else on the page says. */}
           <div className="dash-figure">
-            <dt>XP Earned</dt>
-            <dd>{format.number(xp)}</dd>
+            <dt>XP left</dt>
+            <dd>{format.number(left)}</dd>
           </div>
         </dl>
       </div>

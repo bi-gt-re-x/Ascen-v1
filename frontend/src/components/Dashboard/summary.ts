@@ -253,32 +253,9 @@ export function weekSummary(
   };
 }
 
-// --------------------------------------------------------------------------
-// Top Priorities
-// --------------------------------------------------------------------------
-const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
-/**
- * What to do next: the open tasks on today's plate, hardest first.
- *
- * Ranked by priority and then by XP, because two high-priority tasks are not
- * equally urgent and XP is the only other measure of weight a task carries.
- * Scoped to today's bucket rather than to all 244 open tasks — a card headed
- * "Top Priorities" that ranks something due in December is not advice.
- *
- * Three of them. A list you are meant to act on now is short, and the card has
- * to sit level with the two beside it.
- */
-export function topPriorities(tasks: Task[], limit = 3): Task[] {
-  return [...tasks]
-    .sort((a, b) => {
-      const rank =
-        (PRIORITY_RANK[String(a.priority).toLowerCase()] ?? 2) -
-        (PRIORITY_RANK[String(b.priority).toLowerCase()] ?? 2);
-      return rank !== 0 ? rank : xpOf(b) - xpOf(a);
-    })
-    .slice(0, limit);
-}
+/* `topPriorities` stood here — the day's open tasks, hardest first, for a
+   dashboard card that turned out to be the task list re-sorted. Both are gone;
+   the note where the card was, in ./InsightCards, says why. */
 
 // --------------------------------------------------------------------------
 // Recent Activity

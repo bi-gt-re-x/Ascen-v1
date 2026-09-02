@@ -41,7 +41,6 @@ import {
   TaskModal,
   TaskPanel,
   TodayCard,
-  TopPriorities,
   WeeklyOverview,
   XpCard,
   useCrossing,
@@ -52,7 +51,6 @@ import {
   dayPlan,
   daySummary,
   recentActivity,
-  topPriorities,
   weekSummary,
 } from '@/components/Dashboard/summary';
 import {
@@ -116,7 +114,6 @@ export default function Dashboard() {
     () => weekSummary(tasks, mondayIso, sundayIso),
     [tasks, mondayIso, sundayIso],
   );
-  const priorities = useMemo(() => topPriorities(buckets.today), [buckets.today]);
   const activity = useMemo(() => recentActivity(tasks), [tasks]);
 
   /* Today as spans, for the "what now" strip. The clock above ticks each
@@ -461,7 +458,7 @@ export default function Dashboard() {
           they were — see Settings, Dashboard. */}
       {prefs.show_stats && (
         <div className="dash-stats pg-stagger">
-          <TodayCard day={day} />
+          <TodayCard day={day} xpLeft={plan.xp} />
           <XpCard stats={data.stats} xpToday={day.xp} dailyGoal={dailyGoal} />
           <FocusCard session={session} />
           <StreakCard stats={data.stats} />
@@ -497,11 +494,16 @@ export default function Dashboard() {
         {prefs.show_focus && <FocusPanel session={session} />}
       </div>
 
+      {/* Three, not four. Top Priorities used to sit in this row: the same
+          tasks as the panel above, re-sorted by priority, one screen lower —
+          so on the common day of two or three tasks it was the list again with
+          numbers on it. What it did that the list does not is order by
+          priority, and that is a control the list should grow rather than a
+          card of its own. */}
       {prefs.show_insights && (
         <div className="dash-insights">
           <WeeklyOverview week={week} />
           <GoalsCard goals={goals} />
-          <TopPriorities tasks={priorities} />
           <RecentActivity entries={activity} />
         </div>
       )}

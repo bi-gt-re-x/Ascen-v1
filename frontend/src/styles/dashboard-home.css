@@ -612,12 +612,12 @@ body:has(.dash) .app-main {
 /* ==========================================================================
    THE THREE SUMMARY CARDS
    ========================================================================== */
-/* Four, since goals joined them. The row is the page's "context" band and it
-   was three cards, two of which restated the panels above — see the note on
-   components/Dashboard/GoalsCard for why this one earns its place. */
+/* Three: the week, the goals, and what just happened. It was three before as
+   well, but one of them was Top Priorities — the task list again, re-sorted —
+   and goals have taken the slot. See the note in pages/Dashboard.tsx. */
 .dash-insights {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
     align-items: stretch;
 }
@@ -651,42 +651,12 @@ body:has(.dash) .app-main {
     line-height: 1.25;
 }
 
-/* ---- Top Priorities ----------------------------------------------------- */
-.dash-priority-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 11px;
-}
-.dash-priority-list li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    font-size: 0.9rem;
-    color: #2C302E;
-}
-.dash-priority-rank { color: #9AA0A6; flex: none; }
-.dash-priority-name {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.dash-badge {
-    flex: none;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 0.72rem;
-    font-weight: 600;
-}
-.dash-badge.tone-high { background: #FDECEC; color: #C0392B; }
-.dash-badge.tone-med  { background: #FFF4E5; color: #B26B00; }
-.dash-badge.tone-low  { background: #F0F2F5; color: #6C757D; }
+/* The Top Priorities list and the priority pill it wore both stood here, and
+   both went with the card — see the note in components/Dashboard/InsightCards.
+   The pill was `.dash-badge`, and nothing else on the dashboard wore one: the
+   task rows in the panel above carry their priority as a coloured dot and a
+   word (`.dash-task-tag`), which is a different thing that happens to say the
+   same fact. */
 
 /* ---- Recent Activity ---------------------------------------------------- */
 .dash-activity-list {
@@ -870,7 +840,6 @@ html[data-theme="dark"] .dash-xp-level,
 html[data-theme="dark"] .dash-figure dd,
 html[data-theme="dark"] .dash-week-cell dd,
 html[data-theme="dark"] .dash-task-name,
-html[data-theme="dark"] .dash-priority-list li,
 html[data-theme="dark"] .dash-activity-name strong {
     color: #e6edf3;
 }
@@ -894,8 +863,7 @@ html[data-theme="dark"] .dash-tab {
 html[data-theme="dark"] .dash-task-head,
 html[data-theme="dark"] .dash-task-empty,
 html[data-theme="dark"] .dash-task-nodue,
-html[data-theme="dark"] .dash-xp-goal,
-html[data-theme="dark"] .dash-priority-rank {
+html[data-theme="dark"] .dash-xp-goal {
     color: #6e7681;
 }
 
@@ -939,9 +907,6 @@ html[data-theme="dark"] .dash-task-tag.tone-high { color: #ff9297; }
 html[data-theme="dark"] .dash-task-tag.tone-med  { color: #f4d47c; }
 html[data-theme="dark"] .dash-task-tag.tone-low  { color: #8b949e; }
 
-html[data-theme="dark"] .dash-badge.tone-high { background: #2e1618; color: #ff9297; }
-html[data-theme="dark"] .dash-badge.tone-med  { background: #2e2716; color: #f4d47c; }
-html[data-theme="dark"] .dash-badge.tone-low  { background: #21262d; color: #8b949e; }
 
 html[data-theme="dark"] .dash-xp-today strong,
 html[data-theme="dark"] .dash-xp-today svg,

@@ -16,11 +16,9 @@
  * page will be and which files it will be built from.
  */
 import { Link } from 'react-router-dom';
-import { priorityMeta } from './summary';
 import { useCountUp } from '@/hooks';
 import { format } from '@/utils';
 import type { Activity, WeekSummary } from './summary';
-import type { Task } from '@/types';
 
 // --------------------------------------------------------------------------
 // Weekly Overview
@@ -80,44 +78,14 @@ export function WeeklyOverview({ week }: { week: WeekSummary }) {
   );
 }
 
-// --------------------------------------------------------------------------
-// Top Priorities
-// --------------------------------------------------------------------------
-export function TopPriorities({ tasks }: { tasks: Task[] }) {
-  return (
-    <section className="card dash-panel dash-insight">
-      <h2 className="dash-panel-title dash-insight-title">
-        <span className="dash-stat-ico dash-ico-flag" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 21V4h9l1 2h6v9h-7l-1-2H4" />
-          </svg>
-        </span>
-        Top Priorities
-      </h2>
-
-      {tasks.length === 0 ? (
-        <p className="dash-task-empty">Nothing outstanding today.</p>
-      ) : (
-        <ol className="dash-priority-list">
-          {tasks.map((task, index) => {
-            const priority = priorityMeta(task.priority);
-            return (
-              <li key={task.id}>
-                <span className="dash-priority-rank">{index + 1}.</span>
-                <span className="dash-priority-name">{task.title || 'Untitled'}</span>
-                <span className={`dash-badge tone-${priority.tone}`}>{priority.label}</span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-
-      <Link className="dash-panel-link" to="/tasks">
-        Edit priorities<span aria-hidden="true"> →</span>
-      </Link>
-    </section>
-  );
-}
+/* Top Priorities stood here: the day's three highest-priority tasks, ranked.
+   It is gone because it was the panel above it read twice — the same rows from
+   the same bucket, re-sorted, one screen lower, so on the common day of two or
+   three tasks it was the task list again with numbers on it. The one thing it
+   did that the list does not is order by priority, and that is a control the
+   list should grow rather than a card of its own. The row it left is the
+   goals card (./GoalsCard), which says something nothing else on the page
+   does. */
 
 // --------------------------------------------------------------------------
 // Recent Activity
