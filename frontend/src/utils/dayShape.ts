@@ -20,7 +20,30 @@
  * scale `dayTaskBlocks` lays blocks out on (utils/calendarGrid). Nothing here
  * converts to a clock, because the caller draws them and the two would drift.
  */
-import type { Block } from './calendarGrid';
+/**
+ * The least a thing has to be for this file to say anything about it: when it
+ * runs, and enough to name it.
+ *
+ * A structural type rather than the calendar's `Block`, which every rule here
+ * used to take. `Block` carries a laid-out position, a compactness flag and a
+ * colour family — none of which this file reads — and demanding them meant
+ * only the calendar could ask these questions. The dashboard has the same
+ * tasks and the same day and had to answer them itself.
+ *
+ * `Block` satisfies this as it stands, so the calendar's callers are unchanged.
+ */
+export interface Spanned {
+  kind: 'task' | 'event';
+  /** Grid hours, 6…29 — see the note at the top. */
+  start: number;
+  end: number;
+  done?: boolean;
+  xp?: number;
+  /** A task's name. */
+  title?: string;
+  /** An event's. Whichever it has is the one used. */
+  name?: string;
+}
 
 /** One merged, non-overlapping run of booked time, as grid hours. */
 export interface Band {
@@ -72,8 +95,8 @@ const EMPTY: DayShape = {
   left: 0,
 };
 
-function label(block: Block): string {
-  return block.kind === 'event' ? block.name : block.title;
+function label(block: Spanned): string {
+  return (block.kind === 'event' ? block.name : block.title) || 'Untitled';
 }
 
 /**
@@ -82,7 +105,7 @@ function label(block: Block): string {
  *               day that is not today — where "next" means the first thing on
  *               it rather than the next thing to happen.
  */
-export function dayShape(blocks: Block[], now: number | null): DayShape {
+export function dayShape(blocks: Spanned[], now: number | null): DayShape {
   if (!blocks.length) return EMPTY;
 
   const order = [...blocks].sort((a, b) => a.start - b.start || a.end - b.end);
@@ -95,7 +118,10 @@ export function dayShape(blocks: Block[], now: number | null): DayShape {
   const bands: Band[] = [];
   order.forEach((block) => {
     const last = bands[bands.length - 1];
-    const done = block.kind === 'task' ? block.done : false;
+    /* An event is never "done" — there is nothing to finish — so a run
+       holding one is not done either. `done` is optional on `Spanned`, and a
+       task that did not say counts as unfinished. */
+    const done = block.kind === 'task' && block.done === true;
     if (last && block.start <= last.end) {
       last.end = Math.max(last.end, block.end);
       last.done = last.done && done;
@@ -137,10 +163,7 @@ export function dayShape(blocks: Block[], now: number | null): DayShape {
       }
     : null;
 
-  const unfinished = order.filter(
-    (block): block is Extract<Block, { kind: 'task' }> =>
-      block.kind === 'task' && !block.done,
-  );
+  const unfinished = order.filter((block) => block.kind === 'task' && !block.done);
 
   return {
     from,

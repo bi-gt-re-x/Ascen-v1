@@ -25,7 +25,7 @@
  * `useFocusSession` shared between them is what keeps the goal on the card
  * moving when the + on the panel is pressed.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
 import {
   CatchUp,
@@ -33,7 +33,9 @@ import {
   FocusCard,
   FocusPanel,
   GoalReached,
+  GoalsCard,
   LevelUp,
+  NextUp,
   RecentActivity,
   StreakCard,
   TaskModal,
@@ -47,6 +49,7 @@ import {
 import { RatePrompt } from '@/components/Tasks';
 import {
   bucketTasks,
+  dayPlan,
   daySummary,
   recentActivity,
   topPriorities,
@@ -55,19 +58,20 @@ import {
 import {
   useCatchUp,
   useDocumentTitle,
+  useNow,
   usePageEntrance,
   useSettings,
   useSubjectIndex,
   useUserData,
 } from '@/hooks';
 import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
-import { tasks as taskService } from '@/services';
+import { goals as goalService, tasks as taskService } from '@/services';
 import { weekStartDay } from '@/services/settings';
 import { dates, format } from '@/utils';
 import { isoStamp } from '@/utils/calendarGrid';
 import type { GoalNews, TaskTab } from '@/components/Dashboard';
 import type { NewTask } from '@/services/tasks';
-import type { Task } from '@/types';
+import type { Goal, Task } from '@/types';
 import '@/styles/dashboard.css';
 import '@/styles/dashboard-home.css';
 
@@ -94,8 +98,11 @@ export default function Dashboard() {
   const [news, setNews] = useState<GoalNews | null>(null);
 
   // Today is read once per render rather than per panel, so a page left open
-  // across midnight moves all of its cards over on the same tick.
-  const now = new Date();
+  // across midnight moves all of its cards over on the same tick — and it is
+  // a *ticking* clock rather than `new Date()` on render, so that promise is
+  // actually kept on a page nobody has touched since yesterday. It is also
+  // what counts the "up next" strip down.
+  const now = useNow();
   const todayIso = dates.isoDate(now);
   // The week the account counts in — Monday unless they have said Sunday.
   const opens = dates.startOfWeek(now, weekStartDay(prefs));
@@ -111,6 +118,31 @@ export default function Dashboard() {
   );
   const priorities = useMemo(() => topPriorities(buckets.today), [buckets.today]);
   const activity = useMemo(() => recentActivity(tasks), [tasks]);
+
+  /* Today as spans, for the "what now" strip. The clock above ticks each
+     minute, so the countdown counts down rather than standing still until
+     something else re-renders the page. */
+  const plan = useMemo(() => dayPlan(tasks, todayIso), [tasks, todayIso]);
+  const nowHour = useMemo(() => {
+    const hours = now.getHours() + now.getMinutes() / 60;
+    // The grid's day runs 6 AM to 5 AM — see `gridHour` in Dashboard/summary.
+    return hours < 6 ? hours + 24 : hours;
+  }, [now]);
+
+  /* The account's goals, for the card that says what the day's work is for.
+     Read once per account rather than with the task list: a goal is not a fact
+     about today, and the page's one big read is deliberately not made twice. */
+  const [goals, setGoals] = useState<Goal[]>([]);
+  useEffect(() => {
+    if (!username) return;
+    let live = true;
+    void goalService.getGoals().then((result) => {
+      if (live && result.success) setGoals(result.goals ?? []);
+    });
+    return () => {
+      live = false;
+    };
+  }, [username]);
 
   // ---- Reaching a goal ----------------------------------------------------
   /* The two figures the dashboard already draws against a target, watched for
@@ -444,6 +476,11 @@ export default function Dashboard() {
       {/* The focus panel is a preference too, and hiding it widens the task
           list rather than leaving a hole where it was — see `.is-solo` in
           styles/dashboard-home.css. */}
+      {/* What now — the one line on this page that is about the next hour
+          rather than about the day so far. Above the task list because that is
+          the order the questions arrive in. */}
+      <NextUp plan={plan} now={nowHour} />
+
       <div className={`dash-main${prefs.show_focus ? '' : ' is-solo'}`}>
         <TaskPanel
           buckets={buckets}
@@ -463,6 +500,7 @@ export default function Dashboard() {
       {prefs.show_insights && (
         <div className="dash-insights">
           <WeeklyOverview week={week} />
+          <GoalsCard goals={goals} />
           <TopPriorities tasks={priorities} />
           <RecentActivity entries={activity} />
         </div>

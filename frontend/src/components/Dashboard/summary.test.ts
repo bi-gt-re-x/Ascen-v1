@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { task } from '@/test/factories';
 import {
   bucketTasks,
+  dayPlan,
   daySummary,
   isCalendarTask,
   priorityMeta,
@@ -389,5 +390,117 @@ describe('isCalendarTask', () => {
   it('accepts the 1 that SQLite stores for a boolean', () => {
     const stored = task({ show_on_calendar: 1 as unknown as boolean, due_date: TODAY });
     expect(isCalendarTask(stored)).toBe(true);
+  });
+});
+
+// --------------------------------------------------------------------------
+// The day's shape
+// --------------------------------------------------------------------------
+/**
+ * `dayPlan` is the adapter that lets the dashboard ask `utils/dayShape` the
+ * questions a day poses. Two things about it are easy to get wrong and silent
+ * when they are: which work counts as *timed*, and which counts as *left*.
+ * They are deliberately different sets — a to-do nobody gave an hour to is
+ * still on your plate.
+ */
+describe('dayPlan', () => {
+  const TODAY = '2026-09-01';
+
+  it('turns a timed task into a span, start to end', () => {
+    const plan = dayPlan(
+      [task({
+        id: '1',
+        status: 'todo',
+        xp_value: 40,
+        created_at: `${TODAY}T09:00:00`,
+        due_date: `${TODAY}T11:30:00`,
+        title: 'Physics',
+      })],
+      TODAY,
+    );
+    expect(plan.spans).toHaveLength(1);
+    expect(plan.spans[0]).toMatchObject({ kind: 'task', start: 9, end: 11.5, title: 'Physics' });
+  });
+
+  it('gives a task with no length a nominal half hour', () => {
+    /* Both ends on the same minute is a point, and a point is a span the merge
+       in `dayShape` can never see. */
+    const plan = dayPlan(
+      [task({ id: '1', status: 'todo', created_at: `${TODAY}T14:00:00`, due_date: `${TODAY}T14:00:00` })],
+      TODAY,
+    );
+    expect(plan.spans[0]).toMatchObject({ start: 13.5, end: 14 });
+  });
+
+  it('counts an undated task as left over without giving it a span', () => {
+    const plan = dayPlan(
+      [task({ id: '1', status: 'todo', due_date: '', xp_value: 30 })],
+      TODAY,
+    );
+    expect(plan.spans).toEqual([]);
+    expect(plan.left).toBe(1);
+    expect(plan.xp).toBe(30);
+  });
+
+  it('leaves tomorrow’s work out of both', () => {
+    const plan = dayPlan(
+      [task({ id: '1', status: 'todo', due_date: '2026-09-02T09:00:00', xp_value: 30 })],
+      TODAY,
+    );
+    expect(plan.spans).toEqual([]);
+    expect(plan.left).toBe(0);
+  });
+
+  it('keeps an overdue task on today’s plate', () => {
+    /* The same rule `daySummary` applies: work that is past its date has not
+       stopped being work. It has no span on *today* though — its hour was
+       yesterday's. */
+    const plan = dayPlan(
+      [task({ id: '1', status: 'todo', due_date: '2026-08-30T09:00:00', xp_value: 45 })],
+      TODAY,
+    );
+    expect(plan.left).toBe(1);
+    expect(plan.xp).toBe(45);
+    expect(plan.spans).toEqual([]);
+  });
+
+  it('draws a finished task’s span but does not count it as left', () => {
+    const plan = dayPlan(
+      [task({
+        id: '1',
+        status: 'done',
+        xp_value: 60,
+        created_at: `${TODAY}T09:00:00`,
+        due_date: `${TODAY}T10:00:00`,
+        completed_at: `${TODAY}T10:00:00`,
+      })],
+      TODAY,
+    );
+    expect(plan.spans[0]).toMatchObject({ done: true, start: 9, end: 10 });
+    expect(plan.left).toBe(0);
+    expect(plan.xp).toBe(0);
+  });
+
+  it('puts the small hours at the end of the day, not the start', () => {
+    /* The grid's day runs 6 AM to 5 AM, so 1 AM is hour 25 — otherwise a task
+       at midnight would sort before breakfast and be "up next" all day. */
+    const plan = dayPlan(
+      [task({ id: '1', status: 'todo', created_at: `${TODAY}T00:30:00`, due_date: `${TODAY}T01:00:00` })],
+      TODAY,
+    );
+    expect(plan.spans[0]).toMatchObject({ start: 24.5, end: 25 });
+  });
+
+  it('adds up everything still to be earned', () => {
+    const plan = dayPlan(
+      [
+        task({ id: '1', status: 'todo', due_date: `${TODAY}T09:00:00`, xp_value: 30 }),
+        task({ id: '2', status: 'todo', due_date: '', xp_value: 45 }),
+        task({ id: '3', status: 'done', due_date: `${TODAY}T09:00:00`, completed_at: `${TODAY}T09:00:00`, xp_value: 90 }),
+      ],
+      TODAY,
+    );
+    expect(plan.left).toBe(2);
+    expect(plan.xp).toBe(75);
   });
 });

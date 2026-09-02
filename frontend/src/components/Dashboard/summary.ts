@@ -15,6 +15,7 @@
  */
 import { isCalendarPlaced } from '@/utils/calendarGrid';
 import type { Task, TaskPriority } from '@/types';
+import type { Spanned } from '@/utils/dayShape';
 
 /** The day part of a stored timestamp, or '' when there is not one. */
 function dayOf(stamp: string | undefined): string {
@@ -310,4 +311,87 @@ export function recentActivity(tasks: Task[], limit = 3): Activity[] {
     .filter((entry) => !Number.isNaN(entry.at.getTime()))
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, limit);
+}
+
+// --------------------------------------------------------------------------
+// The day's shape
+// --------------------------------------------------------------------------
+/**
+ * Today's work as spans, so `dayShape` can be asked about it.
+ *
+ * The dashboard has the same tasks the calendar draws and had no way to ask
+ * the questions a day poses — what is next, how much of the day is spoken for,
+ * what finishing the rest is worth. `utils/dayShape` answers all three and
+ * takes a structural type, so this is the whole of the adapter.
+ *
+ * Only work with a **time** takes part. A to-do nobody gave an hour to has no
+ * place in a day's shape: it is a list item, which is exactly the distinction
+ * `taskCalendarDay` draws for the calendar (utils/calendarIntensity). What is
+ * left over is still counted — see `left` and `xp` below, which are about
+ * every unfinished task on the day rather than the timed ones.
+ *
+ * Start comes from `created_at` and end from `due_date`, the same pair
+ * `dayEntries` reads for a card in the month panel (components/Calendar/entries).
+ * A task whose two ends land on the same minute is given a nominal half hour,
+ * so it is a span rather than a point the merge can never see.
+ */
+export interface DayPlan {
+  /** The timed work, for `dayShape`. Empty on a day with no times on it. */
+  spans: Spanned[];
+  /** Every unfinished task on today's plate, timed or not. */
+  left: number;
+  /** What finishing all of them is worth. */
+  xp: number;
+}
+
+/** A stamp as a grid hour, or null when it carries no usable time. */
+function gridHour(stamp: string | undefined): number | null {
+  if (!stamp) return null;
+  const at = new Date(stamp);
+  if (Number.isNaN(at.getTime())) return null;
+  const hours = at.getHours() + at.getMinutes() / 60;
+  // The grid's day runs 6 AM to 5 AM, so the small hours belong to the night
+  // before — the same wrap `minutesInGrid` applies in utils/calendarGrid.
+  return hours < 6 ? hours + 24 : hours;
+}
+
+/** The nominal length of a task whose start and end are the same moment. */
+const NOMINAL = 0.5;
+
+export function dayPlan(tasks: Task[], todayIso: string): DayPlan {
+  const spans: Spanned[] = [];
+  let left = 0;
+  let xp = 0;
+
+  tasks.forEach((task) => {
+    const due = dayOf(task.due_date);
+    if (task.status === 'done') {
+      if (dayOf(task.completed_at) !== todayIso) return;
+    } else if (task.status !== 'todo' || (due && due > todayIso)) {
+      return;
+    }
+
+    if (task.status !== 'done') {
+      left += 1;
+      xp += xpOf(task);
+    }
+
+    // Timed work only, and only where the time is actually today's.
+    if (due !== todayIso) return;
+    const end = gridHour(task.due_date);
+    if (end === null) return;
+    const started = dayOf(task.created_at) === todayIso ? gridHour(task.created_at) : null;
+    const start = started !== null && started < end ? started : end - NOMINAL;
+
+    spans.push({
+      kind: 'task',
+      start,
+      end,
+      done: task.status === 'done',
+      xp: xpOf(task),
+      title: task.title,
+    });
+  });
+
+  return { spans, left, xp };
 }
