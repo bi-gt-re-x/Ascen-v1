@@ -245,8 +245,24 @@ html[data-theme="dark"] .wk-event[data-family].is-overdue .wk-event-start {
 /* ==========================================================================
    Month view — the day panel's cards
    ========================================================================== */
+/* The subject's colour on a plan card is the left edge and nothing else.
+   It used to be the whole card — `--ev-bg` behind the text and `--ev-edge` all
+   the way round — which made twelve subjects twelve differently-tinted cards
+   stacked down a column, and the accent that was supposed to identify one
+   invisible against its own wash. The card is the app's neutral card now
+   (styles/calendar/month.css) and this is the one mark on it, which is how a
+   week-grid block and a tasks-page row have always carried theirs. */
 .task-section[data-family] {
+    /* `!important` for the same reason the neutraliser above it needs one: the
+       ported stylesheet writes `border-left: 5px solid …` on three of these
+       cards with `!important`, and an accent that loses to a legacy rule is an
+       accent that is there on some cards and not others. */
+    border-left-color: var(--ev-accent) !important;
+}
+/* The icon and the index chip pick the same hue up, so the card reads as one
+   thing rather than as a neutral box with a coloured stripe glued to it. */
+.task-section[data-family] .event-icon { border-color: var(--ev-edge); color: var(--ev-ink); }
+.task-section[data-family] .task-kind-badge {
     background: var(--ev-bg);
-    border-color: var(--ev-edge);
-    border-left-color: var(--ev-accent);
+    color: var(--ev-ink);
 }

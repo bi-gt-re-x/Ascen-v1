@@ -2292,52 +2292,87 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
    positioned absolutely so they never disturb the body flow.
    --fx-card-bg / --fx-card-border are kept because the light/dark theme
    overrides re-point them (see html[data-theme="light"] #dailyTasks below). */
+/* ---- A plan card ----------------------------------------------------------
+   The same card the rest of this page is built from: the surface, the hairline
+   and the soft shadow that `.mv-card`, `.wk-panel` and the overview tiles all
+   use. It was a heavy gradient before — near-black with a blue bloom in one
+   corner, and a tan-and-brown version of the same idea in light — which made
+   the one part of the page a reader spends the most time in the one part that
+   did not look like the app around it.
+
+   The subject's colour is still here and is now the only colour on the card: a
+   3px accent down the left edge, which is exactly how a block on the week grid
+   and a row on the tasks page already carry theirs. A card is neutral and its
+   edge says what it is about; before, the whole card was a wash and the edge
+   said nothing. */
 #dailyTasks .task-section {
-    --fx-card-bg:
-        radial-gradient(120% 150% at 0% 0%, rgba(74, 96, 148, 0.30) 0%, rgba(24, 27, 36, 0) 60%),
-        linear-gradient(160deg, #1c2029 0%, #12141b 100%);
-    --fx-card-border: rgba(255, 255, 255, 0.14);
+    --fx-card-border: var(--mv-line);
     position: relative;
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 16px;
     border-bottom: none;
     border: 1px solid var(--fx-card-border);
-    border-radius: 18px;
+    /* The accent is drawn as a border so the card keeps one box: an inset
+       shadow would sit under the rounded corner and a pseudo-element would
+       need its own radius to match. */
+    border-left: 3px solid var(--mv-line);
+    border-radius: 16px;
     /* The right gutter used to be 62px, held open for a badge that floated
        over the card. The badge is in the foot's row now and only the ⋮ needs
        clearing, which is 40px of it. */
-    padding: 16px 40px 16px 20px;
-    background: var(--fx-card-bg);
-    color: #eef0f6;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42);
+    padding: 15px 40px 15px 18px;
+    background: var(--mv-surface);
+    color: var(--mv-ink);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 6px 18px rgba(16, 24, 40, .05);
+    transition: border-color .15s ease, box-shadow .15s ease;
 }
-/* Neutralise every legacy colour-coded background (difficulty / event / done)
-   so all cards share the one futuristic style. !important beats the old rules. */
+#dailyTasks .task-section:hover {
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 10px 24px rgba(16, 24, 40, .08);
+}
+/* Neutralise the legacy colour-coded backgrounds (difficulty / event / done).
+   They are written with `!important` in the ported stylesheet above, so this
+   has to be as well; without it a task card is still tinted blue by a rule
+   from the vanilla app. */
 #dailyTasks .task-section.dashboard-task.priority-high,
 #dailyTasks .task-section.dashboard-task.priority-medium,
 #dailyTasks .task-section.dashboard-task.priority-low,
 #dailyTasks .task-section.dashboard-task.task-completed,
 #dailyTasks .task-section.task-completed,
 #dailyTasks .task-section.calendar-event {
-    background: var(--fx-card-bg) !important;
-    border: 1px solid var(--fx-card-border) !important;
+    background: var(--mv-surface) !important;
+    /* Three sides, not the shorthand. `border-color` would set the left edge
+       too, and with `!important` on it nothing could paint the accent —
+       including styles/calendar/palette.css, which is loaded last precisely so
+       that it can. */
+    border-top-color: var(--fx-card-border) !important;
+    border-right-color: var(--fx-card-border) !important;
+    border-bottom-color: var(--fx-card-border) !important;
+    border-left-width: 3px !important;
     opacity: 1 !important;
 }
+/* A finished card steps back. Not dimmed — the times and the green still have
+   to read — but it stops competing with the thing still to be done, which is
+   the only card on the list anybody needs to find. Its shadow goes and its
+   title softens; the surface stays, because a second background would be a
+   third state to tell apart at a glance and the green already says this one. */
+#dailyTasks .task-section.task-completed { box-shadow: none; }
+#dailyTasks .task-section.task-completed .task-title { color: var(--mv-ink-soft); }
 
 /* Round clock icon — events only (tasks show the TASK label instead) */
 #dailyTasks .event-icon {
     flex: 0 0 auto;
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(255, 255, 255, 0.30);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--mv-line);
+    background: var(--mv-surface-soft);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #c7c9d3;
+    color: var(--mv-ink-soft);
 }
-#dailyTasks .event-icon svg { width: 26px; height: 26px; }
+#dailyTasks .event-icon svg { width: 20px; height: 20px; }
 
 /* Card body: tags → title → time, stacked */
 #dailyTasks .card-body {
@@ -2356,8 +2391,8 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     margin-bottom: 4px;
 }
 #dailyTasks .task-kind-badge {
-    background: rgba(0, 0, 0, 0.28);
-    color: #c9cbd6;
+    background: var(--mv-surface-soft);
+    color: var(--mv-ink-soft);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -2414,7 +2449,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     text-overflow: ellipsis;
 }
 #dailyTasks .task-input::placeholder,
-#dailyTasks .task-input-inline::placeholder { color: rgba(255, 255, 255, 0.4); }
+#dailyTasks .task-input-inline::placeholder { color: var(--mv-ink-faint); }
 
 /* ---- The card's foot ------------------------------------------------------
    The times on the left and what to do about it on the right, as one row.
@@ -2448,7 +2483,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     gap: 9px;
     font-size: 14px;
     font-weight: 500;
-    color: #9a9ca6;
+    color: var(--mv-ink-soft);
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
@@ -2456,7 +2491,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
 #dailyTasks .task-section .timestamp-section input[type="time"] {
     background: transparent;
     border: none;
-    color: #9a9ca6 !important;
+    color: var(--mv-ink-soft) !important;
     opacity: 1;
     font-weight: 500;
     font-size: 14px;
@@ -2465,7 +2500,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     padding: 0;
 }
 #dailyTasks .task-section .timestamp-section input[type="time"]:disabled { opacity: 1; }
-#dailyTasks .timestamp-section span { color: #9a9ca6; font-weight: 500; }
+#dailyTasks .timestamp-section span { color: var(--mv-ink-soft); font-weight: 500; }
 
 /* Subtasks removed from the calendar entirely */
 #dailyTasks .subtasks-list,
@@ -2479,7 +2514,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
 #dailyTasks .card-menu-btn {
     background: transparent;
     border: none;
-    color: #b6b8c2;
+    color: var(--mv-ink-faint);
     font-size: 20px;
     line-height: 1;
     width: 28px;
@@ -2491,17 +2526,17 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     justify-content: center;
     transition: background 0.15s ease, color 0.15s ease;
 }
-#dailyTasks .card-menu-btn:hover { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
+#dailyTasks .card-menu-btn:hover { background: var(--mv-surface-soft); color: var(--mv-ink); }
 #dailyTasks .card-menu {
     display: none;
     position: absolute;
     top: 32px;
     right: 0;
     min-width: 132px;
-    background: #20242e;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--mv-surface);
+    border: 1px solid var(--mv-line);
     border-radius: 12px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 30px rgba(16, 24, 40, .16);
     padding: 6px;
     z-index: 20;
 }
@@ -2512,7 +2547,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     text-align: left;
     background: transparent;
     border: none;
-    color: #e7e8ee;
+    color: var(--mv-ink);
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     font-size: 14px;
     font-weight: 500;
@@ -2520,7 +2555,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     border-radius: 8px;
     cursor: pointer;
 }
-#dailyTasks .card-menu-item:hover { background: rgba(255, 255, 255, 0.1); }
+#dailyTasks .card-menu-item:hover { background: var(--mv-surface-soft); }
 
 /* "Completed", on the right of the card's foot. Green rather than grey: it is
    the one word on a card that reports a result, and a result said in the same
@@ -2532,7 +2567,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     gap: 7px;
     background: transparent;
     border: none;
-    color: #3fb950;
+    color: var(--mv-good);
     text-transform: none;
     font-weight: 700;
     font-size: 13px;
@@ -2545,7 +2580,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     height: 18px;
     padding: 2px;
     border-radius: 50%;
-    background: #2ea043;
+    background: var(--mv-good);
     color: #ffffff;
     box-sizing: border-box;
 }
@@ -2555,11 +2590,11 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
    complete" hint in the very spot the "Completed" badge will occupy once it is
    done, and hovering the title itself turns it green — so the affordance is
    where the pointer already is, and the result is where the eye already looks. */
-#dailyTasks .task-section.can-complete .task-input-inline {
+#dailyTasks .task-section.can-complete .task-title {
     cursor: pointer;
     transition: color 0.15s ease;
 }
-#dailyTasks .task-section.can-complete .task-input-inline:hover { color: #3fb950 !important; }
+#dailyTasks .task-section.can-complete .task-title:hover { color: var(--mv-good); }
 /* The hint keeps the slot the badge will occupy once the task is done, so the
    card does not change shape at the moment it is finished. `visibility` rather
    than `display`, for the same reason: a hidden hint still holds the width. */
@@ -2568,7 +2603,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    color: #9a9ca6;
+    color: var(--mv-ink-soft);
     font-weight: 600;
     font-size: 13px;
     white-space: nowrap;
@@ -2830,41 +2865,11 @@ html[data-theme="light"] #dailyTasks::-webkit-scrollbar-thumb {
     background: rgba(16, 24, 40, 0.18);
 }
 
-/* Warm brown/black plan cards on the light surface — a tan fill with a brown
-   border and near-black text, so events read as brown, not plain white. */
-html[data-theme="light"] #dailyTasks .task-section {
-    --fx-card-bg: linear-gradient(160deg, #f7f0e4 0%, #eadfca 100%);
-    --fx-card-border: #6b5030;
-    color: #2c2013;
-    box-shadow: 0 6px 18px rgba(74, 56, 38, 0.20);
-}
-
-
-/* Card chrome (icon ring, TASK label, ⋮ menu, times) in warm brown/black */
-html[data-theme="light"] #dailyTasks .event-icon { border-color: #6b5030; color: #5c4227; }
-html[data-theme="light"] #dailyTasks .task-kind-badge {
-    background: rgba(92, 66, 39, 0.16);
-    color: #4a3826;
-    border: 1px solid rgba(74, 56, 38, 0.35);
-}
-html[data-theme="light"] #dailyTasks .task-section .timestamp-section input[type="time"],
-html[data-theme="light"] #dailyTasks .timestamp-section span,
-html[data-theme="light"] #dailyTasks .task-times,
-html[data-theme="light"] #dailyTasks .complete-hint { color: #7a6650 !important; }
-/* Completed keeps its green on the warm card. It is the one word here that is
-   a result rather than a detail, and the brown the rest of the chrome takes
-   would bury it. */
-html[data-theme="light"] #dailyTasks .completed-badge { color: #2e7d52; }
-html[data-theme="light"] #dailyTasks .task-section.can-complete .task-input-inline:hover { color: #2e7d52 !important; }
-html[data-theme="light"] #dailyTasks .card-menu-btn { color: #5c4630; }
-html[data-theme="light"] #dailyTasks .card-menu-btn:hover { background: rgba(92, 66, 39, 0.16); color: #2c2013; }
-html[data-theme="light"] #dailyTasks .card-menu {
-    background: #f7f0e4;
-    border-color: #6b5030;
-    box-shadow: 0 12px 30px rgba(74, 56, 38, 0.28);
-}
-html[data-theme="light"] #dailyTasks .card-menu-item { color: #2c2013; }
-html[data-theme="light"] #dailyTasks .card-menu-item:hover { background: rgba(92, 66, 39, 0.14); }
+/* The warm brown/black plan cards are gone, and with them every override that
+   dressed them: a tan gradient, a #6b5030 border, brown chrome, brown text.
+   The card is the app’s own card now and every colour on it comes from the
+   same `--mv-*` tokens the rest of this view uses, so there is nothing left
+   for a theme to correct — see the note on `#dailyTasks .task-section`. */
 
 html[data-theme="light"] .task-counter {
     background: rgba(92, 66, 39, 0.08);
@@ -4168,9 +4173,14 @@ html[data-theme="light"] .mv-side .calendar-bottom-box h3 {
 .mv-side .daily-focus-holder { margin-bottom: 14px; }
 
 /* ---- Monthly Overview: four tiles --------------------------------------- */
+/* Two by two, not four across.
+   Four tiles in a column this narrow gave each about seventy pixels, which is
+   not a tile — it is a column of wrapped fragments: "Focus / Time", "13 / /
+   333", "of 1h 30m / planned". Two rows give each tile twice the width, every
+   label its own line, and the figures room to be read as figures. */
 .mv-tiles {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
 .mv-tile {
@@ -4348,7 +4358,6 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
 @media (max-width: 860px) {
     .mv-header { flex-wrap: wrap; }
     .mv-headtools { margin-left: 0; }
-    .mv-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .mv-summary-figs { width: 100%; }
     .mv-summary-fig:first-child { padding-left: 0; border-left: none; }
     .mv-topday-name { width: auto; }
@@ -4379,21 +4388,21 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
 .mv-fig-value { font-size: 19px; }
 .mv-fig-label { font-size: 12px; }
 
-/* The tiles are four across in a column that is not always four tiles wide.
-   Ellipsising the labels lost the word that identified the tile ("Focus Ti…"),
-   so they wrap instead: a two-line label is still a label. */
-.mv-tiles { gap: 8px; }
-.mv-tile { padding: 11px 10px; }
-.mv-tile-label,
+/* Two across in this column is enough width for a label to stay on one line
+   and a figure to stay whole, so nothing has to wrap or ellipsise any more —
+   which is what the four-across layout spent all its rules on. The `sub` is
+   the one line long enough to still need wrapping ("of 1h 30m planned"). */
+.mv-tiles { gap: 9px; }
+.mv-tile { padding: 13px 14px; }
 .mv-tile-sub {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
-    line-height: 1.25;
+    line-height: 1.3;
 }
-.mv-tile-label { font-size: 11px; }
-.mv-tile-value { font-size: 16px; }
-.mv-tile-sub { font-size: 10.5px; }
+.mv-tile-label { font-size: 12px; }
+.mv-tile-value { font-size: 20px; }
+.mv-tile-sub { font-size: 11px; }
 
 /* The plan cards are in a narrower column than the one they were drawn for, so
    the type comes down a size. Nothing has to be reserved for the badge any
