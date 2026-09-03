@@ -4981,3 +4981,132 @@ body:has(.ax-page) .app-main {
     .ax-summary-how > summary::before,
     .ax-summary-more { transition: none; }
 }
+
+/* ---------- The Growth tab's year table ------------------------------------
+   Six-ish rows of nine figures, compared across two axes at once, which is the
+   one job a table does better than any picture. The rules here are about
+   making a dense grid scannable rather than about decorating it: the year is a
+   row header and holds its column, the figures are tabular so the digits line
+   up down the page, and execution — the column the tab's whole argument rests
+   on — is the only one given ink.
+
+   `--ax-gy-min` keeps the table from crushing its columns on a narrow screen;
+   below that width the wrapper scrolls rather than the page doing so, which is
+   the rule every wide block on this page follows. */
+.ax-gy-scroll {
+    overflow-x: auto;
+    margin-top: 4px;
+}
+
+.ax-gy {
+    --ax-gy-min: 620px;
+    width: 100%;
+    min-width: var(--ax-gy-min);
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.ax-gy th,
+.ax-gy td {
+    padding: 9px 10px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* The year, and the only column that is words rather than figures. */
+.ax-gy thead th:first-child,
+.ax-gy tbody th {
+    text-align: left;
+}
+
+.ax-gy thead th {
+    padding-top: 0;
+    border-bottom: 1px solid var(--ax-line);
+    color: var(--ax-faint);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.ax-gy tbody tr + tr th,
+.ax-gy tbody tr + tr td {
+    border-top: 1px solid var(--ax-line-soft);
+}
+
+.ax-gy tbody th {
+    color: var(--ax-text);
+    font-weight: 700;
+}
+
+.ax-gy tbody td {
+    color: var(--ax-muted);
+    /* Digits in a column are compared down, not read across, so they are set
+       to one width. Proportional figures make a column of numbers ragged and
+       the comparison the table exists for harder than it needs to be. */
+    font-variant-numeric: tabular-nums;
+}
+
+/* The column the tab's argument rests on. */
+.ax-gy tbody td.is-lead {
+    color: var(--ax-text);
+    font-weight: 700;
+}
+
+/* A year the account was present for and did nothing in. Kept, because a gap
+   in the middle of a record is a fact about it, and set back because it is not
+   a reading. */
+.ax-gy tbody tr.is-quiet th,
+.ax-gy tbody tr.is-quiet td {
+    color: var(--ax-faint);
+}
+
+/* Marked rather than dropped: its totals are real and lower than a whole
+   year's, and nothing else on the row says which. */
+.ax-gy-part {
+    display: inline-block;
+    margin-left: 7px;
+    padding: 1px 7px;
+    border: 1px solid var(--ax-line);
+    border-radius: 999px;
+    color: var(--ax-faint);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: none;
+}
+
+/* The three readings under the standing panel. A definition list's shape
+   without the markup: label left, figure right, one per row. */
+.ax-gy-notes {
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+}
+
+.ax-gy-notes li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    font-size: 13px;
+}
+
+.ax-gy-notes li + li {
+    border-top: 1px solid var(--ax-line-soft);
+}
+
+.ax-gy-notes span { color: var(--ax-muted); }
+
+.ax-gy-notes strong {
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.ax-gy-notes em {
+    color: var(--ax-faint);
+    font-style: normal;
+    font-weight: 500;
+}

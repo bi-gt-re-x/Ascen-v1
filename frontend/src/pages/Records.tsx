@@ -49,10 +49,13 @@
  * reads as a table. Nothing moves under `prefers-reduced-motion` — see
  * hooks/useCountUp.
  *
- * **Why this is not the analytics tab.** The Records tab under Analytics
- * (components/Growth/BenchmarksChapter) is about *standing*: where the last
- * thirty days rank against every other thirty. This page is about the high
- * scores themselves. Both read the same history and ask different things of it.
+ * **Why this is not the analytics page.** There was a Records tab under
+ * Analytics, about *standing*: where the last thirty days rank against every
+ * other thirty. It is the Growth tab now
+ * (components/Analytics/tabs/GrowthTab), which asks how far the account has
+ * come across its whole life and kept that percentile as one panel. This page
+ * is about the high scores themselves. All three read the same history and ask
+ * different things of it.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { ErrorState, Loading } from '@/components';

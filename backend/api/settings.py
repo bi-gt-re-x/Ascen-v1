@@ -200,7 +200,7 @@ FIELDS: Dict[str, Any] = {
     #: Which tab the page opens on. The same seven keys as VIEWS in
     #: frontend/src/components/Analytics/Header.tsx.
     'analytics_home_tab': ('overview', _one_of('recommendations', 'overview', 'goals',
-                                               'habits', 'insights', 'subjects', 'records')),
+                                               'habits', 'insights', 'subjects', 'growth')),
     #: How the account records work, and therefore which figure leads the row
     #: of tiles: the tasks it finished, the hours it sat, or both.
     'analytics_log_style': ('both', _one_of('tasks', 'sessions', 'both')),
@@ -277,6 +277,24 @@ def _inherited(username, key):
     return 'none' if str(old).lower() in ('0', 'false', '') else 'ratings'
 
 
+#: Stored values that named something which has since been renamed.
+#:
+#: Nothing here validates a stored value on the way out — a setting written
+#: when it was legal keeps coming back after the allowed set changes, which is
+#: usually harmless and once was not. The analytics page's Records tab became
+#: Growth, and an account that had chosen Records as its opening tab would ask
+#: for a tab that no longer exists: the page itself shrugs and opens on the
+#: Overview, but the picker in Settings would have shown an empty box.
+#:
+#: Mapped on read rather than migrated in place, because a rename is a fact
+#: about this release and not about the account's data, and because the write
+#: path above already refuses the old spelling — so this only ever has to hold
+#: for values stored before the rename.
+ALIASES = {
+    'analytics_home_tab': {'records': 'growth'},
+}
+
+
 def _keyed(username):
     """The user_settings half, defaults filled in and types made honest.
 
@@ -285,6 +303,8 @@ def _keyed(username):
     the browser, and a toggle bound to it would read as on forever. Anything
     whose default is a bool is coerced back to one here, so what leaves this
     module is the type the page thinks it is getting.
+
+    Renamed values are translated on the way out; see ALIASES.
     """
     out = {}
     for key, (fallback, _) in FIELDS.items():
@@ -294,7 +314,7 @@ def _keyed(username):
         elif isinstance(fallback, bool):
             out[key] = str(stored).lower() not in ('0', 'false', '')
         else:
-            out[key] = stored
+            out[key] = ALIASES.get(key, {}).get(stored, stored)
     return out
 
 

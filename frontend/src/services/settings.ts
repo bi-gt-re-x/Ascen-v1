@@ -38,7 +38,7 @@ export type AnalyticsHomeTab =
   | 'habits'
   | 'insights'
   | 'subjects'
-  | 'records';
+  | 'growth';
 export type LogStyle = 'tasks' | 'sessions' | 'both';
 export type AnalyticsTone = 'gentle' | 'balanced' | 'harsh';
 export type AnalyticsDetail = 'essentials' | 'standard' | 'everything';

@@ -24,7 +24,7 @@ export type ViewKey =
   | 'habits'
   | 'insights'
   | 'subjects'
-  | 'records';
+  | 'growth';
 
 export interface View {
   key: ViewKey;
@@ -126,15 +126,28 @@ export const VIEWS: View[] = [
     title: 'Subjects',
   },
   {
-    key: 'records',
-    label: 'Records',
-    // A level down from `/records`, which is the Records page now — see the
-    // note beside the route in App.tsx. This tab is about *standing*: where the
-    // last thirty days rank, how the goals with deadlines are pacing, which
-    // round numbers are cleared. The page is about the high scores themselves.
-    path: '/analytics/records',
-    purpose: 'How far along you are, against your own record and the goals you set.',
-    title: 'Records',
+    key: 'growth',
+    label: 'Growth',
+    /*
+     * This slot was Records, and the question changed rather than the answer
+     * being rearranged.
+     *
+     * That tab asked where the last thirty days *stand* — a percentile against
+     * every other thirty, a pace on each dated goal, a ladder of round
+     * numbers. Two of those three had a better home already: goal pacing is
+     * the Goals tab's whole job, and the round numbers are what the /records
+     * page is for. Only the percentile was a statement about the account over
+     * time rather than about this month, and it came across to this tab.
+     *
+     * `/analytics/records` redirects here rather than 404ing, for the reason
+     * `/trends` redirects to `/analytics/goals`: it was a tab with its own URL
+     * for long enough to be bookmarked. Note that `/growth` — the old
+     * server-rendered path — still redirects to `/analytics`, so the short
+     * path and the tab named Growth are not the same destination.
+     */
+    path: '/analytics/growth',
+    purpose: 'How far you have actually come — every year side by side, and what changed.',
+    title: 'Growth',
   },
 ];
 

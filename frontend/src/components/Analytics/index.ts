@@ -183,5 +183,5 @@ export { GoalsTab } from './tabs/GoalsTab';
 export { HabitsTab } from './tabs/HabitsTab';
 export { InsightsTab } from './tabs/InsightsTab';
 export { RecommendationsTab } from './tabs/RecommendationsTab';
-export { RecordsTab } from './tabs/RecordsTab';
+export { GrowthTab } from './tabs/GrowthTab';
 export { SubjectsTab } from './tabs/SubjectsTab';

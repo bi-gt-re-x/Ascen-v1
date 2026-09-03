@@ -115,7 +115,7 @@ import {
   InsightsTab,
   OverviewTab,
   RecommendationsTab,
-  RecordsTab,
+  GrowthTab,
   scoreMovement,
   SubjectsTab,
   Summary,
@@ -446,13 +446,12 @@ export default function Analytics() {
             <strong>{breakdown.rows[0]!.label}</strong> is the furthest along.
           </TabOpening>
         ) : null;
-      case 'records':
-        return streak > 0 ? (
-          <TabOpening tone="up">
-            You are <strong>{streak}</strong> {streak === 1 ? 'day' : 'days'} into the current
-            streak.
-          </TabOpening>
-        ) : null;
+      case 'growth':
+        /* Nothing. This is the one tab whose opening line is the reading
+           itself — `growthArc`, drawn by the tab — and a streak count above it
+           would be a second, shorter, unrelated headline competing with the
+           sentence the whole page exists to state. */
+        return null;
       default:
         return null;
     }
@@ -519,7 +518,7 @@ export default function Analytics() {
         {view.key === 'insights' && <InsightsTab model={model} />}
         {view.key === 'recommendations' && <RecommendationsTab model={model} data={data} />}
         {view.key === 'subjects' && <SubjectsTab model={model} subjects={subjects} />}
-        {view.key === 'records' && <RecordsTab model={model} data={data} />}
+        {view.key === 'growth' && <GrowthTab model={model} />}
           </>
         )}
       </div>

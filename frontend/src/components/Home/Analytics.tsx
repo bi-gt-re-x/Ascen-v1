@@ -143,9 +143,10 @@ const RING_END = round2(RING_LEN * (1 - SCORE / SCORE_SCALE));
  * when clicked. Every other feature on this page hands the reader to the page
  * it is describing; these are the same promise and now keep it.
  *
- * **The third tab said Trends.** It was renamed to Goals when the growth page
- * was folded into this one (see VIEWS in components/Analytics/Header), and this
- * copy of the list did not hear about it — so the landing page was advertising
+ * **This list has drifted twice.** The third tab said Trends after it was
+ * renamed to Goals, and the seventh said Records after that slot became Growth
+ * (see VIEWS in components/Analytics/Header). The first time, this copy of the
+ * list did not hear about it — so the landing page was advertising
  * a tab by a name the app had stopped using, which is exactly the "tour of
  * features the app does not have" the note at the top of this file warns
  * against. The list is still written out here rather than imported from VIEWS,
@@ -162,7 +163,7 @@ const TABS = [
   { label: 'Habits', to: '/habits' },
   { label: 'Insights', to: '/insights' },
   { label: 'Subjects', to: '/subjects' },
-  { label: 'Records', to: '/analytics/records' },
+  { label: 'Growth', to: '/analytics/growth' },
 ] as const;
 
 /** Long enough to read as counting rather than snapping; the shapes' own time. */

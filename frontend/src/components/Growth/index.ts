@@ -29,7 +29,5 @@ export { FocusChapter } from './FocusChapter';
 export type { FocusChapterProps } from './FocusChapter';
 export { SkillsChapter } from './SkillsChapter';
 export type { SkillsChapterProps } from './SkillsChapter';
-export { BenchmarksChapter } from './BenchmarksChapter';
-export type { BenchmarksChapterProps } from './BenchmarksChapter';
 /** What the chapters share — see the note at the top of GrowthPanels. */
 export { CountValue, Glyph, Hint } from './GrowthPanels';
