@@ -23,6 +23,7 @@
  * to pass is the one callback that opens a screen the page owns.
  */
 import { Link } from 'react-router-dom';
+import { PanelGroup } from '../charts';
 import {
   BaselinePanel,
   Collecting,
@@ -357,84 +358,120 @@ export function OverviewTab({
         )}
       </section>
 
-      {/* Quality, in full, directly under the tile that states it in one
-          number. It sits here rather than on a tab of its own because it is one
-          of the three measures this tab now leads with, and because it is the
-          only one whose figure the app did not measure — the reader did. Two
-          panels: what they said, and where the tasks they said it about
-          actually landed. Both are self-effacing when nothing has been rated;
-          see components/Analytics/Quality. */}
-      {judgement && detail.quality && (
-      <section className="ax-section ax-grid ax-grid-halves-even">
-        <QualityPanel
-          summary={qualitySummary}
-          findings={ratingRows}
-          bands={ratingBands}
-          span={spanText}
-          depth={ratingDepth}
-          aside={<DepthPicker value={ratingDepth} onPick={setDepth} />}
-        />
-        <QualityGridPanel cells={ratingGrid} summary={qualitySummary} depth={ratingDepth} />
-      </section>
-      )}
+      {/*
+        The detail, in named groups the reader opens.
 
-      {/* Consistency and streaks are counts of this account's own days and
-          belong to `trends`. Standing is a placement against everybody else,
-          which is the most confident claim on the page — it waits. Three
-          columns with the third missing would leave a gap, so the grid narrows
-          with it. */}
-      <section
-        id="standing"
-        className={`ax-section ax-grid ${
-          judgement && showStanding ? 'ax-grid-three' : 'ax-grid-halves-even'
-        }`}
-      >
-        <ConsistencyPanel
-          rate={rhythmRate.rate}
-          previousRate={rhythmRate.previousRate}
-          rows={heatRows}
-          compareLabel={compareLabel}
-        />
-        <StreaksPanel
-          current={account.data?.stats?.current_streak ?? 0}
-          best={account.data?.stats?.best_streak ?? 0}
-          bestMonth={rhythmRate.bestMonth}
-        />
-        {/* Two conditions, and they refuse for different reasons. The stage
-            holds it back because a percentile is the most confident claim the
-            page makes and a fortnight is the floor for making it; the
-            preference holds it back because some readers do not want to be
-            ranked against strangers at all, which is a different question and
-            is theirs to answer. See `analytics_standing`. */}
-        {judgement && showStanding && <StandingPanel standing={standing.data ?? null} />}
-      </section>
+        Everything above this point is the tab's answer to "how am I doing":
+        what moved, the trajectory, the score, and the target all of it is
+        measured against. Everything below is the follow-up question, and there
+        were four rows of it — quality in two panels, consistency and streaks
+        and the percentile, the two tallies, and the extras an account asked to
+        have here — all at the same weight as the answer, all needing to be
+        scrolled past by a reader who only wanted the answer.
 
-      {/* The two tallies stay until Habits can do the stronger version of the
-          same question. Tied to that tab's own gate rather than to a stage, so
-          there is never a stretch where the page has stopped answering "when
-          do you work" and nothing else has started. */}
-      {waitFor('habits') > 0 && detail.tallies && (
-        <section className="ax-section ax-grid ax-grid-halves-even">
-          <WhenPanel parts={partsOfDay(tasks, fromIso, toIso)} days={maturity.activeDays} />
-          <FinishPanel tasks={tasks} days={maturity.activeDays} />
-        </section>
-      )}
+        **All four start shut, which is not what Insights does.** There the
+        three groups *are* the tab, so one has to be open or the tab reads as
+        broken; here they sit under a screen of tiles, a chart and a baseline,
+        so a row of shut headings reads as what it is — more, if you want it.
+        Each states what it holds in a line that stays visible whether it is
+        open or not, which is the part that makes a closed group an offer
+        rather than a locked door.
 
-      {/* The two panels an account on 'everything' asked to have here rather
-          than a tab away. Both are already computed for the tabs that own them
-          — Subjects draws the split in full, Insights draws the findings — so
-          this costs no request and no second arithmetic, which is the only
-          reason repeating a panel is acceptable at all. */}
-      {detail.extras && (
-        <>
-          <section className="ax-section">
+        `#trajectory` deliberately stays outside: `Summary` links to it from
+        three of its rows (see Summary.tsx), and an anchor that lands on a
+        collapsed section is a link that appears to do nothing.
+      */}
+      <section id="standing" className="ax-section">
+        {/* Quality is the only one of the three measures this tab leads with
+            whose figure the app did not produce — the reader did. Two panels:
+            what they said, and where the tasks they said it about landed. Both
+            are self-effacing when nothing has been rated; see
+            components/Analytics/Quality. */}
+        {judgement && detail.quality && (
+          <PanelGroup
+            title="Quality"
+            note="What your ratings said, and where those tasks landed"
+          >
+            <div className="ax-grid ax-grid-halves-even">
+              <QualityPanel
+                summary={qualitySummary}
+                findings={ratingRows}
+                bands={ratingBands}
+                span={spanText}
+                depth={ratingDepth}
+                aside={<DepthPicker value={ratingDepth} onPick={setDepth} />}
+              />
+              <QualityGridPanel cells={ratingGrid} summary={qualitySummary} depth={ratingDepth} />
+            </div>
+          </PanelGroup>
+        )}
+
+        {/* Consistency and streaks are counts of this account's own days and
+            belong to `trends`. Standing is a placement against everybody else,
+            which is the most confident claim on the page — it waits. Three
+            columns with the third missing would leave a gap, so the grid
+            narrows with it. */}
+        <PanelGroup
+          title="Consistency and standing"
+          note="How often you show up, and how that compares"
+        >
+          <div
+            className={`ax-grid ${
+              judgement && showStanding ? 'ax-grid-three' : 'ax-grid-halves-even'
+            }`}
+          >
+            <ConsistencyPanel
+              rate={rhythmRate.rate}
+              previousRate={rhythmRate.previousRate}
+              rows={heatRows}
+              compareLabel={compareLabel}
+            />
+            <StreaksPanel
+              current={account.data?.stats?.current_streak ?? 0}
+              best={account.data?.stats?.best_streak ?? 0}
+              bestMonth={rhythmRate.bestMonth}
+            />
+            {/* Two conditions, and they refuse for different reasons. The stage
+                holds it back because a percentile is the most confident claim
+                the page makes and a fortnight is the floor for making it; the
+                preference holds it back because some readers do not want to be
+                ranked against strangers at all, which is a different question
+                and is theirs to answer. See `analytics_standing`. */}
+            {judgement && showStanding && <StandingPanel standing={standing.data ?? null} />}
+          </div>
+        </PanelGroup>
+
+        {/* The two tallies stay until Habits can do the stronger version of the
+            same question. Tied to that tab's own gate rather than to a stage, so
+            there is never a stretch where the page has stopped answering "when
+            do you work" and nothing else has started. */}
+        {waitFor('habits') > 0 && detail.tallies && (
+          <PanelGroup
+            title="When you work"
+            note="Time of day, and how your sessions end"
+          >
+            <div className="ax-grid ax-grid-halves-even">
+              <WhenPanel parts={partsOfDay(tasks, fromIso, toIso)} days={maturity.activeDays} />
+              <FinishPanel tasks={tasks} days={maturity.activeDays} />
+            </div>
+          </PanelGroup>
+        )}
+
+        {/* The two panels an account on 'everything' asked to have here rather
+            than a tab away. Both are already computed for the tabs that own them
+            — Subjects draws the split in full, Insights draws the findings — so
+            this costs no request and no second arithmetic, which is the only
+            reason repeating a panel is acceptable at all. */}
+        {detail.extras && (
+          <PanelGroup
+            title="Subjects and findings"
+            note="The split by subject, and what the record suggests"
+          >
             <SubjectPanel rows={breakdown.rows} previous={previousBySubject} />
-          </section>
-          <section className="ax-section">
             <InsightsPanel insights={insights} />
-          </section>
-        </>
-      )}
+          </PanelGroup>
+        )}
+      </section>
 
       <WhereNext />
     </>

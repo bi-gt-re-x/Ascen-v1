@@ -17,109 +17,19 @@
  * pinning is what they do with a given set of figures, and building the real
  * model would mean fabricating a year of day series to move one number.
  */
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
-import type { ReactElement } from 'react';
+import { screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { HabitsTab } from './HabitsTab';
 import { InsightsTab } from './InsightsTab';
 import { RecommendationsTab } from './RecommendationsTab';
 import { SubjectsTab } from './SubjectsTab';
 import { NEED_DAYS } from '../useAnalyticsModel';
-import { TONE_RULES } from '@/utils/analyticsPrefs';
-import { balanceShape, clockShape, rhythmShape, weekShape } from '@/utils/behaviour';
+/* The model these are driven from — see ./fixtures, which gates.test.tsx used
+   to hold and ./groups.test.tsx now needs too. */
+import { draw, fakeData, fakeModel, nameOf, subjects } from './fixtures';
 import { buildHabits, habitSummary } from '@/utils/habits';
-import { currentState } from '@/utils/insight';
-import { summariseRatings, summariseReasons } from '@/utils/ratings';
 import { reviewAdopted, summarise } from '@/utils/followup';
 import { days, task } from '@/test/factories';
-import type { AnalyticsData } from '../useAnalyticsData';
-import type { AnalyticsModel } from '../useAnalyticsModel';
-
-const nameOf = (id: string) => id;
-
-/*
- * The empty shapes come from the real constructors rather than from literals.
- *
- * `weekShape([])` is what the page hands these panels on an account with no
- * record, so it is the honest empty value — and, unlike a hand-written object,
- * it cannot fall out of step with the type when a field is added to it.
- */
-const EMPTY = {
-  week: weekShape([]),
-  clock: clockShape([]),
-  rhythm: rhythmShape([]),
-  balance: balanceShape([], nameOf, '', ''),
-  qualitySummary: summariseRatings([], '', ''),
-  reasons: summariseReasons([], '', ''),
-};
-
-/**
- * A model with every figure empty, and the gates open.
- *
- * `historyDays` is the one knob most of these tests turn. `waitFor` is derived
- * from it here exactly as the real model derives it, so a test that sets
- * `historyDays` gets a consistent answer from both.
- */
-function fakeModel(over: Partial<AnalyticsModel> = {}): AnalyticsModel {
-  const historyDays = over.historyDays ?? 400;
-  const base = {
-    historyDays,
-    waitFor: (key: keyof typeof NEED_DAYS) => Math.max(0, NEED_DAYS[key] - historyDays),
-    streak: 0,
-    all: [],
-    tasks: [],
-    slice: { current: [], previous: [] },
-    toIso: '2026-08-01',
-    spanText: 'the last 90 days',
-    span: '90',
-    // Habits
-    habits: [],
-    byDate: new Map(),
-    patterns: [],
-    shifts: [],
-    summary: habitSummary([], []),
-    // Insights
-    ...EMPTY,
-    why: [], how: [], wins: [], links: [],
-    state: currentState([], EMPTY.rhythm, EMPTY.week, EMPTY.balance),
-    insights: [], discovered: [], rated: [],
-    reasonRows: [], ratingDepth: 'ratings',
-    breakdown: { rows: [], total: 0 }, previousBySubject: new Map(),
-    aimedShare: null,
-    // Recommendations
-    advice: [], shown: [], projection: {}, plan: { actions: [], budget: 60 },
-    diagnoses: [], recent: { current: [], previous: [] }, weekLeft: 3,
-    reviews: [], reviewSummary: {}, adoptedIds: new Set(), goalAdvice: [],
-    category: '', setCategory: vi.fn(), setBudget: vi.fn(), setNudge: vi.fn(),
-    // Subjects
-    namedSubjects: { total: 0, named: 0 },
-    /* The real model sets this on every render — `useAnalyticsModel` derives it
-       from the stored tone and `toneRules()` falls back to balanced — so a fake
-       without it is a fake of a model that cannot exist. It went unnoticed while
-       no tab here read it; Habits and Goals do now. See ./tone.test.tsx. */
-    toneRules: TONE_RULES.balanced,
-  };
-  return { ...base, ...over } as unknown as AnalyticsModel;
-}
-
-function fakeData(): AnalyticsData {
-  return {
-    goals: { data: { goals: [] }, loading: false },
-    adopt: vi.fn(),
-    adopting: null,
-    justAdopted: null,
-    dropAdopted: vi.fn(),
-    dropping: null,
-    refresh: vi.fn(),
-  } as unknown as AnalyticsData;
-}
-
-const subjects = new Map();
-
-function draw(ui: ReactElement) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
-}
 
 describe('Habits', () => {
   it('is locked one day short of the record it needs', () => {

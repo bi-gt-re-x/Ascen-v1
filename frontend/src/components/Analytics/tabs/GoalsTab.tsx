@@ -19,6 +19,7 @@ import {
   PortfolioPanel as GoalPortfolioPanel,
   SuggestPanel as GoalSuggestPanel,
 } from '../GoalsView';
+import { PanelGroup } from '../charts';
 import type { AnalyticsModel } from '../useAnalyticsModel';
 
 export function GoalsTab({ model }: { model: AnalyticsModel }) {
@@ -58,20 +59,42 @@ export function GoalsTab({ model }: { model: AnalyticsModel }) {
         <GoalPaceMapPanel points={goalPace.points} undated={goalPace.undated} />
       </section>
 
-      {/* What has actually been reached, and where the work went. The
-          two questions the pace map raises and cannot answer. */}
-      <section className="ax-section ax-grid ax-grid-halves-even">
-        <GoalCheckpointsPanel months={goalCheckpoints} />
-        <GoalEffortPanel rows={goalEffort} />
-      </section>
+      {/*
+        The three rows the pace map raises and cannot answer, folded.
 
-      <section className="ax-section ax-grid ax-grid-halves-even">
-        <GoalPacePanel goals={liveGoals} tasks={tasks} />
-        <GoalNotesPanel notes={goalRows} />
-      </section>
-
+        The sentence, the five figures and the two charts above are the tab's
+        answer to "is what I aimed at going to happen". These are the follow-up
+        — what has actually been reached, how each live goal is pacing, and
+        what to aim at next — and they were three more rows of equal-weight
+        panels between the reader and the bottom of the page.
+      */}
       <section className="ax-section">
-        <GoalSuggestPanel suggestions={goalIdeas} limit={toneRules.headlines} />
+        <PanelGroup
+          title="What you have reached"
+          note="Checkpoints cleared, and where the effort went"
+        >
+          <div className="ax-grid ax-grid-halves-even">
+            <GoalCheckpointsPanel months={goalCheckpoints} />
+            <GoalEffortPanel rows={goalEffort} />
+          </div>
+        </PanelGroup>
+
+        <PanelGroup
+          title="Pace and notes"
+          note="How each live goal is tracking, and what you wrote on them"
+        >
+          <div className="ax-grid ax-grid-halves-even">
+            <GoalPacePanel goals={liveGoals} tasks={tasks} />
+            <GoalNotesPanel notes={goalRows} />
+          </div>
+        </PanelGroup>
+
+        <PanelGroup
+          title="What to aim at next"
+          note="Goals suggested from what your record already shows"
+        >
+          <GoalSuggestPanel suggestions={goalIdeas} limit={toneRules.headlines} />
+        </PanelGroup>
       </section>
     </>
   );

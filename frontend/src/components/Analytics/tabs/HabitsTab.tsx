@@ -19,6 +19,7 @@ import {
   TimelinePanel,
 } from '../Habits';
 import { Locked } from '../Locked';
+import { PanelGroup } from '../charts';
 import { FocusChapter } from '@/components/Growth';
 import { NEED_DAYS } from '../useAnalyticsModel';
 import type { AnalyticsModel } from '../useAnalyticsModel';
@@ -66,25 +67,65 @@ export function HabitsTab({ model, subjects }: { model: AnalyticsModel } & { sub
             />
             <PatternsPanel patterns={patterns} limit={toneRules.diagnoses} />
           </section>
+          {/*
+            The habits themselves, and then three layers of detail under them.
+
+            The tab used to run all four of these out flat, the last of them an
+            entire chapter of the old growth page. A reader who wanted the
+            answer to "what do I repeat" — which the tiles and the opening
+            above have already given — scrolled past a card per habit, a
+            year-long calendar, two charts and a planned-against-finished grid
+            to reach the end of it.
+
+            `Your habits` opens by default and the three below it do not. It is
+            the one that names the thing the tab is about; the rest answer a
+            question a reader has only once they have read it. The two that
+            carried an `ax-band` heading keep the same words as their group
+            title, so nothing a reader was scanning for has changed its name.
+          */}
           <section className="ax-section">
-            <h2 className="ax-band">Your habits</h2>
-            <HabitCards habits={habits} todayIso={toIso} />
-          </section>
-          <section className="ax-section ax-hero">
-            <HabitCalendarPanel byDate={byDate} lastIso={toIso} accountDays={all.length} />
-          </section>
-          <section className="ax-section ax-grid ax-grid-halves-even">
-            <HabitConsistencyPanel habits={habits} />
-            <TimelinePanel habits={habits} shifts={shifts} />
-          </section>
-          {/* The growth page's Focus chapter. Habits counts what you repeat;
-              this is whether you can execute it reliably — the planned-against-
-              finished grid, the focus scores, the recovery after a miss. Same
-              question one layer down, which is why it belongs on this tab
-              rather than on a page nobody navigated to. */}
-          <section className="ax-section gr-scope">
-            <h2 className="ax-band">Can you execute it reliably</h2>
-            <FocusChapter all={all} tasks={tasks} subjects={subjects} streak={streak} />
+            <PanelGroup
+              title="Your habits"
+              note="Every routine found in your record, and how each is holding"
+              defaultOpen
+            >
+              <HabitCards habits={habits} todayIso={toIso} />
+            </PanelGroup>
+
+            <PanelGroup
+              title="Every day you worked"
+              note="The whole account as a calendar"
+            >
+              <div className="ax-hero">
+                <HabitCalendarPanel byDate={byDate} lastIso={toIso} accountDays={all.length} />
+              </div>
+            </PanelGroup>
+
+            <PanelGroup
+              title="Holding or slipping"
+              note="How steady each habit is, and when each began"
+            >
+              <div className="ax-grid ax-grid-halves-even">
+                <HabitConsistencyPanel habits={habits} />
+                <TimelinePanel habits={habits} shifts={shifts} />
+              </div>
+            </PanelGroup>
+
+            {/* The growth page's Focus chapter. Habits counts what you repeat;
+                this is whether you can execute it reliably — the planned-
+                against-finished grid, the focus scores, the recovery after a
+                miss. Same question one layer down, which is why it belongs on
+                this tab rather than on a page nobody navigated to — and why it
+                is the last thing opened rather than the last thing scrolled
+                past. */}
+            <PanelGroup
+              title="Can you execute it reliably"
+              note="Planned against finished, focus scores, and recovery after a miss"
+            >
+              <div className="gr-scope">
+                <FocusChapter all={all} tasks={tasks} subjects={subjects} streak={streak} />
+              </div>
+            </PanelGroup>
           </section>
         </>
       )}
