@@ -33,11 +33,15 @@ body:has(.dash) .app-main {
 .dash {
     width: 100%;
     max-width: 1370px;
-    margin: 26px auto 28px;
-    padding: 0 24px;
+    margin: 30px auto 36px;
+    padding: 0 26px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    /* The page is seven bands deep — greeting, figures, what's next, the two
+       panels, the three cards, what to change, the quote. At 20px they read as
+       one wall of boxes; the extra air is what lets each band be looked at on
+       its own. */
+    gap: 28px;
     box-sizing: border-box;
     text-align: left;
 }
@@ -629,13 +633,14 @@ body:has(.dash) .app-main {
 .dash-week-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    gap: 18px 10px;
     margin: 0;
 }
+/* No border. Four bordered cells inside a bordered card inside a page of
+   cards is three frames deep, and the frames were carrying no information the
+   spacing does not — which is most of what made this row feel busy. */
 .dash-week-cell {
-    border: 1.5px solid #EFEDE9;
-    border-radius: 10px;
-    padding: 12px 8px;
+    padding: 4px 2px;
     text-align: center;
     min-width: 0;
 }
@@ -652,13 +657,19 @@ body:has(.dash) .app-main {
 }
 /* What the figure was at this point last week. A sign rather than an arrow:
    four cells in a small grid means four of these, and four arrows is a texture
-   rather than a signal. */
+   rather than a signal. The words are under the grid, once — see `Against`. */
 .dash-week-vs {
     display: block;
-    margin-top: 5px;
-    font-size: 0.65rem;
+    margin-top: 4px;
+    font-size: 0.7rem;
     font-weight: 700;
     line-height: 1.2;
+}
+.dash-week-vs-note {
+    margin: 14px 0 0;
+    text-align: center;
+    font-size: 0.7rem;
+    color: #9AA0A6;
 }
 .dash-week-vs.is-up   { color: #1F8A54; }
 .dash-week-vs.is-down { color: #C0392B; }
@@ -1173,3 +1184,5 @@ html[data-theme="dark"] .dash-move-all { color: #9d8bff; }
     .dash-move { flex-wrap: wrap; }
     .dash-move-all { align-self: flex-start; margin-left: 48px; }
 }
+
+html[data-theme="dark"] .dash-week-vs-note { color: #6e7681; }

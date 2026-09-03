@@ -144,14 +144,20 @@ function Trend({ now, usual }: { now: number; usual: Typical & { value: number }
   /* Within a tenth either way is not a change, it is the same day. Saying
      "↑ 3%" about a normal Tuesday is how a comparison stops being read. */
   if (Math.abs(change) < 10) {
-    return <span className="dash-trend is-flat">About usual for you</span>;
+    return <span className="dash-trend is-flat">about usual</span>;
   }
 
   const up = change > 0;
   return (
-    <span className={`dash-trend${up ? ' is-up' : ' is-down'}`}>
-      <span aria-hidden="true">{up ? '↑' : '↓'}</span> {Math.abs(change)}%{' '}
-      {up ? 'above' : 'below'} your usual day
+    <span
+      className={`dash-trend${up ? ' is-up' : ' is-down'}`}
+      /* The short form on screen and the sentence in the tooltip. "↑ 105%
+         above your usual day" is a line of prose in a card the width of a
+         phone, and four cards each carrying one is most of what made this row
+         feel busy. */
+      title={`${Math.abs(change)}% ${up ? 'above' : 'below'} your usual day`}
+    >
+      <span aria-hidden="true">{up ? '↑' : '↓'}</span> {Math.abs(change)}% vs usual
     </span>
   );
 }

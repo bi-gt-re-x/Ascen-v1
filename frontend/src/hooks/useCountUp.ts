@@ -41,6 +41,21 @@
  *
  * Nothing animates at all under `prefers-reduced-motion`: the value is simply
  * the value, from the first render onwards.
+ *
+ * ## Nor on a page nobody is looking at
+ *
+ * The tween is a `requestAnimationFrame` loop, and a browser does not run one
+ * for a hidden tab. A figure that changed while the tab was in the background
+ * therefore never travelled — the loop was scheduled and never called — and
+ * the reader came back to a number frozen wherever it had got to, which on
+ * this dashboard meant "Completed 2" over a list with four ticks in it.
+ *
+ * That is exactly the failure the note above is about: a figure that is wrong
+ * is worse than one that does not move. So a change that arrives while the
+ * page is hidden lands rather than travels, and coming back to the tab is
+ * checked as well — a tween interrupted halfway by the tab being hidden
+ * finishes the moment it is looked at again, instead of waiting for the next
+ * change to correct it.
  */
 import { useEffect, useRef, useState } from 'react';
 import { reduced } from '@/utils/homePlay';
@@ -61,7 +76,8 @@ export function useCountUp(value: number, duration = DURATION): number {
   const arrived = useRef(false);
 
   useEffect(() => {
-    if (reduced || !arrived.current || current.current === value) {
+    // Nothing to travel from, nothing to travel for, or nobody watching.
+    if (reduced || !arrived.current || current.current === value || document.hidden) {
       arrived.current = true;
       current.current = value;
       setShown(value);
@@ -85,7 +101,24 @@ export function useCountUp(value: number, duration = DURATION): number {
     }
 
     frame.current = requestAnimationFrame(step);
+
+    /* A tab hidden mid-flight pauses the loop wherever it was. Landing on
+       `visibilitychange` means the reader never finds a half-travelled figure
+       waiting for them — and it is a no-op in the normal case, because a
+       finished run has already set `current` to `value`. */
+    const land = () => {
+      if (!document.hidden || current.current === value) return;
+      if (frame.current !== null) {
+        cancelAnimationFrame(frame.current);
+        frame.current = null;
+      }
+      current.current = value;
+      setShown(value);
+    };
+    document.addEventListener('visibilitychange', land);
+
     return () => {
+      document.removeEventListener('visibilitychange', land);
       if (frame.current !== null) {
         cancelAnimationFrame(frame.current);
         frame.current = null;

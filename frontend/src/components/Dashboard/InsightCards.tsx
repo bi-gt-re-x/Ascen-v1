@@ -42,6 +42,12 @@ import type { Activity, WeekSummary } from './summary';
  * arrow: four of these sit in a small grid and four arrows is a texture, so
  * the sign carries it.
  *
+ * **The words are said once, under the grid, not four times inside it.** Every
+ * cell used to end "on last week" — the same four words, repeated, in the
+ * smallest type on the page, which is how a card of four figures came to have
+ * twelve lines in it. What each cell needs is the number; what the reader needs
+ * once is what it is against.
+ *
  * Silent when there is nothing on the other side — a first week is not an
  * infinite improvement on the void before it — and when nothing moved, because
  * "+0" is a fact nobody needs.
@@ -51,10 +57,13 @@ function Against({ now, was, unit }: { now: number; was?: number; unit?: string 
   const change = Math.round(now - was);
   if (change === 0) return null;
   return (
-    <span className={`dash-week-vs${change > 0 ? ' is-up' : ' is-down'}`}>
+    <span
+      className={`dash-week-vs${change > 0 ? ' is-up' : ' is-down'}`}
+      title={`${change > 0 ? 'Up' : 'Down'} ${Math.abs(change)}${unit ?? ''} on the same days last week`}
+    >
       {change > 0 ? '+' : '−'}
       {Math.abs(change)}
-      {unit ?? ''} on last week
+      {unit ?? ''}
     </span>
   );
 }
@@ -108,6 +117,11 @@ export function WeeklyOverview({
           </div>
         ))}
       </dl>
+
+      {/* Said once for all four, and only when there is a comparison to
+          explain. "the same days" is the honest part: three days of this week
+          are held against three of last, never against seven. */}
+      {before && <p className="dash-week-vs-note">against the same days last week</p>}
 
       <Link className="dash-panel-link" to="/analytics">
         View full analytics<span aria-hidden="true"> →</span>
