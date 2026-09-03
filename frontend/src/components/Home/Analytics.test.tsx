@@ -15,10 +15,21 @@
  * leaves — and, where there is no IntersectionObserver to wait for, is simply
  * finished on arrival.
  */
-import { render, screen, act } from '@testing-library/react';
+import { render as rtlRender, screen, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import type { ReactElement } from 'react';
 import { Analytics } from './Analytics';
 import { percentileLabel } from '@/components/Analytics/score';
+import { VIEWS } from '@/components/Analytics/Header';
+
+/**
+ * The tab strip is seven <Link>s now, so the panel needs a router around it.
+ * A MemoryRouter and nothing else: this section reads no context but routing,
+ * and test/render.tsx's provider stack would be four answers to questions it
+ * does not ask.
+ */
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 /** Drive the IntersectionObserver the component arms itself with. */
 function stubIO() {
@@ -60,18 +71,22 @@ describe('the landing page analytics panel', () => {
     expect(screen.getByText(expected as string)).toBeInTheDocument();
   });
 
-  it('names the seven tabs the analytics page has, in order', () => {
+  /**
+   * Against VIEWS itself, not against a copy of it.
+   *
+   * This case used to assert a hardcoded list, and the third entry in it read
+   * 'Trends' — a tab renamed to Goals when the growth page was folded into the
+   * analytics page. Both lists were edited to say the same wrong thing, so the
+   * test went on passing and the landing page went on advertising a tab the app
+   * no longer has. A test that restates the value under test only ever catches
+   * a typo. Importing the real table is free here: a test is not bundled, which
+   * is the whole reason the component keeps its own copy.
+   */
+  it('names the tabs the analytics page has, in order, and links to each', () => {
     render(<Analytics />);
-    const tabs = document.querySelectorAll('.lp-ax-tab');
-    expect([...tabs].map((t) => t.textContent)).toEqual([
-      'Recommendations',
-      'Overview',
-      'Trends',
-      'Habits',
-      'Insights',
-      'Subjects',
-      'Records',
-    ]);
+    const tabs = [...document.querySelectorAll<HTMLAnchorElement>('a.lp-ax-tab')];
+    expect(tabs.map((t) => t.textContent)).toEqual(VIEWS.map((v) => v.label));
+    expect(tabs.map((t) => t.getAttribute('href'))).toEqual(VIEWS.map((v) => v.path));
   });
 
   it('writes each bar its own width and stagger', () => {

@@ -17,22 +17,32 @@ import { useDocumentTitle, usePageEntrance } from '@/hooks';
 import '@/styles/content-page.css';
 import '@/styles/aboutus.css';
 
-/** The four cards under "What it is built on", in the order the original had them. */
+/**
+ * The four cards under "What it is built on", in the order the original had
+ * them.
+ *
+ * The emoji that opened each title are gone. They were not four of a kind:
+ * U+2696 and U+2728 have no emoji presentation on this stack and rendered as
+ * hairline monochrome glyphs, while the chart and the trophy came out in full
+ * colour at twice the visual weight — so a row meant to read as four equal
+ * beliefs read as two loud ones and two smudges. Nothing about the page needs
+ * them, and the fourth card is called Simplicity First.
+ */
 const VALUES = [
   {
-    title: '⚖ Consistency over Intensity',
+    title: 'Consistency over intensity',
     body: 'Small daily wins beat rare all-nighters. Streaks reward showing up.',
   },
   {
-    title: '📈 Measurable Progress',
+    title: 'Measurable progress',
     body: 'Every action turns into a number you can see and improve.',
   },
   {
-    title: '🏆 Rewarding Productivity',
+    title: 'Rewarding productivity',
     body: 'XP, levels and grades make finishing work feel genuinely good.',
   },
   {
-    title: '✨ Simplicity First',
+    title: 'Simplicity first',
     body: 'No clutter. Just the few tools that actually move the needle.',
   },
 ];

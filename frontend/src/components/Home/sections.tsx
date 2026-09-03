@@ -187,7 +187,7 @@ const FEATURES = [
   {
     ico: 'lp-ico-gold',
     glyph: '🎯',
-    title: 'Strategic Goal Tracking',
+    title: 'Goal Tracking',
     body: 'Name a target in XP, tasks or streak days. It advances itself as you work — there is no second place to keep score.',
     bits: ['XP', 'Milestones', 'Auto-advance'],
     to: '/goals',
@@ -465,13 +465,18 @@ export function Pricing({
 
   return (
     <section className="lp-section">
+      {/* Was "Features Comparison and Pricing". There is nothing to compare —
+          one plan, everything in it, no paid tier to hold anything back — so
+          the heading was promising a table the section does not have and
+          cannot have. The blurb underneath was already saying the true and
+          shorter version of it. */}
       <SectionHead
-        title="Features Comparison and Pricing"
+        title="What it costs"
         blurb="Everything is included, free. Pick your look and get to work."
       />
       <div className="lp-split">
         <div className="lp-card lp-themes">
-          <div className="lp-stats-head">Theme Selector</div>
+          <div className="lp-stats-head">Theme</div>
           <div className="lp-swatches">
             {SWATCHES.map((swatch, i) => (
               <span
@@ -589,10 +594,14 @@ export function FinalCta({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="lp-final">
       <h2>Ready to start your ascent?</h2>
-      <p>
-        Finish one task today and the numbers start moving. Everything on this
-        page is the real app — nothing here is a screenshot.
-      </p>
+      {/* The second sentence used to be "Everything on this page is the real
+          app — nothing here is a screenshot." The dashboard section up the page
+          already says it, at the moment the reader is looking at the thing
+          being claimed and can check it. Repeating it here, eight sections
+          later and next to the button, argues a point nobody is still
+          disputing and takes the last line of the page away from the one
+          thing it is for. */}
+      <p>Finish one task today and the numbers start moving.</p>
       <Link to="/dashboard" className="lp-btn lp-btn-primary lp-btn-lg">
         {signedIn ? 'Go to Your Dashboard' : 'Get Started Today'}
       </Link>

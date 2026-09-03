@@ -73,16 +73,25 @@ export function NotBuilt({
   return (
     <div className={`page-state page-state-unbuilt${entering ? ' pg-enter' : ''}`}>
       <h1 className="page-state-title">{name}</h1>
+      {/* Above the description rather than below it. The status is the first
+          thing worth knowing about a page that does not exist, and as a
+          sentence after the description it arrived a beat too late and read
+          as the page's own copy. */}
+      <p className="page-state-note">Not built yet</p>
       <p>{description}</p>
-      <p className="page-state-note">This page isn’t built yet.</p>
       {files && files.length > 0 && (
-        <ul className="page-state-files">
-          {files.map((file) => (
-            <li key={file}>
-              <code>{file}</code>
-            </li>
-          ))}
-        </ul>
+        /* Separated from the page's own words, because these are not
+           addressed to the person who arrived here — see page-state.css. */
+        <div className="page-state-aside">
+          <p>Will be built from</p>
+          <ul className="page-state-files">
+            {files.map((file) => (
+              <li key={file}>
+                <code>{file}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

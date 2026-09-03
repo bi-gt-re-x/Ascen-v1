@@ -56,6 +56,7 @@
  * and only what is inside it belongs to this file.
  */
 import { useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { percentileLabel } from '@/components/Analytics/score';
 import {
   afterPaint,
@@ -131,15 +132,37 @@ const RING_LEN = round2(2 * Math.PI * RING_R);
 /** How much of the ring is left unpainted at the finished score. */
 const RING_END = round2(RING_LEN * (1 - SCORE / SCORE_SCALE));
 
-/** The seven tabs, in the order the analytics page's bar puts them. */
+/**
+ * The seven tabs, in the order the analytics page's bar puts them, each with
+ * the route that opens it.
+ *
+ * **They are links now.** They were bare `<li>`s — no href, no handler, not
+ * reachable by keyboard — while `.lp-ax-tab:hover` lifted them two pixels and
+ * pulled an accent border on. So they read as the one control on the section
+ * that could be operated, and were the one thing on the page that did nothing
+ * when clicked. Every other feature on this page hands the reader to the page
+ * it is describing; these are the same promise and now keep it.
+ *
+ * **The third tab said Trends.** It was renamed to Goals when the growth page
+ * was folded into this one (see VIEWS in components/Analytics/Header), and this
+ * copy of the list did not hear about it — so the landing page was advertising
+ * a tab by a name the app had stopped using, which is exactly the "tour of
+ * features the app does not have" the note at the top of this file warns
+ * against. The list is still written out here rather than imported from VIEWS,
+ * for the reason `score` is imported from its module and not the folder index:
+ * Header pulls components/Analytics/data and its half of utils behind it, and
+ * this is the landing chunk. Analytics.test.tsx imports VIEWS instead and
+ * asserts the two agree — a test is not bundled, so the drift is caught for
+ * free and cannot happen again quietly.
+ */
 const TABS = [
-  'Recommendations',
-  'Overview',
-  'Trends',
-  'Habits',
-  'Insights',
-  'Subjects',
-  'Records',
+  { label: 'Recommendations', to: '/recommendations' },
+  { label: 'Overview', to: '/analytics' },
+  { label: 'Goals', to: '/analytics/goals' },
+  { label: 'Habits', to: '/habits' },
+  { label: 'Insights', to: '/insights' },
+  { label: 'Subjects', to: '/subjects' },
+  { label: 'Records', to: '/analytics/records' },
 ] as const;
 
 /** Long enough to read as counting rather than snapping; the shapes' own time. */
@@ -323,15 +346,19 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* The seven tabs, as the analytics page's own bar orders them. */}
+      {/* The seven tabs, as the analytics page's own bar orders them. The pill
+          is the link rather than the <li>, so the whole of what looks clickable
+          is the click target and the tab strip is one tab stop per tab. */}
       <ul className="lp-ax-tabs">
         {TABS.map((tab, i) => (
-          <li
-            key={tab}
-            className={`lp-ax-tab${i === 0 ? ' is-lead' : ''}`}
-            style={{ transitionDelay: `${i * TAB_STAGGER_MS}ms` } as CSSProperties}
-          >
-            {tab}
+          <li key={tab.label}>
+            <Link
+              to={tab.to}
+              className={`lp-ax-tab${i === 0 ? ' is-lead' : ''}`}
+              style={{ transitionDelay: `${i * TAB_STAGGER_MS}ms` } as CSSProperties}
+            >
+              {tab.label}
+            </Link>
           </li>
         ))}
       </ul>
