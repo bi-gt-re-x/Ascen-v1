@@ -27,7 +27,25 @@ export function RecommendationsTab({ model, data }: { model: AnalyticsModel } & 
   const {
     adoptedIds, advice, category, goalAdvice, historyDays, plan, projection, recent, reviewSummary,
     reviews, setBudget, setCategory, setNudge, shown, shownDiagnoses, toneRules, waitFor, weekLeft,
+    /* The three inputs this tab was not reading. `rhythm` carries the reader's
+       typical sitting, drawn from their logged focus time; `reasons` is what
+       they type after a task; `detail` is how much supporting evidence they
+       asked to be shown. None of the three changes which recommendations exist
+       or how they are ranked — see the note on `headlines` below, which is the
+       same rule. */
+    detail, reasons, rhythm,
   } = model;
+
+  /**
+   * The obstacle reported most often, for the diagnosis panel's empty state.
+   *
+   * `summariseReasons` orders both sides by count, so the head of the struggle
+   * list is the most reported. Nothing is claimed from it beyond the count —
+   * see `DiagnosisEmpty`.
+   */
+  const reported = reasons.struggle[0]
+    ? { phrase: reasons.struggle[0].phrase, count: reasons.struggle[0].count }
+    : null;
 
   /*
    * How many problems this tab puts in front of the reader at once.
@@ -53,6 +71,7 @@ export function RecommendationsTab({ model, data }: { model: AnalyticsModel } & 
           plan={plan}
           onBudget={setBudget}
           weekLeft={weekLeft}
+          typicalSession={rhythm.typicalSession}
           /* Both halves: `refresh` re-reads the account so a task finished
              elsewhere leaves the plan, and the nudge re-asks the clock so
              what counts as overdue is worked out again. */
@@ -70,7 +89,7 @@ export function RecommendationsTab({ model, data }: { model: AnalyticsModel } & 
         {diagnoses.length > 0 ? (
           <DiagnosisCards items={diagnoses} />
         ) : (
-          <DiagnosisEmpty enoughRecord={recent.previous.length >= 7} />
+          <DiagnosisEmpty enoughRecord={recent.previous.length >= 7} reported={reported} />
         )}
       </section>
 
@@ -101,8 +120,11 @@ export function RecommendationsTab({ model, data }: { model: AnalyticsModel } & 
       )}
 
       <section className="ax-section">
+        {/* What happened to changes already adopted is evidence, not diagnosis,
+            so the list follows the detail setting rather than the tone one. It
+            is ordered by the model. */}
         <FollowupPanel
-          reviews={reviews}
+          reviews={reviews.slice(0, detail.rows)}
           summary={reviewSummary}
           onDrop={dropAdopted}
           dropping={dropping}

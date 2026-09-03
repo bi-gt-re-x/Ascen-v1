@@ -32,10 +32,29 @@ import type { AnalyticsModel } from '../useAnalyticsModel';
 
 export function InsightsTab({ model }: { model: AnalyticsModel }) {
   const {
-    aimedShare, balance, breakdown, clock, discovered, historyDays, how, insights, links, previousBySubject,
+    aimedShare, balance, breakdown, clock, discovered, figures, historyDays, how, insights, links, previousBySubject,
     qualitySummary, rated, ratingDepth, reasonRows, reasons, rhythm, slice, spanText, state, waitFor, week,
     wins, why,
+    /* What the account asked this page to be — see utils/analyticsPrefs. This
+       tab read neither of these until now, which is how a reader who had asked
+       for essentials and a gentle page got fifteen findings led by their
+       weakest measure. Neither moves a figure: `why` and `how` are computed in
+       full and ranked the same way at every setting. */
+    detail, toneRules,
   } = model;
+
+  /*
+   * How many findings a panel prints, and which of the opening pair leads.
+   *
+   * `diagnoses` is the tone's cap — two on gentle, eight on blunt — and it is
+   * the right one here for the same reason it is right on Habits: a "finding"
+   * on this tab is a thing that is wrong or notable about the record, which is
+   * exactly what that number is about being shown at once. `rows` is the
+   * detail setting, and caps the supporting lists that are evidence rather
+   * than diagnosis. Whichever is smaller wins — asking for a short page and a
+   * blunt one should get a short blunt page, not the larger of the two.
+   */
+  const findings = Math.min(toneRules.diagnoses, detail.rows);
 
   return (
     <>
@@ -58,7 +77,13 @@ export function InsightsTab({ model }: { model: AnalyticsModel }) {
       {waitFor('insights') === 0 && (
         <>
           <section className="ax-section">
-            <HeadlineTiles week={week} clock={clock} rhythm={rhythm} balance={balance} />
+            <HeadlineTiles
+              week={week}
+              clock={clock}
+              rhythm={rhythm}
+              balance={balance}
+              hours={figures.focusHours.value}
+            />
           </section>
 
           {/* Three groups, and the grouping is the point.
@@ -77,9 +102,28 @@ export function InsightsTab({ model }: { model: AnalyticsModel }) {
               note="Where the account stands, and what is working"
               defaultOpen
             >
+              {/* Which of the pair leads.
+
+                  `CurrentStatePanel` prints `state.weakness` — the single
+                  weakest thing, named plainly — and `WorkingPanel` prints what
+                  improved. That is exactly the comparison `leadWithStrength`
+                  governs everywhere else on the page: gentle states the
+                  strongest first and the weakest second, blunt does the
+                  reverse. Both panels are drawn either way and neither's
+                  content changes; this is the order, which is the only thing
+                  tone is ever allowed to move. */}
               <div className="ax-grid ax-grid-halves-even">
-                <CurrentStatePanel state={state} span={spanText} />
-                <WorkingPanel wins={wins} />
+                {toneRules.leadWithStrength ? (
+                  <>
+                    <WorkingPanel wins={wins} />
+                    <CurrentStatePanel state={state} span={spanText} />
+                  </>
+                ) : (
+                  <>
+                    <CurrentStatePanel state={state} span={spanText} />
+                    <WorkingPanel wins={wins} />
+                  </>
+                )}
               </div>
               {/* The one panel on this tab that names individual tasks. Every
                   other finding here is an aggregate, and an aggregate cannot
@@ -87,7 +131,9 @@ export function InsightsTab({ model }: { model: AnalyticsModel }) {
                   — which tasks were those. */}
               <div className="ax-grid ax-grid-halves-even ax-compact">
                 <RatedTasksPanel rated={rated} summary={qualitySummary} />
-                <InsightsPanel insights={insights} />
+                {/* Evidence rather than diagnosis, so this one follows the
+                    detail setting alone. */}
+                <InsightsPanel insights={insights.slice(0, detail.rows)} />
               </div>
             </PanelGroup>
 
@@ -97,14 +143,14 @@ export function InsightsTab({ model }: { model: AnalyticsModel }) {
                   correlation, and it is what a reader opening Insights is
                   actually looking for. It reads its own month-long window
                   rather than the picker — see "The recent window". */}
-              <DiscoveredPatterns items={discovered} window={PATTERN_DAYS} />
+              <DiscoveredPatterns items={discovered.slice(0, findings)} window={PATTERN_DAYS} />
               <div className="ax-grid ax-grid-halves-even">
                 <WhyPanel
-                  findings={why}
+                  findings={why.slice(0, findings)}
                   notice={unlock(slice.current.length, NEED_DAYS.insights, 'the “why” behind your last stretch')}
                 />
                 <HowPanel
-                  findings={how}
+                  findings={how.slice(0, findings)}
                   notice={unlock(slice.current.length, NEED_DAYS.insights, 'how you tend to work')}
                 />
               </div>

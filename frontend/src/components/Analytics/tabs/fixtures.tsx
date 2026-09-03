@@ -19,6 +19,8 @@ import { balanceShape, clockShape, rhythmShape, weekShape } from '@/utils/behavi
 import { habitSummary } from '@/utils/habits';
 import { currentState } from '@/utils/insight';
 import { summariseRatings, summariseReasons } from '@/utils/ratings';
+import { summaryFigures } from '@/utils/growthSummary';
+import { DETAIL_RULES } from '@/utils/analyticsPrefs';
 import { goalsOverview } from '@/utils/goalAnalytics';
 import { checkpointsByMonth, effortAgainstPriority, paceMap } from '@/utils/goalSuggest';
 import type { AnalyticsData } from '../useAnalyticsData';
@@ -94,11 +96,17 @@ export function fakeModel(over: Partial<AnalyticsModel> = {}): AnalyticsModel {
     goalLead: 'No goals yet.',
     // Subjects
     namedSubjects: { total: 0, named: 0 },
-    /* The real model sets this on every render — `useAnalyticsModel` derives it
-       from the stored tone and `toneRules()` falls back to balanced — so a fake
-       without it is a fake of a model that cannot exist. It went unnoticed while
-       no tab here read it; Habits and Goals do now. See ./tone.test.tsx. */
+    /* The real model sets these on every render — `useAnalyticsModel` derives
+       each from a stored preference and both helpers fall back to the middle
+       setting — so a fake without them is a fake of a model that cannot exist.
+       It went unnoticed for `toneRules` while no tab here read it, and then
+       again for `detail` when Habits, Insights and Recommendations started
+       reading that too. See ./tone.test.tsx and ./detail.test.tsx. */
     toneRules: TONE_RULES.balanced,
+    detail: DETAIL_RULES.standard,
+    /* The figures every tab now reaches into for hours logged. From the real
+       builder over an empty slice, for the reason `EMPTY` gives. */
+    figures: summaryFigures({ current: [], previous: [] }),
   };
   return { ...base, ...over } as unknown as AnalyticsModel;
 }

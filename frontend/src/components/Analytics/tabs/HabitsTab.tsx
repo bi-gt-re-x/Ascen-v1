@@ -27,7 +27,11 @@ import type { SubjectIndex } from '@/hooks/useSubjects';
 
 export function HabitsTab({ model, subjects }: { model: AnalyticsModel } & { subjects: SubjectIndex }) {
   const {
-    all, habits, historyDays, patterns, shifts, spanText, streak, summary, tasks, toIso, byDate, waitFor,
+    all, figures, habits, historyDays, patterns, shifts, spanText, streak, summary, tasks, toIso, byDate, waitFor,
+    /* How much of the page is drawn. This tab ignored the detail setting
+       entirely: an account with thirty habits handed a reader thirty cards
+       whether they had asked for essentials or for everything. */
+    detail,
     /* What the account asked this page to be — see utils/analyticsPrefs. Two
        reads on this tab: which of the two habits the opening names first, and
        how many patterns are put in front of somebody at once. Neither moves a
@@ -57,7 +61,7 @@ export function HabitsTab({ model, subjects }: { model: AnalyticsModel } & { sub
       {waitFor('habits') === 0 && habits.length > 0 && (
         <>
           <section className="ax-section">
-            <HabitTiles summary={summary} span={spanText} />
+            <HabitTiles summary={summary} span={spanText} hours={figures.focusHours.value} />
           </section>
           <section className="ax-section ax-grid ax-grid-halves-even">
             <HabitOpening
@@ -89,7 +93,15 @@ export function HabitsTab({ model, subjects }: { model: AnalyticsModel } & { sub
               note="Every routine found in your record, and how each is holding"
               defaultOpen
             >
-              <HabitCards habits={habits} todayIso={toIso} />
+              {/* `habits` is already ordered strongest-first by `buildHabits`,
+                  so a cap takes the tail rather than an arbitrary slice. Four
+                  is the floor: a tab called Habits that draws three cards on
+                  an account with twenty is a shorter page, but one that draws
+                  one is a broken one. */}
+              <HabitCards
+                habits={habits.slice(0, Math.max(4, detail.rows))}
+                todayIso={toIso}
+              />
             </PanelGroup>
 
             <PanelGroup

@@ -32,6 +32,9 @@
 import { Link } from 'react-router-dom';
 import { Panel, PanelNote } from './charts';
 import { BUDGETS, type ActionKind, type NextAction, type Plan } from '@/utils/nextActions';
+/* The same "1h 20m" the rest of the app prints. Insights carries a private
+   copy of this called `hm`; this is the shared one. */
+import { minutes as hm } from '@/utils/format';
 
 /** The word beside each row, and the colour it carries. */
 const KIND_LABEL: Record<ActionKind, string> = {
@@ -84,11 +87,32 @@ export interface NextActionsProps {
   onBudget: (minutes: number) => void;
   /** Days until this week's advice is replaced. */
   weekLeft: number;
+  /**
+   * The reader's typical sitting, in minutes, from their logged focus time.
+   *
+   * Context for the budget buttons above, which ask how long they have got and
+   * offered no help answering it. Somebody who has sat for forty minutes at a
+   * time all month is being asked to guess at a number this panel already
+   * knows the usual value of. Optional: an account that logs no sessions has
+   * nothing to say here, and a made-up default would be worse than silence.
+   */
+  typicalSession?: number | null;
   onRefresh: () => void;
 }
 
-export function NextActions({ plan, onBudget, weekLeft, onRefresh }: NextActionsProps) {
+export function NextActions({
+  plan,
+  onBudget,
+  weekLeft,
+  onRefresh,
+  typicalSession,
+}: NextActionsProps) {
   const { actions, more, spare, budget, planned } = plan;
+  /* Under thirty seconds is not a sitting, it is a rounding artefact of a
+     timer left running — so it is not offered as one. */
+  const usual = typeof typicalSession === 'number' && typicalSession >= 1
+    ? `you usually sit for ${hm(typicalSession)}`
+    : null;
 
   return (
     <Panel
@@ -97,7 +121,11 @@ export function NextActions({ plan, onBudget, weekLeft, onRefresh }: NextActions
          your goals, your deadlines and the last fortnight of your own record"
          — which is a sentence the reader needs once, not on every visit above
          a plan they came here to read. It is in the footer note instead. */
-      note={actions.length > 0 ? `${planned} of ${budget} minutes planned` : undefined}
+      note={
+        actions.length > 0
+          ? [`${planned} of ${budget} minutes planned`, usual].filter(Boolean).join(' · ')
+          : undefined
+      }
       className="ax-plan"
       aside={
         <div className="ax-plan-budget" role="group" aria-label="Time available">

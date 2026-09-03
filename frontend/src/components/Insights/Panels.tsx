@@ -33,9 +33,30 @@ export interface HeadlineTilesProps {
   clock: ClockShape;
   rhythm: RhythmShape;
   balance: BalanceShape;
+  /**
+   * Focus hours logged across the window.
+   *
+   * What qualifies the sitting beside it. A typical sitting of forty minutes
+   * is a different fact over four hours of logged time than over eighty, and
+   * the tile stated the first number without ever stating the second — so the
+   * one figure on this row drawn from time rather than from task counts had no
+   * scale on it at all. Optional because a caller with no session record has
+   * nothing to add, and `0` is a real answer rather than a missing one.
+   */
+  hours?: number | null;
 }
 
-export function HeadlineTiles({ week, clock, rhythm, balance }: HeadlineTilesProps) {
+export function HeadlineTiles({ week, clock, rhythm, balance, hours }: HeadlineTilesProps) {
+  /* "Best was 2h 10m" alone, when there is no total to put behind it; "Best
+     was 2h 10m · 41h logged" when there is. Rounded to the hour because this
+     is a note under a figure, not the figure. */
+  const logged = typeof hours === 'number' && hours > 0
+    ? `${Math.round(hours).toLocaleString()}h logged`
+    : null;
+  const sessionNote = rhythm.longestSession
+    ? [`Best was ${hm(rhythm.longestSession.minutes)}`, logged].filter(Boolean).join(' · ')
+    : logged ?? 'No focus time logged';
+
   const stats: Stat[] = [
     {
       key: 'day',
@@ -57,9 +78,7 @@ export function HeadlineTiles({ week, clock, rhythm, balance }: HeadlineTilesPro
       key: 'session',
       label: 'Typical sitting',
       value: hm(rhythm.typicalSession),
-      note: rhythm.longestSession
-        ? `Best was ${hm(rhythm.longestSession.minutes)}`
-        : 'No focus time logged',
+      note: sessionNote,
       tone: 'green' as const,
       series: [],
     },

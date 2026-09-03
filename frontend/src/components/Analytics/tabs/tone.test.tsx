@@ -20,7 +20,8 @@ import { describe, expect, it } from 'vitest';
 import type { ReactElement } from 'react';
 import { GoalsTab } from './GoalsTab';
 import { HabitsTab } from './HabitsTab';
-import { TONE_RULES } from '@/utils/analyticsPrefs';
+import { DETAIL_RULES, TONE_RULES } from '@/utils/analyticsPrefs';
+import { summaryFigures } from '@/utils/growthSummary';
 import { habitSummary } from '@/utils/habits';
 import type { AnalyticsModel } from '../useAnalyticsModel';
 import type { Habit, HabitPattern } from '@/utils/habits';
@@ -68,6 +69,13 @@ function habitsModel(tone: keyof typeof TONE_RULES): AnalyticsModel {
     summary: { ...habitSummary([], []), tracked: 2, strong: 1, activeRate: 64,
                anchor: ANCHOR, slipping: SLIPPING },
     toneRules: TONE_RULES[tone],
+    /* Held fixed across the three settings on purpose. These cases exist to
+       show that tone moves the editorial and nothing else, so the two
+       preferences it must not be confused with — how much detail was asked
+       for, and how many hours are behind the figures — are the same in every
+       render here. ./detail.test.tsx is the other half. */
+    detail: DETAIL_RULES.standard,
+    figures: summaryFigures({ current: [], previous: [] }),
   } as unknown as AnalyticsModel;
 }
 
@@ -88,6 +96,9 @@ function goalsModel(tone: keyof typeof TONE_RULES): AnalyticsModel {
     goalRows: [],
     goalIdeas: SUGGESTIONS,
     toneRules: TONE_RULES[tone],
+    /* Fixed across the three settings, for the reason `habitsModel` gives:
+       these cases are about tone and nothing else. */
+    detail: DETAIL_RULES.standard,
   } as unknown as AnalyticsModel;
 }
 

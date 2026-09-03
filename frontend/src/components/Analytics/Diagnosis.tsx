@@ -77,7 +77,24 @@ export function DiagnosisCards({ items }: { items: Diagnosis[] }) {
  * no tension to report, and saying so is more useful than relaxing a threshold
  * until something fires.
  */
-export function DiagnosisEmpty({ enoughRecord }: { enoughRecord: boolean }) {
+export function DiagnosisEmpty({
+  enoughRecord,
+  reported,
+}: {
+  enoughRecord: boolean;
+  /**
+   * The obstacle the reader named most often after finishing a task, and how
+   * many times, when they answer that question at all.
+   *
+   * The counts found nothing to report; what the reader typed is a separate
+   * record and is not nothing. An account that logged "distracted" after nine
+   * tasks has told this page something specific about a fortnight the
+   * arithmetic just called unremarkable — and this panel was throwing it away
+   * to print a sentence about rounding errors. Null when the account has that
+   * question switched off, or has answered it about nothing.
+   */
+  reported?: { phrase: string; count: number } | null;
+}) {
   return (
     <Panel title="Growth diagnosis" className="ax-diag-empty">
       <p className="ax-empty">
@@ -85,6 +102,15 @@ export function DiagnosisEmpty({ enoughRecord }: { enoughRecord: boolean }) {
           ? 'Nothing is pulling against anything else this fortnight — the pace, the ratings and the spread all sit within a rounding error of the fortnight before. That is a finding, not a gap: it is the baseline to change one thing against.'
           : 'A diagnosis compares this fortnight against the one before it, so it needs two of them. Keep going and this fills in on its own.'}
       </p>
+      {/* Their own words, under the arithmetic's silence. Stated as a count
+          rather than as a cause: this is what was reported, and how often —
+          the page does not get to promote it to a diagnosis on its own. */}
+      {reported && (
+        <p className="ax-empty">
+          The one thing you did report: <strong>{reported.phrase}</strong>, after{' '}
+          {reported.count} {reported.count === 1 ? 'task' : 'tasks'} this window.
+        </p>
+      )}
     </Panel>
   );
 }

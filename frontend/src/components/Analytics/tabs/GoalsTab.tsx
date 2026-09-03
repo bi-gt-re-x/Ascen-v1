@@ -25,6 +25,10 @@ import type { AnalyticsModel } from '../useAnalyticsModel';
 export function GoalsTab({ model }: { model: AnalyticsModel }) {
   const {
     goalLead, goalSet, goalPace, goalCheckpoints, goalEffort, liveGoals, tasks, goalRows, goalIdeas,
+    /* How much supporting detail was asked for. This tab read the tone and not
+       this, so the notes list ran to whatever length the account's goals
+       happened to give it at every setting. */
+    detail,
     /* What the account asked this page to be — see utils/analyticsPrefs. Two
        reads on this tab: which half of the count `goalLead` opens on, and how
        many suggestions are put in front of somebody at once. Neither moves a
@@ -85,7 +89,10 @@ export function GoalsTab({ model }: { model: AnalyticsModel }) {
         >
           <div className="ax-grid ax-grid-halves-even">
             <GoalPacePanel goals={liveGoals} tasks={tasks} />
-            <GoalNotesPanel notes={goalRows} />
+            {/* Evidence rather than diagnosis — what you wrote on the goals,
+                not a verdict about them — so this follows the detail setting
+                and not the harshness one. */}
+            <GoalNotesPanel notes={goalRows.slice(0, detail.rows)} />
           </div>
         </PanelGroup>
 

@@ -73,7 +73,7 @@ function matureOverview() {
       progress: 1,
       lastActive: '2026-08-01',
     },
-    detail: { quality: true, tallies: true, extras: true },
+    detail: { quality: true, tallies: true, extras: true, rows: 12 },
     logStyle: 'tasks',
     showStanding: true,
     /* From the real builder over an empty slice, for the reason ./fixtures

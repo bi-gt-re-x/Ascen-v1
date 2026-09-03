@@ -119,6 +119,25 @@ export interface DetailRules {
   tallies: boolean;
   /** Panels that live in full on another tab, repeated here for convenience. */
   extras: boolean;
+  /**
+   * How many rows a *supporting* list prints before it stops.
+   *
+   * Three of these four fields were booleans about the Overview, which is
+   * where the setting was born and for a while the only tab that read it. A
+   * reader who asked the page for essentials and then opened Insights got the
+   * same fifteen findings as somebody who asked for everything — the setting
+   * was called "detail" and governed one tab.
+   *
+   * **This is not `ToneRules.headlines`, and the two are not redundant.** Tone
+   * caps how many *problems* are put in front of somebody: it is about being
+   * confronted, and blunt raises it. Detail caps how much *supporting
+   * evidence* is drawn under whatever is being said: it is about page length,
+   * and essentials lowers it. A blunt reader who wants a short page sets
+   * `harsh` and `essentials` and gets every shortfall named, each with the
+   * short version of its workings — which is a coherent thing to want and was
+   * not expressible while one number did both jobs.
+   */
+  rows: number;
 }
 
 /**
@@ -137,9 +156,9 @@ export interface DetailRules {
  * no second arithmetic.
  */
 export const DETAIL_RULES: Record<AnalyticsDetail, DetailRules> = {
-  essentials: { quality: false, tallies: false, extras: false },
-  standard: { quality: true, tallies: true, extras: false },
-  everything: { quality: true, tallies: true, extras: true },
+  essentials: { quality: false, tallies: false, extras: false, rows: 3 },
+  standard: { quality: true, tallies: true, extras: false, rows: 6 },
+  everything: { quality: true, tallies: true, extras: true, rows: 12 },
 };
 
 export const DETAIL_LABEL: Record<AnalyticsDetail, string> = {
@@ -157,6 +176,18 @@ export const DETAIL_HINT: Record<AnalyticsDetail, string> = {
     'All of the above, and the subject split and findings list pulled onto the Overview so you '
     + 'do not have to open another tab for them.',
 };
+
+/**
+ * How many rows of supporting evidence a list prints, at this setting.
+ *
+ * Read by every tab rather than the Overview alone. `most` is for the handful
+ * of lists where three rows is not a shorter answer but a useless one — a
+ * ranked set whose point is the ranking — and it holds a floor under the
+ * essentials setting instead of a different number for each caller to invent.
+ */
+export function detailRows(detail: AnalyticsDetail | undefined, most = Infinity): number {
+  return Math.min(detailRules(detail).rows, most);
+}
 
 export function detailRules(detail: AnalyticsDetail | undefined): DetailRules {
   return DETAIL_RULES[detail ?? 'standard'] ?? DETAIL_RULES.standard;

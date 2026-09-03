@@ -60,7 +60,26 @@ function since(iso: string | null, todayIso: string): string {
 // --------------------------------------------------------------------------
 // The headline
 // --------------------------------------------------------------------------
-export function HabitTiles({ summary, span }: { summary: HabitSummary; span: string }) {
+export function HabitTiles({
+  summary,
+  span,
+  hours,
+}: {
+  summary: HabitSummary;
+  span: string;
+  /**
+   * Focus hours logged across the window, when the account logs them.
+   *
+   * The scale under "Days worked". A rate of 62% is a different fact over
+   * eleven logged hours than over ninety, and this row counted days without
+   * ever saying how much was done on them — the one tab about repetition had
+   * no measure of volume on it at all.
+   */
+  hours?: number | null;
+}) {
+  const logged = typeof hours === 'number' && hours > 0
+    ? `${Math.round(hours).toLocaleString()}h logged`
+    : null;
   /* Two or three words a note, not a clause. These are read at a glance beside
      a figure, and "nothing repeats often enough yet to count as a habit" under
      a 0 is a sentence doing the work the 0 already did. The long-form versions
@@ -84,7 +103,7 @@ export function HabitTiles({ summary, span }: { summary: HabitSummary; span: str
       key: 'active',
       label: 'Days worked',
       value: `${summary.activeRate}%`,
-      note: 'of this range',
+      note: logged ? `of this range · ${logged}` : 'of this range',
       tone: 'blue',
     },
     {
