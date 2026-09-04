@@ -119,7 +119,7 @@ describe('the headline', () => {
     const tasks = [...rated(2024, 60, 3, 2.8), ...rated(2025, 60, 3, 3.7)];
     draw(<GrowthTab model={model(all, tasks)} />);
 
-    const lead = document.querySelector('.ax-goal-lead') as HTMLElement;
+    const lead = document.querySelector('.ax-gy-lead') as HTMLElement;
     expect(lead).not.toBeNull();
     expect(lead.textContent).toMatch(/better at the work rather than picking easier work/);
     // Both figures, not just the flattering one.
@@ -131,7 +131,7 @@ describe('the headline', () => {
     const all = [...year(2024, { tasks: 2 }), ...year(2025, { tasks: 2 })];
     const tasks = [...rated(2024, 60, 4.2, 2.6), ...rated(2025, 60, 3, 3.6)];
     draw(<GrowthTab model={model(all, tasks)} />);
-    expect(document.querySelector('.ax-goal-lead')!.textContent)
+    expect(document.querySelector('.ax-gy-lead')!.textContent)
       .toMatch(/Some of that rise is easier work/);
   });
 
@@ -140,8 +140,57 @@ describe('the headline', () => {
     // and the tab does not invent one.
     const all = [...year(2024, { tasks: 2 }), ...year(2025, { tasks: 2 })];
     draw(<GrowthTab model={model(all)} />);
-    expect(document.querySelector('.ax-goal-lead')).toBeNull();
+    expect(document.querySelector('.ax-gy-lead')).toBeNull();
     expect(document.querySelector('.ax-gy')).not.toBeNull();
+  });
+});
+
+describe('the ratings chart', () => {
+  const all = [...year(2023, { tasks: 2 }), ...year(2024, { tasks: 2 }), ...year(2025, { tasks: 2 })];
+  const tasks = [
+    ...rated(2023, 40, 3, 2.8), ...rated(2024, 40, 3, 3.2), ...rated(2025, 40, 3, 3.7),
+  ];
+
+  it('draws execution and difficulty as two lines on one box', () => {
+    draw(<GrowthTab model={model(all, tasks)} />);
+    // One filled area (execution) and two lines; difficulty is unfilled,
+    // because two washes on one box leave a band belonging to neither.
+    expect(document.querySelectorAll('.ax-chart-line')).toHaveLength(2);
+    expect(document.querySelectorAll('.ax-chart-area')).toHaveLength(1);
+    expect(document.querySelectorAll('.ax-chart-line.is-muted')).toHaveLength(1);
+  });
+
+  it('pins the axis to the five points a rating actually has', () => {
+    // Left to scale itself the box would run 0 to 3.7 here, which draws a
+    // five-point scale as a three-point one and exaggerates every wobble in
+    // the flat line — the line whose flatness is the whole claim.
+    draw(<GrowthTab model={model(all, tasks)} />);
+    const ticks = [...document.querySelectorAll('.ax-chart-y span')].map((t) => t.textContent);
+    expect(ticks).toEqual(['5', '4', '3', '2', '1', '0']);
+    // The top tick is real: nothing is drawn above four fifths of the height.
+    const d = document.querySelector('.ax-chart-line')!.getAttribute('d')!;
+    const ys = [...d.matchAll(/,([\d.]+)/g)].map((m) => Number(m[1]));
+    expect(Math.min(...ys)).toBeGreaterThan(0);
+  });
+
+  it('marks one point per rated year, in order', () => {
+    draw(<GrowthTab model={model(all, tasks)} />);
+    expect([...document.querySelectorAll('.ax-chart-x span')].map((m) => m.textContent))
+      .toEqual(['2023', '2024', '2025']);
+  });
+
+  it('says so rather than drawing an empty box on one rated year', () => {
+    const thin = [...rated(2025, 40, 3, 3.7)];
+    draw(<GrowthTab model={model(all, thin)} />);
+    expect(document.querySelector('.ax-chart')).toBeNull();
+    expect(screen.getByText(/Two years with ratings on them draws this/)).toBeInTheDocument();
+  });
+
+  it('warns that the two lines are not a race', () => {
+    // They share an axis because both are out of five, but they answer
+    // different questions, so which sits higher means nothing.
+    draw(<GrowthTab model={model(all, tasks)} />);
+    expect(screen.getByRole('button', { name: /Reading this/ })).toBeInTheDocument();
   });
 });
 

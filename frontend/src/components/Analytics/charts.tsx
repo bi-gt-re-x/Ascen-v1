@@ -237,6 +237,20 @@ export interface AreaChartProps {
    *  sharing an id is how one of them ends up unfilled. */
   id: string;
   height?: number;
+  /**
+   * The top of the y axis, when the data must not be the one that sets it.
+   *
+   * Left off, the chart scales to its own tallest point, which is right for a
+   * count that has no ceiling — XP, tasks, hours. It is wrong for a figure
+   * drawn from a fixed scale: a rating out of five that never exceeds 3.7
+   * would fill the box to the brim and its `ticks` would have to be relabelled
+   * to match, which is how a five-point scale ends up looking like a
+   * three-point one. Pass the real ceiling and the ticks stay true.
+   *
+   * Ignored when the data goes past it, because clipping a line is worse than
+   * a stretched axis.
+   */
+  max?: number;
 }
 
 /**
@@ -247,13 +261,13 @@ export interface AreaChartProps {
  * period look identical to the one before it. The second series is drawn first
  * so the headline one wins where they cross.
  */
-export function AreaChart({ series, ticks, marks, id, at, height = 200 }: AreaChartProps) {
+export function AreaChart({ series, ticks, marks, id, at, height = 200, max: ceiling }: AreaChartProps) {
   const width = 600;
   const all = series
     .flatMap((entry) => entry.values)
     .filter((value): value is number => value !== null && !Number.isNaN(value));
   const min = 0;
-  const max = Math.max(...all, 1);
+  const max = Math.max(...all, ceiling ?? 0, 1);
 
   return (
     <div className="ax-chart" style={{ '--ax-chart-h': `${height}px` } as CSSProperties}>

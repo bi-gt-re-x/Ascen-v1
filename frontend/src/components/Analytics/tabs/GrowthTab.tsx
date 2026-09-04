@@ -36,7 +36,7 @@
  */
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
-import { Panel } from '../charts';
+import { AreaChart, Panel, PanelNote } from '../charts';
 import { StatRow, type Stat } from '../StatRow';
 import { Locked } from '../Locked';
 import { growthArc, growthYears } from '@/utils/growthYears';
@@ -57,6 +57,23 @@ import type { GrowthYear } from '@/utils/growthYears';
  * the gate.
  */
 const NEED_YEARS = 2;
+
+/**
+ * The standing panel's one-line claim.
+ *
+ * A percentile of 100 is not a sentence anybody says. It means the last thirty
+ * days are the best thirty the account has had, and "ranks above 100% of your
+ * 1,819 stretches" is a roundabout and slightly wrong way of putting that —
+ * the current window is one of the 1,819 and does not rank above itself.
+ */
+function standingClaim(hero: { percentile: number | null; windows: number }): string | undefined {
+  if (hero.percentile === null) return undefined;
+  if (hero.percentile >= 100) {
+    return 'The last 30 days are the best 30 you have had.';
+  }
+  return `Your last 30 days rank above ${hero.percentile}% of the ${fmtNumber(hero.windows)} `
+    + '30-day stretches on your record.';
+}
 
 /** A dash, not a zero: nothing recorded is not a reading of nothing. */
 const orDash = (value: string | number | null | undefined) =>
@@ -99,9 +116,15 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
 
   return (
     <>
-      {/* The reading, before the table it was read off. A reader who takes one
-          thing from this tab should take this one. */}
-      {arc.sentence && <p className="ax-goal-lead">{arc.sentence}</p>}
+      {/* The reading, before the picture of it and the table it was read off.
+          A reader who takes one thing from this tab should take this one. */}
+      {arc.sentence && <p className="ax-gy-lead">{arc.sentence}</p>}
+
+      {/* The claim, drawn. Two lines is the whole argument: one climbs and one
+          does not, and that is visible before a single figure is read. */}
+      <section className="ax-section">
+        <RatingLines years={worked} />
+      </section>
 
       <section className="ax-section">
         <ThenAndNow years={worked} />
@@ -115,12 +138,7 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
         <Panel
           title="Where this month sits in all of it"
           note="The last 30 days against every other 30 you have had"
-          claim={
-            hero.percentile === null
-              ? undefined
-              : `Your last 30 days rank above ${hero.percentile}% of the ${fmtNumber(hero.windows)} `
-                + '30-day stretches on your record.'
-          }
+          claim={standingClaim(hero)}
         >
           {hero.percentile === null ? (
             <p className="ax-empty">
@@ -143,9 +161,13 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
               {hero.fromBaseline !== null && (
                 <li>
                   <span>Against your first 30</span>
+                  {/* As a multiple past a couple of doublings. "+1228%" is a
+                      figure a reader has to do arithmetic on before it means
+                      anything, and the arithmetic is "about thirteen times". */}
                   <strong>
-                    {hero.fromBaseline >= 0 ? '+' : ''}
-                    {hero.fromBaseline}%
+                    {hero.fromBaseline >= 200
+                      ? `${((hero.fromBaseline + 100) / 100).toFixed(1)}× as much`
+                      : `${hero.fromBaseline >= 0 ? '+' : ''}${hero.fromBaseline}%`}
                   </strong>
                 </li>
               )}
@@ -154,6 +176,79 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
         </Panel>
       </section>
     </>
+  );
+}
+
+/**
+ * Execution and difficulty across the years, on one five-point axis.
+ *
+ * The page's argument as a picture. Execution is the headline line and
+ * difficulty the muted one, and what the reader is meant to take from it is the
+ * *shape* of each — one rising, one level — because that pair is what separates
+ * getting better from picking easier work.
+ *
+ * **What the two lines are not.** They are not a race. Both rows are scored out
+ * of five, which is what lets them share an axis, but they answer different
+ * questions — how hard was it, how well did it go — so the point at which one
+ * crosses the other means nothing at all. Only the slopes are comparable, and
+ * the note under the chart says so rather than leaving a reader to work out
+ * which readings are real.
+ *
+ * The axis is pinned to five rather than to the tallest reading. Left to scale
+ * itself the chart would run 0 to 3.7 on this account, and a five-point scale
+ * drawn as a 3.7-point one exaggerates every wobble in the flat line — which is
+ * the one line whose flatness is the point.
+ */
+const RATING_SCALE = 5;
+
+function RatingLines({ years }: { years: GrowthYear[] }) {
+  const rated = years.filter((year) => year.execution !== null && year.difficulty !== null);
+
+  // Two points is a line; one is a dot with a caption. Below that the panel
+  // says so, because an empty chart box reads as a chart that failed.
+  if (rated.length < 2) {
+    return (
+      <Panel title="Execution against difficulty" note="Both out of five, as you rated them">
+        <p className="ax-empty">
+          Two years with ratings on them draws this. Rating a task after finishing it is what
+          fills it in.
+        </p>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel title="Execution against difficulty" note="Both out of five, as you rated them">
+      <AreaChart
+        id="ax-gy-ratings"
+        /* Shorter than the trajectory panel's 200. Ratings live in a narrow
+           band near the top of a five-point axis — nothing on this account
+           goes below 2.8 — so most of a tall box would be empty, and the
+           honest fix for that is less box rather than a cropped axis. */
+        height={155}
+        max={RATING_SCALE}
+        ticks={['5', '4', '3', '2', '1', '0']}
+        marks={rated.map((year) => year.label)}
+        series={[
+          { values: rated.map((year) => year.execution), tone: 'green' },
+          {
+            values: rated.map((year) => year.difficulty),
+            tone: 'violet',
+            muted: true,
+            // Unfilled: two washes on one box leave a middle band belonging to
+            // neither, and this line is a reference for the other rather than a
+            // quantity in its own right.
+            fill: false,
+          },
+        ]}
+      />
+      <PanelNote label="Reading this">
+        The filled line is execution — how well the work went. The lighter one is difficulty —
+        how hard it was. Both are your own ratings out of five, so they share an axis, but they
+        answer different questions: which line sits higher means nothing, and only the shape of
+        each is worth reading.
+      </PanelNote>
+    </Panel>
   );
 }
 
@@ -173,6 +268,13 @@ function ThenAndNow({ years }: { years: GrowthYear[] }) {
   const first = years[0]!;
   const last = years[years.length - 1]!;
 
+  /* Each tile's own years under it. The tile states where the figure ended and
+     the note says where it began, and neither can tell a climb from a jump in
+     the last year — which on a tab about improvement is the difference that
+     matters most. Ratings skip the years nobody answered for rather than
+     plotting them as nothing. */
+  const rated = years.filter((year) => year.execution !== null && year.difficulty !== null);
+
   const shift = (from: number | null, to: number | null, digits = 1) =>
     from === null || to === null
       ? 'not rated then'
@@ -181,6 +283,7 @@ function ThenAndNow({ years }: { years: GrowthYear[] }) {
   const stats: Stat[] = [
     {
       key: 'execution',
+      series: rated.map((year) => year.execution!),
       label: 'Execution',
       value: last.execution === null ? '—' : last.execution.toFixed(1),
       unit: last.execution === null ? undefined : '/ 5',
@@ -192,6 +295,7 @@ function ThenAndNow({ years }: { years: GrowthYear[] }) {
     },
     {
       key: 'difficulty',
+      series: rated.map((year) => year.difficulty!),
       label: 'Difficulty',
       value: last.difficulty === null ? '—' : last.difficulty.toFixed(1),
       unit: last.difficulty === null ? undefined : '/ 5',
@@ -203,6 +307,7 @@ function ThenAndNow({ years }: { years: GrowthYear[] }) {
     },
     {
       key: 'pace',
+      series: years.map((year) => year.tasksPerActiveDay),
       label: 'Tasks a working day',
       value: last.tasksPerActiveDay.toFixed(1),
       note: `${first.tasksPerActiveDay.toFixed(1)} in ${first.label}`,
@@ -213,6 +318,7 @@ function ThenAndNow({ years }: { years: GrowthYear[] }) {
     },
     {
       key: 'hours',
+      series: years.map((year) => year.focusHours),
       label: 'Hours logged',
       value: fmtNumber(Math.round(last.focusHours)),
       unit: last.partial ? 'so far' : undefined,
@@ -236,6 +342,11 @@ function ThenAndNow({ years }: { years: GrowthYear[] }) {
  */
 function YearTable({ years }: { years: GrowthYear[] }) {
   return (
+    /* No XP column. It is tasks multiplied by their average value, and on a
+       page about improvement it moves for the same reason the task count does
+       — so it was a second copy of a column already there, in bigger numbers.
+       The XP that is worth stating is the 30-day comparison below, which is
+       about standing rather than about volume. */
     <Panel
       title="Year by year"
       note="Volume from your XP ledger; the two ratings from the tasks that carry both"
@@ -248,7 +359,6 @@ function YearTable({ years }: { years: GrowthYear[] }) {
               <th scope="col">Days worked</th>
               <th scope="col">Tasks</th>
               <th scope="col">A working day</th>
-              <th scope="col">XP</th>
               <th scope="col">Hours</th>
               <th scope="col">Rated</th>
               <th scope="col">Difficulty</th>
@@ -267,9 +377,11 @@ function YearTable({ years }: { years: GrowthYear[] }) {
                 <td>{fmtNumber(year.activeDays)}</td>
                 <td>{fmtNumber(year.tasks)}</td>
                 <td>{year.tasksPerActiveDay.toFixed(1)}</td>
-                <td>{fmtNumber(year.xp)}</td>
                 <td>{fmtNumber(Math.round(year.focusHours))}</td>
-                <td>{fmtNumber(year.rated)}</td>
+                {/* The evidence base for the two columns after it, set back
+                    because it qualifies them rather than being a reading of
+                    its own. */}
+                <td className="is-aside">{fmtNumber(year.rated)}</td>
                 <td>{orDash(year.difficulty?.toFixed(1))}</td>
                 <td className="is-lead">{orDash(year.execution?.toFixed(1))}</td>
               </tr>

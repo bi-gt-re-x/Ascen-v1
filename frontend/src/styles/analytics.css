@@ -4982,6 +4982,22 @@ body:has(.ax-page) .app-main {
     .ax-summary-more { transition: none; }
 }
 
+/* ---------- The Growth tab's opening line ----------------------------------
+   The tab's whole argument in one sentence, so it is set as a statement rather
+   than as a paragraph: held to a readable measure instead of running the full
+   width of the page, and given room under it before the picture of the same
+   claim. It borrowed `.ax-goal-lead` at first, which is the Goals tab's
+   headline and is sized for a page that has a tile row directly under it. */
+.ax-gy-lead {
+    max-width: 68ch;
+    margin: 0 0 18px;
+    color: var(--ax-text);
+    font-size: 16.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: -0.008em;
+}
+
 /* ---------- The Growth tab's year table ------------------------------------
    Six-ish rows of nine figures, compared across two axes at once, which is the
    one job a table does better than any picture. The rules here are about
@@ -5045,6 +5061,12 @@ body:has(.ax-page) .app-main {
        to one width. Proportional figures make a column of numbers ragged and
        the comparison the table exists for harder than it needs to be. */
     font-variant-numeric: tabular-nums;
+}
+
+/* Qualifies the two columns after it rather than being a reading of its own. */
+.ax-gy tbody td.is-aside {
+    color: var(--ax-faint);
+    font-size: 12px;
 }
 
 /* The column the tab's argument rests on. */
