@@ -478,6 +478,29 @@ def from_anthropic(brief: str, system: str = None, schema: dict = None,
                 'key in that workspace and use it instead — a key that already '
                 'belongs to a workspace needs none of this. Restart whatever '
                 'read .env either way.') from exc
+        # The other three answers a correctly-configured install actually
+        # gets. All of them arrive as a 400 or 401 carrying a sentence written
+        # for whoever wrote the client, and all of them are shown to somebody
+        # looking at a page in an app — so each one says what to do instead of
+        # what the API said. The catch-all below still exists for everything
+        # not on this list; it is a floor, not the plan.
+        text = str(exc)
+        if 'credit balance' in text:
+            raise PlannerUnavailable(
+                'This Anthropic account is out of API credits, so the model '
+                'cannot be called. Add credits under Plans & Billing in the '
+                'Anthropic console — API credits are separate from a Claude '
+                'subscription, and a Pro or Max plan does not include them.'
+            ) from exc
+        if 'authentication_error' in text or 'invalid x-api-key' in text:
+            raise PlannerUnavailable(
+                'Anthropic did not accept the key in ANTHROPIC_API_KEY. Check '
+                'it has not been revoked, and that it was copied whole.'
+            ) from exc
+        if 'rate_limit' in text:
+            raise PlannerUnavailable(
+                'Anthropic is rate-limiting this key. Try again in a minute.'
+            ) from exc
         raise PlannerUnavailable(
             'Could not reach the model: {}'.format(exc)) from exc
 

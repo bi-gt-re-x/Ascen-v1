@@ -159,6 +159,49 @@ def test_an_empty_answer_is_a_failure_rather_than_an_empty_panel():
 
 
 # ---------------------------------------------------------------------------
+# The answers a configured install actually gets back
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize('raw, expected', [
+    # The real 400 from an account with a workspace-scoped key and no credits.
+    ("Error code: 400 - {'type': 'error', 'error': {'type': "
+     "'invalid_request_error', 'message': 'Your credit balance is too low to "
+     "access the Anthropic API. Please go to Plans & Billing to upgrade or "
+     "purchase credits.'}}", 'out of API credits'),
+    ("Error code: 401 - {'error': {'type': 'authentication_error', "
+     "'message': 'invalid x-api-key'}}", 'did not accept the key'),
+    ("Error code: 429 - {'error': {'type': 'rate_limit_error'}}",
+     'rate-limiting'),
+])
+def test_the_common_failures_read_as_instructions_not_as_api_errors(
+        monkeypatch, raw, expected):
+    """These are shown in a panel, to somebody looking at a page.
+
+    A raw `Error code: 400 - {...}` in the write-up panel is the API talking to
+    whoever wrote the client. Each of these is a state a correctly-configured
+    install genuinely reaches, so each says what to do about it. The catch-all
+    underneath still exists — it is a floor, not the plan.
+    """
+    from backend.tracking import planner
+
+    class Boom:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        @property
+        def messages(self):
+            raise RuntimeError(raw)
+
+    monkeypatch.setenv('ANTHROPIC_API_KEY', 'sk-ant-api03-test')
+    monkeypatch.setattr('anthropic.Anthropic', Boom)
+
+    with pytest.raises(planner.PlannerUnavailable) as caught:
+        planner.from_anthropic('Goal: something')
+    assert expected in str(caught.value)
+    # And never the raw shape underneath it.
+    assert 'Error code:' not in str(caught.value)
+
+
+# ---------------------------------------------------------------------------
 # Without a key
 # ---------------------------------------------------------------------------
 def test_without_a_key_it_says_so_instead_of_calling_anything(monkeypatch):
