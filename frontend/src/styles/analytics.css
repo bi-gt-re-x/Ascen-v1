@@ -889,6 +889,44 @@ body:has(.ax-page) .app-main {
     background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
 }
 
+/* --- What each subject opens, on the Subjects tab -----------------------
+   The chapter above this says how much work went where. This says what there
+   is to learn in each, which the tab never had a route to — every subject
+   opens a lattice and the two pages had nothing joining them. */
+.ax-lattices {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 8px;
+}
+
+.ax-lattice {
+    display: grid;
+    gap: 2px;
+    padding: 11px 13px;
+    border: 1px solid var(--ax-line);
+    border-radius: 10px;
+    background: var(--ax-card-2);
+    text-decoration: none;
+    transition: border-color .12s ease;
+}
+.ax-lattice:hover { border-color: var(--ax-violet); }
+
+.ax-lattice-subject { font-size: 13.5px; font-weight: 650; color: var(--ax-text); }
+.ax-lattice-tree { font-size: 12px; color: var(--ax-muted); }
+.ax-lattice-facts {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+}
+/* The practised count is the reader's own; the rest of the line is the tree's. */
+.ax-lattice-facts b { color: var(--ax-violet); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) { .ax-lattice { transition: none; } }
+
 /* --- One subject, on its own: the skeleton ------------------------------
    pages/SubjectAnalytics.tsx. Four panels in a two-up grid — the same rhythm
    the Overview's rows use, so the finished page will not have to be relaid

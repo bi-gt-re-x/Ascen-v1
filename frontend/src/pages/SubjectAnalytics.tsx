@@ -68,6 +68,8 @@ import { Ambient, ErrorState, Loading } from '@/components';
 import { AreaChart } from '@/components/Analytics';
 import { WINDOWS, type WindowKey } from '@/components/Analytics/data';
 import { subjectModel } from '@/components/Subject/model';
+import { latticeFor } from '@/components/Subject/lattice';
+import { loadProgress } from '@/utils/skillProgress';
 import { useApi, useAuth, useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
 import {
   analyticsTasks,
@@ -174,10 +176,8 @@ export default function SubjectAnalytics() {
         span,
         today,
         goals.data?.goals ?? [],
-        prefs.analytics_subject_depth[subjectId],
-        subject?.group,
       ),
-    [goals.data, prefs.analytics_subject_depth, span, subject?.group, subjectId, tasks.data, today],
+    [goals.data, span, subjectId, tasks.data, today],
   );
 
   /**
@@ -258,6 +258,27 @@ export default function SubjectAnalytics() {
     if (result.success) setBrief(result.brief);
     else setBriefError(result.message || 'Could not write this up.');
   }, [model, span, subject]);
+
+  /**
+   * The lattice this subject opens on, and what the reader has practised of it.
+   *
+   * Read from the practice store rather than fetched — it is local to the
+   * browser (utils/skillProgress), so this costs no request. Recomputed when
+   * the subject or the chosen branch changes and not otherwise: the store only
+   * moves on the skill tree page, which is a navigation away from here.
+   */
+  const lattice = useMemo(
+    () =>
+      subject
+        ? latticeFor(
+            subjectId,
+            subject.group,
+            prefs.analytics_subject_depth[subjectId],
+            loadProgress(username),
+          )
+        : null,
+    [prefs.analytics_subject_depth, subject, subjectId, username],
+  );
 
   useDocumentTitle(subject ? subject.name : 'Subject');
 
@@ -363,6 +384,51 @@ export default function SubjectAnalytics() {
               </p>
               <p className="sb-topline-line">{model.headline.verdict}</p>
             </section>
+
+            {/* ---- The path, under the verdict --------------------- */}
+            {/* On top, because "how am I doing" and "at what" are one question
+                and the page was answering only the first for two screens. It
+                is a strip rather than a panel: the reader is oriented by it on
+                the way past, and the tree itself is one click away. */}
+            {lattice && (
+              <div className="sb-path">
+                <nav className="sb-path-crumbs" aria-label="Where this subject sits">
+                  {lattice.path.map((step, at) => (
+                    <span key={step.id}>
+                      {at > 0 && <i aria-hidden="true">›</i>}
+                      <b className={at === lattice.path.length - 1 ? 'is-here' : undefined}>
+                        {step.title}
+                      </b>
+                    </span>
+                  ))}
+                </nav>
+                <p className="sb-path-facts">
+                  {/* The curriculum's size and the reader's own practice, kept
+                      apart in the wording as well as in the model. The node
+                      count is authored; the practised count is the only figure
+                      here that is about the person. */}
+                  <span>
+                    <strong>{lattice.nodes}</strong> skills
+                  </span>
+                  {lattice.core > 0 && (
+                    <span>
+                      <strong>{lattice.core}</strong> core
+                    </span>
+                  )}
+                  {lattice.branches.length > 0 && (
+                    <span>
+                      <strong>{lattice.branches.length}</strong> branches
+                    </span>
+                  )}
+                  <span className={lattice.practised > 0 ? 'is-yours' : undefined}>
+                    <strong>{lattice.practised}</strong> practised by you
+                  </span>
+                </p>
+                <Link className="sb-path-open" to="/skill-trees">
+                  Open the tree →
+                </Link>
+              </div>
+            )}
 
             {/* ---- What to do ------------------------------------- */}
             {model.advice.length > 0 && (
@@ -810,17 +876,17 @@ export default function SubjectAnalytics() {
             )}
 
             {/* ---- The lattice ------------------------------------- */}
-            {model.tree && (
+            {lattice && (
               <Panel
                 title="What there is to learn"
                 note="The skill tree behind this subject. This one is authored rather than measured — it is the path through the subject, not a reading of how far along it you are, and nothing on this page scores you against it."
               >
                 <div className="sb-tree">
                   <div>
-                    <strong>{model.tree.title}</strong>
-                    <p>{model.tree.blurb}</p>
+                    <strong>{lattice.title}</strong>
+                    <p>{lattice.blurb}</p>
                     <p className="sb-tree-choice">
-                      {model.tree.chosen
+                      {lattice.chosen
                         ? 'You chose to go deeper into this branch when you set your subjects up.'
                         : 'The whole subject. You can pick a branch of it to go deeper into from the setup questions.'}
                     </p>
@@ -834,6 +900,35 @@ export default function SubjectAnalytics() {
                     </Link>
                   </div>
                 </div>
+
+                {/* Where it forks. Named rather than counted, because the
+                    branch names are the useful part: they say what the subject
+                    turns into once its foundations are behind you, and one of
+                    them is the answer to the setup question. */}
+                {lattice.branches.length > 0 && (
+                  <>
+                    <h3 className="sb-sub">It branches into</h3>
+                    <ul className="sb-branches">
+                      {lattice.branches.map((branch) => (
+                        <li key={branch.id}>
+                          <span>{branch.title}</span>
+                          <em>{branch.nodes} skills</em>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+
+                <p className="ax-panel-note ax-panel-note-foot">
+                  {/* The line that keeps the two kinds of number apart. Without
+                      it, "6 practised" beside "42 skills" reads as 14% through
+                      a course, which is a claim about the reader that the seed
+                      states cannot support. */}
+                  <strong>{lattice.nodes}</strong> skills here, {lattice.core} of them core.
+                  You have practised <strong>{lattice.practised}</strong>. The tree is a
+                  route map somebody wrote, not a reading of how far along it you are — the
+                  only figure on this page that is yours is the count you have practised.
+                </p>
               </Panel>
             )}
           </>

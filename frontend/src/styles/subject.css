@@ -740,3 +740,89 @@
     color: var(--ax-faint);
 }
 .sb-brief-why span { font-weight: 700; }
+
+/* --- Where this subject sits, under the verdict --------------------------
+   A strip rather than a panel. It orients the reader on the way past — what
+   this subject opens, how big it is, and how much of it they have touched —
+   and the tree itself is one click away. A panel here would put a card
+   between the verdict and the recommendations, which are meant to read as one
+   movement. */
+.sb-path {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: var(--sb-tight);
+    padding: 12px 18px;
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    background: var(--ax-card-2);
+}
+
+.sb-path-crumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--ax-muted);
+}
+.sb-path-crumbs b { font-weight: 600; }
+/* The leaf — where you actually are. The steps above it are the route. */
+.sb-path-crumbs b.is-here { font-weight: 700; color: var(--ax-text); }
+.sb-path-crumbs i { font-style: normal; color: var(--ax-faint); margin-right: 6px; }
+
+.sb-path-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ax-muted);
+}
+.sb-path-facts strong { color: var(--ax-text); font-variant-numeric: tabular-nums; }
+
+/* The one figure in the strip that is about the reader rather than about the
+   curriculum. Tinted so the distinction the wording makes is visible without
+   reading the wording. */
+.sb-path-facts .is-yours strong { color: var(--ax-violet); }
+
+.sb-path-open {
+    margin-left: auto;
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--ax-violet);
+    text-decoration: none;
+    white-space: nowrap;
+}
+.sb-path-open:hover { text-decoration: underline; }
+
+/* --- Where a subject forks ---------------------------------------------- */
+.sb-branches {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 6px;
+}
+
+.sb-branches li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--ax-line);
+    border-radius: 9px;
+    background: var(--ax-card-2);
+    font-size: 13px;
+    color: var(--ax-text);
+}
+.sb-branches em {
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--ax-faint);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}

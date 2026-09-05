@@ -541,7 +541,9 @@ export default function Analytics() {
         {view.key === 'habits' && <HabitsTab model={model} subjects={subjects} />}
         {view.key === 'insights' && <InsightsTab model={model} />}
         {view.key === 'recommendations' && <RecommendationsTab model={model} data={data} />}
-        {view.key === 'subjects' && <SubjectsTab model={model} subjects={subjects} />}
+        {view.key === 'subjects' && (
+          <SubjectsTab model={model} subjects={subjects} username={username} />
+        )}
         {view.key === 'growth' && <GrowthTab model={model} />}
           </>
         )}

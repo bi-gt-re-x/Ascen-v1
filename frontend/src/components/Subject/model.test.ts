@@ -468,31 +468,6 @@ describe('what to do next', () => {
   });
 });
 
-describe('the skill tree behind a subject', () => {
-  it('routes an unmapped subject by its group rather than dropping it', () => {
-    const model = subjectModel([done()], 'maths', '30d', TODAY, [], undefined, 'Computing');
-    expect(model.tree).not.toBeNull();
-    expect(model.tree!.chosen).toBe(false);
-  });
-
-  it('opens on the branch the reader chose', () => {
-    const root = subjectModel([done()], 'maths', '30d', TODAY)!.tree!;
-    // Any real tree id other than the one it would pick on its own.
-    const model = subjectModel([done()], 'maths', '30d', TODAY, [], 'algorithms');
-    if (model.tree && model.tree.id !== root.id) {
-      expect(model.tree.chosen).toBe(true);
-    }
-  });
-
-  it('falls back to the whole subject when the chosen branch is gone', () => {
-    // A stored branch can outlive the tree it named. Falling back to the root
-    // is the same degradation the rail makes for a deleted subject: a shorter
-    // answer rather than a broken one.
-    const model = subjectModel([done()], 'maths', '30d', TODAY, [], 'a-tree-that-never-was');
-    expect(model.tree).not.toBeNull();
-    expect(model.tree!.chosen).toBe(false);
-  });
-});
 
 describe('the verdict at the top of the page', () => {
   it('says nothing happened rather than grading an empty window', () => {

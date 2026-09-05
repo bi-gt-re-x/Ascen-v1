@@ -57,8 +57,6 @@ import { gradeFor } from '@/utils/analyticalScore';
 import type { Grade } from '@/types';
 import { windowOption, type WindowKey } from '@/components/Analytics/data';
 import { goalPace } from '@/utils/goalHealth';
-import { treeForSubject } from '@/skills/subjectMap';
-import { subjectTreeById } from '@/skills/subjectTrees';
 import type { AnalyticsTask } from '@/services/analytics';
 import type { Goal } from '@/types';
 
@@ -717,16 +715,6 @@ export interface SubjectModel {
   goalAimed: number | null;
   goals: SubjectGoal[];
 
-  /**
-   * The lattice this subject teaches, and the branch of it the reader chose.
-   *
-   * Authored, not measured — every node in skills/trees is written by hand and
-   * its state is illustrative. So this is a route map and the page says so: it
-   * is what there is to learn, next to a record of what has been done. Reading
-   * mastery off it would be reporting a designer's guess as the reader's own.
-   */
-  tree: { id: string; title: string; blurb: string; chosen: boolean } | null;
-
   advice: Advice[];
   insight: string | null;
 }
@@ -751,10 +739,6 @@ export function subjectModel(
   today: string,
   /** The account's goals, for the advice that leads the page. */
   goals: Goal[] = [],
-  /** The branch of this subject's tree the reader chose, if any. */
-  depth?: string,
-  /** The catalogue group, so an unmapped subject still routes to a tree. */
-  group?: string,
 ): SubjectModel {
   const mine = all.filter((task) => task.subject === subjectId);
   const span = spanFor(key, today);
@@ -909,17 +893,6 @@ export function subjectModel(
     ? Math.round((done.filter((task) => task.goal_id).length / done.length) * 100)
     : null;
 
-  /* The chosen branch when it still resolves, the subject's own tree
-     otherwise. A stored branch can outlive the tree it named, and falling back
-     to the root is the same degradation the rail makes for a deleted subject:
-     a shorter answer rather than a broken one. */
-  const chosenTree = depth ? subjectTreeById(depth) : null;
-  const rootTree = subjectTreeById(treeForSubject(subjectId, group).tree);
-  const found = chosenTree ?? rootTree;
-  const tree = found
-    ? { id: found.id, title: found.title, blurb: found.blurb, chosen: Boolean(chosenTree) }
-    : null;
-
   const subjectGoals = goalsFor(goals, subjectId, new Date(`${today}T00:00:00`));
   const advice = adviceFrom(bands, struggles, rates, subjectGoals);
 
@@ -980,7 +953,6 @@ export function subjectModel(
     recent,
     goalAimed,
     goals: subjectGoals,
-    tree,
     advice,
     insight,
   };
