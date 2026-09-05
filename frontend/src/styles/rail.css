@@ -210,38 +210,101 @@
     cursor: pointer;
 }
 
-.rail-disclose svg { width: 18px; height: 18px; }
+.rail-disclose svg {
+    width: 17px;
+    height: 17px;
+    transition: transform .18s ease;
+}
 .rail-disclose:hover { background: #F4F6F8; color: #2C302E; }
 .rail-disclose.is-open svg { transform: rotate(180deg); }
-.rail-disclose svg { transition: transform .15s ease; }
+
+/* The control is a 28px target on a 17px glyph, which is right for the finger
+   and wrong for the eye — at rest it should be a hint beside the label rather
+   than a second thing competing with it. It comes up to full strength when the
+   row is hovered or the button itself is focused. */
+.rail-disclose { opacity: .55; transition: opacity .12s ease; }
+.rail-group-head:hover .rail-disclose,
+.rail-disclose:focus-visible,
+.rail-disclose.is-open { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .rail-disclose,
+    .rail-disclose svg { transition: none; }
+}
 
 /* Indented under the entry and quieter than it: these are places inside
-   Analytics, not destinations of their own rank. The rule down the left is
-   what makes the indent read as containment rather than as a stray margin. */
+   Analytics, not destinations of their own rank. Three things carry that, and
+   the first two were missing — the set read as four siblings of the parent
+   rather than as its children.
+
+   **The rule hangs under the parent's icon, not under its text.** 24px is the
+   icon's centre: `.rail-link` has 14px of left padding and a 21px icon, so
+   14 + 10.5 rounds there. That alignment is the whole reason a tree reads as
+   a tree — a rule at an arbitrary indent is a stray margin with a line in it.
+
+   **They are a step down in size and weight**, not the same 15px/600 as the
+   destinations above. Two levels set identically are one level with extra
+   indentation. */
 .rail-sub {
     display: flex;
     flex-direction: column;
     gap: 1px;
-    margin: 2px 0 4px 22px;
-    padding-left: 10px;
+    margin: 3px 0 6px 24px;
+    padding-left: 12px;
     border-left: 1.5px solid #E6E9EF;
 }
 
 .rail-sub-link {
+    position: relative;
     display: block;
-    padding: 7px 10px;
+    padding: 6px 10px;
     border-radius: 8px;
-    color: #6C757D;
-    font-size: 13.5px;
-    font-weight: 600;
+    color: #7A828A;
+    font-size: 13px;
+    font-weight: 550;
+    letter-spacing: -.005em;
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color .12s ease, background .12s ease;
 }
 
 .rail-sub-link:hover { background: #F4F6F8; color: #2C302E; }
-.rail-sub-link.active { background: #F1EDE7; color: #2C302E; }
+
+/* Where you are, marked on the rule rather than as a wide filled pill. The
+   pill was the same shape and nearly the same tone as the parent's own active
+   state, so an open group showed two similar blocks and neither said which
+   page was actually open. A tick on the line and a weight change say it
+   without competing. */
+.rail-sub-link.active {
+    color: #2C302E;
+    font-weight: 700;
+    background: #F6F4F1;
+}
+
+.rail-sub-link.active::before {
+    content: '';
+    position: absolute;
+    left: -13.5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.5px;
+    height: 15px;
+    border-radius: 999px;
+    background: #A38A70;
+}
+
+/* An open group whose child is the page you are on. The parent keeps its text
+   colour and gives up its fill: two filled blocks in one group is the rail
+   claiming two pages are open at once. */
+.rail-group:has(.rail-sub-link.active) > .rail-group-head > .rail-link.active {
+    background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rail-sub-link { transition: none; }
+}
 
 /* --- The foot: the rank and the bar to the next one --------------------- */
 /* It held the dark-mode switch and an avatar-and-username plate. The switch is
@@ -522,9 +585,10 @@ html[data-theme="dark"] .rail-mark-foot { fill: #B0B4F8; }
 html[data-theme="dark"] .rail-disclose { color: #6E7681; }
 html[data-theme="dark"] .rail-disclose:hover { background: #21262D; color: #F0F2F5; }
 html[data-theme="dark"] .rail-sub { border-left-color: #30363D; }
-html[data-theme="dark"] .rail-sub-link { color: #8B949E; }
+html[data-theme="dark"] .rail-sub-link { color: #7D8590; }
 html[data-theme="dark"] .rail-sub-link:hover { color: #F0F2F5; background: #21262D; }
-html[data-theme="dark"] .rail-sub-link.active { color: #F0F2F5; background: #2A2118; }
+html[data-theme="dark"] .rail-sub-link.active { color: #F0F2F5; background: #1F242C; }
+html[data-theme="dark"] .rail-sub-link.active::before { background: #D8C3A5; }
 
 html[data-theme="dark"] .rail-link { color: #8B949E; }
 html[data-theme="dark"] .rail-link:hover { color: #F0F2F5; background: #21262D; }
