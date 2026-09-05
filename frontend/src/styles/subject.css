@@ -12,88 +12,171 @@
    analytics.css; anything keyed off them flips with it.
 */
 
+/* --- A rhythm, rather than a number per rule -----------------------------
+   Every gap on this page was its own literal — 12, 14, 16, 18, 30 — which is
+   how a layout ends up almost-aligned in six places. Three steps, used
+   everywhere below, so the vertical rhythm is a decision rather than an
+   accumulation.
+
+   On `.sb-page`, not `.ax-page`: the page carries both classes, and a bare
+   rule here for a class analytics.css already owns is a silent override that
+   scripts/check_css.mjs fails the build over. */
+.sb-page {
+    --sb-tight: 10px;
+    --sb-gap: 16px;
+    --sb-block: 28px;
+}
+
 /* --- The verdict, which is the first thing on the page ------------------
    The page opened with four tiles and a paragraph, and the reader had to
    assemble the verdict out of them. This states it in one line at a size that
    cannot be skimmed past, with the recommendations directly under it and every
-   figure it was drawn from further down. Somebody who reads the top two blocks
-   and leaves has read the two worth reading.
+   figure it was drawn from further down.
 
    Not `.sb-verdict` — that class is the pill on a recent-work row and has been
    since before this existed. */
 .sb-topline {
-    margin-top: 18px;
-    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    padding: 26px 28px;
     border: 1px solid var(--ax-line);
-    border-left: 4px solid var(--ax-violet);
     border-radius: var(--ax-radius);
     background: var(--ax-card);
     box-shadow: var(--ax-shadow);
 }
 
+/* The band's colour, once, as a variable the rest of the block reads.
+   Coloured by what the grade *means* rather than by house accent: a C that
+   looks like an A is a page saying one thing in words and another in colour. */
+.sb-topline[data-band="high"] { --sb-band: var(--ax-green); }
+.sb-topline[data-band="good"] { --sb-band: var(--ax-blue); }
+.sb-topline[data-band="fair"] { --sb-band: var(--ax-amber); }
+.sb-topline[data-band="low"]  { --sb-band: var(--ax-pink); }
+.sb-topline[data-band="none"] { --sb-band: var(--ax-faint); }
+
+/* A wash off the left edge rather than a flat tint across the card. It gives
+   the block a light source and keeps the right-hand side of the sentence on
+   plain card, where text is easiest to read. */
+.sb-topline::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        color-mix(in srgb, var(--sb-band) 13%, transparent) 0%,
+        color-mix(in srgb, var(--sb-band) 4%, transparent) 34%,
+        transparent 62%);
+    pointer-events: none;
+}
+
+/* The band, restated as an edge. Thicker than a hairline because it is the
+   one piece of chrome carrying the verdict's colour into the page's margin. */
+.sb-topline::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--sb-band);
+}
+
+.sb-topline > * { position: relative; }
+
 .sb-topline-grade {
     display: flex;
     align-items: baseline;
-    gap: 12px;
+    gap: 14px;
     margin: 0;
 }
 
 .sb-topline-grade strong {
-    font-size: 46px;
+    font-size: 56px;
     font-weight: 800;
-    line-height: 1;
-    letter-spacing: -.03em;
-    color: var(--ax-text);
-}
-
-/* The checkable half, and quieter than the letter it qualifies. */
-.sb-topline-score {
-    font-size: 15px;
-    font-weight: 650;
-    color: var(--ax-muted);
+    line-height: .95;
+    letter-spacing: -.045em;
+    color: var(--sb-band);
+    /* The letters are read as a set — B against B+ against A — so they line up
+       on their own advance width rather than on the glyphs' natural ones. */
     font-variant-numeric: tabular-nums;
 }
 
-/* The sentence. Bold and large enough to be the headline it is, capped in
-   width so it stays one or two lines rather than becoming the paragraph this
-   whole block replaced. */
-.sb-topline-line {
-    margin: 10px 0 0;
-    font-size: 19px;
+/* The checkable half. Quieter than the letter it qualifies, and set as a pill
+   so it reads as a footnote to the grade rather than as a second headline. */
+.sb-topline-score {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sb-band) 12%, transparent);
+    color: color-mix(in srgb, var(--sb-band) 72%, var(--ax-text));
+    font-size: 13px;
     font-weight: 700;
-    line-height: 1.35;
-    letter-spacing: -.015em;
+    letter-spacing: .01em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* The sentence. Large and bold enough to be the headline it is, capped in
+   width so it stays one or two lines rather than becoming the paragraph this
+   whole block replaced. `text-wrap: balance` keeps a two-line verdict from
+   breaking with one word on the second line. */
+.sb-topline-line {
+    margin: 14px 0 0;
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1.32;
+    letter-spacing: -.018em;
     color: var(--ax-text);
-    max-width: 46ch;
+    max-width: 44ch;
+    text-wrap: balance;
+}
+
+@media (max-width: 560px) {
+    .sb-topline { padding: 20px; }
+    .sb-topline-grade strong { font-size: 44px; }
+    .sb-topline-line { font-size: 18px; }
 }
 
 /* --- Where the working starts ------------------------------------------
    A heading rather than a rule, because the split it marks is editorial: above
    it is the answer, below it is why. Without something saying so, the reader
    who scrolls past the recommendations has no way to know the rest is
-   optional. */
+   optional. The line beside it does the work a bare rule would, without
+   claiming a section of its own. */
 .sb-detail-head {
-    margin: 30px 0 0;
-    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: var(--sb-block) 0 0;
+    font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: .08em;
+    letter-spacing: .1em;
     text-transform: uppercase;
     color: var(--ax-faint);
+}
+
+.sb-detail-head::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--ax-line);
 }
 
 /* --- The four figures across the top ------------------------------------ */
 .sb-tiles {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 12px;
-    margin-top: 16px;
+    gap: var(--sb-tight);
+    margin-top: var(--sb-gap);
 }
 
 .sb-tile {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 14px 16px;
+    /* The label sits tight to its figure and the note hangs off the bottom, so
+       the three lines read as one object rather than as three evenly-spaced
+       ones. `margin-top: auto` on the note keeps the row of tiles bottom-
+       aligned when one of them wraps to two lines. */
+    gap: 2px;
+    padding: 15px 17px 14px;
     background: var(--ax-card);
     border: 1px solid var(--ax-line);
     border-radius: var(--ax-radius);
@@ -109,11 +192,15 @@
 }
 
 .sb-tile-value {
-    font-size: 27px;
-    font-weight: 700;
-    letter-spacing: -.02em;
+    margin-top: 3px;
+    font-size: 28px;
+    font-weight: 750;
+    letter-spacing: -.028em;
     color: var(--ax-text);
-    line-height: 1.1;
+    line-height: 1.05;
+    /* Four tiles in a row, four figures of different widths. Tabular keeps
+       their left edges on the same axis as the labels above them. */
+    font-variant-numeric: tabular-nums;
 }
 
 /* The score out of 100 beside its letter. Quieter and smaller: the letter is
@@ -126,6 +213,7 @@
 }
 
 .sb-tile-note {
+    margin-top: 6px;
     font-size: 12px;
     line-height: 1.45;
     color: var(--ax-muted);
@@ -138,12 +226,18 @@
 .sb-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-    gap: 14px;
-    margin-top: 14px;
+    gap: var(--sb-gap);
+    margin-top: var(--sb-gap);
+    align-items: start;
 }
 
 /* A panel outside `.sb-grid` is full width and needs the same gap above it. */
-.ax-shell > .sb-panel { margin-top: 14px; }
+.ax-shell > .sb-panel { margin-top: var(--sb-gap); }
+
+/* The two panels that lead the page get the air a lead block needs, so the
+   verdict, the recommendations and the chart read as three beats rather than
+   as a stack. */
+.sb-topline + .sb-panel { margin-top: var(--sb-gap); }
 
 .sb-sub {
     margin: 14px 0 8px;
@@ -209,8 +303,8 @@
 /* --- Bars and deltas ---------------------------------------------------- */
 .sb-bar {
     display: block;
-    height: 7px;
-    border-radius: 4px;
+    height: 6px;
+    border-radius: 999px;
     background: var(--ax-line-soft);
     overflow: hidden;
 }
@@ -218,8 +312,12 @@
 .sb-bar-fill {
     display: block;
     height: 100%;
-    border-radius: 4px;
+    border-radius: 999px;
     background: var(--ax-violet);
+    /* A very short bar rounded at 999px collapses to a dot and reads as
+       nothing. A floor keeps 2% visible as a sliver, which is the honest
+       rendering of a small number rather than of no number. */
+    min-width: 3px;
 }
 
 .sb-delta {
@@ -245,11 +343,22 @@
 
 .sb-table th,
 .sb-table td {
-    padding: 9px 10px;
+    padding: 11px 12px;
     text-align: left;
     border-bottom: 1px solid var(--ax-line-soft);
     vertical-align: middle;
 }
+
+/* The first and last cells sit flush with the panel's own padding rather than
+   inside a gutter of their own — otherwise the table reads as inset from a
+   card it is already inside. */
+.sb-table th:first-child,
+.sb-table td:first-child { padding-left: 0; }
+.sb-table th:last-child,
+.sb-table td:last-child { padding-right: 0; }
+
+/* Counts, percentages and durations, all read down their columns. */
+.sb-table td { font-variant-numeric: tabular-nums; }
 
 .sb-table thead th {
     font-size: 11px;
@@ -272,8 +381,25 @@
 /* The row the page is about to make a recommendation from. Tinted rather than
    outlined: the table is read down its length and a box in the middle of it
    reads as a different table. */
-.sb-table tbody tr.is-weak {
-    background: color-mix(in srgb, var(--ax-amber) 9%, transparent);
+/* The row the page is about to recommend from. A marker in the gutter rather
+   than a wash across the row: the cells stay on the card's own ground, so the
+   figures in them are as legible as every other row's, and the mark is still
+   the first thing found when scanning the column of names. */
+.sb-table tbody tr.is-weak th:first-child {
+    position: relative;
+    padding-left: 12px;
+}
+
+.sb-table tbody tr.is-weak th:first-child::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 15px;
+    border-radius: 999px;
+    background: var(--ax-amber);
 }
 
 .sb-cell-bar {
@@ -304,22 +430,29 @@
 .sb-run li {
     display: grid;
     justify-items: center;
-    gap: 2px;
-    min-width: 52px;
-    padding: 8px 6px;
+    gap: 3px;
+    min-width: 54px;
+    padding: 9px 7px;
     border: 1px solid var(--ax-line);
-    border-radius: 10px;
+    border-radius: 11px;
     background: var(--ax-card-2);
 }
 
+/* A dot rather than a coloured number, so the row can be read as a pattern
+   before any of the figures are. A ring around it separates two adjacent
+   readings of the same colour, which a flat row of dots does not. */
 .sb-run-dot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
+    /* Both the dot and its ring come off `color`, so a reading's tone is one
+       declaration rather than three that can drift apart. */
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
 }
-.sb-run-dot.is-good { background: var(--ax-green); }
-.sb-run-dot.is-mid { background: var(--ax-amber); }
-.sb-run-dot.is-poor { background: var(--ax-pink); }
+.sb-run-dot.is-good { color: var(--ax-green); }
+.sb-run-dot.is-mid { color: var(--ax-amber); }
+.sb-run-dot.is-poor { color: var(--ax-pink); }
 
 .sb-run-value {
     font-size: 13px;
@@ -347,12 +480,24 @@
 .sb-advice-item {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 12px;
-    padding: 12px 14px;
+    gap: 13px;
+    padding: 14px 16px;
     border: 1px solid var(--ax-line);
     border-left-width: 3px;
-    border-radius: 10px;
+    border-radius: 11px;
     background: var(--ax-card-2);
+    transition: border-color .14s ease, transform .14s ease;
+}
+
+/* A lift on hover, on a card that is not a link. It is not affordance — there
+   is nothing to click — it is feedback that the pointer is on one row of a
+   list where every row looks alike, which is where a reader loses their place.
+   Two pixels, and it stops for anyone who has asked motion to stop. */
+.sb-advice-item:hover { transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+    .sb-advice-item { transition: none; }
+    .sb-advice-item:hover { transform: none; }
 }
 
 /* Ranked by what it is worth, and the left edge says which is which without a
@@ -361,18 +506,25 @@
 .sb-advice-item.is-second { border-left-color: var(--ax-amber); }
 .sb-advice-item.is-upkeep { border-left-color: var(--ax-blue); }
 
+/* The rank, filled in its row's own colour rather than outlined in grey. The
+   left edge already carries that colour; a badge in a fourth neutral beside it
+   was one more thing on the card that meant nothing. */
 .sb-advice-rank {
     display: grid;
     place-items: center;
-    width: 24px;
-    height: 24px;
+    width: 25px;
+    height: 25px;
+    margin-top: 1px;
     border-radius: 50%;
-    background: var(--ax-card);
-    border: 1px solid var(--ax-line);
+    background: color-mix(in srgb, currentColor 14%, var(--ax-card));
     font-size: 12px;
-    font-weight: 700;
-    color: var(--ax-muted);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
 }
+
+.sb-advice-item.is-first .sb-advice-rank { color: var(--ax-pink); }
+.sb-advice-item.is-second .sb-advice-rank { color: var(--ax-amber); }
+.sb-advice-item.is-upkeep .sb-advice-rank { color: var(--ax-blue); }
 
 /* Bold and a size up: this is the instruction, and the sentence under it is
    the qualifier. The page is read top-down and these are the second thing
@@ -443,7 +595,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--sb-gap);
 }
 
 .sb-goal { display: grid; gap: 6px; }
@@ -499,7 +651,7 @@
 .sb-tree p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ax-muted); max-width: 62ch; }
 .sb-tree-choice { color: var(--ax-faint) !important; }
 
-.sb-tree-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sb-tree-actions { display: flex; gap: var(--sb-tight); flex-wrap: wrap; }
 
 /* --- The one panel a model wrote ----------------------------------------
    Marked out from the counted panels on purpose, and by more than a label: a
@@ -508,7 +660,12 @@
    see the panel — but a border does not have to be read. */
 .sb-brief {
     border-left: 3px solid var(--ax-blue);
-    background: color-mix(in srgb, var(--ax-blue) 4%, var(--ax-card));
+    background:
+        linear-gradient(
+            105deg,
+            color-mix(in srgb, var(--ax-blue) 7%, transparent) 0%,
+            transparent 46%),
+        var(--ax-card);
 }
 
 .sb-brief-error {

@@ -269,7 +269,12 @@ export default function SubjectAnalytics() {
   const naming = catalogue.size === 0;
 
   return (
-    <div className="ax-page">
+    /* `sb-page` alongside `ax-page`: this page is a guest in the analytics
+       palette and reads its tokens, but its own spacing scale has to hang off
+       a class this stylesheet owns. A bare `.ax-page` rule in subject.css is
+       two sheets writing one class, and whichever Vite loads second wins —
+       scripts/check_css.mjs fails the build for exactly that. */
+    <div className="ax-page sb-page">
       <Ambient />
       <div className="ax-shell page-shell">
         <header className="ax-head">
@@ -330,7 +335,26 @@ export default function SubjectAnalytics() {
                 to do, and only then shows the working. The order is the whole
                 point: somebody who reads two blocks and leaves has read the
                 two that were worth reading. */}
-            <section className="sb-topline" aria-label="How this subject is going">
+            <section
+              className="sb-topline"
+              aria-label="How this subject is going"
+              /* The band, for the stylesheet. The letter is coloured by what it
+                 means rather than by house accent — a C that looks like an A is
+                 a page telling the reader one thing in words and another in
+                 colour. Attribute rather than a class so the CSS reads as the
+                 table of bands it is. */
+              data-band={
+                model.headline.grade === null
+                  ? 'none'
+                  : ['S', 'A+', 'A'].includes(model.headline.grade)
+                    ? 'high'
+                    : model.headline.grade === 'B'
+                      ? 'good'
+                      : model.headline.grade === 'C'
+                        ? 'fair'
+                        : 'low'
+              }
+            >
               <p className="sb-topline-grade">
                 <strong>{model.headline.grade ?? '—'}</strong>
                 {model.headline.score !== null && (
