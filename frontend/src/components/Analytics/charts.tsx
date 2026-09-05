@@ -1129,7 +1129,15 @@ export function PanelGroup({
             <strong>{title}</strong>
             <span className="ax-muted ax-small">{note}</span>
           </span>
-          <span className="ax-finding-mark" aria-hidden="true" />
+          {/* The chevron gets a target around it rather than floating loose at
+              the far end of a full-width row. A bare 13px glyph two feet from
+              the words it belongs to does not read as a control — it reads as
+              punctuation, and these rows were being missed because of it. The
+              whole head is still the button; this is what makes that look
+              true. */}
+          <span className="ax-group-toggle" aria-hidden="true">
+            <span className="ax-finding-mark" />
+          </span>
         </button>
       </Heading>
       {/*

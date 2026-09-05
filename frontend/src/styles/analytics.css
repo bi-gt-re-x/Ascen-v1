@@ -1428,32 +1428,94 @@ body:has(.ax-page) .app-main {
    The heading is not a `.ax-panel`: a group that looked like a card would read
    as a fourth panel that happened to contain the others. It is a rule and a
    label, which is what a section heading is. */
-.ax-group { display: flex; flex-direction: column; }
-.ax-group + .ax-group { margin-top: 4px; }
+/* The rule belongs to the section, not to the button.
+ *
+ * It used to be a `border-top` on the head itself, which meant the head could
+ * never have a shape of its own: a rounded hover surface with a square rule
+ * welded across its top edge looks like a rendering fault. Moving the rule out
+ * here leaves the button free to be a rounded target, and the divided-list
+ * reading — which is the right one for a stack of groups — is unchanged. */
+.ax-group { display: flex; flex-direction: column; border-top: 1px solid var(--ax-line); }
+.ax-group + .ax-group { margin-top: 0; }
 /* The group's title is a real heading now, wrapped around the disclosure
    button so a reader moving by heading finds the groups that organise the tab.
    It carries a heading's default margins and size, and it should not: the
    button inside it is what is styled. */
 .ax-group > :is(h2, h3, h4) { margin: 0; font: inherit; }
+/* A row you can tell is a row.
+ *
+ * These were a title, a note and a chevron pinned to the far right of a
+ * full-width head with nothing between them — on a wide screen the glyph ends
+ * up a hand's width from the words it opens, and the only thing that moved on
+ * hover was the title's colour. The head now lights up as one surface, so the
+ * thing the pointer is over and the thing the click will open are visibly the
+ * same object.
+ *
+ * The tint bleeds 10px past the text on both sides and takes it back in
+ * margin, so the surface is wider than the words without the words moving. */
 .ax-group-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    padding: 12px 2px;
+    gap: 14px;
+    width: calc(100% + 20px);
+    margin: 0 -10px;
+    padding: 13px 10px;
     border: 0;
-    border-top: 1px solid var(--ax-line);
+    border-radius: 11px;
     background: none;
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
+    transition: background .15s ease;
 }
+.ax-group-head:hover { background: var(--ax-card-2); }
 .ax-group-head:hover strong { color: var(--ax-violet); }
+/* Keyboard only. A ring drawn on every click would flash across the stack as a
+   reader opened one group after another. */
+.ax-group-head:focus-visible {
+    outline: 2px solid var(--ax-violet);
+    outline-offset: -2px;
+}
+
 .ax-group-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ax-group-title strong { font-size: 15px; font-weight: 700; letter-spacing: -.015em; }
-.ax-group-head .ax-finding-mark { margin-top: 0; flex: none; }
+.ax-group-title strong {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -.015em;
+    transition: color .15s ease;
+}
+
+/* The chevron's target. See the note at `PanelGroup` in components/Analytics/charts. */
+.ax-group-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    transition: border-color .15s ease, background .15s ease;
+}
+.ax-group-head:hover .ax-group-toggle {
+    border-color: color-mix(in srgb, var(--ax-violet) 45%, transparent);
+    background: color-mix(in srgb, var(--ax-violet) 9%, transparent);
+}
+.ax-group-head:hover .ax-finding-mark { background: var(--ax-violet); }
+
+/* Open is a state worth seeing from across the page: a reader scanning a tab
+   of six groups wants to know which two they left open without opening them
+   again to find out. */
+.ax-group.is-open .ax-group-toggle {
+    border-color: color-mix(in srgb, var(--ax-violet) 45%, transparent);
+    background: color-mix(in srgb, var(--ax-violet) 12%, transparent);
+}
+.ax-group.is-open .ax-finding-mark { background: var(--ax-violet); }
+
+.ax-group-head .ax-finding-mark { margin-top: 0; flex: none; width: 12px; height: 12px; }
 .ax-group.is-open .ax-finding-mark { transform: rotate(180deg); }
 
 .ax-group-body {
@@ -1469,7 +1531,7 @@ body:has(.ax-page) .app-main {
     display: flex;
     flex-direction: column;
     gap: var(--ax-gap);
-    padding: 4px 0 16px;
+    padding: 8px 0 18px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3464,49 +3526,6 @@ body:has(.ax-page) .app-main {
    introduction, and tinted only when there is a direction to report. `is-up`
    and `is-down` are the finding; a tab with nothing rising or falling gets the
    plain card rather than a colour that means nothing. See `TabOpening`. */
-/* "You were last here on Tuesday" — above the tab bar, on every tab.
- *
- * Deliberately quieter than `.ax-opening` below, and the difference is the
- * point: the opening is the tab's own finding and this is the page saying
- * hello. Two bordered cards stacked would read as two headlines competing,
- * which is exactly what the Growth tab refused an opening line to avoid.
- *
- * So: no border, no card, no tint. A rule under it, muted text, and one dot in
- * the accent — enough to be found on purpose and not enough to be read first.
- */
-.ax-since {
-    display: flex;
-    align-items: baseline;
-    gap: 9px;
-    margin: 0 0 14px;
-    padding: 0 0 13px;
-    border-bottom: 1px solid var(--ax-line-soft);
-    font-size: 12.5px;
-    line-height: 1.55;
-    color: var(--ax-muted);
-}
-
-.ax-since strong {
-    font-weight: 650;
-    color: var(--ax-text);
-    font-variant-numeric: tabular-nums;
-}
-
-.ax-since-mark {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--ax-violet);
-    flex: none;
-    /* Baseline-aligned text and a bare box do not agree about where the middle
-       is; this drops the dot onto the x-height of the sentence beside it. */
-    transform: translateY(-1px);
-}
-
-@media (max-width: 640px) {
-    .ax-since { font-size: 12px; }
-}
-
 .ax-opening {
     margin: 0 0 2px;
     padding: 11px 15px;

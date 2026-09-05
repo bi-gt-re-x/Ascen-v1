@@ -114,8 +114,6 @@ import {
 import { outlook, recommendations } from '@/utils/advice';
 import { PATTERN_DAYS, RECENT_DAYS, daysUntilNextWeek, recentWindow, weekStamp } from '@/utils/recent';
 import { dataMaturity } from '@/utils/dataMaturity';
-import { sinceLastVisit } from '@/utils/sinceLastVisit';
-import { isoDate } from '@/utils/dates';
 import { detailRules, toneRules } from '@/utils/analyticsPrefs';
 import { diagnose, vitals } from '@/utils/diagnosis';
 import { analyticalScore } from '@/utils/analyticalScore';
@@ -265,27 +263,6 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
      deliberately blank. See `dates` on `ScorePanelProps`. */
   const scoreDates = useMemo(() => recorded.map((point) => pointLabel(point.date)), [recorded]);
 
-  /**
-   * What the record did since the reader was last here.
-   *
-   * Off the score log's *dates* and the day series, both already fetched —
-   * reading the report card files a dated snapshot, so that log is a visit log.
-   * See utils/sinceLastVisit for why this needs no storage of its own, and why
-   * it says nothing about the score.
-   *
-   * Unscoped by the window picker, like `standing` and for the same reason:
-   * "what happened while you were away" is a question about the account and a
-   * period the reader did not choose. Scoping it would make the sentence change
-   * when they pressed 7D, which is the one thing it must not do.
-   */
-  const since = useMemo(
-    /* Today from the clock, not from `all[all.length - 1]`. The series ends on
-       the last day that *recorded* something, so on the visit that matters most
-       — somebody coming back after a fortnight of nothing — reading today off
-       it would put "today" a fortnight ago and report a gap of zero days. */
-    () => sinceLastVisit(recorded, all, isoDate()),
-    [all, recorded],
-  );
 
   const breakdown = useMemo(
     () => subjectXp(bySubject, subjects, fromIso, toIso, RADAR_SUBJECTS),
@@ -824,7 +801,6 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     recorded,
     scoreLine,
     scoreDates,
-    since,
     scoreMarks,
     breakdown,
     previousBySubject,

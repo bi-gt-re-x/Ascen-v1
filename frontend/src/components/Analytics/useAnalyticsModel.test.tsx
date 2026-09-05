@@ -257,20 +257,6 @@ describe('the score', () => {
   });
 });
 
-describe('the visit strip', () => {
-  it('reads the gap off the score log and the record off the series', () => {
-    const { result } = drive();
-    const since = result.current.since;
-    expect(since?.on).toBe(dayAt(TOTAL - 4));
-    // `dayAt(TOTAL - 1)` is today, so the reading three rows back is three days
-    // ago — the visit day itself is not counted, having already happened when
-    // the reader looked at it.
-    expect(since?.daysAgo).toBe(3);
-    expect(since?.activeDays).toBe(activeBetween(TOTAL - 3, TOTAL));
-    expect(since?.xp).toBe(activeBetween(TOTAL - 3, TOTAL) * AFTER);
-  });
-});
-
 describe('the tasks', () => {
   it('takes the whole record, not the window', () => {
     const { result } = drive();

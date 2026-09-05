@@ -12,7 +12,6 @@
  * scrolls like one.
  */
 import type { ReactNode } from 'react';
-import type { SinceLastVisit } from '@/utils/sinceLastVisit';
 import { WINDOWS, type WindowKey } from './data';
 
 // --------------------------------------------------------------------------
@@ -400,65 +399,6 @@ export function TabOpening({
 }) {
   if (!children) return null;
   return <p className={`ax-opening is-${tone}`}>{children}</p>;
-}
-
-/**
- * What the record did while the reader was away.
- *
- * The seven tabs all describe a *state* over a window the reader picks. None of
- * them describes movement since the last visit, which is the question somebody
- * actually arrives with on their fourth trip here — and it is the only question
- * on the page whose answer is different every time, which is what makes coming
- * back worth anything.
- *
- * ## Why this is above the tab bar and not in a tab
- *
- * It is a statement about the account, not about a tab, and it is true of all
- * seven — so putting it inside one would make six visits out of seven miss it.
- * Above the bar is also what keeps it from competing with `TabOpening`: that
- * slot is the open tab's own sentence, this is the page saying hello, and they
- * are never two headlines about the same thing.
- *
- * ## It does not mention the score
- *
- * `scoreMovement` above already answers that, and `Summary` prints it on the
- * Overview. Saying it here as well would be two statements about one number,
- * in two places, free to disagree. See the note in utils/sinceLastVisit.
- *
- * A gap with nothing in it still prints. Coming back after a week off is
- * exactly when a reader wants to be told it was a week off — zero is the
- * finding, and a strip that quietly vanished on the visits where the news is
- * bad would be the page flattering them.
- */
-export function SinceLast({ since }: { since: SinceLastVisit | null }) {
-  if (!since) return null;
-
-  const when =
-    since.daysAgo === 1
-      ? 'yesterday'
-      : since.daysAgo < 14
-        ? `${since.daysAgo} days ago`
-        : `${Math.round(since.daysAgo / 7)} weeks ago`;
-
-  return (
-    <p className="ax-since">
-      <span className="ax-since-mark" aria-hidden="true" />
-      <span>
-        You were last here <strong>{when}</strong>.{' '}
-        {since.tasks === 0 && since.xp === 0 ? (
-          <>Nothing has been recorded since.</>
-        ) : (
-          <>
-            Since then: <strong>{since.tasks.toLocaleString()}</strong>{' '}
-            {since.tasks === 1 ? 'task' : 'tasks'} and{' '}
-            <strong>{since.xp.toLocaleString()}</strong> XP across{' '}
-            <strong>{since.activeDays}</strong> of {since.daysAgo}{' '}
-            {since.daysAgo === 1 ? 'day' : 'days'}.
-          </>
-        )}
-      </span>
-    </p>
-  );
 }
 
 // --------------------------------------------------------------------------

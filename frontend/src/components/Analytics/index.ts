@@ -42,7 +42,7 @@ export type { PatternsProps as DiscoveredPatternsProps } from './Patterns';
 
 export { scoreMovement } from './Header';
 export type { ScoreMovement, ScoreReading } from './Header';
-export { Header, SinceLast, ViewTabs, Controls, TabOpening, VIEWS, viewFor } from './Header';
+export { Header, ViewTabs, Controls, TabOpening, VIEWS, viewFor } from './Header';
 export type { HeaderProps, ViewTabsProps, ControlsProps, View, ViewKey } from './Header';
 
 export {
