@@ -205,6 +205,14 @@ export interface PeriodCard {
   change: number | null;
   /** True when the account is younger than the window the label names. */
   partial: boolean;
+  /**
+   * The card's own overall score across the period, for its sparkline.
+   *
+   * Scored the same trailing-window way as the main line, so a card and the
+   * chart it opens cannot disagree about the shape. Twelve points, because a
+   * sparkline at this width is read as a shape rather than as a series.
+   */
+  spark: number[];
 }
 
 export interface GrowthPeriods {

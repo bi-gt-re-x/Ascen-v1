@@ -789,6 +789,14 @@ MIN_TREND_WINDOW = 7
 #: the period the reader picked, which is the period they asked about.
 MAX_TREND_WINDOW = 30
 
+#: Points in a period card's sparkline.
+#:
+#: Twelve, because the card is about 150px wide and a sparkline is read as a
+#: *shape* rather than as a series — the reader is asking "did this climb or
+#: sag", not "what was it on the 14th". More points at that width is a thicker
+#: line saying the same thing.
+SPARK_POINTS = 12
+
 
 def _period_bounds(period, today, created):
     """The inclusive [start, end] a period key names, and its length in days."""
@@ -885,10 +893,23 @@ def period_scores(username, period='30d', rollup=None, user=None, today=None):
         card_prev_start = card_prev_end - timedelta(days=card_len - 1)
         card_before = (scored(card_prev_start, card_prev_end)
                        if card_prev_start >= created else None)
+        # The card's own shape, so the row does not need a request per card.
+        # Same trailing-window scoring as the main line — see `trend_window`
+        # above — because a card whose sparkline was drawn from daily readings
+        # would disagree with the chart the card opens.
+        card_trend = max(MIN_TREND_WINDOW, min(MAX_TREND_WINDOW, round(card_len / 6)))
+        spark = []
+        for n in range(SPARK_POINTS):
+            at = card_start + timedelta(
+                days=round(n * (card_len - 1) / max(1, SPARK_POINTS - 1)))
+            spark.append(scored(
+                max(at - timedelta(days=card_trend - 1), created), at)['overall'])
+
         cards.append({
             'key': key,
             'label': label,
             'days': card_len,
+            'spark': spark,
             'overall': card_now['overall'],
             'previous': card_before['overall'] if card_before else None,
             'change': _growth_pct(card_now['overall'],

@@ -56,25 +56,25 @@ export const METRIC_META: Record<
 > = {
   productivity: {
     label: 'Productivity',
-    tone: 'violet',
+    tone: 'blue',
     glyph: 'sparkle',
     asks: 'XP a working day, against your daily goal',
   },
   quality: {
     label: 'Quality',
-    tone: 'green',
+    tone: 'amber',
     glyph: 'target',
     asks: 'how hard the work was, times how well it went',
   },
   consistency: {
     label: 'Consistency',
-    tone: 'blue',
+    tone: 'green',
     glyph: 'check',
     asks: 'the share of days you showed up at all',
   },
   efficiency: {
     label: 'Efficiency',
-    tone: 'amber',
+    tone: 'violet',
     glyph: 'clock',
     asks: 'the share of tasks finished by their deadline',
   },
@@ -185,20 +185,31 @@ export function measuredAs(metric: PeriodMetric, side: PeriodSide | null): strin
 // --------------------------------------------------------------------------
 // The period row — the tab's one control, and its summary at the same time
 // --------------------------------------------------------------------------
+/** The short forms, for the segmented control. The cards keep the long ones. */
+const SHORT: Record<PeriodKey, string> = {
+  '7d': 'Week',
+  '30d': 'Month',
+  '90d': '3 Months',
+  '180d': '6 Months',
+  '365d': 'Year',
+  all: 'All time',
+};
+
 /**
- * Six periods, each showing what it grew by, and pressing one opens it.
+ * The period, as a segmented control in the chart's own header.
  *
- * The control and the overview are the same object on purpose. The tab needs a
- * period selector and it needs a row of "this week / this month / all time"
- * cards, and building both would have put two rows of the same six words at the
- * top of the page — one of them answering a question the other had already
- * asked. A card that states its own growth *is* the reason to press it.
+ * It lives there because the period is a property of the *chart* before it is a
+ * property of anything else on the tab: a reader changing it is asking the line
+ * to cover a different span, and a control that does that from the top of the
+ * page makes them look somewhere other than the thing that moves.
  *
- * A period with no equivalent stretch before it prints a dash rather than a
- * number. "Since you started" always does, by definition: there is nothing
- * before the beginning to have grown from.
+ * The row of cards at the foot of the tab is not a second copy of this. It
+ * states what every period grew by — six answers at once, which a segmented
+ * control cannot show — and pressing one is a way of asking for the detail
+ * behind a figure the reader has just read. Same destination, different
+ * question.
  */
-export function PeriodRow({
+export function PeriodTabs({
   cards,
   active,
   onPick,
@@ -210,7 +221,43 @@ export function PeriodRow({
   busy: boolean;
 }) {
   return (
-    <nav className="ax-gp-row" aria-label="Growth period">
+    <div className="ax-gp-tabs" role="group" aria-label="Growth period">
+      {cards.map((card) => (
+        <button
+          key={card.key}
+          type="button"
+          className={`ax-gp-tab${card.key === active ? ' is-on' : ''}`}
+          aria-pressed={card.key === active}
+          onClick={() => onPick(card.key)}
+          disabled={busy}
+        >
+          {SHORT[card.key]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Every period, with what it grew by and the shape it grew in.
+ *
+ * A period with no equivalent stretch before it prints a dash rather than a
+ * number. "Since you started" always does, by definition: there is nothing
+ * before the beginning to have grown from.
+ */
+export function PeriodCards({
+  cards,
+  active,
+  onPick,
+  busy,
+}: {
+  cards: PeriodCard[];
+  active: PeriodKey;
+  onPick: (key: PeriodKey) => void;
+  busy: boolean;
+}) {
+  return (
+    <nav className="ax-gp-row" aria-label="Growth by period">
       {cards.map((card) => {
         const way = card.previous === null ? 'held' : direction(card.previous, card.overall);
         return (
@@ -222,15 +269,19 @@ export function PeriodRow({
             onClick={() => onPick(card.key)}
             disabled={busy}
           >
-            <span className="ax-gp-card-label">{card.label}</span>
+            <span className="ax-gp-card-head">
+              <span className="ax-gp-card-label">{card.label}</span>
+              <span className="ax-gp-card-go" aria-hidden="true">›</span>
+            </span>
             <strong className="ax-gp-card-value">
               {growthLabel(card.change, card.previous, card.overall)}
             </strong>
             <span className="ax-gp-card-note">
               {card.previous === null
-                ? 'nothing before it'
-                : `${card.previous} → ${card.overall}`}
+                ? 'nothing before it to compare against'
+                : `against the ${card.days} days before · ${card.previous} → ${card.overall}`}
             </span>
+            <Spark values={card.spark} way={way} />
           </button>
         );
       })}
@@ -238,53 +289,118 @@ export function PeriodRow({
   );
 }
 
+/**
+ * A card's own shape, unlabelled and unscaled to anything but itself.
+ *
+ * Deliberately without an axis: it is answering "did this climb or sag", not
+ * "what was it on the 14th", and a sparkline that invites a reading off its
+ * y-axis has stopped being one. Scored the same way as the big chart, so the
+ * card and the line it opens cannot disagree about the shape.
+ */
+function Spark({ values, way }: { values: number[]; way: 'up' | 'down' | 'held' }) {
+  if (values.length < 2) return null;
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const span = high - low || 1;
+  const d = values
+    .map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const y = 26 - ((value - low) / span) * 22;
+      return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+
+  return (
+    <svg className={`ax-gp-spark is-${way}`} viewBox="0 0 100 30" preserveAspectRatio="none"
+         aria-hidden="true">
+      <path d={`${d} L100,30 L0,30 Z`} className="ax-gp-spark-fill" />
+      <path d={d} fill="none" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 // --------------------------------------------------------------------------
 // The verdict
 // --------------------------------------------------------------------------
 /**
- * Overall growth, in the biggest type on the page, with the grades either side.
+ * The whole verdict as one strip: overall growth, then each measure beside it.
  *
- * One figure and two letters. The figure is the movement in the mean of the
- * five; the letters are what that mean was graded before and after, which is
- * the part a reader repeats to somebody else. Everything below this block
- * exists to say where the figure came from.
+ * ## Why the five sit level with the total
+ *
+ * The overall figure is the mean of the five and nothing else, so a layout that
+ * gave it a block of its own and buried the parts further down would be asking
+ * the reader to take the headline on trust and then go looking for the
+ * arithmetic. Here the sum and its terms are on one line and the reader can
+ * check one against the other without moving.
+ *
+ * The overall card is wider and carries the sentence, because it is the one
+ * figure somebody repeats out loud; the five are the same shape as each other
+ * so they can be compared down the row rather than read one at a time.
+ *
+ * Each card states a *movement* and a *grade transition*, which are two
+ * different readings of the same pair of numbers and both worth having: the
+ * percentage says how far it went, and "B → A" says whether going that far
+ * crossed a line anybody names.
  */
-export function OverallVerdict({ data }: { data: GrowthPeriods }) {
+export function MetricStrip({ data }: { data: GrowthPeriods }) {
   const now = data.current;
   const then = data.previous;
   const way = then === null ? 'held' : direction(then.overall, now.overall);
-  const tone = way === 'up' ? 'green' : way === 'down' ? 'amber' : 'blue';
 
   return (
-    <section className={`ax-gp-verdict ax-tone-${tone}`}>
-      <p className="ax-gp-eyebrow">Overall growth · {data.label.toLowerCase()}</p>
-
-      <div className="ax-gp-verdict-main">
+    <div className="ax-gp-strip">
+      <section className={`ax-gp-overall is-${way}`}>
+        <p className="ax-gp-eyebrow">Overall growth</p>
         <strong className="ax-gp-big">
           {growthLabel(data.change.overall, then?.overall ?? null, now.overall)}
         </strong>
-        <div className="ax-gp-grades">
+        <p className="ax-gp-overall-note">
           {then ? (
-            <p className="ax-gp-grade-move">
-              <span className="ax-gp-grade is-was">{then.grade}</span>
-              <span className="ax-gp-arrow" aria-hidden="true">→</span>
-              <span className="ax-gp-grade is-now">{now.grade}</span>
-            </p>
+            <>
+              You moved from <strong>{then.grade}</strong>{' '}
+              <span aria-hidden="true">→</span> <strong>{now.grade}</strong> over{' '}
+              {data.label.toLowerCase()}
+            </>
           ) : (
-            <p className="ax-gp-grade-move">
-              <span className="ax-gp-grade is-now">{now.grade}</span>
-            </p>
+            <>
+              Graded <strong>{now.grade}</strong> at {now.overall} out of 100. This period
+              reaches back to your first day, so there is nothing before it.
+            </>
           )}
-          <p className="ax-gp-grade-note">
-            {then
-              ? `${now.overall} out of 100 now, against ${then.overall} over the `
-                + `${data.days} days before this one.`
-              : `${now.overall} out of 100. This period reaches back to the day you `
-                + 'started, so there is nothing before it to compare against.'}
-          </p>
-        </div>
-      </div>
-    </section>
+        </p>
+      </section>
+
+      {METRIC_ORDER.map((metric) => {
+        const to = now.parts[metric];
+        const from = then ? then.parts[metric] : null;
+        const moved = from === null ? 'held' : direction(from, to);
+        const meta = METRIC_META[metric];
+
+        return (
+          <section
+            key={metric}
+            className={`ax-gp-metric-card ax-tone-${meta.tone} is-${moved}`}
+          >
+            <p className="ax-gp-metric-card-head">
+              <span className="ax-gp-trend" aria-hidden="true" />
+              {meta.label}
+            </p>
+            <strong className="ax-gp-metric-card-value">
+              {growthLabel(data.change[metric], from, to)}
+            </strong>
+            <p className="ax-gp-metric-card-grade">
+              {then && (
+                <>
+                  <span className="ax-gp-was">{then.grades[metric]}</span>
+                  <span className="ax-gp-arrow" aria-hidden="true">→</span>
+                </>
+              )}
+              <span>{now.grades[metric]}</span>
+            </p>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 
@@ -332,6 +448,84 @@ export function movers(data: GrowthPeriods): { best: Mover | null; worst: Mover 
   };
 }
 
+/** One measured quantity behind a metric, before and after. */
+interface Part {
+  label: string;
+  from: number;
+  to: number;
+  /** What a full bar means. The scale the quantity is actually on. */
+  max: number;
+  /** The figure as the reader should see it — "82%", "14.2 hrs", "340". */
+  show: (value: number) => string;
+}
+
+const asIs = (value: number) => String(Math.round(value));
+const asPct = (value: number) => `${Math.round(value)}%`;
+const asRating = (value: number) => value.toFixed(1);
+
+/**
+ * What a metric is actually made of, before and after.
+ *
+ * The panel names a winner, and a winner nobody can check is a boast. These are
+ * the quantities the backend measured on the way to the score — not a second
+ * derivation of anything — so a reader who disbelieves "efficiency +31%" can
+ * see that it is 70% of tasks on time becoming 85%, and decide for themselves.
+ *
+ * The bar is scaled to the quantity's *own* ceiling rather than to the pair,
+ * which is the difference between "this went up a bit" and "this went from
+ * two-thirds to nearly all of it". A rating is out of five, a share is out of a
+ * hundred, and a count has no ceiling — so that one is scaled to the larger of
+ * the two readings with room above it.
+ */
+function partsOf(metric: PeriodMetric, now: PeriodSide, then: PeriodSide): Part[] {
+  const num = (side: PeriodSide, field: string) =>
+    Number((side.figures?.[metric] as Record<string, unknown>)?.[field]) || 0;
+  const pair = (field: string) => [num(then, field), num(now, field)] as const;
+  const headroom = (a: number, b: number) => Math.max(a, b, 1) * 1.15;
+
+  switch (metric) {
+    case 'productivity': {
+      const [from, to] = pair('avg_daily_xp');
+      return [{ label: 'XP a working day', from, to, max: headroom(from, to), show: asIs }];
+    }
+    case 'quality': {
+      const [wasD, isD] = pair('avg_difficulty');
+      const [wasE, isE] = pair('avg_execution');
+      const [wasN, isN] = pair('rated_tasks');
+      return [
+        { label: 'Difficulty you took on', from: wasD, to: isD, max: 5, show: asRating },
+        { label: 'How well it went', from: wasE, to: isE, max: 5, show: asRating },
+        { label: 'Tasks you rated', from: wasN, to: isN, max: headroom(wasN, isN), show: asIs },
+      ];
+    }
+    case 'consistency': {
+      const [from, to] = pair('active_days');
+      const [, days] = pair('total_days');
+      return [{ label: 'Days worked', from, to, max: Math.max(days, to, 1), show: asIs }];
+    }
+    case 'efficiency': {
+      const [from, to] = pair('on_time_pct');
+      return [{ label: 'Finished by the deadline', from, to, max: 100, show: asPct }];
+    }
+    case 'focus': {
+      const [wasH, isH] = pair('focused_minutes');
+      const [wasG, isG] = pair('pct_of_goal');
+      return [
+        {
+          label: 'Hours logged',
+          from: wasH / 60,
+          to: isH / 60,
+          max: headroom(wasH / 60, isH / 60),
+          show: (value) => `${value.toFixed(1)} hrs`,
+        },
+        { label: 'Share of your focus goal', from: wasG, to: isG, max: 100, show: asPct },
+      ];
+    }
+    default:
+      return [];
+  }
+}
+
 /** One of the two mover panels. `kind` decides only the wording and the tone. */
 export function MoverPanel({
   kind,
@@ -369,36 +563,62 @@ export function MoverPanel({
       title={heading}
       note={kind === 'best' ? 'Where you gained the most ground' : 'Where you lost ground'}
     >
-      <div className={`ax-gp-mover ax-tone-${kind === 'best' ? 'green' : 'amber'}`}>
+      <div className={`ax-gp-mover ax-tone-${meta.tone}`}>
         <span
-          className={`ax-gp-mover-icon ax-tone-${meta.tone}`}
+          className="ax-gp-mover-icon"
           style={{ '--ico': GLYPHS[meta.glyph] } as Record<string, string>}
           aria-hidden="true"
         />
-        <div>
-          <p className="ax-gp-mover-name">{meta.label}</p>
-          <p className="ax-gp-mover-move">
-            <span className="ax-gp-was">{mover.from}</span>
-            <span className="ax-gp-arrow" aria-hidden="true">→</span>
-            <strong>{mover.to}</strong>
-            <em>{pct(mover.change)}</em>
-          </p>
-        </div>
+        <p className="ax-gp-mover-name">{meta.label}</p>
+        <span className={`ax-gp-mover-pill is-${kind}`}>
+          {growthLabel(mover.change, mover.from, mover.to)}
+        </span>
       </div>
 
-      {/* What the metric actually measures, and what that quantity did. The
-          panel is naming a winner, and a winner nobody can check is a boast. */}
-      <p className="ax-gp-mover-asks">{meta.asks}</p>
-      <ul className="ax-gp-why">
-        <li>
-          <span>Before</span>
-          <strong>{measuredAs(mover.metric, then)}</strong>
-        </li>
-        <li>
-          <span>After</span>
-          <strong>{measuredAs(mover.metric, now)}</strong>
-        </li>
+      <p className="ax-gp-mover-asks">
+        {kind === 'best' ? 'Up' : 'Down'} from {mover.from} to {mover.to} out of 100 — {meta.asks}.
+      </p>
+
+      {/* The quantities the score was computed from, so the claim can be
+          checked rather than taken. See `partsOf`. */}
+      <ul className="ax-gp-parts">
+        {then &&
+          partsOf(mover.metric, now, then).map((part) => {
+            const way = part.to > part.from ? 'up' : part.to < part.from ? 'down' : 'held';
+            return (
+              <li key={part.label} className={`is-${way}`}>
+                <span className="ax-gp-part-label">{part.label}</span>
+                <span className="ax-gp-part-bar" aria-hidden="true">
+                  <span
+                    className="ax-gp-part-fill"
+                    style={{ width: `${Math.min(100, (part.to / part.max) * 100)}%` }}
+                  />
+                  <span
+                    className="ax-gp-part-was"
+                    style={{ left: `${Math.min(100, (part.from / part.max) * 100)}%` }}
+                  />
+                </span>
+                <span className="ax-gp-part-value">
+                  {part.show(part.from)} <span aria-hidden="true">→</span>{' '}
+                  <strong>{part.show(part.to)}</strong>
+                </span>
+              </li>
+            );
+          })}
       </ul>
+
+      {/* Why it matters, assembled from the same figures. */}
+      <p className="ax-gp-mover-why">
+        <span className="ax-gp-mover-why-mark" aria-hidden="true">✦</span>
+        <span>
+          <strong>What this is:</strong> {meta.asks}. It is{' '}
+          {kind === 'best'
+            ? 'the measure that gained the most ground this period'
+            : 'the measure that lost the most ground this period'}
+          , ranked on points moved rather than on percentage — a score climbing from 4 to 12
+          is a bigger percentage and a much smaller change.
+        </span>
+      </p>
     </Panel>
   );
 }
@@ -406,12 +626,39 @@ export function MoverPanel({
 // --------------------------------------------------------------------------
 // Then and now
 // --------------------------------------------------------------------------
-/** Every metric, before and after, with what it was measured from. */
+/** "6 Aug — 4 Sep", the span a column of figures belongs to. */
+function span(from: string, to: string): string {
+  const at = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${at(from)} – ${at(to)}`;
+}
+
+/**
+ * Every metric, before and after, under two dated headings.
+ *
+ * The headings are not decoration. Without them the panel states fifteen
+ * numbers and never says which stretch of days any of them belongs to, and
+ * "then" is a word that means whatever the reader assumes — a month, a term,
+ * the beginning. Naming both windows is what makes every row below a claim
+ * about a period rather than a vibe.
+ */
 export function ThenNow({ data }: { data: GrowthPeriods }) {
   const then = data.previous;
 
   return (
-    <ul className="ax-gp-rows">
+    <>
+      <p className="ax-gp-when">
+        <span className="is-then">
+          <b>{then ? 'Before' : 'No earlier period'}</b>
+          <em>{then && then.start && then.end ? span(then.start, then.end) : '—'}</em>
+        </span>
+        <span className="is-now">
+          <b>Now</b>
+          <em>{span(data.start, data.end)}</em>
+        </span>
+      </p>
+
+      <ul className="ax-gp-rows">
       {METRIC_ORDER.map((metric) => {
         const to = data.current.parts[metric];
         const from = then ? then.parts[metric] : null;
@@ -479,7 +726,20 @@ export function ThenNow({ data }: { data: GrowthPeriods }) {
           </li>
         );
       })}
-    </ul>
+      </ul>
+
+      {/* What the five rows add up to. The same figure the strip states at the
+          top of the tab, repeated here because this is the panel that shows
+          the working and a total belongs at the foot of one. */}
+      {then && (
+        <p className="ax-gp-total">
+          Overall growth:{' '}
+          <strong>
+            {growthLabel(data.change.overall, then.overall, data.current.overall)}
+          </strong>
+        </p>
+      )}
+    </>
   );
 }
 

@@ -42,15 +42,16 @@ import { Link } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { Panel, PanelGroup, type Tone } from '../charts';
 import { ConsistencyPanel } from '../Breakdown';
-import { GrowthLine, type LineSeries } from '../GrowthLine';
+import { GrowthLine, type LineMark, type LineSeries } from '../GrowthLine';
 import { YearOnYear } from '../GrowthYears';
 import {
   METRIC_META,
   METRIC_ORDER,
+  MetricStrip,
   MilestoneFeed,
   MoverPanel,
-  OverallVerdict,
-  PeriodRow,
+  PeriodCards,
+  PeriodTabs,
   ThenNow,
   milestones,
   movers,
@@ -79,10 +80,29 @@ function shortDate(iso: string): string {
  * away, and pressing one is what a reader does *after* the overall line has
  * raised a question.
  */
-const OPENS_WITH: Array<PeriodMetric | 'overall'> = ['overall'];
+const OPENS_WITH: Array<PeriodMetric | 'overall'> = [
+  'productivity',
+  'consistency',
+  'quality',
+  'efficiency',
+];
 
-/** The overall line's colour. Not one of the five: it is their mean. */
-const OVERALL_TONE: Tone = 'violet';
+/**
+ * The overall line's colour.
+ *
+ * Not one of the five, because it is their mean: a sixth hue would put it in
+ * the same visual class as its own terms, and borrowing one of the five would
+ * give it a colour that already means a measure everywhere else on the page.
+ * So it is a near-neutral of its own, and the line is drawn dashed on top of
+ * that so it reads as a summary rather than as another reading.
+ *
+ * It briefly *was* `pink`, which is Focus's tone — so Focus quietly rendered
+ * grey on every bar, toggle and line it appeared in. Hence the separate token.
+ */
+const OVERALL_COLOR = 'var(--ax-gp-overall)';
+
+/** The tone a series falls back to when it has no colour of its own. */
+const OVERALL_TONE: Tone = 'pink';
 
 export function GrowthTab({ model }: { model: AnalyticsModel }) {
   const { clock, heatRows, rhythmRate } = model;
@@ -110,6 +130,7 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
         key: 'overall',
         label: 'Overall',
         tone: OVERALL_TONE,
+        color: OVERALL_COLOR,
         values: data.series.map((point) => point.overall),
       });
     }
@@ -127,6 +148,20 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
 
   const moved = useMemo(() => (data ? movers(data) : { best: null, worst: null }), [data]);
   const feed = useMemo(() => (data ? milestones(data) : []), [data]);
+
+  /* The same milestones, placed on the line they were found in. A feed under
+     the chart and a rule on it are two readings of one list, and deriving both
+     from `feed` is what stops them disagreeing about which days matter. */
+  const marks: LineMark[] = useMemo(() => {
+    if (!data) return [];
+    return feed
+      .map((entry) => ({
+        at: data.series.findIndex((point) => point.date === entry.date),
+        label: entry.headline,
+        glyph: entry.kind === 'best' ? '★' : '◆',
+      }))
+      .filter((mark) => mark.at >= 0);
+  }, [data, feed]);
   const changes = useMemo(() => (data ? whatChanged(data) : []), [data]);
 
   if (periods.error && !data) {
@@ -154,20 +189,6 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
 
   return (
     <>
-      {/* The control and the summary at once. It stays on the page while the
-          rest reloads, because it is what the reader is about to press again —
-          swapping it for a spinner would move the thing under their cursor. */}
-      {data && (
-        <section className="ax-section">
-          <PeriodRow
-            cards={data.periods}
-            active={period}
-            onPick={setPeriod}
-            busy={periods.refreshing}
-          />
-        </section>
-      )}
-
       {!data && periods.loading && (
         <section className="ax-section">
           <p className="ax-empty">Scoring your record…</p>
@@ -176,12 +197,16 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
 
       {data && (
         <>
+          {/* The sum and its five terms on one line, so the headline can be
+              checked against the arithmetic without moving. */}
           <section className="ax-section">
-            <OverallVerdict data={data} />
+            <MetricStrip data={data} />
           </section>
 
-          {/* The line, and the toggles that decide what is on it. */}
-          <section className="ax-section ax-hero">
+          {/* The line. The period control lives in this panel's header because
+              the period is a property of the chart before it is a property of
+              anything else on the tab. */}
+          <section className="ax-section ax-hero ax-gp-timeline">
             <Panel
               title="Growth timeline"
               note={
@@ -189,60 +214,48 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
                 + 'line is a moving average rather than a daily reading'
               }
               aside={
-                <div className="ax-gp-toggles" role="group" aria-label="Metrics on the chart">
-                  <button
-                    type="button"
-                    className={`ax-gp-toggle ax-tone-${OVERALL_TONE}${
-                      lines.includes('overall') ? ' is-on' : ''
-                    }`}
-                    aria-pressed={lines.includes('overall')}
-                    onClick={() => toggle('overall')}
-                  >
-                    <span className="ax-gp-key" aria-hidden="true" />
-                    Overall
-                  </button>
-                  {METRIC_ORDER.map((metric) => (
-                    <button
-                      key={metric}
-                      type="button"
-                      className={`ax-gp-toggle ax-tone-${METRIC_META[metric].tone}${
-                        lines.includes(metric) ? ' is-on' : ''
-                      }`}
-                      aria-pressed={lines.includes(metric)}
-                      onClick={() => toggle(metric)}
-                    >
-                      <span className="ax-gp-key" aria-hidden="true" />
-                      {METRIC_META[metric].label}
-                    </button>
-                  ))}
-                </div>
+                <PeriodTabs
+                  cards={data.periods}
+                  active={period}
+                  onPick={setPeriod}
+                  busy={periods.refreshing}
+                />
               }
             >
+              <div className="ax-gp-toggles" role="group" aria-label="Metrics on the chart">
+                {([...METRIC_ORDER, 'overall'] as Array<PeriodMetric | 'overall'>).map((key) => {
+                  const overall = key === 'overall';
+                  const meta = overall ? { label: 'Overall' } : METRIC_META[key];
+                  const on = lines.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={
+                        `ax-gp-toggle ${overall ? 'is-overall' : `ax-tone-${METRIC_META[key].tone}`}`
+                        + (on ? ' is-on' : '')
+                      }
+                      aria-pressed={on}
+                      onClick={() => toggle(key)}
+                    >
+                      <span className="ax-gp-check" aria-hidden="true" />
+                      {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               <GrowthLine
                 series={series}
                 dates={data.series.map((point) => point.date)}
                 labels={data.series.map((point) => shortDate(point.date))}
+                marks={marks}
               />
             </Panel>
           </section>
 
-          {/* Which way the period ran, at its two extremes. */}
+          {/* The comparison and the metric that carried it, side by side. */}
           <section className="ax-section ax-grid ax-grid-halves-even">
-            <MoverPanel
-              kind="best"
-              mover={moved.best}
-              now={data.current}
-              then={data.previous}
-            />
-            <MoverPanel
-              kind="worst"
-              mover={moved.worst}
-              now={data.current}
-              then={data.previous}
-            />
-          </section>
-
-          <section className="ax-section">
             <Panel
               title="Then and now"
               note={
@@ -253,38 +266,59 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
             >
               <ThenNow data={data} />
             </Panel>
+            <MoverPanel
+              kind="best"
+              mover={moved.best}
+              now={data.current}
+              then={data.previous}
+            />
+          </section>
+
+          <section className="ax-section ax-grid ax-grid-halves-even">
+            <MoverPanel
+              kind="worst"
+              mover={moved.worst}
+              now={data.current}
+              then={data.previous}
+            />
+            <Panel
+              title="What changed underneath"
+              note="Assembled from the same figures the scores were graded on"
+            >
+              {changes.length === 0 ? (
+                <p className="ax-empty">
+                  {data.previous
+                    ? 'Nothing moved far enough to be worth calling a change.'
+                    : 'This period reaches back to the day you started, so there is nothing '
+                      + 'before it to have changed from.'}
+                </p>
+              ) : (
+                <ul className="ax-gp-changes">
+                  {changes.map((line, index) => (
+                    <li key={index}>{line}</li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          </section>
+
+          {/* Every period at once. Not a second copy of the segmented control:
+              that shows one answer and this shows six, and pressing a card is
+              asking for the detail behind a figure just read. */}
+          <section className="ax-section">
+            <h2 className="ax-gp-heading">Growth by period</h2>
+            <PeriodCards
+              cards={data.periods}
+              active={period}
+              onPick={setPeriod}
+              busy={periods.refreshing}
+            />
           </section>
 
           {/* The two readings that explain the five above rather than restating
               them: what the underlying quantities did, and when the score
               crossed a letter. Folded, because they are the follow-up. */}
           <section className="ax-section">
-            <PanelGroup
-              title="What changed underneath"
-              note="The quantities behind the scores, in their own units"
-              defaultOpen
-            >
-              <Panel
-                title="What changed"
-                note="Assembled from the same figures the scores were graded on"
-              >
-                {changes.length === 0 ? (
-                  <p className="ax-empty">
-                    {data.previous
-                      ? 'Nothing moved far enough to be worth calling a change.'
-                      : 'This period reaches back to the day you started, so there is nothing '
-                        + 'before it to have changed from.'}
-                  </p>
-                ) : (
-                  <ul className="ax-gp-changes">
-                    {changes.map((line, index) => (
-                      <li key={index}>{line}</li>
-                    ))}
-                  </ul>
-                )}
-              </Panel>
-            </PanelGroup>
-
             <PanelGroup
               title="Your milestones"
               note="The days the overall score crossed into a new grade"

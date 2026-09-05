@@ -42,8 +42,28 @@ export interface LineSeries {
   key: string;
   label: string;
   tone: Tone;
+  /**
+   * A colour that is not one of the five, as a CSS value.
+   *
+   * For a series that is not a measure. The overall line is the *mean* of the
+   * other four, and painting it in a sixth hue would put it in the same visual
+   * class as its own terms — while borrowing one of the five would hand it a
+   * colour that already means something else on this page. It gets a
+   * near-neutral of its own instead, and `tone` stays as the fallback for
+   * everything that is a measure.
+   */
+  color?: string;
   /** One value per point, 0-100. Same length as `marks`. */
   values: number[];
+}
+
+/** A moment worth marking on the line, placed at the point it happened on. */
+export interface LineMark {
+  /** Index into `dates`. The caller resolves the date; this only draws. */
+  at: number;
+  label: string;
+  /** One emoji. Drawn above the rule, in the reader's own font. */
+  glyph: string;
 }
 
 export interface GrowthLineProps {
@@ -52,6 +72,8 @@ export interface GrowthLineProps {
   dates: string[];
   /** Formatted for the reader — "12 Aug". One per point. */
   labels: string[];
+  /** Milestones, drawn as a dashed rule with a caption above it. */
+  marks?: LineMark[];
   height?: number;
 }
 
@@ -77,6 +99,19 @@ function pathFor(values: number[], height: number): string {
     .join(' ');
 }
 
+/** The same points as zero-length subpaths, which a round cap draws as dots. */
+function dotsFor(values: number[], height: number): string {
+  const steps = Math.max(1, values.length - 1);
+  const inner = height - PAD * 2;
+  return values
+    .map((value, index) => {
+      const x = ((index / steps) * WIDTH).toFixed(2);
+      const y = (PAD + inner - (Math.max(0, Math.min(SCALE, value)) / SCALE) * inner).toFixed(2);
+      return `M${x},${y}L${x},${y}`;
+    })
+    .join(' ');
+}
+
 /** Where a point sits across the box, 0-1. The HTML layer's only arithmetic. */
 const ratioAt = (index: number, count: number) => (count < 2 ? 0 : index / (count - 1));
 
@@ -87,7 +122,13 @@ function heightAt(value: number, height: number): number {
   return y / height;
 }
 
-export function GrowthLine({ series, dates, labels, height = 260 }: GrowthLineProps) {
+export function GrowthLine({
+  series,
+  dates,
+  labels,
+  marks: milestones = [],
+  height = 260,
+}: GrowthLineProps) {
   const count = dates.length;
   const box = useRef<HTMLDivElement | null>(null);
   const [at, setAt] = useState<number | null>(null);
@@ -158,8 +199,8 @@ export function GrowthLine({ series, dates, labels, height = 260 }: GrowthLinePr
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="0%" stopColor={toneVar(line.tone)} stopOpacity="0.26" />
-                  <stop offset="100%" stopColor={toneVar(line.tone)} stopOpacity="0" />
+                  <stop offset="0%" stopColor={(line.color ?? toneVar(line.tone))} stopOpacity="0.26" />
+                  <stop offset="100%" stopColor={(line.color ?? toneVar(line.tone))} stopOpacity="0" />
                 </linearGradient>
               ))}
             </defs>
@@ -193,19 +234,68 @@ export function GrowthLine({ series, dates, labels, height = 260 }: GrowthLinePr
               ))}
 
             {series.map((line) => (
-              <path
-                key={line.key}
-                className="ax-gp-line"
-                d={pathFor(line.values, height)}
-                fill="none"
-                stroke={toneVar(line.tone)}
-                strokeWidth="2.25"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                vectorEffect="non-scaling-stroke"
-              />
+              <g key={line.key}>
+                <path
+                  className={`ax-gp-line${line.key === 'overall' ? ' is-overall' : ''}`}
+                  d={pathFor(line.values, height)}
+                  fill="none"
+                  stroke={(line.color ?? toneVar(line.tone))}
+                  strokeWidth="2.25"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+                {/* A dot on every reading. Zero-length round-capped subpaths
+                    with a non-scaling stroke, for the reason the header gives:
+                    a <circle> in a box with no fixed aspect is an ellipse of
+                    whatever eccentricity the panel's width happens to give it.
+                    Same device as `dots` in ./charts. */}
+                <path
+                  className="ax-gp-point"
+                  d={dotsFor(line.values, height)}
+                  fill="none"
+                  stroke={(line.color ?? toneVar(line.tone))}
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </g>
             ))}
           </svg>
+
+          {/* Milestones, over the drawing and under the pointer readout. The
+              rule is HTML for the same reason everything else here is: a dashed
+              stroke in a non-uniformly scaled box comes out with dashes of two
+              different lengths depending on which way it runs. */}
+          {milestones.map((mark) => (
+            <div
+              key={`${mark.at}-${mark.label}`}
+              className="ax-gp-mark"
+              style={{ left: `${ratioAt(mark.at, count) * 100}%` }}
+            >
+              <span className="ax-gp-mark-glyph" aria-hidden="true">{mark.glyph}</span>
+              <span className="ax-gp-mark-label">{mark.label}</span>
+            </div>
+          ))}
+
+          {/* Where each line ends, as a pill on the axis. A five-line chart
+              whose lines are told apart only by a key in the header makes the
+              reader look away and back for every one of them; the value at the
+              right-hand end is both the label and the reading. */}
+          <div className="ax-gp-ends" aria-hidden="true">
+            {series.map((line) => (
+              <span
+                key={line.key}
+                className="ax-gp-end"
+                style={{
+                  top: `${heightAt(line.values[count - 1] ?? 0, height) * 100}%`,
+                  color: (line.color ?? toneVar(line.tone)),
+                }}
+              >
+                {Math.round(line.values[count - 1] ?? 0)}
+              </span>
+            ))}
+          </div>
 
           {/* The readout. HTML rather than SVG for the reason in the header:
               nothing here survives a non-uniform scale intact. */}
@@ -221,7 +311,7 @@ export function GrowthLine({ series, dates, labels, height = 260 }: GrowthLinePr
                   className="ax-gp-pin"
                   style={{
                     top: `${heightAt(line.values[shown] ?? 0, height) * 100}%`,
-                    background: toneVar(line.tone),
+                    background: (line.color ?? toneVar(line.tone)),
                   }}
                 />
               ))}
@@ -248,7 +338,7 @@ export function GrowthLine({ series, dates, labels, height = 260 }: GrowthLinePr
             <ul>
               {series.map((line) => (
                 <li key={line.key}>
-                  <span className="ax-gp-tip-key" style={{ background: toneVar(line.tone) }} />
+                  <span className="ax-gp-tip-key" style={{ background: (line.color ?? toneVar(line.tone)) }} />
                   <span>{line.label}</span>
                   <strong>{Math.round(line.values[shown] ?? 0)}</strong>
                 </li>

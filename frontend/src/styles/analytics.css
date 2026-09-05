@@ -5528,7 +5528,10 @@ body:has(.ax-page) .app-main {
     font-variant-numeric: tabular-nums;
 }
 
-.ax-gp-arrow { color: var(--ax-line); font-weight: 600; }
+/* Between a "was" and an "is", everywhere on the tab. `--ax-line` was the
+   first try and it is the *border* token — correct for a hairline and far too
+   quiet for a glyph carrying the relationship between two figures. */
+.ax-gp-arrow { color: var(--ax-faint); font-weight: 600; }
 
 /* ---------- The chart ------------------------------------------------------
    The one interactive drawing on the page. The SVG carries the paths and
@@ -5988,4 +5991,597 @@ body:has(.ax-page) .app-main {
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0;
+}
+
+/* ==========================================================================
+   The Growth tab's own surface
+   ==========================================================================
+   Every other tab reads as a report: white cards on a light ground, the page's
+   five series colours used sparingly, nothing louder than the figure it is
+   labelling. That is right for six tabs whose job is to be checked.
+
+   This tab is not being checked, it is being *read* — a reader arrives with one
+   question and leaves with one answer — and it earns a surface of its own: a
+   darker ground, cards that sit on it rather than in it, and the five measures
+   given saturated, unmistakable hues so a line, a card, a bar and a toggle
+   that mean the same metric are obviously the same colour across the page.
+
+   ## Scoped, not global
+
+   All of it hangs off `.ax-view-growth`, which pages/Analytics puts on the
+   shell for whichever tab is open. Custom properties inherit, so redeclaring
+   the tokens recolours this tab and touches none of the other six — the
+   alternative was a second stylesheet with a second copy of the panel rules in
+   it, which is how two looks become two codebases.
+
+   The tokens are declared on `.ax-page:has(.ax-view-growth)` rather than on
+   the shell itself, and that is not a stylistic choice. The page element is
+   what paints the ground behind everything, and a custom property set on a
+   child does not exist on its parent — so declaring `--ax-gp-ground` on the
+   shell and reading it from `.ax-page` resolved to nothing, the `background`
+   declaration was thrown out as invalid, and the tab drew on whatever was
+   behind it. Declaring them one level up means the same block serves the
+   ground *and* cascades down to everything inside it.
+
+   ## Both themes, from one set of decisions
+
+   The dark palette is the designed one and the light palette is derived from
+   it rather than invented beside it: the same five hues, darkened until they
+   hold their contrast on a light ground, and the same relationships between
+   ground, card and line. That is why they are written as one block with one
+   override rather than as two independent themes — a change to what "the
+   consistency colour" means is one line, in one place, in both. */
+.ax-page:has(.ax-view-growth) {
+    /* The five, as this tab uses them. Deliberately more saturated than the
+       page's defaults: on the other tabs a series colour is a label, and here
+       it is the identity of a measure carried across four different controls. */
+    --ax-blue: #3b82f6;      /* productivity */
+    --ax-green: #16a34a;     /* consistency  */
+    --ax-amber: #d97706;     /* quality      */
+    --ax-violet: #7c3aed;    /* efficiency   */
+    --ax-pink: #db2777;      /* focus        */
+
+    /* The mean of the four, which is not a fifth measure and does not get a
+       measure's hue. See OVERALL_COLOR in tabs/GrowthTab. */
+    --ax-gp-overall: #64748b;
+
+    --ax-gp-ground: #eef1f6;
+    --ax-gp-card: #ffffff;
+    --ax-gp-line: #dfe4ec;
+    --ax-gp-rule: #cbd5e1;
+
+    --ax-gap: 14px;
+    background: var(--ax-gp-ground);
+}
+
+html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
+    /* The designed palette. Brighter than the page's dark tokens because these
+       sit on a darker ground and have to carry a 2px line at 600 units wide. */
+    --ax-blue: #4d9fff;
+    --ax-green: #3ddc84;
+    --ax-amber: #f5b642;
+    --ax-violet: #b57bff;
+    --ax-pink: #ff7ab8;
+
+    --ax-gp-overall: #c9d3e0;
+
+    --ax-gp-ground: #080b12;
+    --ax-gp-card: #0f141d;
+    --ax-gp-line: #1c2431;
+    --ax-gp-rule: #263041;
+
+    --ax-card: var(--ax-gp-card);
+    --ax-card-2: #141a25;
+    --ax-line: var(--ax-gp-line);
+    --ax-line-soft: #161d28;
+    --ax-text: #e8eef7;
+    --ax-muted: #8b98ab;
+    --ax-faint: #66748a;
+    --ax-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+}
+
+.ax-view-growth .ax-panel {
+    background: var(--ax-gp-card);
+    border-color: var(--ax-gp-line);
+}
+
+/* Uppercased, tracked, and small — a panel title on this tab is a *label* over
+   a block of reading rather than a heading in a report. */
+.ax-view-growth .ax-panel :is(h2, h3, h4),
+.ax-gp-heading {
+    font-size: 12px;
+    font-weight: 750;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ax-muted);
+}
+
+.ax-gp-heading { margin: 0 0 10px; }
+
+/* ---------- The strip: the mean, and its five terms ------------------------
+   One `auto-fit` track list and a span, so the row is six across on a desktop,
+   three and three on a tablet and a stack on a phone with no breakpoint per
+   arrangement.
+
+   The overall card takes its extra width with `grid-column: span 2` rather
+   than by being its own `1.5fr` track in front of the repeat. That was the
+   first attempt and it collapsed the whole row to one column: `auto-fit` beside
+   a flexible track cannot resolve a repetition count, so it resolves to one,
+   and every card went full width in a stack. */
+.ax-gp-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.ax-gp-overall { grid-column: span 2; }
+
+.ax-gp-overall,
+.ax-gp-metric-card {
+    padding: 16px 18px;
+    border: 1px solid var(--ax-gp-line);
+    border-radius: var(--ax-radius);
+    background: var(--ax-gp-card);
+    box-shadow: var(--ax-shadow);
+    min-width: 0;
+}
+
+.ax-gp-overall {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    /* The one card that is lit. It is the answer; the five beside it are the
+       working, and a working that glowed as brightly would make the row read
+       as six equal figures. */
+    background:
+        linear-gradient(150deg, color-mix(in srgb, var(--ax-violet) 12%, transparent), transparent 70%),
+        var(--ax-gp-card);
+}
+
+.ax-gp-eyebrow {
+    margin: 0;
+    color: var(--ax-muted);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+}
+
+.ax-gp-big {
+    color: var(--ax-violet);
+    font-size: 40px;
+    font-weight: 780;
+    line-height: 1.05;
+    letter-spacing: -.035em;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-gp-overall-note {
+    margin: 2px 0 0;
+    color: var(--ax-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.ax-gp-overall-note strong { color: var(--ax-text); font-weight: 700; }
+
+.ax-gp-metric-card {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ax-gp-metric-card-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: var(--ax-text);
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+/* The little rising arrow beside each name. Drawn rather than a glyph so it
+   can flip for a measure that fell without a second character to find. */
+.ax-gp-trend {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 17 9 11 13 15 21 7'/%3E%3Cpolyline points='15 7 21 7 21 13'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 17 9 11 13 15 21 7'/%3E%3Cpolyline points='15 7 21 7 21 13'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.ax-gp-metric-card.is-down .ax-gp-trend { transform: scaleY(-1); }
+.ax-gp-metric-card.is-held .ax-gp-trend { opacity: .45; }
+
+.ax-gp-metric-card-value {
+    color: currentColor;
+    font-size: 25px;
+    font-weight: 760;
+    letter-spacing: -.03em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-gp-metric-card-grade {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    color: var(--ax-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+.ax-gp-metric-card-grade > span:last-child { color: currentColor; }
+
+/* ---------- The segmented period control ----------------------------------
+   In the chart's header, because the period is a property of the chart before
+   it is a property of anything else on the tab. */
+.ax-gp-tabs {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--ax-gp-line);
+    border-radius: 10px;
+    background: var(--ax-card-2);
+}
+
+.ax-gp-tab {
+    padding: 5px 11px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+}
+
+.ax-gp-tab.is-on {
+    background: color-mix(in srgb, var(--ax-violet) 20%, transparent);
+    color: var(--ax-text);
+}
+.ax-gp-tab:hover:not(.is-on):not(:disabled) { color: var(--ax-text); }
+.ax-gp-tab:disabled { cursor: default; }
+
+/* ---------- The metric toggles, as a row of checkboxes --------------------- */
+.ax-gp-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 0 0 14px;
+}
+
+.ax-gp-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 620;
+    cursor: pointer;
+}
+
+/* A real box rather than a pill: this is a set of independent on/off choices,
+   and a row of pills reads as a set of alternatives where one wins. */
+.ax-gp-check {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    border: 1.5px solid var(--ax-gp-rule);
+    border-radius: 4px;
+    background: none;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.ax-gp-toggle.is-on { color: currentColor; }
+.ax-gp-toggle.is-on .ax-gp-check {
+    border-color: currentColor;
+    background: currentColor
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 13 10 18 19 6'/%3E%3C/svg%3E")
+        center / 10px 10px no-repeat;
+}
+
+/* ---------- The chart -------------------------------------------------- */
+.ax-gp-timeline > .ax-panel { padding: 18px 20px 14px; }
+
+/* Dashed, so it reads as a summary of the lines under it rather than as
+   another reading taken alongside them. */
+.ax-gp-line.is-overall {
+    stroke-dasharray: 5 4;
+    opacity: .85;
+}
+
+/* The overall toggle, keyed to the same near-neutral as its line. */
+.ax-gp-toggle.is-overall { color: var(--ax-gp-overall); }
+
+/* A reading on every point. It follows its line's colour, and is ringed in the
+   card so two lines crossing stay two. */
+.ax-gp-point { paint-order: stroke; }
+
+/* The milestone rules. Dashed, drawn behind everything, and captioned above
+   the plot so the label never sits on the data. */
+.ax-gp-mark {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px dashed var(--ax-gp-rule);
+    pointer-events: none;
+}
+
+.ax-gp-mark-glyph {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    line-height: 1;
+    color: var(--ax-muted);
+}
+
+.ax-gp-mark-label {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 96px;
+    color: var(--ax-faint);
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1.2;
+    text-align: center;
+}
+
+/* Room above the plot for the milestone captions, so they are not clipped by
+   the panel and do not sit over the top gridline. */
+.ax-gp-plot { padding-top: 34px; }
+.ax-gp-y { padding-top: 34px; }
+
+/* Where each line ends, on the axis. Both the label and the reading. */
+.ax-gp-ends {
+    position: absolute;
+    top: 0;
+    right: -6px;
+    bottom: 0;
+    width: 0;
+    pointer-events: none;
+}
+
+.ax-gp-end {
+    position: absolute;
+    left: 0;
+    transform: translate(0, -50%);
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: var(--ax-gp-card);
+    font-size: 10.5px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The plot needs room on the right for those pills. */
+.ax-gp-chart { padding-right: 26px; }
+
+/* ---------- Then and now, as two dated columns ----------------------------
+   The two column headings carry the dates, so every "68 -> 82" below them is
+   anchored to a pair of real windows rather than to the words "then" and
+   "now". Without them the panel states fifteen numbers and never says which
+   fortnight any of them belongs to. */
+.ax-gp-when {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 4px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+
+.ax-gp-when > span {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.ax-gp-when > span:last-child { text-align: right; }
+
+.ax-gp-when b {
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+.ax-gp-when .is-then b { color: var(--ax-blue); }
+.ax-gp-when .is-now b { color: var(--ax-green); }
+.ax-gp-when em {
+    color: var(--ax-faint);
+    font-size: 11.5px;
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The panel's own footer: the one figure the five rows add up to. */
+.ax-gp-total {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--ax-violet) 12%, transparent);
+    color: var(--ax-text);
+    font-size: 13.5px;
+    font-weight: 700;
+    text-align: center;
+}
+.ax-gp-total strong { color: var(--ax-violet); font-weight: 780; }
+
+/* ---------- The mover panel ----------------------------------------------- */
+.ax-gp-mover {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 6px;
+}
+
+.ax-gp-mover-icon {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 9px;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+    position: relative;
+}
+
+.ax-gp-mover-icon::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+}
+
+.ax-gp-mover-name {
+    margin: 0;
+    color: currentColor;
+    font-size: 20px;
+    font-weight: 760;
+    letter-spacing: -.02em;
+}
+
+.ax-gp-mover-pill {
+    margin-left: auto;
+    padding: 4px 12px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+.ax-gp-mover-pill.is-best { color: var(--ax-green); }
+.ax-gp-mover-pill.is-worst { color: var(--ax-amber); }
+
+.ax-gp-mover-asks {
+    margin: 0 0 12px;
+    color: var(--ax-muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+/* The quantities the score was computed from. The bar is the *after* value on
+   the quantity's own scale, and the tick is where it started — so the gap
+   between them is the change, at a glance, without a second number. */
+.ax-gp-parts { list-style: none; margin: 0 0 12px; padding: 0; }
+
+.ax-gp-parts li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(70px, 1.1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    font-size: 12px;
+}
+
+.ax-gp-part-label { color: var(--ax-muted); }
+
+.ax-gp-part-bar {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+
+.ax-gp-part-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 999px;
+    background: var(--ax-blue);
+}
+.ax-gp-parts li.is-down .ax-gp-part-fill { background: var(--ax-amber); }
+.ax-gp-parts li.is-held .ax-gp-part-fill { background: var(--ax-faint); }
+
+/* Where the quantity started, as a hairline on the bar. */
+.ax-gp-part-was {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: var(--ax-text);
+    opacity: .5;
+}
+
+.ax-gp-part-value {
+    color: var(--ax-muted);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+.ax-gp-part-value strong { color: var(--ax-text); font-weight: 700; }
+
+/* Pushed to the foot of the panel. A row of panels is stretched to the tallest
+   of them (see `.ax-grid`), and a metric with two component rows beside one
+   with five left a band of nothing under the short one — the same raggedness
+   `.ax-panel-foot` uses `margin-top: auto` to avoid. */
+.ax-gp-mover-why {
+    display: flex;
+    gap: 9px;
+    margin: auto 0 0;
+    padding: 11px 12px;
+    border-radius: 10px;
+    background: var(--ax-card-2);
+    color: var(--ax-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.ax-gp-mover-why strong { color: var(--ax-text); font-weight: 700; }
+.ax-gp-mover-why-mark { color: var(--ax-violet); flex: none; }
+
+/* ---------- The period cards ---------------------------------------------- */
+.ax-gp-card {
+    position: relative;
+    gap: 4px;
+    padding: 13px 15px 0;
+    overflow: hidden;
+}
+
+.ax-gp-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ax-gp-card-go { color: var(--ax-faint); font-size: 15px; line-height: 1; }
+
+.ax-gp-card-value { font-size: 24px; }
+
+.ax-gp-card-note { padding-bottom: 10px; line-height: 1.45; }
+
+/* The card's own shape, bled to the edges along the bottom. It is a texture
+   rather than a chart — see `Spark` — so it carries no axis and no labels. */
+.ax-gp-spark {
+    display: block;
+    width: calc(100% + 30px);
+    height: 30px;
+    margin: auto -15px 0;
+    stroke: var(--ax-faint);
+}
+.ax-gp-spark.is-up { stroke: var(--ax-green); }
+.ax-gp-spark.is-down { stroke: var(--ax-amber); }
+.ax-gp-spark-fill { fill: color-mix(in srgb, currentColor 0%, transparent); }
+.ax-gp-spark.is-up .ax-gp-spark-fill { fill: color-mix(in srgb, var(--ax-green) 14%, transparent); }
+.ax-gp-spark.is-down .ax-gp-spark-fill { fill: color-mix(in srgb, var(--ax-amber) 14%, transparent); }
+
+@media (max-width: 900px) {
+    .ax-gp-overall { grid-column: 1 / -1; }
+    .ax-gp-tabs { flex-wrap: wrap; }
 }

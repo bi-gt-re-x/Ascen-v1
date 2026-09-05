@@ -95,12 +95,12 @@ function payload(over: Partial<GrowthPeriods> = {}): GrowthPeriods {
       { date: '2026-09-04', overall: 58, ...now },
     ],
     periods: [
-      { key: '7d', label: 'Last 7 days', days: 7, overall: 60, previous: 55, change: 9.1, partial: false },
-      { key: '30d', label: 'Last 30 days', days: 30, overall: 58, previous: 54, change: 7.4, partial: false },
-      { key: '90d', label: 'Last 3 months', days: 90, overall: 55, previous: 57, change: -3.5, partial: false },
-      { key: '180d', label: 'Last 6 months', days: 180, overall: 54, previous: 54, change: 0, partial: false },
-      { key: '365d', label: 'Last year', days: 365, overall: 52, previous: 48, change: 8.3, partial: false },
-      { key: 'all', label: 'Since you started', days: 900, overall: 50, previous: null, change: null, partial: false },
+      { key: '7d', label: 'Last 7 days', days: 7, overall: 60, previous: 55, change: 9.1, partial: false , spark: [50, 52, 51, 55, 58, 57, 60, 62, 61, 64, 66, 68] },
+      { key: '30d', label: 'Last 30 days', days: 30, overall: 58, previous: 54, change: 7.4, partial: false , spark: [50, 52, 51, 55, 58, 57, 60, 62, 61, 64, 66, 68] },
+      { key: '90d', label: 'Last 3 months', days: 90, overall: 55, previous: 57, change: -3.5, partial: false , spark: [50, 52, 51, 55, 58, 57, 60, 62, 61, 64, 66, 68] },
+      { key: '180d', label: 'Last 6 months', days: 180, overall: 54, previous: 54, change: 0, partial: false , spark: [50, 52, 51, 55, 58, 57, 60, 62, 61, 64, 66, 68] },
+      { key: '365d', label: 'Last year', days: 365, overall: 52, previous: 48, change: 8.3, partial: false , spark: [50, 52, 51, 55, 58, 57, 60, 62, 61, 64, 66, 68] },
+      { key: 'all', label: 'Since you started', days: 900, overall: 50, previous: null, change: null, partial: false , spark: [50, 52, 51, 55, 58, 57, 60, 62, 61, 64, 66, 68] },
     ],
     ...over,
   };
@@ -119,7 +119,7 @@ describe('the period row', () => {
     serve();
     draw(<GrowthTab model={fakeModel()} />);
 
-    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+    const row = await screen.findByRole('navigation', { name: /Growth by period/i });
     const buttons = within(row).getAllByRole('button');
     expect(buttons).toHaveLength(6);
     // The control and the summary are one object: pressing it is worth doing
@@ -128,24 +128,39 @@ describe('the period row', () => {
     expect(within(row).getByText('−3.5%')).toBeInTheDocument();
   });
 
-  it('marks the open period pressed, and no other', async () => {
+  it('marks the open period pressed in both controls, and no other', async () => {
+    // The segmented control in the chart head and the row of cards at the foot
+    // are two ways of asking the same question, so they cannot disagree about
+    // which period is open.
     serve();
     draw(<GrowthTab model={fakeModel()} />);
-    const row = await screen.findByRole('navigation', { name: /Growth period/i });
-    const pressed = within(row)
-      .getAllByRole('button')
-      .filter((button) => button.getAttribute('aria-pressed') === 'true');
-    expect(pressed).toHaveLength(1);
-    expect(pressed[0]!.textContent).toContain('Last 30 days');
+    const row = await screen.findByRole('navigation', { name: /Growth by period/i });
+    const tabs = screen.getByRole('group', { name: /Growth period/i });
+
+    for (const control of [row, tabs]) {
+      const pressed = within(control)
+        .getAllByRole('button')
+        .filter((button) => button.getAttribute('aria-pressed') === 'true');
+      expect(pressed).toHaveLength(1);
+    }
+    expect(within(tabs).getByRole('button', { pressed: true }).textContent).toBe('Month');
   });
 
   it('asks the server again when a different period is pressed', async () => {
     serve();
     draw(<GrowthTab model={fakeModel()} />);
-    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+    const row = await screen.findByRole('navigation', { name: /Growth by period/i });
 
     await userEvent.click(within(row).getByRole('button', { name: /Last year/ }));
     expect(growthPeriods).toHaveBeenCalledWith('365d');
+  });
+
+  it('drives the same fetch from the segmented control', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const tabs = await screen.findByRole('group', { name: /Growth period/i });
+    await userEvent.click(within(tabs).getByRole('button', { name: 'Week' }));
+    expect(growthPeriods).toHaveBeenCalledWith('7d');
   });
 
   it('falls back to points moved where there is no percentage of nothing', async () => {
@@ -158,7 +173,7 @@ describe('the period row', () => {
         card.key === '7d' ? { ...card, previous: 0, overall: 44, change: null } : card),
     }));
     draw(<GrowthTab model={fakeModel()} />);
-    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+    const row = await screen.findByRole('navigation', { name: /Growth by period/i });
     expect(within(row).getByText('+44 pts')).toBeInTheDocument();
   });
 
@@ -167,38 +182,55 @@ describe('the period row', () => {
     // is no earlier equivalent. A "+100%" here would mean "we had no idea".
     serve();
     draw(<GrowthTab model={fakeModel()} />);
-    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+    const row = await screen.findByRole('navigation', { name: /Growth by period/i });
     const all = within(row).getByRole('button', { name: /Since you started/ });
     expect(all.textContent).toContain('—');
     expect(all.textContent).toContain('nothing before it');
   });
 });
 
-describe('the verdict', () => {
-  it('states overall growth in the biggest type, with the grades either side', async () => {
+describe('the metric strip', () => {
+  it('states overall growth in the biggest type, with the grade move under it', async () => {
     serve();
     draw(<GrowthTab model={fakeModel()} />);
-    // Scoped to the verdict: the 30-day period card states the same figure,
+    // Scoped to the strip: the 30-day period card states the same figure,
     // which is the point of the row and not a duplicate to be deduplicated.
-    const verdict = (await screen.findByText(/Overall growth/i))
-      .closest('.ax-gp-verdict') as HTMLElement;
-    expect(within(verdict).getByText('+7.4%').className).toContain('ax-gp-big');
-    expect(document.querySelector('.ax-gp-grade.is-was')).not.toBeNull();
-    expect(document.querySelector('.ax-gp-grade.is-now')).not.toBeNull();
+    await screen.findByRole('heading', { name: /Growth timeline/ });
+    const overall = document.querySelector('.ax-gp-overall') as HTMLElement;
+    expect(within(overall).getByText('+7.4%').className).toContain('ax-gp-big');
+    expect(overall.textContent).toContain('You moved from');
   });
 
-  it('draws one grade and an explanation when there is nothing to compare to', async () => {
+  it('puts the five terms of the mean beside the mean', async () => {
+    /* The overall figure is the mean of the five and nothing else. A layout
+       that gave it a block of its own and buried the parts further down would
+       ask the reader to take the headline on trust. */
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const cards = await screen.findAllByText(
+      /^(Productivity|Quality|Consistency|Efficiency|Focus)$/);
+    const inStrip = cards.filter((node) => node.closest('.ax-gp-metric-card'));
+    expect(inStrip).toHaveLength(5);
+  });
+
+  it('shows each metric as a grade transition as well as a percentage', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    await screen.findByRole('heading', { name: /Growth timeline/ });
+    const strip = document.querySelector('.ax-gp-strip') as HTMLElement;
+    expect(strip.querySelectorAll('.ax-gp-metric-card-grade')).toHaveLength(5);
+  });
+
+  it('says so plainly when there is nothing to compare to', async () => {
     serve(payload({ previous: null, change: {
       overall: null, productivity: null, quality: null,
       consistency: null, efficiency: null, focus: null,
     } }));
     draw(<GrowthTab model={fakeModel()} />);
 
-    const verdict = (await screen.findByText(/Overall growth/i))
-      .closest('.ax-gp-verdict') as HTMLElement;
-    expect(within(verdict).getByText(/nothing before it to compare against/i))
-      .toBeInTheDocument();
-    expect(document.querySelector('.ax-gp-grade.is-was')).toBeNull();
+    await screen.findByRole('heading', { name: /Growth timeline/ });
+    const overall = document.querySelector('.ax-gp-overall') as HTMLElement;
+    expect(overall.textContent).toMatch(/reaches back to your first day/i);
   });
 });
 
@@ -281,7 +313,7 @@ describe('what changed', () => {
     draw(<GrowthTab model={fakeModel()} />);
     // Assembled from the figures, so it cannot drift from them. The metric
     // rows print the same quantity, so this looks only at the prose block.
-    const list = (await screen.findByRole('heading', { name: /^What changed$/ }))
+    const list = (await screen.findByRole('heading', { name: /^What changed underneath$/ }))
       .closest('.ax-panel')!
       .querySelector('.ax-gp-changes');
     expect(list).not.toBeNull();
@@ -301,23 +333,23 @@ describe('what changed', () => {
 });
 
 describe('the chart', () => {
-  it('opens on the overall line alone', async () => {
-    // Five crossing lines is the puzzle this tab replaced. The rest are one
-    // press away, which is what a reader does after the overall line raises a
-    // question.
+  it('opens on the four graded measures, with the mean left off', async () => {
+    // Overall is the mean of the lines already drawn, so showing it by default
+    // adds a line that says nothing the others do not. It is one press away.
     serve();
     draw(<GrowthTab model={fakeModel()} />);
     const on = await screen.findAllByRole('button', { pressed: true });
     const toggles = on.filter((button) => button.className.includes('ax-gp-toggle'));
-    expect(toggles.map((button) => button.textContent)).toEqual(['Overall']);
-    expect(document.querySelectorAll('.ax-gp-line')).toHaveLength(1);
+    expect(toggles.map((button) => button.textContent))
+      .toEqual(['Productivity', 'Quality', 'Consistency', 'Efficiency']);
+    expect(document.querySelectorAll('.ax-gp-line')).toHaveLength(4);
   });
 
   it('adds a line when its metric is switched on', async () => {
     serve();
     draw(<GrowthTab model={fakeModel()} />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Consistency' }));
-    expect(document.querySelectorAll('.ax-gp-line')).toHaveLength(2);
+    await userEvent.click(await screen.findByRole('button', { name: 'Overall' }));
+    expect(document.querySelectorAll('.ax-gp-line')).toHaveLength(5);
   });
 
   it('refuses to be emptied', async () => {
@@ -325,7 +357,28 @@ describe('the chart', () => {
     // reader emptied.
     serve();
     draw(<GrowthTab model={fakeModel()} />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Overall' }));
+    // Awaited, not read straight off: the tab fetches, so the toggles are not
+    // in the document on the tick after `draw`.
+    await screen.findByRole('button', { name: 'Productivity' });
+    for (const name of ['Productivity', 'Quality', 'Consistency', 'Efficiency']) {
+      await userEvent.click(screen.getByRole('button', { name }));
+    }
     expect(document.querySelectorAll('.ax-gp-line')).toHaveLength(1);
+  });
+
+  it('marks every point, so a reading is not guessed off the line', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    await screen.findByRole('heading', { name: /Growth timeline/ });
+    expect(document.querySelectorAll('.ax-gp-point')).toHaveLength(4);
+  });
+
+  it('labels where each line ends', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const ends = (await screen.findByRole('heading', { name: /Growth timeline/ }))
+      .closest('.ax-panel')!
+      .querySelectorAll('.ax-gp-end');
+    expect(ends).toHaveLength(4);
   });
 });
