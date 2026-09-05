@@ -1,15 +1,20 @@
 /**
  * The question phase, and the two promises it makes.
  *
- * **One write, at the end.** Seven screens, two stores, and an account that
+ * **One write, at the end.** Eight screens, two stores, and an account that
  * closed the tab on step three should be exactly as unconfigured as one that
  * never opened the page. That is a property of the whole flow rather than of
  * any one step, so it is checked by walking the flow.
  *
- * **The count is the steps that exist.** The subject question is dropped on an
- * account with no subjects, and the rail and the "Step n of m" have to agree
- * with that — a flow that says "Step 4 of 7" and then finishes on 6 is the
- * failure a hard-coded length produces, and it is invisible to the compiler.
+ * **The count is the steps that exist.** The two subject questions are dropped
+ * on an account with no subjects, and the rail and the "Step n of m" have to
+ * agree with that — a flow that says "Step 4 of 8" and then finishes on 6 is
+ * the failure a hard-coded length produces, and it is invisible to the
+ * compiler.
+ *
+ * **The follow list is capped and it is ordered.** Four is the most, the cap
+ * is held by the buttons rather than by silently dropping a pick, and the
+ * order is the reader's own because the rail draws the menu in it.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -23,9 +28,19 @@ const PREFS: SetupPrefs = {
   analytics_tone: DEFAULTS.analytics_tone,
   analytics_detail: DEFAULTS.analytics_detail,
   analytics_home_tab: DEFAULTS.analytics_home_tab,
+  analytics_subjects: DEFAULTS.analytics_subjects,
 };
 
 const SUBJECTS = [{ id: 'maths', label: 'Mathematics' }];
+
+/** Enough subjects to reach the cap and try to pass it. */
+const MANY = [
+  { id: 'maths', label: 'Mathematics' },
+  { id: 'physics', label: 'Physics' },
+  { id: 'chem', label: 'Chemistry' },
+  { id: 'bio', label: 'Biology' },
+  { id: 'history', label: 'History' },
+];
 
 /* Typed against the prop rather than inferred from the arrow: `vi.fn(async ()
    => true)` infers a nullary mock, and `mock.calls[0][0]` on one of those is a
@@ -51,11 +66,11 @@ async function toTheEnd(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('the analytics question phase', () => {
-  it('asks seven with a catalogue and six without', () => {
+  it('asks eight with a catalogue and six without', () => {
     const { unmount } = render(
       <AnalyticsSetup subjects={SUBJECTS} prefs={PREFS} onSave={saver()} />,
     );
-    expect(screen.getByText(/Step 1 of 7/)).toBeInTheDocument();
+    expect(screen.getByText(/Step 1 of 8/)).toBeInTheDocument();
     unmount();
 
     render(<AnalyticsSetup subjects={[]} prefs={PREFS} onSave={saver()} />);
@@ -174,5 +189,75 @@ describe('the analytics question phase', () => {
     // asked: two days of 25 minutes is 0.8 of an hour.
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('spinbutton', { name: /hours a week/i })).toHaveValue(0.8);
+  });
+
+  /** Walk to the subjects question — the fourth screen, after log, days and
+   *  hours. Written as clicks rather than as an index so that adding a step
+   *  before it fails here loudly instead of testing the wrong screen. */
+  async function toSubjects(user: ReturnType<typeof userEvent.setup>) {
+    for (let step = 0; step < 3; step += 1) {
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+    }
+  }
+
+  it('sends the followed subjects in the order they were picked', async () => {
+    const user = userEvent.setup();
+    const onSave = saver();
+    render(<AnalyticsSetup subjects={MANY} prefs={PREFS} onSave={onSave} />);
+
+    await toSubjects(user);
+    // Out of order on purpose: the stored order is the reader's, not the
+    // catalogue's, because the rail draws the menu in it.
+    await user.click(screen.getByRole('button', { name: /Chemistry/ }));
+    await user.click(screen.getByRole('button', { name: /Mathematics/ }));
+
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+
+    expect(onSave.mock.calls[0]![0].prefs.analytics_subjects).toEqual(['chem', 'maths']);
+  });
+
+  it('stops at four rather than quietly dropping the oldest pick', async () => {
+    const user = userEvent.setup();
+    const onSave = saver();
+    render(<AnalyticsSetup subjects={MANY} prefs={PREFS} onSave={onSave} />);
+
+    await toSubjects(user);
+    for (const name of [/Mathematics/, /Physics/, /Chemistry/, /Biology/]) {
+      await user.click(screen.getByRole('button', { name }));
+    }
+
+    // The fifth is not merely ignored — it is visibly unavailable, so the cap
+    // is something the reader can see rather than something they discover by
+    // clicking and having nothing happen.
+    const fifth = screen.getByRole('button', { name: /History/ });
+    expect(fifth).toBeDisabled();
+    await user.click(fifth);
+
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+
+    // The first four, and the first one picked is still the first one stored.
+    expect(onSave.mock.calls[0]![0].prefs.analytics_subjects)
+      .toEqual(['maths', 'physics', 'chem', 'bio']);
+  });
+
+  it('drops a subject that has left the catalogue since it was picked', async () => {
+    const user = userEvent.setup();
+    const onSave = saver();
+    render(
+      <AnalyticsSetup
+        subjects={SUBJECTS}
+        // 'physics' is not in SUBJECTS: nominated once, deleted since. It must
+        // not come back on a save just because it is still in the stored list.
+        prefs={{ ...PREFS, analytics_subjects: ['maths', 'physics'] }}
+        onSave={onSave}
+      />,
+    );
+
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+
+    expect(onSave.mock.calls[0]![0].prefs.analytics_subjects).toEqual(['maths']);
   });
 });

@@ -1,0 +1,362 @@
+/*
+   subject.css — one subject, on its own.
+
+   Prefixed `sb-`, for the reason analytics.css prefixes `ax-`: this page sits
+   inside `.ax-page` and borrows its panels, its tiles' surfaces and its whole
+   token set, so its own classes have to be unmistakably its own. Everything
+   below reads `--ax-*` and defines none of its own colours — the page is a
+   guest in the analytics palette, and a second set of greys that nearly
+   matched would be visible on exactly the screens nobody tests.
+
+   There is no dark-theme block here for the same reason. The tokens flip in
+   analytics.css; anything keyed off them flips with it.
+*/
+
+/* --- The four figures across the top ------------------------------------ */
+.sb-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.sb-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    box-shadow: var(--ax-shadow);
+}
+
+.sb-tile-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
+.sb-tile-value {
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--ax-text);
+    line-height: 1.1;
+}
+
+/* The score out of 100 beside its letter. Quieter and smaller: the letter is
+   the reading, the number is the thing that makes it checkable. */
+.sb-tile-value em {
+    font-size: 14px;
+    font-weight: 600;
+    font-style: normal;
+    color: var(--ax-muted);
+}
+
+.sb-tile-note {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--ax-muted);
+}
+
+/* The one sentence the page is for, when there is one. */
+.sb-insight { margin-top: 14px; }
+
+/* --- Panels ------------------------------------------------------------- */
+.sb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+}
+
+/* A panel outside `.sb-grid` is full width and needs the same gap above it. */
+.ax-shell > .sb-panel { margin-top: 14px; }
+
+.sb-sub {
+    margin: 14px 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+.sb-sub:first-child { margin-top: 0; }
+
+/* --- Rows --------------------------------------------------------------- */
+.sb-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Name and figure on the first line, the workings underneath. The note spans
+   the whole row rather than sitting in a column of its own: it is a sentence,
+   and a sentence in a 90px column is a column of single words. */
+.sb-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px 10px;
+}
+
+.sb-row-rate { grid-template-columns: 1fr auto minmax(70px, 110px) auto; }
+
+.sb-row-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ax-text);
+}
+
+.sb-row-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.sb-row-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--ax-muted);
+}
+
+/* Said plainly rather than drawn as a zero. A rate with nothing behind it is
+   not a rate of nought, and a bar at 0% would claim it was. */
+.is-none {
+    font-size: 12.5px;
+    font-style: italic;
+    color: var(--ax-faint);
+}
+
+/* --- Bars and deltas ---------------------------------------------------- */
+.sb-bar {
+    display: block;
+    height: 7px;
+    border-radius: 4px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+
+.sb-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--ax-violet);
+}
+
+.sb-delta {
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.sb-delta.is-up { color: var(--ax-good); }
+.sb-delta.is-down { color: var(--ax-bad); }
+.sb-delta.is-flat { color: var(--ax-faint); font-weight: 600; }
+
+/* --- The difficulty table ----------------------------------------------- */
+/* Its own scroller, so a narrow window scrolls the table rather than the
+   page — the rule every wide block on this page follows. */
+.sb-table-wrap { overflow-x: auto; }
+
+.sb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.sb-table th,
+.sb-table td {
+    padding: 9px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--ax-line-soft);
+    vertical-align: middle;
+}
+
+.sb-table thead th {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+    white-space: nowrap;
+}
+
+.sb-table tbody th {
+    font-weight: 650;
+    color: var(--ax-text);
+    white-space: nowrap;
+}
+
+.sb-table tbody tr:last-child th,
+.sb-table tbody tr:last-child td { border-bottom: 0; }
+
+/* The row the page is about to make a recommendation from. Tinted rather than
+   outlined: the table is read down its length and a box in the middle of it
+   reads as a different table. */
+.sb-table tbody tr.is-weak {
+    background: color-mix(in srgb, var(--ax-amber) 9%, transparent);
+}
+
+.sb-cell-bar {
+    display: grid;
+    gap: 3px;
+    min-width: 92px;
+}
+.sb-cell-bar strong { font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.sb-cell-aside {
+    margin-left: 6px;
+    font-size: 11.5px;
+    font-style: normal;
+    color: var(--ax-muted);
+    white-space: nowrap;
+}
+
+/* --- The run of recent readings ----------------------------------------- */
+.sb-run {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sb-run li {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    min-width: 52px;
+    padding: 8px 6px;
+    border: 1px solid var(--ax-line);
+    border-radius: 10px;
+    background: var(--ax-card-2);
+}
+
+.sb-run-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+}
+.sb-run-dot.is-good { background: var(--ax-green); }
+.sb-run-dot.is-mid { background: var(--ax-amber); }
+.sb-run-dot.is-poor { background: var(--ax-pink); }
+
+.sb-run-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.sb-run-day {
+    font-size: 10.5px;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- What to do --------------------------------------------------------- */
+.sb-advice {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sb-advice-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--ax-line);
+    border-left-width: 3px;
+    border-radius: 10px;
+    background: var(--ax-card-2);
+}
+
+/* Ranked by what it is worth, and the left edge says which is which without a
+   badge to read. */
+.sb-advice-item.is-first { border-left-color: var(--ax-pink); }
+.sb-advice-item.is-second { border-left-color: var(--ax-amber); }
+.sb-advice-item.is-upkeep { border-left-color: var(--ax-blue); }
+
+.sb-advice-rank {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ax-muted);
+}
+
+.sb-advice-item strong { font-size: 14px; font-weight: 650; color: var(--ax-text); }
+.sb-advice-item p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ax-muted); }
+
+.sb-advice-why { color: var(--ax-faint) !important; }
+.sb-advice-why span { font-weight: 700; }
+
+/* --- Recent work -------------------------------------------------------- */
+.sb-recent {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sb-recent li {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.sb-recent li:last-child { padding-bottom: 0; border-bottom: 0; }
+
+.sb-recent-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.sb-recent-head strong { font-size: 13.5px; font-weight: 650; color: var(--ax-text); }
+
+.sb-recent-meta {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: var(--ax-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.sb-verdict {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    background: var(--ax-card-2);
+    color: var(--ax-muted);
+}
+.sb-verdict.is-went-well {
+    background: color-mix(in srgb, var(--ax-green) 14%, transparent);
+    color: var(--ax-good);
+}
+.sb-verdict.is-struggled {
+    background: color-mix(in srgb, var(--ax-pink) 14%, transparent);
+    color: var(--ax-bad);
+}

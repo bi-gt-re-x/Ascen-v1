@@ -117,6 +117,21 @@ export interface Prefs {
   analytics_detail: AnalyticsDetail;
   analytics_standing: boolean;
   /**
+   * The subjects the account said it most wants to work on, by id — at most
+   * `SUBJECTS_MAX` of them (utils/analyticsPrefs), in the order picked.
+   *
+   * The one analytics preference that is not about how the page reads. It is
+   * about what the app offers: each id becomes a row under Analytics in the
+   * rail, opening that subject's own page. Empty is the honest default and a
+   * real state — an account that named none gets the single entry it always
+   * had rather than a menu of one.
+   *
+   * Not guaranteed to name subjects that still exist. A subject can be deleted
+   * the day after it is nominated, so every reader joins this against the
+   * catalogue and drops what it does not recognise. See backend `_id_list`.
+   */
+  analytics_subjects: string[];
+  /**
    * The notification switches. One master, one for the on-screen half, and one
    * per channel — the same six as `NotificationChannel` in
    * services/notifications.
@@ -198,6 +213,7 @@ export const DEFAULTS: Prefs = {
   analytics_tone: 'balanced',
   analytics_detail: 'standard',
   analytics_standing: true,
+  analytics_subjects: [],
   /* Every channel on. The bell is quiet when the record is quiet — nothing is
      generated on a schedule (backend/tracking/notify.py) — so the honest
      default is on, and the switches are here for the reader who decides one

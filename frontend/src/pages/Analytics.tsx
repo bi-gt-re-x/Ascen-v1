@@ -80,17 +80,20 @@
  *
  * ## The question phase
  *
- * A new account answers six or seven questions before this page draws
- * anything: the three that make a baseline, and the four that decide what the
+ * A new account answers six or eight questions before this page draws
+ * anything: the three that make a baseline, and the five that decide what the
  * page is — how the reader records work, how blunt it may be, how much of it
- * to draw, and which tab opens. See ./components/Analytics/Setup for why that
- * is a sequence of screens rather than a card, utils/analyticsPrefs for what
- * each answer changes, and `firstRun` below for the three conditions that
- * decide somebody has genuinely never answered.
+ * to draw, which tab opens, and which subjects are worth a page of their own.
+ * See ./components/Analytics/Setup for why that is a sequence of screens
+ * rather than a card, utils/analyticsPrefs for what each answer changes, and
+ * `firstRun` below for the three conditions that decide somebody has genuinely
+ * never answered.
  *
- * Every one of the four is read by something on this page. That is the rule
- * the settings page is held to and it holds here: a question that stored a
- * value nothing looked at would be worse than not asking it.
+ * Every one of the five is read by something the reader can see. Four of them
+ * by this page; the fifth — the followed subjects — by the rail, which unfolds
+ * the Analytics entry into a page per subject (pages/SubjectAnalytics). That
+ * is the rule the settings page is held to and it holds here: a question that
+ * stored a value nothing looked at would be worse than not asking it.
  *
  * **Every figure on this page is this account's own.** There is no sample data
  * and no placeholder mode. Four tabs used to fall back to invented figures
@@ -313,8 +316,8 @@ export default function Analytics() {
   /**
    * The one write the screen makes, and it is deliberately one.
    *
-   * Seven questions, two stores — the baseline is a table of its own
-   * (backend/api/analytics.py) and the four preferences are keyed rows beside
+   * Eight questions, two stores — the baseline is a table of its own
+   * (backend/api/analytics.py) and the five preferences are keyed rows beside
    * every other preference. Both go out from here, and the flag that closes
    * the screen for good travels with the preferences rather than as a third
    * write: an account whose preferences landed and whose flag did not would be

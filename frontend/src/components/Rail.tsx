@@ -46,7 +46,8 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { useAuth, useMediaQuery, useSettings, useStats } from '@/hooks';
+import { useAuth, useMediaQuery, useSettings, useStats, useSubjectIndex } from '@/hooks';
+import { followedSubjects } from '@/utils/analyticsPrefs';
 import { useChainAccount } from '@/hooks/useChainAccount';
 import { useTitleEgg } from '@/hooks/useTitleEgg';
 import { format } from '@/utils';
@@ -72,6 +73,25 @@ interface Tab {
    * is plainly on the analytics page.
    */
   also?: string[];
+  /**
+   * Path prefixes this entry should light up for.
+   *
+   * `also` is exact matches, which cannot express a route with an id in it —
+   * `/analytics/subject/:subjectId` is one URL per subject the account
+   * follows, and listing them would mean the rail knowing the catalogue.
+   */
+  under?: string[];
+  /**
+   * Whether this entry unfolds into a menu, and which one.
+   *
+   * The rows are not in `TABS` because they are not static: they come from the
+   * account's own answer to a setup question (`analytics_subjects`) joined
+   * against its subject catalogue, neither of which a module-level constant
+   * can hold. So the table carries the marker and the component builds the
+   * rows — which keeps the one entry that has a menu from turning `TABS` into
+   * a tree that nine other entries pay for.
+   */
+  menu?: 'analytics';
   /**
    * Show this one in the phone's bottom bar.
    *
@@ -165,6 +185,10 @@ const TABS: Tab[] = [
       '/subjects',
       '/growth',
     ],
+    // The per-subject pages, which are one URL each and so cannot be listed.
+    under: ['/analytics/subject/'],
+    // The only entry in this table that unfolds. See `Tab.menu`.
+    menu: 'analytics',
     icon: (
       <svg {...stroke}>
         <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
@@ -272,6 +296,21 @@ const TABS: Tab[] = [
   },
 ];
 
+/**
+ * Whether an entry is the page currently open.
+ *
+ * `NavLink` answers this for the entry's own path and nothing else, and three
+ * places here need the whole answer — the column, the phone's More button, and
+ * the sheet. Written once so the three cannot drift: an entry lit in the
+ * column and dark in the sheet is a rail that disagrees with itself about
+ * where the reader is.
+ */
+function onPage(tab: Tab, pathname: string): boolean {
+  if (tab.to === pathname) return true;
+  if (tab.also?.includes(pathname)) return true;
+  return Boolean(tab.under?.some((prefix) => pathname.startsWith(prefix)));
+}
+
 export function Rail() {
   const { status, username } = useAuth();
   const { stats, reload } = useStats();
@@ -336,6 +375,30 @@ export function Rail() {
   const phone = useMediaQuery(PHONE);
   const shown = phone ? TABS.filter((tab) => tab.phone) : TABS;
   const rest = phone ? TABS.filter((tab) => !tab.phone) : [];
+
+  /**
+   * The subjects under Analytics, and whether the menu is open.
+   *
+   * The catalogue is cached module-wide and read by a dozen components
+   * already, so this costs the rail no request of its own — see
+   * hooks/useSubjects. The join drops ids the catalogue no longer holds, which
+   * is what keeps a subject deleted after it was nominated from leaving a row
+   * that opens a page about nothing.
+   */
+  const catalogue = useSubjectIndex(username);
+  const followed = followedSubjects(prefs.analytics_subjects, catalogue);
+
+  /* Open when the reader is already on one of these pages, and remembered
+     while they are not. Two rules rather than one because they answer
+     different questions: a reader who has just landed on a subject page should
+     see where they are in the rail without opening anything, and a reader who
+     opened the menu to browse should not have it fold every time they click a
+     row in it. */
+  const inSubjects = pathname.startsWith('/analytics/subject/');
+  const [menuOpen, setMenuOpen] = useState(inSubjects);
+  useEffect(() => {
+    if (inSubjects) setMenuOpen(true);
+  }, [inSubjects]);
 
   /* Closed on arrival, and closed again the moment the reader lands
      somewhere — a sheet still open over the page it just navigated to is a
@@ -435,19 +498,90 @@ export function Rail() {
       </div>
 
       <div className="rail-links">
-        {shown.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            className={({ isActive }) =>
-              `rail-link${isActive || tab.also?.includes(pathname) ? ' active' : ''}`
-            }
-            title={tab.label}
-          >
-            {tab.icon}
-            <span>{tab.label}</span>
-          </NavLink>
-        ))}
+        {shown.map((tab) => {
+          /* The menu is drawn only where it can be read and only when it has
+             something in it. Collapsed, the rail is a strip of icons with no
+             labels, so a list of subject names has nowhere to go; on a phone
+             the rail is a bottom bar and Analytics lives in the More sheet;
+             and with nothing followed, a disclosure that opens onto a single
+             row called "Overall" is a click that changes nothing. Each of
+             those is the entry behaving as it always did. */
+          const menu = tab.menu === 'analytics' && followed.length > 0 && !collapsed && !phone;
+          const link = (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              className={({ isActive }) =>
+                `rail-link${isActive || onPage(tab, pathname) ? ' active' : ''}`
+              }
+              title={tab.label}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </NavLink>
+          );
+
+          if (!menu) return link;
+
+          return (
+            <div className="rail-group" key={tab.to}>
+              <div className="rail-group-head">
+                {link}
+                {/* Beside the link rather than wrapping it, so the row still
+                    goes to Analytics in one click. A parent that only opens a
+                    menu makes the reader take two clicks to reach the page
+                    they named, which is the commonest way a nav like this
+                    gets worse than the flat list it replaced. */}
+                <button
+                  type="button"
+                  className={`rail-disclose${menuOpen ? ' is-open' : ''}`}
+                  aria-expanded={menuOpen}
+                  aria-controls="rail-analytics-menu"
+                  aria-label={menuOpen ? 'Hide your subjects' : 'Show your subjects'}
+                  title={menuOpen ? 'Hide your subjects' : 'Show your subjects'}
+                  onClick={() => setMenuOpen((was) => !was)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}
+                       strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m8 10 4 4 4-4" />
+                  </svg>
+                </button>
+              </div>
+
+              {menuOpen && (
+                <div className="rail-sub" id="rail-analytics-menu">
+                  {/* Named, and first. The page that has always been here is
+                      one of the things in this menu now rather than the thing
+                      the menu hangs off, and leaving it unnamed would make the
+                      four subjects look like the whole of Analytics.
+
+                      `end` because `/analytics` is a prefix of every subject
+                      path: without it this row would be lit on all of them. */}
+                  <NavLink
+                    to="/analytics"
+                    end
+                    className={({ isActive }) => `rail-sub-link${isActive ? ' active' : ''}`}
+                  >
+                    Overall
+                  </NavLink>
+                  {followed.map((subject) => (
+                    <NavLink
+                      key={subject.id}
+                      to={`/analytics/subject/${encodeURIComponent(subject.id)}`}
+                      className={({ isActive }) => `rail-sub-link${isActive ? ' active' : ''}`}
+                      /* The full name on hover; the row prints the short form
+                         when the subject has one, because the rail is narrow
+                         and "Environmental Science" is not. */
+                      title={subject.name}
+                    >
+                      {subject.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {/* The other six, on a phone. Lit when the reader is on one of them,
             so the bar still answers "where am I" for every page in the app
@@ -456,9 +590,7 @@ export function Rail() {
           <button
             type="button"
             className={`rail-link rail-more${moreOpen ? ' is-open' : ''}${
-              rest.some((tab) => tab.to === pathname || tab.also?.includes(pathname))
-                ? ' active'
-                : ''
+              rest.some((tab) => onPage(tab, pathname)) ? ' active' : ''
             }`}
             aria-expanded={moreOpen}
             aria-haspopup="menu"
@@ -491,9 +623,7 @@ export function Rail() {
                 to={tab.to}
                 role="menuitem"
                 className={({ isActive }) =>
-                  `rail-sheet-link${
-                    isActive || tab.also?.includes(pathname) ? ' active' : ''
-                  }`
+                  `rail-sheet-link${isActive || onPage(tab, pathname) ? ' active' : ''}`
                 }
                 onClick={() => setMoreOpen(false)}
               >

@@ -889,6 +889,107 @@ body:has(.ax-page) .app-main {
     background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
 }
 
+/* --- One subject, on its own: the skeleton ------------------------------
+   pages/SubjectAnalytics.tsx. Four panels in a two-up grid — the same rhythm
+   the Overview's rows use, so the finished page will not have to be relaid
+   out when the panels start holding figures. */
+.ax-subject-skeleton {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+/* Three grey blocks, and deliberately not a chart. A skeleton that draws a
+   plausible series shape teaches the reader to read a picture the page has not
+   earned the right to draw — so these have no scale, no axis and no motion,
+   and they sit at fixed widths that could not be mistaken for values. */
+.ax-skeleton-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 4px 0 2px;
+}
+
+.ax-skeleton-bars span {
+    height: 10px;
+    border-radius: 5px;
+    background: var(--ax-line-soft);
+}
+.ax-skeleton-bars span:nth-child(1) { width: 82%; }
+.ax-skeleton-bars span:nth-child(2) { width: 61%; }
+.ax-skeleton-bars span:nth-child(3) { width: 44%; }
+
+/* The subjects worth a page of their own — up to four, picked from the whole
+   catalogue. A denser grid than the tabs above because the rows carry a name
+   and nothing else: there is no consequence line to weigh, the reader is
+   scanning a list they already know for the handful they care about, and a
+   hundred subjects at the tab row's height would be a screen of scrolling. */
+.ax-setup-picks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+    /* The catalogue is a hundred rows and the card is not. Capped and scrolled
+       rather than allowed to run: the Next button has to stay reachable
+       without a trip to the bottom of the list. */
+    max-height: 46vh;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.ax-setup-pick {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease, opacity .12s ease;
+}
+
+.ax-setup-pick:hover:not(:disabled) { border-color: var(--ax-violet); }
+.ax-setup-pick strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ax-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The slot number, and it holds its width when empty so that picking a subject
+   does not shove its own name sideways. */
+.ax-setup-pick-slot {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--ax-line);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ax-faint);
+}
+
+.ax-setup-pick.is-on {
+    border-color: var(--ax-violet);
+    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+}
+.ax-setup-pick.is-on .ax-setup-pick-slot {
+    border-color: transparent;
+    background: var(--ax-violet);
+    color: #fff;
+}
+
+/* At the cap. Dimmed rather than hidden — a row that disappears when a fourth
+   is picked rearranges the list under the cursor. */
+.ax-setup-pick:disabled { opacity: .42; cursor: not-allowed; }
+
 /* The verdict beside a baseline row, and the only thing on that panel the
    harshness setting moves. The percentage and the bar are identical at every
    tone — see src/utils/analyticsPrefs.ts. */

@@ -194,6 +194,47 @@ export function detailRules(detail: AnalyticsDetail | undefined): DetailRules {
 }
 
 // --------------------------------------------------------------------------
+// The subjects the account is following
+// --------------------------------------------------------------------------
+
+/**
+ * How many subjects an account may nominate as the ones it most wants to work
+ * on — `analytics_subjects`.
+ *
+ * Four, and the number is a design decision rather than a storage limit. The
+ * list becomes a menu under Analytics in the rail, and a rail entry that
+ * unfolds into eleven rows is a rail entry nobody opens twice; four also fits
+ * the setup screen's grid without it turning into a scrolling list. The server
+ * holds the same bound and truncates past it — ANALYTICS_SUBJECTS_MAX in
+ * backend/api/settings.py. If one moves, move the other.
+ */
+export const SUBJECTS_MAX = 4;
+
+/**
+ * The nominated subjects that still exist, in the order they were picked.
+ *
+ * Every reader of `analytics_subjects` needs this and none of them should
+ * write it twice. The stored list is ids and nothing else, and an id can
+ * outlive the subject it named — a catalogue is per-account and editable, so a
+ * subject nominated in the wizard can be deleted the afternoon after. Dropping
+ * what the catalogue does not recognise degrades to a shorter menu, which is
+ * the right failure: the alternatives are a rail row that opens a page about
+ * nothing, or a save that fails months after the mistake was made.
+ *
+ * `catalogue` is the same map `useSubjectIndex` returns, so the rail and the
+ * analytics page are reading one source rather than two.
+ */
+export function followedSubjects(
+  ids: string[] | undefined,
+  catalogue: Map<string, { id: string; name: string; label: string }>,
+): Array<{ id: string; name: string; label: string }> {
+  return (ids ?? [])
+    .slice(0, SUBJECTS_MAX)
+    .map((id) => catalogue.get(id))
+    .filter((subject): subject is { id: string; name: string; label: string } => Boolean(subject));
+}
+
+// --------------------------------------------------------------------------
 // What the account actually records
 // --------------------------------------------------------------------------
 

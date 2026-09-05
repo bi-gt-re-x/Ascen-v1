@@ -29,6 +29,7 @@ const Homepage = lazy(() => import('@/pages/Homepage'));
 const Goals = lazy(() => import('@/pages/Goals'));
 const Tasks = lazy(() => import('@/pages/Tasks'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
+const SubjectAnalytics = lazy(() => import('@/pages/SubjectAnalytics'));
 const SkillTrees = lazy(() => import('@/pages/SkillTrees'));
 const Notes = lazy(() => import('@/pages/Notes'));
 const Records = lazy(() => import('@/pages/Records'));
@@ -229,6 +230,14 @@ export default function App() {
                   different destinations. It is left alone because `/growth` has
                   meant "the analytics page" since the port, and quietly moving
                   it would change where an existing link lands. */}
+              {/* One subject, on its own — a page rather than an eighth tab.
+                  There is one of these per subject the account follows, and a
+                  tab bar whose shape depends on a wizard answer is a tab bar
+                  the reader cannot learn; the rail's Analytics entry unfolds
+                  into the list instead. The id is the subject's own, the same
+                  one a task carries, so the URL survives a rename. It is a
+                  skeleton today — see the page. */}
+              <Route path="/analytics/subject/:subjectId" element={<SubjectAnalytics />} />
               <Route path="/analytics/growth" element={<Analytics />} />
               <Route
                 path="/analytics/records"

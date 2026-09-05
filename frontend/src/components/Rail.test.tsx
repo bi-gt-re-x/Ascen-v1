@@ -10,6 +10,13 @@
  * The rest is the contract with the stylesheet: `html.nav-collapsed` is what
  * every page sizes itself against, so it is asserted on the element rather
  * than on the state that sets it.
+ *
+ * The third thing tested here is the one entry that unfolds. Analytics carries
+ * a menu of the subjects the account said it most wants to work on, and the
+ * three ways that can go wrong are all invisible to the compiler: the entry
+ * ceasing to be a one-click link to Analytics, the menu appearing where it
+ * cannot be read, and a subject deleted since it was nominated leaving a row
+ * that opens a page about nothing.
  */
 import { fireEvent, screen, within } from '@testing-library/react';
 import { Link } from 'react-router-dom';
@@ -17,6 +24,7 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Rail, STATS_CHANGED } from './Rail';
 import { renderWithProviders } from '@/test/render';
+import type { Subject } from '@/services/subjects';
 import { setMatchMedia } from '@/test/media';
 import { stats } from '@/test/factories';
 import type { MediaControl } from '@/test/media';
@@ -28,6 +36,39 @@ const PHONE = '(max-width: 640px)';
 const PHONE_TABS = ['Dashboard', 'Calendar', 'Tasks', 'Goals'];
 /** The six behind More. Records and Settings are the two that used to fall off. */
 const SHEET_TABS = ['Analytics', 'Skill Tree', 'Notes', 'Achievements', 'Records', 'Settings'];
+
+/**
+ * The catalogue the rail joins the account's picks against.
+ *
+ * Mocked at the service rather than at `useSubjects`, so the hook's own cache,
+ * its event listener and its "only a real answer is cached" rule are all still
+ * being exercised. Without this the fetch fails and every account has an empty
+ * catalogue — which is a valid state, and the one that would let a broken join
+ * pass silently.
+ */
+function subject(id: string, name: string, abbr = ''): Subject {
+  return {
+    id,
+    name,
+    abbr,
+    label: abbr || name,
+    icon: '',
+    group: 'Study',
+    used: 3,
+    family: null,
+  } as Subject;
+}
+
+const CATALOGUE = [
+  subject('maths', 'Mathematics'),
+  subject('physics', 'Physics'),
+  subject('enviro', 'Environmental Science', 'Enviro Sci'),
+];
+
+vi.mock('@/services/subjects', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/services/subjects')>()),
+  list: vi.fn(async () => ({ success: true as const, subjects: CATALOGUE })),
+}));
 
 let media: MediaControl;
 
@@ -71,6 +112,130 @@ describe('on a desktop', () => {
       'href',
       '/home',
     );
+  });
+});
+
+describe('the Analytics entry, which is the one that unfolds', () => {
+  /** Renders with an account that follows some subjects, and waits for the
+   *  catalogue — the join needs both halves and one of them is a fetch. */
+  async function withFollowed(ids: string[], route = '/dashboard') {
+    const view = renderWithProviders(<Rail />, {
+      route,
+      settings: { prefs: { analytics_subjects: ids } },
+    });
+    // The disclosure only exists once there is something to disclose, so
+    // finding it is also the wait for the catalogue to land.
+    if (ids.length) await screen.findByRole('button', { name: /your subjects/i });
+    return view;
+  }
+
+  it('stays a one-click link to Analytics, with the chevron beside it', async () => {
+    // The commonest way a nav like this gets worse than the flat list it
+    // replaced: the parent stops being a destination and only opens a menu, so
+    // the page the entry names costs two clicks.
+    await withFollowed(['maths']);
+    expect(screen.getByRole('link', { name: 'Analytics' }))
+      .toHaveAttribute('href', '/recommendations');
+  });
+
+  it('shows nothing to unfold when the account follows none', () => {
+    // A disclosure that opens onto a single row called "Overall" is a click
+    // that changes nothing, so the entry stays exactly as it was.
+    renderWithProviders(<Rail />);
+    expect(screen.queryByRole('button', { name: /your subjects/i })).not.toBeInTheDocument();
+  });
+
+  it('names Overall alongside the subjects rather than leaving it implied', async () => {
+    await withFollowed(['maths', 'physics']);
+    fireEvent.click(screen.getByRole('button', { name: /show your subjects/i }));
+
+    // Without a row of its own, the page that has always been here would look
+    // like it had been replaced by the two subjects under it.
+    expect(screen.getByRole('link', { name: 'Overall' })).toHaveAttribute('href', '/analytics');
+    expect(screen.getByRole('link', { name: 'Mathematics' }))
+      .toHaveAttribute('href', '/analytics/subject/maths');
+    expect(screen.getByRole('link', { name: 'Physics' }))
+      .toHaveAttribute('href', '/analytics/subject/physics');
+  });
+
+  it('draws the menu in the order the reader picked, not the catalogue order', async () => {
+    await withFollowed(['physics', 'maths']);
+    fireEvent.click(screen.getByRole('button', { name: /show your subjects/i }));
+
+    const named = screen
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'))
+      .filter((href): href is string => Boolean(href?.startsWith('/analytics/subject/')));
+
+    expect(named).toEqual(['/analytics/subject/physics', '/analytics/subject/maths']);
+  });
+
+  it('drops a subject the catalogue no longer holds', async () => {
+    // Nominated in the wizard, deleted from the library the week after. The
+    // stored list still names it; a row for it would open a page about
+    // nothing.
+    await withFollowed(['maths', 'latin']);
+    fireEvent.click(screen.getByRole('button', { name: /show your subjects/i }));
+
+    expect(screen.getByRole('link', { name: 'Mathematics' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /latin/i })).not.toBeInTheDocument();
+  });
+
+  it('prints the short form and keeps the full name for the hover', async () => {
+    await withFollowed(['enviro']);
+    fireEvent.click(screen.getByRole('button', { name: /show your subjects/i }));
+
+    // "Environmental Science" does not fit a rail this narrow; the name it
+    // does not fit is still what a screen reader and a tooltip get.
+    const row = screen.getByRole('link', { name: 'Enviro Sci' });
+    expect(row).toHaveAttribute('title', 'Environmental Science');
+  });
+
+  it('is already open when the reader lands on a subject page', async () => {
+    // Arriving from a link or a bookmark, the rail has to say where you are
+    // without being opened first.
+    await withFollowed(['maths'], '/analytics/subject/maths');
+
+    expect(screen.getByRole('button', { name: /hide your subjects/i }))
+      .toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('link', { name: 'Mathematics' }).className).toContain('active');
+  });
+
+  it('lights Analytics on a subject page, which `also` cannot express', async () => {
+    // One URL per subject, so the entry matches on a prefix rather than on a
+    // list — otherwise the rail shows nothing selected on a page it owns.
+    await withFollowed(['maths'], '/analytics/subject/maths');
+    expect(screen.getByRole('link', { name: 'Analytics' }).className).toContain('active');
+  });
+
+  it('does not light Overall on a subject page, since /analytics is its prefix', async () => {
+    await withFollowed(['maths'], '/analytics/subject/maths');
+    expect(screen.getByRole('link', { name: 'Overall' }).className).not.toContain('active');
+  });
+
+  it('folds the menu away with the rail, which is a strip of icons with no labels', async () => {
+    // Folded rather than rendered folded, on purpose. An assertion that the
+    // disclosure is absent on first paint would pass just as well if the
+    // catalogue had simply not arrived yet — so this waits for the menu to
+    // exist, which proves the join worked, and only then collapses the rail.
+    await withFollowed(['maths']);
+    fireEvent.click(screen.getByRole('button', { name: /show your subjects/i }));
+    expect(screen.getByRole('link', { name: 'Mathematics' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse navigation' }));
+
+    // The labels are gone at this width, so a list of subject names has
+    // nowhere to go. The entry behaves as it did before it had a menu.
+    expect(screen.queryByRole('button', { name: /your subjects/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Mathematics' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Analytics' })).toBeInTheDocument();
+  });
+
+  it('has no menu on a phone, where the rail is a bar and Analytics is in the sheet', async () => {
+    await withFollowed(['maths']);
+    act(() => media.set(PHONE, true));
+
+    expect(screen.queryByRole('button', { name: /your subjects/i })).not.toBeInTheDocument();
   });
 });
 

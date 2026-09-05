@@ -11,21 +11,35 @@
  *
  * The three were all facts the reader already knew without thinking — how many
  * days, how many hours, which subject. What has been added is not more of
- * those. It is the four decisions that were previously made *for* the reader
- * and buried:
+ * those. It is the decisions that were previously made *for* the reader and
+ * buried:
  * how they record work, how blunt the page is allowed to be about a shortfall,
- * how much of the page they want drawn, and which tab it opens on. Those are
- * choices rather than recollections, and a choice needs its options laid out
- * and its consequence stated beside it. Seven of those on one card is a wall
- * of segmented controls that nobody reads and everybody clicks past — which is
- * the failure the old comment was actually worried about, arrived at from the
- * other direction.
+ * how much of the page they want drawn, which tab it opens on, and which
+ * subjects are worth a page of their own. Those are choices rather than
+ * recollections, and a choice needs its options laid out and its consequence
+ * stated beside it. Eight of those on one card is a wall of segmented controls
+ * that nobody reads and everybody clicks past — which is the failure the old
+ * comment was actually worried about, arrived at from the other direction.
  *
  * So: one question per screen, the consequence of each answer written under it
- * in the reader's own terms, and a step count that never goes above seven. The
- * subject question is dropped on an account with no subjects, so the flow is
- * six there — the count comes from the steps that exist rather than being
- * declared, because a "Step 4 of 7" that skips 4 is worse than either number.
+ * in the reader's own terms, and a step count that never goes above eight. The
+ * two subject questions are dropped together on an account with no subjects,
+ * so the flow is six there — the count comes from the steps that exist rather
+ * than being declared, because a "Step 4 of 8" that skips 4 is worse than
+ * either number.
+ *
+ * ## The two subject questions are two questions
+ *
+ * They sit next to each other and they read alike, so it is worth saying why
+ * both are here. **Followed subjects** decide what the app *offers*: each one
+ * becomes a row under Analytics in the rail with a page behind it. **The focus
+ * subject** decides what a *figure means*: it is what the week's hours are
+ * aimed at, and it is what lets the page tell four days of work apart from
+ * four days of the work that mattered. A reader can follow four subjects with
+ * no single one the week is for, and a reader with one clear focus may want no
+ * extra pages at all, so neither answer is derived from the other. They also
+ * land in different stores — the follow list is a preference, the focus is
+ * part of the baseline.
  *
  * ## Nothing here is required to be right
  *
@@ -67,6 +81,7 @@ import {
   DETAIL_LABEL,
   LOG_STYLE_HINT,
   LOG_STYLE_LABEL,
+  SUBJECTS_MAX,
   TONE_HINT,
   TONE_LABEL,
 } from '@/utils/analyticsPrefs';
@@ -74,7 +89,11 @@ import {
 /** The preferences this screen sets. The rest of analytics' are settings-only. */
 export type SetupPrefs = Pick<
   Prefs,
-  'analytics_log_style' | 'analytics_tone' | 'analytics_detail' | 'analytics_home_tab'
+  | 'analytics_log_style'
+  | 'analytics_tone'
+  | 'analytics_detail'
+  | 'analytics_home_tab'
+  | 'analytics_subjects'
 >;
 
 export interface SetupAnswers {
@@ -206,6 +225,16 @@ export function AnalyticsSetup({
     ),
   );
   const [focus, setFocus] = useState(current?.focus_subject ?? '');
+  /* The nominated subjects, held as the ids in the order they were picked —
+     that order is the reader's and the rail draws the menu in it, so a Set
+     would lose the one thing about this answer that is not a membership test.
+     Trimmed to what the catalogue still has, for the reason `followedSubjects`
+     gives: an account re-opening these questions a year on should not be shown
+     four ticked boxes when one of the subjects has since been deleted. */
+  const [followed, setFollowed] = useState<string[]>(() => {
+    const known = new Set(subjects.map((subject) => subject.id));
+    return prefs.analytics_subjects.filter((id) => known.has(id)).slice(0, SUBJECTS_MAX);
+  });
   const [logStyle, setLogStyle] = useState<LogStyle>(prefs.analytics_log_style);
   const [tone, setTone] = useState<AnalyticsTone>(prefs.analytics_tone);
   const [detail, setDetail] = useState<AnalyticsDetail>(prefs.analytics_detail);
@@ -232,6 +261,20 @@ export function AnalyticsSetup({
      the server will accept, so the line below can say what will be stored
      instead of quietly storing something else. */
   const clamped = weeklyHours > 0 && Math.round((weeklyHours * 60) / days) !== minutes;
+
+  /* On, off, and nothing else — the cap is enforced by the buttons being
+     disabled rather than by this quietly dropping the oldest pick. A control
+     that un-ticks something the reader ticked two clicks ago, without saying
+     so, is a control they stop trusting. */
+  const toggleFollowed = (id: string) => {
+    setFollowed((was) =>
+      was.includes(id)
+        ? was.filter((entry) => entry !== id)
+        : was.length >= SUBJECTS_MAX
+          ? was
+          : [...was, id],
+    );
+  };
 
   const steps: Step[] = useMemo(() => {
     const list: Step[] = [
@@ -337,12 +380,82 @@ export function AnalyticsSetup({
        nothing, and the step count below is computed from this array so the
        rail says six rather than skipping a number. */
     if (subjects.length > 0) {
+      /* Two subject questions, and they are not the same question asked twice.
+         This one asks what the reader wants to *work on* — it builds the menu
+         under Analytics in the rail, and each answer gets a page of its own.
+         The one below asks what the baseline is *for*, so that "you worked
+         four days" can be told apart from "you worked four days on the thing
+         you said mattered". A reader can follow four subjects and have no
+         single one the week is aimed at, which is why neither answer is
+         derived from the other.
+
+         It goes first because it is the wider question: having named the
+         handful that matter, picking the one that matters most is a choice
+         out of four rather than out of a hundred. */
+      list.push({
+        key: 'followed',
+        title: 'Which subjects do you most want to work on?',
+        lead:
+          `Up to ${SUBJECTS_MAX}. Each one you pick gets its own page under Analytics in the `
+          + 'sidebar, so you can look at that subject on its own instead of reading it out of a '
+          + 'total. Pick none and Analytics stays the single page it is now.',
+        body: (
+          <>
+            <div className="ax-setup-picks" role="group" aria-label="Subjects to follow">
+              {subjects.map((subject) => {
+                const on = followed.includes(subject.id);
+                /* Disabled rather than hidden at the cap, and only the ones
+                   that are off. A row that vanishes when a fourth is picked
+                   would make the list rearrange itself under the cursor. */
+                const full = !on && followed.length >= SUBJECTS_MAX;
+                return (
+                  <button
+                    key={subject.id}
+                    type="button"
+                    className={`ax-setup-pick${on ? ' is-on' : ''}`}
+                    aria-pressed={on}
+                    disabled={full}
+                    onClick={() => toggleFollowed(subject.id)}
+                  >
+                    {/* The position in the reader's own order, not a tick.
+                        The order is stored and the rail draws the menu in it,
+                        so the number is a fact about the answer rather than
+                        decoration. */}
+                    <span className="ax-setup-pick-slot" aria-hidden="true">
+                      {on ? followed.indexOf(subject.id) + 1 : ''}
+                    </span>
+                    <strong>{subject.label}</strong>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="ax-setup-sum">
+              {followed.length === 0 ? (
+                <>None picked — Analytics stays one page</>
+              ) : (
+                <>
+                  <strong>
+                    {followed.length} of {SUBJECTS_MAX}
+                  </strong>{' '}
+                  picked
+                  {followed.length >= SUBJECTS_MAX && (
+                    <em> — that is the most. Unpick one to swap it.</em>
+                  )}
+                </>
+              )}
+            </p>
+          </>
+        ),
+      });
+
       list.push({
         key: 'subject',
         title: 'Is most of this for one subject?',
         lead:
           'Optional, and easy to change. It is what lets the page tell "you worked four days" '
-          + 'apart from "you worked four days on the thing you said mattered".',
+          + 'apart from "you worked four days on the thing you said mattered". Different from '
+          + 'the last question: that one chose which subjects get a page, this one is what the '
+          + 'hours you just gave are aimed at.',
         body: (
           <select
             className="ax-setup-select"
@@ -427,7 +540,10 @@ export function AnalyticsSetup({
     );
 
     return list;
-  }, [clamped, days, detail, focus, homeTab, hours, logStyle, minutes, subjects, tone, weeklyHours]);
+  }, [
+    clamped, days, detail, focus, followed, homeTab, hours, logStyle, minutes, subjects,
+    tone, weeklyHours,
+  ]);
 
   const total = steps.length;
   // Clamped rather than trusted: the subject step disappears when a catalogue
@@ -446,6 +562,7 @@ export function AnalyticsSetup({
         analytics_tone: tone,
         analytics_detail: detail,
         analytics_home_tab: homeTab,
+        analytics_subjects: followed,
       },
     });
     setSaving(false);

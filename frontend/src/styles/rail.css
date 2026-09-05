@@ -19,7 +19,15 @@
  */
 
 :root {
-    --rail-w: 240px;
+    /* 240px until the Analytics entry learned to unfold. A submenu is indented
+       under its parent and its rows are subject names rather than the column's
+       one-word destinations, so the width that comfortably held "Achievements"
+       was squeezing "Environmental Science" into an ellipsis two levels in.
+       Widened 1.8x rather than by enough to fit: every page sizes itself off
+       this variable, so the rail can take the space without a single page's
+       layout arithmetic being touched. The folded width below is unchanged —
+       that one is measured by the icons, which have not moved. */
+    --rail-w: 432px;
     --topnav-h: 68px;
 }
 
@@ -162,6 +170,78 @@
     color: #2C302E;
 }
 .rail-link.active svg { color: #A38A70; }
+
+/* --- An entry that unfolds ----------------------------------------------
+   Analytics is the only one, and it unfolds into the subjects the account said
+   it most wants to work on. The row itself still goes to Analytics in one
+   click — the chevron beside it is a separate control, not a wrapper around
+   the link — so an entry with a menu costs the reader nothing to use as an
+   entry. See `Tab.menu` in components/Rail.tsx. */
+.rail-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rail-group-head {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* The link takes the row and the chevron takes what is left, so the entry is
+   exactly as tall and as wide as the nine that have no menu. */
+.rail-group-head .rail-link {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.rail-disclose {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: #98A1AE;
+    cursor: pointer;
+}
+
+.rail-disclose svg { width: 18px; height: 18px; }
+.rail-disclose:hover { background: #F4F6F8; color: #2C302E; }
+.rail-disclose.is-open svg { transform: rotate(180deg); }
+.rail-disclose svg { transition: transform .15s ease; }
+
+/* Indented under the entry and quieter than it: these are places inside
+   Analytics, not destinations of their own rank. The rule down the left is
+   what makes the indent read as containment rather than as a stray margin. */
+.rail-sub {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 2px 0 4px 22px;
+    padding-left: 10px;
+    border-left: 1.5px solid #E6E9EF;
+}
+
+.rail-sub-link {
+    display: block;
+    padding: 7px 10px;
+    border-radius: 8px;
+    color: #6C757D;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rail-sub-link:hover { background: #F4F6F8; color: #2C302E; }
+.rail-sub-link.active { background: #F1EDE7; color: #2C302E; }
 
 /* --- The foot: the rank and the bar to the next one --------------------- */
 /* It held the dark-mode switch and an avatar-and-username plate. The switch is
@@ -361,6 +441,11 @@ html.nav-collapsed .rail-brand { justify-content: center; padding-bottom: 18px; 
 html.nav-collapsed .rail-brand-name,
 html.nav-collapsed .rail-link span,
 html.nav-collapsed .rail-rank-head,
+/* A strip of icons has nowhere to put a list of subject names. The component
+   declines to render these when the rail is folded; this is what keeps them
+   gone in the frame between the class landing and the render. */
+html.nav-collapsed .rail-disclose,
+html.nav-collapsed .rail-sub,
 html.nav-collapsed .rail-xp-row { display: none; }
 
 html.nav-collapsed .rail-link { justify-content: center; padding-left: 0; padding-right: 0; }
@@ -433,6 +518,13 @@ html[data-theme="dark"] .rail-brand-name { color: #F0F2F5; }
    both — so it lifts here rather than being asked to work in two places. */
 html[data-theme="dark"] .rail-mark-body { fill: #8085EE; }
 html[data-theme="dark"] .rail-mark-foot { fill: #B0B4F8; }
+
+html[data-theme="dark"] .rail-disclose { color: #6E7681; }
+html[data-theme="dark"] .rail-disclose:hover { background: #21262D; color: #F0F2F5; }
+html[data-theme="dark"] .rail-sub { border-left-color: #30363D; }
+html[data-theme="dark"] .rail-sub-link { color: #8B949E; }
+html[data-theme="dark"] .rail-sub-link:hover { color: #F0F2F5; background: #21262D; }
+html[data-theme="dark"] .rail-sub-link.active { color: #F0F2F5; background: #2A2118; }
 
 html[data-theme="dark"] .rail-link { color: #8B949E; }
 html[data-theme="dark"] .rail-link:hover { color: #F0F2F5; background: #21262D; }

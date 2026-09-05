@@ -252,6 +252,49 @@ def test_the_catch_up_stamp_takes_a_date_and_refuses_anything_else(client):
     assert client.get('/api/settings').json()['settings']['catchup_seen_on'] == ''
 
 
+def test_the_followed_subjects_are_a_list_and_are_bounded(client):
+    """`analytics_subjects` is the only preference here holding a set.
+
+    Everything else in FIELDS is one value, so this is the one validator whose
+    job is to say what a *list* is allowed to be. Three rules, and each is a
+    thing the rail would otherwise show the reader:
+
+    - the order is kept, because it is the reader's own and the menu is drawn
+      in it;
+    - duplicates go, because a menu with the same row twice is a visible bug;
+    - past the cap it is truncated rather than refused, the same way `_whole`
+      clamps — a client that sent five meant "these".
+    """
+    settings = lambda: client.get('/api/settings').json()['settings']
+
+    # Absent is empty, not missing. An account that named none gets the single
+    # Analytics entry it has always had.
+    assert settings()['analytics_subjects'] == []
+
+    client.post('/api/settings', json={'values': {
+        'analytics_subjects': ['physics', 'maths', 'physics'],
+    }})
+    assert settings()['analytics_subjects'] == ['physics', 'maths']
+
+    # Five picked, four stored, and the four are the first four.
+    client.post('/api/settings', json={'values': {
+        'analytics_subjects': ['a', 'b', 'c', 'd', 'e'],
+    }})
+    assert settings()['analytics_subjects'] == ['a', 'b', 'c', 'd']
+
+    # A string where a list belongs is a bug in the client rather than an
+    # over-eager reader, so it is refused and the stored answer is left alone.
+    assert client.post('/api/settings', json={
+        'values': {'analytics_subjects': 'maths'},
+    }).status_code == 400
+    assert settings()['analytics_subjects'] == ['a', 'b', 'c', 'd']
+
+    # Emptying it is a real answer and has to be possible: it is how a reader
+    # puts the Analytics entry back to a single link.
+    client.post('/api/settings', json={'values': {'analytics_subjects': []}})
+    assert settings()['analytics_subjects'] == []
+
+
 def test_hand_entered_focus_adds_to_the_day_rather_than_replacing_it(client):
     """The catch-up prompt is a person, not a mirror.
 

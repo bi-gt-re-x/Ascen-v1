@@ -69,6 +69,14 @@ router = APIRouter(tags=['settings'])
 NAME_MAX = 60
 GOAL_MIN, GOAL_MAX = 10, 2000
 
+#: How many subjects an account may nominate as the ones it most wants to work
+#: on. Four rather than "as many as you like", and the number is a design
+#: decision rather than a storage limit: the list becomes a menu under
+#: Analytics in the rail (frontend/src/components/Rail.tsx), and a rail entry
+#: that unfolds into eleven rows is a rail entry nobody opens twice. Four also
+#: fits the setup screen's grid without it becoming a scrolling list.
+ANALYTICS_SUBJECTS_MAX = 4
+
 
 def _one_of(*allowed):
     """A validator for a fixed set of strings."""
@@ -108,6 +116,41 @@ def _fraction(low, high, step=0.25):
             return None
         snapped = round(round(number / step) * step, 2)
         return max(low, min(high, snapped))
+    return check
+
+
+def _id_list(limit, item_max=64):
+    """A short, ordered, de-duplicated list of ids.
+
+    The one field here that holds a *set* rather than a value, so it is the one
+    that has to say what a set is allowed to be. Order is kept because it is
+    the reader's own ordering — the rail draws the menu in it — and duplicates
+    go because a menu with the same row twice is a bug the reader can see.
+
+    **Over the limit is truncated; the wrong shape is refused.** Those are
+    different mistakes. A client that sent five ids meant "these", the same way
+    somebody typing 5000 into a field marked 10-2000 meant "as high as it
+    goes", and `_whole` clamps that rather than failing the save. A client that
+    sent a string where a list belongs has a bug, and a save that quietly
+    stored something else would hide it.
+
+    Ids are not checked against the account's catalogue. They cannot be: the
+    catalogue is per-account and a subject can be deleted the day after it is
+    nominated. Every reader of this list joins it against the catalogue anyway
+    and drops what it does not recognise, which degrades to a shorter menu
+    instead of a save that fails months later.
+    """
+    def check(value):
+        if not isinstance(value, list):
+            return None
+        kept = []
+        for entry in value:
+            if not isinstance(entry, str):
+                return None
+            ident = entry.strip()[:item_max]
+            if ident and ident not in kept:
+                kept.append(ident)
+        return kept[:limit]
     return check
 
 
@@ -216,6 +259,15 @@ FIELDS: Dict[str, Any] = {
     #: Whether the page is allowed to rank this account against everybody
     #: else. Off hides the percentile panel outright.
     'analytics_standing': (True, _boolean),
+    #: The subjects the account said it most wants to work on, by id, at most
+    #: ANALYTICS_SUBJECTS_MAX of them. Empty is the honest default and a real
+    #: state: an account that named none gets the one Analytics entry it has
+    #: always had, rather than a menu with a single row in it.
+    #:
+    #: This is the one analytics preference that is not about how the page
+    #: reads. It is about what the app *offers* — each id becomes a row under
+    #: Analytics in the rail, opening that subject's own page.
+    'analytics_subjects': ([], _id_list(ANALYTICS_SUBJECTS_MAX)),
 
     # Notifications.
     #
@@ -310,9 +362,19 @@ def _keyed(username):
     for key, (fallback, _) in FIELDS.items():
         stored = db.user_setting(username, key)
         if stored is None:
-            out[key] = _inherited(username, key) or fallback
+            # `list(fallback)` rather than `fallback`: the defaults in FIELDS
+            # are module-level objects, and handing the same list out to every
+            # account would make one caller's mutation everybody's.
+            out[key] = _inherited(username, key) or (
+                list(fallback) if isinstance(fallback, list) else fallback
+            )
         elif isinstance(fallback, bool):
             out[key] = str(stored).lower() not in ('0', 'false', '')
+        elif isinstance(stored, (list, dict)):
+            # A stored list is not a renamed string, and `dict.get` on an
+            # unhashable key raises rather than missing. ALIASES translates
+            # words; there is nothing here for it to translate.
+            out[key] = stored
         else:
             out[key] = ALIASES.get(key, {}).get(stored, stored)
     return out
