@@ -920,6 +920,31 @@ body:has(.ax-page) .app-main {
 .ax-skeleton-bars span:nth-child(2) { width: 61%; }
 .ax-skeleton-bars span:nth-child(3) { width: 44%; }
 
+/* The per-subject depth question — one row per followed subject, each with the
+   branches of its lattice. A stack rather than the grid the picks above use:
+   there are at most four, each is a label and a select, and a grid of four
+   two-column rows reads as a form nobody filled in. */
+.ax-setup-depths { display: grid; gap: 10px; }
+
+.ax-setup-depth {
+    display: grid;
+    grid-template-columns: minmax(90px, 30%) 1fr;
+    align-items: center;
+    gap: 10px;
+}
+
+.ax-setup-depth-name {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--ax-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+    .ax-setup-depth { grid-template-columns: 1fr; gap: 4px; }
+}
+
 /* The subjects worth a page of their own — up to four, picked from the whole
    catalogue. A denser grid than the tabs above because the rows carry a name
    and nothing else: there is no consequence line to weigh, the reader is

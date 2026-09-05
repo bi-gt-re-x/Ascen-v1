@@ -194,11 +194,16 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
 
   const nameOf = useCallback((id: string) => subjects.get(id)?.name ?? id, [subjects]);
 
+  /* `custom` rides along because one consumer has to tell an account's own
+     subject from a catalogue one: the setup wizard, whose answers decide which
+     subjects get a skill tree and a page, and there is no tree behind an
+     invented name. Everything else here keeps them — a label to file work
+     under is all the filters need. See `latticeSubjects` in skills/subjectMap. */
   const subjectOptions = useMemo(
     () =>
       [...subjects.values()]
         .filter((entry) => entry.used > 0)
-        .map((entry) => ({ id: entry.id, label: entry.name })),
+        .map((entry) => ({ id: entry.id, label: entry.name, custom: entry.custom })),
     [subjects],
   );
 

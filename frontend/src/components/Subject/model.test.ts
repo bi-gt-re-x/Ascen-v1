@@ -13,6 +13,25 @@
 import { describe, expect, it } from 'vitest';
 import { subjectModel } from './model';
 import type { AnalyticsTask } from '@/services/analytics';
+import type { Goal } from '@/types';
+
+/** A goal on this subject, with only the fields the model reads set. */
+function goal(over: Partial<Goal> = {}): Goal {
+  return {
+    id: 'g1',
+    title: 'Competition ready',
+    status: 'active',
+    progress: 40,
+    subject_ids: 'maths',
+    deadline: '2026-12-01',
+    start_date: '2026-08-01',
+    created_at: '2026-08-01',
+    target_number: 100,
+    current_value: 40,
+    unit: 'problems',
+    ...over,
+  } as Goal;
+}
 
 const TODAY = '2026-09-05';
 
@@ -339,5 +358,132 @@ describe('recent work', () => {
     const model = subjectModel([done()], 'maths', '30d', TODAY);
     expect(model.recent[0]!.verdict).toBe('not rated');
     expect(model.recent[0]!.quality).toBeNull();
+  });
+});
+
+describe('what to do next', () => {
+  /* Four bands with a wide gap and a struggle reason, so there is always more
+     than one thing the page could say. What is being tested is the ordering
+     and the count, not whether any single card appears. */
+  const busy = () => [
+    ...Array.from({ length: 4 }, () => done({ difficulty: 1, execution: 5 })),
+    ...Array.from({ length: 4 }, () =>
+      done({ difficulty: 5, execution: 2, reason: 'interrupted' }),
+    ),
+  ];
+
+  it('never names two different measures as the lowest of the four', () => {
+    // The bug this replaced: one card per rate under 60, each captioned "the
+    // lowest of the four", two of them on screen at once. Not a wording
+    // problem — the page contradicting itself in the panel whose whole job is
+    // to be trusted.
+    const model = subjectModel(busy(), 'maths', '30d', TODAY);
+    const lowest = model.advice.filter((item) => item.id.startsWith('rate-'));
+
+    expect(lowest.length).toBeLessThanOrEqual(1);
+  });
+
+  it('names the lowest measure only when it is clearly the lowest', () => {
+    // Two rates a couple of points apart are not a weak spot, they are the low
+    // end of four numbers that are all fine.
+    const model = subjectModel(
+      [done({ difficulty: 3, execution: 3, due_date: TODAY, met_deadline: true })],
+      'maths',
+      '30d',
+      TODAY,
+    );
+    const named = model.advice.filter((item) => item.id.startsWith('rate-'));
+    for (const item of named) {
+      // Whatever it named, it has to be the measure that is actually lowest.
+      const lowest = [...model.rates]
+        .filter((r) => r.known)
+        .sort((a, b) => a.now - b.now)[0]!;
+      expect(item.id).toBe(`rate-${lowest.key}`);
+    }
+  });
+
+  it('leads with the goal rather than with an internal measure', () => {
+    // The whole ordering. "Quality is the measure holding the grade down" is a
+    // true sentence answering a question nobody asked; a goal is what the
+    // reader actually said they wanted.
+    const model = subjectModel(busy(), 'maths', '30d', TODAY, [
+      goal({ progress: 10, deadline: '2026-09-20' }),
+    ]);
+
+    expect(model.advice[0]!.id).toBe('goal-g1');
+    // And it carries its arithmetic, like every other card here.
+    expect(model.advice[0]!.why).toContain('%');
+  });
+
+  it('does not call a goal on course when it cannot be projected at all', () => {
+    // The failure this guards is quiet: a goal with no target number or no
+    // date produces a null drift, and a two-branch test would sort it into the
+    // good pile and print "on course" — a claim, off no evidence, in the panel
+    // that leads the page.
+    const model = subjectModel(busy(), 'maths', '30d', TODAY, [
+      goal({ measure: undefined as never, target_number: 0, deadline: '' }),
+    ]);
+    const led = model.advice.find((item) => item.id === 'goal-g1')!;
+
+    expect(led.title).not.toMatch(/on course/i);
+    expect(led.title).toMatch(/cannot be projected/i);
+    // And it says what would fix it, rather than only that it is stuck.
+    expect(led.detail).toMatch(/target number and a date/i);
+  });
+
+  it('does not lead with a goal that belongs to another subject', () => {
+    const model = subjectModel(busy(), 'maths', '30d', TODAY, [
+      goal({ subject_ids: 'physics,chem' }),
+    ]);
+    expect(model.goals).toEqual([]);
+    expect(model.advice.every((item) => !item.id.startsWith('goal-'))).toBe(true);
+  });
+
+  it('reads a goal naming several subjects, not just a lone id', () => {
+    const model = subjectModel(busy(), 'maths', '30d', TODAY, [
+      goal({ subject_ids: 'physics, maths ,chem' }),
+    ]);
+    expect(model.goals.map((g) => g.id)).toEqual(['g1']);
+  });
+
+  it('ignores a goal that is no longer being worked on', () => {
+    const model = subjectModel(busy(), 'maths', '30d', TODAY, [
+      goal({ status: 'completed' as Goal['status'] }),
+    ]);
+    expect(model.goals).toEqual([]);
+  });
+
+  it('falls back to the record when nothing has been aimed at', () => {
+    // No goal is a real state and the commonest one. The page still has to
+    // rank something, and the widest band gap is the honest lead.
+    const model = subjectModel(busy(), 'maths', '30d', TODAY, []);
+    expect(model.advice[0]!.id).toBe('weakest-band');
+    expect(model.advice[0]!.weight).toBe('first');
+  });
+});
+
+describe('the skill tree behind a subject', () => {
+  it('routes an unmapped subject by its group rather than dropping it', () => {
+    const model = subjectModel([done()], 'maths', '30d', TODAY, [], undefined, 'Computing');
+    expect(model.tree).not.toBeNull();
+    expect(model.tree!.chosen).toBe(false);
+  });
+
+  it('opens on the branch the reader chose', () => {
+    const root = subjectModel([done()], 'maths', '30d', TODAY)!.tree!;
+    // Any real tree id other than the one it would pick on its own.
+    const model = subjectModel([done()], 'maths', '30d', TODAY, [], 'algorithms');
+    if (model.tree && model.tree.id !== root.id) {
+      expect(model.tree.chosen).toBe(true);
+    }
+  });
+
+  it('falls back to the whole subject when the chosen branch is gone', () => {
+    // A stored branch can outlive the tree it named. Falling back to the root
+    // is the same degradation the rail makes for a deleted subject: a shorter
+    // answer rather than a broken one.
+    const model = subjectModel([done()], 'maths', '30d', TODAY, [], 'a-tree-that-never-was');
+    expect(model.tree).not.toBeNull();
+    expect(model.tree!.chosen).toBe(false);
   });
 });

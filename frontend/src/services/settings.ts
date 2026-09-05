@@ -132,6 +132,21 @@ export interface Prefs {
    */
   analytics_subjects: string[];
   /**
+   * For a followed subject, the skill tree it opens on.
+   *
+   * Keyed by subject id, valued by tree id — the sub-part of the subject the
+   * reader said they want to go deeper into. Absent is the answer for most
+   * subjects and means "the whole thing": without a branch named, the subject
+   * page falls back to `treeForSubject`, which is the subject's own root.
+   *
+   * A separate preference from the follow list rather than encoded into it,
+   * because they are two questions — *which* subjects, and *where inside* each
+   * — and one list carrying both would make every reader of either parse the
+   * other. Neither the keys nor the values are guaranteed to still resolve;
+   * every reader joins against the live catalogue and tree registry.
+   */
+  analytics_subject_depth: Record<string, string>;
+  /**
    * The notification switches. One master, one for the on-screen half, and one
    * per channel — the same six as `NotificationChannel` in
    * services/notifications.
@@ -214,6 +229,7 @@ export const DEFAULTS: Prefs = {
   analytics_detail: 'standard',
   analytics_standing: true,
   analytics_subjects: [],
+  analytics_subject_depth: {},
   /* Every channel on. The bell is quiet when the record is quiet — nothing is
      generated on a schedule (backend/tracking/notify.py) — so the honest
      default is on, and the switches are here for the reader who decides one

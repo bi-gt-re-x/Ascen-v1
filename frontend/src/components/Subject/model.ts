@@ -56,7 +56,11 @@ import {
 import { gradeFor } from '@/utils/analyticalScore';
 import type { Grade } from '@/types';
 import { windowOption, type WindowKey } from '@/components/Analytics/data';
+import { goalPace } from '@/utils/goalHealth';
+import { treeForSubject } from '@/skills/subjectMap';
+import { subjectTreeById } from '@/skills/subjectTrees';
 import type { AnalyticsTask } from '@/services/analytics';
+import type { Goal } from '@/types';
 
 // --------------------------------------------------------------------------
 // Days
@@ -365,6 +369,61 @@ function runOf(done: AnalyticsTask[], most: number): Run {
 // What to do about it
 // --------------------------------------------------------------------------
 
+// --------------------------------------------------------------------------
+// The goal this subject is for
+// --------------------------------------------------------------------------
+
+/**
+ * A goal this subject is filed under, read as a pace rather than a percentage.
+ *
+ * A goal's `progress` says where it is; only the pace says whether it is going
+ * to arrive, and arriving is the thing the reader actually wants to know. The
+ * arithmetic is `goalPace` in utils/goalHealth — reused rather than repeated
+ * because the Goals tab already states these numbers and two derivations of
+ * "will this land" that disagreed would be worse than either.
+ */
+export interface SubjectGoal {
+  id: string;
+  title: string;
+  /** 0-100. */
+  progress: number;
+  deadline: string;
+  /** Units a day needed to arrive on time, and the rate it is moving at. */
+  need: number | null;
+  have: number | null;
+  /** Days late (positive) or early (negative) it lands at the current rate. */
+  drift: number | null;
+  unit: string;
+}
+
+/** The goals that name this subject, nearest deadline first. */
+function goalsFor(goals: Goal[], subjectId: string, today: Date): SubjectGoal[] {
+  return goals
+    .filter((goal) => {
+      if (goal.status !== 'active') return false;
+      // `subject_ids` is a comma-separated string, split at the call sites
+      // that read it — see the note on the field in types/models.
+      return String(goal.subject_ids ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .includes(subjectId);
+    })
+    .map((goal) => {
+      const pace = goalPace(goal, today);
+      return {
+        id: goal.id,
+        title: goal.title,
+        progress: goal.progress,
+        deadline: goal.deadline,
+        need: pace.need,
+        have: pace.have,
+        drift: pace.drift,
+        unit: goal.unit || 'units',
+      };
+    })
+    .sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'));
+}
+
 /**
  * A recommendation, with the arithmetic that produced it attached.
  *
@@ -381,7 +440,39 @@ export interface Advice {
   weight: 'first' | 'second' | 'upkeep';
 }
 
-function adviceFrom(bands: Band[], struggles: Driver[], rates: Rate[]): Advice[] {
+/**
+ * What to do next, led by what the subject is *for*.
+ *
+ * ## The goal comes first, and that is the whole ordering
+ *
+ * A page that ranks advice by which internal measure is lowest is ranking by
+ * its own arithmetic rather than by what the reader is trying to do. "Quality
+ * is the measure holding the grade down" is a true sentence that answers a
+ * question nobody asked; "your goal lands eleven days late at this rate" is
+ * the same record read against the thing the reader actually said they wanted.
+ * So an active goal on this subject leads, every time, and the measures are
+ * read as *why* it is or is not going to land rather than as findings of their
+ * own.
+ *
+ * With no goal set, the order falls back to what the record can still say:
+ * the widest gap between difficulty bands, then the commonest thing that makes
+ * a session go badly, then — once — the weakest of the four rates.
+ *
+ * ## Only one rate is ever named, and only if it is the lowest
+ *
+ * This used to push one card per rate under 60, each captioned "the lowest of
+ * the four". Two of them could be on screen at once, both claiming to be the
+ * lowest, which is not a wording problem: it is the page contradicting itself
+ * in the panel whose entire job is to be trusted. There is one lowest measure,
+ * it is named once, and the card says how far below the next one it actually
+ * sits — which is the figure that decides whether it is worth acting on.
+ */
+function adviceFrom(
+  bands: Band[],
+  struggles: Driver[],
+  rates: Rate[],
+  goals: SubjectGoal[],
+): Advice[] {
   const out: Advice[] = [];
 
   // The weakest band that has enough behind it to be a finding rather than a
@@ -390,7 +481,59 @@ function adviceFrom(bands: Band[], struggles: Driver[], rates: Rate[]): Advice[]
   const measured = bands.filter((band) => band.holding !== null && band.done >= 3);
   const weakest = [...measured].sort((a, b) => a.holding! - b.holding!)[0];
   const strongest = [...measured].sort((a, b) => b.holding! - a.holding!)[0];
+  const top = struggles[0];
 
+  // ---- What the goal needs ------------------------------------------------
+  /* Three cases, not two, and the third is the one worth spelling out. A goal
+     with no target number or no date has no projection, and "on course" is a
+     claim — the same kind of claim as a rate of zero standing in for a rate
+     nobody measured. So an unprojectable goal says it is unprojectable and
+     says what would fix it, rather than being quietly sorted into the good
+     pile because `drift` failed to be a positive number. */
+  for (const goal of goals.slice(0, 2)) {
+    const rate =
+      goal.need !== null && goal.have !== null
+        ? `It needs ${goal.need.toFixed(1)} ${goal.unit} a day to arrive on time and has been `
+          + `moving at ${goal.have.toFixed(1)}.`
+        : `It is ${Math.round(goal.progress)}% of the way there.`;
+    const due = `Goal due ${goal.deadline || 'with no date set'}, ${Math.round(goal.progress)}% done`;
+
+    if (goal.drift === null) {
+      out.push({
+        id: `goal-${goal.id}`,
+        title: `"${goal.title}" cannot be projected yet`,
+        detail:
+          `${rate} Without both a target number and a date there is no arrival to work back `
+          + 'from, so this subject\'s sessions cannot be ranked against it. Give it either and '
+          + 'the advice below reorders itself around the goal.',
+        why: `${due}, and no pace can be computed from it.`,
+        weight: 'second',
+      });
+    } else if (goal.drift > 0) {
+      out.push({
+        id: `goal-${goal.id}`,
+        title: `Put this subject's next sessions into "${goal.title}"`,
+        detail:
+          `${rate} At that rate it lands ${goal.drift} ${goal.drift === 1 ? 'day' : 'days'} after `
+          + 'the date you set'
+          + (weakest
+            ? `, and the ${weakest.label.toLowerCase()} end of this subject is where the time is going.`
+            : '.'),
+        why: `${due}, projected ${goal.drift} days late.`,
+        weight: 'first',
+      });
+    } else {
+      out.push({
+        id: `goal-${goal.id}`,
+        title: `"${goal.title}" is on course — keep this subject at its current rate`,
+        detail: `${rate} Nothing here needs to change to make the date.`,
+        why: `${due}, projected to land on or before it.`,
+        weight: 'upkeep',
+      });
+    }
+  }
+
+  // ---- Where the work should go inside the subject ------------------------
   if (weakest && strongest && weakest.level !== strongest.level) {
     out.push({
       id: 'weakest-band',
@@ -402,11 +545,10 @@ function adviceFrom(bands: Band[], struggles: Driver[], rates: Rate[]): Advice[]
       why:
         `${weakest.done} ${weakest.done === 1 ? 'task' : 'tasks'} at ${weakest.label.toLowerCase()}, `
         + `mean execution ${(weakest.holding! / 20).toFixed(1)} of 5.`,
-      weight: 'first',
+      weight: goals.length ? 'second' : 'first',
     });
   }
 
-  const top = struggles[0];
   if (top) {
     out.push({
       id: `reason-${top.key}`,
@@ -420,13 +562,25 @@ function adviceFrom(bands: Band[], struggles: Driver[], rates: Rate[]): Advice[]
     });
   }
 
-  const soft = rates.filter((entry) => entry.known && entry.now < 60);
-  for (const entry of soft) {
+  // ---- The one measure worth naming --------------------------------------
+  /* Sorted, then the first — not filtered by a threshold and looped. There is
+     one lowest measure. The gap to the next one is what says whether it is a
+     real weak spot or just the low end of four numbers that are all fine, and
+     a measure that is lowest by two points is not worth a card. */
+  const ranked = [...rates].filter((entry) => entry.known).sort((a, b) => a.now - b.now);
+  const lowest = ranked[0];
+  const next = ranked[1];
+  if (lowest && lowest.now < 60 && (!next || next.now - lowest.now >= 5)) {
     out.push({
-      id: `rate-${entry.key}`,
-      title: `${entry.label} is the measure holding the grade down`,
-      detail: `It is at ${Math.round(entry.now)}%, which is the lowest of the four this subject is scored on.`,
-      why: entry.note,
+      id: `rate-${lowest.key}`,
+      title: `${lowest.label} is the measure holding this subject's grade down`,
+      detail:
+        `It is at ${Math.round(lowest.now)}%`
+        + (next
+          ? `, ${Math.round(next.now - lowest.now)} points below ${next.label.toLowerCase()}, `
+            + 'which is the next lowest.'
+          : '.'),
+      why: lowest.note,
       weight: 'upkeep',
     });
   }
@@ -470,6 +624,17 @@ export interface SubjectModel {
   run: Run;
   recent: Recent[];
   goalAimed: number | null;
+  goals: SubjectGoal[];
+
+  /**
+   * The lattice this subject teaches, and the branch of it the reader chose.
+   *
+   * Authored, not measured — every node in skills/trees is written by hand and
+   * its state is illustrative. So this is a route map and the page says so: it
+   * is what there is to learn, next to a record of what has been done. Reading
+   * mastery off it would be reporting a designer's guess as the reader's own.
+   */
+  tree: { id: string; title: string; blurb: string; chosen: boolean } | null;
 
   advice: Advice[];
   insight: string | null;
@@ -493,6 +658,12 @@ export function subjectModel(
   subjectId: string,
   key: WindowKey,
   today: string,
+  /** The account's goals, for the advice that leads the page. */
+  goals: Goal[] = [],
+  /** The branch of this subject's tree the reader chose, if any. */
+  depth?: string,
+  /** The catalogue group, so an unmapped subject still routes to a tree. */
+  group?: string,
 ): SubjectModel {
   const mine = all.filter((task) => task.subject === subjectId);
   const span = spanFor(key, today);
@@ -644,7 +815,19 @@ export function subjectModel(
     ? Math.round((done.filter((task) => task.goal_id).length / done.length) * 100)
     : null;
 
-  const advice = adviceFrom(bands, struggles, rates);
+  /* The chosen branch when it still resolves, the subject's own tree
+     otherwise. A stored branch can outlive the tree it named, and falling back
+     to the root is the same degradation the rail makes for a deleted subject:
+     a shorter answer rather than a broken one. */
+  const chosenTree = depth ? subjectTreeById(depth) : null;
+  const rootTree = subjectTreeById(treeForSubject(subjectId, group).tree);
+  const found = chosenTree ?? rootTree;
+  const tree = found
+    ? { id: found.id, title: found.title, blurb: found.blurb, chosen: Boolean(chosenTree) }
+    : null;
+
+  const subjectGoals = goalsFor(goals, subjectId, new Date(`${today}T00:00:00`));
+  const advice = adviceFrom(bands, struggles, rates, subjectGoals);
 
   /* The one sentence the page is for, and it is only written when the record
      supports it. A "key insight" generated whether or not there is one is the
@@ -679,6 +862,8 @@ export function subjectModel(
     run: runOf(byRecency, RUN_LENGTH),
     recent,
     goalAimed,
+    goals: subjectGoals,
+    tree,
     advice,
     insight,
   };

@@ -360,3 +360,71 @@
     background: color-mix(in srgb, var(--ax-pink) 14%, transparent);
     color: var(--ax-bad);
 }
+
+/* --- What this subject is for ------------------------------------------- */
+/* The goals come before the panels that explain them, because a goal is what
+   the recommendations are ordered by — see the note in Subject/model on why
+   the goal leads and the measures follow. */
+.sb-goals {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.sb-goal { display: grid; gap: 6px; }
+
+.sb-goal-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.sb-goal-head strong { font-size: 14px; font-weight: 650; color: var(--ax-text); }
+
+/* Late, early, or no projection. Amber rather than red for late: a goal that
+   lands after its date is a thing to act on, not a failure, and the page has
+   a recommendation for it directly below. */
+.sb-goal-state {
+    flex: none;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.sb-goal-state.is-late {
+    background: color-mix(in srgb, var(--ax-amber) 16%, transparent);
+    color: var(--ax-amber);
+}
+.sb-goal-state.is-early {
+    background: color-mix(in srgb, var(--ax-green) 14%, transparent);
+    color: var(--ax-good);
+}
+.sb-goal-state.is-flat { background: var(--ax-card-2); color: var(--ax-faint); }
+
+.sb-goal-meta {
+    margin: 0;
+    font-size: 12px;
+    color: var(--ax-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- The lattice --------------------------------------------------------- */
+/* Set apart from the counted panels on purpose: this one is authored, and the
+   page says so in its note. A route map beside the record, not mixed into it. */
+.sb-tree {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.sb-tree strong { font-size: 14.5px; font-weight: 650; color: var(--ax-text); }
+.sb-tree p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ax-muted); max-width: 62ch; }
+.sb-tree-choice { color: var(--ax-faint) !important; }
+
+.sb-tree-actions { display: flex; gap: 8px; flex-wrap: wrap; }

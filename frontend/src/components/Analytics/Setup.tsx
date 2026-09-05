@@ -76,6 +76,8 @@ import type { ReactNode } from 'react';
 import type { BaselineValues } from './Baseline';
 import { VIEWS } from './Header';
 import type { AnalyticsHomeTab, AnalyticsDetail, AnalyticsTone, LogStyle, Prefs } from '@/services/settings';
+import { latticeSubjects, treeForSubject } from '@/skills/subjectMap';
+import { childrenOf, subjectTreeById } from '@/skills/subjectTrees';
 import {
   DETAIL_HINT,
   DETAIL_LABEL,
@@ -94,6 +96,7 @@ export type SetupPrefs = Pick<
   | 'analytics_detail'
   | 'analytics_home_tab'
   | 'analytics_subjects'
+  | 'analytics_subject_depth'
 >;
 
 export interface SetupAnswers {
@@ -102,8 +105,15 @@ export interface SetupAnswers {
 }
 
 export interface AnalyticsSetupProps {
-  /** The subjects this account has actually used, for the subject question. */
-  subjects: Array<{ id: string; label: string }>;
+  /**
+   * The subjects this account has actually used, for the subject questions.
+   *
+   * `custom` is here so this screen can drop the account's own inventions —
+   * see the note on the follow question below. Callers send the catalogue as
+   * it is; the filtering is this screen's job because this screen is the only
+   * one whose answers need a subject to have a lattice behind it.
+   */
+  subjects: Array<{ id: string; label: string; custom?: boolean }>;
   /** What the account already said, when this is an edit rather than a first run. */
   current?: BaselineValues | null;
   /** The day the current baseline was set, ISO. Empty on a first run. */
@@ -231,10 +241,39 @@ export function AnalyticsSetup({
      Trimmed to what the catalogue still has, for the reason `followedSubjects`
      gives: an account re-opening these questions a year on should not be shown
      four ticked boxes when one of the subjects has since been deleted. */
+  /**
+   * The subjects these questions are allowed to offer.
+   *
+   * The account's own inventions are dropped, and that is a rule about what
+   * the answers are *for* rather than tidiness. Both answers here lead
+   * somewhere that needs a lattice behind the subject: the follow list gives
+   * each pick a page whose whole right-hand side is its skill tree, and the
+   * depth question below is a choice between that tree's branches. A subject
+   * nobody authored has neither. `treeForSubject` would still route it — on
+   * `group` alone, confidently and wrongly, which is how "Fantasy Football"
+   * filed under Business once opened twenty nodes about unit economics.
+   *
+   * `latticeSubjects` is the same filter the skill tree page applies before it
+   * offers anything, and it is used here rather than re-derived so the two
+   * screens cannot disagree about which subjects have a tree.
+   */
+  const pickable = useMemo(
+    () => latticeSubjects(subjects.map((s) => ({ ...s, custom: Boolean(s.custom) }))),
+    [subjects],
+  );
+
   const [followed, setFollowed] = useState<string[]>(() => {
-    const known = new Set(subjects.map((subject) => subject.id));
+    const known = new Set(pickable.map((subject) => subject.id));
     return prefs.analytics_subjects.filter((id) => known.has(id)).slice(0, SUBJECTS_MAX);
   });
+
+  /* Which branch of each followed subject the reader wants to go into, keyed
+     by subject id. Held whole rather than per-subject so the step below can be
+     one screen for all four picks — four screens asking the same question with
+     a different heading is the wall this flow is written against. */
+  const [depth, setDepth] = useState<Record<string, string>>(
+    () => ({ ...prefs.analytics_subject_depth }),
+  );
   const [logStyle, setLogStyle] = useState<LogStyle>(prefs.analytics_log_style);
   const [tone, setTone] = useState<AnalyticsTone>(prefs.analytics_tone);
   const [detail, setDetail] = useState<AnalyticsDetail>(prefs.analytics_detail);
@@ -274,6 +313,16 @@ export function AnalyticsSetup({
           ? was
           : [...was, id],
     );
+    /* Un-picking a subject takes its branch with it. A depth left behind for a
+       subject that is no longer followed would be stored, invisible, and would
+       come back the day the subject was picked again — an answer the reader
+       gave once and has no way to see. */
+    setDepth((was) => {
+      if (!was[id]) return was;
+      const next = { ...was };
+      delete next[id];
+      return next;
+    });
   };
 
   const steps: Step[] = useMemo(() => {
@@ -379,7 +428,7 @@ export function AnalyticsSetup({
        whose only answer is "none" is a step that costs a click and returns
        nothing, and the step count below is computed from this array so the
        rail says six rather than skipping a number. */
-    if (subjects.length > 0) {
+    if (pickable.length > 0) {
       /* Two subject questions, and they are not the same question asked twice.
          This one asks what the reader wants to *work on* — it builds the menu
          under Analytics in the rail, and each answer gets a page of its own.
@@ -402,7 +451,7 @@ export function AnalyticsSetup({
         body: (
           <>
             <div className="ax-setup-picks" role="group" aria-label="Subjects to follow">
-              {subjects.map((subject) => {
+              {pickable.map((subject) => {
                 const on = followed.includes(subject.id);
                 /* Disabled rather than hidden at the cap, and only the ones
                    that are off. A row that vanishes when a fourth is picked
@@ -448,6 +497,68 @@ export function AnalyticsSetup({
         ),
       });
 
+      /* Only when something was picked *and* at least one pick actually forks.
+         A subject whose lattice has no branches has one honest answer, and a
+         screen offering it alone is a click that changes nothing — the same
+         reason the subject questions vanish on an account with no catalogue. */
+      const forks = followed
+        .map((id) => {
+          const subject = pickable.find((entry) => entry.id === id);
+          if (!subject) return null;
+          const root = treeForSubject(id, undefined).tree;
+          const branches = childrenOf(root);
+          return branches.length ? { subject, root, branches } : null;
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+      if (forks.length > 0) {
+        list.push({
+          key: 'depth',
+          title: 'Do you want to go deeper into any of them?',
+          lead:
+            'Each subject you picked opens a skill tree. Some of them fork — the foundations fit '
+            + 'on one lattice, and then the subject branches into parts big enough to be subjects '
+            + 'of their own. Naming a branch points that subject\'s page and its tree straight at '
+            + 'it. Leave any of them on the whole subject if you are not sure; it is one click to '
+            + 'change later.',
+          body: (
+            <div className="ax-setup-depths">
+              {forks.map(({ subject, root, branches }) => (
+                <div className="ax-setup-depth" key={subject.id}>
+                  <span className="ax-setup-depth-name">{subject.label}</span>
+                  <select
+                    className="ax-setup-select"
+                    value={depth[subject.id] ?? ''}
+                    aria-label={`Which part of ${subject.label}`}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setDepth((was) => {
+                        const out = { ...was };
+                        /* Stored as absence rather than as an empty string:
+                           "the whole subject" is the default every reader of
+                           this map already falls back to. */
+                        if (next) out[subject.id] = next;
+                        else delete out[subject.id];
+                        return out;
+                      });
+                    }}
+                  >
+                    <option value="">
+                      All of {subjectTreeById(root)?.title ?? subject.label}
+                    </option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          ),
+        });
+      }
+
       list.push({
         key: 'subject',
         title: 'Is most of this for one subject?',
@@ -464,7 +575,7 @@ export function AnalyticsSetup({
             aria-label="Main subject"
           >
             <option value="">No single subject</option>
-            {subjects.map((subject) => (
+            {pickable.map((subject) => (
               <option key={subject.id} value={subject.id}>
                 {subject.label}
               </option>
@@ -541,7 +652,7 @@ export function AnalyticsSetup({
 
     return list;
   }, [
-    clamped, days, detail, focus, followed, homeTab, hours, logStyle, minutes, subjects,
+    clamped, days, depth, detail, focus, followed, homeTab, hours, logStyle, minutes, pickable,
     tone, weeklyHours,
   ]);
 
@@ -563,6 +674,12 @@ export function AnalyticsSetup({
         analytics_detail: detail,
         analytics_home_tab: homeTab,
         analytics_subjects: followed,
+        /* Narrowed to what is still followed. The toggle already prunes as it
+           goes; this is the second guard, for the reader who picked a branch
+           and then went back a step to change their mind about the subject. */
+        analytics_subject_depth: Object.fromEntries(
+          Object.entries(depth).filter(([id]) => followed.includes(id)),
+        ),
       },
     });
     setSaving(false);

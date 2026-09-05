@@ -295,6 +295,60 @@ def test_the_followed_subjects_are_a_list_and_are_bounded(client):
     assert settings()['analytics_subjects'] == []
 
 
+def test_the_subject_depth_map_is_bounded_and_refuses_the_wrong_shape(client):
+    """`analytics_subject_depth` is the only preference holding a map.
+
+    It says which branch of a followed subject's skill tree that subject opens
+    on. Absence is the answer for most subjects and means "the whole thing", so
+    an empty value is stored as absence rather than as an empty string — the
+    page falls back to the subject's own root either way, and a key mapping to
+    nothing would be a stored answer that means the default.
+    """
+    settings = lambda: client.get('/api/settings').json()['settings']
+
+    assert settings()['analytics_subject_depth'] == {}
+
+    client.post('/api/settings', json={'values': {
+        'analytics_subject_depth': {'maths': 'algebra', 'coding': ''},
+    }})
+    # The empty one is dropped, not stored as ''.
+    assert settings()['analytics_subject_depth'] == {'maths': 'algebra'}
+
+    # Capped at the number of subjects that can be followed in the first place.
+    client.post('/api/settings', json={'values': {
+        'analytics_subject_depth': {
+            'a': 't', 'b': 't', 'c': 't', 'd': 't', 'e': 't', 'f': 't',
+        },
+    }})
+    assert len(settings()['analytics_subject_depth']) == 4
+
+    # A list where a map belongs is a client bug, refused rather than coerced.
+    assert client.post('/api/settings', json={
+        'values': {'analytics_subject_depth': ['maths']},
+    }).status_code == 400
+
+    # As is a value that is not a string.
+    assert client.post('/api/settings', json={
+        'values': {'analytics_subject_depth': {'maths': 3}},
+    }).status_code == 400
+
+
+def test_a_default_is_not_shared_between_accounts(client, stranger):
+    """The list and map defaults in FIELDS are module-level objects.
+
+    Handed out rather than copied, one account's mutation would be everybody's
+    — and the two accounts here would come back holding the same list.
+    """
+    mine = client.get('/api/settings').json()['settings']['analytics_subjects']
+    theirs = stranger.get('/api/settings').json()['settings']['analytics_subjects']
+
+    assert mine == [] and theirs == []
+    mine.append('maths')
+    # The other account's answer is untouched, and so is the next read of mine.
+    assert stranger.get('/api/settings').json()['settings']['analytics_subjects'] == []
+    assert client.get('/api/settings').json()['settings']['analytics_subjects'] == []
+
+
 def test_hand_entered_focus_adds_to_the_day_rather_than_replacing_it(client):
     """The catch-up prompt is a person, not a mirror.
 

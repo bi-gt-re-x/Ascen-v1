@@ -19,12 +19,29 @@
  *
  * ## Where the numbers come from, and where they do not
  *
- * All of them, from one call: `/api/analytics/tasks`, the same sixteen columns
- * the analytics page reads. Nothing here is fetched per panel and nothing is
- * fetched per subject — the filter is a comparison on `task.subject`, so
- * opening four of these pages costs what opening one does. The arithmetic is
- * in ./components/Subject/model, which is a pure function of the tasks, the
- * window and the day; this file lays out what it worked out.
+ * Two calls, and no more: `/api/analytics/tasks` — the same sixteen columns
+ * the analytics page reads — and the goals. Nothing is fetched per panel and
+ * nothing is fetched per subject: the filter is a comparison on
+ * `task.subject`, so opening four of these pages costs what opening one does.
+ * The arithmetic is in ./components/Subject/model, a pure function of the
+ * tasks, the goals, the window and the day; this file lays out what it worked
+ * out.
+ *
+ * The goals are the second call because **what to do next is read against what
+ * the subject is for**. A page that ranks its advice by whichever of its own
+ * measures is lowest is ranking by its arithmetic rather than by the reader's
+ * intention — "Quality is the measure holding the grade down" is a true
+ * sentence answering a question nobody asked. A goal on this subject leads the
+ * recommendations, and the measures explain why it will or will not land.
+ *
+ * ## The skill tree is beside the record, not mixed into it
+ *
+ * Each subject opens a lattice (skills/subjectTrees), and the wizard lets a
+ * reader name the branch of it they want to go deeper into. That tree is
+ * **authored** — every node is written by hand and its state is illustrative —
+ * so it is drawn as a route map next to the record rather than as a reading of
+ * it. Mixing the two would put a designer's guess in the same panel as counted
+ * evidence, and nothing on screen would say which was which.
  *
  * **The sections are the ones that were asked for. The figures are the ones
  * that are true.** A page about Mathematics wants to say "Geometry 68%,
@@ -52,6 +69,7 @@ import { WINDOWS, type WindowKey } from '@/components/Analytics/data';
 import { subjectModel } from '@/components/Subject/model';
 import { useApi, useAuth, useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
 import { analyticsTasks } from '@/services/analytics';
+import { getGoals } from '@/services/goals';
 import { format } from '@/utils';
 import '@/styles/analytics.css';
 import '@/styles/subject.css';
@@ -128,10 +146,32 @@ export default function SubjectAnalytics() {
   );
   const tasks = useApi(call, [username]);
 
+  /* The second and last call. Goals lead the recommendations — what to do next
+     is read against what the subject is *for* rather than against whichever
+     internal measure is lowest — and there is no way to know that from tasks
+     alone: the link is `subject_ids` on the goal. */
+  const goalCall = useMemo(
+    () =>
+      username
+        ? getGoals
+        : () => Promise.resolve({ success: false as const, message: 'Sign in to see goals.' }),
+    [username],
+  );
+  const goals = useApi(goalCall, [username]);
+
   const today = todayIso();
   const model = useMemo(
-    () => subjectModel(tasks.data?.tasks ?? [], subjectId, span, today),
-    [span, subjectId, tasks.data, today],
+    () =>
+      subjectModel(
+        tasks.data?.tasks ?? [],
+        subjectId,
+        span,
+        today,
+        goals.data?.goals ?? [],
+        prefs.analytics_subject_depth[subjectId],
+        subject?.group,
+      ),
+    [goals.data, prefs.analytics_subject_depth, span, subject?.group, subjectId, tasks.data, today],
   );
 
   useDocumentTitle(subject ? subject.name : 'Subject');
@@ -238,6 +278,53 @@ export default function SubjectAnalytics() {
             </div>
 
             {model.insight && <p className="ax-opening is-down sb-insight">{model.insight}</p>}
+
+            {/* ---- What this subject is for ------------------------- */}
+            {model.goals.length > 0 && (
+              <Panel
+                title="What this subject is for"
+                note="The goals that name this subject. Read as a pace rather than a percentage — where a goal is says less than whether it is going to arrive."
+              >
+                <ul className="sb-goals">
+                  {model.goals.map((goal) => (
+                    <li key={goal.id} className="sb-goal">
+                      <div className="sb-goal-head">
+                        <strong>{goal.title}</strong>
+                        <span
+                          className={`sb-goal-state ${
+                            goal.drift === null ? 'is-flat' : goal.drift > 0 ? 'is-late' : 'is-early'
+                          }`}
+                        >
+                          {goal.drift === null
+                            ? 'no projection yet'
+                            : goal.drift > 0
+                              ? `${goal.drift} ${goal.drift === 1 ? 'day' : 'days'} late`
+                              : goal.drift < 0
+                                ? `${Math.abs(goal.drift)} ${Math.abs(goal.drift) === 1 ? 'day' : 'days'} early`
+                                : 'on the day'}
+                        </span>
+                      </div>
+                      <Bar percent={goal.progress} />
+                      <p className="sb-goal-meta">
+                        {Math.round(goal.progress)}% done
+                        {goal.deadline && <> · due {goal.deadline}</>}
+                        {goal.need !== null && goal.have !== null && (
+                          <>
+                            {' '}· needs {goal.need.toFixed(1)}/day, moving at{' '}
+                            {goal.have.toFixed(1)}
+                          </>
+                        )}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                <p className="ax-panel-note ax-panel-note-foot">
+                  A goal here is what orders the recommendations below. Set one on{' '}
+                  <Link to="/goals">the goals page</Link> and this subject's advice is read
+                  against it rather than against whichever measure happens to be lowest.
+                </p>
+              </Panel>
+            )}
 
             <div className="sb-grid">
               {/* ---- Progress ----------------------------------------- */}
@@ -489,6 +576,34 @@ export default function SubjectAnalytics() {
                     was aimed at a goal.
                   </p>
                 )}
+              </Panel>
+            )}
+
+            {/* ---- The lattice ------------------------------------- */}
+            {model.tree && (
+              <Panel
+                title="What there is to learn"
+                note="The skill tree behind this subject. This one is authored rather than measured — it is the path through the subject, not a reading of how far along it you are, and nothing on this page scores you against it."
+              >
+                <div className="sb-tree">
+                  <div>
+                    <strong>{model.tree.title}</strong>
+                    <p>{model.tree.blurb}</p>
+                    <p className="sb-tree-choice">
+                      {model.tree.chosen
+                        ? 'You chose to go deeper into this branch when you set your subjects up.'
+                        : 'The whole subject. You can pick a branch of it to go deeper into from the setup questions.'}
+                    </p>
+                  </div>
+                  <div className="sb-tree-actions">
+                    <Link className="ax-btn ax-btn-primary" to="/skill-trees">
+                      Open the tree
+                    </Link>
+                    <Link className="ax-btn ax-btn-quiet" to="/analytics?setup">
+                      Change the branch
+                    </Link>
+                  </div>
+                </div>
               </Panel>
             )}
           </>

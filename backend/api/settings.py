@@ -154,6 +154,42 @@ def _id_list(limit, item_max=64):
     return check
 
 
+def _id_map(limit, item_max=64):
+    """A short map of id to id — which sub-tree a followed subject opens on.
+
+    The second field here that holds a structure rather than a value, and it is
+    a map rather than a longer list for the reason the two questions are
+    separate in the wizard: the follow list is *which* subjects, this is *where
+    inside* each of them, and encoding the pair as "maths>algebra" in one list
+    would make every reader of either answer parse the other one's.
+
+    Same split as `_id_list` on what is refused. A key past the cap is dropped
+    and so is an entry whose value is empty — that is a reader who un-chose a
+    depth, which is a real answer meaning "the whole subject". A value that is
+    not a string at all is a client bug, and is refused rather than coerced.
+
+    Nothing here checks that the key is a followed subject or that the value
+    names a tree that exists. It cannot: both lists move independently of this
+    one. Every reader joins against the live catalogue and the live tree
+    registry and drops what does not resolve.
+    """
+    def check(value):
+        if not isinstance(value, dict):
+            return None
+        kept = {}
+        for key, target in value.items():
+            if not isinstance(key, str) or not isinstance(target, str):
+                return None
+            ident = key.strip()[:item_max]
+            where = target.strip()[:item_max]
+            # An empty value is "no sub-tree", which is the default and so is
+            # stored as absence rather than as an empty string.
+            if ident and where and len(kept) < limit:
+                kept[ident] = where
+        return kept
+    return check
+
+
 _ISO_DAY = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
 
@@ -268,6 +304,14 @@ FIELDS: Dict[str, Any] = {
     #: reads. It is about what the app *offers* — each id becomes a row under
     #: Analytics in the rail, opening that subject's own page.
     'analytics_subjects': ([], _id_list(ANALYTICS_SUBJECTS_MAX)),
+    #: For a followed subject, the skill tree it should open on — the sub-part
+    #: of it the reader said they want to go deeper into. Keyed by subject id,
+    #: valued by tree id (frontend/src/skills/subjectTrees.ts).
+    #:
+    #: Absent is the answer for most subjects and means "the whole thing": a
+    #: reader following Mathematics without naming a branch gets the subject's
+    #: own root tree, which is what `treeForSubject` already returns.
+    'analytics_subject_depth': ({}, _id_map(ANALYTICS_SUBJECTS_MAX)),
 
     # Notifications.
     #
@@ -362,11 +406,11 @@ def _keyed(username):
     for key, (fallback, _) in FIELDS.items():
         stored = db.user_setting(username, key)
         if stored is None:
-            # `list(fallback)` rather than `fallback`: the defaults in FIELDS
-            # are module-level objects, and handing the same list out to every
+            # Copied rather than handed over: the defaults in FIELDS are
+            # module-level objects, and passing the same list or dict to every
             # account would make one caller's mutation everybody's.
             out[key] = _inherited(username, key) or (
-                list(fallback) if isinstance(fallback, list) else fallback
+                type(fallback)(fallback) if isinstance(fallback, (list, dict)) else fallback
             )
         elif isinstance(fallback, bool):
             out[key] = str(stored).lower() not in ('0', 'false', '')

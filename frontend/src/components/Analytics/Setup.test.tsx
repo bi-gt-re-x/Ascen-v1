@@ -29,6 +29,7 @@ const PREFS: SetupPrefs = {
   analytics_detail: DEFAULTS.analytics_detail,
   analytics_home_tab: DEFAULTS.analytics_home_tab,
   analytics_subjects: DEFAULTS.analytics_subjects,
+  analytics_subject_depth: DEFAULTS.analytics_subject_depth,
 };
 
 const SUBJECTS = [{ id: 'maths', label: 'Mathematics' }];
@@ -240,6 +241,80 @@ describe('the analytics question phase', () => {
     // The first four, and the first one picked is still the first one stored.
     expect(onSave.mock.calls[0]![0].prefs.analytics_subjects)
       .toEqual(['maths', 'physics', 'chem', 'bio']);
+  });
+
+  it('does not offer a subject the account invented', async () => {
+    // Both subject answers lead somewhere that needs a lattice behind the
+    // subject: a page whose right-hand side is the skill tree, and a choice
+    // between that tree's branches. There is no tree behind an invented name,
+    // and `treeForSubject` would route it on group alone — confidently and
+    // wrongly, which is how "Fantasy Football" filed under Business once
+    // opened twenty nodes about unit economics.
+    const user = userEvent.setup();
+    render(
+      <AnalyticsSetup
+        subjects={[
+          { id: 'maths', label: 'Mathematics' },
+          { id: 'custom_fantasy_football', label: 'Fantasy Football', custom: true },
+        ]}
+        prefs={PREFS}
+        onSave={saver()}
+      />,
+    );
+
+    await toSubjects(user);
+    expect(screen.getByRole('button', { name: /Mathematics/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Fantasy Football/ })).not.toBeInTheDocument();
+  });
+
+  it('drops a custom subject already in the stored list', async () => {
+    // Stored before the rule existed, or picked when it was still on offer.
+    // Either way it must not survive a save that re-writes the list.
+    const user = userEvent.setup();
+    const onSave = saver();
+    render(
+      <AnalyticsSetup
+        subjects={[
+          { id: 'maths', label: 'Mathematics' },
+          { id: 'custom_x', label: 'Something Invented', custom: true },
+        ]}
+        prefs={{ ...PREFS, analytics_subjects: ['maths', 'custom_x'] }}
+        onSave={onSave}
+      />,
+    );
+
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+    expect(onSave.mock.calls[0]![0].prefs.analytics_subjects).toEqual(['maths']);
+  });
+
+  it('forgets the branch when its subject is un-picked', async () => {
+    // A depth left behind for a subject no longer followed would be stored,
+    // invisible, and would come back the day the subject was picked again — an
+    // answer the reader gave once and has no way to see.
+    const user = userEvent.setup();
+    const onSave = saver();
+    render(
+      <AnalyticsSetup
+        subjects={MANY}
+        prefs={{
+          ...PREFS,
+          analytics_subjects: ['maths'],
+          analytics_subject_depth: { maths: 'algorithms' },
+        }}
+        onSave={onSave}
+      />,
+    );
+
+    await toSubjects(user);
+    // Un-pick the only followed subject.
+    await user.click(screen.getByRole('button', { name: /Mathematics/ }));
+
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+
+    expect(onSave.mock.calls[0]![0].prefs.analytics_subjects).toEqual([]);
+    expect(onSave.mock.calls[0]![0].prefs.analytics_subject_depth).toEqual({});
   });
 
   it('drops a subject that has left the catalogue since it was picked', async () => {
