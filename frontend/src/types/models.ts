@@ -49,9 +49,24 @@ export type TaskStatus = 'todo' | 'done' | 'expired';
 
 export interface Task {
   id: string;
-  user_id: string;
+  /**
+   * Who owns it. Sent up when a task is created and not read back anywhere.
+   *
+   * Optional because a task does not always arrive whole any more: the
+   * analytics page asks for sixteen columns rather than the row (see
+   * `AnalyticsTask` in services/analytics), and the alternative to marking the
+   * two missing fields optional here was a parallel task type that every util
+   * taking a `Task` would have to be widened to accept.
+   */
+  user_id?: string;
   title: string;
-  description: string;
+  /**
+   * Free text, unbounded, and read in exactly one place — the task board's
+   * search. Optional for the same reason as `user_id` above, and it is the
+   * field that made the projection worth having: it is on every row, it has no
+   * ceiling, and no page but the task list has ever looked at it.
+   */
+  description?: string;
   priority: TaskPriority;
   status: TaskStatus;
   /** The XP completing it awards. Named `xp_value` in the database. */

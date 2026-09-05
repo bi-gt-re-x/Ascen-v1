@@ -26,7 +26,7 @@ import type { GrowthPeriods, MetricScores, PeriodSide } from '@/services/analyti
 
 vi.mock('@/hooks', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/hooks')>()),
-  useUserData: () => ({ username: 'tester' }),
+  useStats: () => ({ username: 'tester', stats: null }),
 }));
 
 vi.mock('@/services', async (importOriginal) => {

@@ -713,6 +713,7 @@ export function CheckpointsPanel({ months }: { months: ReachedMonth[] }) {
               peak: unique && row.count > 0 && row.count === peak,
             }))}
             tone="green"
+            label="Goal checkpoints reached each month"
           />
           <p className="ax-muted ax-goal-foot">
             Empty months are kept — a gap is the finding, and skipping them would draw four

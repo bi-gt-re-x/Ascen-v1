@@ -121,9 +121,15 @@ export function fakeModel(over: Partial<AnalyticsModel> = {}): AnalyticsModel {
 export function fakeData(): AnalyticsData {
   return {
     goals: { data: { goals: [] }, loading: false },
-    /* OverviewTab reads all three. Every use is optional-chained, so `null`
-       data is the honest "the call has not come back" rather than a shape. */
-    account: { data: null, loading: false },
+    /* OverviewTab reads all four. Every use is optional-chained, so `null`
+       data is the honest "the call has not come back" rather than a shape.
+
+       `stats` is the provider's shape and not `useApi`'s — it carries the
+       numbers under `stats.stats` rather than under `.data`, because the
+       account's figures are read once near the root and shared. See
+       context/StatsProvider. */
+    stats: { stats: null, loading: false, username: 'test' },
+    tasks: { data: null, loading: false },
     baseline: { data: null, loading: false },
     standing: { data: null, loading: false },
     adopt: vi.fn(),

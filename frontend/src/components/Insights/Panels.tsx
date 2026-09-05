@@ -110,7 +110,7 @@ export function WeekPanel({ week }: { week: WeekShape }) {
 
   return (
     <Panel title="When you do your best work" note="Average XP per weekday">
-      <Columns columns={columns} />
+      <Columns columns={columns} label="Average XP per weekday" />
       <p className="ax-prose">
         {week.best && week.worst && week.best.index !== week.worst.index ? (
           <>
@@ -163,6 +163,10 @@ export function ClockPanel({ clock }: { clock: ClockShape }) {
   const shown = clock.hours.filter((hour) => hour.hour >= 6 && hour.hour <= 23);
   const columns: Column[] = shown.map((hour) => ({
     label: hour.hour % 3 === 0 ? hourLabel(hour.hour).replace(' ', '') : '',
+    /* Every hour, not every third: the drawn label is thinned so eighteen of
+       them fit, and the spoken one has no such constraint. See `name` on
+       `Column`. */
+    name: hourLabel(hour.hour),
     value: hour.tasks,
     text: hour.tasks ? String(hour.tasks) : '',
     peak: clock.peak?.hour === hour.hour,
@@ -170,7 +174,7 @@ export function ClockPanel({ clock }: { clock: ClockShape }) {
 
   return (
     <Panel title="The clock you keep" note="Tasks finished, by hour">
-      <Columns columns={columns} tone="blue" />
+      <Columns columns={columns} tone="blue" label="Tasks finished by hour of the day" />
       <p className="ax-prose">
         {clock.coreWindow ? (
           <>

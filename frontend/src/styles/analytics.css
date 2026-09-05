@@ -1715,6 +1715,101 @@ body:has(.ax-page) .app-main {
     min-height: 0;
 }
 
+/* The layer that owns the pointer, the focus ring and the readout.
+ *
+ * A wrapper around the SVG rather than the SVG itself, for two reasons that
+ * both had to be true. Firefox and Safari will not hold a tab stop on an
+ * `<svg>` dependably, so the focusable element has to be HTML; and the readout
+ * is HTML that has to be positioned against the drawing, which needs a
+ * positioned ancestor that is exactly the drawing's box. One element is both.
+ *
+ * It inherits the column flex the box used to give the SVG directly, so the
+ * chart still grows into a panel's spare height — see `.ax-chart-box`. */
+.ax-chart-plot {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* The readout and the crosshair markers sit slightly proud of the drawing
+       at the edges of the axis, and clipping them is worse than letting them
+       overhang a panel that has padding anyway. */
+    overflow: visible;
+}
+
+/* Only on keyboard focus. A ring drawn every time a reader's pointer crossed
+   the chart would be a box flashing on and off across the whole page. */
+.ax-chart-plot:focus-visible {
+    outline: 2px solid var(--ax-violet);
+    outline-offset: 3px;
+    border-radius: 8px;
+}
+
+/* No `cursor: crosshair`: the chart is read by pointing, not by aiming, and a
+   reticle over a panel a reader is scrolling past reads as a drag handle. */
+.ax-chart-plot.is-reading { cursor: default; }
+
+.ax-crosshair line {
+    stroke: var(--ax-muted);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    opacity: .55;
+}
+
+/* Ringed in the panel's own background so a marker landing on the line it
+   belongs to still reads as a marker rather than a thickening. */
+.ax-crosshair-dot { paint-order: stroke; }
+
+.ax-readout {
+    position: absolute;
+    top: 4px;
+    z-index: 2;
+    /* It follows the pointer. Letting it take the pointer would mean the
+       pointer entering it, leaving the plot, and the whole thing vanishing —
+       which reads as a chart that flickers when you try to read it. */
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 7px 10px;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    border-radius: 9px;
+    box-shadow: var(--ax-shadow);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ax-text);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-readout-when {
+    color: var(--ax-muted);
+    font-size: 10.5px;
+    letter-spacing: .02em;
+}
+
+.ax-readout-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ax-muted);
+}
+
+.ax-readout-row strong {
+    margin-left: auto;
+    padding-left: 10px;
+    color: var(--ax-text);
+    font-weight: 650;
+}
+
+.ax-readout-mark {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    flex: none;
+}
+
 .ax-chart-svg {
     display: block;
     width: 100%;
@@ -4959,16 +5054,6 @@ body:has(.ax-page) .app-main {
 .ax-goal-advice strong { font-size: 13px; font-weight: 650; color: var(--ax-text); }
 .ax-goal-advice span { line-height: 1.55; }
 .ax-goal-advice li.is-urgent strong { color: var(--ax-amber); }
-
-.ax-sr-only {
-    position: absolute;
-    width: 1px; height: 1px;
-    margin: -1px; padding: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
-}
 
 /* On a phone the hand-off drops under the sentence it belongs to rather than
    squeezing it into a column two words wide. */

@@ -108,6 +108,60 @@ class DropAdvice(BaseModel):
     id: str = ''
 
 
+# The task fields the analytics page reads, and nothing else.
+#
+# Every panel on all seven tabs is arithmetic over three responses, and this is
+# one of them. The page used to get it from `/api/get_user_data` — the whole
+# task list, every column, which the provider warns is megabytes and which is
+# turned on for the rest of the session by the first component that asks.
+# Opening Analytics paid that in full for sixteen fields.
+#
+# The list is the union of what the page's utils actually touch, checked
+# against them rather than guessed: subject and XP for the breakdown, the two
+# stamps and `completion_seconds` for the rates, the ratings pair and `reason`
+# for quality, the goal pointers for the Records tab, and title, priority and
+# `due_date` for the plan. What it leaves behind is `description` — free text
+# with no ceiling, on every row, that no panel here has ever read.
+#
+# Adding a field to this list is how a new panel gets its data. Adding one that
+# nothing reads is how this endpoint slowly becomes the old one again.
+ANALYTICS_TASK_FIELDS = (
+    'id',
+    'title',
+    'status',
+    'priority',
+    'subject',
+    'xp_value',
+    'created_at',
+    'completed_at',
+    'due_date',
+    'completion_seconds',
+    'met_deadline',
+    'difficulty',
+    'execution',
+    'reason',
+    'goal_id',
+    'milestone_id',
+)
+
+
+@router.get('/api/analytics/tasks')
+def get_analytics_tasks(username: str = Depends(current_username)):
+    """Every task the account owns, in the sixteen columns this page reads.
+
+    Unwindowed, and that is deliberate. The window picker slices in the browser
+    so that changing it costs nothing, and several panels are not scoped by it
+    at all — the goal-aimed share and the habit history both look at the whole
+    record. Pushing the window into this query would trade an instant control
+    for a round trip per click and still need a second, unwindowed call for the
+    panels that ignore it.
+
+    What was worth moving was the *width* of each row, not the number of them.
+    See ANALYTICS_TASK_FIELDS.
+    """
+    return ok(tasks=db.columns_for('tasks', username, ANALYTICS_TASK_FIELDS))
+
+
 @router.get('/api/standing')
 def get_standing(username: str = Depends(current_username)):
     """Where this account places against the others, measure by measure.

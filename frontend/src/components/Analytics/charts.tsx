@@ -14,7 +14,16 @@
  * the box and `preserveAspectRatio` does the rest, so a panel that changes
  * width at a breakpoint needs no JS to stay drawn correctly.
  */
-import { createContext, useContext, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router-dom';
 
 /** The series colours, as the CSS variable each panel paints with. */
@@ -118,6 +127,31 @@ function linePath(
 
   if (drawn < 2 || fromX === null) return null;
   return { d: parts.join(' '), fromX, toX, points };
+}
+
+/**
+ * Where one value sits up the box — the same arithmetic `linePath` does inline.
+ *
+ * Pulled out because the crosshair needs it for a *specific index*, and
+ * `linePath`'s `points` cannot answer that: it only carries the points it drew,
+ * so a series with a gap in it has its indices shifted by however many holes
+ * came before. A marker half a series out of position is worse than no marker.
+ */
+function yAt(value: number, height: number, min: number, max: number, pad: number): number {
+  const span = max - min || 1;
+  const inner = height - pad * 2;
+  return pad + inner - ((value - min) / span) * inner;
+}
+
+/**
+ * Where each index sits across the width, 0 to 1.
+ *
+ * One place, because the line, the crosshair and the readout's own position all
+ * have to agree about it. `at` is the caller's override for a time axis; the
+ * fallback is even spacing. See `linePath`.
+ */
+function ratioAt(index: number, count: number, at?: number[]): number {
+  return at?.[index] ?? (count > 1 ? index / (count - 1) : 0);
 }
 
 // --------------------------------------------------------------------------
@@ -251,6 +285,38 @@ function depth(entry: AreaSeries): number {
   return entry.muted ? 1 : 2;
 }
 
+/**
+ * What the chart says when a reader points at it.
+ *
+ * The charts on this page were shapes for a long time: no hover, no focus, no
+ * way to get a number back out of one. That is a defensible trade on a
+ * sparkline under a stated figure — see `Sparkline`, which stays deliberately
+ * mute — and it is not defensible here, where the panel's whole content is the
+ * line. A reader who wants to know what happened on the twelfth had to guess it
+ * off the gridlines.
+ *
+ * Passing this turns three things on at once, and they are one feature rather
+ * than three: a crosshair under the pointer, the same crosshair under the arrow
+ * keys, and a hidden table carrying every row for a reader who is not pointing
+ * at anything. The chart is `aria-hidden` once the table exists — a `role="img"`
+ * with a one-line label beside a table of the same numbers is the label
+ * competing with the data.
+ */
+export interface AreaReadout {
+  /** What the x axis is at each index. One entry per point, not per `mark`. */
+  labels: string[];
+  /** What each series is called, index-matched to `series`. */
+  names: string[];
+  /**
+   * How a value is written, unit included.
+   *
+   * The caller's business, because this component has never known what it is
+   * drawing: the same box carries XP, a rating out of five and a score out of
+   * ten, and "3.7" is the right rendering of exactly one of them.
+   */
+  format?: (value: number) => string;
+}
+
 export interface AreaChartProps {
   series: AreaSeries[];
   /**
@@ -266,6 +332,19 @@ export interface AreaChartProps {
   /** A unique prefix for this chart's gradient ids. Two charts on one page
    *  sharing an id is how one of them ends up unfilled. */
   id: string;
+  /**
+   * What the chart is, for a reader who cannot see it.
+   *
+   * Required, and it used to be the string `"Growth over the selected period"`
+   * written into the component. That was true of one of the four charts drawn
+   * with this and wrong about the other three — the score line, the year
+   * ratings and the five-year outlook were all announced as growth over a
+   * period none of them covers. A label that is wrong is worse than the generic
+   * one it replaced, so it is the caller's to supply.
+   */
+  label: string;
+  /** Turns the crosshair, the keyboard readout and the data table on. */
+  readout?: AreaReadout;
   height?: number;
   /**
    * The top of the y axis, when the data must not be the one that sets it.
@@ -291,13 +370,119 @@ export interface AreaChartProps {
  * period look identical to the one before it. The second series is drawn first
  * so the headline one wins where they cross.
  */
-export function AreaChart({ series, ticks, marks, id, at, height = 200, max: ceiling }: AreaChartProps) {
+export function AreaChart({
+  series,
+  ticks,
+  marks,
+  id,
+  at,
+  label,
+  readout,
+  height = 200,
+  max: ceiling,
+}: AreaChartProps) {
   const width = 600;
   const all = series
     .flatMap((entry) => entry.values)
     .filter((value): value is number => value !== null && !Number.isNaN(value));
   const min = 0;
   const max = Math.max(...all, ceiling ?? 0, 1);
+  /* The same padding `linePath` is called with below. The crosshair's markers
+     have to sit on the line rather than near it, and a second literal here is
+     how that stops being true the first time one of them is changed. */
+  const pad = 4;
+
+  /* How many points the x axis carries. The longest series, not the first:
+     the compounding chart's forecast is longer than its history, and reading
+     the count off `series[0]` put the last third of that axis out of reach. */
+  const count = series.reduce((longest, entry) => Math.max(longest, entry.values.length), 0);
+
+  /** Which point the crosshair is on. `null` is the resting state — no chrome. */
+  const [active, setActive] = useState<number | null>(null);
+
+  const write = readout?.format ?? ((value: number) => `${Math.round(value * 10) / 10}`);
+
+  /* Every drawn point of every series, by index, for the table and the
+     readout. Memoised because the table is `count` rows deep and rebuilding it
+     on a pointer move — which changes `active` and nothing else — would be the
+     one thing on this page that made moving the mouse cost real work. */
+  const rows = useMemo(() => {
+    if (!readout) return [];
+    return Array.from({ length: count }, (_, index) => ({
+      label: readout.labels[index] ?? '',
+      values: series.map((entry) => {
+        const value = entry.values[index];
+        return value === null || value === undefined || Number.isNaN(value) ? null : value;
+      }),
+    }));
+  }, [count, readout, series]);
+
+  /* What a screen reader is told as the crosshair moves. Empty at rest, so
+     arriving on the chart does not announce a point nobody asked for. */
+  const spoken =
+    active === null || !rows[active]
+      ? ''
+      : `${rows[active]!.label}. ${rows[active]!.values
+          .map((value, index) =>
+            value === null
+              ? `${readout!.names[index] ?? `Series ${index + 1}`}: no reading`
+              : `${readout!.names[index] ?? `Series ${index + 1}`}: ${write(value)}`,
+          )
+          .join('. ')}`;
+
+  /**
+   * The point nearest the pointer, in the chart's own 0-1 space.
+   *
+   * Off the element's client rect rather than the viewBox, because
+   * `preserveAspectRatio="none"` means the two are unrelated: the box is 600
+   * units wide and however many pixels the panel gave it, and the ratio is the
+   * only thing the two agree about.
+   */
+  const nearest = (ratio: number): number => {
+    if (count < 2) return 0;
+    if (!at) return Math.max(0, Math.min(count - 1, Math.round(ratio * (count - 1))));
+    let best = 0;
+    let gap = Infinity;
+    for (let index = 0; index < count; index += 1) {
+      const distance = Math.abs(ratioAt(index, count, at) - ratio);
+      if (distance < gap) {
+        gap = distance;
+        best = index;
+      }
+    }
+    return best;
+  };
+
+  const track = (event: PointerEvent<HTMLDivElement>) => {
+    if (!readout) return;
+    const box = event.currentTarget.getBoundingClientRect();
+    if (box.width === 0) return;
+    setActive(nearest((event.clientX - box.left) / box.width));
+  };
+
+  const step = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!readout) return;
+    const keys: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
+    if (event.key === 'Escape') {
+      setActive(null);
+      return;
+    }
+    if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      setActive(event.key === 'Home' ? 0 : count - 1);
+      return;
+    }
+    const move = keys[event.key];
+    if (move === undefined) return;
+    /* Or the arrow scrolls the page out from under the chart being read. */
+    event.preventDefault();
+    setActive((current) => {
+      const next = current === null ? (move > 0 ? 0 : count - 1) : current + move;
+      return Math.max(0, Math.min(count - 1, next));
+    });
+  };
+
+  const cursor = active === null ? null : ratioAt(active, count, at);
 
   return (
     <div className="ax-chart" style={{ '--ax-chart-h': `${height}px` } as CSSProperties}>
@@ -307,12 +492,35 @@ export function AreaChart({ series, ticks, marks, id, at, height = 200, max: cei
         ))}
       </div>
       <div className="ax-chart-box">
+      {/* The focusable thing is this wrapper and not the SVG. Firefox and
+          Safari both refuse a tab stop on an `<svg>` reliably, and the readout
+          below is HTML that has to be positioned against the drawing anyway —
+          so the element that owns the pointer, the focus ring and the tooltip
+          is one box around both. */}
+      <div
+        className={`ax-chart-plot${active === null ? '' : ' is-reading'}`}
+        {...(readout
+          ? {
+              tabIndex: 0,
+              role: 'group' as const,
+              'aria-label': `${label}. Use the left and right arrow keys to read each point.`,
+              onPointerMove: track,
+              onPointerDown: track,
+              onPointerLeave: () => setActive(null),
+              onBlur: () => setActive(null),
+              onKeyDown: step,
+            }
+          : {})}
+      >
         <svg
           viewBox={`0 0 ${width} ${height}`}
           preserveAspectRatio="none"
           className="ax-chart-svg"
-          role="img"
-          aria-label="Growth over the selected period"
+          {...(readout
+            ? /* The table below says everything this does, in rows. Two
+                 descriptions of one chart is one description too many. */
+              { 'aria-hidden': true as const }
+            : { role: 'img' as const, 'aria-label': label })}
         >
           <defs>
             {series.map((entry, index) => (
@@ -410,13 +618,136 @@ export function AreaChart({ series, ticks, marks, id, at, height = 200, max: cei
                 </g>
               );
             })}
+          {/* The crosshair, over everything, drawn last so no fill lands on it.
+
+              `aria-hidden` on the group as well as the SVG around it: this is
+              the sighted half of the readout, and the half a screen reader gets
+              is the live region and the table below. */}
+          {cursor !== null && (
+            <g className="ax-crosshair" aria-hidden="true">
+              <line
+                x1={(cursor * width).toFixed(2)}
+                x2={(cursor * width).toFixed(2)}
+                y1="0"
+                y2={height}
+                vectorEffect="non-scaling-stroke"
+              />
+              {/* A marker per series that has a reading here. Drawn the same
+                  way `dots` is — a zero-length subpath with a round cap — for
+                  the same reason: under `preserveAspectRatio="none"` a
+                  `<circle>` comes out an ellipse of whatever eccentricity the
+                  panel's width happens to give it. */}
+              {series.map((entry, index) => {
+                const value = entry.values[active!];
+                if (value === null || value === undefined || Number.isNaN(value)) return null;
+                const x = (cursor * width).toFixed(2);
+                const y = yAt(value, height, min, max, pad).toFixed(2);
+                return (
+                  <path
+                    key={index}
+                    className="ax-crosshair-dot"
+                    d={`M${x},${y}L${x},${y}`}
+                    fill="none"
+                    stroke={toneVar(entry.tone)}
+                    strokeWidth="7"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                );
+              })}
+            </g>
+          )}
         </svg>
+
+        {/* The tooltip. HTML rather than SVG `<text>`, because the box is
+            `preserveAspectRatio="none"` and every glyph in it would be
+            stretched by whatever ratio the panel's width to its height happens
+            to be — the one thing on a chart that must not be scaled with the
+            drawing is the writing. */}
+        {readout && active !== null && rows[active] && (
+          <div
+            className="ax-readout"
+            /*
+             * Placed by the point *and* aligned by it, which is what stops it
+             * needing to be clamped.
+             *
+             * A tooltip pinned at `left: x` and centred with a flat
+             * `translateX(-50%)` hangs half its own width outside the panel at
+             * either end of the axis — and the width is the caller's text, so
+             * there is no number here that could clamp it. Translating by the
+             * same ratio the point sits at makes the box left-aligned at 0,
+             * centred in the middle and right-aligned at 1, so it is always
+             * inside the drawing, at every width, with no measuring.
+             */
+            style={
+              {
+                left: `${(cursor ?? 0) * 100}%`,
+                transform: `translateX(-${(cursor ?? 0) * 100}%)`,
+              } as CSSProperties
+            }
+            aria-hidden="true"
+          >
+            <span className="ax-readout-when">{rows[active]!.label}</span>
+            {rows[active]!.values.map((value, index) =>
+              value === null ? null : (
+                <span className="ax-readout-row" key={index}>
+                  <span
+                    className="ax-readout-mark"
+                    style={{ background: toneVar(series[index]!.tone) }}
+                  />
+                  {readout.names[index] ?? `Series ${index + 1}`}
+                  <strong>{write(value)}</strong>
+                </span>
+              ),
+            )}
+          </div>
+        )}
+      </div>
         <div className="ax-chart-x">
           {marks.map((mark, index) => (
             <span key={`${mark}-${index}`}>{mark}</span>
           ))}
         </div>
       </div>
+
+      {/* The other half of the readout, and the reason the drawing above is
+          allowed to be `aria-hidden`.
+
+          The live region carries the crosshair as it moves — the same sentence
+          a sighted reader gets from the tooltip — and the table carries the
+          whole series, for a reader who wants the shape rather than one point
+          of it. Both are `.ax-sr`: this is the same chart, said twice for two
+          ways of reading, not a second chart. */}
+      {readout && (
+        <>
+          <div className="ax-sr" aria-live="polite">
+            {spoken}
+          </div>
+          <table className="ax-sr">
+            <caption>{label}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Point</th>
+                {readout.names.map((name, index) => (
+                  <th scope="col" key={index}>
+                    {name}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={index}>
+                  <th scope="row">{row.label}</th>
+                  {row.values.map((value, column) => (
+                    <td key={column}>{value === null ? 'No reading' : write(value)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 }
@@ -442,7 +773,30 @@ export interface RadarAxis {
 /** Longest axis name drawn before it is cut. "Computer Science" is 16. */
 const RADAR_LABEL = 13;
 
-export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Tone }) {
+/**
+ * @param label What the web is, for a reader who cannot see it. It used to be
+ *              the string `"XP earned by subject"` written in here, which is
+ *              what the Subjects panel draws and *not* what the Growth tab's
+ *              Balance web draws — that one is five readings of one skill. Both
+ *              charts announced themselves as the first.
+ *
+ *              There is no data table beside this one, unlike `AreaChart`, and
+ *              that is deliberate: both call sites already print a legend of
+ *              every axis and its real value next to the web, in the document,
+ *              where a screen reader meets it in order. A hidden table here
+ *              would be the same list a third time — and in the normalised 0-1
+ *              units the polygon is drawn from rather than the XP the legend
+ *              states, which is the version nobody wants.
+ */
+export function Radar({
+  axes,
+  tone = 'violet',
+  label,
+}: {
+  axes: RadarAxis[];
+  tone?: Tone;
+  label: string;
+}) {
   const size = 220;
   const centre = size / 2;
   const radius = size / 2 - 34;
@@ -480,7 +834,7 @@ export function Radar({ axes, tone = 'violet' }: { axes: RadarAxis[]; tone?: Ton
       viewBox={`${-padX} 0 ${size + padX * 2} ${size}`}
       className="ax-radar"
       role="img"
-      aria-label="XP earned by subject"
+      aria-label={label}
     >
       {rings.map((ring) => (
         <polygon key={ring} points={polygon(() => ring)} className="ax-radar-ring" />
@@ -533,6 +887,17 @@ export interface Column {
   text: string;
   /** Drawn in the accent rather than the base — the best day, the peak hour. */
   peak?: boolean;
+  /**
+   * What this bar is called when it is read rather than drawn. Defaults to
+   * `label`.
+   *
+   * For a chart that labels only some of its bars. The clock draws eighteen
+   * hours and prints a label on every third, because eighteen labels under
+   * bars that narrow is a grey smear — so two thirds of its columns have
+   * `label: ''`, which is right on the drawing and useless in the sentence the
+   * group is announced as. This is the name that is always there.
+   */
+  name?: string;
 }
 
 /**
@@ -544,10 +909,38 @@ export interface Column {
  * difference the reader is looking for. The tallest is marked so the answer to
  * "when" is visible before any of the numbers are read.
  */
-export function Columns({ columns, tone = 'violet' }: { columns: Column[]; tone?: Tone }) {
+/**
+ * @param label What the distribution is of. See the `role="img"` below.
+ */
+export function Columns({
+  columns,
+  tone = 'violet',
+  label,
+}: {
+  columns: Column[];
+  tone?: Tone;
+  label: string;
+}) {
   const peak = Math.max(...columns.map((column) => column.value), 1);
   return (
-    <div className="ax-columns">
+    /*
+     * `role="img"` with the whole distribution in its label, rather than
+     * nothing at all.
+     *
+     * These are divs, so a screen reader was walking them and reading the value
+     * and the label of each as two unrelated runs of text — "12", "Mon", "8",
+     * "Tue" — with nothing anywhere saying what was being counted. `role="img"`
+     * makes the group a leaf, so the fragments stop being announced separately
+     * and the label below is what is read instead: one sentence, in order, with
+     * the units the caller already wrote into `text`.
+     */
+    <div
+      className="ax-columns"
+      role="img"
+      aria-label={`${label}. ${columns
+        .map((column) => `${column.name ?? column.label} ${column.text || column.value}`)
+        .join(', ')}.`}
+    >
       {columns.map((column) => (
         <div className="ax-column" key={column.label}>
           <span className="ax-column-value">{column.text}</span>
@@ -833,7 +1226,20 @@ export function Scatter({ points, tone, xLabel, yLabel, trend }: ScatterProps) {
 
   return (
     <div className="ax-scatter">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${xLabel} against ${yLabel}`}>
+      {/* The count and the fit, not the points.
+          
+          A scatter's content is its shape, and sixty coordinate pairs read
+          aloud is not a shape — it is sixty numbers. What a reader can actually
+          use is how many observations there are and whether the page thought
+          the relationship strong enough to draw a line through them, which is
+          the same thing the panel's own prose says beside it. */}
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`${xLabel} against ${yLabel}. ${points.length} ${
+          points.length === 1 ? 'observation' : 'observations'
+        }${trend ? ', with a line of best fit' : ', with no line of fit drawn'}.`}
+      >
         {[0.25, 0.5, 0.75].map((ratio) => (
           <line
             key={ratio}

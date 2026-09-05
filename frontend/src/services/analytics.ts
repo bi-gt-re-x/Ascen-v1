@@ -10,7 +10,7 @@
  * Backend: backend/api/analytics.py, backend/tracking/standing.py.
  */
 import { get, post } from './api';
-import type { ApiResult } from '@/types';
+import type { ApiResult, TaskPriority, TaskStatus } from '@/types';
 
 /** The measures, in the order the panel lists them. Matches MEASURES server-side. */
 export type StandingKey = 'xp' | 'focus' | 'consistency' | 'tasks' | 'score';
@@ -83,6 +83,56 @@ export interface Baseline {
 }
 
 /** `baseline: null` means this account has never set one — a real answer. */
+/**
+ * A task, in the fields the analytics page reads.
+ *
+ * Deliberately not `Task`. The full row carries `description` — unbounded free
+ * text on every task the account owns — plus the calendar and timer fields, and
+ * no panel on this page has ever looked at any of them. Typing this as `Task`
+ * would compile and would quietly re-authorise every one of those fields the
+ * first time somebody reached for one.
+ *
+ * The utils under utils/ take `Task`, and this is assignable to it: every field
+ * here has the same name and type it has there, and everything missing is
+ * optional there. So the arithmetic did not change to accept it — see
+ * ANALYTICS_TASK_FIELDS in backend/api/analytics.py, which is the same list on
+ * the other side of the wire and the thing to change if a panel needs a field
+ * that is not here.
+ */
+export interface AnalyticsTask {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  subject?: string;
+  xp_value: number;
+  created_at: string;
+  completed_at?: string;
+  due_date?: string;
+  completion_seconds?: number;
+  met_deadline?: boolean;
+  difficulty?: number;
+  execution?: number;
+  reason?: string;
+  goal_id?: string;
+  milestone_id?: string;
+}
+
+export interface AnalyticsTasksResult {
+  tasks: AnalyticsTask[];
+}
+
+/**
+ * The account's tasks, narrowed to what this page counts.
+ *
+ * Unwindowed on purpose — the picker slices in the browser so that changing it
+ * costs nothing, and the goal and habit panels are not scoped by it at all. The
+ * saving is the width of each row, not the number of them.
+ */
+export function analyticsTasks(): Promise<ApiResult<AnalyticsTasksResult>> {
+  return get<AnalyticsTasksResult>('/api/analytics/tasks');
+}
+
 export interface BaselineResult {
   baseline: Baseline | null;
 }

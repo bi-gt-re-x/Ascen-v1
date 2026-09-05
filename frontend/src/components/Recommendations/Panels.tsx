@@ -259,6 +259,16 @@ export function OutlookPanel({ outlook }: { outlook: Outlook }) {
       <AreaChart
         id="ax-outlook"
         height={180}
+        label="Banked XP over the next five years, at today's pace and with the changes made"
+        /* Six points and six marks, and they are the same six — this is the one
+           chart on the page whose axis labels already name every point it
+           carries, because the x axis is five round years rather than a
+           sampling of days. */
+        readout={{
+          labels: ['Now', 'In 1 year', 'In 2 years', 'In 3 years', 'In 4 years', 'In 5 years'],
+          names: ['With the changes', "At today's pace"],
+          format: (value) => `${compact(value)} XP`,
+        }}
         series={[
           { values: outlook.improvedLine, tone: 'green' },
           { values: outlook.currentLine, tone: 'violet', muted: true },

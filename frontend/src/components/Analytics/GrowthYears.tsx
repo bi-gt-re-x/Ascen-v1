@@ -294,6 +294,14 @@ function RatingLines({ years }: { years: GrowthYear[] }) {
         id="ax-gy-ratings"
         height={RATING_HEIGHT}
         max={RATING_SCALE}
+        label="Execution and difficulty, your own ratings out of five, by year"
+        /* One reading a year, so the x label *is* the year — no date formatting
+           and no sampling, unlike every other chart drawn with this. */
+        readout={{
+          labels: rated.map((year) => year.label),
+          names: ['Execution', 'Difficulty'],
+          format: (value) => `${value.toFixed(1)} out of 5`,
+        }}
         ticks={['5', '4', '3', '2', '1', '0']}
         marks={rated.map((year) => year.label)}
         series={[

@@ -709,6 +709,39 @@ def rows_for(table, user_id, order='rowid'):
         con.close()
 
 
+def columns_for(table, user_id, columns, order='rowid'):
+    """`rows_for`, but only the named columns.
+
+    For a caller that reads a handful of fields off every row of a big table.
+    The analytics page is the one that needed it: it walks every task the
+    account owns and reads sixteen fields, one of which — `description` — is
+    unbounded free text that nothing on that page ever looks at. Selecting the
+    sixteen leaves the descriptions in the database rather than sending them to
+    a browser that will drop them.
+
+    Names are checked against the live schema rather than trusted, for two
+    reasons that both matter. It is a table name and column names going into
+    an f-string, so an unchecked list is an injection; and a deployment whose
+    `tasks` table predates a column would otherwise take an OperationalError
+    where the honest answer is a row without that field. Unknown names are
+    dropped, which is exactly what `_decode_records` already does with a NULL.
+    """
+    con = connect()
+    try:
+        schema = _schema(con, table)
+        if not schema:
+            return []
+        known = {name for name, _, _ in schema}
+        wanted = [name for name in columns if name in known]
+        if not wanted:
+            return []
+        query = 'SELECT {} FROM "{}" WHERE user_id = ? ORDER BY {}'.format(
+            ', '.join('"{}"'.format(name) for name in wanted), table, order)
+        return _decode_records(con, table, con.execute(query, (user_id,)))
+    finally:
+        con.close()
+
+
 def find_row(table, row_id, user_id=None, key='id'):
     """One row by id, scoped to an account when one is given, or None."""
     con = connect()

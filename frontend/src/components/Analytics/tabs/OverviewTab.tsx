@@ -92,6 +92,7 @@ export function OverviewTab({
     score,
     scoreLine,
     scoreMarks,
+    scoreDates,
     setDepth,
     setGrain,
     setMetric,
@@ -108,7 +109,7 @@ export function OverviewTab({
     insights,
     previousBySubject,
   } = model;
-  const { account, baseline, standing } = data;
+  const { stats, baseline, standing } = data;
   const aim = baseline.data?.baseline ?? null;
 
   /*
@@ -323,6 +324,7 @@ export function OverviewTab({
           factors={card.factors}
           series={scoreLine}
           marks={scoreMarks}
+          dates={scoreDates}
           // The counted placement, so the badge here and the Growth Score row
           // on "Where You Stand" are one figure rather than two that disagree.
           percentile={standing.data?.rows.find((row) => row.key === 'score')?.percentile ?? null}
@@ -427,8 +429,8 @@ export function OverviewTab({
               compareLabel={compareLabel}
             />
             <StreaksPanel
-              current={account.data?.stats?.current_streak ?? 0}
-              best={account.data?.stats?.best_streak ?? 0}
+              current={stats.stats?.current_streak ?? 0}
+              best={stats.stats?.best_streak ?? 0}
               bestMonth={rhythmRate.bestMonth}
             />
             {/* Two conditions, and they refuse for different reasons. The stage

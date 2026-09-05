@@ -284,7 +284,7 @@ export function Summary({
       <div className="ax-summary-head">
         <div className="ax-summary-grade" title={`${bandLabel(grade)} out of 100`}>
           <span aria-hidden="true">{grade}</span>
-          <span className="ax-sr-only">Grade {grade}</span>
+          <span className="ax-sr">Grade {grade}</span>
         </div>
         <p className="ax-summary-lead">
           Your analytical score is{' '}

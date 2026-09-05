@@ -109,6 +109,20 @@ export function monthLabel(iso: string): string {
 }
 
 /**
+ * One date, written out in full, for a chart's readout.
+ *
+ * Not `monthLabel`: that one names a *slot* on the x axis, where six labels
+ * stand in for a year and "Mar '26" is the honest resolution. The readout names
+ * the single point under the crosshair, and telling a reader who asked about
+ * one day that it happened in March is answering a question they did not ask.
+ */
+export function pointLabel(iso: string): string {
+  const at = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(at.getTime())) return iso;
+  return at.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/**
  * `want` labels for a run of dates, sampled where the labels are drawn.
  *
  * The x-axis strip is a flex row of equal slots with the label centred in each

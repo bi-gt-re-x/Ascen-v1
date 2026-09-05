@@ -64,7 +64,7 @@ export function SubjectPanel({ rows, previous, balance }: SubjectPanelProps) {
         <p className="ax-empty">No finished tasks carry a subject in this window yet.</p>
       ) : (
         <div className="ax-subject">
-          <Radar axes={axes} />
+          <Radar axes={axes} label="XP earned by subject" />
           <ul className="ax-subject-legend">
             {rows.map((row, index) => {
               const was = previous.get(row.key) ?? 0;

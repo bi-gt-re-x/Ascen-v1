@@ -34,7 +34,7 @@
  * saving it would turn every glance into a preference.
  */
 import { useCallback, useState } from 'react';
-import { useApi, useUserData } from '@/hooks';
+import { useApi, useStats } from '@/hooks';
 import { analytics as analyticsService } from '@/services';
 import type { GrowthPeriods, PeriodKey } from '@/services/analytics';
 
@@ -50,7 +50,12 @@ import type { GrowthPeriods, PeriodKey } from '@/services/analytics';
 export const DEFAULT_PERIOD: PeriodKey = '30d';
 
 export function useGrowthPeriods() {
-  const { username } = useUserData();
+  /* `useStats`, not `useUserData`. Both carry the name; only one of them
+     charges the account's whole task list for it, and reaching for it here
+     would have turned that request back on for the Growth tab alone — after
+     the rest of this page had just stopped making it. The warning is in
+     hooks/useUserData's own doc comment. */
+  const { username } = useStats();
   const [period, setPeriod] = useState<PeriodKey>(DEFAULT_PERIOD);
 
   const call = useCallback(

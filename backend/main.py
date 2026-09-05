@@ -27,6 +27,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from backend import middleware, routes
@@ -84,6 +85,23 @@ def create_app():
         same_site='lax',
         https_only=settings.secure_cookies(),
     )
+
+    # Compression, added last so it runs first and therefore wraps everything
+    # below it — including the JSON the API returns.
+    #
+    # This app sends a lot of JSON and none of it was compressed. The analytics
+    # page reads the account's whole task list, which on a real account is a
+    # couple of megabytes of short, extremely repetitive objects — the same
+    # sixteen keys, eight thousand times — and that is close to the best case
+    # for deflate. Narrowing the columns (see ANALYTICS_TASK_FIELDS in
+    # backend/api/analytics.py) took about a fifth off it; this takes about
+    # nine tenths off what is left, and it does so for every response the app
+    # sends rather than for one endpoint.
+    #
+    # `minimum_size` is what keeps that from being a loss: below roughly a
+    # kilobyte the gzip header and the CPU cost buy nothing, and most of this
+    # API's replies are a success flag and a sentence.
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
 
     # The Vite dev server is a separate origin during development and the
     # session cookie has to survive the hop. Nothing is cross-origin once the

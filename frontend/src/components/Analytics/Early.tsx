@@ -71,6 +71,7 @@ export function WhenPanel({ parts, days }: WhenPanelProps) {
               text: part.count === 0 ? '—' : String(part.count),
             }))}
             tone="blue"
+            label="Finished tasks by part of the day"
           />
           <p className="ax-muted ax-early-foot">
             {total} finished {total === 1 ? 'task' : 'tasks'} with a time on {total === 1 ? 'it' : 'them'}.

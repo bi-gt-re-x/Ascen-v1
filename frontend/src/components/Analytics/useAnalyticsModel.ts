@@ -36,6 +36,7 @@ import { useSettings } from '@/hooks';
 import {
   consistency,
   sliceWindow,
+  pointLabel,
   spanLabel,
   windowOption,
   type Grain,
@@ -101,6 +102,7 @@ import { DEFAULT_BUDGET, buildPlan } from '@/utils/nextActions';
 import { reviewAdopted, summarise } from '@/utils/followup';
 import type { AnalyticsData } from './useAnalyticsData';
 import type { SubjectIndex } from '@/hooks/useSubjects';
+import type { Task } from '@/types';
 import type { Prefs } from '@/services/settings';
 
 /** How many named subjects get a spoke before Other takes the rest. */
@@ -110,7 +112,7 @@ const RADAR_SUBJECTS = 6;
 export const NEED_DAYS = { habits: 21, insights: 28, recommendations: 14 };
 
 export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
-  const { account, series, ratings, goals, adopted, gradedLog, scoreLog } = data;
+  const { stats, tasks: taskCall, series, ratings, goals, adopted, gradedLog, scoreLog } = data;
 
   /* Opens on the account's chosen period. Not kept in step with it after
      that: the control on this page is the reader changing their mind for one
@@ -161,7 +163,10 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
   const option = windowOption(span);
   const spanText = spanLabel(slice.current);
 
-  const tasks = useMemo(() => account.data?.tasks ?? [], [account.data]);
+  /* The sixteen columns, not the whole row. Assignable to `Task`, which is why
+     nothing downstream of here changed — see `AnalyticsTask` in
+     services/analytics. */
+  const tasks: Task[] = useMemo(() => taskCall.data?.tasks ?? [], [taskCall.data]);
   const fromIso = slice.current[0]?.date ?? '';
   const toIso = slice.current[slice.current.length - 1]?.date ?? '';
   const wasFrom = slice.previous[0]?.date ?? '';
@@ -233,6 +238,10 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     () => (recorded.length >= 2 ? ['First reading', '', '', 'Now'] : []),
     [recorded],
   );
+  /* When each reading was taken, for the chart's readout. `scoreMarks` cannot
+     serve: it is four labels for however many readings there are, two of them
+     deliberately blank. See `dates` on `ScorePanelProps`. */
+  const scoreDates = useMemo(() => recorded.map((point) => pointLabel(point.date)), [recorded]);
 
   const breakdown = useMemo(
     () => subjectXp(bySubject, subjects, fromIso, toIso, RADAR_SUBJECTS),
@@ -493,9 +502,9 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
             xp: row.xp,
             share: breakdown.total > 0 ? row.xp / breakdown.total : 0,
           })),
-        currentStreak: account.data?.stats?.current_streak ?? 0,
+        currentStreak: stats.stats?.current_streak ?? 0,
       }),
-    [account.data, breakdown, liveGoals, slice, tasks],
+    [breakdown, liveGoals, slice, stats.stats, tasks],
   );
 
   /** How much of the account's finished work is aimed at a goal. */
@@ -715,7 +724,7 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
   );
 
   /** The streak, which three of the chapters read and none of them fetch. */
-  const streak = account.data?.stats?.current_streak ?? 0;
+  const streak = stats.stats?.current_streak ?? 0;
 
   return {
     // What the account asked this page to be. See utils/analyticsPrefs.
@@ -770,6 +779,7 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     hasReportCard: ratings.data !== null,
     recorded,
     scoreLine,
+    scoreDates,
     scoreMarks,
     breakdown,
     previousBySubject,

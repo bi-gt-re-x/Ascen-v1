@@ -18,7 +18,7 @@
  * read it moves is what keeps that pairing from drifting.
  */
 import { useCallback, useState } from 'react';
-import { useApi, useUserData } from '@/hooks';
+import { useApi, useStats } from '@/hooks';
 import {
   analytics as analyticsService,
   goals as goalsService,
@@ -27,6 +27,7 @@ import {
 } from '@/services';
 import type {
   AdoptedResult,
+  AnalyticsTasksResult,
   BaselineResult,
   MetricHistories,
   MetricHistory,
@@ -41,19 +42,38 @@ const DEFAULT_ADVICE_XP = 25;
 
 export function useAnalyticsData() {
   /*
-   * The account's stats and its task list.
+   * The account's numbers — the streak, and who this is.
    *
-   * The list is the expensive read (see hooks/useUserData) and this page is
-   * one of the pages that genuinely needs it: `useAnalyticsModel` counts the
-   * subject breakdown, the finished-in-window totals and the goal-aimed share
-   * off individual task rows, none of which the day series carries.
+   * `useStats` and not `useUserData`, and the difference is the largest single
+   * saving on this page. Calling `useUserData` is what turns the app's biggest
+   * request on for the rest of the session (see hooks/useUserData): every task
+   * the account owns, every column, `description` included. This page reads six
+   * integers off the stats block and sixteen columns off the tasks, and it now
+   * asks for exactly those two things.
    *
-   * What it does *not* need is the whole history. The window picker slices
-   * `from`/`to` here in the browser after downloading everything, and pushing
-   * that window into the query is the next thing worth doing to this page.
+   * The stats are already in flight before this page mounts — the rail reads
+   * them on every page — so in practice this costs nothing at all.
    */
-  const account = useUserData();
-  const { username } = account;
+  const stats = useStats();
+  const { username } = stats;
+
+  /*
+   * The tasks, in the sixteen fields the panels actually count.
+   *
+   * See `analyticsTasks` in services/analytics and ANALYTICS_TASK_FIELDS on the
+   * other side of it. Still the whole record rather than the window: the picker
+   * slices in the browser so that changing it is instant, and the goal and
+   * habit panels are not scoped by it at all. What moved to the server is how
+   * wide each row is, not how many of them there are.
+   */
+  const tasksCall = useCallback(
+    () =>
+      username
+        ? analyticsService.analyticsTasks()
+        : Promise.resolve({ success: false as const, message: 'Sign in to see your analytics.' }),
+    [username],
+  );
+  const tasks = useApi<AnalyticsTasksResult>(tasksCall, [username]);
 
   // The whole history, sliced here. Same reason the growth page does it: the
   // comparisons need the period *before* the one on screen, and the milestone
@@ -262,14 +282,15 @@ export function useAnalyticsData() {
    */
   const refresh = useCallback(() => {
     series.reload();
-    account.reload();
+    tasks.reload();
     ratings.reload();
     goals.reload();
     adopted.reload();
-  }, [account, adopted, goals, ratings, series]);
+  }, [adopted, goals, ratings, series, tasks]);
 
   return {
-    account,
+    stats,
+    tasks,
     username,
     series,
     ratings,
