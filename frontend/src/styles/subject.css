@@ -239,8 +239,11 @@
    as a stack. */
 .sb-topline + .sb-panel { margin-top: var(--sb-gap); }
 
+/* 22px, not 14. A sub-heading directly under a chart at 14px sat on the axis
+   labels above it and read as that chart's caption rather than as the next
+   thing's title. */
 .sb-sub {
-    margin: 14px 0 8px;
+    margin: 22px 0 8px;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: .04em;

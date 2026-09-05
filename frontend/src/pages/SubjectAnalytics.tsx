@@ -280,6 +280,10 @@ export default function SubjectAnalytics() {
     [prefs.analytics_subject_depth, subject, subjectId, username],
   );
 
+  /* The volume chart's own ceiling. A floor of 1 keeps a window with a single
+     quiet period from producing a "0" top tick over a line that is not flat. */
+  const seriesPeak = Math.max(...model.series.done, 1);
+
   useDocumentTitle(subject ? subject.name : 'Subject');
 
   /* The catalogue is cached module-wide and read by a dozen components, so on
@@ -322,7 +326,7 @@ export default function SubjectAnalytics() {
           <p className="ax-opening is-flat">
             No subject with that id is in your catalogue. It may have been deleted since you
             picked it — you can choose the subjects you follow again from{' '}
-            <Link to="/analytics?setup">the analytics setup questions</Link>.
+            <Link className="ax-link" to="/analytics?setup">the analytics setup questions</Link>.
           </p>
         ) : !tasks.data ? (
           <ErrorState message={tasks.error ?? 'Could not read your tasks.'} onRetry={tasks.reload} />
@@ -456,39 +460,57 @@ export default function SubjectAnalytics() {
             )}
 
             {/* ---- The shape of it ---------------------------------- */}
+            {/* Two charts, not two lines on one axis. Tasks finished runs 0 to
+                about ten and quality runs 0 to 100 — sharing a scale squashed
+                the volume line flat along the floor and left the y-axis
+                labelled with the volume's peak while the axis was really the
+                quality's. A chart whose ticks do not describe its own line is
+                worse than no chart. */}
             {model.series.any && (
               <Panel
                 title="Over this window"
-                note="Tasks finished per period, with the quality you rated them at over the top."
+                note="Tasks finished per period, and the quality you rated them at. Two charts because they are two scales — a count has no ceiling and a percentage has one."
               >
                 <AreaChart
-                  id={`sb-${subjectId}`}
-                  label={`Work finished in ${subject.name} over ${
+                  id={`sb-done-${subjectId}`}
+                  label={`Tasks finished in ${subject.name} over ${
                     WINDOWS.find((option) => option.key === span)?.label ?? 'the window'
                   }`}
-                  height={190}
-                  series={[
-                    { values: model.series.done, tone: 'violet' },
-                    {
-                      /* Quality rides over the count on its own footing —
-                         `muted` so the volume line stays the headline, and
-                         unfilled so two washes do not leave a middle band that
-                         belongs to neither. Nulls are real: a period with
-                         nothing rated has no quality, and drawing it as zero
-                         would invent a bad fortnight. */
-                      values: model.series.quality,
-                      tone: 'blue',
-                      muted: true,
-                    },
-                  ]}
-                  ticks={[String(Math.max(...model.series.done, 1)), '', '0']}
+                  height={165}
+                  series={[{ values: model.series.done, tone: 'violet' }]}
+                  ticks={[String(seriesPeak), String(Math.round(seriesPeak / 2)), '0']}
                   marks={model.series.marks}
                   readout={{
                     labels: model.series.labels,
-                    names: ['Finished', 'Quality'],
-                    format: (value) => String(Math.round(value)),
+                    names: ['Finished'],
+                    format: (value) => `${Math.round(value)} tasks`,
                   }}
                 />
+
+                {model.series.quality.some((value) => value !== null) && (
+                  <>
+                    <h3 className="sb-sub">Quality over the same periods</h3>
+                    <AreaChart
+                      id={`sb-quality-${subjectId}`}
+                      label={`Quality rated in ${subject.name} over the same periods`}
+                      height={135}
+                      /* Nulls are real and stay null: a period with nothing
+                         rated has no quality, and the chart breaks its line
+                         there rather than drawing a zero nobody recorded. */
+                      series={[{ values: model.series.quality, tone: 'blue' }]}
+                      /* The real ceiling, so a run that never passes 60% is not
+                         stretched to fill the box and read as excellent. */
+                      max={100}
+                      ticks={['100', '50', '0']}
+                      marks={model.series.marks}
+                      readout={{
+                        labels: model.series.labels,
+                        names: ['Quality'],
+                        format: (value) => `${Math.round(value)}%`,
+                      }}
+                    />
+                  </>
+                )}
               </Panel>
             )}
 
@@ -577,7 +599,7 @@ export default function SubjectAnalytics() {
                 </ul>
                 <p className="ax-panel-note ax-panel-note-foot">
                   A goal here is what orders the recommendations below. Set one on{' '}
-                  <Link to="/goals">the goals page</Link> and this subject's advice is read
+                  <Link className="ax-link" to="/goals">the goals page</Link> and this subject's advice is read
                   against it rather than against whichever measure happens to be lowest.
                 </p>
               </Panel>
