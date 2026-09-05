@@ -279,6 +279,53 @@ describe('the movers', () => {
       .toBeInTheDocument();
     expect(screen.getByText(/Nothing fell by more than a few points/i)).toBeInTheDocument();
   });
+
+  it('falls back to a measure rather than drawing an empty panel', async () => {
+    /* A steady period has no biggest riser and a good one has nothing that
+       fell, and the first version printed one sentence into a card the height
+       of the one beside it. On an account doing well that is a large empty
+       rectangle most of the time, which reads as something failing to load. */
+    serve(payload({
+      current: side(scores({ quality: 41, productivity: 88 }), 50),
+      previous: side(scores({ quality: 40, productivity: 87 }), 50),
+      change: {
+        overall: 0, productivity: 1.1, quality: 2.5, consistency: 0, efficiency: 0, focus: 0,
+      },
+    }));
+    draw(<GrowthTab model={fakeModel()} />);
+
+    const worst = (await screen.findByRole('heading', { name: /Needs attention/ }))
+      .closest('.ax-panel') as HTMLElement;
+    // The lowest measure, named, with its own quantities under it.
+    expect(within(worst).getByText('Quality')).toBeInTheDocument();
+    expect(worst.querySelectorAll('.ax-gp-parts li').length).toBeGreaterThan(1);
+  });
+
+  it('does not call a fallback a decline', async () => {
+    // "Your lowest score" and "what fell" are different claims, and only one
+    // of them is a criticism.
+    serve(payload({
+      current: side(scores(), 50),
+      previous: side(scores(), 50),
+      change: {
+        overall: 0, productivity: 0, quality: 0, consistency: 0, efficiency: 0, focus: 0,
+      },
+    }));
+    draw(<GrowthTab model={fakeModel()} />);
+    const worst = (await screen.findByRole('heading', { name: /Needs attention/ }))
+      .closest('.ax-panel') as HTMLElement;
+    expect(worst.textContent).toMatch(/not a claim that anything got worse/i);
+  });
+
+  it('gives every measure more than one quantity to be checked against', async () => {
+    // A metric that reports a single number gives a reader nothing to check
+    // the score against, and left the panel two-thirds empty.
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const best = (await screen.findByRole('heading', { name: /Biggest improvement/ }))
+      .closest('.ax-panel') as HTMLElement;
+    expect(best.querySelectorAll('.ax-gp-parts li').length).toBeGreaterThan(1);
+  });
 });
 
 describe('then and now', () => {

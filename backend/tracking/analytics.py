@@ -365,6 +365,7 @@ def score_window(rollup, start, end, daily_goal):
     on_time = 0
     focused_sec = 0.0
     focus_goal_sec = 0.0
+    focus_days = 0
 
     day = start
     while day <= end:
@@ -387,6 +388,7 @@ def score_window(rollup, start, end, daily_goal):
         on_time += row['on_time']
         focused_sec += row['focus_seconds']
         focus_goal_sec += row['focus_goal_seconds']
+        focus_days += 1 if row['focus_seconds'] > 0 else 0
 
     # Per day that *earned*, not per day on the calendar. Turning up is what
     # consistency measures, and scoring the same absence twice is why a
@@ -455,8 +457,16 @@ def score_window(rollup, start, end, daily_goal):
         'parts': parts,
         'overall': round(_clamp(sum(parts.values()) / len(parts))),
         'figures': {
+            # More than the one figure the score divides. The Growth tab prints
+            # these under the score as the evidence for it, and a metric that
+            # reports a single number gives a reader nothing to check it
+            # against — see `partsOf` in components/Analytics/GrowthPeriod.
             'productivity': {
                 'avg_daily_xp': round(avg_daily_xp),
+                'total_xp': total_xp,
+                'earning_days': earning_days,
+                'tasks': total_tasks,
+                'daily_goal': daily_goal or DEFAULT_DAILY_GOAL,
             },
             'quality': {
                 'avg_task_xp': round(avg_task_xp),
@@ -479,11 +489,14 @@ def score_window(rollup, start, end, daily_goal):
                 'avg_minutes': max(1, round(avg_minutes)) if avg_minutes is not None else None,
                 'on_time_pct': round(deadline_score),
                 'has_timing': bool(timed),
+                'on_time': on_time,
+                'deadline_tracked': deadline_tracked,
             },
             'focus': {
                 'focused_minutes': round(focused_sec / 60),
                 'goal_minutes': round(focus_goal_sec / 60),
                 'pct_of_goal': round(focus_ratio * 100),
+                'focus_days': focus_days,
             },
         },
     }

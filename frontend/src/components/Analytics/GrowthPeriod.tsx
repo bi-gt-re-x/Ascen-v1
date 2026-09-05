@@ -485,31 +485,55 @@ function partsOf(metric: PeriodMetric, now: PeriodSide, then: PeriodSide): Part[
 
   switch (metric) {
     case 'productivity': {
-      const [from, to] = pair('avg_daily_xp');
-      return [{ label: 'XP a working day', from, to, max: headroom(from, to), show: asIs }];
+      const [wasXp, isXp] = pair('avg_daily_xp');
+      const [wasTotal, isTotal] = pair('total_xp');
+      const [wasDays, isDays] = pair('earning_days');
+      const [wasTasks, isTasks] = pair('tasks');
+      const goal = num(now, 'daily_goal') || 100;
+      return [
+        // Against the goal the account set itself, which is what the score
+        // actually divides by — so a full bar here is a full mark there.
+        { label: 'XP a working day', from: wasXp, to: isXp, max: Math.max(goal, wasXp, isXp), show: asIs },
+        { label: 'XP earned in total', from: wasTotal, to: isTotal, max: headroom(wasTotal, isTotal), show: asIs },
+        { label: 'Days that earned any', from: wasDays, to: isDays, max: headroom(wasDays, isDays), show: asIs },
+        { label: 'Tasks finished', from: wasTasks, to: isTasks, max: headroom(wasTasks, isTasks), show: asIs },
+      ];
     }
     case 'quality': {
       const [wasD, isD] = pair('avg_difficulty');
       const [wasE, isE] = pair('avg_execution');
+      const [wasQ, isQ] = pair('avg_quality');
       const [wasN, isN] = pair('rated_tasks');
       return [
         { label: 'Difficulty you took on', from: wasD, to: isD, max: 5, show: asRating },
         { label: 'How well it went', from: wasE, to: isE, max: 5, show: asRating },
+        { label: 'The two multiplied', from: wasQ, to: isQ, max: 25, show: asRating },
         { label: 'Tasks you rated', from: wasN, to: isN, max: headroom(wasN, isN), show: asIs },
       ];
     }
     case 'consistency': {
-      const [from, to] = pair('active_days');
-      const [, days] = pair('total_days');
-      return [{ label: 'Days worked', from, to, max: Math.max(days, to, 1), show: asIs }];
+      const [wasDays, isDays] = pair('active_days');
+      const [wasAll, isAll] = pair('total_days');
+      const [wasRate, isRate] = pair('rate');
+      return [
+        { label: 'Days worked', from: wasDays, to: isDays, max: Math.max(isAll, wasAll, isDays, 1), show: asIs },
+        { label: 'Share of the window', from: wasRate, to: isRate, max: 100, show: asPct },
+      ];
     }
     case 'efficiency': {
-      const [from, to] = pair('on_time_pct');
-      return [{ label: 'Finished by the deadline', from, to, max: 100, show: asPct }];
+      const [wasPct, isPct] = pair('on_time_pct');
+      const [wasMet, isMet] = pair('on_time');
+      const [wasSeen, isSeen] = pair('deadline_tracked');
+      return [
+        { label: 'Finished by the deadline', from: wasPct, to: isPct, max: 100, show: asPct },
+        { label: 'Tasks that made it', from: wasMet, to: isMet, max: headroom(wasMet, isMet), show: asIs },
+        { label: 'Tasks that had one', from: wasSeen, to: isSeen, max: headroom(wasSeen, isSeen), show: asIs },
+      ];
     }
     case 'focus': {
       const [wasH, isH] = pair('focused_minutes');
       const [wasG, isG] = pair('pct_of_goal');
+      const [wasN, isN] = pair('focus_days');
       return [
         {
           label: 'Hours logged',
@@ -519,6 +543,7 @@ function partsOf(metric: PeriodMetric, now: PeriodSide, then: PeriodSide): Part[
           show: (value) => `${value.toFixed(1)} hrs`,
         },
         { label: 'Share of your focus goal', from: wasG, to: isG, max: 100, show: asPct },
+        { label: 'Days you tracked it', from: wasN, to: isN, max: headroom(wasN, isN), show: asIs },
       ];
     }
     default:
@@ -526,37 +551,56 @@ function partsOf(metric: PeriodMetric, now: PeriodSide, then: PeriodSide): Part[
   }
 }
 
-/** One of the two mover panels. `kind` decides only the wording and the tone. */
+/**
+ * One of the two mover panels. `kind` decides the wording and the tone.
+ *
+ * ## The fallback is not an empty panel
+ *
+ * Both of these can legitimately have no answer — a steady period has no
+ * biggest riser and a good one has nothing that fell — and the first version
+ * printed one sentence into a card the height of the one beside it. On an
+ * account doing well that is a large empty rectangle most of the time, which
+ * reads as something failing to load rather than as good news.
+ *
+ * So each falls back to the nearest true statement it can still make. "Needs
+ * attention" shows the measure with the most room in it, which is where the
+ * next point is cheapest; "biggest improvement" shows the one currently
+ * highest. Both say plainly which question they are answering, because
+ * "your lowest score" and "what fell" are different claims and only one of
+ * them is a criticism.
+ */
 export function MoverPanel({
   kind,
   mover,
   now,
   then,
+  data,
 }: {
   kind: 'best' | 'worst';
   mover: Mover | null;
   now: PeriodSide;
   then: PeriodSide | null;
+  /** For the fallback, which ranks on the current scores rather than on moves. */
+  data: GrowthPeriods;
 }) {
   const heading = kind === 'best' ? 'Biggest improvement' : 'Needs attention';
+  const fell = mover !== null;
 
-  if (!mover) {
-    return (
-      <Panel
-        title={heading}
-        note={kind === 'best' ? 'Where you gained the most ground' : 'Where you lost ground'}
-      >
-        <p className="ax-empty">
-          {kind === 'best'
-            ? 'Nothing moved up by more than a few points this period. That is a steady '
-              + 'stretch rather than a flat one.'
-            : 'Nothing fell by more than a few points this period.'}
-        </p>
-      </Panel>
-    );
-  }
+  /* Nothing moved far enough to name, so the panel answers the nearest
+     question it can. See the note above. */
+  const shown = mover ?? (() => {
+    const ranked = METRIC_ORDER
+      .map((metric) => ({
+        metric,
+        from: then ? then.parts[metric] : data.current.parts[metric],
+        to: data.current.parts[metric],
+        change: data.change[metric],
+      }))
+      .sort((a, b) => a.to - b.to);
+    return kind === 'worst' ? ranked[0]! : ranked[ranked.length - 1]!;
+  })();
 
-  const meta = METRIC_META[mover.metric];
+  const meta = METRIC_META[shown.metric];
 
   return (
     <Panel
@@ -570,20 +614,27 @@ export function MoverPanel({
           aria-hidden="true"
         />
         <p className="ax-gp-mover-name">{meta.label}</p>
-        <span className={`ax-gp-mover-pill is-${kind}`}>
-          {growthLabel(mover.change, mover.from, mover.to)}
+        <span className={`ax-gp-mover-pill is-${fell ? kind : 'held'}`}>
+          {fell ? growthLabel(shown.change, shown.from, shown.to) : `${shown.to} / 100`}
         </span>
       </div>
 
       <p className="ax-gp-mover-asks">
-        {kind === 'best' ? 'Up' : 'Down'} from {mover.from} to {mover.to} out of 100 — {meta.asks}.
+        {fell
+          ? `${kind === 'best' ? 'Up' : 'Down'} from ${shown.from} to ${shown.to} out of 100`
+          : kind === 'worst'
+            ? `Nothing fell by more than a few points. This is your lowest measure at `
+              + `${shown.to} out of 100, which is where the next point is cheapest`
+            : `Nothing moved up by more than a few points — a steady stretch. This is your `
+              + `strongest measure at ${shown.to} out of 100`}
+        {' '}— {meta.asks}.
       </p>
 
       {/* The quantities the score was computed from, so the claim can be
           checked rather than taken. See `partsOf`. */}
       <ul className="ax-gp-parts">
         {then &&
-          partsOf(mover.metric, now, then).map((part) => {
+          partsOf(shown.metric, now, then).map((part) => {
             const way = part.to > part.from ? 'up' : part.to < part.from ? 'down' : 'held';
             return (
               <li key={part.label} className={`is-${way}`}>
@@ -611,12 +662,13 @@ export function MoverPanel({
       <p className="ax-gp-mover-why">
         <span className="ax-gp-mover-why-mark" aria-hidden="true">✦</span>
         <span>
-          <strong>What this is:</strong> {meta.asks}. It is{' '}
-          {kind === 'best'
-            ? 'the measure that gained the most ground this period'
-            : 'the measure that lost the most ground this period'}
-          , ranked on points moved rather than on percentage — a score climbing from 4 to 12
-          is a bigger percentage and a much smaller change.
+          <strong>What this is:</strong> {meta.asks}.{' '}
+          {fell
+            ? `It is the measure that ${kind === 'best' ? 'gained' : 'lost'} the most ground `
+              + 'this period, ranked on points moved rather than on percentage — a score '
+              + 'climbing from 4 to 12 is a bigger percentage and a much smaller change.'
+            : 'Nothing moved far enough this period to name a mover, so this is ranked on '
+              + 'the score itself instead. It is not a claim that anything got worse.'}
         </span>
       </p>
     </Panel>

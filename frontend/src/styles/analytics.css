@@ -5379,9 +5379,8 @@ body:has(.ax-page) .app-main {
    page, one of them answering a question the other had already asked. */
 .ax-gp-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
-    gap: 10px;
-    margin-bottom: 4px;
+    grid-template-columns: repeat(auto-fit, minmax(164px, 1fr));
+    gap: 12px;
 }
 
 .ax-gp-card {
@@ -5873,17 +5872,32 @@ body:has(.ax-page) .app-main {
 .ax-gp-metric-raw strong { color: var(--ax-text); font-weight: 650; }
 
 /* ---------- What changed --------------------------------------------------- */
-.ax-gp-changes { list-style: none; margin: 0; padding: 0; }
+/* Two or three across when the panel has the width for it. The list is four
+   or five short sentences, and a full-width panel running them one to a line
+   is a strip of text with two-thirds of the card empty beside it. */
+.ax-gp-changes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 0 24px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
 
 .ax-gp-changes li {
     position: relative;
-    padding: 8px 0 8px 20px;
+    padding: 9px 0 9px 20px;
     color: var(--ax-muted);
     font-size: 13.5px;
     line-height: 1.55;
+    border-top: 1px solid var(--ax-line-soft);
 }
 
-.ax-gp-changes li + li { border-top: 1px solid var(--ax-line-soft); }
+/* The first row of the grid has no rule above it, whichever column it is in.
+   `li + li` was the rule before the list became a grid and drew a line above
+   the second column's first item, which is a line across the middle of
+   nothing. */
+.ax-gp-changes li:nth-child(-n + 2) { border-top: 0; }
 
 .ax-gp-changes li::before {
     content: '';
@@ -6050,7 +6064,11 @@ body:has(.ax-page) .app-main {
     --ax-gp-line: #dfe4ec;
     --ax-gp-rule: #cbd5e1;
 
-    --ax-gap: 14px;
+    /* Wider than the page's 16, and the sections below space to match. The
+       tab is read top to bottom in one pass rather than scanned panel by
+       panel, and at the shared gap the six rows ran together into one block
+       of card. */
+    --ax-gap: 18px;
     background: var(--ax-gp-ground);
 }
 
@@ -6083,7 +6101,16 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
 .ax-view-growth .ax-panel {
     background: var(--ax-gp-card);
     border-color: var(--ax-gp-line);
+    padding: 18px 20px 16px;
 }
+
+/* The gap between rows. `.ax-shell` sets 18 for every tab and the sections
+   inside it inherit nothing, so the rhythm of this tab is set here. */
+.ax-view-growth > .ax-section + .ax-section { margin-top: 6px; }
+
+/* A row of panels keeps the same air between its columns as between the rows,
+   so the page has one spacing rather than two that nearly agree. */
+.ax-view-growth .ax-grid { gap: var(--ax-gap); }
 
 /* Uppercased, tracked, and small — a panel title on this tab is a *label* over
    a block of reading rather than a heading in a report. */
@@ -6096,7 +6123,12 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
     color: var(--ax-muted);
 }
 
-.ax-gp-heading { margin: 0 0 10px; }
+.ax-gp-heading { margin: 0 0 12px; }
+
+/* The line under a panel title. It carries the panel's whole subtitle and was
+   sitting a hair under it at the shared 12px, which on an uppercased label
+   reads as one two-line heading rather than as a heading and a gloss. */
+.ax-view-growth .ax-panel > .ax-panel-note { margin-bottom: 16px; }
 
 /* ---------- The strip: the mean, and its five terms ------------------------
    One `auto-fit` track list and a span, so the row is six across on a desktop,
@@ -6118,12 +6150,15 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
 
 .ax-gp-overall,
 .ax-gp-metric-card {
-    padding: 16px 18px;
+    padding: 18px 20px;
     border: 1px solid var(--ax-gp-line);
     border-radius: var(--ax-radius);
     background: var(--ax-gp-card);
     box-shadow: var(--ax-shadow);
     min-width: 0;
+    /* One height for the row whichever card carries the longest sentence, so
+       six cards across do not step up and down along their undersides. */
+    min-height: 104px;
 }
 
 .ax-gp-overall {
@@ -6332,12 +6367,18 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
     top: -15px;
     left: 50%;
     transform: translateX(-50%);
-    max-width: 96px;
+    /* A definite width, not a maximum. The rule this sits on is `width: 0` —
+       it is a hairline — so an absolutely positioned child inside it has no
+       available width to shrink-wrap against, and `max-width` left the caption
+       to break at every space and settle at the width of its longest word:
+       "Reached C" came out as two lines of one word each. */
+    width: 132px;
     color: var(--ax-faint);
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 650;
-    line-height: 1.2;
+    line-height: 1.25;
     text-align: center;
+    text-wrap: balance;
 }
 
 /* Room above the plot for the milestone captions, so they are not clipped by
@@ -6421,6 +6462,16 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
 }
 .ax-gp-total strong { color: var(--ax-violet); font-weight: 780; }
 
+/* Two panels sharing one column of a row, so a tall neighbour is matched by
+   two short ones rather than by one short one and a band of nothing. */
+.ax-gp-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ax-gap);
+    min-width: 0;
+}
+.ax-gp-stack > .ax-panel { flex: 1 1 auto; }
+
 /* ---------- The mover panel ----------------------------------------------- */
 .ax-gp-mover {
     display: flex;
@@ -6481,18 +6532,19 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
 
 .ax-gp-parts li {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(70px, 1.1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(80px, 1.05fr) auto;
     align-items: center;
-    gap: 10px;
-    padding: 7px 0;
+    gap: 12px;
+    padding: 9px 0;
     font-size: 12px;
 }
+.ax-gp-parts li + li { border-top: 1px solid var(--ax-line-soft); }
 
 .ax-gp-part-label { color: var(--ax-muted); }
 
 .ax-gp-part-bar {
     position: relative;
-    height: 6px;
+    height: 7px;
     border-radius: 999px;
     background: var(--ax-line-soft);
     overflow: hidden;
@@ -6548,9 +6600,13 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
 /* ---------- The period cards ---------------------------------------------- */
 .ax-gp-card {
     position: relative;
-    gap: 4px;
-    padding: 13px 15px 0;
+    gap: 5px;
+    padding: 15px 16px 0;
     overflow: hidden;
+    /* The note under the figure wraps to one or two lines depending on the
+       period, and a row of cards whose sparklines start at different heights
+       reads as six unrelated cards rather than as one row. */
+    min-height: 132px;
 }
 
 .ax-gp-card-head {
@@ -6564,15 +6620,15 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
 
 .ax-gp-card-value { font-size: 24px; }
 
-.ax-gp-card-note { padding-bottom: 10px; line-height: 1.45; }
+.ax-gp-card-note { padding-bottom: 12px; line-height: 1.5; }
 
 /* The card's own shape, bled to the edges along the bottom. It is a texture
    rather than a chart — see `Spark` — so it carries no axis and no labels. */
 .ax-gp-spark {
     display: block;
-    width: calc(100% + 30px);
-    height: 30px;
-    margin: auto -15px 0;
+    width: calc(100% + 32px);
+    height: 34px;
+    margin: auto -16px 0;
     stroke: var(--ax-faint);
 }
 .ax-gp-spark.is-up { stroke: var(--ax-green); }

@@ -254,7 +254,19 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
             </Panel>
           </section>
 
-          {/* The comparison and the metric that carried it, side by side. */}
+          {/*
+            The comparison beside the two measures at its extremes.
+
+            The movers are stacked in one column rather than each taking a row
+            of its own, and that is a height decision as much as a reading one:
+            panels in a row are stretched to the tallest of them, and "then and
+            now" is five metrics with a bar and a sentence each while a mover is
+            one metric with three. Set one against one, the short panel carried
+            a band of nothing half its own height again. Two against one is the
+            arrangement where both columns end at about the same place, and it
+            also happens to be the right reading order — the comparison, then
+            what came top and bottom of it.
+          */}
           <section className="ax-section ax-grid ax-grid-halves-even">
             <Panel
               title="Then and now"
@@ -266,21 +278,26 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
             >
               <ThenNow data={data} />
             </Panel>
-            <MoverPanel
-              kind="best"
-              mover={moved.best}
-              now={data.current}
-              then={data.previous}
-            />
+
+            <div className="ax-gp-stack">
+              <MoverPanel
+                kind="best"
+                mover={moved.best}
+                now={data.current}
+                then={data.previous}
+                data={data}
+              />
+              <MoverPanel
+                kind="worst"
+                mover={moved.worst}
+                now={data.current}
+                then={data.previous}
+                data={data}
+              />
+            </div>
           </section>
 
-          <section className="ax-section ax-grid ax-grid-halves-even">
-            <MoverPanel
-              kind="worst"
-              mover={moved.worst}
-              now={data.current}
-              then={data.previous}
-            />
+          <section className="ax-section">
             <Panel
               title="What changed underneath"
               note="Assembled from the same figures the scores were graded on"
