@@ -62,13 +62,18 @@
  * bands and no reasons, and the honest page for it is a short one that says
  * what it is waiting for — not eight panels of dashes.
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Ambient, ErrorState, Loading } from '@/components';
 import { WINDOWS, type WindowKey } from '@/components/Analytics/data';
 import { subjectModel } from '@/components/Subject/model';
 import { useApi, useAuth, useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
-import { analyticsTasks } from '@/services/analytics';
+import {
+  analyticsTasks,
+  subjectBriefAvailable,
+  writeSubjectBrief,
+  type SubjectBrief,
+} from '@/services/analytics';
 import { getGoals } from '@/services/goals';
 import { format } from '@/utils';
 import '@/styles/analytics.css';
@@ -173,6 +178,85 @@ export default function SubjectAnalytics() {
       ),
     [goals.data, prefs.analytics_subject_depth, span, subject?.group, subjectId, tasks.data, today],
   );
+
+  /**
+   * The model's write-up, and whether it can be asked for at all.
+   *
+   * Pressed rather than automatic, and that is not a performance decision: the
+   * call costs the account's owner money, and a panel that spent it on every
+   * page load would be spending it on every reader who came to look at a
+   * number. Nothing on this page depends on it — the write-up is a reading of
+   * findings that are already all on screen.
+   */
+  const [brief, setBrief] = useState<SubjectBrief | null>(null);
+  const [writing, setWriting] = useState(false);
+  const [briefError, setBriefError] = useState('');
+  const [canWrite, setCanWrite] = useState(false);
+
+  /* Asked once, so an install with no key draws no button at all. A control
+     that is always there and says "no key" when pressed is a worse answer
+     than no control. */
+  useEffect(() => {
+    if (!username) return;
+    let live = true;
+    void subjectBriefAvailable().then((result) => {
+      if (live) setCanWrite(result.success && result.available);
+    });
+    return () => {
+      live = false;
+    };
+  }, [username]);
+
+  /* Cleared when the window or the subject changes: a reading of the last
+     ninety days sitting under a page now showing seven is prose about figures
+     that are no longer on screen. */
+  useEffect(() => {
+    setBrief(null);
+    setBriefError('');
+  }, [span, subjectId]);
+
+  const write = useCallback(async () => {
+    if (!subject) return;
+    setWriting(true);
+    setBriefError('');
+    /* Exactly what the page is showing, and nothing it is not. The server
+       sends these to the model and forbids it any number that is not among
+       them — so a figure here that the page did not draw would be a figure
+       the reader cannot check. */
+    const result = await writeSubjectBrief({
+      subject: subject.name,
+      span: WINDOWS.find((option) => option.key === span)?.label ?? '',
+      score: model.score,
+      grade: model.grade,
+      finished: model.finished,
+      finished_before: model.finishedBefore,
+      streak: model.streak,
+      rates: model.rates
+        .filter((rate) => rate.known)
+        .map((rate) => ({ label: rate.label, now: Math.round(rate.now) })),
+      bands: model.bands
+        .filter((band) => band.done > 0)
+        .map((band) => ({
+          label: band.label,
+          done: band.done,
+          holding: band.holding === null ? null : Math.round(band.holding),
+        })),
+      struggles: model.struggles.map((driver) => ({
+        label: driver.label,
+        share: driver.share,
+        count: driver.count,
+      })),
+      goals: model.goals.map((goal) => ({
+        title: goal.title,
+        progress: Math.round(goal.progress),
+        deadline: goal.deadline,
+        drift: goal.drift,
+      })),
+    });
+    setWriting(false);
+    if (result.success) setBrief(result.brief);
+    else setBriefError(result.message || 'Could not write this up.');
+  }, [model, span, subject]);
 
   useDocumentTitle(subject ? subject.name : 'Subject');
 
@@ -545,6 +629,70 @@ export default function SubjectAnalytics() {
                   ))}
                 </ol>
               </Panel>
+            )}
+
+            {/* ---- The write-up ------------------------------------ */}
+            {canWrite && (
+              <section className="ax-panel sb-panel sb-brief">
+                <div className="ax-panel-head">
+                  <div className="ax-panel-title">
+                    <h2>Read this back to me</h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="ax-btn"
+                    onClick={() => void write()}
+                    disabled={writing}
+                  >
+                    {writing ? 'Writing…' : brief ? 'Write it again' : 'Write it up'}
+                  </button>
+                </div>
+                <p className="ax-panel-note">
+                  {/* Said before the button is pressed, not after. A reader
+                      has to know which half of this page is counted and which
+                      half is written before they decide what to trust. */}
+                  Everything above is counted from your own tasks. This one panel is written by
+                  a model, from those same figures — it is given them and forbidden from
+                  producing any others, so it can tell you what they mean but cannot tell you
+                  anything they do not say. It costs an API call and is not saved.
+                </p>
+
+                {briefError && (
+                  <p className="sb-brief-error" role="alert">
+                    {briefError}
+                  </p>
+                )}
+
+                {brief && (
+                  <div className="sb-brief-body">
+                    {brief.reading && <p className="sb-brief-reading">{brief.reading}</p>}
+                    {brief.practice.length > 0 && (
+                      <ol className="sb-brief-practice">
+                        {brief.practice.map((item) => (
+                          <li key={item.title}>
+                            <div className="sb-brief-practice-head">
+                              <strong>{item.title}</strong>
+                              <span className="sb-brief-minutes">{item.minutes} min</span>
+                            </div>
+                            {item.focus.length > 0 && (
+                              <ul className="sb-brief-focus">
+                                {item.focus.map((point) => (
+                                  <li key={point}>{point}</li>
+                                ))}
+                              </ul>
+                            )}
+                            {item.why && (
+                              <p className="sb-brief-why">
+                                <span>Why:</span> {item.why}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                )}
+              </section>
             )}
 
             {/* ---- Recent work ------------------------------------- */}

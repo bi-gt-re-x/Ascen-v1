@@ -46,6 +46,7 @@ from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking import analytics as analytics_tracking
 from backend.tracking import standing as standing_tracking
+from backend.tracking import subject_brief
 from backend.tracking.auth import load_user
 
 router = APIRouter(tags=['analytics'])
@@ -468,3 +469,130 @@ def get_growth_periods(username: str = Depends(current_username), period: str = 
     if scores is None:
         return fail('User not found')
     return ok(**scores)
+
+
+# --------------------------------------------------------------------------
+# Writing one subject up, with a model
+# --------------------------------------------------------------------------
+#: How many of each list the brief will carry, whatever the page sends.
+#:
+#: A bound rather than trust. The body of this request is figures the page has
+#: already computed and is asking to have read back — the account's own
+#: numbers, going to a model and coming back as prose — so nothing here is a
+#: permission decision. What it is is an unbounded payload from a client, and
+#: the cost of the call scales with it, so the lists are cut before anything
+#: is spent on them.
+BRIEF_RATES = 8
+BRIEF_BANDS = 8
+BRIEF_REASONS = 8
+BRIEF_GOALS = 4
+#: Long enough for a subject name and a window label; short enough that no
+#: single field can carry a paragraph into the prompt.
+BRIEF_TEXT = 120
+
+
+class BriefFinding(BaseModel):
+    """One row of the findings — a rate, a band, a reason or a goal.
+
+    Deliberately one loose model rather than four strict ones. Every field is
+    optional because the four kinds of row share this shape and each fills a
+    different half of it, and the alternative is four near-identical models
+    plus a discriminator that would exist only to make this file longer.
+    """
+
+    label: Optional[str] = None
+    title: Optional[str] = None
+    now: Optional[float] = None
+    done: Optional[int] = None
+    holding: Optional[float] = None
+    share: Optional[int] = None
+    count: Optional[int] = None
+    progress: Optional[float] = None
+    deadline: Optional[str] = None
+    drift: Optional[int] = None
+
+
+class SubjectBrief(BaseModel):
+    """What the subject page has worked out, on its way to being written up."""
+
+    subject: str = ''
+    span: str = ''
+    score: Optional[int] = None
+    grade: Optional[str] = None
+    finished: Optional[int] = None
+    finished_before: Optional[int] = None
+    streak: Optional[int] = None
+    rates: List[BriefFinding] = []
+    bands: List[BriefFinding] = []
+    struggles: List[BriefFinding] = []
+    goals: List[BriefFinding] = []
+
+
+def _rows(rows, most):
+    """The first `most` rows, as plain dicts with the empty fields dropped."""
+    return [{key: value for key, value in row.model_dump().items() if value is not None}
+            for row in (rows or [])[:most]]
+
+
+@router.get('/api/subject_brief')
+def subject_brief_available(username: str = Depends(current_username)):
+    """Whether the write-up button can do anything.
+
+    Asked so the page can leave the button out entirely rather than draw one
+    that fails when pressed. A button that always exists and sometimes says
+    "no key" is a worse answer than no button on an install that has no key.
+    """
+
+    _, user = load_user(username)
+    if not user:
+        return fail('User not found')
+    return ok(available=subject_brief.configured())
+
+
+@router.post('/api/subject_brief')
+def write_subject_brief(body: SubjectBrief, username: str = Depends(current_username)):
+    """A model's reading of one subject's findings. Writes nothing.
+
+    The same contract as `/api/suggest_milestones` in goals.py: a draft rather
+    than a record, and every failure comes back as a readable message instead
+    of an error status, because the page prints it in the panel. A write-up
+    that cannot be made is not a broken request — the page underneath it was
+    already complete.
+
+    **The figures come from the client, and that is the right way round here.**
+    They are the account's own numbers, computed by the page from the account's
+    own tasks (frontend/src/components/Subject/model.ts), and this endpoint
+    sends them to a model and hands the prose back to the same page that sent
+    them. Nothing is stored, nothing is authorised off them, and no other
+    account can see them. Recomputing them here would mean a second
+    implementation of eighty figures that would drift from the first, and the
+    page would then be showing one set and quoting another.
+    """
+
+    _, user = load_user(username)
+    if not user:
+        return fail('User not found')
+
+    name = (body.subject or '').strip()[:BRIEF_TEXT]
+    if not name:
+        return fail('There is no subject to write about.')
+
+    findings = {
+        'subject': name,
+        'span': (body.span or '').strip()[:BRIEF_TEXT],
+        'score': body.score,
+        'grade': body.grade,
+        'finished': body.finished,
+        'finished_before': body.finished_before,
+        'streak': body.streak,
+        'rates': _rows(body.rates, BRIEF_RATES),
+        'bands': _rows(body.bands, BRIEF_BANDS),
+        'struggles': _rows(body.struggles, BRIEF_REASONS),
+        'goals': _rows(body.goals, BRIEF_GOALS),
+    }
+
+    try:
+        written = subject_brief.write(findings)
+    except subject_brief.BriefUnavailable as exc:
+        return fail(str(exc))
+    return ok(brief=written)

@@ -428,3 +428,86 @@
 .sb-tree-choice { color: var(--ax-faint) !important; }
 
 .sb-tree-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* --- The one panel a model wrote ----------------------------------------
+   Marked out from the counted panels on purpose, and by more than a label: a
+   tinted ground and a left edge, so a reader scanning the page can see where
+   the counted figures stop without reading the note. The note is there too —
+   see the panel — but a border does not have to be read. */
+.sb-brief {
+    border-left: 3px solid var(--ax-blue);
+    background: color-mix(in srgb, var(--ax-blue) 4%, var(--ax-card));
+}
+
+.sb-brief-error {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ax-bad);
+}
+
+.sb-brief-body { margin-top: 12px; }
+
+.sb-brief-reading {
+    margin: 0 0 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ax-text);
+    max-width: 68ch;
+}
+
+.sb-brief-practice {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: sb-practice;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sb-brief-practice > li {
+    counter-increment: sb-practice;
+    padding: 11px 14px;
+    border: 1px solid var(--ax-line);
+    border-radius: 10px;
+    background: var(--ax-card);
+}
+
+.sb-brief-practice-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.sb-brief-practice-head strong { font-size: 13.5px; font-weight: 650; color: var(--ax-text); }
+
+/* The one figure on this page a model supplied rather than the record. It is
+   a recommendation and reads as one — no bar, no comparison, no delta. */
+.sb-brief-minutes {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--ax-card-2);
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--ax-muted);
+    white-space: nowrap;
+}
+
+.sb-brief-focus {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.sb-brief-focus li { font-size: 12.5px; line-height: 1.45; color: var(--ax-muted); }
+
+.sb-brief-why {
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ax-faint);
+}
+.sb-brief-why span { font-weight: 700; }

@@ -295,3 +295,62 @@ export interface GrowthPeriods {
 export function growthPeriods(period: PeriodKey = '30d'): Promise<ApiResult<GrowthPeriods>> {
   return get<GrowthPeriods>('/api/growth_periods', { period });
 }
+
+
+// --------------------------------------------------------------------------
+// Writing one subject up, with a model
+// --------------------------------------------------------------------------
+/**
+ * The findings the subject page sends to be read back to it.
+ *
+ * The page's own figures, computed in components/Subject/model — this is not
+ * a second source of them. The server sends them to a model, which is allowed
+ * to write prose over them and explicitly not allowed to produce any number
+ * that is not in here; see backend/tracking/subject_brief.py for the prompt
+ * that enforces it and for why that rule is the whole feature.
+ */
+export interface BriefFindings {
+  subject: string;
+  span: string;
+  score: number | null;
+  grade: string | null;
+  finished: number;
+  finished_before: number;
+  streak: number;
+  rates: Array<{ label: string; now: number }>;
+  bands: Array<{ label: string; done: number; holding: number | null }>;
+  struggles: Array<{ label: string; share: number; count: number }>;
+  goals: Array<{ title: string; progress: number; deadline: string; drift: number | null }>;
+}
+
+/** One thing to practise, and the figure that says why. */
+export interface BriefPractice {
+  title: string;
+  /** A suggested sitting length. The one number the model supplies. */
+  minutes: number;
+  focus: string[];
+  why: string;
+}
+
+export interface SubjectBrief {
+  reading: string;
+  practice: BriefPractice[];
+}
+
+/**
+ * Whether the write-up is available at all on this install.
+ *
+ * Asked so the page can leave the button out rather than draw one that fails
+ * when pressed — the feature needs an Anthropic key and a great many installs
+ * will not have one.
+ */
+export function subjectBriefAvailable(): Promise<ApiResult<{ available: boolean }>> {
+  return get<{ available: boolean }>('/api/subject_brief');
+}
+
+/** A model's reading of one subject. Stores nothing; costs a call. */
+export function writeSubjectBrief(
+  findings: BriefFindings,
+): Promise<ApiResult<{ brief: SubjectBrief }>> {
+  return post<{ brief: SubjectBrief }>('/api/subject_brief', findings);
+}

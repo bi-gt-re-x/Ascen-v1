@@ -403,8 +403,22 @@ SCHEMA = {
 }
 
 
-def _from_anthropic(brief: str, system: str = None, schema: dict = None,
-                    instruction: str = '') -> str:
+def from_anthropic(brief: str, system: str = None, schema: dict = None,
+                   instruction: str = '', model_id: str = '',
+                   max_tokens: int = 0) -> str:
+    """One schema-constrained answer from Anthropic, as raw text.
+
+    Public, and named without the underscore, because a second module now
+    calls it: backend/tracking/subject_brief.py asks a different question with
+    a different prompt and schema. What is shared is everything around the
+    question — building the client, the workspace header, the refusal check,
+    and the two error messages that took a while to word. Duplicating those
+    would mean a second copy of the identity-linked-key explanation, which is
+    the one message here a reader actually has to act on.
+
+    `model_id` and `max_tokens` default to this module's own, so the goals
+    page's two calls are unchanged by the parameter existing.
+    """
     try:
         import anthropic
     except ImportError as exc:  # pragma: no cover - dependency is in requirements
@@ -421,8 +435,8 @@ def _from_anthropic(brief: str, system: str = None, schema: dict = None,
                          if workspace else None))
     try:
         response = client.messages.create(
-            model=model(),
-            max_tokens=ANTHROPIC_MAX_TOKENS,
+            model=model_id or model(),
+            max_tokens=max_tokens or ANTHROPIC_MAX_TOKENS,
             system=system or SYSTEM,
             # `high` is this model's own default, and the level its guidance
             # calls the balance of cost against intelligence. It was 'medium'
@@ -476,6 +490,10 @@ def _from_anthropic(brief: str, system: str = None, schema: dict = None,
 
     return next((block.text for block in response.content
                  if block.type == 'text'), '')
+
+
+#: The name the two calls in this module were written against.
+_from_anthropic = from_anthropic
 
 
 def _from_huggingface(brief: str, system: str = None,
