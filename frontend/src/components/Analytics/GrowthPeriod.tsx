@@ -25,7 +25,7 @@
  * graded measure, and `MetricRow` prints the measured quantity underneath in
  * its own units so the two can be read against each other.
  */
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Panel, type Tone } from './charts';
 import { GLYPHS, type GlyphName } from './glyphs';
 import { gradeFor } from '@/utils/analyticalScore';
@@ -290,31 +290,164 @@ export function PeriodCards({
 }
 
 /**
- * A card's own shape, unlabelled and unscaled to anything but itself.
+ * The smallest movement a card's shape is allowed to fill its whole band with.
+ *
+ * The scores are all out of a hundred, and a spark scaled only to its own
+ * extremes draws every card identically: a period that wandered between 77 and
+ * 79 gets the same range of peaks and troughs as one that climbed from 20 to
+ * 90, because both were stretched to the same twenty-two units of box. Six
+ * cards drawn that way are six pictures of noise that all look equally
+ * dramatic, and the row's whole job is to let one period be compared against
+ * another at a glance.
+ *
+ * So a series narrower than this is drawn *centred inside* this span rather
+ * than stretched across it, and comes out as the nearly-flat line it is.
+ * Twenty points is about one grade band — a movement smaller than that has not
+ * changed what the reader would be told about themselves.
+ *
+ * The band is still not the full 0-100 of the chart the card opens: at
+ * thirty-odd pixels tall, a fixed hundred-point axis flattens every real
+ * climb to a couple of pixels and the row stops saying anything at all.
+ */
+const SPARK_MIN_SPAN = 20;
+
+/** The drawing's own units: the band the line lives in, inside a 30-tall box. */
+const SPARK_TOP = 4;
+const SPARK_BOTTOM = 26;
+
+/**
+ * Where each reading sits up the box, honestly scaled. See `SPARK_MIN_SPAN`.
+ *
+ * Only the heights: the readings are evenly spaced, so every x is `index / last`
+ * of the width and none of them is worth storing.
+ */
+function sparkHeights(values: number[]): number[] {
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const span = Math.max(high - low, SPARK_MIN_SPAN);
+  // Centred in the span rather than sat on its floor, so a series narrower
+  // than the floor is drawn through the middle of the band instead of along
+  // the bottom of it.
+  const base = (low + high) / 2 - span / 2;
+  const inner = SPARK_BOTTOM - SPARK_TOP;
+
+  return values.map((value) => SPARK_BOTTOM - ((value - base) / span) * inner);
+}
+
+/**
+ * The heights as one curve, bent but never bulging past a reading.
+ *
+ * Twelve straight segments across a hundred and fifty pixels come out as a
+ * zigzag, and the eye reads the corners — which are artefacts of where the
+ * twelve samples happened to land — rather than the drift, which is the only
+ * thing a card this size can actually say.
+ *
+ * Monotone cubic (Fritsch-Carlson), not the usual Catmull-Rom, and the
+ * difference matters here: Catmull-Rom overshoots around a turn, so a run of
+ * scores that rose to 88 and settled would be drawn touching 91. On a card
+ * captioned "77 → 89" that is a curve inventing a peak the reader never had.
+ * Clamping the tangents — to zero where the slope changes sign, and to three
+ * times the gentler neighbouring segment everywhere else — costs a little
+ * grace on the bends and guarantees the line stays inside its own readings.
+ */
+function sparkPath(ys: number[]): string {
+  const last = ys.length - 1;
+  const step = 100 / last;
+
+  /** The slope of each segment. One shorter than `ys`, by construction. */
+  const slopes = ys.slice(0, last).map((y, index) => ((ys[index + 1] ?? y) - y) / step);
+
+  /** The slope the curve leaves each reading at. `undefined` means an end. */
+  const tangents = ys.map((_, index) => {
+    const before = slopes[index - 1];
+    const after = slopes[index];
+    if (before === undefined) return after ?? 0;
+    if (after === undefined) return before;
+    // A sign change is a turning point, and a flat tangent is what stops the
+    // curve carrying on past the reading it is turning on.
+    if (before * after <= 0) return 0;
+    // Elsewhere the average, but never steeper than three times the gentler of
+    // the two segments it joins. Both halves are needed: the clamp above only
+    // holds the peaks and troughs, and a tangent much steeper than the segment
+    // it has to cross will bulge past the far end of a run that never turns at
+    // all — a slow climb into a sudden one draws a dip before the rise.
+    const mean = (before + after) / 2;
+    const limit = 3 * Math.min(Math.abs(before), Math.abs(after));
+    return Math.sign(mean) * Math.min(Math.abs(mean), limit);
+  });
+
+  const head = ys[0] ?? SPARK_BOTTOM;
+  const segments = ys.slice(0, last).map((y, index) => {
+    const x = index * step;
+    const y1 = ys[index + 1] ?? y;
+    const m0 = tangents[index] ?? 0;
+    const m1 = tangents[index + 1] ?? 0;
+    // A cubic whose control points sit a third of a step either side, lifted
+    // by the tangent there — the standard Hermite-to-Bezier conversion.
+    return (
+      ` C${(x + step / 3).toFixed(2)},${(y + (m0 * step) / 3).toFixed(2)}` +
+      ` ${(x + (step * 2) / 3).toFixed(2)},${(y1 - (m1 * step) / 3).toFixed(2)}` +
+      ` ${(x + step).toFixed(2)},${y1.toFixed(2)}`
+    );
+  });
+
+  return `M0.00,${head.toFixed(2)}${segments.join('')}`;
+}
+
+/**
+ * A card's own shape, unlabelled and scaled against a floor rather than itself.
  *
  * Deliberately without an axis: it is answering "did this climb or sag", not
  * "what was it on the 14th", and a sparkline that invites a reading off its
  * y-axis has stopped being one. Scored the same way as the big chart, so the
  * card and the line it opens cannot disagree about the shape.
+ *
+ * The one reference it does carry is a rule at the period's *first* reading,
+ * because "did this climb" is a question about a starting point and the shape
+ * alone cannot answer it — a line that sags and recovers and one that climbs
+ * and falls back trace much the same profile, and only the rule says which of
+ * them ended up ahead. It is drawn flat and faint: a horizontal line is the
+ * one thing that survives `preserveAspectRatio="none"` unbent, and at this
+ * weight it reads as the floor of the shape rather than as a second series.
  */
 function Spark({ values, way }: { values: number[]; way: 'up' | 'down' | 'held' }) {
+  const gradient = useId();
   if (values.length < 2) return null;
-  const low = Math.min(...values);
-  const high = Math.max(...values);
-  const span = high - low || 1;
-  const d = values
-    .map((value, index) => {
-      const x = (index / (values.length - 1)) * 100;
-      const y = 26 - ((value - low) / span) * 22;
-      return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
+
+  const ys = sparkHeights(values);
+  const d = sparkPath(ys);
+  const base = (ys[0] ?? SPARK_BOTTOM).toFixed(2);
 
   return (
     <svg className={`ax-gp-spark is-${way}`} viewBox="0 0 100 30" preserveAspectRatio="none"
          aria-hidden="true">
-      <path d={`${d} L100,30 L0,30 Z`} className="ax-gp-spark-fill" />
-      <path d={d} fill="none" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      <defs>
+        {/* Faded out towards the foot rather than a flat wash, so the fill
+            stops at the card's bottom edge instead of ending on one. The id
+            comes from `useId` because six of these share a page and two
+            gradients under one id is how five cards end up unfilled. */}
+        <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.26" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${d} L100,30 L0,30 Z`} fill={`url(#${gradient})`} />
+      <line
+        className="ax-gp-spark-base"
+        x1="0"
+        y1={base}
+        x2="100"
+        y2={base}
+        vectorEffect="non-scaling-stroke"
+      />
+      <path
+        d={d}
+        className="ax-gp-spark-line"
+        fill="none"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
   );
 }

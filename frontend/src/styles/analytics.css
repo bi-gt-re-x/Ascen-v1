@@ -6623,19 +6623,33 @@ html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
 .ax-gp-card-note { padding-bottom: 12px; line-height: 1.5; }
 
 /* The card's own shape, bled to the edges along the bottom. It is a texture
-   rather than a chart — see `Spark` — so it carries no axis and no labels. */
+   rather than a chart — see `Spark` — so it carries no axis and no labels.
+
+   The tone is set once here as `color`, and the line, the rule and the
+   gradient's stops all take it from `currentColor`. That is what lets the
+   fill be a gradient at all: a `<linearGradient>` lives in `<defs>` and
+   inherits nothing from the element that references it, so `currentColor` on
+   its stops is the only way its hue can follow the card's direction without a
+   rule — and a hard-coded stop — per tone. */
 .ax-gp-spark {
     display: block;
     width: calc(100% + 32px);
     height: 34px;
     margin: auto -16px 0;
-    stroke: var(--ax-faint);
+    color: var(--ax-faint);
 }
-.ax-gp-spark.is-up { stroke: var(--ax-green); }
-.ax-gp-spark.is-down { stroke: var(--ax-amber); }
-.ax-gp-spark-fill { fill: color-mix(in srgb, currentColor 0%, transparent); }
-.ax-gp-spark.is-up .ax-gp-spark-fill { fill: color-mix(in srgb, var(--ax-green) 14%, transparent); }
-.ax-gp-spark.is-down .ax-gp-spark-fill { fill: color-mix(in srgb, var(--ax-amber) 14%, transparent); }
+.ax-gp-spark.is-up { color: var(--ax-green); }
+.ax-gp-spark.is-down { color: var(--ax-amber); }
+
+.ax-gp-spark-line { stroke: currentColor; }
+
+/* The rule at the period's first reading. Faint enough to read as the floor
+   of the shape rather than as a second line crossing it. */
+.ax-gp-spark-base {
+    stroke: currentColor;
+    stroke-width: 1;
+    opacity: .3;
+}
 
 @media (max-width: 900px) {
     .ax-gp-overall { grid-column: 1 / -1; }
