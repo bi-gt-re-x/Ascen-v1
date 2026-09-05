@@ -113,6 +113,7 @@ import {
   HabitsTab,
   Header,
   InsightsTab,
+  SinceLast,
   OverviewTab,
   RecommendationsTab,
   GrowthTab,
@@ -218,7 +219,7 @@ export default function Analytics() {
   const {
     span, chooseSpan, option, spanText, subject, setSubject, subjectOptions, waitFor,
     maturity, streak, analytical, hasReportCard, figures, insights, breakdown, banked, recentSubjects,
-    discovered, diagnoses, advice, plan, recorded, state, goalSet, habits, summary,
+    discovered, diagnoses, advice, plan, recorded, state, goalSet, habits, summary, since,
   } = model;
   // ---- The shell ----------------------------------------------------------
 
@@ -480,6 +481,15 @@ export default function Analytics() {
           onExport={report}
           exportName={reportFilename(username ?? 'account', new Date())}
         />
+        {/* Above the bar, not inside a tab: it is true of all seven, and a
+            reader who opens on Recommendations should meet it just as a reader
+            who opens on the Overview does. See `SinceLast`.
+
+            Not during the question phase, for the reason the setup branch below
+            gives about the controls: that screen is meant to be the only thing
+            on the page, and a line about a visit three weeks ago sitting over
+            it is the page talking about itself while asking a question. */}
+        {!showSetup && <SinceLast since={since} />}
         <ViewTabs active={view.key} onView={openView} />
 
         {/* The setup screen replaces the controls as well as the tab, because

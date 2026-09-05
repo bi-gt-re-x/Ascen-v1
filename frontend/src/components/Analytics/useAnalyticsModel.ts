@@ -21,9 +21,29 @@
  * about where a figure came from.
  *
  * Everything below is memoised against the window slice, so switching tabs
- * recomputes nothing. Computing a hidden tab's figures costs a few hundred
- * array passes once per window change, which is the price of the paragraph
- * above and is worth it.
+ * recomputes nothing. Computing a hidden tab's figures costs a pass or two over
+ * an array already in memory, once per window change, which is the price of the
+ * paragraph above.
+ *
+ * ## What that price actually is
+ *
+ * Measured rather than estimated, because "seventy-nine memos" is the sort of
+ * number that invites a rewrite on principle. Over the largest account in the
+ * database — 8,268 tasks, 1,100 days — the two things a reader can press:
+ *
+ *     window picker moves    ~9 ms    (the slice, and everything keyed on it)
+ *     subject picker moves  ~10 ms    (the twelve memos keyed on `bySubject`)
+ *
+ * Both are inside a frame, and both happen on a click rather than on a render.
+ * Two of the nineteen calls behind those totals account for half of each —
+ * `relationships` and `subjectQuality`, which are the two that walk the tasks
+ * and the days together — so the shape of any future work here is those two
+ * functions, not the memo boundaries.
+ *
+ * The subject axis is worth naming because it is not obvious: `subject` narrows
+ * `bySubject`, and only what reads `bySubject` recomputes when it moves. The
+ * goal panels, the clock's own rhythm, the day-series figures and everything
+ * keyed on `tasks` directly are all untouched by it.
  *
  * ## Two windows, on purpose
  *
@@ -94,6 +114,8 @@ import {
 import { outlook, recommendations } from '@/utils/advice';
 import { PATTERN_DAYS, RECENT_DAYS, daysUntilNextWeek, recentWindow, weekStamp } from '@/utils/recent';
 import { dataMaturity } from '@/utils/dataMaturity';
+import { sinceLastVisit } from '@/utils/sinceLastVisit';
+import { isoDate } from '@/utils/dates';
 import { detailRules, toneRules } from '@/utils/analyticsPrefs';
 import { diagnose, vitals } from '@/utils/diagnosis';
 import { analyticalScore } from '@/utils/analyticalScore';
@@ -242,6 +264,28 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
      serve: it is four labels for however many readings there are, two of them
      deliberately blank. See `dates` on `ScorePanelProps`. */
   const scoreDates = useMemo(() => recorded.map((point) => pointLabel(point.date)), [recorded]);
+
+  /**
+   * What the record did since the reader was last here.
+   *
+   * Off the score log's *dates* and the day series, both already fetched —
+   * reading the report card files a dated snapshot, so that log is a visit log.
+   * See utils/sinceLastVisit for why this needs no storage of its own, and why
+   * it says nothing about the score.
+   *
+   * Unscoped by the window picker, like `standing` and for the same reason:
+   * "what happened while you were away" is a question about the account and a
+   * period the reader did not choose. Scoping it would make the sentence change
+   * when they pressed 7D, which is the one thing it must not do.
+   */
+  const since = useMemo(
+    /* Today from the clock, not from `all[all.length - 1]`. The series ends on
+       the last day that *recorded* something, so on the visit that matters most
+       — somebody coming back after a fortnight of nothing — reading today off
+       it would put "today" a fortnight ago and report a gap of zero days. */
+    () => sinceLastVisit(recorded, all, isoDate()),
+    [all, recorded],
+  );
 
   const breakdown = useMemo(
     () => subjectXp(bySubject, subjects, fromIso, toIso, RADAR_SUBJECTS),
@@ -780,6 +824,7 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     recorded,
     scoreLine,
     scoreDates,
+    since,
     scoreMarks,
     breakdown,
     previousBySubject,

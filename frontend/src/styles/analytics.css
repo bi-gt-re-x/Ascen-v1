@@ -3654,6 +3654,49 @@ body:has(.ax-page) .app-main {
    introduction, and tinted only when there is a direction to report. `is-up`
    and `is-down` are the finding; a tab with nothing rising or falling gets the
    plain card rather than a colour that means nothing. See `TabOpening`. */
+/* "You were last here on Tuesday" — above the tab bar, on every tab.
+ *
+ * Deliberately quieter than `.ax-opening` below, and the difference is the
+ * point: the opening is the tab's own finding and this is the page saying
+ * hello. Two bordered cards stacked would read as two headlines competing,
+ * which is exactly what the Growth tab refused an opening line to avoid.
+ *
+ * So: no border, no card, no tint. A rule under it, muted text, and one dot in
+ * the accent — enough to be found on purpose and not enough to be read first.
+ */
+.ax-since {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin: 0 0 14px;
+    padding: 0 0 13px;
+    border-bottom: 1px solid var(--ax-line-soft);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ax-muted);
+}
+
+.ax-since strong {
+    font-weight: 650;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-since-mark {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ax-violet);
+    flex: none;
+    /* Baseline-aligned text and a bare box do not agree about where the middle
+       is; this drops the dot onto the x-height of the sentence beside it. */
+    transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+    .ax-since { font-size: 12px; }
+}
+
 .ax-opening {
     margin: 0 0 2px;
     padding: 11px 15px;
