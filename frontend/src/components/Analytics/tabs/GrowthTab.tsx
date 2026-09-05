@@ -1,108 +1,146 @@
 /**
- * Growth — how the account has actually changed, a year at a time.
+ * Growth — how the account has changed, over a period the reader chooses.
  *
- * This tab replaced Records, and the question changed with it. Records asked
- * where the last thirty days *stand*: a percentile against every other thirty,
- * a ladder of round numbers, a pace on each goal. Two of those three are
- * answered better elsewhere — the goal pacing is the Goals tab's whole job, and
- * the round numbers are what the /records page is for — so what came across is
- * the percentile, which is the one figure there that was already a statement
- * about the account over time rather than about this month.
+ * ## The question, and why it is not the dashboard's
  *
- * ## Totals are not improvement
+ * The dashboard answers *how am I doing right now*: today's XP, the streak, the
+ * tasks still open. This tab answers *how have I changed*, and the difference
+ * is not one of detail — it is that every figure here is two figures. A period
+ * and the equivalent period before it, a score and the score it moved from, a
+ * grade and the grade it was. A panel that can only state a current value
+ * belongs on the other page.
  *
- * The trap this page is built to avoid. An account that did exactly the same
- * work at exactly the same standard every week for five years has a rising XP
- * line, a rising task count and a rising hours-logged figure, and has improved
- * at nothing: those all grow because time passes. So the figures that carry the
- * claim here are the two the reader supplies themselves — how hard the work was
- * and how well it went — and the totals sit beside them as context.
+ * That is also why the tab is built around a *period* rather than the analytics
+ * page's window picker. The picker scopes what the other six tabs describe;
+ * this one needs the window *and* the window before it, which is a different
+ * control asking a different question, so it has its own — see `PeriodRow`.
  *
- * The headline is `growthArc`, and the reason it names difficulty and execution
- * in the same breath is that either alone is misleading. Execution rising on
- * its own is what happens both when somebody gets better and when they start
- * picking easier things, and a page that showed the rise without the other half
- * would be flattering the reader with a number they could have got by lowering
- * their standards. See utils/growthYears, which will say so out loud when that
- * is what the record shows.
+ * ## Where the figures come from
  *
- * ## Partial years are marked rather than dropped
+ * One request, and it is the page's only one that is scoped to a tab. The five
+ * graded measures — productivity, quality, consistency, efficiency, focus — are
+ * scored server-side over every window this tab offers, by the same
+ * `score_window` that grades the report card. The long reasons are on the
+ * endpoint in backend/api/analytics.py and in ../useGrowthPeriods; the short
+ * one is that focus cannot be scored in the browser at all, because the growth
+ * series carries the minutes logged and not the goal they were against.
  *
- * The first year begins when the account did and the last one is still running,
- * so both are short. The table prints their totals with the rest — they are
- * real — and every comparison the page makes is per active day, because a year
- * with four months in it has a smaller total than the year before it and that
- * is not a decline.
+ * **Nothing in this tab computes a score.** It draws differences between scores
+ * it was handed, and every sentence on it is assembled from those figures
+ * rather than written, so no claim here can drift from the number beside it.
+ *
+ * ## The year-on-year half is still here, folded
+ *
+ * The tab used to be only that: the account a calendar year at a time, with
+ * execution set against difficulty to separate getting better from picking
+ * easier work. It is a genuinely different reading — self-rated, over years,
+ * about the *work* rather than about the record — and it survives at the foot
+ * of the page in a group of its own. What it is not is the answer to "how have
+ * I changed lately", which is the question people arrive with.
  */
 import { Link } from 'react-router-dom';
-import { useMemo } from 'react';
-import { AreaChart, Panel, PanelNote } from '../charts';
-import { StatRow, type Stat } from '../StatRow';
+import { useMemo, useState } from 'react';
+import { Panel, PanelGroup, type Tone } from '../charts';
+import { ConsistencyPanel } from '../Breakdown';
+import { GrowthLine, type LineSeries } from '../GrowthLine';
+import { YearOnYear } from '../GrowthYears';
+import {
+  METRIC_META,
+  METRIC_ORDER,
+  MilestoneFeed,
+  MoverPanel,
+  OverallVerdict,
+  PeriodRow,
+  ThenNow,
+  milestones,
+  movers,
+  whatChanged,
+} from '../GrowthPeriod';
 import { Locked } from '../Locked';
-import { growthArc, growthYears } from '@/utils/growthYears';
-import { benchHero } from '@/utils/growthBench';
-import { longDate } from '@/utils/growthChapters';
-import { number as fmtNumber } from '@/utils/format';
+import { hourLabel } from '@/utils/behaviour';
+import { useGrowthPeriods } from '../useGrowthPeriods';
 import type { AnalyticsModel } from '../useAnalyticsModel';
-import type { GrowthYear } from '@/utils/growthYears';
+import type { PeriodMetric } from '@/services/analytics';
 
-/**
- * Calendar years the account has been present for before the tab will draw.
- *
- * Two, and it is a count of years rather than of days on purpose: a page whose
- * every row is a year cannot say anything with one row, and no number of days
- * inside a single calendar year produces a second one. An account that joined
- * in November is three months from a comparison and one that joined in January
- * is fourteen, which is the honest shape of the thing rather than a fault in
- * the gate.
- */
-const NEED_YEARS = 2;
-
-/**
- * The standing panel's one-line claim.
- *
- * A percentile of 100 is not a sentence anybody says. It means the last thirty
- * days are the best thirty the account has had, and "ranks above 100% of your
- * 1,819 stretches" is a roundabout and slightly wrong way of putting that —
- * the current window is one of the 1,819 and does not rank above itself.
- */
-function standingClaim(hero: { percentile: number | null; windows: number }): string | undefined {
-  if (hero.percentile === null) return undefined;
-  if (hero.percentile >= 100) {
-    return 'The last 30 days are the best 30 you have had.';
-  }
-  return `Your last 30 days rank above ${hero.percentile}% of the ${fmtNumber(hero.windows)} `
-    + '30-day stretches on your record.';
+/** "12 Aug" — the x axis and the milestone feed. Short, because it repeats. */
+function shortDate(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
-/** A dash, not a zero: nothing recorded is not a reading of nothing. */
-const orDash = (value: string | number | null | undefined) =>
-  value === null || value === undefined ? '—' : String(value);
+/**
+ * Which lines the chart opens with.
+ *
+ * Overall alone. Five lines at once is the wall this tab is meant to replace —
+ * the reader arrives wanting to know whether they got better, and five
+ * crossing lines is a puzzle rather than an answer. The five are one press
+ * away, and pressing one is what a reader does *after* the overall line has
+ * raised a question.
+ */
+const OPENS_WITH: Array<PeriodMetric | 'overall'> = ['overall'];
+
+/** The overall line's colour. Not one of the five: it is their mean. */
+const OVERALL_TONE: Tone = 'violet';
 
 export function GrowthTab({ model }: { model: AnalyticsModel }) {
-  const { all, tasks } = model;
+  const { clock, heatRows, rhythmRate } = model;
+  const { period, setPeriod, periods } = useGrowthPeriods();
+  const [lines, setLines] = useState<Array<PeriodMetric | 'overall'>>(OPENS_WITH);
 
-  const years = useMemo(() => growthYears(all, tasks), [all, tasks]);
-  const arc = useMemo(() => growthArc(years), [years]);
-  const hero = useMemo(() => benchHero(all), [all]);
+  const data = periods.data;
 
-  /* Years with something on them. A year the account existed through and did
-     nothing in is kept in the table — a gap in the middle is a fact — but it
-     cannot be one of the two the gate is counting. */
-  const worked = years.filter((year) => year.activeDays > 0);
+  const toggle = (key: PeriodMetric | 'overall') =>
+    setLines((current) =>
+      current.includes(key)
+        ? // Never down to nothing: an empty chart box reads as a chart that
+          // broke rather than as one the reader emptied.
+          current.length === 1
+          ? current
+          : current.filter((entry) => entry !== key)
+        : [...current, key],
+    );
 
-  if (worked.length < NEED_YEARS) {
+  const series: LineSeries[] = useMemo(() => {
+    if (!data) return [];
+    const chosen: LineSeries[] = [];
+    if (lines.includes('overall')) {
+      chosen.push({
+        key: 'overall',
+        label: 'Overall',
+        tone: OVERALL_TONE,
+        values: data.series.map((point) => point.overall),
+      });
+    }
+    METRIC_ORDER.forEach((metric) => {
+      if (!lines.includes(metric)) return;
+      chosen.push({
+        key: metric,
+        label: METRIC_META[metric].label,
+        tone: METRIC_META[metric].tone,
+        values: data.series.map((point) => point[metric]),
+      });
+    });
+    return chosen;
+  }, [data, lines]);
+
+  const moved = useMemo(() => (data ? movers(data) : { best: null, worst: null }), [data]);
+  const feed = useMemo(() => (data ? milestones(data) : []), [data]);
+  const changes = useMemo(() => (data ? whatChanged(data) : []), [data]);
+
+  if (periods.error && !data) {
     return (
       <Locked
         title="Growth"
-        remaining={NEED_YEARS - worked.length}
-        need={NEED_YEARS}
-        have={worked.length}
-        promise="A year-on-year reading needs two years to hold against each other."
+        remaining={1}
+        need={1}
+        have={0}
+        promise="Growth needs a graded record to read, and this one could not be loaded."
         brings={[
-          'Every year, side by side',
-          'Whether the work got harder',
-          'Whether you got better at it',
+          'Every period, side by side',
+          'Which measure moved furthest',
+          'What actually changed underneath it',
           'Where this month sits in all of it',
         ]}
         action={
@@ -116,279 +154,254 @@ export function GrowthTab({ model }: { model: AnalyticsModel }) {
 
   return (
     <>
-      {/* The reading, before the picture of it and the table it was read off.
-          A reader who takes one thing from this tab should take this one. */}
-      {arc.sentence && <p className="ax-gy-lead">{arc.sentence}</p>}
+      {/* The control and the summary at once. It stays on the page while the
+          rest reloads, because it is what the reader is about to press again —
+          swapping it for a spinner would move the thing under their cursor. */}
+      {data && (
+        <section className="ax-section">
+          <PeriodRow
+            cards={data.periods}
+            active={period}
+            onPick={setPeriod}
+            busy={periods.refreshing}
+          />
+        </section>
+      )}
 
-      {/* The claim, drawn. Two lines is the whole argument: one climbs and one
-          does not, and that is visible before a single figure is read. */}
-      <section className="ax-section">
-        <RatingLines years={worked} />
-      </section>
+      {!data && periods.loading && (
+        <section className="ax-section">
+          <p className="ax-empty">Scoring your record…</p>
+        </section>
+      )}
 
-      <section className="ax-section">
-        <ThenAndNow years={worked} />
-      </section>
+      {data && (
+        <>
+          <section className="ax-section">
+            <OverallVerdict data={data} />
+          </section>
 
-      <section className="ax-section">
-        <YearTable years={years} />
-      </section>
+          {/* The line, and the toggles that decide what is on it. */}
+          <section className="ax-section ax-hero">
+            <Panel
+              title="Growth timeline"
+              note={
+                `Each point is scored over the ${data.trend_window} days behind it, so the `
+                + 'line is a moving average rather than a daily reading'
+              }
+              aside={
+                <div className="ax-gp-toggles" role="group" aria-label="Metrics on the chart">
+                  <button
+                    type="button"
+                    className={`ax-gp-toggle ax-tone-${OVERALL_TONE}${
+                      lines.includes('overall') ? ' is-on' : ''
+                    }`}
+                    aria-pressed={lines.includes('overall')}
+                    onClick={() => toggle('overall')}
+                  >
+                    <span className="ax-gp-key" aria-hidden="true" />
+                    Overall
+                  </button>
+                  {METRIC_ORDER.map((metric) => (
+                    <button
+                      key={metric}
+                      type="button"
+                      className={`ax-gp-toggle ax-tone-${METRIC_META[metric].tone}${
+                        lines.includes(metric) ? ' is-on' : ''
+                      }`}
+                      aria-pressed={lines.includes(metric)}
+                      onClick={() => toggle(metric)}
+                    >
+                      <span className="ax-gp-key" aria-hidden="true" />
+                      {METRIC_META[metric].label}
+                    </button>
+                  ))}
+                </div>
+              }
+            >
+              <GrowthLine
+                series={series}
+                dates={data.series.map((point) => point.date)}
+                labels={data.series.map((point) => shortDate(point.date))}
+              />
+            </Panel>
+          </section>
 
-      <section className="ax-section">
-        <Panel
-          title="Where this month sits in all of it"
-          note="The last 30 days against every other 30 you have had"
-          claim={standingClaim(hero)}
-        >
-          {hero.percentile === null ? (
-            <p className="ax-empty">
-              A ranking needs more than one 30-day stretch to rank against. This fills in on its
-              own.
-            </p>
-          ) : (
-            <ul className="ax-gy-notes">
-              <li>
-                <span>These 30 days</span>
-                <strong>{fmtNumber(hero.currentXp)} XP</strong>
-              </li>
-              <li>
-                <span>Your best 30</span>
-                <strong>
-                  {fmtNumber(hero.bestXp)} XP
-                  {hero.bestEndedOn ? <em> to {longDate(hero.bestEndedOn)}</em> : null}
-                </strong>
-              </li>
-              {hero.fromBaseline !== null && (
-                <li>
-                  <span>Against your first 30</span>
-                  {/* As a multiple past a couple of doublings. "+1228%" is a
-                      figure a reader has to do arithmetic on before it means
-                      anything, and the arithmetic is "about thirteen times". */}
-                  <strong>
-                    {hero.fromBaseline >= 200
-                      ? `${((hero.fromBaseline + 100) / 100).toFixed(1)}× as much`
-                      : `${hero.fromBaseline >= 0 ? '+' : ''}${hero.fromBaseline}%`}
-                  </strong>
-                </li>
-              )}
-            </ul>
-          )}
-        </Panel>
-      </section>
+          {/* Which way the period ran, at its two extremes. */}
+          <section className="ax-section ax-grid ax-grid-halves-even">
+            <MoverPanel
+              kind="best"
+              mover={moved.best}
+              now={data.current}
+              then={data.previous}
+            />
+            <MoverPanel
+              kind="worst"
+              mover={moved.worst}
+              now={data.current}
+              then={data.previous}
+            />
+          </section>
+
+          <section className="ax-section">
+            <Panel
+              title="Then and now"
+              note={
+                data.previous
+                  ? `${data.label} against the ${data.days} days before it`
+                  : 'Your whole record — there is nothing before it to compare against'
+              }
+            >
+              <ThenNow data={data} />
+            </Panel>
+          </section>
+
+          {/* The two readings that explain the five above rather than restating
+              them: what the underlying quantities did, and when the score
+              crossed a letter. Folded, because they are the follow-up. */}
+          <section className="ax-section">
+            <PanelGroup
+              title="What changed underneath"
+              note="The quantities behind the scores, in their own units"
+              defaultOpen
+            >
+              <Panel
+                title="What changed"
+                note="Assembled from the same figures the scores were graded on"
+              >
+                {changes.length === 0 ? (
+                  <p className="ax-empty">
+                    {data.previous
+                      ? 'Nothing moved far enough to be worth calling a change.'
+                      : 'This period reaches back to the day you started, so there is nothing '
+                        + 'before it to have changed from.'}
+                  </p>
+                ) : (
+                  <ul className="ax-gp-changes">
+                    {changes.map((line, index) => (
+                      <li key={index}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+            </PanelGroup>
+
+            <PanelGroup
+              title="Your milestones"
+              note="The days the overall score crossed into a new grade"
+            >
+              <Panel
+                title="Milestones"
+                note="Found in the record rather than stored, so they cannot go out of date"
+              >
+                <MilestoneFeed entries={feed} format={shortDate} />
+              </Panel>
+            </PanelGroup>
+
+            {/* The same year of days the Overview draws, and deliberately the
+                same component rather than a second one: consistency is one of
+                the five scores above, and the panel that shows it as days is
+                where a reader goes to see *which* days. Always a year,
+                whatever period is selected — a heatmap of the last seven days
+                is seven squares. */}
+            <PanelGroup
+              title="When the work actually happens"
+              note="The shape of your day, from the hours you finish things in"
+            >
+              <WhenPanel clock={clock} />
+            </PanelGroup>
+
+            <PanelGroup
+              title="Every day of the last year"
+              note="The consistency score above, drawn as the days themselves"
+            >
+              <ConsistencyPanel
+                rate={rhythmRate.rate}
+                previousRate={rhythmRate.previousRate}
+                rows={heatRows}
+                compareLabel="the year before"
+              />
+            </PanelGroup>
+
+            <PanelGroup
+              title="The work itself, year by year"
+              note="How hard it was and how well it went, as you rated it"
+            >
+              <YearOnYear model={model} />
+            </PanelGroup>
+          </section>
+        </>
+      )}
     </>
   );
 }
 
+// --------------------------------------------------------------------------
+// When the work happens
+// --------------------------------------------------------------------------
 /**
- * Execution and difficulty across the years, on one five-point axis.
+ * The hours the work lands in, and how concentrated they are.
  *
- * The page's argument as a picture. Execution is the headline line and
- * difficulty the muted one, and what the reader is meant to take from it is the
- * *shape* of each — one rising, one level — because that pair is what separates
- * getting better from picking easier work.
+ * The one reading on this tab that is not a score, and it is here because it
+ * answers the question the five scores raise and cannot settle: consistency
+ * says how many days you turned up, and this says what turning up looks like.
  *
- * **What the two lines are not.** They are not a race. Both rows are scored out
- * of five, which is what lets them share an axis, but they answer different
- * questions — how hard was it, how well did it go — so the point at which one
- * crosses the other means nothing at all. Only the slopes are comparable, and
- * the note under the chart says so rather than leaving a reader to work out
- * which readings are real.
+ * `coreWindow` is the *narrowest run of hours holding half the finished work*,
+ * which is deliberately a different thing from a peak hour. A peak overstates
+ * how concentrated a habit is — one unusual evening can own it — and a run
+ * survives that and describes the shape of a day rather than a spike in it.
+ * See utils/behaviour.
  *
- * The axis is pinned to five rather than to the tallest reading. Left to scale
- * itself the chart would run 0 to 3.7 on this account, and a five-point scale
- * drawn as a 3.7-point one exaggerates every wobble in the flat line — which is
- * the one line whose flatness is the point.
+ * Scoped to the page's recent window rather than to the selected period, and
+ * that is a limitation stated rather than hidden: the model computes this once
+ * over its own recent slice, and re-deriving it per period would mean a second
+ * pass over the hour of every finished task that the model already holds. The
+ * panel's note says which days it is describing.
  */
-const RATING_SCALE = 5;
-
-function RatingLines({ years }: { years: GrowthYear[] }) {
-  const rated = years.filter((year) => year.execution !== null && year.difficulty !== null);
-
-  // Two points is a line; one is a dot with a caption. Below that the panel
-  // says so, because an empty chart box reads as a chart that failed.
-  if (rated.length < 2) {
-    return (
-      <Panel title="Execution against difficulty" note="Both out of five, as you rated them">
-        <p className="ax-empty">
-          Two years with ratings on them draws this. Rating a task after finishing it is what
-          fills it in.
-        </p>
-      </Panel>
-    );
-  }
+function WhenPanel({ clock }: { clock: AnalyticsModel['clock'] }) {
+  const core = clock.coreWindow;
 
   return (
-    <Panel title="Execution against difficulty" note="Both out of five, as you rated them">
-      <AreaChart
-        id="ax-gy-ratings"
-        /* Shorter than the trajectory panel's 200. Ratings live in a narrow
-           band near the top of a five-point axis — nothing on this account
-           goes below 2.8 — so most of a tall box would be empty, and the
-           honest fix for that is less box rather than a cropped axis. */
-        height={155}
-        max={RATING_SCALE}
-        ticks={['5', '4', '3', '2', '1', '0']}
-        marks={rated.map((year) => year.label)}
-        series={[
-          { values: rated.map((year) => year.execution), tone: 'green' },
-          {
-            values: rated.map((year) => year.difficulty),
-            tone: 'violet',
-            muted: true,
-            // Unfilled: two washes on one box leave a middle band belonging to
-            // neither, and this line is a reference for the other rather than a
-            // quantity in its own right.
-            fill: false,
-          },
-        ]}
-      />
-      <PanelNote label="Reading this">
-        The filled line is execution — how well the work went. The lighter one is difficulty —
-        how hard it was. Both are your own ratings out of five, so they share an axis, but they
-        answer different questions: which line sits higher means nothing, and only the shape of
-        each is worth reading.
-      </PanelNote>
-    </Panel>
-  );
-}
-
-/**
- * The first worked year against the latest, as four tiles.
- *
- * Rates rather than totals for the two volume figures, for the reason the file
- * header gives: both ends of this comparison are usually partial years, and
- * their totals are not comparable while their per-active-day figures are.
- *
- * `delta` is left off every tile. The row's deltas are percentages against a
- * previous period, and these are a first-to-latest comparison across several
- * years — the same word for a different thing. The note under each figure
- * carries the comparison in the units it is actually in.
- */
-function ThenAndNow({ years }: { years: GrowthYear[] }) {
-  const first = years[0]!;
-  const last = years[years.length - 1]!;
-
-  /* Each tile's own years under it. The tile states where the figure ended and
-     the note says where it began, and neither can tell a climb from a jump in
-     the last year — which on a tab about improvement is the difference that
-     matters most. Ratings skip the years nobody answered for rather than
-     plotting them as nothing. */
-  const rated = years.filter((year) => year.execution !== null && year.difficulty !== null);
-
-  const shift = (from: number | null, to: number | null, digits = 1) =>
-    from === null || to === null
-      ? 'not rated then'
-      : `${from.toFixed(digits)} in ${first.label}`;
-
-  const stats: Stat[] = [
-    {
-      key: 'execution',
-      series: rated.map((year) => year.execution!),
-      label: 'Execution',
-      value: last.execution === null ? '—' : last.execution.toFixed(1),
-      unit: last.execution === null ? undefined : '/ 5',
-      note: shift(first.execution, last.execution),
-      tone: 'green',
-      glyph: 'sparkle',
-      hint: 'How well the work went, as you rated it after finishing. Averaged over the tasks '
-        + 'carrying both a difficulty and an execution.',
-    },
-    {
-      key: 'difficulty',
-      series: rated.map((year) => year.difficulty!),
-      label: 'Difficulty',
-      value: last.difficulty === null ? '—' : last.difficulty.toFixed(1),
-      unit: last.difficulty === null ? undefined : '/ 5',
-      note: shift(first.difficulty, last.difficulty),
-      tone: 'violet',
-      glyph: 'target',
-      hint: 'How hard the work was, as you rated it. The figure that says whether a rising '
-        + 'execution score is improvement or easier work.',
-    },
-    {
-      key: 'pace',
-      series: years.map((year) => year.tasksPerActiveDay),
-      label: 'Tasks a working day',
-      value: last.tasksPerActiveDay.toFixed(1),
-      note: `${first.tasksPerActiveDay.toFixed(1)} in ${first.label}`,
-      tone: 'blue',
-      glyph: 'check',
-      hint: 'Per day you actually worked, not per day on the calendar — so a part-year is '
-        + 'comparable with a whole one.',
-    },
-    {
-      key: 'hours',
-      series: years.map((year) => year.focusHours),
-      label: 'Hours logged',
-      value: fmtNumber(Math.round(last.focusHours)),
-      unit: last.partial ? 'so far' : undefined,
-      note: `${fmtNumber(Math.round(first.focusHours))} in ${first.label}`,
-      tone: 'amber',
-      glyph: 'clock',
-    },
-  ];
-
-  return <StatRow stats={stats} />;
-}
-
-/**
- * Every year the account has been present for, oldest first.
- *
- * A table rather than a chart, and deliberately. Six rows of eight figures is
- * not a shape — it is a set of readings a person wants to compare across two
- * axes at once, which is the one job a table does better than any picture, and
- * the page already states its argument in a sentence above. A stack of six bar
- * charts would take four times the room to say less.
- */
-function YearTable({ years }: { years: GrowthYear[] }) {
-  return (
-    /* No XP column. It is tasks multiplied by their average value, and on a
-       page about improvement it moves for the same reason the task count does
-       — so it was a second copy of a column already there, in bigger numbers.
-       The XP that is worth stating is the 30-day comparison below, which is
-       about standing rather than about volume. */
     <Panel
-      title="Year by year"
-      note="Volume from your XP ledger; the two ratings from the tasks that carry both"
+      title="When you work"
+      note="Over your recent record, not the period above"
+      claim={
+        core
+          ? `Half of everything you finish lands between ${hourLabel(core.from)} and `
+            + `${hourLabel(core.to)}.`
+          : undefined
+      }
     >
-      <div className="ax-gy-scroll">
-        <table className="ax-gy">
-          <thead>
-            <tr>
-              <th scope="col">Year</th>
-              <th scope="col">Days worked</th>
-              <th scope="col">Tasks</th>
-              <th scope="col">A working day</th>
-              <th scope="col">Hours</th>
-              <th scope="col">Rated</th>
-              <th scope="col">Difficulty</th>
-              <th scope="col">Execution</th>
-            </tr>
-          </thead>
-          <tbody>
-            {years.map((year) => (
-              <tr key={year.year} className={year.activeDays === 0 ? 'is-quiet' : undefined}>
-                <th scope="row">
-                  {year.label}
-                  {/* Marked, not hidden. Its totals are real and lower than a
-                      full year's, and the reader has to know which is which. */}
-                  {year.partial && <span className="ax-gy-part">part year</span>}
-                </th>
-                <td>{fmtNumber(year.activeDays)}</td>
-                <td>{fmtNumber(year.tasks)}</td>
-                <td>{year.tasksPerActiveDay.toFixed(1)}</td>
-                <td>{fmtNumber(Math.round(year.focusHours))}</td>
-                {/* The evidence base for the two columns after it, set back
-                    because it qualifies them rather than being a reading of
-                    its own. */}
-                <td className="is-aside">{fmtNumber(year.rated)}</td>
-                <td>{orDash(year.difficulty?.toFixed(1))}</td>
-                <td className="is-lead">{orDash(year.execution?.toFixed(1))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {core === null ? (
+        <p className="ax-empty">
+          A shape needs a few weeks of finished tasks with times on them. This fills in on
+          its own.
+        </p>
+      ) : (
+        <ul className="ax-gy-notes">
+          <li>
+            <span>Your core hours</span>
+            <strong>
+              {hourLabel(core.from)} – {hourLabel(core.to)}
+            </strong>
+          </li>
+          <li>
+            <span>Share of finished work in them</span>
+            <strong>{Math.round(core.share)}%</strong>
+          </li>
+          {clock.peak && (
+            <li>
+              <span>Busiest single hour</span>
+              <strong>
+                {clock.peak.label} <em>{clock.peak.tasks} tasks</em>
+              </strong>
+            </li>
+          )}
+          <li>
+            <span>Finished after 10 PM or before 5 AM</span>
+            <strong>{Math.round(clock.lateShare)}%</strong>
+          </li>
+        </ul>
+      )}
     </Panel>
   );
 }

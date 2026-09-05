@@ -236,10 +236,26 @@ export interface GrowthArc {
    * beside it — the same rule `currentState` follows in utils/insight.
    */
   sentence: string | null;
+  /**
+   * The same reading in four or five words, for setting large.
+   *
+   * The Growth tab prints this at the top in the biggest type on the page and
+   * the sentence underneath it, so the two are one claim at two lengths and
+   * are assigned in the same branch for the same reason `sentence` is
+   * assembled rather than written: a headline kept anywhere else drifts.
+   *
+   * It exists because `kind` cannot be printed. Five kinds cover six branches
+   * — `harder` is both "you took on more" and "some of this is easier work",
+   * which are opposite news — so a caller mapping the kind to a phrase would
+   * have to re-derive the branch off `difficultyShift` to tell them apart, and
+   * that is the duplicated arithmetic this field removes.
+   */
+  headline: string | null;
 }
 
 const noArc: GrowthArc = {
-  from: null, to: null, executionGain: null, difficultyShift: null, kind: null, sentence: null,
+  from: null, to: null, executionGain: null, difficultyShift: null, kind: null,
+  sentence: null, headline: null,
 };
 
 /**
@@ -277,35 +293,42 @@ export function growthArc(years: GrowthYear[]): GrowthArc {
 
   let kind: ArcKind;
   let sentence: string;
+  let headline: string;
 
   if (rose && !harder && !easier) {
     kind = 'better';
+    headline = 'You got better at the work';
     sentence = `From ${span} your execution went ${exec} out of 5 while the difficulty of what `
       + `you took on held at ${to.difficulty!.toFixed(1)}. You got better at the work rather than `
       + `picking easier work.`;
   } else if (rose && harder) {
     kind = 'both';
+    headline = 'Harder work, executed better';
     sentence = `From ${span} your execution went ${exec} out of 5 and the difficulty you took on `
       + `went ${diff}. Harder work, executed better.`;
   } else if (rose && easier) {
     // Said plainly. This is the one case where a rising execution score is not
     // evidence of improvement, and the page does not get to omit it.
     kind = 'harder';
+    headline = 'Some of the rise is easier work';
     sentence = `From ${span} your execution went ${exec} out of 5, but the difficulty of what you `
       + `took on went ${diff}. Some of that rise is easier work.`;
   } else if (harder && !fell) {
     kind = 'harder';
+    headline = 'Harder work, held steady';
     sentence = `From ${span} the difficulty you took on went ${diff} and your execution held at `
       + `${to.execution!.toFixed(1)} out of 5. Harder work, held steady.`;
   } else if (fell) {
     kind = 'slipped';
+    headline = 'Execution slipped';
     sentence = `From ${span} your execution went ${exec} out of 5, against difficulty going `
       + `${diff}.`;
   } else {
     kind = 'flat';
+    headline = 'Steady on both';
     sentence = `From ${span} your execution held around ${to.execution!.toFixed(1)} out of 5 and `
       + `the difficulty you took on around ${to.difficulty!.toFixed(1)}. Steady on both.`;
   }
 
-  return { from, to, executionGain, difficultyShift, kind, sentence };
+  return { from, to, executionGain, difficultyShift, kind, sentence, headline };
 }

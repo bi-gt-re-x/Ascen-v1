@@ -14,6 +14,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import type { ReactElement } from 'react';
 import { NEED_DAYS } from '../useAnalyticsModel';
+import { consistency } from '../data';
 import { TONE_RULES } from '@/utils/analyticsPrefs';
 import { balanceShape, clockShape, rhythmShape, weekShape } from '@/utils/behaviour';
 import { habitSummary } from '@/utils/habits';
@@ -64,6 +65,12 @@ export function fakeModel(over: Partial<AnalyticsModel> = {}): AnalyticsModel {
     toIso: '2026-08-01',
     spanText: 'the last 90 days',
     span: '90',
+    // The year of days, and the rate drawn over it. From the real constructor
+    // rather than a literal, for the reason the note above `EMPTY` gives: this
+    // is what the page hands the panel on an account with no record, and it
+    // cannot fall out of step with the type when a field is added.
+    heatRows: [],
+    rhythmRate: consistency({ current: [], previous: [] }),
     // Habits
     habits: [],
     byDate: new Map(),

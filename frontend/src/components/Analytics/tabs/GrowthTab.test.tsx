@@ -1,215 +1,331 @@
 /**
- * The Growth tab: its gate, its table, and the claim at the top of it.
+ * The Growth tab: the period half.
  *
- * The arithmetic is pinned in utils/growthYears.test.ts — this is about what
- * the tab does with it. Three things are worth holding here:
+ * Everything on this tab is a *pair* — a period and the equivalent period
+ * before it — and most of what can go wrong is a pair that has quietly become
+ * one figure. So these hold four things:
  *
- *   * the gate counts *years*, not days, because no number of days inside one
- *     calendar year produces a second one to compare against;
- *   * a partial year is drawn and labelled rather than dropped or quietly
- *     shown as a decline;
- *   * the headline is the arc sentence and nothing else, which is the reason
- *     this tab is the only one with no `TabOpening` above it.
+ *   * the period row is the control and the summary at once, and a period with
+ *     nothing before it says so rather than printing a growth figure;
+ *   * "biggest improvement" is ranked on points moved, not on percentage, so a
+ *     metric climbing 4 → 12 cannot outrank a month's real work;
+ *   * a movement smaller than `HELD` is reported as held, in both directions;
+ *   * nothing on the tab invents a comparison when `previous` is null.
+ *
+ * The scoring itself is not tested here and cannot be: it is
+ * `backend/tracking/analytics.py`, and tests/test_report_card.py is where it is
+ * pinned. This suite feeds the tab a response and checks what it says about it.
+ *
+ * The year-on-year half lives in ../GrowthYears.test.tsx.
  */
 import { screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import { GrowthTab } from './GrowthTab';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { draw, fakeModel } from './fixtures';
-import type { GrowthDay, Task } from '@/types';
+import type { GrowthPeriods, MetricScores, PeriodSide } from '@/services/analytics';
 
-const day = (date: string, over: Partial<GrowthDay> = {}): GrowthDay =>
-  ({
-    date, day_number: 1, xp_earned: 0, tasks_completed: 0, cumulative_xp: 0,
-    avg_task_xp: 0, focus_minutes: 0, cumulative_focus_minutes: 0,
-    rated_tasks: 0, quality_score: 0, avg_difficulty: 0, avg_execution: 0,
+vi.mock('@/hooks', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks')>()),
+  useUserData: () => ({ username: 'tester' }),
+}));
+
+vi.mock('@/services', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/services')>();
+  return { ...real, analytics: { ...real.analytics, growthPeriods: vi.fn() } };
+});
+
+const { analytics: analyticsService } = await import('@/services');
+const growthPeriods = vi.mocked(analyticsService.growthPeriods);
+
+const { GrowthTab } = await import('./GrowthTab');
+
+// --------------------------------------------------------------------------
+const scores = (over: Partial<MetricScores> = {}): MetricScores => ({
+  productivity: 50, quality: 50, consistency: 50, efficiency: 50, focus: 50, ...over,
+});
+
+/**
+ * One side of a comparison.
+ *
+ * `figures` matters as much as `parts` here: the tab prints the measured
+ * quantity under every score, and "what changed" is assembled *only* from
+ * these, so a fixture whose two sides share them produces a tab with nothing
+ * to say. `moved` is what makes the two sides differ.
+ */
+function side(parts: MetricScores, overall: number, moved = 0): PeriodSide {
+  return {
+    overall,
+    grade: 'C',
+    parts,
+    grades: {
+      productivity: 'C', quality: 'C', consistency: 'C', efficiency: 'C', focus: 'C',
+    },
+    figures: {
+      productivity: { avg_daily_xp: 200 + moved * 40 },
+      quality: {
+        basis: 'ratings', avg_quality: 12.5 + moved, max_quality: 25, rated_tasks: 40,
+        total_tasks: 60, avg_difficulty: 3.4, avg_execution: 3.6,
+      },
+      consistency: { active_days: 20 + moved * 2, total_days: 30, rate: 67 },
+      efficiency: { on_time_pct: 70 + moved * 5, has_timing: true, avg_minutes: 42 },
+      focus: { focused_minutes: 600 + moved * 90, goal_minutes: 900, pct_of_goal: 67 },
+    },
+  };
+}
+
+function payload(over: Partial<GrowthPeriods> = {}): GrowthPeriods {
+  const now = scores({ efficiency: 80, focus: 62 });
+  const then = scores({ efficiency: 60, focus: 58 });
+  return {
+    period: '30d',
+    label: 'Last 30 days',
+    start: '2026-08-06',
+    end: '2026-09-04',
+    days: 30,
+    trend_window: 7,
+    current: side(now, 58, 1),
+    previous: side(then, 54, 0),
+    change: {
+      overall: 7.4, productivity: 0, quality: 0, consistency: 0,
+      efficiency: 33.3, focus: 6.9,
+    },
+    series: [
+      { date: '2026-08-06', overall: 54, ...then },
+      { date: '2026-08-20', overall: 56, ...scores({ efficiency: 70, focus: 60 }) },
+      { date: '2026-09-04', overall: 58, ...now },
+    ],
+    periods: [
+      { key: '7d', label: 'Last 7 days', days: 7, overall: 60, previous: 55, change: 9.1, partial: false },
+      { key: '30d', label: 'Last 30 days', days: 30, overall: 58, previous: 54, change: 7.4, partial: false },
+      { key: '90d', label: 'Last 3 months', days: 90, overall: 55, previous: 57, change: -3.5, partial: false },
+      { key: '180d', label: 'Last 6 months', days: 180, overall: 54, previous: 54, change: 0, partial: false },
+      { key: '365d', label: 'Last year', days: 365, overall: 52, previous: 48, change: 8.3, partial: false },
+      { key: 'all', label: 'Since you started', days: 900, overall: 50, previous: null, change: null, partial: false },
+    ],
     ...over,
-  }) as GrowthDay;
+  };
+}
 
-function year(y: number, opts: { from?: number; to?: number; tasks?: number; xp?: number } = {}) {
-  const days: GrowthDay[] = [];
-  for (let n = opts.from ?? 1; n <= (opts.to ?? 366); n += 1) {
-    const at = new Date(Date.UTC(y, 0, n));
-    if (at.getUTCFullYear() !== y) break;
-    days.push(day(at.toISOString().slice(0, 10), {
-      tasks_completed: opts.tasks ?? 0,
-      xp_earned: opts.xp ?? 0,
+const serve = (data: GrowthPeriods = payload()) =>
+  growthPeriods.mockResolvedValue({ success: true, ...data } as never);
+
+beforeEach(() => {
+  growthPeriods.mockReset();
+});
+
+// --------------------------------------------------------------------------
+describe('the period row', () => {
+  it('offers every period as a control that states its own growth', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+
+    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+    const buttons = within(row).getAllByRole('button');
+    expect(buttons).toHaveLength(6);
+    // The control and the summary are one object: pressing it is worth doing
+    // because of the figure printed on it.
+    expect(within(row).getByText('+9.1%')).toBeInTheDocument();
+    expect(within(row).getByText('−3.5%')).toBeInTheDocument();
+  });
+
+  it('marks the open period pressed, and no other', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+    const pressed = within(row)
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-pressed') === 'true');
+    expect(pressed).toHaveLength(1);
+    expect(pressed[0]!.textContent).toContain('Last 30 days');
+  });
+
+  it('asks the server again when a different period is pressed', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+
+    await userEvent.click(within(row).getByRole('button', { name: /Last year/ }));
+    expect(growthPeriods).toHaveBeenCalledWith('365d');
+  });
+
+  it('falls back to points moved where there is no percentage of nothing', async () => {
+    /* A score that went 0 -> 44 grew by an undefined share of zero, so the
+       backend sends null rather than inventing +100%. A dash in 52px type is
+       the one reading of that movement which says nothing, so the tab states
+       it in the units the scores are already in. */
+    serve(payload({
+      periods: payload().periods.map((card) =>
+        card.key === '7d' ? { ...card, previous: 0, overall: 44, change: null } : card),
     }));
-  }
-  return days;
-}
-
-/** Integer ratings mixed to land on the means given. */
-function rated(y: number, count: number, difficulty: number, execution: number): Task[] {
-  const split = (t: number) => ({ low: Math.floor(t), highs: Math.round((t - Math.floor(t)) * count) });
-  const d = split(difficulty);
-  const e = split(execution);
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${y}-${i}`, title: 't', status: 'done',
-    completed_at: `${y}-06-15T12:00:00`,
-    difficulty: i < d.highs ? d.low + 1 : d.low,
-    execution: i < e.highs ? e.low + 1 : e.low,
-  }) as unknown as Task);
-}
-
-const model = (all: GrowthDay[], tasks: Task[] = []) => fakeModel({ all, tasks });
-
-describe('the gate', () => {
-  it('refuses on a single year, however much is in it', () => {
-    // A whole busy year is still one row, and one row is not a comparison.
-    draw(<GrowthTab model={model(year(2025, { tasks: 5, xp: 50 }), rated(2025, 400, 3, 4))} />);
-    expect(screen.getByText(/needs two years to hold against each other/i)).toBeInTheDocument();
-    expect(document.querySelector('.ax-gy')).toBeNull();
+    draw(<GrowthTab model={fakeModel()} />);
+    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+    expect(within(row).getByText('+44 pts')).toBeInTheDocument();
   });
 
-  it('does not count a year the account sat out toward the two', () => {
-    const all = [...year(2024, { tasks: 2 }), ...year(2025)];
-    draw(<GrowthTab model={model(all)} />);
-    expect(screen.getByText(/needs two years to hold against each other/i)).toBeInTheDocument();
-  });
-
-  it('opens once two years have work in them', () => {
-    const all = [...year(2024, { tasks: 2 }), ...year(2025, { tasks: 3 })];
-    draw(<GrowthTab model={model(all)} />);
-    expect(screen.queryByText(/needs two years/i)).not.toBeInTheDocument();
-    expect(document.querySelector('.ax-gy')).not.toBeNull();
+  it('says a period has nothing before it rather than printing a growth figure', async () => {
+    // "Since you started" reaches back to the first day by definition, so there
+    // is no earlier equivalent. A "+100%" here would mean "we had no idea".
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const row = await screen.findByRole('navigation', { name: /Growth period/i });
+    const all = within(row).getByRole('button', { name: /Since you started/ });
+    expect(all.textContent).toContain('—');
+    expect(all.textContent).toContain('nothing before it');
   });
 });
 
-describe('the table', () => {
-  const all = [
-    ...year(2023, { from: 200, tasks: 1, xp: 10 }), // joined mid-year
-    ...year(2024, { tasks: 2, xp: 20 }),
-    ...year(2025, { to: 120, tasks: 3, xp: 30 }), // still running
-  ];
-
-  it('draws a row per year the account has been present for', () => {
-    draw(<GrowthTab model={model(all)} />);
-    const rows = document.querySelectorAll('.ax-gy tbody tr');
-    expect(rows).toHaveLength(3);
-    expect([...rows].map((r) => r.querySelector('th')?.textContent)).toEqual([
-      '2023part year', '2024', '2025part year',
-    ]);
+describe('the verdict', () => {
+  it('states overall growth in the biggest type, with the grades either side', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    // Scoped to the verdict: the 30-day period card states the same figure,
+    // which is the point of the row and not a duplicate to be deduplicated.
+    const verdict = (await screen.findByText(/Overall growth/i))
+      .closest('.ax-gp-verdict') as HTMLElement;
+    expect(within(verdict).getByText('+7.4%').className).toContain('ax-gp-big');
+    expect(document.querySelector('.ax-gp-grade.is-was')).not.toBeNull();
+    expect(document.querySelector('.ax-gp-grade.is-now')).not.toBeNull();
   });
 
-  it('marks the first and last years partial and no others', () => {
-    draw(<GrowthTab model={model(all)} />);
-    expect(screen.getAllByText('part year')).toHaveLength(2);
-  });
+  it('draws one grade and an explanation when there is nothing to compare to', async () => {
+    serve(payload({ previous: null, change: {
+      overall: null, productivity: null, quality: null,
+      consistency: null, efficiency: null, focus: null,
+    } }));
+    draw(<GrowthTab model={fakeModel()} />);
 
-  it('sets a year with nothing rated as a dash, never a zero', () => {
-    // Zero would draw as "rated badly" on a year nobody answered for.
-    draw(<GrowthTab model={model(all)} />);
-    const row = document.querySelectorAll('.ax-gy tbody tr')[1] as HTMLElement;
-    const cells = [...row.querySelectorAll('td')].map((c) => c.textContent);
-    expect(cells.slice(-2)).toEqual(['—', '—']);
-  });
-
-  it('sets back a year the account was present for and did nothing in', () => {
-    const quiet = [...year(2023, { tasks: 1 }), ...year(2024), ...year(2025, { tasks: 1 })];
-    draw(<GrowthTab model={model(quiet)} />);
-    const rows = [...document.querySelectorAll('.ax-gy tbody tr')];
-    expect(rows[1]!.className).toContain('is-quiet');
-    expect(rows[0]!.className).not.toContain('is-quiet');
+    const verdict = (await screen.findByText(/Overall growth/i))
+      .closest('.ax-gp-verdict') as HTMLElement;
+    expect(within(verdict).getByText(/nothing before it to compare against/i))
+      .toBeInTheDocument();
+    expect(document.querySelector('.ax-gp-grade.is-was')).toBeNull();
   });
 });
 
-describe('the headline', () => {
-  it('states the arc, naming both ratings', () => {
-    const all = [...year(2024, { tasks: 2 }), ...year(2025, { tasks: 2 })];
-    const tasks = [...rated(2024, 60, 3, 2.8), ...rated(2025, 60, 3, 3.7)];
-    draw(<GrowthTab model={model(all, tasks)} />);
-
-    const lead = document.querySelector('.ax-gy-lead') as HTMLElement;
-    expect(lead).not.toBeNull();
-    expect(lead.textContent).toMatch(/better at the work rather than picking easier work/);
-    // Both figures, not just the flattering one.
-    expect(lead.textContent).toMatch(/2\.8 to 3\.7/);
-    expect(lead.textContent).toMatch(/3\.0/);
+describe('the movers', () => {
+  it('names the metric that moved furthest each way', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const best = (await screen.findByRole('heading', { name: /Biggest improvement/ }))
+      .closest('.ax-panel') as HTMLElement;
+    expect(within(best).getByText('Efficiency')).toBeInTheDocument();
   });
 
-  it('says plainly when a rising score came with easier work', () => {
-    const all = [...year(2024, { tasks: 2 }), ...year(2025, { tasks: 2 })];
-    const tasks = [...rated(2024, 60, 4.2, 2.6), ...rated(2025, 60, 3, 3.6)];
-    draw(<GrowthTab model={model(all, tasks)} />);
-    expect(document.querySelector('.ax-gy-lead')!.textContent)
-      .toMatch(/Some of that rise is easier work/);
+  it('ranks on points moved, not on percentage', async () => {
+    /* The trap. A metric going 2 → 8 is "+300%" and is a rounding error on a
+       measure that was barely registering; one going 60 → 80 is "+33%" and is
+       the reader's month. Ranking on the percentage puts the noise on top. */
+    serve(payload({
+      current: side(scores({ productivity: 8, efficiency: 80 }), 58),
+      previous: side(scores({ productivity: 2, efficiency: 60 }), 54),
+      change: {
+        overall: 7.4, productivity: 300, quality: 0,
+        consistency: 0, efficiency: 33.3, focus: 0,
+      },
+    }));
+    draw(<GrowthTab model={fakeModel()} />);
+
+    const best = (await screen.findByRole('heading', { name: /Biggest improvement/ }))
+      .closest('.ax-panel') as HTMLElement;
+    expect(within(best).getByText('Efficiency')).toBeInTheDocument();
+    expect(within(best).queryByText('Productivity')).toBeNull();
   });
 
-  it('draws no headline at all when nothing is rated', () => {
-    // The table still stands — volume is a fact — but the claim needs ratings
-    // and the tab does not invent one.
-    const all = [...year(2024, { tasks: 2 }), ...year(2025, { tasks: 2 })];
-    draw(<GrowthTab model={model(all)} />);
-    expect(document.querySelector('.ax-gy-lead')).toBeNull();
-    expect(document.querySelector('.ax-gy')).not.toBeNull();
-  });
-});
-
-describe('the ratings chart', () => {
-  const all = [...year(2023, { tasks: 2 }), ...year(2024, { tasks: 2 }), ...year(2025, { tasks: 2 })];
-  const tasks = [
-    ...rated(2023, 40, 3, 2.8), ...rated(2024, 40, 3, 3.2), ...rated(2025, 40, 3, 3.7),
-  ];
-
-  it('draws execution and difficulty as two lines on one box', () => {
-    draw(<GrowthTab model={model(all, tasks)} />);
-    // One filled area (execution) and two lines; difficulty is unfilled,
-    // because two washes on one box leave a band belonging to neither.
-    expect(document.querySelectorAll('.ax-chart-line')).toHaveLength(2);
-    expect(document.querySelectorAll('.ax-chart-area')).toHaveLength(1);
-    expect(document.querySelectorAll('.ax-chart-line.is-muted')).toHaveLength(1);
-  });
-
-  it('pins the axis to the five points a rating actually has', () => {
-    // Left to scale itself the box would run 0 to 3.7 here, which draws a
-    // five-point scale as a three-point one and exaggerates every wobble in
-    // the flat line — the line whose flatness is the whole claim.
-    draw(<GrowthTab model={model(all, tasks)} />);
-    const ticks = [...document.querySelectorAll('.ax-chart-y span')].map((t) => t.textContent);
-    expect(ticks).toEqual(['5', '4', '3', '2', '1', '0']);
-    // The top tick is real: nothing is drawn above four fifths of the height.
-    const d = document.querySelector('.ax-chart-line')!.getAttribute('d')!;
-    const ys = [...d.matchAll(/,([\d.]+)/g)].map((m) => Number(m[1]));
-    expect(Math.min(...ys)).toBeGreaterThan(0);
-  });
-
-  it('marks one point per rated year, in order', () => {
-    draw(<GrowthTab model={model(all, tasks)} />);
-    expect([...document.querySelectorAll('.ax-chart-x span')].map((m) => m.textContent))
-      .toEqual(['2023', '2024', '2025']);
-  });
-
-  it('says so rather than drawing an empty box on one rated year', () => {
-    const thin = [...rated(2025, 40, 3, 3.7)];
-    draw(<GrowthTab model={model(all, thin)} />);
-    expect(document.querySelector('.ax-chart')).toBeNull();
-    expect(screen.getByText(/Two years with ratings on them draws this/)).toBeInTheDocument();
-  });
-
-  it('warns that the two lines are not a race', () => {
-    // They share an axis because both are out of five, but they answer
-    // different questions, so which sits higher means nothing.
-    draw(<GrowthTab model={model(all, tasks)} />);
-    expect(screen.getByRole('button', { name: /Reading this/ })).toBeInTheDocument();
+  it('says nothing moved rather than promoting a wobble', async () => {
+    // Everything inside the threshold in `HELD`, which is the window sliding
+    // rather than the reader changing.
+    const flat = scores();
+    serve(payload({
+      current: side(flat, 50),
+      previous: side(scores({ efficiency: 52 }), 50),
+      change: {
+        overall: 0, productivity: 0, quality: 0, consistency: 0, efficiency: -3.8, focus: 0,
+      },
+    }));
+    draw(<GrowthTab model={fakeModel()} />);
+    expect(await screen.findByText(/Nothing moved up by more than a few points/i))
+      .toBeInTheDocument();
+    expect(screen.getByText(/Nothing fell by more than a few points/i)).toBeInTheDocument();
   });
 });
 
-describe('the standing panel', () => {
-  it('keeps the percentile the Records tab was carrying', () => {
-    const all = [...year(2024, { tasks: 2, xp: 20 }), ...year(2025, { tasks: 3, xp: 40 })];
-    draw(<GrowthTab model={model(all)} />);
-    expect(screen.getByRole('heading', { name: /Where this month sits/i })).toBeInTheDocument();
-    expect(screen.getByText(/Your best 30/)).toBeInTheDocument();
+describe('then and now', () => {
+  it('prints every metric before and after, in the units it was measured in', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+
+    const rows = await screen.findByRole('heading', { name: /^Then and now$/ });
+    const panel = rows.closest('.ax-panel') as HTMLElement;
+    expect(panel.querySelectorAll('.ax-gp-metric')).toHaveLength(5);
+    // The score is a position on a scale nobody designed; the quantity is what
+    // actually happened, so both are on the row.
+    expect(within(panel).getAllByText(/22 of 30 days worked/).length).toBeGreaterThan(0);
+    expect(within(panel).getAllByText(/11\.5 hrs of a 15\.0 hr goal/).length).toBeGreaterThan(0);
   });
 
-  it('compares a partial year on a rate, not on a total', () => {
-    // The trap: a four-month year has a smaller total than the year before it
-    // and that is not a decline. The tile row says so in per-working-day terms.
-    const all = [...year(2024, { tasks: 3 }), ...year(2025, { to: 120, tasks: 3 })];
-    draw(<GrowthTab model={model(all)} />);
-    const tiles = document.querySelector('.ax-tiles') as HTMLElement;
-    expect(within(tiles).getByText('Tasks a working day')).toBeInTheDocument();
-    // Same rate at both ends, so the note reports no fall.
-    expect(within(tiles).getByText('3.0 in 2024')).toBeInTheDocument();
+  it('says which basis a quality score came from rather than assuming ratings', async () => {
+    const unrated = side(scores(), 50);
+    unrated.figures.quality = { basis: 'xp', avg_task_xp: 30, rated_tasks: 0, total_tasks: 12 };
+    serve(payload({ current: unrated, previous: null, change: {
+      overall: null, productivity: null, quality: null,
+      consistency: null, efficiency: null, focus: null,
+    } }));
+    draw(<GrowthTab model={fakeModel()} />);
+    expect(await screen.findByText(/no ratings yet — scored on task XP/)).toBeInTheDocument();
+  });
+});
+
+describe('what changed', () => {
+  it('names the quantities rather than restating the scores', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    // Assembled from the figures, so it cannot drift from them. The metric
+    // rows print the same quantity, so this looks only at the prose block.
+    const list = (await screen.findByRole('heading', { name: /^What changed$/ }))
+      .closest('.ax-panel')!
+      .querySelector('.ax-gp-changes');
+    expect(list).not.toBeNull();
+    expect(list!.textContent).toContain('% of tasks by their deadline');
+    expect(list!.textContent).toContain('XP a working day');
+  });
+
+  it('draws nothing to compare when there is no previous period', async () => {
+    serve(payload({ previous: null, change: {
+      overall: null, productivity: null, quality: null,
+      consistency: null, efficiency: null, focus: null,
+    } }));
+    draw(<GrowthTab model={fakeModel()} />);
+    expect(await screen.findByText(/nothing before it to have changed from/i))
+      .toBeInTheDocument();
+  });
+});
+
+describe('the chart', () => {
+  it('opens on the overall line alone', async () => {
+    // Five crossing lines is the puzzle this tab replaced. The rest are one
+    // press away, which is what a reader does after the overall line raises a
+    // question.
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    const on = await screen.findAllByRole('button', { pressed: true });
+    const toggles = on.filter((button) => button.className.includes('ax-gp-toggle'));
+    expect(toggles.map((button) => button.textContent)).toEqual(['Overall']);
+    expect(document.querySelectorAll('.ax-gp-line')).toHaveLength(1);
+  });
+
+  it('adds a line when its metric is switched on', async () => {
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Consistency' }));
+    expect(document.querySelectorAll('.ax-gp-line')).toHaveLength(2);
+  });
+
+  it('refuses to be emptied', async () => {
+    // An empty chart box reads as a chart that broke rather than as one the
+    // reader emptied.
+    serve();
+    draw(<GrowthTab model={fakeModel()} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Overall' }));
+    expect(document.querySelectorAll('.ax-gp-line')).toHaveLength(1);
   });
 });

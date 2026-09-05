@@ -56,6 +56,14 @@ interface Drawn {
   /** Where the drawn part begins and ends, for closing an area under it. */
   fromX: number;
   toX: number;
+  /**
+   * Every point the line actually passes through, in box units.
+   *
+   * For `dots`. Recomputing these beside the path would be the same arithmetic
+   * written twice, and a marker half a pixel off its own line is the kind of
+   * wrong that looks like a rendering bug rather than a mistake.
+   */
+  points: Array<[number, number]>;
 }
 
 /**
@@ -85,6 +93,7 @@ function linePath(
   const steps = values.length - 1;
 
   const parts: string[] = [];
+  const points: Array<[number, number]> = [];
   let fromX: number | null = null;
   let toX = 0;
   let drawn = 0;
@@ -100,6 +109,7 @@ function linePath(
     const x = (at?.[index] ?? index / steps) * width;
     const y = pad + inner - ((value - min) / span) * inner;
     parts.push(`${open ? 'L' : 'M'}${x.toFixed(2)},${y.toFixed(2)}`);
+    points.push([x, y]);
     if (fromX === null) fromX = x;
     toX = x;
     drawn += 1;
@@ -107,7 +117,7 @@ function linePath(
   });
 
   if (drawn < 2 || fromX === null) return null;
-  return { d: parts.join(' '), fromX, toX };
+  return { d: parts.join(' '), fromX, toX, points };
 }
 
 // --------------------------------------------------------------------------
@@ -212,6 +222,26 @@ export interface AreaSeries {
    * unbroken wash.
    */
   line?: boolean;
+  /**
+   * A marker on every point the series passes through. Off by default.
+   *
+   * For a series whose points are *readings* rather than samples. The
+   * trajectory and compounding charts carry sixty and more points each, where
+   * a marker per point is a string of beads and the shape is the whole content
+   * — so those stay bare. The Growth tab's ratings are one reading a year, six
+   * of them, and without markers a reader cannot see where a year sits: the
+   * line between 2023 and 2024 looks exactly like the line through them.
+   *
+   * ## Why these are drawn as a path and not as circles
+   *
+   * The box is `preserveAspectRatio="none"`, so a `<circle>` in it comes out an
+   * ellipse of whatever eccentricity the panel's width happens to give it —
+   * and changes shape at every breakpoint. A zero-length subpath — `M x,y
+   * L x,y` — with a round cap and `non-scaling-stroke` is a dot of exactly
+   * `stroke-width` *screen* pixels, round at every width, which is what the
+   * rest of this file already relies on to keep its lines an even weight.
+   */
+  dots?: boolean;
 }
 
 /** How far back a series is painted: the wash, then the second line, then the
@@ -358,6 +388,21 @@ export function AreaChart({ series, ticks, marks, id, at, height = 200, max: cei
                       stroke={toneVar(entry.tone)}
                       strokeWidth={entry.muted ? 1.5 : 2}
                       strokeLinejoin="round"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )}
+                  {/* Over the line rather than under it: a marker the line is
+                      drawn across is a bulge in the line, not a point. */}
+                  {entry.dots && (
+                    <path
+                      className={`ax-chart-dot${entry.muted ? ' is-muted' : ''}`}
+                      d={drawn.points
+                        .map(([x, y]) => `M${x.toFixed(2)},${y.toFixed(2)}L${x.toFixed(2)},${y.toFixed(2)}`)
+                        .join(' ')}
+                      fill="none"
+                      stroke={toneVar(entry.tone)}
+                      strokeWidth={entry.muted ? 5 : 6.5}
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
                     />

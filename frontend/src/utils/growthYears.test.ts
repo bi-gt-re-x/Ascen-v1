@@ -181,6 +181,7 @@ describe('growthArc', () => {
     expect(arc.sentence).toMatch(/better at the work rather than picking easier work/);
     // Both figures are named, whichever leads.
     expect(arc.sentence).toMatch(/2\.8 to 3\.6|2\.8 to 3\.5/);
+    expect(arc.headline).toBe('You got better at the work');
   });
 
   it('says so when a rising score came with easier work', () => {
@@ -189,6 +190,7 @@ describe('growthArc', () => {
     const tasks = [...rated(2024, 40, 4.2, 2.6), ...rated(2025, 40, 3.1, 3.6)];
     const arc = growthArc(growthYears(days, tasks));
     expect(arc.sentence).toMatch(/Some of that rise is easier work/);
+    expect(arc.headline).toBe('Some of the rise is easier work');
   });
 
   it('credits holding steady on harder work', () => {
@@ -197,6 +199,34 @@ describe('growthArc', () => {
     const arc = growthArc(growthYears(days, tasks));
     expect(arc.kind).toBe('harder');
     expect(arc.sentence).toMatch(/Harder work, held steady/);
+    expect(arc.headline).toBe('Harder work, held steady');
+  });
+
+  it('gives the two readings of `harder` different headlines', () => {
+    // The reason `headline` exists rather than being mapped from `kind` by
+    // whoever prints it. One kind, two opposite pieces of news: a caller with
+    // only the kind would have to re-derive the branch off `difficultyShift`.
+    const days = [...year(2024, { tasks: 1 }), ...year(2025, { tasks: 1 })];
+    const coped = growthArc(growthYears(days, [
+      ...rated(2024, 40, 2.5, 3.5), ...rated(2025, 40, 3.6, 3.5),
+    ]));
+    const flattered = growthArc(growthYears(days, [
+      ...rated(2024, 40, 4.2, 2.6), ...rated(2025, 40, 3.1, 3.6),
+    ]));
+    expect(coped.kind).toBe(flattered.kind);
+    expect(coped.headline).not.toBe(flattered.headline);
+  });
+
+  it('leaves the headline null wherever the sentence is null', () => {
+    // They are one claim at two lengths, so neither may stand without the
+    // other — a tab printing a headline over no sentence would be a page
+    // asserting in 30px type something it declined to explain.
+    const thin = growthArc(growthYears(
+      [...year(2024, { tasks: 1 }), ...year(2025, { tasks: 1 })],
+      [...rated(2024, MIN_RATED - 1, 3, 2), ...rated(2025, 40, 3, 4)],
+    ));
+    expect(thin.sentence).toBeNull();
+    expect(thin.headline).toBeNull();
   });
 
   it('refuses a claim on a year too thinly rated to anchor one', () => {

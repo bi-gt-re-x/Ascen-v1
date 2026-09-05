@@ -149,3 +149,91 @@ export function adoptAdvice(
 export function dropAdvice(id: string): Promise<ApiResult<AdoptedResult>> {
   return post<AdoptedResult>('/api/drop_advice', { id });
 }
+
+// --------------------------------------------------------------------------
+// Periods — the Growth tab's whole data source
+// --------------------------------------------------------------------------
+/**
+ * The windows the Growth tab offers. Mirrors `PERIODS` in
+ * backend/tracking/analytics.py, which is where the day counts live.
+ */
+export type PeriodKey = '7d' | '30d' | '90d' | '180d' | '365d' | 'all';
+
+/** The five graded measures, in the order the tab lists them. */
+export const PERIOD_METRICS = [
+  'productivity',
+  'quality',
+  'consistency',
+  'efficiency',
+  'focus',
+] as const;
+
+export type PeriodMetric = (typeof PERIOD_METRICS)[number];
+
+/** Every metric's 0-100 score for one window. */
+export type MetricScores = Record<PeriodMetric, number>;
+
+/** One window, scored, with the measured figures the scores came from. */
+export interface PeriodSide {
+  /** The mean of the five, 0-100. */
+  overall: number;
+  grade: string;
+  parts: MetricScores;
+  grades: Record<PeriodMetric, string>;
+  /** The quantities behind each score, in their own units. Shapes vary. */
+  figures: Record<PeriodMetric, Record<string, unknown>>;
+  /** Only on `previous`: which days it covered. */
+  start?: string;
+  end?: string;
+}
+
+/** A point on the growth line — the five metrics over the days behind it. */
+export interface PeriodPoint extends MetricScores {
+  date: string;
+  overall: number;
+}
+
+/** One card in the "growth by period" row. */
+export interface PeriodCard {
+  key: PeriodKey;
+  label: string;
+  days: number;
+  overall: number;
+  /** The equivalent stretch before it, or null when there was not one. */
+  previous: number | null;
+  /** Percentage movement against that, or null. */
+  change: number | null;
+  /** True when the account is younger than the window the label names. */
+  partial: boolean;
+}
+
+export interface GrowthPeriods {
+  period: PeriodKey;
+  label: string;
+  start: string;
+  end: string;
+  days: number;
+  /** How many days each point on the line was scored over. */
+  trend_window: number;
+  current: PeriodSide;
+  /** Null when the account has no equal stretch before this one. */
+  previous: PeriodSide | null;
+  /** Percentage movement per metric, and overall. Null where there is no base. */
+  change: { overall: number | null } & Record<PeriodMetric, number | null>;
+  series: PeriodPoint[];
+  periods: PeriodCard[];
+}
+
+/**
+ * The five metrics over a period, the period before it, and a line.
+ *
+ * The one call the Growth tab makes, and the page's one deliberate exception to
+ * "a tab costs no request" — see the endpoint in backend/api/analytics.py for
+ * why this cannot be arithmetic in the browser like everything else here. In
+ * short: focus needs each day's goal, which the growth series does not send,
+ * and mirroring the five formulas in TypeScript would create the second scoring
+ * implementation this codebase has one rule against.
+ */
+export function growthPeriods(period: PeriodKey = '30d'): Promise<ApiResult<GrowthPeriods>> {
+  return get<GrowthPeriods>('/api/growth_periods', { period });
+}

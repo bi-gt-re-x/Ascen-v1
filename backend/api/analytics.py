@@ -364,3 +364,53 @@ def drop_advice(body: DropAdvice, username: str = Depends(current_username)):
     stored = db.set_user_setting(username, ADOPTED_KEY, rows)
 
     return ok(adopted=_adopted(stored))
+
+
+@router.get('/api/growth_periods')
+def get_growth_periods(username: str = Depends(current_username), period: str = '30d'):
+    """The five metrics over one period, the period before it, and a line.
+
+    The Growth tab's whole data source. It asks a different question from
+    `/api/get_growth_ratings` — that one says how the account is doing *now*,
+    scored over a fixed trailing ninety days, and this one says how it has
+    *changed*, over whichever window the reader picked.
+
+    ## Why the client cannot do this itself
+
+    Every other figure the analytics page draws is arithmetic over the day
+    series in the browser, and the page's oldest rule is that a tab costs no
+    request. This is the exception, for two reasons that are both about the
+    data rather than about the arithmetic.
+
+    The first is that two of the five metrics are not derivable from what the
+    browser has. Efficiency needs each task's `met_deadline`, which the task
+    list does carry — but focus needs each *day's* focus goal, and the growth
+    series sends the minutes logged and not the goal they were against. A
+    client-side scorer would have had to drop focus or invent it.
+
+    The second is the rule in backend/tracking/analytics.py: there is one
+    scoring computation in this app. Mirroring five formulas in TypeScript to
+    save a request would have created the second one, and the first thing to
+    drift would have been the thing nobody checks — a clamp, a fallback, the
+    quality basis.
+
+    So `score_window` is parameterised and called from here for every window
+    the tab needs, which is six periods, their six predecessors and up to sixty
+    points of line. That is one read of the record and a walk over its days: on
+    the five-year account in this repository the whole response takes about
+    seventy milliseconds.
+
+    ## The snapshot log is not what this reads
+
+    Worth stating, because it is the obvious place to look. `metric_snapshots`
+    accumulates a dated row per metric — but only when somebody *opens* the
+    report card, so it is a log of visits rather than of days. On the account
+    here it covers three weeks against five years of record. It is right for
+    "what changed since I was last here" (`/api/metric_history`) and cannot
+    answer "how have I changed since I started", which is this tab's question.
+    """
+
+    scores = analytics_tracking.period_scores(username, period)
+    if scores is None:
+        return fail('User not found')
+    return ok(**scores)
