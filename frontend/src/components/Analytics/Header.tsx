@@ -209,6 +209,16 @@ export interface HeaderProps {
   onExport?: (() => string | null) | undefined;
   /** What the downloaded file is called. */
   exportName?: string;
+  /**
+   * Builds the CSV of the rows behind the report, or null when there are none.
+   *
+   * The second half of Export, and a different reader's half. See
+   * utils/seriesCsv for why a page making claims this strong keeps a way of
+   * checking them, and why this is scoped by the window exactly as the written
+   * report is.
+   */
+  onExportData?: (() => string | null) | undefined;
+  dataName?: string;
 }
 
 /**
@@ -227,15 +237,27 @@ export interface HeaderProps {
  * Recommendations has its own re-read, which is a different thing: that one is
  * about the clock, and it says what it does.
  */
-export function Header({ span, view, onExport, exportName }: HeaderProps) {
+export function Header({
+  span,
+  view,
+  onExport,
+  exportName,
+  onExportData,
+  dataName,
+}: HeaderProps) {
   const shown = view ?? VIEWS[0]!;
-  const save = () => {
-    const text = onExport?.();
+
+  /* One download path for both buttons. Two copies of the object-URL dance is
+     two places to forget the `revokeObjectURL`, which is a leak that never
+     shows up in testing because the page is usually navigated away from soon
+     after. */
+  const save = (build: (() => string | null) | undefined, name: string, mime: string) => {
+    const text = build?.();
     if (!text) return;
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+    const url = URL.createObjectURL(new Blob([text], { type: `${mime};charset=utf-8` }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = exportName ?? 'ascen-report.txt';
+    link.download = name;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -257,12 +279,24 @@ export function Header({ span, view, onExport, exportName }: HeaderProps) {
         <button
           type="button"
           className="ax-btn"
-          onClick={save}
+          onClick={() => save(onExport, exportName ?? 'ascen-report.txt', 'text/plain')}
           disabled={!onExport}
           title="Download a written report — your score, what the window holds, and what to change"
         >
           <span className="ax-btn-icon" aria-hidden="true" />
           Export report
+        </button>
+        {/* Quieter than the report, and second, because it is the export fewer
+            readers want — but it is the only one that can be checked, and a
+            page that grades a person should not make that the hard path. */}
+        <button
+          type="button"
+          className="ax-btn ax-btn-quiet"
+          onClick={() => save(onExportData, dataName ?? 'ascen-data.csv', 'text/csv')}
+          disabled={!onExportData}
+          title="Download the day-by-day rows this window's figures were calculated from, as a CSV"
+        >
+          Data (CSV)
         </button>
       </div>
     </header>

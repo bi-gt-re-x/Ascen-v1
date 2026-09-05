@@ -132,15 +132,23 @@ import {
 import { useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
 import { PATTERN_DAYS, RECENT_DAYS } from '@/utils/recent';
 import { buildReport, reportFilename } from '@/utils/report';
+import { buildSeriesCsv, seriesFilename } from '@/utils/seriesCsv';
 import '@/styles/analytics.css';
 /**
  * The chapters' own stylesheet, which came with them.
  *
  * Their markup is `gr-*` classes and its rules read a block of tokens that used
  * to be scoped to `#growthCard` — the id on the growth page's outer card. That
- * card is gone, so the token block and the handful of rules that depended on
- * the ancestor now answer to `.gr-scope` as well, and the four chapter tabs
- * render inside one. See the note at `.gr-scope` in the stylesheet.
+ * card is gone, and the token block and the rules that depended on the ancestor
+ * now answer to `.gr-scope`, which the four chapter tabs render inside. See the
+ * note at `.gr-scope` in the stylesheet.
+ *
+ * The `#growthCard` half is gone from the sheet too, along with the rest of the
+ * pre-React page it belonged to — its header, its dropdowns, its donut, its tab
+ * strip and its `.growth-card` shell, none of which anything has rendered since
+ * `/growth` became a React route. That was 1,300 lines, or nearly half the
+ * file: a plain `.css` import in Vite is global, so those rules were being
+ * shipped and matched against every page in the app, not just this one.
  */
 import '@/styles/growth.css';
 
@@ -274,6 +282,17 @@ export default function Analytics() {
     streak,
     username,
   ]);
+
+  /**
+   * The rows behind the report, for the reader who wants to check it.
+   *
+   * The window's own days and not the whole record, so this file and the
+   * written one describe the same period — see utils/seriesCsv. A callback for
+   * the same reason `report` is: most visits never press either button, and
+   * joining ten thousand strings on every render to be ready for one that
+   * usually does not come is work nobody asked for.
+   */
+  const exportData = useCallback(() => buildSeriesCsv(model.slice.current), [model.slice]);
 
   const openView = useCallback((next: View) => navigate(next.path), [navigate]);
 
@@ -480,6 +499,8 @@ export default function Analytics() {
           span={spanText}
           onExport={report}
           exportName={reportFilename(username ?? 'account', new Date())}
+          onExportData={model.slice.current.length > 0 ? exportData : undefined}
+          dataName={seriesFilename(username ?? 'account', new Date())}
         />
         {/* Above the bar, not inside a tab: it is true of all seven, and a
             reader who opens on Recommendations should meet it just as a reader

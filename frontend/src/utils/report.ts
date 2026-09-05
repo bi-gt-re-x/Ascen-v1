@@ -13,6 +13,13 @@
  * machine, pastes into anything, and cannot render wrong — and because the
  * thing being exported is words, and words do not need a file format.
  *
+ * **The CSV is back, beside this rather than instead of it.** The paragraph
+ * above is right about the default and was wrong to conclude there should only
+ * be one file: this page assigns a person a score out of a hundred, a letter
+ * grade and a percentile, and deleting the raw rows took away every route to
+ * checking any of it. Prose for the reader who came to be told something, rows
+ * for the one who wants to disagree. See utils/seriesCsv.
+ *
  * ## What is in it, and in what order
  *
  *     The Analytical Score      one number and its letter, at the top

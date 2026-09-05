@@ -143,10 +143,6 @@ body:has(.ax-page) .app-main {
     text-align: center;
 }
 
-/* An empty state replacing a chart takes the chart's own height, so switching
-   a picker to a metric with no data does not resize the panel. */
-.ax-empty-chart { min-height: var(--ax-chart-h, 220px); }
-
 /* One column of a panel whose other column has content. Nothing is collapsing
    here — the panel is already the height of its fuller half — and a 150px
    floor inside it would only push that half's rows apart. */
@@ -1233,6 +1229,19 @@ body:has(.ax-page) .app-main {
 .ax-btn:hover:not(:disabled) { background: var(--ax-card-2); border-color: var(--ax-violet); }
 .ax-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+/* The second export, and second on purpose.
+ *
+ * Same size and same shape as the report button, because it does the same kind
+ * of thing and a smaller control beside it would read as a footnote. Quieter in
+ * weight and colour, because fewer readers want it — and no icon, so the one
+ * download arrow on the row still points at the file most people came for. */
+.ax-btn-quiet {
+    font-weight: 500;
+    color: var(--ax-muted);
+    background: transparent;
+}
+.ax-btn-quiet:hover:not(:disabled) { color: var(--ax-text); background: var(--ax-card-2); }
+
 .ax-btn-icon {
     width: 14px; height: 14px;
     flex: none;
@@ -1854,7 +1863,6 @@ body:has(.ax-page) .app-main {
     font-size: 11.5px;
     color: var(--ax-muted);
 }
-.ax-legend-tight { margin-top: 0; gap: 12px; }
 .ax-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 
 .ax-legend-line { width: 18px; height: 2px; border-radius: 2px; }
@@ -1865,9 +1873,6 @@ body:has(.ax-page) .app-main {
     background: var(--ax-violet);
     opacity: .42;
 }
-
-.ax-swatch { width: 10px; height: 10px; border-radius: 3px; }
-.ax-swatch-was { background: var(--ax-line); border: 1px solid var(--ax-faint); }
 
 /* ---------- Growth score -------------------------------------------------- */
 .ax-score-head {
@@ -2020,15 +2025,6 @@ body:has(.ax-page) .app-main {
 }
 .ax-subject-xp { grid-area: xp; color: var(--ax-muted); font-variant-numeric: tabular-nums; }
 .ax-subject-legend .ax-delta { grid-area: delta; justify-self: end; }
-
-/* ---------- Consistency heatmap ------------------------------------------ */
-.ax-consistency-head {
-    display: flex;
-    align-items: baseline;
-    gap: 9px;
-    margin: 2px 0 2px;
-}
-.ax-consistency-head .ax-muted { font-size: 12px; }
 
 .ax-heat {
     display: flex;
@@ -2223,46 +2219,6 @@ body:has(.ax-page) .app-main {
     background: var(--ax-line);
 }
 
-.ax-timeline-dot {
-    width: 27px; height: 27px;
-    border-radius: 9px;
-    flex: none;
-    background: color-mix(in srgb, currentColor 16%, transparent);
-    position: relative;
-}
-.ax-timeline-dot::after {
-    content: '';
-    position: absolute;
-    inset: 6px;
-    background: currentColor;
-    -webkit-mask: var(--ico) center / contain no-repeat;
-    mask: var(--ico) center / contain no-repeat;
-}
-
-.ax-timeline-body { display: flex; flex-direction: column; min-width: 0; }
-.ax-timeline-body strong {
-    font-size: 12.5px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.ax-timeline-body .ax-muted { font-size: 11px; }
-
-.ax-timeline-reward {
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--ax-violet);
-    white-space: nowrap;
-}
-
-.ax-bar {
-    width: 100%;
-    border-radius: 4px 4px 0 0;
-    min-height: 2px;
-    transition: height .3s ease;
-}
-
 /* ---------- Compounding --------------------------------------------------- */
 .ax-figures {
     display: grid;
@@ -2284,33 +2240,6 @@ body:has(.ax-page) .app-main {
 }
 .ax-figure .ax-muted { font-size: 11px; }
 .ax-figure strong { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
-
-/* The callout is positioned against this, so it cannot be the chart itself —
-   but it still has to pass the panel's spare height down to it. */
-.ax-compound {
-    position: relative;
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.ax-callout {
-    position: absolute;
-    right: 4px;
-    top: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    padding: 9px 13px;
-    border-radius: 11px;
-    background: var(--ax-card);
-    border: 1px solid color-mix(in srgb, var(--ax-violet) 34%, transparent);
-    box-shadow: var(--ax-shadow);
-    text-align: center;
-}
-.ax-callout strong { font-size: 16px; font-weight: 700; color: var(--ax-violet); }
 
 /* ---------- Streaks ------------------------------------------------------- */
 .ax-streaks {
@@ -2644,19 +2573,6 @@ body:has(.ax-page) .app-main {
     .ax-advice-impact { grid-column: 2; align-items: flex-start; text-align: left; }
 }
 
-/* ---------- Foot ---------------------------------------------------------- */
-.ax-foot {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 6px 0 0;
-    color: var(--ax-faint);
-    font-size: 12px;
-    scroll-margin-top: 18px;
-}
-.ax-foot p { margin: 0; }
-
 /* ==========================================================================
    Responsive — the standard breakpoints from styles/layout.css.
 
@@ -2680,7 +2596,6 @@ body:has(.ax-page) .app-main {
     .ax-page { padding: 18px 0 30px; }
     .ax-head h1 { font-size: 20px; }
     .ax-figures { grid-template-columns: 1fr; }
-    .ax-callout { position: static; margin-top: 10px; }
 }
 
 @media (max-width: 480px) {
@@ -2799,7 +2714,6 @@ body:has(.ax-page) .app-main {
    rather than as a faint line wearing solid beads. */
 .ax-chart-dot.is-muted { opacity: .42; }
 
-.ax-bar,
 .ax-column-bar {
     transform-origin: bottom;
     animation: ax-grow .55s cubic-bezier(.22, .68, .3, 1) .18s both;
@@ -2820,20 +2734,17 @@ body:has(.ax-page) .app-main {
    state on the first frame, which is what `animation: none` on a `both`-filled
    keyframe leaves behind. */
 @media (prefers-reduced-motion: reduce) {
-    .ax-bar,
     .ax-standing-track i,
-    .ax-tab,
-    .ax-chip { transition: none; }
+.ax-tab,
+.ax-chip { transition: none; }
 
     .ax-panel,
-    .ax-tiles > *,
-    .ax-chart-svg,
-    .ax-spark,
-    .ax-bar,
-    .ax-column-bar,
-    .ax-factor-track i,
-    .ax-split-track i,
-    .ax-radar-shape {
+.ax-tiles > *,
+.ax-chart-svg,
+.ax-spark,
+.ax-column-bar,
+.ax-factor-track i,
+.ax-radar-shape {
         animation: none;
     }
 }
@@ -2911,8 +2822,6 @@ body:has(.ax-page) .app-main {
     letter-spacing: -.015em;
     color: var(--ax-text);
 }
-
-.ax-prose-tight { margin: 4px 0 0; font-size: 12px; line-height: 1.55; }
 .ax-figures-tight { margin-bottom: 10px; }
 
 /* ==========================================================================
@@ -3435,102 +3344,6 @@ body:has(.ax-page) .app-main {
 }
 
 /* ==========================================================================
-   Trends — direction, and how much of it survives the noise.
-   ========================================================================== */
-/* Five rows against a panel of five paragraphs: the direction panel beside this
-   one is the taller of the two by a long way, and a row of panels is stretched
-   to the tallest (see the note by `.ax-grid`). The convention there is that the
-   slack goes to the footer, and this panel has no footer — so it went to the
-   bottom of the card and read as a rendering fault rather than as a panel.
-
-   The rows take it instead, a fifth each, with the content centred in what it
-   gets. What that buys over letting the card end early is that the two panels
-   still finish on the same line, and the dividers stay evenly spaced whatever
-   the neighbour does. When there is no slack — a narrow screen, one column —
-   every row is its own height again and none of this applies. */
-.ax-compare-rows {
-    list-style: none;
-    margin: 8px 0 0;
-    padding: 0;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 11px;
-}
-.ax-compare-rows li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) 66px auto auto;
-    grid-template-areas: 'dot label spark now delta' '. label spark was was';
-    align-items: center;
-    align-content: center;
-    flex: 1 0 auto;
-    gap: 1px 11px;
-    padding-bottom: 11px;
-    border-bottom: 1px solid var(--ax-line-soft);
-}
-.ax-compare-rows li:last-child { border-bottom: 0; padding-bottom: 0; }
-.ax-compare-rows li .ax-dot { grid-area: dot; }
-.ax-compare-label { grid-area: label; font-size: 12.5px; font-weight: 500; }
-.ax-compare-spark { grid-area: spark; min-width: 0; }
-.ax-compare-spark .ax-spark { height: 20px; margin: 0; }
-.ax-compare-now {
-    grid-area: now;
-    font-size: 14px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-}
-.ax-compare-rows li .ax-delta { grid-area: delta; justify-self: end; }
-.ax-compare-was {
-    grid-area: was;
-    font-size: 10.5px;
-    color: var(--ax-faint);
-    text-align: right;
-}
-
-.ax-directions {
-    list-style: none;
-    margin: 8px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-.ax-directions li {
-    padding-bottom: 13px;
-    border-bottom: 1px solid var(--ax-line-soft);
-}
-.ax-directions li:last-child { border-bottom: 0; padding-bottom: 0; }
-.ax-directions header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-}
-.ax-directions header strong { font-size: 12.5px; }
-.ax-directions header .ax-delta { margin-left: auto; }
-
-/* How much of the variation the fitted line accounts for. The part of a trend
-   chart everyone leaves out, and the part that tells a reader whether the slope
-   above it is a direction or a fortnight. */
-.ax-fit {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 5px;
-    margin-bottom: 7px;
-}
-.ax-fit i {
-    display: block;
-    height: 5px;
-    min-width: 3px;
-    border-radius: 999px;
-    opacity: .55;
-    transition: width .35s ease;
-}
-.ax-fit .ax-small { white-space: nowrap; }
-
-/* ==========================================================================
    Recommendations — actionable, prioritised, improvement-focused.
    ========================================================================== */
 .ax-advice-chips {
@@ -3625,8 +3438,6 @@ body:has(.ax-page) .app-main {
 @media (max-width: 1024px) {
     .ax-buckets { grid-template-columns: 1fr; }
     .ax-tabs-major .ax-tab { flex: 0 0 auto; }
-    .ax-compare-rows li { grid-template-columns: auto minmax(0, 1fr) auto auto; }
-    .ax-compare-spark { display: none; }
 }
 
 @media (max-width: 768px) {
@@ -3643,10 +3454,9 @@ body:has(.ax-page) .app-main {
 
 @media (prefers-reduced-motion: reduce) {
     .ax-habit-track i,
-    .ax-fit i,
-    .ax-finding-body,
-    .ax-finding-mark,
-    .ax-try { transition: none; }
+.ax-finding-body,
+.ax-finding-mark,
+.ax-try { transition: none; }
 }
 
 /* The tab's opening line — one sentence, above everything, on all seven tabs.
@@ -5568,31 +5378,6 @@ body:has(.ax-page) .app-main {
     font-variant-numeric: tabular-nums;
 }
 
-/* ---------- The verdict ----------------------------------------------------
-   One figure and two letters, in the biggest type on the tab. Same
-   construction as `.ax-gy-verdict` above — a tone class on the section, every
-   accent inherited from it as `currentColor` — so both halves of the page
-   recolour from one class and neither needs a rule per tone. */
-.ax-gp-verdict {
-    position: relative;
-    padding: 24px 26px 22px;
-    border: 1px solid var(--ax-line);
-    border-radius: var(--ax-radius);
-    background:
-        linear-gradient(180deg, color-mix(in srgb, currentColor 8%, transparent), transparent 62%),
-        var(--ax-card);
-    box-shadow: var(--ax-shadow);
-    overflow: hidden;
-}
-
-.ax-gp-verdict::before {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto;
-    height: 3px;
-    background: currentColor;
-}
-
 .ax-gp-eyebrow {
     margin: 0 0 10px;
     color: currentColor;
@@ -5600,13 +5385,6 @@ body:has(.ax-page) .app-main {
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
-}
-
-.ax-gp-verdict-main {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px 32px;
 }
 
 /* The number the tab exists to state. */
@@ -5617,35 +5395,6 @@ body:has(.ax-page) .app-main {
     line-height: 1;
     letter-spacing: -.04em;
     font-variant-numeric: tabular-nums;
-}
-
-.ax-gp-grades { min-width: 0; }
-
-.ax-gp-grade-move {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin: 0 0 4px;
-}
-
-.ax-gp-grade {
-    font-size: 26px;
-    font-weight: 750;
-    letter-spacing: -.02em;
-}
-
-/* Where it was: same size, set back in colour and weight. Shrinking it would
-   make the comparison look like a headline with a footnote, and it is a
-   comparison. */
-.ax-gp-grade.is-was { color: var(--ax-faint); font-weight: 550; }
-.ax-gp-grade.is-now { color: var(--ax-text); }
-
-.ax-gp-grade-note {
-    margin: 0;
-    max-width: 52ch;
-    color: var(--ax-muted);
-    font-size: 12.5px;
-    line-height: 1.5;
 }
 
 /* ---------- The shared then-and-now shape ---------------------------------- */
@@ -5823,21 +5572,10 @@ body:has(.ax-page) .app-main {
     transition: border-color .16s ease, color .16s ease;
 }
 
-/* Off is a hollow key and muted text; on is the metric's own colour. The
-   swatch is a line rather than a square because it stands for a line. */
-.ax-gp-key {
-    width: 14px;
-    height: 3px;
-    border-radius: 2px;
-    background: var(--ax-line);
-    flex: none;
-}
-
 .ax-gp-toggle.is-on {
     border-color: currentColor;
     color: currentColor;
 }
-.ax-gp-toggle.is-on .ax-gp-key { background: currentColor; }
 .ax-gp-toggle:hover { border-color: currentColor; }
 
 /* ---------- The two movers ------------------------------------------------- */
@@ -5866,48 +5604,11 @@ body:has(.ax-page) .app-main {
     letter-spacing: .02em;
 }
 
-.ax-gp-mover-move {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin: 2px 0 0;
-    font-size: 27px;
-    font-weight: 750;
-    letter-spacing: -.025em;
-    line-height: 1.05;
-    font-variant-numeric: tabular-nums;
-    color: var(--ax-text);
-}
-
-.ax-gp-mover-move em {
-    color: currentColor;
-    font-size: 14px;
-    font-style: normal;
-    font-weight: 700;
-}
-
 .ax-gp-mover-asks {
     margin: 0 0 8px;
     color: var(--ax-faint);
     font-size: 12px;
 }
-
-/* The measured quantity either side of the move. A winner nobody can check is
-   a boast, so the panel prints what the metric is actually made of. */
-.ax-gp-why { list-style: none; margin: 0; padding: 0; }
-
-.ax-gp-why li {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 7px 0;
-    font-size: 12.5px;
-}
-
-.ax-gp-why li + li { border-top: 1px solid var(--ax-line-soft); }
-.ax-gp-why span { color: var(--ax-muted); }
-.ax-gp-why strong { color: var(--ax-text); font-weight: 650; text-align: right; }
 
 /* ---------- Then and now, one row per metric ------------------------------- */
 .ax-gp-rows { list-style: none; margin: 0; padding: 0; }
@@ -6102,11 +5803,8 @@ body:has(.ax-page) .app-main {
 
 @media (max-width: 720px) {
     .ax-gp-big { font-size: 40px; }
-    .ax-gp-grade { font-size: 22px; }
-    .ax-gp-verdict { padding: 20px 18px 18px; }
     .ax-gp-metric-scores { font-size: 22px; }
     .ax-gp-metric-scores .ax-gp-was { font-size: 19px; }
-    .ax-gp-mover-move { font-size: 23px; }
     /* The toggles lead the panel on a narrow screen rather than being pushed
        to a second right-aligned line under the title. */
     .ax-gp-toggles { justify-content: flex-start; }
