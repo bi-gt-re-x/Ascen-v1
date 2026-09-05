@@ -23,11 +23,11 @@
        under its parent and its rows are subject names rather than the column's
        one-word destinations, so the width that comfortably held "Achievements"
        was squeezing "Environmental Science" into an ellipsis two levels in.
-       Widened 1.8x rather than by enough to fit: every page sizes itself off
+       Widened 1.3x rather than by enough to fit: every page sizes itself off
        this variable, so the rail can take the space without a single page's
        layout arithmetic being touched. The folded width below is unchanged —
        that one is measured by the icons, which have not moved. */
-    --rail-w: 432px;
+    --rail-w: 312px;
     --topnav-h: 68px;
 }
 
