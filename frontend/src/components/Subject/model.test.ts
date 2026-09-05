@@ -26,6 +26,11 @@ function goal(over: Partial<Goal> = {}): Goal {
     deadline: '2026-12-01',
     start_date: '2026-08-01',
     created_at: '2026-08-01',
+    // Without this `goalNumbers` reads it as a milestone goal with no
+    // milestones: target 0, and therefore no pace and no projection. Every
+    // test that wants a *projectable* goal needs it, and the one that wants
+    // the opposite overrides it.
+    measure: 'number',
     target_number: 100,
     current_value: 40,
     unit: 'problems',
@@ -426,9 +431,10 @@ describe('what to do next', () => {
     const led = model.advice.find((item) => item.id === 'goal-g1')!;
 
     expect(led.title).not.toMatch(/on course/i);
-    expect(led.title).toMatch(/cannot be projected/i);
-    // And it says what would fix it, rather than only that it is stuck.
-    expect(led.detail).toMatch(/target number and a date/i);
+    // It asks for what is missing rather than reporting a state, which is the
+    // shorter and more useful of the two things it could say.
+    expect(led.title).toMatch(/give .* a target and a date/i);
+    expect(led.detail).toMatch(/no arrival to pace against/i);
   });
 
   it('does not lead with a goal that belongs to another subject', () => {
@@ -485,5 +491,83 @@ describe('the skill tree behind a subject', () => {
     const model = subjectModel([done()], 'maths', '30d', TODAY, [], 'a-tree-that-never-was');
     expect(model.tree).not.toBeNull();
     expect(model.tree!.chosen).toBe(false);
+  });
+});
+
+describe('the verdict at the top of the page', () => {
+  it('says nothing happened rather than grading an empty window', () => {
+    const model = subjectModel([done({ completed_at: ago(200) })], 'maths', '7d', TODAY);
+    expect(model.headline.verdict).toMatch(/nothing finished/i);
+  });
+
+  it('leads with a goal that is going to miss, over any internal measure', () => {
+    // The same ordering the recommendations use, said in one line — the page's
+    // headline and its advice cannot disagree about what matters most.
+    const tasks = [
+      ...Array.from({ length: 4 }, () => done({ difficulty: 1, execution: 5 })),
+      ...Array.from({ length: 4 }, () => done({ difficulty: 5, execution: 2 })),
+    ];
+    const model = subjectModel(tasks, 'maths', '30d', TODAY, [
+      goal({ progress: 10, current_value: 10, target_number: 100, deadline: '2026-09-20' }),
+    ]);
+    expect(model.headline.verdict).toContain('Competition ready');
+  });
+
+  it('names the band gap when there is no goal', () => {
+    const tasks = [
+      ...Array.from({ length: 4 }, () => done({ difficulty: 1, execution: 5 })),
+      ...Array.from({ length: 4 }, () => done({ difficulty: 5, execution: 2 })),
+    ];
+    const model = subjectModel(tasks, 'maths', '30d', TODAY);
+    expect(model.headline.verdict).toContain('Brutal');
+    // Short enough to set in large bold type without wrapping into a paragraph.
+    expect(model.headline.verdict.length).toBeLessThan(110);
+  });
+
+  it('carries the same grade the score rounds to', () => {
+    const model = subjectModel([done({ difficulty: 5, execution: 5 })], 'maths', '30d', TODAY);
+    expect(model.headline.grade).toBe(model.grade);
+    expect(model.headline.score).toBe(model.score);
+  });
+});
+
+describe('the chart series', () => {
+  it('declines to draw a line through two points', () => {
+    // Two buckets is a line between two dots, which says less than the tiles
+    // above it already do.
+    const model = subjectModel([done(), done({ completed_at: ago(1) })], 'maths', '30d', TODAY);
+    expect(model.series.any).toBe(false);
+  });
+
+  it('buckets a long window rather than drawing a point per day', () => {
+    const tasks = Array.from({ length: 40 }, (_, at) =>
+      done({ completed_at: ago(at * 8) }),
+    );
+    const model = subjectModel(tasks, 'maths', '1y', TODAY);
+
+    expect(model.series.any).toBe(true);
+    // Near twelve at every window, so the chart reads the same way whichever
+    // one is picked — never 365 points.
+    expect(model.series.done.length).toBeLessThanOrEqual(13);
+    expect(model.series.done.length).toBe(model.series.quality.length);
+    expect(model.series.done.length).toBe(model.series.labels.length);
+  });
+
+  it('counts every finished task into exactly one bucket', () => {
+    const tasks = Array.from({ length: 9 }, (_, at) => done({ completed_at: ago(at * 3) }));
+    const model = subjectModel(tasks, 'maths', '30d', TODAY);
+    expect(model.series.done.reduce((sum, n) => sum + n, 0)).toBe(model.finished);
+  });
+
+  it('leaves a period with nothing rated as null rather than as zero quality', () => {
+    // Drawing it as zero would invent a bad fortnight out of a quiet one.
+    const tasks = [
+      done({ completed_at: ago(1), difficulty: 4, execution: 4 }),
+      done({ completed_at: ago(2) }),
+      done({ completed_at: ago(20) }),
+      done({ completed_at: ago(25) }),
+    ];
+    const model = subjectModel(tasks, 'maths', '30d', TODAY);
+    expect(model.series.quality.some((value) => value === null)).toBe(true);
   });
 });

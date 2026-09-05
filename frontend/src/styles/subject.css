@@ -12,6 +12,75 @@
    analytics.css; anything keyed off them flips with it.
 */
 
+/* --- The verdict, which is the first thing on the page ------------------
+   The page opened with four tiles and a paragraph, and the reader had to
+   assemble the verdict out of them. This states it in one line at a size that
+   cannot be skimmed past, with the recommendations directly under it and every
+   figure it was drawn from further down. Somebody who reads the top two blocks
+   and leaves has read the two worth reading.
+
+   Not `.sb-verdict` — that class is the pill on a recent-work row and has been
+   since before this existed. */
+.sb-topline {
+    margin-top: 18px;
+    padding: 20px 22px;
+    border: 1px solid var(--ax-line);
+    border-left: 4px solid var(--ax-violet);
+    border-radius: var(--ax-radius);
+    background: var(--ax-card);
+    box-shadow: var(--ax-shadow);
+}
+
+.sb-topline-grade {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0;
+}
+
+.sb-topline-grade strong {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.03em;
+    color: var(--ax-text);
+}
+
+/* The checkable half, and quieter than the letter it qualifies. */
+.sb-topline-score {
+    font-size: 15px;
+    font-weight: 650;
+    color: var(--ax-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The sentence. Bold and large enough to be the headline it is, capped in
+   width so it stays one or two lines rather than becoming the paragraph this
+   whole block replaced. */
+.sb-topline-line {
+    margin: 10px 0 0;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -.015em;
+    color: var(--ax-text);
+    max-width: 46ch;
+}
+
+/* --- Where the working starts ------------------------------------------
+   A heading rather than a rule, because the split it marks is editorial: above
+   it is the answer, below it is why. Without something saying so, the reader
+   who scrolls past the recommendations has no way to know the rest is
+   optional. */
+.sb-detail-head {
+    margin: 30px 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
 /* --- The four figures across the top ------------------------------------ */
 .sb-tiles {
     display: grid;
@@ -265,7 +334,7 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* --- What to do --------------------------------------------------------- */
+/* --- Do this next, directly under the verdict --------------------------- */
 .sb-advice {
     list-style: none;
     margin: 0;
@@ -305,7 +374,10 @@
     color: var(--ax-muted);
 }
 
-.sb-advice-item strong { font-size: 14px; font-weight: 650; color: var(--ax-text); }
+/* Bold and a size up: this is the instruction, and the sentence under it is
+   the qualifier. The page is read top-down and these are the second thing
+   on it. */
+.sb-advice-item strong { font-size: 15px; font-weight: 700; color: var(--ax-text); }
 .sb-advice-item p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ax-muted); }
 
 .sb-advice-why { color: var(--ax-faint) !important; }

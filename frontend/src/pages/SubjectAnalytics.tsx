@@ -65,6 +65,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Ambient, ErrorState, Loading } from '@/components';
+import { AreaChart } from '@/components/Analytics';
 import { WINDOWS, type WindowKey } from '@/components/Analytics/data';
 import { subjectModel } from '@/components/Subject/model';
 import { useApi, useAuth, useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
@@ -323,6 +324,87 @@ export default function SubjectAnalytics() {
             </div>
 
             {/* ---- Overview ------------------------------------------- */}
+            {/* ---- The verdict, then what to do about it ----------- */}
+            {/* The page used to open with four tiles and leave the reader to
+                assemble the verdict from them. This states it, then says what
+                to do, and only then shows the working. The order is the whole
+                point: somebody who reads two blocks and leaves has read the
+                two that were worth reading. */}
+            <section className="sb-topline" aria-label="How this subject is going">
+              <p className="sb-topline-grade">
+                <strong>{model.headline.grade ?? '—'}</strong>
+                {model.headline.score !== null && (
+                  <span className="sb-topline-score">{model.headline.score}/100</span>
+                )}
+              </p>
+              <p className="sb-topline-line">{model.headline.verdict}</p>
+            </section>
+
+            {/* ---- What to do ------------------------------------- */}
+            {model.advice.length > 0 && (
+              <Panel
+                title="Do this next"
+                note="Ranked by what it is worth. Each carries the figure it came from — an instruction without a number behind it is a horoscope."
+              >
+                <ol className="sb-advice">
+                  {model.advice.map((item, at) => (
+                    <li key={item.id} className={`sb-advice-item is-${item.weight}`}>
+                      <span className="sb-advice-rank" aria-hidden="true">
+                        {at + 1}
+                      </span>
+                      <div>
+                        <strong>{item.title}</strong>
+                        <p>{item.detail}</p>
+                        <p className="sb-advice-why">
+                          <span>Why:</span> {item.why}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </Panel>
+            )}
+
+            {/* ---- The shape of it ---------------------------------- */}
+            {model.series.any && (
+              <Panel
+                title="Over this window"
+                note="Tasks finished per period, with the quality you rated them at over the top."
+              >
+                <AreaChart
+                  id={`sb-${subjectId}`}
+                  label={`Work finished in ${subject.name} over ${
+                    WINDOWS.find((option) => option.key === span)?.label ?? 'the window'
+                  }`}
+                  height={190}
+                  series={[
+                    { values: model.series.done, tone: 'violet' },
+                    {
+                      /* Quality rides over the count on its own footing —
+                         `muted` so the volume line stays the headline, and
+                         unfilled so two washes do not leave a middle band that
+                         belongs to neither. Nulls are real: a period with
+                         nothing rated has no quality, and drawing it as zero
+                         would invent a bad fortnight. */
+                      values: model.series.quality,
+                      tone: 'blue',
+                      muted: true,
+                    },
+                  ]}
+                  ticks={[String(Math.max(...model.series.done, 1)), '', '0']}
+                  marks={model.series.marks}
+                  readout={{
+                    labels: model.series.labels,
+                    names: ['Finished', 'Quality'],
+                    format: (value) => String(Math.round(value)),
+                  }}
+                />
+              </Panel>
+            )}
+
+            {/* ---- Everything else: the working -------------------- */}
+            <h2 className="sb-detail-head">The detail</h2>
+
             <div className="sb-tiles">
               <div className="sb-tile">
                 <span className="sb-tile-label">Subject score</span>
@@ -362,6 +444,7 @@ export default function SubjectAnalytics() {
             </div>
 
             {model.insight && <p className="ax-opening is-down sb-insight">{model.insight}</p>}
+
 
             {/* ---- What this subject is for ------------------------- */}
             {model.goals.length > 0 && (
@@ -605,31 +688,6 @@ export default function SubjectAnalytics() {
                 </Panel>
               )}
             </div>
-
-            {/* ---- What to do ------------------------------------- */}
-            {model.advice.length > 0 && (
-              <Panel
-                title="What to do next"
-                note="Each one carries the arithmetic that produced it. An instruction without a number behind it is a horoscope."
-              >
-                <ol className="sb-advice">
-                  {model.advice.map((item, at) => (
-                    <li key={item.id} className={`sb-advice-item is-${item.weight}`}>
-                      <span className="sb-advice-rank" aria-hidden="true">
-                        {at + 1}
-                      </span>
-                      <div>
-                        <strong>{item.title}</strong>
-                        <p>{item.detail}</p>
-                        <p className="sb-advice-why">
-                          <span>Why:</span> {item.why}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </Panel>
-            )}
 
             {/* ---- The write-up ------------------------------------ */}
             {canWrite && (

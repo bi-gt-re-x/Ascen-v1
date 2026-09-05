@@ -370,6 +370,86 @@ function runOf(done: AnalyticsTask[], most: number): Run {
 // --------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------
+// The shape of it over time
+// --------------------------------------------------------------------------
+
+/**
+ * The window, cut into buckets a chart can draw.
+ *
+ * Buckets rather than days, because the window picker spans a week to a
+ * lifetime and one point per day is either eight points or seven hundred. The
+ * count is held near twelve at every setting, so the chart reads the same way
+ * whichever window is chosen and no setting produces a line that is really a
+ * scatter or a smear.
+ */
+export interface Series {
+  /** One per bucket, for the crosshair readout. */
+  labels: string[];
+  /** The sparse x-axis labels the chart prints under itself. */
+  marks: string[];
+  /** Tasks finished in each bucket. */
+  done: number[];
+  /** Mean quality in each bucket as a percentage, or null where none were rated. */
+  quality: Array<number | null>;
+  /** Whether there is enough here to be worth drawing. */
+  any: boolean;
+}
+
+/** About this many points, at every window. */
+const BUCKETS = 12;
+
+function seriesOf(done: AnalyticsTask[], span: Span, today: string): Series {
+  /* All Time has no fixed length, so the axis runs from the first thing
+     finished rather than from a date arithmetic cannot produce. An account
+     with one task gets a one-bucket chart, which `any` then declines to draw. */
+  const days = done.map((task) => dayOf(task.completed_at)).filter(Boolean).sort();
+  const from = span.from || days[0] || today;
+  const to = span.to || today;
+
+  const start = new Date(`${from}T00:00:00Z`).getTime();
+  const end = new Date(`${to}T00:00:00Z`).getTime();
+  const total = Math.max(1, Math.round((end - start) / 86_400_000) + 1);
+  const size = Math.max(1, Math.ceil(total / BUCKETS));
+  const count = Math.ceil(total / size);
+
+  const buckets: AnalyticsTask[][] = Array.from({ length: count }, () => []);
+  for (const task of done) {
+    const day = dayOf(task.completed_at);
+    if (!day) continue;
+    const at = Math.floor(
+      (new Date(`${day}T00:00:00Z`).getTime() - start) / 86_400_000 / size,
+    );
+    if (at >= 0 && at < count) buckets[at]!.push(task);
+  }
+
+  const labels = buckets.map((_, index) => {
+    const first = shift(from, index * size);
+    const last = shift(from, Math.min(total - 1, (index + 1) * size - 1));
+    return size === 1 ? first : `${first} to ${last}`;
+  });
+
+  return {
+    labels,
+    /* Four labels across the axis rather than twelve. Twelve dates under a
+       600-unit chart is a grey smear; the crosshair carries the exact one. */
+    marks: buckets.map((_, index) =>
+      index % Math.ceil(count / 4) === 0 ? shift(from, index * size).slice(5) : '',
+    ),
+    done: buckets.map((list) => list.length),
+    quality: buckets.map((list) => {
+      const scores = list
+        .map((task) => qualityOf(task))
+        .filter((score): score is number => score !== null);
+      if (!scores.length) return null;
+      return Math.round((scores.reduce((sum, q) => sum + q, 0) / scores.length / 25) * 100);
+    }),
+    // Two buckets is a line between two dots, which says less than the tiles
+    // above it already do.
+    any: buckets.filter((list) => list.length > 0).length >= 3,
+  };
+}
+
+// --------------------------------------------------------------------------
 // The goal this subject is for
 // --------------------------------------------------------------------------
 
@@ -501,32 +581,24 @@ function adviceFrom(
     if (goal.drift === null) {
       out.push({
         id: `goal-${goal.id}`,
-        title: `"${goal.title}" cannot be projected yet`,
-        detail:
-          `${rate} Without both a target number and a date there is no arrival to work back `
-          + 'from, so this subject\'s sessions cannot be ranked against it. Give it either and '
-          + 'the advice below reorders itself around the goal.',
+        title: `Give "${goal.title}" a target and a date`,
+        detail: 'Without both there is no arrival to pace against.',
         why: `${due}, and no pace can be computed from it.`,
         weight: 'second',
       });
     } else if (goal.drift > 0) {
       out.push({
         id: `goal-${goal.id}`,
-        title: `Put this subject's next sessions into "${goal.title}"`,
-        detail:
-          `${rate} At that rate it lands ${goal.drift} ${goal.drift === 1 ? 'day' : 'days'} after `
-          + 'the date you set'
-          + (weakest
-            ? `, and the ${weakest.label.toLowerCase()} end of this subject is where the time is going.`
-            : '.'),
+        title: `Work "${goal.title}" — it is ${goal.drift} ${goal.drift === 1 ? 'day' : 'days'} late`,
+        detail: rate,
         why: `${due}, projected ${goal.drift} days late.`,
         weight: 'first',
       });
     } else {
       out.push({
         id: `goal-${goal.id}`,
-        title: `"${goal.title}" is on course — keep this subject at its current rate`,
-        detail: `${rate} Nothing here needs to change to make the date.`,
+        title: `"${goal.title}" is on course — hold this rate`,
+        detail: rate,
         why: `${due}, projected to land on or before it.`,
         weight: 'upkeep',
       });
@@ -537,11 +609,10 @@ function adviceFrom(
   if (weakest && strongest && weakest.level !== strongest.level) {
     out.push({
       id: 'weakest-band',
-      title: `Put the next stretch into ${weakest.label.toLowerCase()} work`,
+      title: `Drill ${weakest.label.toLowerCase()} work`,
       detail:
-        `Your ${weakest.label.toLowerCase()} tasks come out at ${Math.round(weakest.holding!)}% `
-        + `on execution against ${Math.round(strongest.holding!)}% for ${strongest.label.toLowerCase()} `
-        + 'ones. That gap is the whole of the difference in this subject.',
+        `${Math.round(weakest.holding!)}% there against ${Math.round(strongest.holding!)}% on `
+        + `${strongest.label.toLowerCase()}. That gap is the whole difference.`,
       why:
         `${weakest.done} ${weakest.done === 1 ? 'task' : 'tasks'} at ${weakest.label.toLowerCase()}, `
         + `mean execution ${(weakest.holding! / 20).toFixed(1)} of 5.`,
@@ -552,11 +623,10 @@ function adviceFrom(
   if (top) {
     out.push({
       id: `reason-${top.key}`,
-      title: `Deal with "${top.label.toLowerCase()}" before the next session`,
+      title: `Fix "${top.label.toLowerCase()}" before the next session`,
       detail:
-        `It is behind ${top.share}% of the sessions you said went badly in this subject. `
-        + 'It is a condition rather than a skill, which is what makes it the cheapest thing '
-        + 'on this page to change.',
+        `Behind ${top.share}% of your bad sessions here. A condition, not a skill — `
+        + 'the cheapest thing on this page to change.',
       why: `${top.count} of the rated tasks you struggled with ${top.phrase}.`,
       weight: 'second',
     });
@@ -573,12 +643,11 @@ function adviceFrom(
   if (lowest && lowest.now < 60 && (!next || next.now - lowest.now >= 5)) {
     out.push({
       id: `rate-${lowest.key}`,
-      title: `${lowest.label} is the measure holding this subject's grade down`,
+      title: `${lowest.label} is dragging the grade`,
       detail:
-        `It is at ${Math.round(lowest.now)}%`
+        `${Math.round(lowest.now)}%`
         + (next
-          ? `, ${Math.round(next.now - lowest.now)} points below ${next.label.toLowerCase()}, `
-            + 'which is the next lowest.'
+          ? `, ${Math.round(next.now - lowest.now)} points below ${next.label.toLowerCase()}.`
           : '.'),
       why: lowest.note,
       weight: 'upkeep',
@@ -592,10 +661,32 @@ function adviceFrom(
 // The whole page
 // --------------------------------------------------------------------------
 
+/**
+ * The bold line at the top of the page.
+ *
+ * The page used to open with four tiles and a paragraph, and a reader had to
+ * assemble the verdict from them. This states it: the grade, and one short
+ * sentence naming the single thing most responsible for it. Everything under
+ * it is the working.
+ *
+ * `verdict` is deliberately short — it is set in large bold type, and a
+ * sentence that wraps to three lines there stops being a headline and becomes
+ * the paragraph it replaced.
+ */
+export interface Headline {
+  /** "B", or null when nothing in the window was measurable. */
+  grade: Grade | null;
+  score: number | null;
+  /** One short sentence. Never more than a line at the size it is set. */
+  verdict: string;
+}
+
 export interface SubjectModel {
   /** Whether there is enough here to say anything at all. */
   any: boolean;
   span: Span;
+  headline: Headline;
+  series: Series;
 
   done: AnalyticsTask[];
   open: number;
@@ -724,6 +815,9 @@ export function subjectModel(
   const change = (now: number, was: number): number | null =>
     was > 0 ? Math.round(((now - was) / was) * 100) : null;
 
+  /** The volume change, named because the headline reads it too. */
+  const finishedChange = change(done.length, before.length);
+
   const seconds = (list: AnalyticsTask[]) =>
     list.reduce((sum, task) => sum + Math.max(0, Number(task.completion_seconds) || 0), 0);
 
@@ -739,7 +833,7 @@ export function subjectModel(
     {
       key: 'volume',
       label: 'Volume',
-      change: change(done.length, before.length),
+      change: finishedChange,
       note: `${done.length} finished against ${before.length} the window before.`,
     },
     {
@@ -829,6 +923,27 @@ export function subjectModel(
   const subjectGoals = goalsFor(goals, subjectId, new Date(`${today}T00:00:00`));
   const advice = adviceFrom(bands, struggles, rates, subjectGoals);
 
+  /* The one sentence, in priority order: a goal that is going to miss, then
+     the gap between bands, then the weakest rate, then the volume. Whichever
+     fires first is the thing most responsible for the grade — the same
+     ordering the recommendations use, said in one line. */
+  const behind = subjectGoals.find((goal) => goal.drift !== null && goal.drift > 0);
+  const lowest = [...rates].filter((entry) => entry.known).sort((a, b) => a.now - b.now)[0];
+  const verdict = (() => {
+    if (!done.length) return 'Nothing finished here in this window.';
+    if (behind) {
+      return `On track for everything except "${behind.title}" — ${behind.drift} days late.`;
+    }
+    if (weakest && strongest && weakest.level !== strongest.level
+        && strongest.holding! - weakest.holding! >= 15) {
+      return `${strongest.label} work is solid. ${weakest.label} work is what is holding you back.`;
+    }
+    if (lowest && lowest.now < 60) return `${lowest.label} is the weak measure here.`;
+    if (finishedChange !== null && finishedChange > 15) return 'Speeding up, and holding quality.';
+    if (finishedChange !== null && finishedChange < -15) return 'Slowing down against last period.';
+    return 'Steady. Nothing here needs fixing.';
+  })();
+
   /* The one sentence the page is for, and it is only written when the record
      supports it. A "key insight" generated whether or not there is one is the
      line that teaches a reader to skip the box it lives in. */
@@ -843,6 +958,8 @@ export function subjectModel(
   return {
     any: mine.length > 0,
     span,
+    headline: { grade: score === null ? null : gradeFor(score), score, verdict },
+    series: seriesOf(done, span, today),
     done,
     open,
     rates,
