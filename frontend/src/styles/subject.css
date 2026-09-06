@@ -829,3 +829,146 @@
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
+
+/* --- Checkpoints on a subject, and the goal they become -------------------
+   Before a goal, not inside one. The list needs no target and no date, so it
+   is a checklist rather than the goals page's row of numbers. */
+.sb-miles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sb-miles li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    border-radius: 8px;
+}
+.sb-miles li:hover { background: var(--ax-card-2); }
+
+.sb-miles label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    font-size: 13.5px;
+    color: var(--ax-text);
+    cursor: pointer;
+}
+
+.sb-miles input { flex: none; width: 15px; height: 15px; accent-color: var(--ax-violet); }
+
+/* Struck through and faded, both. Either alone reads as a styling accident on
+   a list where the rest of the rows are plain. */
+.sb-miles li.is-done span { text-decoration: line-through; color: var(--ax-faint); }
+
+.sb-miles-drop {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--ax-faint);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    /* Hidden until the row is under the pointer: a column of crosses down a
+       checklist makes deleting look like the point of the list. */
+    opacity: 0;
+}
+.sb-miles li:hover .sb-miles-drop,
+.sb-miles-drop:focus-visible { opacity: 1; }
+.sb-miles-drop:hover { background: var(--ax-line-soft); color: var(--ax-bad); }
+
+.sb-miles-add {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.sb-miles-add input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 11px;
+    border: 1px solid var(--ax-line);
+    border-radius: 9px;
+    background: var(--ax-card);
+    color: var(--ax-text);
+    font: inherit;
+    font-size: 13px;
+}
+.sb-miles-add input:focus {
+    outline: none;
+    border-color: var(--ax-violet);
+}
+
+/* --- The drafted goal ---------------------------------------------------- */
+/* Marked out like the write-up panel, and for the same reason: a model wrote
+   it. The blue edge is the page's one signal for that. */
+.sb-draft {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+
+.sb-draft-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.sb-draft-head strong { font-size: 14px; font-weight: 650; color: var(--ax-text); }
+.sb-draft-head p {
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+    max-width: 62ch;
+}
+
+.sb-draft-body {
+    margin-top: 14px;
+    padding: 15px 17px;
+    border: 1px solid var(--ax-line);
+    border-left: 3px solid var(--ax-blue);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--ax-blue) 5%, var(--ax-card));
+}
+
+.sb-draft-title { display: block; font-size: 16px; font-weight: 700; color: var(--ax-text); }
+.sb-draft-why { margin: 5px 0 0; font-size: 13px; line-height: 1.5; color: var(--ax-muted); }
+
+.sb-draft-terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--ax-muted);
+}
+.sb-draft-terms b { color: var(--ax-text); font-variant-numeric: tabular-nums; }
+
+.sb-draft-miles {
+    margin: 12px 0 14px;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12.5px;
+    color: var(--ax-muted);
+}
+
+.sb-draft-made {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--ax-good);
+}

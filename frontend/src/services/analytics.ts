@@ -354,3 +354,67 @@ export function writeSubjectBrief(
 ): Promise<ApiResult<{ brief: SubjectBrief }>> {
   return post<{ brief: SubjectBrief }>('/api/subject_brief', findings);
 }
+
+// --------------------------------------------------------------------------
+// Checkpoints set against a subject, and the goal drafted from them
+// --------------------------------------------------------------------------
+/**
+ * One checkpoint on a subject.
+ *
+ * Not a goal milestone. These hang off the *subject*, need no target and no
+ * date, and exist before there is a goal — which is the order people actually
+ * work in. See backend/api/subjects.py for why they are kept apart.
+ */
+export interface SubjectMilestone {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
+/** Every subject's checkpoints, keyed by subject id. One read for the lot. */
+export function subjectMilestones(): Promise<
+  ApiResult<{ milestones: Record<string, SubjectMilestone[]> }>
+> {
+  return get<{ milestones: Record<string, SubjectMilestone[]> }>('/api/subject_milestones');
+}
+
+/** Replace one subject's list. An empty array clears it. */
+export function saveSubjectMilestones(
+  subject: string,
+  milestones: SubjectMilestone[],
+): Promise<ApiResult<{ milestones: Record<string, SubjectMilestone[]> }>> {
+  return post<{ milestones: Record<string, SubjectMilestone[]> }>(
+    '/api/subject_milestones',
+    { subject, milestones },
+  );
+}
+
+/**
+ * A goal drafted for a subject from its checkpoints.
+ *
+ * A draft, not a goal: the page shows it and only the reader pressing Create
+ * sends it to `/api/add_goal`, where it is validated like any other.
+ */
+export interface GoalDraft {
+  title: string;
+  why: string;
+  unit: string;
+  target: number;
+  weeks: number;
+  milestones: string[];
+}
+
+export interface DraftFindings {
+  subject: string;
+  finished: number;
+  days: number;
+  active_days: number;
+  hours: number;
+  milestones: string[];
+}
+
+export function suggestSubjectGoal(
+  findings: DraftFindings,
+): Promise<ApiResult<{ draft: GoalDraft }>> {
+  return post<{ draft: GoalDraft }>('/api/suggest_subject_goal', findings);
+}

@@ -73,11 +73,16 @@ import { loadProgress } from '@/utils/skillProgress';
 import { useApi, useAuth, useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
 import {
   analyticsTasks,
+  saveSubjectMilestones,
   subjectBriefAvailable,
+  subjectMilestones,
+  suggestSubjectGoal,
   writeSubjectBrief,
+  type GoalDraft,
   type SubjectBrief,
+  type SubjectMilestone,
 } from '@/services/analytics';
-import { getGoals } from '@/services/goals';
+import { addGoal, getGoals } from '@/services/goals';
 import { format } from '@/utils';
 import '@/styles/analytics.css';
 import '@/styles/subject.css';
@@ -279,6 +284,95 @@ export default function SubjectAnalytics() {
         : null,
     [prefs.analytics_subject_depth, subject, subjectId, username],
   );
+
+  /**
+   * The checkpoints set against this subject, and the goal drafted from them.
+   *
+   * Checkpoints first, goal second, which is the order people actually work
+   * in: everybody knows roughly what the stages of a subject are long before
+   * they have settled on a target, a date and a number. The draft turns the
+   * stages into the goal, and the goal is what orders the recommendations at
+   * the top of this page — so the loop closes here.
+   */
+  const [milestones, setMilestones] = useState<SubjectMilestone[]>([]);
+  const [adding, setAdding] = useState('');
+  const [draft, setDraft] = useState<GoalDraft | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [draftError, setDraftError] = useState('');
+  const [created, setCreated] = useState(false);
+
+  useEffect(() => {
+    if (!username || !subjectId) return;
+    let live = true;
+    void subjectMilestones().then((result) => {
+      if (live && result.success) setMilestones(result.milestones[subjectId] ?? []);
+    });
+    return () => {
+      live = false;
+    };
+  }, [subjectId, username]);
+
+  /* Applied here and stored in the background, the way the rail's collapse is:
+     a checkbox that waited for a round trip before ticking feels broken, and
+     there is nothing to roll back to — the list on screen is what was sent. */
+  const putMilestones = useCallback(
+    (next: SubjectMilestone[]) => {
+      setMilestones(next);
+      void saveSubjectMilestones(subjectId, next);
+    },
+    [subjectId],
+  );
+
+  const askForGoal = useCallback(async () => {
+    if (!subject) return;
+    setDrafting(true);
+    setDraftError('');
+    setCreated(false);
+    const result = await suggestSubjectGoal({
+      subject: subject.name,
+      finished: model.finished,
+      days: model.span.days,
+      active_days: new Set(
+        model.done.map((task) => String(task.completed_at ?? '').slice(0, 10)).filter(Boolean),
+      ).size,
+      hours: Math.round((model.invested / 3600) * 10) / 10,
+      milestones: milestones.map((entry) => entry.title),
+    });
+    setDrafting(false);
+    if (result.success) setDraft(result.draft);
+    else setDraftError(result.message || 'Could not draft a goal.');
+  }, [milestones, model, subject]);
+
+  /* The draft becomes a real goal through the ordinary endpoint, with the
+     ordinary validation — nothing here is a back door. `subject_ids` is what
+     makes it show up in "What this subject is for" above and start ordering
+     the recommendations; the checkpoints are copied across so the goal owns
+     its own from that moment. */
+  const createGoal = useCallback(async () => {
+    if (!draft) return;
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + draft.weeks * 7);
+    const result = await addGoal({
+      title: draft.title,
+      goal_type: 'tasks',
+      measure: 'number',
+      why: draft.why,
+      unit: draft.unit,
+      target_number: draft.target,
+      current_value: 0,
+      target_tasks: draft.target,
+      deadline: deadline.toISOString().slice(0, 10),
+      subject_ids: subjectId,
+      milestones: draft.milestones,
+    });
+    if (result.success) {
+      setCreated(true);
+      setDraft(null);
+      goals.reload();
+    } else {
+      setDraftError(result.message || 'Could not create the goal.');
+    }
+  }, [draft, goals, subjectId]);
 
   /* The volume chart's own ceiling. A floor of 1 keeps a window with a single
      quiet period from producing a "0" top tick over a line that is not flat. */
@@ -800,6 +894,132 @@ export default function SubjectAnalytics() {
                 </Panel>
               )}
             </div>
+
+            {/* ---- Checkpoints, and the goal they become ----------- */}
+            <Panel
+              title="Checkpoints for this subject"
+              note="The stages, in the order you mean to reach them. They need no target and no date — that is what the goal below them is for, and you can have these long before you have that."
+            >
+              <ul className="sb-miles">
+                {milestones.map((entry, at) => (
+                  <li key={entry.id} className={entry.done ? 'is-done' : undefined}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={entry.done}
+                        onChange={() =>
+                          putMilestones(
+                            milestones.map((row, index) =>
+                              index === at ? { ...row, done: !row.done } : row,
+                            ),
+                          )
+                        }
+                      />
+                      <span>{entry.title}</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="sb-miles-drop"
+                      aria-label={`Remove ${entry.title}`}
+                      onClick={() => putMilestones(milestones.filter((_, i) => i !== at))}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <form
+                className="sb-miles-add"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const title = adding.trim();
+                  if (!title) return;
+                  putMilestones([
+                    ...milestones,
+                    { id: `m${Date.now()}`, title, done: false },
+                  ]);
+                  setAdding('');
+                }}
+              >
+                <input
+                  value={adding}
+                  onChange={(event) => setAdding(event.target.value)}
+                  placeholder="A stage you mean to reach"
+                  aria-label="New checkpoint"
+                  maxLength={120}
+                />
+                <button type="submit" className="ax-btn" disabled={!adding.trim()}>
+                  Add
+                </button>
+              </form>
+
+              {canWrite && (
+                <div className="sb-draft">
+                  <div className="sb-draft-head">
+                    <div>
+                      <strong>Turn these into a goal</strong>
+                      <p>
+                        A model reads your checkpoints and what you have been doing here, and
+                        drafts the goal over them — a title, a target and a horizon. Nothing is
+                        created until you say so.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="ax-btn"
+                      onClick={() => void askForGoal()}
+                      disabled={drafting}
+                    >
+                      {drafting ? 'Drafting…' : draft ? 'Draft another' : 'Draft a goal'}
+                    </button>
+                  </div>
+
+                  {draftError && (
+                    <p className="sb-brief-error" role="alert">
+                      {draftError}
+                    </p>
+                  )}
+
+                  {created && (
+                    <p className="sb-draft-made" role="status">
+                      Created. It is in <Link className="ax-link" to="/goals">your goals</Link> and
+                      in "What this subject is for" above.
+                    </p>
+                  )}
+
+                  {draft && (
+                    <div className="sb-draft-body">
+                      <strong className="sb-draft-title">{draft.title}</strong>
+                      <p className="sb-draft-why">{draft.why}</p>
+                      <p className="sb-draft-terms">
+                        <span>
+                          <b>{draft.target}</b> {draft.unit}
+                        </span>
+                        <span>
+                          over <b>{draft.weeks}</b> {draft.weeks === 1 ? 'week' : 'weeks'}
+                        </span>
+                      </p>
+                      {draft.milestones.length > 0 && (
+                        <ol className="sb-draft-miles">
+                          {draft.milestones.map((title) => (
+                            <li key={title}>{title}</li>
+                          ))}
+                        </ol>
+                      )}
+                      <div className="sb-tree-actions">
+                        <button type="button" className="ax-btn ax-btn-primary" onClick={() => void createGoal()}>
+                          Create this goal
+                        </button>
+                        <button type="button" className="ax-btn ax-btn-quiet" onClick={() => setDraft(null)}>
+                          Discard
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Panel>
 
             {/* ---- The write-up ------------------------------------ */}
             {canWrite && (

@@ -259,3 +259,128 @@ def remove(subject_id: str, username: str = Depends(current_username)):
 
     db.delete_row('user_subjects', subject_id, user_id=username, key='subject_id')
     return ok(subject_id=subject_id)
+
+
+# --------------------------------------------------------------------------
+# Milestones on a subject
+# --------------------------------------------------------------------------
+"""Checkpoints a reader sets against a subject, before there is a goal.
+
+## Why these are not goal milestones
+
+A goal's milestones belong to that goal — the table is keyed on `goal_id`, and
+deleting the goal takes them with it. That is right for a goal and wrong for
+the thing people actually do first, which is know roughly what the stages of a
+subject are long before they have decided on a target, a date or a number.
+Making them state a goal to record "get comfortable with proofs" is asking for
+the hardest part first.
+
+So these hang off the *subject*. They outlive any goal, they need no target and
+no date, and they are what `/api/suggest_subject_goal` reads to draft a real
+goal — at which point the goal gets its own milestones, seeded from these, and
+the two lists go their separate ways. Copied rather than shared on purpose: a
+goal is a commitment and its checkpoints should not silently change because
+somebody edited a note on a subject page months later.
+
+## One row, not a table
+
+Every account's whole set is small — a handful of subjects with a handful of
+lines each — and it is always read all at once by the page that draws it. A
+table would buy indexing nothing needs and cost a migration.
+"""
+
+#: Where they live in `user_settings`.
+MILESTONES_KEY = 'subject_milestones'
+
+#: How many subjects may carry a list, and how long a list may be.
+#:
+#: Bounds rather than rules about behaviour. The whole set is one JSON value
+#: read and rewritten on every save, so an unbounded one is a row that grows
+#: until something slow happens; and a subject with forty checkpoints has a
+#: plan nobody is going to read, let alone finish.
+MILESTONE_SUBJECTS = 40
+MILESTONES_PER_SUBJECT = 12
+MILESTONE_TITLE_MAX = 120
+
+
+class SubjectMilestones(BaseModel):
+    """One subject's list, replacing whatever it held."""
+
+    subject: str = ''
+    #: Titles in the order they are meant to be reached. Ticked ones carry a
+    #: trailing marker rather than a second field — see `_clean_milestones`.
+    milestones: Optional[list] = None
+
+
+def _clean_milestones(raw):
+    """One subject's list, bounded and made honest.
+
+    Reads defensively for the reason `_clean` in analytics.py does: the value
+    is one JSON blob written by one endpoint and read by a page that draws off
+    it, so a hand-edited store should cost the reader their list rather than
+    the page.
+    """
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for entry in raw[:MILESTONES_PER_SUBJECT]:
+        if not isinstance(entry, dict):
+            continue
+        title = str(entry.get('title') or '').strip()[:MILESTONE_TITLE_MAX]
+        if not title:
+            continue
+        out.append({
+            'id': str(entry.get('id') or '')[:64] or 'm{}'.format(len(out)),
+            'title': title,
+            'done': bool(entry.get('done')),
+        })
+    return out
+
+
+def _all_milestones(username):
+    """Every subject's list for this account, cleaned."""
+    raw = db.user_setting(username, MILESTONES_KEY)
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for subject, rows in list(raw.items())[:MILESTONE_SUBJECTS]:
+        cleaned = _clean_milestones(rows)
+        if cleaned:
+            out[str(subject)[:64]] = cleaned
+    return out
+
+
+@router.get('/api/subject_milestones')
+def get_subject_milestones(username: str = Depends(current_username)):
+    """Every subject's checkpoints. One read; the page holds the lot."""
+    return ok(milestones=_all_milestones(username))
+
+
+@router.post('/api/subject_milestones')
+def set_subject_milestones(body: SubjectMilestones,
+                           username: str = Depends(current_username)):
+    """Replace one subject's list.
+
+    One subject at a time, and the whole list rather than a diff. The page
+    edits a handful of lines in place and saves the result, so a diff protocol
+    would be three endpoints and an ordering question to save a few bytes on a
+    request nobody makes twice a minute.
+
+    An empty list is a real answer and clears the subject rather than being
+    refused — it is how somebody removes their last checkpoint.
+    """
+    subject = (body.subject or '').strip()[:64]
+    if not subject:
+        return fail('Which subject?')
+
+    everything = _all_milestones(username)
+    cleaned = _clean_milestones(body.milestones or [])
+    if cleaned:
+        if subject not in everything and len(everything) >= MILESTONE_SUBJECTS:
+            return fail('That is as many subjects as can carry checkpoints.')
+        everything[subject] = cleaned
+    else:
+        everything.pop(subject, None)
+
+    db.set_user_setting(username, MILESTONES_KEY, everything)
+    return ok(milestones=everything)

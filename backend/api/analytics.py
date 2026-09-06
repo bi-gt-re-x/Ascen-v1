@@ -47,6 +47,7 @@ from backend.database import connection as db
 from backend.tracking import analytics as analytics_tracking
 from backend.tracking import standing as standing_tracking
 from backend.tracking import subject_brief
+from backend.tracking import subject_goal
 from backend.tracking.auth import load_user
 
 router = APIRouter(tags=['analytics'])
@@ -596,3 +597,52 @@ def write_subject_brief(body: SubjectBrief, username: str = Depends(current_user
     except subject_brief.BriefUnavailable as exc:
         return fail(str(exc))
     return ok(brief=written)
+
+
+class SubjectGoalDraft(BaseModel):
+    """What the subject page knows, on its way to a drafted goal."""
+
+    subject: str = ''
+    finished: Optional[int] = None
+    days: Optional[int] = None
+    active_days: Optional[int] = None
+    hours: Optional[float] = None
+    milestones: List[str] = []
+
+
+@router.post('/api/suggest_subject_goal')
+def suggest_subject_goal(body: SubjectGoalDraft, username: str = Depends(current_username)):
+    """A goal drafted for one subject, from its checkpoints. Writes nothing.
+
+    The same contract as `/api/suggest_milestones` in goals.py — a draft rather
+    than a record, and every failure comes back as a readable message rather
+    than an error status, because the page prints it beside the button.
+
+    What comes back is not a goal. The page shows it, and only the reader
+    pressing Create sends it to `/api/add_goal`, which validates it like any
+    other goal. Nothing here bypasses that.
+    """
+
+    _, user = load_user(username)
+    if not user:
+        return fail('User not found')
+
+    name = (body.subject or '').strip()[:BRIEF_TEXT]
+    if not name:
+        return fail('There is no subject to draft a goal for.')
+
+    try:
+        drafted = subject_goal.draft({
+            'subject': name,
+            'finished': body.finished,
+            'days': body.days,
+            'active_days': body.active_days,
+            'hours': body.hours,
+            # Bounded here as well as in the module: this is an unbounded list
+            # from a client and the cost of the call scales with it.
+            'milestones': [str(entry).strip()[:BRIEF_TEXT]
+                           for entry in (body.milestones or [])[:12] if str(entry).strip()],
+        })
+    except subject_goal.BriefUnavailable as exc:
+        return fail(str(exc))
+    return ok(draft=drafted)
