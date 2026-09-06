@@ -28,6 +28,9 @@ export interface MonthSummaryBarProps {
   scheduled: number;
   xpEarned: number;
   avgGoal: number;
+  /** The account's live streak, and the longest it has ever been. */
+  streak: number;
+  bestStreak: number;
   /** The same three figures for the month before, for the deltas. */
   previous: { settled: number; xpEarned: number; avgGoal: number };
   /** "Jul" — the month the deltas are against. */
@@ -60,6 +63,40 @@ function Delta({
   );
 }
 
+/**
+ * One figure: an icon chip, the number, what it is, and the line under it.
+ *
+ * The chip is what makes four figures in a row scannable — without it they are
+ * a paragraph of numerals in the same weight, and the eye has nothing to land
+ * on between them.
+ */
+function Figure({
+  tone,
+  icon,
+  label,
+  value,
+  children,
+}: {
+  tone: string;
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mv-summary-fig">
+      <span className={`mv-fig-ico tone-${tone}`} aria-hidden="true">
+        {icon}
+      </span>
+      <span className="mv-fig-body">
+        <span className="mv-fig-label">{label}</span>
+        <span className="mv-fig-value">{value}</span>
+        {children}
+      </span>
+    </div>
+  );
+}
+
 export function MonthSummaryBar({
   settled,
   scheduled,
@@ -67,6 +104,8 @@ export function MonthSummaryBar({
   avgGoal,
   previous,
   previousName,
+  streak,
+  bestStreak,
   onViewAnalytics,
 }: MonthSummaryBarProps) {
   const percent = scheduled > 0 ? Math.round((settled / scheduled) * 100) : 0;
@@ -100,53 +139,100 @@ export function MonthSummaryBar({
       </div>
 
       <div className="mv-summary-lead">
-        <span className="mv-summary-title">Month Completion Progress</span>
+        <span className="mv-summary-title">Month Progress</span>
         <span className="mv-summary-sub">
-          {settled} / {scheduled} days completed
+          {settled} of {scheduled} days completed
         </span>
+        {/* One line of verdict, and it is read off the same ratio the ring
+            draws rather than being a mood. Silent on a month with nothing
+            scheduled, which has no pace to be ahead or behind of. */}
+        {scheduled > 0 && (
+          <span className={`mv-summary-verdict${percent >= 60 ? ' is-good' : ''}`}>
+            <span aria-hidden="true">{percent >= 60 ? '↑' : '·'}</span>{' '}
+            {percent >= 80
+              ? 'On track to beat your goal!'
+              : percent >= 60
+                ? 'Holding a good pace this month.'
+                : percent > 0
+                  ? 'There is still month left to turn it around.'
+                  : 'Nothing cleared yet this month.'}
+          </span>
+        )}
+
+        {/* Under the sentence it belongs to rather than out on the strip's far
+            end. It was a two-line square button there, and with a fourth
+            figure beside it the row ran out of width and dropped it onto a
+            line of its own — a whole extra band of strip for one link. */}
+        <button type="button" className="mv-analytics" onClick={onViewAnalytics}>
+          View full analytics <span aria-hidden="true">→</span>
+        </button>
       </div>
 
       <div className="mv-summary-figs">
-        <div className="mv-summary-fig">
-          <span className="mv-fig-value">{shownXp.toLocaleString()}</span>
-          <span className="mv-fig-label">Total XP Earned</span>
+        <Figure
+          tone="xp"
+          icon={
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M13 3 5.5 13.5H11l-1 7.5 8-11H12.5z" />
+            </svg>
+          }
+          label="Total XP Earned"
+          value={shownXp.toLocaleString()}
+        >
           <Delta
             value={percentChange(xpEarned, previous.xpEarned)}
             suffix="%"
             against={previousName}
           />
-        </div>
-        <div className="mv-summary-fig">
-          <span className="mv-fig-value">{shownDays}</span>
-          <span className="mv-fig-label">Days Completed</span>
+        </Figure>
+        <Figure
+          tone="days"
+          icon={
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3.5" y="5" width="17" height="15" rx="3" />
+              <path d="M3.5 10h17M8 3.5v3M16 3.5v3" />
+            </svg>
+          }
+          label="Days Completed"
+          value={String(shownDays)}
+        >
           {/* A count, so the delta is a count too — "8 more days", not "8%". */}
           <Delta value={settled - previous.settled} suffix="" against={previousName} />
-        </div>
-        <div className="mv-summary-fig">
-          <span className="mv-fig-value">{shownGoal}%</span>
-          <span className="mv-fig-label">Avg Daily Goal</span>
+        </Figure>
+        <Figure
+          tone="goal"
+          icon={
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="8.5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="12" cy="12" r="1" />
+            </svg>
+          }
+          label="Avg Daily Goal"
+          value={`${shownGoal}%`}
+        >
           <Delta value={avgGoal - previous.avgGoal} suffix="%" against={previousName} />
-        </div>
+        </Figure>
+        {/* The one figure here that is not about the month on screen, and it
+            earns the place: a streak is the only thing in the app that can be
+            lost by doing nothing, so it belongs beside the pace rather than
+            three panels away. Its second line is its own record instead of a
+            comparison, because "up 4 days on July" is not what anybody wants
+            to know about a streak. */}
+        <Figure
+          tone="streak"
+          icon={
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M13 3c.4 3-1.4 4.2-2.6 5.4C9 9.8 8 11 8 13a4 4 0 0 0 8 0c0-1.4-.6-2.4-1.2-3.2.2 1.4-.5 2.2-1.1 2.2-.8 0-1.2-.7-1.1-1.7.2-2.5-.2-5.5.4-7.3Z" />
+            </svg>
+          }
+          label="Current Streak"
+          value={`${streak} ${streak === 1 ? 'day' : 'days'}`}
+        >
+          <span className="mv-delta is-flat">Best: {bestStreak} days</span>
+        </Figure>
       </div>
 
-      {/* Labelled as well as written on, because on a narrower window the
-          words are dropped and the icon carries it alone — see month.css. */}
-      <button
-        type="button"
-        className="mv-analytics"
-        title="View Analytics"
-        aria-label="View Analytics"
-        onClick={onViewAnalytics}
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M5 20V10M12 20V4M19 20v-6" />
-        </svg>
-        <span>
-          View
-          <br />
-          Analytics
-        </span>
-      </button>
     </section>
   );
 }

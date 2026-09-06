@@ -16,6 +16,7 @@
  * here is invented, and where the record cannot answer a question the function
  * says so with a null rather than guessing.
  */
+import { isActiveDay } from './activeDay';
 import type { GrowthDay, Task } from '@/types';
 
 const num = (value: unknown) => Number(value) || 0;
@@ -55,7 +56,7 @@ export function weekdayProfile(days: GrowthDay[]): WeekdayStat[] {
     bucket.xp += num(day.xp_earned);
     bucket.focus += num(day.focus_minutes);
     bucket.days += 1;
-    if (num(day.xp_earned) > 0) bucket.active += 1;
+    if (isActiveDay(day)) bucket.active += 1;
   });
 
   return buckets.map((bucket, index) => ({
@@ -220,7 +221,7 @@ export interface RhythmShape {
  * single-day gap would report a healthy routine as hundreds of interruptions.
  */
 export function rhythmShape(days: GrowthDay[]): RhythmShape {
-  const worked = days.filter((day) => num(day.xp_earned) > 0 || num(day.focus_minutes) > 0);
+  const worked = days.filter(isActiveDay);
   const focusDays = days.filter((day) => num(day.focus_minutes) > 0);
 
   const typicalSession = focusDays.length
@@ -247,8 +248,13 @@ export function rhythmShape(days: GrowthDay[]): RhythmShape {
     run = 0;
   };
 
+  /* A gap is broken by *any* day that had work on it, not only one that
+     earned XP. Focus sessions earn none — see utils/activeDay — so counting
+     XP here told somebody who sat down every day of a fortnight and logged it
+     that they had taken a fourteen-day break, and then priced a
+     "fill the three-day gaps" recommendation off the fiction. */
   days.forEach((day) => {
-    if (num(day.xp_earned) > 0) {
+    if (isActiveDay(day)) {
       close(day.date);
       return;
     }
@@ -314,7 +320,9 @@ export function momentum(days: GrowthDay[], window = 90): Momentum[] {
     build('Focus hours', (day) => num(day.focus_minutes) / 60, (v) => `${Math.round(v)}h`),
     build(
       'Days worked',
-      (day) => (num(day.xp_earned) > 0 ? 1 : 0),
+      // The row is called "Days worked", so it counts days worked — all three
+      // ways of doing it. See utils/activeDay.
+      (day) => (isActiveDay(day) ? 1 : 0),
       (v) => `${Math.round(v)}`,
     ),
   ];
@@ -452,5 +460,155 @@ export function balanceShape(
     fadingIds,
     rows,
     total,
+  };
+}
+
+// --------------------------------------------------------------------------
+// Subjects, by how well they are actually going
+// --------------------------------------------------------------------------
+
+/**
+ * Fewest finished tasks in a subject before its ratings are worth reading.
+ *
+ * Five is low, and deliberately so: this is the floor for *reporting* a
+ * subject's numbers, not for recommending a change on them. The rules in
+ * utils/advice that act on this ask for more.
+ */
+export const SUBJECT_FLOOR = 5;
+
+export interface SubjectQuality {
+  id: string;
+  name: string;
+  /** Finished tasks in the window. */
+  done: number;
+  /**
+   * Finished tasks in this subject over the whole record, not just the window.
+   *
+   * Here because the two questions want different spans. Whether a subject is
+   * going well is a question about now, and reading it over a year would let a
+   * good spring hide a bad fortnight. Whether it has been *dropped* cannot be
+   * asked of the window at all: a subject last touched five weeks ago has
+   * nothing inside a fortnight to be absent from, so on the window alone it
+   * does not appear as neglected — it does not appear.
+   */
+  lifetimeDone: number;
+  /** How many of those carried both ratings. */
+  rated: number;
+  /** Mean execution, 1-5, or null when too few were rated. */
+  execution: number | null;
+  /** Mean difficulty, 1-5, or null when too few were rated. */
+  difficulty: number | null;
+  /**
+   * Execution in the later half of the window minus the earlier half.
+   *
+   * Null unless both halves carry at least two rated tasks — the one number
+   * here that a single task can otherwise invent a trend out of.
+   */
+  movement: number | null;
+  /** Days since the most recent finished task in this subject, over the whole record. */
+  sinceDays: number | null;
+}
+
+export interface SubjectQualityShape {
+  rows: SubjectQuality[];
+  /** Mean execution across every subject with a reading. Null when none has. */
+  average: number | null;
+}
+
+/**
+ * Each subject as a quality reading rather than a quantity one.
+ *
+ * `balanceShape` above answers *where the effort went*; this answers *whether
+ * it worked*. They are different questions and an account regularly gets
+ * opposite answers to them — the subject carrying half the week is quite often
+ * the one rated worst, which is exactly the finding neither an XP share nor a
+ * task count can produce on its own.
+ *
+ * Everything is null where the record cannot answer. A subject nobody rated has
+ * `execution: null`, which is not the same as a subject rated badly, and the
+ * rules reading this must never collapse the two.
+ */
+export function subjectQuality(
+  tasks: Task[],
+  nameOf: (id: string) => string,
+  fromIso: string,
+  toIso: string,
+  now: Date = new Date(),
+): SubjectQualityShape {
+  const from = new Date(`${fromIso}T00:00:00`).getTime();
+  const to = new Date(`${toIso}T00:00:00`).getTime();
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return { rows: [], average: null };
+  const mid = (from + to) / 2;
+
+  /* Two passes over the same tasks. `lifetime` is every finished task in a
+     subject, ever, and is what answers "when did this last happen"; `buckets`
+     is the window, and is what answers "how is it going". A subject with a long
+     history and nothing this fortnight has a row in `lifetime` and an empty one
+     in `buckets`, which is exactly the state the dropped-subject rule looks
+     for and the state a window-only pass cannot represent. */
+  const lifetime = new Map<string, Task[]>();
+  const buckets = new Map<string, Task[]>();
+  tasks.forEach((task) => {
+    if (task.status !== 'done' || !task.subject || !task.completed_at) return;
+    const at = new Date(task.completed_at).getTime();
+    if (!Number.isFinite(at)) return;
+    const all = lifetime.get(task.subject) ?? [];
+    all.push(task);
+    lifetime.set(task.subject, all);
+    if (at < from || at > to + 86_400_000) return;
+    const list = buckets.get(task.subject) ?? [];
+    list.push(task);
+    buckets.set(task.subject, list);
+  });
+
+  const isRated = (task: Task) => num(task.difficulty) > 0 && num(task.execution) > 0;
+  const avg = (values: number[]) =>
+    values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+
+  const rows: SubjectQuality[] = [...lifetime.entries()].map(([id, everything]) => {
+    const list = buckets.get(id) ?? [];
+    const rated = list.filter(isRated);
+    const early = rated.filter((task) => new Date(task.completed_at!).getTime() < mid);
+    const late = rated.filter((task) => new Date(task.completed_at!).getTime() >= mid);
+    const earlyMean = early.length >= 2 ? avg(early.map((task) => num(task.execution))) : null;
+    const lateMean = late.length >= 2 ? avg(late.map((task) => num(task.execution))) : null;
+
+    /* By date, not by timestamp. `completed_at` carries a time of day, so a
+       task finished at 7pm and read at 9am the next morning is "-1 days ago"
+       if the two are subtracted directly — which is how a subject last worked
+       on today ends up reported as dropped. Both sides are floored to local
+       midnight, and the answer is never below zero. */
+    const newest = everything
+      .map((task) => {
+        const at = new Date(task.completed_at!);
+        if (Number.isNaN(at.getTime())) return NaN;
+        return new Date(at.getFullYear(), at.getMonth(), at.getDate()).getTime();
+      })
+      .filter((at) => Number.isFinite(at))
+      .sort((a, b) => b - a)[0];
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    return {
+      id,
+      name: nameOf(id),
+      done: list.length,
+      lifetimeDone: everything.length,
+      rated: rated.length,
+      execution: rated.length >= 3 ? avg(rated.map((task) => num(task.execution))) : null,
+      difficulty: rated.length >= 3 ? avg(rated.map((task) => num(task.difficulty))) : null,
+      movement: earlyMean !== null && lateMean !== null ? lateMean - earlyMean : null,
+      sinceDays:
+        newest === undefined ? null : Math.max(0, Math.round((midnight - newest) / 86_400_000)),
+    };
+  });
+
+  rows.sort((a, b) => b.done - a.done);
+
+  const readable = rows.filter((row) => row.execution !== null);
+  return {
+    rows,
+    average: readable.length
+      ? readable.reduce((sum, row) => sum + row.execution!, 0) / readable.length
+      : null,
   };
 }

@@ -33,7 +33,7 @@ def set_theme(request: Request, body: SetTheme):
     users, user = load_user(request.session.get('username'))
     if user:
         user['theme'] = body.theme
-        db.save_users(users)
+        db.save_user(user)
         persisted = True
 
     response = JSONResponse(ok(persisted=persisted))

@@ -61,7 +61,20 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- done well are the two readings a single "how did that go" would collapse
     -- into the same middling star.
     difficulty          INTEGER CHECK (difficulty BETWEEN 1 AND 5),
-    execution           INTEGER CHECK (execution BETWEEN 1 AND 5)
+    execution           INTEGER CHECK (execution BETWEEN 1 AND 5),
+
+    -- The third question, asked only when the account has turned it on
+    -- (rating_depth 'reasons'): the one thing that made the difference. One of
+    -- the twelve words in REASONS in backend/api/tasks.py — six for a task
+    -- that went badly, six for one that went well — and which side it came
+    -- from is recoverable from the word itself.
+    --
+    -- Deliberately not a foreign key and deliberately not free text, for the
+    -- two reasons `subject` above is neither: the vocabulary is code rather
+    -- than a table, and an answer that cannot be counted alongside other
+    -- answers is not worth the question. Null is the ordinary state — it means
+    -- the question was not asked or not answered.
+    reason              TEXT
 );
 
 CREATE INDEX IF NOT EXISTS tasks_user_status_idx ON tasks (user_id, status);

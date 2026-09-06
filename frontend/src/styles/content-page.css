@@ -30,29 +30,56 @@ body:has(.content-container) {
 
 .content-container {
     background: rgba(255, 255, 255, 0.9);
-    padding: 40px;
-    border-radius: 10px;
-    max-width: 800px;
+    padding: clamp(26px, 4vw, 44px);
+    border-radius: 12px;
+    /* Sized for the prose rather than for the screen. At 800px a line of the
+       privacy policy ran to about ninety characters; the eye loses its place
+       returning across one that long, and these are three pages of nothing but
+       running text. This holds a line near seventy-five. The About Us cards
+       fall to two columns at this width, which is the better shape for four
+       of them anyway — they were a ragged three-then-one before. */
+    max-width: 700px;
     /* The original's 50px top margin was clearing nothing — those pages had no
        top bar, only a Home button floating over the corner. This one sits
        clear of the rail, whose width body.has-rail has already reserved,
        so this is the gap below it rather than room made for it. */
-    margin: 28px auto 50px;
+    margin: 28px auto 56px;
     color: #333;
 }
 
 .content-container h1 {
     color: inherit;
     margin-top: 0;
+    /* The page title carried the browser's 0.67em, which on a 2em heading is
+       a wider gap than the one under any section heading below it — the top of
+       the page was the loosest thing on it. */
+    margin-bottom: 0.6em;
+    font-size: 1.9em;
+    letter-spacing: -0.015em;
 }
 
+/* A heading belongs to what follows it, not to what it interrupts. Both
+   margins were doing the same job before — 1.5em above and the browser's
+   0.83em below — which left every section looking like a title floating
+   between two paragraphs rather than the start of one. */
 .content-container h2 {
-    margin-top: 1.5em;
-    font-size: 1.2em;
+    margin: 2.1em 0 0.5em;
+    font-size: 1.16em;
+    letter-spacing: -0.01em;
+}
+
+.content-container p {
+    margin: 0 0 0.9em;
 }
 
 .content-container ul {
-    padding-left: 1.4em;
+    margin: 0 0 0.9em;
+    padding-left: 1.3em;
+}
+
+/* Rows of a list, not a block of text with bullets in it. */
+.content-container li + li {
+    margin-top: 0.4em;
 }
 
 .content-container a {

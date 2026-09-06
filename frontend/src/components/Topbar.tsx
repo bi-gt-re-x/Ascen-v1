@@ -13,13 +13,23 @@
  * offender — a red 3 that is always 3 trains people to ignore every badge you
  * will ever show them. So:
  *
- *   **Search** reads the account's own tasks and goes to the one you pick. Not
- *   a global search over a corpus that does not exist; the placeholder says
- *   which, so nobody types a subject into it and concludes the app is broken.
- *   **Alerts** are counted from the record — work that is late, work due today,
- *   and a streak that will break tonight. Nothing is generated on a schedule,
- *   so an account in good order gets no badge at all, which is what makes the
- *   badge worth looking at on the day it appears.
+ *   **Search** looks in two places: the account's own tasks, and the
+ *   containers this app is made of — every page, tab and settings section
+ *   (utils/siteIndex). It takes you to the closest match as you type and the
+ *   arrows walk the rest, so nobody has to know which screen a control is on
+ *   to reach it. The panel is components/Search/Panel.tsx.
+ *   **Notifications** are read from the record — late work, today's calendar,
+ *   a goal's date coming up, how the week went, a streak that will break
+ *   tonight. Nothing is generated on a schedule, so an account in good order
+ *   gets no badge at all, which is what makes the badge worth looking at on
+ *   the day it appears.
+ *
+ *   That list used to be counted right here, on every render, from three
+ *   numbers `/api/alerts` returned — and a count cannot be deleted. There was
+ *   nothing to delete; the next render brought it back, so the bell told you
+ *   the same three things until you fixed them. They are rows now
+ *   (data/sql/notifications.sql), each one can be thrown away for good, and
+ *   the panel is components/Notifications/Panel.tsx.
  *   **Dark mode** is a switch, not a two-option dropdown — it stood in the
  *   rail's foot until the foot became the rank and the XP bar, and it belongs
  *   with the rest of the app's controls anyway.
@@ -28,14 +38,15 @@
  *   rail, whose account plate is gone — a picker with no way to open it is a
  *   deleted feature with extra steps.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth, useTheme, useUserData } from '@/hooks';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { NotificationPanel } from './Notifications';
+import { SearchPanel } from './Search';
+import { useAuth, useNotifications, useSettings, useStats, useTheme } from '@/hooks';
 import { AVATARS, avatarPath } from '@/services/avatars';
 import { auth } from '@/services';
 import { format } from '@/utils';
-import { isoDate } from '@/utils/dates';
-import type { Task, Theme } from '@/types';
+import type { Theme } from '@/types';
 import '@/styles/topbar.css';
 
 const stroke = {
@@ -47,113 +58,27 @@ const stroke = {
   strokeLinejoin: 'round' as const,
 };
 
-/** How many matches the search drops down. Enough to choose from, few enough to scan. */
-const RESULTS = 6;
-
-// --------------------------------------------------------------------------
-// Alerts
-// --------------------------------------------------------------------------
-interface Alert {
-  id: string;
-  tone: 'late' | 'today' | 'streak';
-  title: string;
-  detail: string;
-  to: string;
-}
-
-/**
- * What the record says is worth interrupting somebody about.
- *
- * Three kinds, and each is a fact rather than a nudge: a task whose deadline
- * has passed, a task due today, and a streak with nothing on the board yet.
- * The last one is the only one with any urgency built in, and it earns it —
- * a streak is the one thing in the app that can be lost by doing nothing, and
- * it is lost at midnight rather than gradually.
- *
- * Deliberately not here: anything about how much was done, how it compared to
- * last week, or what the reader could be doing better. That is what the
- * analytics page is for, it is never urgent, and a bell that rings about it is
- * a bell people turn off.
- */
-function alertsFrom(tasks: Task[], streak: number): Alert[] {
-  const today = isoDate();
-  const out: Alert[] = [];
-
-  const open = tasks.filter((task) => task.status !== 'done');
-  const dueDay = (task: Task) => String(task.due_date || '').slice(0, 10);
-
-  const late = open.filter((task) => dueDay(task) && dueDay(task) < today);
-  const due = open.filter((task) => dueDay(task) === today);
-
-  if (late.length > 0) {
-    out.push({
-      id: 'late',
-      tone: 'late',
-      title:
-        late.length === 1
-          ? '1 task is past its date'
-          : `${late.length} tasks are past their dates`,
-      detail:
-        late.length === 1
-          ? late[0]!.title
-          : `Oldest: ${[...late].sort((a, b) => dueDay(a).localeCompare(dueDay(b)))[0]!.title}`,
-      to: '/tasks',
-    });
-  }
-
-  if (due.length > 0) {
-    out.push({
-      id: 'today',
-      tone: 'today',
-      title: `${due.length} ${due.length === 1 ? 'task is' : 'tasks are'} due today`,
-      detail: due.length === 1 ? due[0]!.title : `Including ${due[0]!.title}`,
-      to: '/tasks',
-    });
-  }
-
-  // Nothing finished today, and something to lose by leaving it that way.
-  const finishedToday = tasks.some(
-    (task) => task.status === 'done' && String(task.completed_at || '').slice(0, 10) === today,
-  );
-  if (streak > 0 && !finishedToday) {
-    out.push({
-      id: 'streak',
-      tone: 'streak',
-      title: `Your ${streak}-day streak has nothing on it yet`,
-      detail: 'Anything finished today keeps it. It resets at midnight.',
-      to: '/dashboard',
-    });
-  }
-
-  return out;
-}
-
 // --------------------------------------------------------------------------
 // The bar
 // --------------------------------------------------------------------------
 export function Topbar() {
   const { username, avatar, signOut, refresh } = useAuth();
+  /* The name the account calls itself, which is the one the dashboard greets
+     it by. The bar used to show `username` while the greeting under it showed
+     `displayName`, so an account named "temu" with the username "Alpha" read
+     as two people on one screen. One name on the surface; the username is in
+     the menu below, which is where "which account am I in" belongs. */
+  const { displayName } = useSettings();
   const { theme, setTheme } = useTheme();
-  /*
-   * A second read of /api/get_user_data — the rail makes the first, for the
-   * level under the avatar. Two small GETs per page load rather than a store
-   * shared between two components that mount once each and never unmount: the
-   * shared version is the right answer the moment a third caller appears, and
-   * inventing it for the second is more machinery than the call costs.
-   */
-  const { data } = useUserData();
-  const navigate = useNavigate();
+  // Shared with the rail, which shows the same level under the avatar. Six
+  // integers, read once for the session — this used to be the account's whole
+  // task list, twice, because the bar and the rail each asked for it.
+  const { stats } = useStats();
 
-  const tasks = useMemo(() => data?.tasks ?? [], [data]);
-  const streak = data?.stats?.current_streak ?? 0;
-  const level = data ? format.levelForTotalXp(data.stats.xp) : null;
-
-  const alerts = useMemo(() => alertsFrom(tasks, streak), [streak, tasks]);
+  const level = stats ? format.levelForTotalXp(stats.xp) : null;
 
   const [open, setOpen] = useState<'search' | 'alerts' | 'account' | null>(null);
-  const [query, setQuery] = useState('');
   const barRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // A click anywhere else closes whatever is open. One listener for all three
   // panels, because only one is ever open at a time.
@@ -173,26 +98,45 @@ export function Topbar() {
     };
   }, [open]);
 
-  useEffect(() => {
-    if (open === 'search') inputRef.current?.focus();
-  }, [open]);
-
-  const matches = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return [];
-    return tasks
-      .filter((task) => task.title.toLowerCase().includes(needle))
-      // Unfinished first: a search on a to-do list is nearly always somebody
-      // looking for something they still have to do.
-      .sort((a, b) => Number(a.status === 'done') - Number(b.status === 'done'))
-      .slice(0, RESULTS);
-  }, [query, tasks]);
+  /*
+   * The bell's list.
+   *
+   * Not worked out here any more. These are rows the server wrote
+   * (context/NotificationsProvider reads and polls them), which is what lets a
+   * notification be deleted and stay deleted — the three counts this bar used
+   * to derive could not be, because there was nothing to delete.
+   *
+   * The badge counts the list rather than the unread part of it: it is "you
+   * have N notifications", and it goes back to nothing by them being dealt
+   * with rather than by being glanced at. `unread` still has a job — it is
+   * what marks the new rows inside the panel — and opening the bell is what
+   * settles it.
+   */
+  const { items, markRead } = useNotifications();
+  const waiting = items.length;
 
   const toggle = useCallback(
     (panel: 'search' | 'alerts' | 'account') =>
       setOpen((current) => (current === panel ? null : panel)),
     [],
   );
+
+  /* Opening the bell is what marks its contents read, which is why this one
+     is not just `toggle('alerts')`. Reading is not deleting: the list is
+     exactly as long afterwards, the badge is simply no longer counting it.
+
+     `open` is read rather than updated with a function, because `markRead`
+     sets state in the provider above and a state updater is not the place to
+     do that — React runs it while rendering, and updating another component
+     from there is the warning it is right to give. */
+  const openAlerts = useCallback(() => {
+    if (open === 'alerts') {
+      setOpen(null);
+      return;
+    }
+    setOpen('alerts');
+    markRead();
+  }, [open, markRead]);
 
   const chooseAvatar = useCallback(
     async (name: string) => {
@@ -215,7 +159,7 @@ export function Topbar() {
           <button
             type="button"
             className={`topbar-btn${open === 'search' ? ' is-on' : ''}`}
-            aria-label="Search your tasks"
+            aria-label="Search tasks and pages"
             aria-expanded={open === 'search'}
             onClick={() => toggle('search')}
           >
@@ -225,90 +169,54 @@ export function Topbar() {
             </svg>
           </button>
 
+          {/* Mounted only while open, and that is load-bearing rather than
+              tidy: the panel navigates as the reader types, so a copy kept
+              alive behind a `display: none` would be a copy still steering the
+              router. Its query resets with it, which is also the right
+              behaviour — a search is a question, not a setting. */}
           {open === 'search' && (
             <div className="topbar-panel topbar-search">
-              <input
-                ref={inputRef}
-                type="search"
-                className="topbar-search-input"
-                placeholder="Search your tasks"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && matches[0]) {
-                    setOpen(null);
-                    navigate('/tasks');
-                  }
-                }}
-              />
-              {query.trim() === '' ? (
-                <p className="topbar-empty">
-                  Type to find a task by name. This searches the tasks on your account and
-                  nothing else.
-                </p>
-              ) : matches.length === 0 ? (
-                <p className="topbar-empty">No task matches “{query.trim()}”.</p>
-              ) : (
-                <ul className="topbar-results">
-                  {matches.map((task) => (
-                    <li key={task.id}>
-                      <Link to="/tasks" onClick={() => setOpen(null)}>
-                        <span className={`topbar-dot is-${task.status === 'done' ? 'done' : 'open'}`} />
-                        <span className="topbar-result-name">{task.title}</span>
-                        <span className="topbar-result-meta">
-                          {task.status === 'done' ? 'Done' : `${task.xp_value} XP`}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <SearchPanel onClose={() => setOpen(null)} />
             </div>
           )}
         </div>
 
-        {/* ---- Alerts ---- */}
+        {/* ---- Notifications ---- */}
         <div className="topbar-slot">
           <button
             type="button"
             className={`topbar-btn${open === 'alerts' ? ' is-on' : ''}`}
             aria-label={
-              alerts.length === 0 ? 'Notifications: nothing waiting' : `Notifications: ${alerts.length}`
+              waiting === 0
+                ? 'Notifications: nothing waiting'
+                : `Notifications: ${waiting} waiting`
             }
             aria-expanded={open === 'alerts'}
-            onClick={() => toggle('alerts')}
+            onClick={() => openAlerts()}
           >
             <svg {...stroke}>
               <path d="M18 8a6 6 0 1 0-12 0c0 6-3 7-3 7h18s-3-1-3-7" />
               <path d="M13.7 21a2 2 0 0 1-3.4 0" />
             </svg>
-            {/* No badge at zero. A count that is always showing is furniture. */}
-            {alerts.length > 0 && <span className="topbar-badge">{alerts.length}</span>}
+            {/* How many are in the bell, in a red circle at its corner. No
+                badge at zero: a count that is always showing is furniture, and
+                an account in good order genuinely has none.
+
+                It counts the list rather than the unread part of it, so it
+                goes away by the notifications being dealt with — read, or
+                deleted — rather than by being glanced at. A badge that clears
+                itself on a glance is a badge that stops meaning anything.
+
+                Past 99 it says 99+. Three digits do not fit in a circle, and
+                nobody with that many is counting. */}
+            {waiting > 0 && (
+              <span className="topbar-badge">{waiting > 99 ? '99+' : waiting}</span>
+            )}
           </button>
 
           {open === 'alerts' && (
             <div className="topbar-panel topbar-alerts">
-              <div className="topbar-panel-head">Needs you</div>
-              {alerts.length === 0 ? (
-                <p className="topbar-empty">
-                  Nothing is late, nothing is due today, and your streak is safe. This is
-                  empty because the record is clear, not because it is switched off.
-                </p>
-              ) : (
-                <ul className="topbar-alert-list">
-                  {alerts.map((alert) => (
-                    <li key={alert.id}>
-                      <Link to={alert.to} onClick={() => setOpen(null)}>
-                        <span className={`topbar-alert-dot is-${alert.tone}`} aria-hidden="true" />
-                        <span>
-                          <strong>{alert.title}</strong>
-                          <em>{alert.detail}</em>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <NotificationPanel onClose={() => setOpen(null)} />
             </div>
           )}
         </div>
@@ -349,7 +257,7 @@ export function Topbar() {
             onClick={() => toggle('account')}
           >
             <img className="topbar-avatar" src={avatar} alt="" width={34} height={34} />
-            <span className="topbar-name">{username}</span>
+            <span className="topbar-name">{displayName || username}</span>
             <svg className="topbar-caret" {...stroke} strokeWidth={2.2}>
               <path d="m6 9 6 6 6-6" />
             </svg>
@@ -358,10 +266,16 @@ export function Topbar() {
           {open === 'account' && (
             <div className="topbar-panel topbar-account-menu" role="menu">
               <div className="topbar-account-head">
-                <strong>{username}</strong>
+                <strong>{displayName || username}</strong>
+                {/* The username, where it is an answer rather than a label:
+                    the menu is where somebody checks which account they are
+                    signed in to. Only shown when it differs from the name
+                    above it, so an account that never set one does not read
+                    its own username twice. */}
+                {displayName && displayName !== username && <span>@{username}</span>}
                 {level && (
                   <span>
-                    Level {level.level} · {format.number(data?.stats.xp ?? 0)} XP
+                    Level {level.level} · {format.number(stats?.xp ?? 0)} XP
                   </span>
                 )}
               </div>

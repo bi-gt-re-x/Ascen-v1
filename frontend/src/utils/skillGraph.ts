@@ -1,21 +1,23 @@
 /**
  * The shape a skill tree is drawn from — any skill tree.
  *
- * ## Why this exists beside utils/skillTree
+ * ## Why this knows nothing about what a node means
  *
- * utils/skillTree knows what a skill tree *means* on this account: that Depth
- * is XP on the mastery ladder, that Output is finished tasks, that a node opens
- * when a threshold is crossed. It is one specific tree, derived from one
- * specific record, and the page used to be written against its shape — three
- * named branches, five nodes each, a fan of exactly three curves.
+ * There used to be a second file, utils/skillTree, that knew exactly what a
+ * skill tree *meant* on this account: Depth was XP on the mastery ladder,
+ * Output was finished tasks, a node opened when a threshold was crossed. It was
+ * one specific tree derived from one specific record, and the page was once
+ * written against its shape — three named branches, five nodes each, a fan of
+ * exactly three curves. Nothing rendered it in the end and it has been deleted.
  *
- * This file knows none of that. A graph here is nodes and edges and a status
+ * This file deliberately knew none of that, and that is why it outlived it. A graph here is nodes and edges and a status
  * per node, and that is the whole model. It cannot say why a node is locked; it
  * is told. That split is the point: the renderer that hangs off this file draws
  * any number of nodes, edges, branches and categories in any arrangement, so
  * the day a generator produces a real per-account skill graph, the drawing code
- * does not change — only what feeds it. utils/skillGraphFromTrees is today's
- * feed and is deliberately the only file that knows both shapes.
+ * does not change — only what feeds it. `graphFromSubjectTree` in
+ * skills/subjectTrees is today's feed and is deliberately the only thing that
+ * knows both shapes.
  *
  * ## What this file does *not* do
  *
@@ -98,6 +100,23 @@ export interface GraphNode {
    * not to know.
    */
   secondary?: boolean;
+  /**
+   * The drawing on the node, named by filename without the extension — the
+   * files in utils/icons/tree_icons, served at `/static/icons/tree_icons`.
+   *
+   * A name rather than a component or a URL: the model stays free of both React
+   * and of where the assets happen to be mounted, and a feed that has no icons
+   * simply omits it. What a missing one falls back to is the renderer's
+   * business, not the model's.
+   */
+  icon?: string;
+  /**
+   * Nodes worth doing first without being required to. Drawn as a second kind
+   * of edge — dashed, and reading "recommended" rather than "prerequisite" —
+   * and deliberately *not* part of `requires`: these must not gate a node or
+   * move it down a rank, or a suggestion would silently become a rule.
+   */
+  recommends?: string[];
 }
 
 export interface SkillGraph {
@@ -133,6 +152,36 @@ export const GEOM = {
   pad: 44,
 };
 
+/** The shape of a geometry `layoutGraph` can be handed. */
+export type Geometry = typeof GEOM;
+
+/**
+ * A tight, icon-sized geometry — square nodes packed close, the way a talent
+ * lattice reads rather than a wall of labelled cards. The subject-tree feed
+ * lays out with this; the card feeds keep {@link GEOM}. Same algorithm, same
+ * coordinate space — only the numbers the arithmetic runs on change.
+ */
+export const LATTICE_GEOM: Geometry = {
+  nodeW: 64,
+  nodeH: 64,
+  // Both gaps are set by the label rather than by the tile: a name sits under
+  // each square, so siblings need room for one to stand between them and each
+  // rank needs room for one to hang below it. Tighter than this and the names
+  // touch, which is the one thing that makes a lattice unreadable.
+  // Both gaps are set by what hangs off a tile rather than by the tile: a name
+  // of up to two lines and a percentage sit under each one, so siblings need
+  // room for a label to stand between them and each rank needs room for one to
+  // hang below it. The column gap is also what stops the drawing outgrowing a
+  // canvas that now shares its row with a 340px detail panel.
+  // Room for what hangs off a tile: a name of up to two lines, then a row
+  // holding the difficulty chip and the percentage. The column gap has to clear
+  // that row, which is wider than the 64px tile, or two neighbours' chips
+  // collide before their tiles come close.
+  colGap: 96,
+  rowGap: 118,
+  pad: 56,
+};
+
 export interface PlacedNode {
   node: GraphNode;
   /** Top-left of the node box, in canvas units. */
@@ -149,6 +198,9 @@ export interface PlacedEdge {
   state: EdgeState;
   /** The cubic path, ready for a `d` attribute. */
   d: string;
+  /** What the line means: something you must do first, or something worth
+   *  doing first. The renderer draws the second one dashed. */
+  kind: 'requires' | 'recommends';
 }
 
 export interface GraphLayout {
@@ -212,7 +264,7 @@ export function edgeState(target: GraphNode | undefined): EdgeState {
  * Cycles cannot hang it: rank is computed with a seen-set per walk, and a node
  * reached again keeps the deeper of the two ranks.
  */
-export function layoutGraph(graph: SkillGraph): GraphLayout {
+export function layoutGraph(graph: SkillGraph, geom: Geometry = GEOM): GraphLayout {
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
   const kids = new Map<string, string[]>();
   const parents = new Map<string, string[]>();
@@ -264,7 +316,7 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
   }
 
   // ---- position across, one piece at a time -------------------------------
-  const step = GEOM.nodeW + GEOM.colGap;
+  const step = geom.nodeW + geom.colGap;
   const centre = new Map<string, number>();
 
   const layOut = (members: readonly string[]) => {
@@ -301,15 +353,15 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
   };
   for (const members of pieces) layOut(members);
 
-  const rowStep = GEOM.nodeH + GEOM.rowGap;
+  const rowStep = geom.nodeH + geom.rowGap;
 
   // ---- shelve the pieces --------------------------------------------------
   const size = pieces.map((members) => {
     const xs = members.map((id) => centre.get(id) ?? 0);
     const ranks = members.map((id) => rank.get(id) ?? 0);
     return {
-      width: Math.max(...xs) - Math.min(...xs) + GEOM.nodeW,
-      height: Math.max(...ranks) * rowStep + GEOM.nodeH,
+      width: Math.max(...xs) - Math.min(...xs) + geom.nodeW,
+      height: Math.max(...ranks) * rowStep + geom.nodeH,
       left: Math.min(...xs),
     };
   });
@@ -328,11 +380,11 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
   size.forEach((box, index) => {
     if (shelfX > 0 && shelfX + box.width > target) {
       shelfX = 0;
-      shelfY += shelfH + GEOM.rowGap * 2;
+      shelfY += shelfH + geom.rowGap * 2;
       shelfH = 0;
     }
     offset[index] = { x: shelfX - box.left, y: shelfY };
-    shelfX += box.width + GEOM.colGap * 2;
+    shelfX += box.width + geom.colGap * 2;
     shelfH = Math.max(shelfH, box.height);
   });
 
@@ -340,8 +392,8 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
     const shelf = offset[piece.get(node.id) ?? 0] ?? { x: 0, y: 0 };
     return {
       node,
-      x: (centre.get(node.id) ?? 0) + shelf.x + GEOM.pad,
-      y: (rank.get(node.id) ?? 0) * rowStep + shelf.y + GEOM.pad,
+      x: (centre.get(node.id) ?? 0) + shelf.x + geom.pad,
+      y: (rank.get(node.id) ?? 0) * rowStep + shelf.y + geom.pad,
       rank: rank.get(node.id) ?? 0,
     };
   });
@@ -349,33 +401,43 @@ export function layoutGraph(graph: SkillGraph): GraphLayout {
   const at = new Map(placed.map((entry) => [entry.node.id, entry]));
 
   const edges: PlacedEdge[] = [];
+
+  /** One curve between two placed nodes, however the two are related. */
+  const join = (fromId: string, toId: string, kind: PlacedEdge['kind']) => {
+    const from = at.get(fromId);
+    const to = at.get(toId);
+    if (!from || !to) return;
+    const x1 = from.x + geom.nodeW / 2;
+    const y1 = from.y + geom.nodeH;
+    const x2 = to.x + geom.nodeW / 2;
+    const y2 = to.y;
+    // Control points pulled vertically by half the gap, so the line leaves the
+    // node it comes from going down and arrives at the next one going down —
+    // a curve that reads as a route rather than as a diagonal.
+    const bend = Math.max(24, (y2 - y1) / 2);
+    edges.push({
+      id: `${fromId}-${kind}->${toId}`,
+      from: fromId,
+      to: toId,
+      state: edgeState(byId.get(toId)),
+      d: `M${x1},${y1} C${x1},${y1 + bend} ${x2},${y2 - bend} ${x2},${y2}`,
+      kind,
+    });
+  };
+
   for (const node of graph.nodes) {
-    for (const id of parents.get(node.id) ?? []) {
-      const from = at.get(id);
-      const to = at.get(node.id);
-      if (!from || !to) continue;
-      const x1 = from.x + GEOM.nodeW / 2;
-      const y1 = from.y + GEOM.nodeH;
-      const x2 = to.x + GEOM.nodeW / 2;
-      const y2 = to.y;
-      // Control points pulled vertically by half the gap, so the line leaves the
-      // node it comes from going down and arrives at the next one going down —
-      // a curve that reads as a route rather than as a diagonal.
-      const bend = Math.max(24, (y2 - y1) / 2);
-      edges.push({
-        id: `${id}->${node.id}`,
-        from: id,
-        to: node.id,
-        state: edgeState(node),
-        d: `M${x1},${y1} C${x1},${y1 + bend} ${x2},${y2 - bend} ${x2},${y2}`,
-      });
+    for (const id of parents.get(node.id) ?? []) join(id, node.id, 'requires');
+    // Suggestions are drawn but were never ranked, so one can point upward or
+    // sideways. The curve handles it; the layout above never saw it.
+    for (const id of node.recommends ?? []) {
+      if (byId.has(id)) join(id, node.id, 'recommends');
     }
   }
 
-  const right = placed.reduce((max, entry) => Math.max(max, entry.x + GEOM.nodeW), 0);
-  const bottom = placed.reduce((max, entry) => Math.max(max, entry.y + GEOM.nodeH), 0);
+  const right = placed.reduce((max, entry) => Math.max(max, entry.x + geom.nodeW), 0);
+  const bottom = placed.reduce((max, entry) => Math.max(max, entry.y + geom.nodeH), 0);
 
-  return { nodes: placed, edges, width: right + GEOM.pad, height: bottom + GEOM.pad };
+  return { nodes: placed, edges, width: right + geom.pad, height: bottom + geom.pad };
 }
 
 // ---------------------------------------------------------------------------

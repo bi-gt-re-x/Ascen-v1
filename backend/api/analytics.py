@@ -38,13 +38,15 @@ utils/followup.ts, next to the rules whose promises it is checking.
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking import analytics as analytics_tracking
 from backend.tracking import standing as standing_tracking
+from backend.tracking import subject_brief
 from backend.tracking.auth import load_user
 
 router = APIRouter(tags=['analytics'])
@@ -53,12 +55,11 @@ router = APIRouter(tags=['analytics'])
 class SetBaseline(BaseModel):
     """What a reader can state about their own intentions on day one.
 
-    `username` rides in the body rather than the query because every other
-    POST in this app does — see backend/api/goals.py — and one endpoint with a
-    different convention is one endpoint somebody calls wrongly.
+    No `username`: the account is the signed-in one and nothing else — see
+    backend/api/guard.py. The field used to ride in the body here because every
+    other POST in this app sent one; none of them do now.
     """
 
-    username: str = ''
     #: Days a week they mean to work. 1-7.
     active_days: Optional[int] = None
     #: What a normal sitting is, in minutes.
@@ -100,18 +101,70 @@ class AdoptAdvice(BaseModel):
     remembers what the reader actually agreed to.
     """
 
-    username: str = ''
     id: str = ''
     title: str = ''
 
 
 class DropAdvice(BaseModel):
-    username: str = ''
     id: str = ''
 
 
+# The task fields the analytics page reads, and nothing else.
+#
+# Every panel on all seven tabs is arithmetic over three responses, and this is
+# one of them. The page used to get it from `/api/get_user_data` — the whole
+# task list, every column, which the provider warns is megabytes and which is
+# turned on for the rest of the session by the first component that asks.
+# Opening Analytics paid that in full for sixteen fields.
+#
+# The list is the union of what the page's utils actually touch, checked
+# against them rather than guessed: subject and XP for the breakdown, the two
+# stamps and `completion_seconds` for the rates, the ratings pair and `reason`
+# for quality, the goal pointers for the Records tab, and title, priority and
+# `due_date` for the plan. What it leaves behind is `description` — free text
+# with no ceiling, on every row, that no panel here has ever read.
+#
+# Adding a field to this list is how a new panel gets its data. Adding one that
+# nothing reads is how this endpoint slowly becomes the old one again.
+ANALYTICS_TASK_FIELDS = (
+    'id',
+    'title',
+    'status',
+    'priority',
+    'subject',
+    'xp_value',
+    'created_at',
+    'completed_at',
+    'due_date',
+    'completion_seconds',
+    'met_deadline',
+    'difficulty',
+    'execution',
+    'reason',
+    'goal_id',
+    'milestone_id',
+)
+
+
+@router.get('/api/analytics/tasks')
+def get_analytics_tasks(username: str = Depends(current_username)):
+    """Every task the account owns, in the sixteen columns this page reads.
+
+    Unwindowed, and that is deliberate. The window picker slices in the browser
+    so that changing it costs nothing, and several panels are not scoped by it
+    at all — the goal-aimed share and the habit history both look at the whole
+    record. Pushing the window into this query would trade an instant control
+    for a round trip per click and still need a second, unwindowed call for the
+    panels that ignore it.
+
+    What was worth moving was the *width* of each row, not the number of them.
+    See ANALYTICS_TASK_FIELDS.
+    """
+    return ok(tasks=db.columns_for('tasks', username, ANALYTICS_TASK_FIELDS))
+
+
 @router.get('/api/standing')
-def get_standing(username: str = ''):
+def get_standing(username: str = Depends(current_username)):
     """Where this account places against the others, measure by measure.
 
     Returns the placements, the size of the cohort behind them, and whether
@@ -119,8 +172,6 @@ def get_standing(username: str = ''):
     tracking/standing.py for why the last of those is a field rather than an
     assumption.
     """
-    if not username:
-        return fail('Username required')
 
     placement = standing_tracking.standing(username)
     if placement is None:
@@ -129,7 +180,7 @@ def get_standing(username: str = ''):
 
 
 @router.get('/api/metric_history')
-def get_metric_history(username: str = '', metric: str = 'overall'):
+def get_metric_history(username: str = Depends(current_username), metric: str = 'overall'):
     """Past grades for one metric, oldest first.
 
     The snapshots have been accumulating since the report card existed — every
@@ -142,8 +193,6 @@ def get_metric_history(username: str = '', metric: str = 'overall'):
     *what changed since I was last here.* One score is a status; two scores a
     week apart is a reason to come back.
     """
-    if not username:
-        return fail('Username required')
 
     rows = analytics_tracking.history(username, metric)
     return ok(metric=metric, points=[
@@ -153,7 +202,7 @@ def get_metric_history(username: str = '', metric: str = 'overall'):
 
 
 @router.get('/api/metric_histories')
-def get_metric_histories(username: str = ''):
+def get_metric_histories(username: str = Depends(current_username)):
     """Every graded metric's past readings at once, grouped by metric.
 
     The endpoint above answers about one metric and is what the score panel
@@ -166,8 +215,6 @@ def get_metric_histories(username: str = ''):
     same table read either way, so fanning out would be several round trips to
     answer a question one already can.
     """
-    if not username:
-        return fail('Username required')
 
     series: dict = {}
     for row in analytics_tracking.history(username):
@@ -214,14 +261,12 @@ def _clean(raw):
 
 
 @router.get('/api/baseline')
-def get_baseline(username: str = ''):
+def get_baseline(username: str = Depends(current_username)):
     """What this account said it was aiming at, or nothing.
 
     `baseline: null` is a real answer and the page depends on it — it is what
     puts a new reader on the setup screen instead of a wall of countdowns.
     """
-    if not username:
-        return fail('Username required')
 
     _, user = load_user(username)
     if not user:
@@ -231,7 +276,7 @@ def get_baseline(username: str = ''):
 
 
 @router.post('/api/baseline')
-def set_baseline(body: SetBaseline):
+def set_baseline(body: SetBaseline, username: str = Depends(current_username)):
     """Record what the account is aiming at.
 
     Both numbers are required and bounded. `focus_subject` is not: a reader who
@@ -242,8 +287,6 @@ def set_baseline(body: SetBaseline):
     it worth anything later — a target set eight months ago and never revisited
     is a different thing from one set last week, and the page says which.
     """
-    if not body.username:
-        return fail('Username required')
 
     if body.active_days is None or body.session_minutes is None:
         return fail('A baseline needs both how often and how long.')
@@ -254,11 +297,11 @@ def set_baseline(body: SetBaseline):
     if not (SESSION_MINUTES[0] <= body.session_minutes <= SESSION_MINUTES[1]):
         return fail('A sitting must be between {} and {} minutes.'.format(*SESSION_MINUTES))
 
-    _, user = load_user(body.username)
+    _, user = load_user(username)
     if not user:
         return fail('User not found')
 
-    stored = db.set_user_setting(body.username, BASELINE_KEY, {
+    stored = db.set_user_setting(username, BASELINE_KEY, {
         'active_days': int(body.active_days),
         'session_minutes': int(body.session_minutes),
         'focus_subject': str(body.focus_subject or ''),
@@ -320,10 +363,8 @@ def _remember(rows: List[dict], ident: str, title: str) -> List[dict]:
 
 
 @router.get('/api/adopted_advice')
-def get_adopted(username: str = ''):
+def get_adopted(username: str = Depends(current_username)):
     """Every recommendation this account has said it would act on, oldest first."""
-    if not username:
-        return fail('Username required')
 
     _, user = load_user(username)
     if not user:
@@ -333,7 +374,7 @@ def get_adopted(username: str = ''):
 
 
 @router.post('/api/adopt_advice')
-def adopt_advice(body: AdoptAdvice):
+def adopt_advice(body: AdoptAdvice, username: str = Depends(current_username)):
     """Record that the reader is acting on a recommendation, dated today.
 
     Dated today rather than tomorrow, even though the task this creates is due
@@ -343,22 +384,22 @@ def adopt_advice(body: AdoptAdvice):
     anyway, and "the day I pressed the button" is the one a reader can
     remember.
     """
-    if not body.username or not body.id:
+    if not username or not body.id:
         return fail('Username and id required')
 
-    _, user = load_user(body.username)
+    _, user = load_user(username)
     if not user:
         return fail('User not found')
 
-    rows = _adopted(db.user_setting(body.username, ADOPTED_KEY))
+    rows = _adopted(db.user_setting(username, ADOPTED_KEY))
     stored = db.set_user_setting(
-        body.username, ADOPTED_KEY, _remember(rows, body.id, body.title))
+        username, ADOPTED_KEY, _remember(rows, body.id, body.title))
 
     return ok(adopted=_adopted(stored))
 
 
 @router.post('/api/drop_advice')
-def drop_advice(body: DropAdvice):
+def drop_advice(body: DropAdvice, username: str = Depends(current_username)):
     """Forget an adoption.
 
     This deletes the record of the decision and nothing else — any task the
@@ -366,15 +407,192 @@ def drop_advice(body: DropAdvice):
     the same as undoing the work, and silently deleting somebody's task on a
     second click is not what either button meant.
     """
-    if not body.username or not body.id:
+    if not username or not body.id:
         return fail('Username and id required')
 
-    _, user = load_user(body.username)
+    _, user = load_user(username)
     if not user:
         return fail('User not found')
 
-    rows = [row for row in _adopted(db.user_setting(body.username, ADOPTED_KEY))
+    rows = [row for row in _adopted(db.user_setting(username, ADOPTED_KEY))
             if row['id'] != body.id]
-    stored = db.set_user_setting(body.username, ADOPTED_KEY, rows)
+    stored = db.set_user_setting(username, ADOPTED_KEY, rows)
 
     return ok(adopted=_adopted(stored))
+
+
+@router.get('/api/growth_periods')
+def get_growth_periods(username: str = Depends(current_username), period: str = '30d'):
+    """The five metrics over one period, the period before it, and a line.
+
+    The Growth tab's whole data source. It asks a different question from
+    `/api/get_growth_ratings` — that one says how the account is doing *now*,
+    scored over a fixed trailing ninety days, and this one says how it has
+    *changed*, over whichever window the reader picked.
+
+    ## Why the client cannot do this itself
+
+    Every other figure the analytics page draws is arithmetic over the day
+    series in the browser, and the page's oldest rule is that a tab costs no
+    request. This is the exception, for two reasons that are both about the
+    data rather than about the arithmetic.
+
+    The first is that two of the five metrics are not derivable from what the
+    browser has. Efficiency needs each task's `met_deadline`, which the task
+    list does carry — but focus needs each *day's* focus goal, and the growth
+    series sends the minutes logged and not the goal they were against. A
+    client-side scorer would have had to drop focus or invent it.
+
+    The second is the rule in backend/tracking/analytics.py: there is one
+    scoring computation in this app. Mirroring five formulas in TypeScript to
+    save a request would have created the second one, and the first thing to
+    drift would have been the thing nobody checks — a clamp, a fallback, the
+    quality basis.
+
+    So `score_window` is parameterised and called from here for every window
+    the tab needs, which is six periods, their six predecessors and up to sixty
+    points of line. That is one read of the record and a walk over its days: on
+    the five-year account in this repository the whole response takes about
+    seventy milliseconds.
+
+    ## The snapshot log is not what this reads
+
+    Worth stating, because it is the obvious place to look. `metric_snapshots`
+    accumulates a dated row per metric — but only when somebody *opens* the
+    report card, so it is a log of visits rather than of days. On the account
+    here it covers three weeks against five years of record. It is right for
+    "what changed since I was last here" (`/api/metric_history`) and cannot
+    answer "how have I changed since I started", which is this tab's question.
+    """
+
+    scores = analytics_tracking.period_scores(username, period)
+    if scores is None:
+        return fail('User not found')
+    return ok(**scores)
+
+
+# --------------------------------------------------------------------------
+# Writing one subject up, with a model
+# --------------------------------------------------------------------------
+#: How many of each list the brief will carry, whatever the page sends.
+#:
+#: A bound rather than trust. The body of this request is figures the page has
+#: already computed and is asking to have read back — the account's own
+#: numbers, going to a model and coming back as prose — so nothing here is a
+#: permission decision. What it is is an unbounded payload from a client, and
+#: the cost of the call scales with it, so the lists are cut before anything
+#: is spent on them.
+BRIEF_RATES = 8
+BRIEF_BANDS = 8
+BRIEF_REASONS = 8
+BRIEF_GOALS = 4
+#: Long enough for a subject name and a window label; short enough that no
+#: single field can carry a paragraph into the prompt.
+BRIEF_TEXT = 120
+
+
+class BriefFinding(BaseModel):
+    """One row of the findings — a rate, a band, a reason or a goal.
+
+    Deliberately one loose model rather than four strict ones. Every field is
+    optional because the four kinds of row share this shape and each fills a
+    different half of it, and the alternative is four near-identical models
+    plus a discriminator that would exist only to make this file longer.
+    """
+
+    label: Optional[str] = None
+    title: Optional[str] = None
+    now: Optional[float] = None
+    done: Optional[int] = None
+    holding: Optional[float] = None
+    share: Optional[int] = None
+    count: Optional[int] = None
+    progress: Optional[float] = None
+    deadline: Optional[str] = None
+    drift: Optional[int] = None
+
+
+class SubjectBrief(BaseModel):
+    """What the subject page has worked out, on its way to being written up."""
+
+    subject: str = ''
+    span: str = ''
+    score: Optional[int] = None
+    grade: Optional[str] = None
+    finished: Optional[int] = None
+    finished_before: Optional[int] = None
+    streak: Optional[int] = None
+    rates: List[BriefFinding] = []
+    bands: List[BriefFinding] = []
+    struggles: List[BriefFinding] = []
+    goals: List[BriefFinding] = []
+
+
+def _rows(rows, most):
+    """The first `most` rows, as plain dicts with the empty fields dropped."""
+    return [{key: value for key, value in row.model_dump().items() if value is not None}
+            for row in (rows or [])[:most]]
+
+
+@router.get('/api/subject_brief')
+def subject_brief_available(username: str = Depends(current_username)):
+    """Whether the write-up button can do anything.
+
+    Asked so the page can leave the button out entirely rather than draw one
+    that fails when pressed. A button that always exists and sometimes says
+    "no key" is a worse answer than no button on an install that has no key.
+    """
+
+    _, user = load_user(username)
+    if not user:
+        return fail('User not found')
+    return ok(available=subject_brief.configured())
+
+
+@router.post('/api/subject_brief')
+def write_subject_brief(body: SubjectBrief, username: str = Depends(current_username)):
+    """A model's reading of one subject's findings. Writes nothing.
+
+    The same contract as `/api/suggest_milestones` in goals.py: a draft rather
+    than a record, and every failure comes back as a readable message instead
+    of an error status, because the page prints it in the panel. A write-up
+    that cannot be made is not a broken request — the page underneath it was
+    already complete.
+
+    **The figures come from the client, and that is the right way round here.**
+    They are the account's own numbers, computed by the page from the account's
+    own tasks (frontend/src/components/Subject/model.ts), and this endpoint
+    sends them to a model and hands the prose back to the same page that sent
+    them. Nothing is stored, nothing is authorised off them, and no other
+    account can see them. Recomputing them here would mean a second
+    implementation of eighty figures that would drift from the first, and the
+    page would then be showing one set and quoting another.
+    """
+
+    _, user = load_user(username)
+    if not user:
+        return fail('User not found')
+
+    name = (body.subject or '').strip()[:BRIEF_TEXT]
+    if not name:
+        return fail('There is no subject to write about.')
+
+    findings = {
+        'subject': name,
+        'span': (body.span or '').strip()[:BRIEF_TEXT],
+        'score': body.score,
+        'grade': body.grade,
+        'finished': body.finished,
+        'finished_before': body.finished_before,
+        'streak': body.streak,
+        'rates': _rows(body.rates, BRIEF_RATES),
+        'bands': _rows(body.bands, BRIEF_BANDS),
+        'struggles': _rows(body.struggles, BRIEF_REASONS),
+        'goals': _rows(body.goals, BRIEF_GOALS),
+    }
+
+    try:
+        written = subject_brief.write(findings)
+    except subject_brief.BriefUnavailable as exc:
+        return fail(str(exc))
+    return ok(brief=written)

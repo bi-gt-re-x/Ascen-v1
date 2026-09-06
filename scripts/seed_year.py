@@ -23,17 +23,34 @@ alone.
 
 ## The shape of the year
 
-One person: an AI engineer who also runs the marketing, with a family. The
-rhythm is theirs rather than a spread of random rows — mornings are for the
-model and the inbox, afternoons for campaigns and the people who need an hour,
-evenings belong to the house, and the weekend is family with a little side
-project in it. Three kinds of entry make that up:
+One person: a high-school student training seriously for competitive maths and
+competitive programming, who also plays violin at a level that costs real hours.
+The rhythm is theirs rather than a spread of random rows — the day opens with an
+instrument and a problem set before school, school takes the middle of it, and
+the afternoon and evening are where the actual training happens. The weekend is
+where the long timed work goes, because that is the only place a three-hour
+contest fits.
 
-  * daily and weekday recurrences, the spine of the week;
-  * weekly and monthly recurrences, the rhythm on top of it — Monday planning,
-    Friday retro and newsletter, month-end invoices, the metrics deck;
-  * one-offs, scattered across the year: launches, a conference talk, school
-    plays, birthdays, two holidays, a performance review.
+It is deliberately a *rigorous* week and it is meant to look like one. Three
+kinds of entry make it up:
+
+  * daily and weekday recurrences, the spine of the week — morning practice,
+    morning drill, school, an afternoon block that alternates orchestra and
+    programming, homework, and contest maths in the evening;
+  * weekly and monthly recurrences, the rhythm on top of it — Monday's three
+    targets, Friday's math team and its timed mock, the monthly mistake review
+    and the lesson checkpoint;
+  * one-offs, scattered across the year, which for this person is a *calendar*
+    rather than a scattering: AMC in November, USACO in December, January and
+    February, AIME in February, the US Open in March, APs in May, ARML in June,
+    and the concerts, auditions and recitals that sit between them.
+
+The account this seeds already has five years of record behind it, and that
+record is the same person — its subjects are maths, computer science, physics,
+chemistry, literature and music, and its personal bests are AMC 8, MathCounts,
+AIME problems solved, a Codeforces rating and RCM levels. The forward year has
+to be recognisably the same student, a bit further along: AMC 10/12 and AIME
+rather than AMC 8, USACO and Codeforces rather than a first contest.
 
 ## The XP floor
 
@@ -102,147 +119,170 @@ WEEKDAYS = (0, 1, 2, 3, 4)
 WEEKEND = (5, 6)
 ALL_DAYS = (0, 1, 2, 3, 4, 5, 6)
 
-DEEP_WORK = [
-    'Deep work — eval harness for the ranking model',
-    'Deep work — retrieval quality pass',
-    'Deep work — fine-tune run + error analysis',
-    'Deep work — prompt regression suite',
-    'Deep work — inference latency profiling',
-    'Deep work — feature store cleanup',
-    'Deep work — embedding refresh pipeline',
-    'Deep work — guardrails and refusal tests',
+# The training pools.
+#
+# Rotated rather than sampled (see `pick`), so a week reads as a syllabus
+# working through its topics rather than as a list being shuffled. Each pool is
+# one recurring block's worth of subject matter for a couple of weeks.
+MATH_TRAINING = [
+    'Math — AIME set: algebra and number theory',
+    'Math — geometry: power of a point, radical axes',
+    'Math — combinatorics: bijections, counting two ways',
+    'Math — number theory: orders and primitive roots',
+    'Math — functional equations drill',
+    'Math — inequalities: AM-GM, Cauchy, smoothing',
+    'Math — timed AMC 12 set, 25 in 75',
+    'Math — polynomials: Vieta and symmetric sums',
 ]
-MARKETING = [
-    'Campaign — lifecycle email sequence',
-    'Campaign — paid search creative refresh',
-    'Campaign — landing page copy test',
-    'Campaign — case study draft',
-    'Campaign — webinar promo plan',
-    'Campaign — SEO cluster for "AI evals"',
-    'Campaign — partner co-marketing brief',
-    'Campaign — pricing page rewrite',
+CS_TRAINING = [
+    'USACO — graphs: shortest paths and DSU',
+    'USACO — dynamic programming on trees',
+    'USACO — greedy and exchange arguments',
+    'USACO — segment trees and range queries',
+    'USACO — binary search on the answer',
+    'Codeforces — Div. 2 virtual, four problems',
+    'USACO — flood fill and grid simulation',
+    'USACO — strings: hashing and KMP',
 ]
-BUILD = [
-    'Ship — dashboard for model drift',
-    'Ship — attribution reporting fix',
-    'Ship — onboarding flow instrumentation',
-    'Ship — A/B test framework tidy-up',
-    'Ship — data warehouse sync job',
-    'Ship — customer feedback tagging',
+PRACTICE = [
+    'Violin — scales, thirds and octaves',
+    'Violin — Kreutzer etude, slow bowing',
+    'Violin — Bach partita, movement work',
+    'Violin — orchestra parts for the winter set',
+    'Violin — shifting and intonation drill',
+    'Violin — vibrato and tone in the low register',
+    'Violin — concerto exposition from memory',
+    'Violin — sight-reading and rhythm',
 ]
-MEETINGS = [
-    'Customer call — enterprise pilot',
-    'Product sync with design',
-    'Sales enablement session',
-    'Investor update call',
-    'Vendor review — annotation tooling',
-    'Hiring loop — ML engineer',
+SCHOOLWORK = [
+    'Homework — AP Calculus BC problem set',
+    'Homework — AP Physics C, rotation',
+    'Homework — AP Chemistry, equilibrium',
+    'Homework — English essay draft',
+    'Homework — US History reading and notes',
+    'Homework — Spanish composition',
+    'Homework — physics lab write-up',
+    'Homework — AP Statistics, inference',
 ]
 READING = [
-    'Read — new papers from the week',
-    'Read — competitor teardown',
-    'Read — long-form on positioning',
-    'Read — with the kids',
+    'Read — the English set text',
+    'Read — an olympiad write-up from AoPS',
+    'Read — a competitive programming editorial',
+    'Read — something that is not for school',
 ]
 
 # Blocks that go on the calendar.
 #
-# The weekday afternoon slots deliberately skip the day their weekly beat owns:
-# Thursday's blog post *is* that afternoon's marketing block, Wednesday's 1:1s
-# are that afternoon's meeting, and Friday's retro and newsletter are that
-# afternoon's build slot. Stacking them instead of swapping them drew two
-# blocks over the same hour, which on the week grid is not a busy day — it is
-# two rectangles on top of each other.
+# The weekday afternoon slot deliberately alternates rather than stacking:
+# orchestra owns Monday and Wednesday, programming training owns Tuesday and
+# Thursday, and Friday's math team is a weekly beat that takes the same hour.
+# Drawing them on top of each other is not a busy day on the week grid — it is
+# two rectangles over the same hour.
+#
+# School is one block rather than seven. The account is a record of work this
+# person chooses and is measured on; the timetable is the container it happens
+# around, and splitting it into periods would bury every training block under a
+# wall of lessons nobody is tracking.
 BLOCKS = [
     # (start, end, title-or-pool, subject, priority, xp, days)
-    ('06:45', '07:30', 'Morning run',                  'running',         'medium',  40, (0, 2, 4)),
-    ('07:30', '08:15', 'Gym — strength',               'gym',             'medium',  45, (1, 3)),
-    ('08:15', '08:45', 'School run',                   'family',          'high',    30, WEEKDAYS),
-    ('09:00', '09:15', 'Team standup',                 'meetings',        'medium',  20, WEEKDAYS),
-    ('09:15', '11:30', DEEP_WORK,                      'machine_learning','high',   130, WEEKDAYS),
-    ('11:30', '12:15', 'Inbox and Slack triage',       'email',           'low',     35, WEEKDAYS),
-    ('13:00', '14:30', MARKETING,                      'marketing',       'high',    95, (0, 1, 2, 4)),
-    ('14:30', '15:30', MEETINGS,                       'meetings',        'medium',  55, (0, 1, 3, 4)),
-    ('15:30', '17:00', BUILD,                          'programming',     'high',   100, (0, 1, 2, 3)),
-    ('17:30', '18:30', 'Family dinner',                'family',          'high',    40, ALL_DAYS),
-    ('18:30', '19:15', 'Homework help',                'family',          'medium',  35, WEEKDAYS),
-    ('19:15', '19:45', 'Bedtime stories',              'family',          'medium',  25, ALL_DAYS),
-    ('21:00', '21:45', READING,                        'reading',         'low',     40, (0, 1, 2, 3, 6)),
-    # Saturday
-    ('09:00', '10:30', 'Family outing',                'family',          'high',    60, (5,)),
-    ('11:00', '12:00', 'House and chores',             'chores',          'low',     30, (5,)),
-    ('14:00', '15:30', 'Side project — personal site', 'web_design',      'low',     55, (5,)),
-    ('16:00', '17:00', 'Kids swimming lesson',         'family',          'medium',  35, (5,)),
-    ('20:00', '21:30', 'Film night with the family',   'film',            'low',     30, (5,)),
+    ('05:50', '06:40', PRACTICE,          'music',            'high',    70, WEEKDAYS),
+    ('06:45', '07:25', MATH_TRAINING,     'mathematics',      'high',    85, (0, 2, 4)),
+    ('06:45', '07:25', 'Strength and conditioning', 'gym',    'medium',  45, (1, 3)),
+    ('07:55', '15:10', 'School — periods 1 to 7',   'coursework', 'high', 120, WEEKDAYS),
+    ('15:30', '16:30', 'Orchestra rehearsal',       'music',  'high',    70, (0, 2)),
+    ('15:30', '16:45', CS_TRAINING,       'computer_science', 'high',   110, (1, 3)),
+    ('17:00', '18:15', SCHOOLWORK,        'homework',         'high',    90, WEEKDAYS),
+    ('18:20', '19:00', 'Dinner with the family',    'family', 'medium',  30, ALL_DAYS),
+    ('19:10', '20:40', MATH_TRAINING,     'mathematics',      'high',   120, (0, 1, 2, 3)),
+    ('20:50', '21:40', PRACTICE,          'music',            'medium',  60, (1, 3, 4)),
+    ('21:45', '22:10', 'Log the day and set tomorrow', 'journaling', 'low', 25, WEEKDAYS),
+    # Saturday — where the long timed work goes, because nothing else fits it.
+    ('08:00', '09:00', 'Long run',                  'running', 'medium', 50, (5,)),
+    ('09:30', '11:30', 'Violin lesson, then the notes from it', 'music', 'high', 120, (5,)),
+    ('13:00', '15:00', 'USACO — full timed practice contest', 'computer_science', 'high', 150, (5,)),
+    ('15:30', '17:00', MATH_TRAINING,     'mathematics',      'high',   110, (5,)),
+    ('20:00', '21:30', 'Downtime — film or friends', 'film',  'low',     30, (5,)),
     # Sunday
-    ('08:30', '09:30', 'Long run',                     'running',         'medium',  45, (6,)),
-    ('10:00', '11:00', 'Meal prep for the week',       'cooking',         'medium',  35, (6,)),
-    ('11:30', '12:30', 'Grocery run',                  'groceries',       'low',     25, (6,)),
-    ('13:00', '14:30', 'Family time — park or museum', 'family',          'high',    55, (6,)),
-    ('16:00', '17:00', 'Week review and plan',         'planning',        'high',    60, (6,)),
-    ('19:45', '20:30', 'Clear the inbox for Monday',   'email',           'low',     30, (6,)),
+    ('09:00', '10:30', PRACTICE,          'music',            'high',    95, (6,)),
+    ('11:00', '12:30', 'Write up the week\'s solutions', 'writing', 'high', 90, (6,)),
+    ('13:30', '15:00', 'Personal project — contest grader', 'programming', 'medium', 85, (6,)),
+    ('16:00', '17:00', 'Week review — what actually moved', 'planning', 'high', 60, (6,)),
+    ('19:00', '20:00', READING,           'reading',          'low',     35, (6,)),
 ]
 
 # Weekly beats. Each one owns its slot — see the note on BLOCKS.
 WEEKLY = [
-    (0, '08:45', '09:00', 'Set the week — three outcomes', 'planning',   'high',   45),
-    (2, '14:30', '15:30', '1:1s with the team',            'management', 'medium', 55),
-    (3, '13:00', '14:30', 'Write the weekly blog post',    'writing',    'high',   90),
-    (4, '15:30', '16:15', 'Sprint retro',                  'meetings',   'medium', 45),
-    (4, '16:15', '17:00', 'Send the newsletter',           'marketing',  'high',   70),
+    (0, '07:25', '07:50', 'Set the week — three targets',      'planning',    'high',  45),
+    (4, '15:30', '17:00', 'Math team practice — relay round',  'study_group', 'high',  95),
+    (4, '19:10', '21:10', 'Mock contest — timed, full length', 'exams',       'high', 140),
 ]
 
-# Monthly beats, placed in the lunch hour or the evening so they do not land on
-# top of the working blocks the rest of the month keeps.
+# Monthly beats. Placed in the evening slot the contest-maths block otherwise
+# holds, so they replace it for that day rather than being drawn over it.
 MONTHLY = [
-    (1,  '12:15', '13:00', 'Invoices and expenses',        'finance',   'high',   80),
-    (12, '12:15', '13:00', 'Monthly metrics deck',         'reports',   'high',   95),
-    (18, '19:45', '21:00', 'Date night',                   'family',    'high',   50),
-    (25, '20:00', '21:00', 'Household admin and bills',    'admin',     'medium', 40),
+    (3,  '19:10', '20:30', 'Review every problem missed this month', 'revision',    'high',   90),
+    (11, '19:10', '20:30', 'Lesson checkpoint — repertoire and etudes', 'music',    'high',   85),
+    (19, '19:10', '20:20', 'Update the AoPS notebook and tag the gaps', 'mathematics', 'medium', 65),
+    (26, '20:00', '21:00', 'Activity log and college list upkeep',   'admin',       'medium', 50),
 ]
 
 # Untimed to-dos — the Tasks page list, never on the grid.
 TODOS = [
-    ('Review open pull requests',           'programming',      'medium', 35),
-    ('Reply to customer questions',         'email',            'medium', 30),
-    ('Draft ad copy variants',              'marketing',        'medium', 40),
-    ('Update the model card',               'machine_learning', 'low',    30),
-    ('Check ad spend pacing',               'marketing',        'medium', 25),
-    ('Tidy the analytics dashboard',        'data_science',     'low',    30),
-    ('Book the dentist',                    'health',           'low',    15),
-    ('Plan the kids weekend activity',      'family',           'medium', 25),
-    ('Refill the pantry list',              'groceries',        'low',    15),
-    ('Log the week in the journal',         'journaling',       'low',    20),
-    ('Follow up with the design contractor','design',           'medium', 30),
-    ('Sort receipts for the accountant',    'accounting',       'low',    25),
+    ("Redo yesterday's missed problems",          'revision',         'high',   40),
+    ('Update the solution log',                   'mathematics',      'medium', 35),
+    ('Flashcards — Spanish vocabulary',           'flashcards',       'low',    20),
+    ('Read 20 pages of the set text',             'literature',       'medium', 30),
+    ('Fix the failing USACO test case',           'computer_science', 'high',   45),
+    ('Practise the shifting passage slowly',      'music',            'medium', 30),
+    ('Email the orchestra director about the audition', 'email',      'low',    15),
+    ('Finish the physics lab data',               'physics',          'medium', 40),
+    ('Memorise the polyatomic ions',              'chemistry',        'low',    25),
+    ('Pack the violin and the contest kit',       'chores',           'low',    15),
+    ('Lights out by half ten',                    'sleep',            'medium', 20),
+    ('Ask about the calculus proof from class',   'tutoring',         'low',    20),
 ]
 
-# One-offs across the year: (month-offset, day-of-month, title, subject, priority, xp, hours)
+# The fixed points of the year: (month, day-of-month, title, subject, priority, xp, hours)
 # `hours` is None for an untimed to-do, or (start, end) for a block.
+#
+# ## A real month, not an offset from the run date
+#
+# These used to be offsets from whatever month the seed started in, which is
+# right for a persona whose year is "twelve months of work from here" and wrong
+# for this one. A contest calendar is *seasonal*: the AMC is in November, the
+# AIME is in February, the AP exams are in May, and none of them care when
+# somebody ran a script. Seeding from August put the AMC in October and the
+# AIME in January, which is a demo account that a competitor would read as
+# nonsense before they read anything else on the page.
+#
+# So the month is the month. Each fixture is placed in every year the window
+# covers, which is what makes a fourteen-month window correctly contain two
+# Septembers and one November.
 ONE_OFFS = [
-    (0,  27, 'Launch — v2 recommendations to 10% of traffic', 'machine_learning', 'high', 180, ('09:00', '12:00')),
-    (1,   9, 'Conference talk — "Evals that survive prod"',   'presenting',       'high', 200, ('14:00', '15:30')),
-    (1,  22, "School play — Maya's class",                    'family',           'high',  60, ('18:00', '19:30')),
-    (2,   5, 'Quarterly board deck',                          'reports',          'high', 150, ('09:00', '12:00')),
-    (2,  17, 'Performance reviews for the team',              'management',       'high', 120, ('13:00', '16:00')),
-    (3,   3, 'Family holiday — flights and rentals booked',   'travel',           'high',  70, None),
-    (3,  14, 'Rebrand kickoff workshop',                      'design',           'high', 140, ('10:00', '13:00')),
-    (4,   8, "Ben's birthday party",                          'family',           'high',  80, ('14:00', '17:00')),
-    (4,  21, 'Annual pricing review',                         'finance',          'high', 110, ('09:30', '11:30')),
-    (5,   6, 'Open-source the eval toolkit',                  'programming',      'high', 160, ('09:00', '12:00')),
-    (5,  19, 'Parent-teacher evening',                        'family',           'medium',50, ('17:30', '19:00')),
-    (6,   2, 'Summer campaign — big push planning',           'marketing',        'high', 130, ('09:00', '11:30')),
-    (6,  15, 'Two weeks off — out of office',                 'travel',           'high',  90, None),
-    (7,   9, 'Hiring — close the ML engineer role',           'interviews',       'high', 100, ('10:00', '12:00')),
-    (7,  24, 'Website replatform go-live',                    'web_design',       'high', 170, ('08:00', '12:00')),
-    (8,  11, 'Customer advisory board',                       'meetings',         'high', 120, ('13:00', '16:00')),
-    (8,  26, 'School term starts — supplies and forms',       'family',           'medium',45, None),
-    (9,   7, 'Annual security review',                        'cybersecurity',    'high', 110, ('09:00', '11:00')),
-    (9,  20, 'Marketing plan for next year',                  'planning',         'high', 140, ('13:00', '16:00')),
-    (10,  4, 'Model retrain — full corpus',                   'machine_learning', 'high', 160, ('09:00', '12:00')),
-    (10, 16, 'Family photos',                                 'family',           'medium', 50, ('11:00', '12:00')),
-    (11,  2, 'Year in review — write it up',                  'writing',          'high', 120, ('13:00', '15:00')),
-    (11, 15, 'Holiday shopping',                              'errands',          'medium', 40, None),
+    (9,  12, 'All-State orchestra audition — recording day', 'music',            'high', 180, ('09:00', '12:00')),
+    (9,  26, 'Math team tryout',                             'mathematics',      'high', 140, ('15:30', '17:30')),
+    (10, 10, 'USACO — October practice contest',             'computer_science', 'high', 160, ('09:00', '13:00')),
+    (10, 24, 'Youth symphony — first concert of the season', 'music',            'high', 150, ('18:00', '21:00')),
+    (11,  7, 'AMC 12 A',                                     'exams',            'high', 220, ('08:00', '11:00')),
+    (11, 18, 'AMC 12 B',                                     'exams',            'high', 200, ('08:00', '11:00')),
+    (12, 12, 'USACO December contest',                       'computer_science', 'high', 200, ('09:00', '13:00')),
+    (12, 19, 'Winter concert — full orchestra',              'music',            'high', 160, ('18:30', '21:00')),
+    (1,  16, 'USACO January contest',                        'computer_science', 'high', 200, ('09:00', '13:00')),
+    (1,  30, 'Semester finals — the long study block',       'exams',            'high', 180, ('09:00', '13:00')),
+    (2,   5, 'AIME I',                                       'exams',            'high', 260, ('13:00', '16:00')),
+    (2,  20, 'USACO February contest',                       'computer_science', 'high', 200, ('09:00', '13:00')),
+    (3,   6, 'Summer programme applications — essays',       'writing',          'high', 170, ('10:00', '13:00')),
+    (3,  20, 'USACO US Open',                                'computer_science', 'high', 220, ('09:00', '14:00')),
+    (4,  11, 'Spring recital — solo repertoire',             'music',            'high', 170, ('18:00', '20:00')),
+    (4,  25, 'State math league finals',                     'mathematics',      'high', 190, ('08:30', '13:00')),
+    (5,   8, 'AP Calculus BC exam',                          'exams',            'high', 200, ('08:00', '12:00')),
+    (5,  13, 'AP Computer Science A exam',                   'exams',            'high', 190, ('12:00', '15:30')),
+    (5,  19, 'AP Physics C exam',                            'exams',            'high', 190, ('08:00', '11:30')),
+    (6,   6, 'ARML — team practice weekend',                 'mathematics',      'high', 200, ('09:00', '16:00')),
+    (6,  20, 'Summer plan — reading list and packing',       'planning',         'medium', 80, None),
+    (7,  13, 'Summer programme — qualifying quiz',           'mathematics',      'high', 180, ('09:00', '12:00')),
+    (7,  27, 'Chamber music intensive — final showcase',     'music',            'high', 160, ('17:00', '20:00')),
+    (8,  17, 'Back to school — timetable and supplies',      'planning',         'medium', 60, None),
 ]
 
 
@@ -291,15 +331,17 @@ def build(user: str, start: date, days: int, min_xp: int, seed: int):
     # One-offs resolved to real dates before the year is walked, because they
     # get first claim on their hours — see the note in the day loop.
     special: dict[date, list] = {}
-    for moff, dom, title, subject, priority, xp, span in ONE_OFFS:
-        month = start.month - 1 + moff
-        year = start.year + month // 12
-        try:
-            when = date(year, month % 12 + 1, dom)
-        except ValueError:
-            continue
-        if start <= when < start + timedelta(days=days):
-            special.setdefault(when, []).append((title, subject, priority, xp, span))
+    finish = start + timedelta(days=days)
+    for month, dom, title, subject, priority, xp, span in ONE_OFFS:
+        # Every year the window touches, so a fourteen-month run gets both of
+        # its Septembers and only its one November. See the note on ONE_OFFS.
+        for year in range(start.year, finish.year + 1):
+            try:
+                when = date(year, month, dom)
+            except ValueError:
+                continue
+            if start <= when < finish:
+                special.setdefault(when, []).append((title, subject, priority, xp, span))
 
     for offset in range(days):
         day = start + timedelta(days=offset)
@@ -348,9 +390,16 @@ def build(user: str, start: date, days: int, min_xp: int, seed: int):
             if day.day == dom:
                 earned += block(title, subject, priority, xp, (s, e))
 
-        for s, e, pool, subject, priority, xp, when in BLOCKS:
+        # Stepped by the day *and* by the row, not the day alone. Two blocks can
+        # share a pool — the morning drill and the evening session both draw
+        # from MATH_TRAINING, and morning and evening practice both draw from
+        # PRACTICE — and keying the rotation on the day alone handed both of
+        # them the same title, so a Wednesday read "timed AMC 12 set" at a
+        # quarter to seven and again at ten past seven. Adding the row's index
+        # walks the two through the pool a fixed distance apart.
+        for index, (s, e, pool, subject, priority, xp, when) in enumerate(BLOCKS):
             if wd in when:
-                earned += block(pick(pool, offset), subject, priority, xp, (s, e))
+                earned += block(pick(pool, offset + index), subject, priority, xp, (s, e))
 
         # Two or three to-dos, varying by day so the list is not a stencil.
         for entry in rng.sample(TODOS, rng.randint(2, 3)):
@@ -376,6 +425,89 @@ def build(user: str, start: date, days: int, min_xp: int, seed: int):
     return rows
 
 
+# ---------------------------------------------------------------------------
+# Finishing the part of the window that is already in the past
+# ---------------------------------------------------------------------------
+#: How many of the finished tasks carry a rating.
+#:
+#: About half, because about half is what actually happens: the prompt after a
+#: completed task can be skipped and often is, and `backend/tracking/analytics.py`
+#: is explicit that an account which never answers it must not be graded zero for
+#: quality. A seed that rated everything would produce an account no real one
+#: resembles, and would hide that fallback from anybody looking at the page.
+RATED_SHARE = 0.55
+
+#: How often a deadline is missed. Not zero — a record with a hundred per cent
+#: on-time rate grades a perfect efficiency score and tells nobody anything.
+MISSED_SHARE = 0.14
+
+
+def complete_through(con, user: str, through: date, seed: int) -> int:
+    """Finish every seeded task dated on or before `through`.
+
+    ## Why this exists
+
+    Re-running this script deletes the rows the previous run wrote — including
+    the ones that had since been marked done. On an account whose whole point
+    is a continuous record that leaves a hole: the last few weeks lose their
+    finished tasks, and the analytics page reads that as a collapse rather than
+    as a re-seed. So the window that is already in the past gets finished on the
+    way in, and the record stays continuous across the swap.
+
+    ## It deliberately writes no XP events
+
+    The XP ledger is a separate, append-only store, and the events for the days
+    this covers are **already there** — they were written when the previous
+    run's tasks were completed, and deleting those tasks did not un-earn them
+    (which is the ledger's whole design; see the note on two sources in
+    frontend/src/utils/growthYears.ts). Writing a second set would double every
+    one of those days.
+
+    So the split is: the ledger keeps its history, and these rows supply the
+    two things only a task can — a rating, and whether it met its deadline —
+    which are what the quality and efficiency scores are computed from.
+    """
+    rng = random.Random(seed ^ 0x5EED)
+    rows = con.execute(
+        f'SELECT id, due_date, created_at FROM tasks WHERE {OWNED}', OWNED_ARGS(user)
+    ).fetchall()
+
+    updates = []
+    for task_id, due, created in rows:
+        day = (due or '')[:10]
+        if not day or date.fromisoformat(day) > through:
+            continue
+
+        # A block finished when it ended; an untimed to-do got ticked off in the
+        # evening, which is when the rest of this person's list gets cleared.
+        finished = due if 'T' in (due or '') else f'{day}T20:30:00'
+
+        elapsed = None
+        if created and 'T' in created and 'T' in finished:
+            started = datetime.fromisoformat(created)
+            elapsed = max(60, int((datetime.fromisoformat(finished) - started).total_seconds()))
+
+        met = 0 if rng.random() < MISSED_SHARE else 1
+
+        if rng.random() < RATED_SHARE:
+            # Weighted toward the middle and up. A record where everything is a
+            # 5 is not a record of anything, and one where everything is a 3 is
+            # a slider nobody moved.
+            difficulty = rng.choices([2, 3, 4, 5], weights=[1, 3, 4, 2])[0]
+            execution = rng.choices([2, 3, 4, 5], weights=[1, 3, 4, 2])[0]
+        else:
+            difficulty = execution = None
+
+        updates.append((finished, elapsed, met, difficulty, execution, task_id))
+
+    con.executemany(
+        'UPDATE tasks SET status = ?, completed_at = ?, completion_seconds = ?,'
+        ' met_deadline = ?, difficulty = ?, execution = ? WHERE id = ?',
+        [('done',) + row for row in updates],
+    )
+    return len(updates)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--user', default='Alpha')
@@ -384,6 +516,8 @@ def main():
     ap.add_argument('--seed', type=int, default=20260818)
     ap.add_argument('--from', dest='start', default=None, help='YYYY-MM-DD, default today')
     ap.add_argument('--clear', action='store_true', help='remove seeded rows and stop')
+    ap.add_argument('--complete-through', dest='through', default=None,
+                    help='YYYY-MM-DD: finish the seeded tasks dated on or before this')
     args = ap.parse_args()
 
     start = date.fromisoformat(args.start) if args.start else date.today()
@@ -404,8 +538,16 @@ def main():
             ' VALUES (?,?,?,?,?,?,?,?,?,?,?)', rows)
         con.commit()
 
+        finished = 0
+        if args.through:
+            finished = complete_through(
+                con, args.user, date.fromisoformat(args.through), args.seed)
+            con.commit()
+
         blocks = sum(1 for r in rows if r[9] == 1)
         print(f'{args.user}: replaced {gone} seeded rows with {len(rows)}')
+        if finished:
+            print(f'  {finished} of them marked done, up to {args.through}')
         print(f'  {blocks} calendar blocks, {len(rows) - blocks} untimed to-dos')
         print(f'  {start} to {start + timedelta(days=args.days - 1)}')
     finally:

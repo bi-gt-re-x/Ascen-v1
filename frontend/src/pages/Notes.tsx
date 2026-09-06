@@ -37,10 +37,31 @@
  * asterisks, puts `## ` at the front of the line. That keeps the note readable
  * as itself, which is the property a notes table should not lose to a format
  * only this page can open.
+ *
+ * That rule is what decided the shape of the colours, the highlighters, the
+ * faces and the alignment when they arrived. Every one of them is a button
+ * that writes something a person could have typed — `[urgent]{red}`,
+ * `==this==`, `A title {center}` — and utils/markdown reads it back. Nothing
+ * here holds formatting state, because there is nowhere to hold it: the note
+ * is its text, and what you see in the write pane is the whole document.
+ *
+ * This file used to claim that shape could not give a live toolbar — that
+ * knowing what the caret is standing in would mean reading formatting out of a
+ * `<textarea>`, which reports none. That was wrong, and worth writing down
+ * because it is the kind of wrong that looks like a constraint: the textarea is
+ * not the document. The text is, a span is `[...]{...}`, and the caret is an
+ * offset into it. `tokensAt` reads it, so the font and size selectors show what
+ * is under the caret and the two palette buttons wear the colour that is
+ * actually there.
+ *
+ * It matters more than a nicety. A control whose label never changes when you
+ * use it is indistinguishable from one that does nothing — which is how the
+ * font selector came to be reported as missing while it was on the screen.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Ambient, ErrorState, Loading } from '@/components';
-import { useAuth, useDocumentTitle, useSubjects } from '@/hooks';
+import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
 import { notes as noteService } from '@/services';
 import {
   NotebookPicker,
@@ -85,6 +106,38 @@ const asDraft = (note: Note): Draft => ({
  */
 export function subjectIds(value: string | undefined | null): string[] {
   return (value ?? '').split(',').map((id) => id.trim()).filter(Boolean);
+}
+
+/**
+ * The tokens of the `[...]{...}` span the caret is sitting in, if it is in one.
+ *
+ * The font and size buttons used to be labels: "Font" and "14", whatever you
+ * had picked and wherever the caret was. Press one, pick Lora, and the button
+ * still said "Font" — which is indistinguishable from a control that does
+ * nothing, and is what "the font selector is gone" turned out to mean.
+ *
+ * A `<textarea>` reports no formatting, and that is what the docstring at the
+ * top of this file said made a live label impossible. It was wrong: the
+ * textarea is not the document. The *text* is, and the text is right here — a
+ * span is `[...]{...}` and the caret is an offset into it. So the label reads
+ * what is actually under the caret rather than what was last pressed, and is
+ * right after an undo, after clicking somewhere else, and on a note opened
+ * fresh.
+ *
+ * Exported for its tests: it is the one piece of this page that is a pure
+ * function of two arguments, and the one worth pinning down.
+ */
+export function tokensAt(body: string, at: number): string[] {
+  const spans = /\[([^\]\n]+)\]\{([^}\n]*)\}/g;
+  let found: RegExpExecArray | null;
+  while ((found = spans.exec(body)) !== null) {
+    // Inside, not merely touching: a caret resting against the `[` belongs to
+    // the text before the span, which is what you are about to type into.
+    if (at > found.index && at < found.index + found[0].length) {
+      return found[2]!.trim().toLowerCase().split(/[\s,]+/).filter(Boolean);
+    }
+  }
+  return [];
 }
 
 /** How many body edits back the toolbar's undo can reach. */
@@ -137,35 +190,137 @@ const words = (body: string) => body.trim() ? body.trim().split(/\s+/).length : 
  *
  * `wrap` puts the same string either side of the selection — bold, italic,
  * code. `prefix` puts one at the front of every selected line — headings,
- * lists, quotes. Between them they cover everything the toolbar offers, which
- * is why there is no third kind.
+ * lists, quotes.
+ *
+ * Those two were once the whole vocabulary, and the comment here used to say
+ * so. Colour, highlight, font and alignment do not fit either: a colour wraps
+ * the selection in *different* strings, and an alignment belongs to the line
+ * and has to survive being applied twice. So there are four kinds now:
+ *
+ *   `span`    `[selection]{tokens}` — colour, highlight, face, size
+ *   `attr`    a `{token}` at the end of the line — alignment
+ *   `shift`   two spaces on or off the front — list depth
+ *
+ * All of them still write Markdown that reads as itself, which is the rule
+ * that decides what may be added here. See utils/markdown for the vocabulary
+ * and for why the token list is fixed.
  */
 type Tool =
-  | { id: string; label: string; hint: string; wrap: string; text?: string }
-  | { id: string; label: string; hint: string; prefix: string; text?: string };
+  | { id: string; label: ReactNode; hint: string; wrap: string; text?: string }
+  | { id: string; label: ReactNode; hint: string; prefix: string; text?: string }
+  | { id: string; label: ReactNode; hint: string; text: string }
+  | { id: string; label: ReactNode; hint: string; span: string }
+  | { id: string; label: ReactNode; hint: string; attr: string }
+  | { id: string; label: ReactNode; hint: string; shift: 1 | -1 };
+
+/**
+ * The eight buttons whose meaning is a shape rather than a character.
+ *
+ * `⬅` and `➡` are emoji on macOS and Windows both — they arrive in colour, at
+ * the wrong weight, in a toolbar where every other glyph is monochrome text.
+ * Alignment and depth are the two things here a letter cannot say, so they are
+ * drawn: four lines with the short one moved, and an arrow against a wall.
+ */
+function Lines({ at }: { at: 'left' | 'center' | 'right' }) {
+  // The second and fourth lines are short; where they sit is the whole icon.
+  const short = { left: '2 8', center: '5 8', right: '8 8' }[at];
+  return (
+    <svg viewBox="0 0 18 14" className="nt-glyph" aria-hidden="true">
+      {[2, 5.5, 9, 12.5].map((y, row) => {
+        const isShort = row % 2 === 1;
+        const [x, width] = isShort ? short.split(' ') : ['2', '14'];
+        return <rect key={y} x={x} y={y} width={width} height="1.6" rx=".8" />;
+      })}
+    </svg>
+  );
+}
+
+function Depth({ into }: { into: boolean }) {
+  return (
+    <svg viewBox="0 0 18 14" className="nt-glyph" aria-hidden="true">
+      <rect x={into ? '2' : '6'} y="2" width={into ? '14' : '10'} height="1.6" rx=".8" />
+      <rect x={into ? '2' : '6'} y="10.4" width={into ? '14' : '10'} height="1.6" rx=".8" />
+      <path
+        d={into ? 'M3 4.6 L7 7 L3 9.4 Z' : 'M15 4.6 L11 7 L15 9.4 Z'}
+        className="nt-glyph-fill"
+      />
+    </svg>
+  );
+}
 
 const TOOLS: Tool[][] = [
-  [
-    { id: 'h1', label: 'H1', hint: 'Heading 1', prefix: '# ' },
-    { id: 'h2', label: 'H2', hint: 'Heading 2', prefix: '## ' },
-    { id: 'h3', label: 'H3', hint: 'Heading 3', prefix: '### ' },
-  ],
   [
     { id: 'bold', label: 'B', hint: 'Bold', wrap: '**' },
     { id: 'italic', label: 'I', hint: 'Italic', wrap: '*' },
     { id: 'under', label: 'U', hint: 'Underline', wrap: '__' },
+    { id: 'strike', label: 'S', hint: 'Strikethrough', wrap: '~~' },
+    { id: 'mark', label: '▮', hint: 'Highlight', wrap: '==' },
   ],
   [
     { id: 'bullet', label: '•', hint: 'Bulleted list', prefix: '- ' },
     { id: 'number', label: '1.', hint: 'Numbered list', prefix: '1. ' },
+    { id: 'letter', label: 'a.', hint: 'Lettered list', prefix: 'a. ' },
+    { id: 'roman', label: 'i.', hint: 'Roman list', prefix: 'i. ' },
     { id: 'todo', label: '☑', hint: 'Checklist', prefix: '- [ ] ' },
+  ],
+  [
+    { id: 'outdent', label: <Depth into={false} />, hint: 'Move out one level', shift: -1 },
+    { id: 'indent', label: <Depth into />, hint: 'Move in one level', shift: 1 },
+  ],
+  [
+    { id: 'left', label: <Lines at="left" />, hint: 'Align left', attr: 'left' },
+    { id: 'centre', label: <Lines at="center" />, hint: 'Centre', attr: 'center' },
+    { id: 'right', label: <Lines at="right" />, hint: 'Align right', attr: 'right' },
   ],
   [
     { id: 'quote', label: '❝', hint: 'Quote', prefix: '> ' },
     { id: 'code', label: '</>', hint: 'Code', wrap: '`' },
-    { id: 'link', label: '🔗', hint: 'Link', wrap: '', text: '[text](https://)' },
+    { id: 'rule', label: '—', hint: 'Divider', text: '\n---\n' },
+    { id: 'link', label: '🔗', hint: 'Link', text: '[text](https://)' },
   ],
 ];
+
+/**
+ * The swatches behind the two colour buttons, and the faces behind the third.
+ *
+ * The same nine names in both rows, because ink and highlighter are the same
+ * decision made twice and a reader who has learned one row has learned the
+ * other. `bg-` is the highlighter's prefix in the note text too, so what the
+ * button writes is legible in the body afterwards.
+ */
+const INKS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'violet', 'pink', 'grey'];
+
+/** Face and size, which are spans like the colours and belong in the same menu. */
+/**
+ * `label` names the face in the menu, `short` on the button.
+ *
+ * "JetBrains Mono" in a toolbar control sets the width of everything beside
+ * it, and the button is read at a glance by somebody who already knows which
+ * five there are — the menu is where the full name earns its room.
+ */
+const FACES: Array<{ token: string; label: string; short: string }> = [
+  { token: 'sans', label: 'Inter', short: 'Inter' },
+  { token: 'serif', label: 'Lora', short: 'Lora' },
+  { token: 'mono', label: 'JetBrains Mono', short: 'Mono' },
+  { token: 'display', label: 'Playfair Display', short: 'Playfair' },
+  { token: 'hand', label: 'Caveat', short: 'Caveat' },
+];
+
+/**
+ * The size selector, which replaced the four heading buttons.
+ *
+ * A number is a thing everybody already knows how to read, and H1 against H3
+ * is a question about this app rather than about the writing. Headings did not
+ * go anywhere — `# ` still makes one, and the preview still styles four levels
+ * — they are just no longer the only way to make a line bigger.
+ *
+ * Points rather than a scale relative to the body: a size selector that says
+ * "18" and produces something other than 18 is a selector nobody can aim.
+ */
+const SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 48];
+
+/** What the body is set at, so the menu can show which entry is the plain one. */
+const BASE_SIZE = 14;
 
 /**
  * What the New Note chevron offers.
@@ -227,6 +382,10 @@ export default function Notes() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [tplOpen, setTplOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  /** Which toolbar palette is down: 'ink', 'mark', 'face', or none. */
+  const [paletteOpen, setPaletteOpen] = useState<'ink' | 'mark' | 'face' | 'size' | null>(null);
+  /** Where the caret is, so the two selectors can say what is under it. */
+  const [caret, setCaret] = useState(0);
   const [filter, setFilter] = useState<Filter>({ kind: 'all' });
   /**
    * Whether the body is being written or read.
@@ -252,7 +411,7 @@ export default function Notes() {
 
   const load = useCallback(async () => {
     if (!username) return;
-    const result = await noteService.list(username);
+    const result = await noteService.list();
     if (result.success) {
       setRows(result.notes);
       setError(null);
@@ -285,15 +444,16 @@ export default function Notes() {
      in the app does — a menu that only closes on its own button is one the
      reader has to aim at twice. */
   useEffect(() => {
-    if (!menuOpen && !tplOpen && !filterOpen) return;
+    if (!menuOpen && !tplOpen && !filterOpen && !paletteOpen) return;
     const close = () => {
       setMenuOpen(false);
       setTplOpen(false);
       setFilterOpen(false);
+      setPaletteOpen(null);
     };
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
-  }, [filterOpen, menuOpen, tplOpen]);
+  }, [filterOpen, menuOpen, paletteOpen, tplOpen]);
 
   /*
    * The list is the server's ordering, filtered. Not re-sorted here: the API
@@ -416,31 +576,134 @@ export default function Notes() {
 
       let next: string;
       let caret: number;
+      /* Where the selection lands afterwards. Equal to `caret` for everything
+         that has no placeholder — which is what a collapsed caret is. */
+      let anchor: number | null = null;
+
+      /* Where the first selected line begins. Four of the five kinds work on
+         whole lines rather than on the selection, so they all start here — a
+         caret in the middle of a word still indents the line it is in. */
+      const lineStart = body.lastIndexOf('\n', from - 1) + 1;
+      /** Rewrite every line the selection touches. Returns, so `next` is provably set. */
+      const overLines = (change: (line: string) => string): [string, number] => {
+        const marked = body.slice(lineStart, to).split('\n').map(change).join('\n');
+        return [body.slice(0, lineStart) + marked + body.slice(to), lineStart + marked.length];
+      };
 
       if ('prefix' in tool) {
-        // Back to the start of the first selected line, so a caret in the
-        // middle of a word still prefixes the line it is in.
-        const lineStart = body.lastIndexOf('\n', from - 1) + 1;
-        const block = body.slice(lineStart, to);
-        const marked = block
-          .split('\n')
-          .map((line) => (line.startsWith(tool.prefix) ? line.slice(tool.prefix.length) : tool.prefix + line))
-          .join('\n');
-        next = body.slice(0, lineStart) + marked + body.slice(to);
-        caret = lineStart + marked.length;
-      } else if (tool.text) {
+        [next, caret] = overLines((line) =>
+          line.startsWith(tool.prefix) ? line.slice(tool.prefix.length) : tool.prefix + line,
+        );
+      } else if ('shift' in tool) {
+        // Two spaces is one level, which is what the renderer counts.
+        [next, caret] = overLines((line) =>
+          tool.shift === 1 ? `  ${line}` : line.replace(/^ {1,2}|^\t/, ''),
+        );
+      } else if ('attr' in tool) {
+        /* An alignment is one per line, so an existing one is replaced rather
+           than appended — pressing centre and then right twice would otherwise
+           leave a line claiming both. Pressing the one already there takes it
+           off, the way the prefix buttons do. */
+        const had = new RegExp(`\\s*\\{\\s*${tool.attr}\\s*\\}\\s*$`);
+        const any = /\s*\{\s*(left|center|centre|right)\s*\}\s*$/;
+        [next, caret] = overLines((line) =>
+          had.test(line) ? line.replace(had, '') : `${line.replace(any, '')} {${tool.attr}}`,
+        );
+      } else if ('span' in tool) {
+        /* Pressing a font with nothing selected used to write `[sans]{sans}`:
+           the placeholder was the button's own hint, so the word the reader
+           got was the name of the thing they had pressed. It is "text" now,
+           and it arrives selected — the next keystroke replaces it, which is
+           what pressing a font before typing was meant to do. */
+        const inner = picked || tool.hint;
+        const written = `[${inner}]{${tool.span}}`;
+        next = body.slice(0, from) + written + body.slice(to);
+        caret = from + written.length;
+        if (!picked) {
+          anchor = from + 1;
+          caret = anchor + inner.length;
+        }
+      } else if ('text' in tool && !('wrap' in tool)) {
         next = body.slice(0, from) + tool.text + body.slice(to);
         caret = from + tool.text.length;
       } else {
         const inner = picked || tool.hint.toLowerCase();
         next = body.slice(0, from) + tool.wrap + inner + tool.wrap + body.slice(to);
         caret = from + tool.wrap.length + inner.length + tool.wrap.length;
+        if (!picked) {
+          anchor = from + tool.wrap.length;
+          caret = anchor + inner.length;
+        }
       }
 
       setBody(next);
       requestAnimationFrame(() => {
         field.focus();
-        field.setSelectionRange(caret, caret);
+        field.setSelectionRange(anchor ?? caret, caret);
+      });
+    },
+    [draft.body, mode, setBody],
+  );
+
+  /**
+   * What the caret is standing in, as the two selectors show it.
+   *
+   * Falls back to the note's own defaults rather than to a blank: text with no
+   * span on it *is* Inter at 14, so saying so is not a guess.
+   */
+  const marks = useMemo(() => {
+    const tokens = tokensAt(draft.body, caret);
+    return {
+      face: FACES.find((entry) => tokens.includes(entry.token)) ?? FACES[0]!,
+      size: SIZES.find((value) => tokens.includes(`s${value}`)) ?? BASE_SIZE,
+      /* The two palette buttons wore a fixed spectrum because the caret's own
+         colour was thought to be unreadable. It is not — it is in the text. */
+      ink: INKS.find((name) => tokens.includes(name)) ?? null,
+      mark: INKS.find((name) => tokens.includes(`bg-${name}`)) ?? null,
+    };
+  }, [caret, draft.body]);
+
+  /**
+   * Take the ink or the highlighter back off the selection.
+   *
+   * Unwrapping is not the same job as wrapping and cannot be a `Tool`: the
+   * text to remove is whatever colour happens to be there, which the button
+   * does not know until it looks. So this reads the selection, drops the
+   * `{...}` that holds a token of the right family, and unwraps `==` for the
+   * highlighter's shorthand.
+   *
+   * It leaves a span alone when its tokens are of the other family, so taking
+   * the highlight off `[x]{red bg-blue}` leaves the red where it was.
+   */
+  const strip = useCallback(
+    (family: 'ink' | 'mark') => {
+      const field = bodyRef.current;
+      if (!field || mode === 'read') return;
+      const from = field.selectionStart;
+      const to = field.selectionEnd;
+      const body = draft.body;
+      const wanted = family === 'ink' ? /^(?!bg-)/ : /^bg-/;
+
+      let picked = body.slice(from, to);
+      if (family === 'mark') picked = picked.replace(/==([^=]+)==/g, '$1');
+      picked = picked.replace(
+        /\[([^\]]+)\]\{([^}\n]*)\}/g,
+        (whole, label: string, raw: string) => {
+          const kept = raw
+            .trim()
+            .split(/[\s,]+/)
+            .filter(Boolean)
+            .filter((token) => !wanted.test(token));
+          if (kept.length === raw.trim().split(/[\s,]+/).filter(Boolean).length) return whole;
+          return kept.length > 0 ? `[${label}]{${kept.join(' ')}}` : label;
+        },
+      );
+
+      const next = body.slice(0, from) + picked + body.slice(to);
+      setBody(next);
+      requestAnimationFrame(() => {
+        field.focus();
+        field.setSelectionRange(from, from + picked.length);
       });
     },
     [draft.body, mode, setBody],
@@ -511,7 +774,7 @@ export default function Notes() {
       return;
     }
     setBusy(true);
-    const result = await noteService.save(username, {
+    const result = await noteService.save({
       ...(draft.id ? { id: draft.id } : {}),
       title: draft.title,
       body: draft.body,
@@ -534,7 +797,7 @@ export default function Notes() {
   const discard = useCallback(async () => {
     if (!username || !draft.id || busy) return;
     setBusy(true);
-    const result = await noteService.remove(username, draft.id);
+    const result = await noteService.remove(draft.id);
     setBusy(false);
     if (!result.success) {
       setMessage(result.message);
@@ -543,6 +806,10 @@ export default function Notes() {
     blank();
     await load();
   }, [blank, busy, draft.id, load, username]);
+
+  /* The arrival cascade. Bound to the read rather than to mount, so it
+     starts when there is something to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(!loading);
 
   if (loading) return <Loading label="Reading your notes" />;
   if (rows === null) {
@@ -562,12 +829,12 @@ export default function Notes() {
   return (
     <div className="nt-page">
       <Ambient />
-      <div className="nt-shell page-shell">
+      <div className={`nt-shell page-shell${entering ? ' pg-enter' : ''}`}>
         {/* ---- The page's own header ---- */}
         <header className="nt-head">
           <div className="nt-head-titles">
             <h1>Notes</h1>
-            <p>Capture ideas. Organize knowledge. Fuel growth.</p>
+            <p>Somewhere to think.</p>
           </div>
 
           <div className="nt-head-tools">
@@ -711,7 +978,7 @@ export default function Notes() {
               {shown.length === 0 ? (
                 <p className="nt-list-empty">
                   {rows.length === 0
-                    ? 'Nothing written yet. The panel beside this one is already a blank note — start there.'
+                    ? 'Nothing written yet. The panel beside this one is a blank note.'
                     : `No note matches “${query.trim()}”.`}
                 </p>
               ) : (
@@ -874,6 +1141,85 @@ export default function Notes() {
 
             {/* ---- What the buttons write ---- */}
             <div className="nt-toolbar">
+              {/* Face and size lead, where H1..H4 used to. They are the two
+                  controls a writer reaches for before they have written
+                  anything, and both are lists rather than buttons because
+                  five faces and nine sizes is fourteen buttons nobody wants. */}
+              <div className="nt-tool-group">
+                <div className="nt-menu-wrap">
+                  <button
+                    type="button"
+                    className={`nt-pick nt-pick-face${paletteOpen === 'face' ? ' is-on' : ''}`}
+                    title="Font"
+                    aria-label="Font"
+                    aria-expanded={paletteOpen === 'face'}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPaletteOpen((open) => (open === 'face' ? null : 'face'));
+                    }}
+                  >
+                    <span>{marks.face.short}</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+                      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {paletteOpen === 'face' && (
+                    <div className="nt-menu is-wide is-left" onClick={(event) => event.stopPropagation()}>
+                      {FACES.map((face) => (
+                        <button
+                          key={face.token}
+                          type="button"
+                          className={`nt-face is-${face.token}${face.token === marks.face.token ? ' is-on' : ''}`}
+                          onClick={() => {
+                            setPaletteOpen(null);
+                            apply({ id: face.token, label: '', hint: 'text', span: face.token });
+                          }}
+                        >
+                          <span>{face.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="nt-menu-wrap">
+                  <button
+                    type="button"
+                    className={`nt-pick nt-pick-size${paletteOpen === 'size' ? ' is-on' : ''}`}
+                    title="Font size"
+                    aria-label="Font size"
+                    aria-expanded={paletteOpen === 'size'}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPaletteOpen((open) => (open === 'size' ? null : 'size'));
+                    }}
+                  >
+                    <span>{marks.size}</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+                      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {paletteOpen === 'size' && (
+                    <div className="nt-menu nt-sizes is-left" onClick={(event) => event.stopPropagation()}>
+                      {SIZES.map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          className={size === marks.size ? 'is-on' : undefined}
+                          onClick={() => {
+                            setPaletteOpen(null);
+                            apply({ id: `s${size}`, label: '', hint: 'text', span: `s${size}` });
+                          }}
+                        >
+                          <span>{size}</span>
+                          {size === BASE_SIZE && <em>normal</em>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {TOOLS.map((group, index) => (
                 <div className="nt-tool-group" key={index}>
                   {group.map((tool) => (
@@ -891,6 +1237,79 @@ export default function Notes() {
                   ))}
                 </div>
               ))}
+
+              {/* ---- Ink, highlighter and face ----
+                  Three menus rather than twenty-four more buttons. A palette is
+                  a choice from a set the reader is already looking at, and a
+                  row of nine coloured squares says that better than nine
+                  buttons in a strip that already scrolls. */}
+              <div className="nt-tool-group">
+                {([
+                  { key: 'ink', hint: 'Text colour', label: 'A' },
+                  { key: 'mark', hint: 'Highlight', label: '▮' },
+                ] as const).map((palette) => (
+                  <div className="nt-menu-wrap" key={palette.key}>
+                    <button
+                      type="button"
+                      className={`nt-tool nt-tool-swatch${paletteOpen === palette.key ? ' is-on' : ''}${
+                        marks[palette.key] ? ' is-set' : ''
+                      }`}
+                      style={
+                        marks[palette.key]
+                          ? ({ '--sw': `var(--nt-ink-${marks[palette.key]})` } as CSSProperties)
+                          : undefined
+                      }
+                      title={
+                        marks[palette.key] ? `${palette.hint}: ${marks[palette.key]}` : palette.hint
+                      }
+                      aria-label={palette.hint}
+                      aria-expanded={paletteOpen === palette.key}
+                      data-tool={palette.key}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setPaletteOpen((open) => (open === palette.key ? null : palette.key));
+                      }}
+                    >
+                      {palette.label}
+                    </button>
+                    {paletteOpen === palette.key && (
+                      <div className="nt-swatches" onClick={(event) => event.stopPropagation()}>
+                        {INKS.map((ink) => {
+                          const token = palette.key === 'ink' ? ink : `bg-${ink}`;
+                          return (
+                            <button
+                              key={ink}
+                              type="button"
+                              className={`nt-swatch is-${palette.key}`}
+                              style={{ '--sw': `var(--nt-ink-${ink})` } as CSSProperties}
+                              title={ink}
+                              aria-label={`${palette.hint}: ${ink}`}
+                              onClick={() => {
+                                setPaletteOpen(null);
+                                apply({ id: token, label: '', hint: ink, span: token });
+                              }}
+                            />
+                          );
+                        })}
+                        {/* Taking it off is a choice in the same menu as putting
+                            it on, because the reader who wants it gone is
+                            looking at the button that put it there. */}
+                        <button
+                          type="button"
+                          className="nt-swatch-clear"
+                          onClick={() => {
+                            setPaletteOpen(null);
+                            strip(palette.key === 'ink' ? 'ink' : 'mark');
+                          }}
+                        >
+                          None
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+              </div>
 
               <div className="nt-tool-group nt-tool-end">
                 <div className="nt-mode" role="group" aria-label="Write or read">
@@ -953,7 +1372,15 @@ export default function Notes() {
                   placeholder="Write it here. Nothing on this page is counted, graded or shown anywhere else."
                   value={draft.body}
                   maxLength={20000}
-                  onChange={(event) => setBody(event.target.value)}
+                  onChange={(event) => {
+                    setBody(event.target.value);
+                    setCaret(event.target.selectionStart);
+                  }}
+                  /* Fires on every caret move and every selection change,
+                     which is exactly when the two selectors' labels can go
+                     stale. `onKeyUp` would miss a click and `onClick` would
+                     miss the arrow keys. */
+                  onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
                 />
               )}
 

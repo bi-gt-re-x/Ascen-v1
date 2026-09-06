@@ -52,6 +52,7 @@
  * figures.
  */
 import type { GrowthDay, Task } from '@/types';
+import { countActiveDays, isActiveDay } from './activeDay';
 import type { MetricPoint } from '@/services/analytics';
 import { clockShape, rhythmShape, weekShape } from './behaviour';
 
@@ -191,11 +192,11 @@ export interface Measure {
  */
 const UNMEASURED: Record<string, string> = {
   rebalance:
-    'No measure — this one asks you to decide whether the shape of your week is deliberate, and either answer can be the right one.',
+    'No measure — this one asks whether the shape of your week is deliberate. Either answer can be right.',
   'stretch-harder':
-    'No measure — the difficulty of your work is your own rating of it, and a page that scored you on rating it harder would be asking for the rating rather than the work.',
+    'No measure — difficulty is your own rating, and scoring you on it would be asking for the rating rather than the work.',
   'difficulty-is-the-half':
-    'No measure — the difficulty of your work is your own rating of it, and a page that scored you on rating it harder would be asking for the rating rather than the work.',
+    'No measure — difficulty is your own rating, and scoring you on it would be asking for the rating rather than the work.',
 };
 
 /** The bottom quarter of working days, averaged. What `raise-the-floor` is about. */
@@ -222,7 +223,7 @@ function longestRun(days: GrowthDay[]): number | null {
   let best = 0;
   let run = 0;
   days.forEach((day) => {
-    run = num(day.xp_earned) > 0 ? run + 1 : 0;
+    run = isActiveDay(day) ? run + 1 : 0;
     if (run > best) best = run;
   });
   return best;
@@ -237,6 +238,10 @@ function longestRun(days: GrowthDay[]): number | null {
  * where it did before rather than being congratulated for slowing down.
  */
 function loadConcentration(days: GrowthDay[]): number | null {
+  /* Days that *earned*, not days worked — deliberately narrower than
+     `isActiveDay`. This is a share of XP, and a day that contributed none of
+     it belongs in neither half of the fraction. See utils/activeDay for the
+     wider definition and why the two are different questions. */
   const worked = days.map((day) => num(day.xp_earned)).filter((xp) => xp > 0);
   if (worked.length < 4) return null;
   const total = worked.reduce((sum, xp) => sum + xp, 0);
@@ -247,7 +252,7 @@ function loadConcentration(days: GrowthDay[]): number | null {
 
 /** Share of working days that carry any focus minutes. What `log-the-focus` is about. */
 function focusCoverage(days: GrowthDay[]): number | null {
-  const worked = days.filter((day) => num(day.xp_earned) > 0).length;
+  const worked = countActiveDays(days);
   if (worked < 4) return null;
   const logged = days.filter((day) => num(day.focus_minutes) > 0).length;
   return (logged / worked) * 100;

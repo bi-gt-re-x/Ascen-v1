@@ -37,6 +37,13 @@ export interface GridBlockProps {
    * "Show me on the grid" has something to point at.
    */
   flagged?: boolean;
+  /**
+   * Painted for a moment, for a block somebody was *sent* to.
+   *
+   * The top bar's search takes a calendar task to the day it sits on and then
+   * has to say which of the day's blocks it meant — see pages/Calendar/Day.
+   */
+  marked?: boolean;
 }
 
 /**
@@ -141,6 +148,7 @@ export function GridBlock({
   onComplete,
   completing,
   flagged,
+  marked,
 }: GridBlockProps) {
   const clash = flagged ? ' is-clashing' : '';
   const position = {
@@ -254,7 +262,9 @@ export function GridBlock({
         block.overdue ? ' is-overdue' : ''
       }${
         block.compact ? ' is-compact' : ''
-      }${block.snug ? ' is-snug' : ''}${completing ? ' is-completing' : ''}${clash}`}
+      }${block.snug ? ' is-snug' : ''}${completing ? ' is-completing' : ''}${clash}${
+        marked ? ' is-found' : ''
+      }`}
       data-kind="task"
       data-iso={iso}
       data-id={block.id}

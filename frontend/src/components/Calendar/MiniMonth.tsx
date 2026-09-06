@@ -11,11 +11,15 @@
  *
  * **Two callers, two ways of saying "here".** The Day view is on one day and
  * passes `selectedIso`, which fills that cell. The Week view is on seven and
- * passes `fromIso`/`toIso`, which bands the row — and with it `weekStart: 1`,
- * because a Monday-to-Sunday week laid on a Sunday-first grid is not a row at
- * all: it is the tail of one and the head of the next, and a band split across
- * two lines is worse than no band. The Day view keeps the Sunday-first grid it
- * has always had; nothing there depends on which column a week begins in.
+ * passes `fromIso`/`toIso`, which bands the row.
+ *
+ * Both pass `weekStart`, and the Week view is why the prop exists: a week laid
+ * on a grid that opens on a different day is not a row at all — it is the tail
+ * of one and the head of the next, and a band split across two lines is worse
+ * than no band. Which day that is comes from the account (Settings, Calendar);
+ * it was fixed at Monday here and Sunday in the Day view until it did, and two
+ * calendars in one app disagreeing about where a week begins is the kind of
+ * detail a reader notices immediately.
  */
 import { dates } from '@/utils';
 

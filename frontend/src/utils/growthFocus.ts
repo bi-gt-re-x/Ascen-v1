@@ -41,6 +41,8 @@
  * hour is stated on the card rather than passed off as the reader's own target.
  */
 import type { GrowthDay, Task } from '@/types';
+import { activeRate, countActiveDays } from './activeDay';
+import { gradeFor as letterFor } from './analyticalScore';
 import type { Subject } from '@/services/subjects';
 
 const num = (value: unknown): number => Number(value) || 0;
@@ -65,26 +67,20 @@ export function dayName(iso: string): string {
 /**
  * A 0-100 score as a letter.
  *
- * The bands are the report card's — S/A/B/C/D/F at 95/85/72/65/40 — and the
- * modifier is which third of its band the score sits in. The base letter is
- * therefore always the letter /analytics would print for the same number.
+ * Delegates, and that is the whole point of it. This used to carry its own
+ * table — S/A/B/C/D/F at 95/85/72/65/40 — plus a modifier for which third of a
+ * band the score sat in, under a comment promising that the base letter was
+ * always the one /analytics would print. It was a promise made by two copies of
+ * the boundaries, and it broke the moment the real ones moved: the report card
+ * runs on the school scale now, with A+ at 96 and S reserved for 100.
+ *
+ * So there is one table, in utils/analyticalScore, mirroring the backend's. The
+ * thirds are gone with the second copy — an app that shows "B−" here and "B"
+ * on the analytics page for the same number is not more precise, it is
+ * disagreeing with itself in a way the reader has no way to resolve.
  */
 export function gradeFor(score: number): string {
-  const bands: Array<[number, number, string]> = [
-    [95, 101, 'S'],
-    [85, 95, 'A'],
-    [72, 85, 'B'],
-    [65, 72, 'C'],
-    [40, 65, 'D'],
-    [0, 40, 'F'],
-  ];
-  const band = bands.find(([low]) => score >= low) ?? bands[bands.length - 1]!;
-  const [low, high, letter] = band;
-  if (letter === 'S' || letter === 'F') return letter;
-  const third = (high - low) / 3;
-  if (score < low + third) return `${letter}−`;
-  if (score < low + third * 2) return letter;
-  return `${letter}+`;
+  return letterFor(score);
 }
 
 // --------------------------------------------------------------------------
@@ -697,11 +693,10 @@ export const COMPARE_BACK_DAYS = 90;
 /** The reference focus day the focus score is measured against. */
 export const FOCUS_REFERENCE_MINUTES = 60;
 
-/** Days with any XP, over days — the plainest consistency there is. */
+/** Days worked, over days — the plainest consistency there is. */
 function consistencyScore(window: GrowthDay[]): number | null {
   if (window.length === 0) return null;
-  const active = window.filter((day) => num(day.xp_earned) > 0).length;
-  return Math.round((active / window.length) * 100);
+  return Math.round(activeRate(window));
 }
 
 /** Average focus minutes a day, against the stated reference hour. */
@@ -789,7 +784,9 @@ export function scoreCards(all: GrowthDay[], tasks: Task[], days = 30): ScoreCar
     };
   };
 
-  const active = now.filter((day) => num(day.xp_earned) > 0).length;
+  // Printed as "N of M days had work on them" a few lines down, so it counts
+  // what that sentence says it counts. See utils/activeDay.
+  const active = countActiveDays(now);
   let planned = 0;
   let met = 0;
   now.forEach((day) => {

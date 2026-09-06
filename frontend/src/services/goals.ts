@@ -12,14 +12,7 @@
  * Backend: backend/api/goals.py.
  */
 import { get, post } from './api';
-import type {
-  ApiResult,
-  Goal,
-  GoalCategory,
-  GoalMeasure,
-  GoalType,
-  MilestoneStatus,
-} from '@/types';
+import type { ApiResult, Goal, GoalCategory, GoalMeasure, GoalType, MilestoneStatus, MilestoneStep } from '@/types';
 
 export interface GoalsResult {
   goals: Goal[];
@@ -28,8 +21,8 @@ export interface GoalsResult {
 }
 
 /** Every goal, with the self-tracking ones brought up to date first. */
-export function getGoals(username: string): Promise<ApiResult<GoalsResult>> {
-  return get<GoalsResult>('/api/get_goals', { username });
+export function getGoals(): Promise<ApiResult<GoalsResult>> {
+  return get<GoalsResult>('/api/get_goals');
 }
 
 export interface NewGoal {
@@ -63,10 +56,9 @@ export interface NewGoal {
 }
 
 export function addGoal(
-  username: string,
   goal: NewGoal,
 ): Promise<ApiResult<{ message: string; id: string }>> {
-  return post('/api/add_goal', { username, ...goal });
+  return post('/api/add_goal', { ...goal });
 }
 
 /**
@@ -106,18 +98,16 @@ export type GoalEdit = Partial<
 >;
 
 export function updateGoal(
-  username: string,
   goalId: string,
   edit: GoalEdit,
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/update_goal', { id: goalId, username, ...edit });
+  return post('/api/update_goal', { id: goalId, ...edit });
 }
 
 export function deleteGoal(
-  username: string,
   goalId: string,
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/delete_goal', { goal_id: goalId, username });
+  return post('/api/delete_goal', { goal_id: goalId });
 }
 
 // --------------------------------------------------------------------------
@@ -131,31 +121,51 @@ export function deleteGoal(
  * moved, and patching that in the client would be a second opinion.
  */
 export function addMilestone(
-  username: string,
   goalId: string,
   milestone: { title: string; note?: string; target_date?: string },
-): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/add_milestone', { username, goal_id: goalId, ...milestone });
+): Promise<ApiResult<{ id: string }>> {
+  return post<{ id: string }>('/api/add_milestone', { goal_id: goalId, ...milestone });
+}
+
+/**
+ * Five step titles for one checkpoint, from the model. Writes nothing.
+ *
+ * The checklist counterpart of `suggestMilestones`, with the same contract:
+ * a draft, and every failure back as `success: false` with a message meant to
+ * be shown. `updateMilestone` is what saves them, exactly as it saves a
+ * checklist typed by hand.
+ *
+ * Identify the checkpoint with `milestoneId` — it carries its goal with it —
+ * or pass a `title` and the `goalId` it sits under, for one not yet written.
+ */
+export function suggestSteps(
+  step: { milestoneId?: string; goalId?: string; title?: string },
+): Promise<ApiResult<{ steps: string[] }>> {
+  return post<{ steps: string[] }>('/api/suggest_steps', {
+    milestone_id: step.milestoneId,
+    goal_id: step.goalId,
+    title: step.title,
+  });
 }
 
 export function updateMilestone(
-  username: string,
   milestoneId: string,
   edit: {
     title?: string;
     note?: string;
     status?: MilestoneStatus;
     target_date?: string;
+    /** The whole checklist. Sent entire — see UpdateMilestone in the API. */
+    steps?: MilestoneStep[];
   },
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/update_milestone', { username, id: milestoneId, ...edit });
+  return post('/api/update_milestone', { id: milestoneId, ...edit });
 }
 
 export function deleteMilestone(
-  username: string,
   milestoneId: string,
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/delete_milestone', { username, id: milestoneId });
+  return post('/api/delete_milestone', { id: milestoneId });
 }
 
 /**
@@ -171,11 +181,9 @@ export function deleteMilestone(
  * rather than treating it as the page breaking.
  */
 export function suggestMilestones(
-  username: string,
   goal: { goalId?: string; title?: string; why?: string; description?: string; category?: string },
 ): Promise<ApiResult<{ milestones: string[] }>> {
   return post<{ milestones: string[] }>('/api/suggest_milestones', {
-    username,
     goal_id: goal.goalId,
     title: goal.title,
     why: goal.why,
@@ -196,20 +204,18 @@ export function suggestMilestones(
  * At most five, which is what the ladder on the page draws.
  */
 export function setMilestones(
-  username: string,
   goalId: string,
   titles: string[],
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/set_milestones', { username, goal_id: goalId, titles });
+  return post('/api/set_milestones', { goal_id: goalId, titles });
 }
 
 /** The new execution order, as milestone ids. */
 export function reorderMilestones(
-  username: string,
   goalId: string,
   order: string[],
 ): Promise<ApiResult<Record<string, never>>> {
-  return post('/api/reorder_milestones', { username, goal_id: goalId, order });
+  return post('/api/reorder_milestones', { goal_id: goalId, order });
 }
 
 export interface ProgressResult {
@@ -257,8 +263,7 @@ export interface AppliedXp {
  * the XP counts twice.
  */
 export function applyTaskXp(
-  username: string,
   xp: number,
 ): Promise<ApiResult<AppliedXp>> {
-  return post<AppliedXp>('/api/auto_apply_task_xp', { username, xp });
+  return post<AppliedXp>('/api/auto_apply_task_xp', { xp });
 }

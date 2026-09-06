@@ -6,7 +6,7 @@
  * Searching for "physics" should not empty the panel telling you what is due at
  * four o'clock.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFocusSession } from '@/hooks';
 import type { Task } from '@/types';
 import type { Streak } from './board';
@@ -179,7 +179,7 @@ function Streaks({ rows, onAll }: { rows: Streak[]; onAll: () => void }) {
       </header>
       {rows.length === 0 ? (
         <p className="tk-side-empty">
-          Nothing on a run yet. A task done two days together starts one.
+          Nothing on a run yet. Two days together starts one.
         </p>
       ) : (
         <ul className="tk-streaks">
@@ -216,16 +216,29 @@ function Streaks({ rows, onAll }: { rows: Streak[]; onAll: () => void }) {
  */
 function QuickAdd({
   busy,
+  defaultPriority,
   onAdd,
   onOpenFull,
 }: {
   busy: boolean;
+  /** Where the priority button starts, and what it returns to after a task.
+      From Settings, Tasks — which has always described this control as the one
+      it sets, while this started every task at medium regardless. */
+  defaultPriority: 'high' | 'medium' | 'low';
   onAdd: (name: string, due: string | null, priority: 'high' | 'medium' | 'low') => void;
   onOpenFull: () => void;
 }) {
   const [name, setName] = useState('');
   const [when, setWhen] = useState<'none' | 'today' | 'tomorrow'>('none');
-  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const [priority, setPriority] = useState(defaultPriority);
+
+  // The preferences land after the page does, so the button has usually been
+  // built before the account's answer is known. It follows until it is pressed
+  // — `send` resets to the preference too, which is the same rule.
+  const touched = useRef(false);
+  useEffect(() => {
+    if (!touched.current) setPriority(defaultPriority);
+  }, [defaultPriority]);
 
   const send = () => {
     const title = name.trim();
@@ -235,7 +248,8 @@ function QuickAdd({
     onAdd(title, when === 'none' ? null : at.toISOString().slice(0, 10), priority);
     setName('');
     setWhen('none');
-    setPriority('medium');
+    touched.current = false;
+    setPriority(defaultPriority);
   };
 
   const dates: Array<{ key: typeof when; label: string }> = [
@@ -286,9 +300,10 @@ function QuickAdd({
           type="button"
           className={`tk-quick-tool is-${priority}`}
           title={`Priority: ${priority}`}
-          onClick={() =>
-            setPriority(priority === 'medium' ? 'high' : priority === 'high' ? 'low' : 'medium')
-          }
+          onClick={() => {
+            touched.current = true;
+            setPriority(priority === 'medium' ? 'high' : priority === 'high' ? 'low' : 'medium');
+          }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
             <path d="M5 21V4h11l-1.5 3.5L16 11H5" />
@@ -326,6 +341,8 @@ export interface SidebarProps {
   upcoming: Task[];
   streaks: Streak[];
   busy: boolean;
+  /** What Quick Add's priority button starts on. From Settings, Tasks. */
+  defaultPriority: 'high' | 'medium' | 'low';
   subjectName: (id: string | undefined) => string | null;
   onAdd: (name: string, due: string | null, priority: 'high' | 'medium' | 'low') => void;
   onOpenFull: () => void;
@@ -343,7 +360,12 @@ export function Sidebar(props: SidebarProps) {
         onAll={props.onShowUpcoming}
       />
       <Streaks rows={props.streaks} onAll={props.onShowStreaks} />
-      <QuickAdd busy={props.busy} onAdd={props.onAdd} onOpenFull={props.onOpenFull} />
+      <QuickAdd
+        busy={props.busy}
+        defaultPriority={props.defaultPriority}
+        onAdd={props.onAdd}
+        onOpenFull={props.onOpenFull}
+      />
     </aside>
   );
 }

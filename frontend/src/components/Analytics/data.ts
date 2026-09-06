@@ -17,6 +17,7 @@ import {
   compact,
   type RangeSlice,
 } from '@/utils/growthSummary';
+import { activeRate, isActiveDay } from '@/utils/activeDay';
 import type { GrowthDay } from '@/types';
 
 // --------------------------------------------------------------------------
@@ -105,6 +106,20 @@ export function monthLabel(iso: string): string {
   if (Number.isNaN(at.getTime())) return '';
   const month = at.toLocaleDateString('en-US', { month: 'short' });
   return `${month} '${String(at.getFullYear()).slice(2)}`;
+}
+
+/**
+ * One date, written out in full, for a chart's readout.
+ *
+ * Not `monthLabel`: that one names a *slot* on the x axis, where six labels
+ * stand in for a year and "Mar '26" is the honest resolution. The readout names
+ * the single point under the crosshair, and telling a reader who asked about
+ * one day that it happened in March is answering a question they did not ask.
+ */
+export function pointLabel(iso: string): string {
+  const at = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(at.getTime())) return iso;
+  return at.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /**
@@ -238,7 +253,9 @@ export const METRICS: MetricOption[] = [
     // — the grain picker is right there, and weekly is where it becomes a line.
     key: 'consistency',
     label: 'Consistency',
-    read: (day) => (num(day.xp_earned) > 0 ? 100 : 0),
+    /* The same test the tile and the panel use, so the chart of consistency
+       and the figure above it cannot describe different days. */
+    read: (day) => (isActiveDay(day) ? 100 : 0),
     cumulative: false,
     format: (value) => `${Math.round(value)}% of days`,
     axis: (value) => `${Math.round(value)}%`,
@@ -387,21 +404,11 @@ export function bucketed(
   return out;
 }
 
-/** The whole-window figure a metric comes to, in the units it is stated in. */
-export function metricTotal(days: GrowthDay[], metric: MetricOption): number {
-  if (days.length === 0) return 0;
-  if (metric.cumulative) return days.reduce((acc, day) => acc + metric.read(day), 0);
-  const weigh = metric.weigh ?? (() => 1);
-  const weight = days.reduce((acc, day) => acc + weigh(day), 0);
-  if (weight === 0) return 0;
-  return days.reduce((acc, day) => acc + metric.read(day) * weigh(day), 0) / weight;
-}
-
 // --------------------------------------------------------------------------
 // Consistency
 // --------------------------------------------------------------------------
 export interface Consistency {
-  /** Share of the window's days with any XP on them, 0-100. */
+  /** Share of the window's days that had work on them, 0-100. */
   rate: number;
   /** The same for the period before, or null when there is none. */
   previousRate: number | null;
@@ -409,11 +416,9 @@ export interface Consistency {
   bestMonth: { label: string; rate: number } | null;
 }
 
-function activeRate(days: GrowthDay[]): number {
-  if (days.length === 0) return 0;
-  const active = days.filter((day) => num(day.xp_earned) > 0).length;
-  return (active / days.length) * 100;
-}
+/* Was `xp_earned > 0` here, which is a narrower thing than the same figure
+   meant three files away. See utils/activeDay: a focus session earns no XP, so
+   this panel and the gates on the page were counting different Tuesdays. */
 
 /**
  * How much of the window was worked, and which calendar month was worked most.
@@ -514,81 +519,3 @@ export function compounding(slice: RangeSlice, all: GrowthDay[]): Compounding {
 // --------------------------------------------------------------------------
 // The yearly comparison
 // --------------------------------------------------------------------------
-export interface ComparisonBar {
-  label: string;
-  current: number;
-  previous: number;
-  format: (value: number) => string;
-}
-
-/**
- * The five headline figures, this period beside the one before it.
- *
- * Every bar is a pair from the same slice the tiles above are drawn from, so
- * the panel restates the tiles rather than recomputing them differently. When
- * there is no previous period the bars still draw — at zero, which reads as
- * "nothing to compare with" and is the truth.
- *
- * The three rates lead, for the reason the tiles do: a longer window banks more
- * of everything, so a pair of *total* bars compares two calendars as much as it
- * compares two performances. XP a day, days worked and XP a task are the three
- * that hold still when the window does.
- *
- * The Growth Score bar is gone. It was the fifth pair and its previous half was
- * hard-coded to zero — no earlier reading of the score is recorded — so it drew
- * one bar beside an empty slot in a panel whose entire subject is the pair. The
- * score's own history has a panel on the Overview that draws it properly, or
- * says why it cannot.
- */
-export function comparisonBars(slice: RangeSlice): ComparisonBar[] {
-  const sum = (days: GrowthDay[], read: (day: GrowthDay) => number) =>
-    days.reduce((acc, day) => acc + read(day), 0);
-  const { current, previous } = slice;
-  const perDay = (days: GrowthDay[]) =>
-    days.length ? sum(days, (day) => num(day.xp_earned)) / days.length : 0;
-  const worked = (days: GrowthDay[]) =>
-    days.length
-      ? (days.filter((day) => num(day.xp_earned) > 0).length / days.length) * 100
-      : 0;
-  // Weighted by ratings, not by days. See `perTask` in utils/growthSummary.
-  const perTask = (days: GrowthDay[]) => {
-    const rated = sum(days, (day) => num(day.rated_tasks));
-    return rated
-      ? sum(days, (day) => num(day.quality_score) * num(day.rated_tasks)) / rated
-      : 0;
-  };
-
-  return [
-    {
-      label: 'Productivity (XP/day)',
-      current: perDay(current),
-      previous: perDay(previous),
-      format: (value) => Math.round(value).toLocaleString(),
-    },
-    {
-      label: 'Consistency (% of days)',
-      current: worked(current),
-      previous: worked(previous),
-      format: (value) => `${Math.round(value)}%`,
-    },
-    {
-      label: 'Quality (of 25)',
-      current: perTask(current),
-      previous: perTask(previous),
-      format: (value) => value.toFixed(1),
-    },
-    {
-      label: 'Tasks Completed',
-      current: sum(current, (day) => num(day.tasks_completed)),
-      previous: sum(previous, (day) => num(day.tasks_completed)),
-      format: (value) => Math.round(value).toLocaleString(),
-    },
-    {
-      label: 'XP Earned',
-      current: sum(current, (day) => num(day.xp_earned)),
-      previous: sum(previous, (day) => num(day.xp_earned)),
-      format: compact,
-    },
-  ];
-}
-

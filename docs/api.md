@@ -116,6 +116,36 @@ All in `routes/auth.py`, except the theme (`routes/theme.py`).
 | `GET /api/get_growth_ratings?username=` | The five-metric report card + weekly trends |
 | `GET /api/get_xp_data?username=` | The ledger rolled up: level, totals, series |
 
+## Task search — `api/tasks.py`
+
+| Endpoint | Does |
+| --- | --- |
+| `GET /api/tasks/search?q=&limit=&open=` | Title search, unfinished first |
+
+`open=1` drops the finished ones. The top bar's search passes it: what that
+panel does with a result is take the reader to it, and the cap means a word
+appearing in more finished tasks than the limit would otherwise come back with
+the live ones missing.
+
+## Notifications — `api/notifications.py`
+
+| Endpoint | Does |
+| --- | --- |
+| `GET /api/notifications?day=&at=` | Sweep the record, then the account's live list |
+| `POST /api/notifications/mark` | `{shown: [id], read: bool}` — on screen, or opened |
+| `DELETE /api/notifications/{id}` | Throw one away, permanently |
+| `DELETE /api/notifications` | Throw all of them away, permanently |
+
+The read is also the write: there is no job runner, so the request that asks
+for the list is what produces it (`backend/tracking/notify.py`). `day` and `at`
+are the reader's local ISO day and `HH:MM` — stored stamps carry no timezone,
+so the server cannot work out "today" or "within the hour" on its own.
+
+Both deletes are soft, and permanently so. The situation a notification
+describes is usually still true, so a hard delete would let the next sweep
+write it straight back; the tombstone under its fingerprint is what makes the
+bell stay quiet until something genuinely new turns up.
+
 ## Closed gap
 
 `calendar-month.js` posted to `/api/update_task_completion`, which never

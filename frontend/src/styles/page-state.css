@@ -26,7 +26,11 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    min-height: 45vh;
+    /* 45vh put the spinner a fifth of the way down the screen, which reads as
+       a page that stopped rather than one still arriving. Two thirds is enough
+       for it to land just above true centre — where the eye expects to be told
+       to wait. */
+    min-height: 66vh;
     padding: 40px 24px;
     text-align: center;
     color: #6C757D;
@@ -77,9 +81,39 @@
     margin: 0;
 }
 
+/* A stamp on the page rather than a sentence about it. As a paragraph between
+   the title and the description it read as the page's own first line — the
+   loudest thing said about a page whose whole point is that there is nothing
+   here yet. A pill says the same in three words and gets out of the way. */
 .page-state-note {
+    padding: 4px 12px;
+    border: 1px solid #E8DFD4;
+    border-radius: 999px;
+    background: #FBF8F4;
     color: #A38A70;
+    font-size: 12px;
     font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* The files are a note to whoever builds the page, not to whoever landed on
+   it, so they are set apart and set quieter — a footnote under a rule, below
+   the point where a reader who wanted the feature has stopped reading. */
+.page-state-aside {
+    width: 100%;
+    max-width: 460px;
+    margin-top: 10px;
+    padding-top: 18px;
+    border-top: 1px solid #EAEAEA;
+}
+
+.page-state-aside > p {
+    margin: 0 0 8px;
+    color: #9AA1A9;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 /* The files a page will be built from: a note to whoever picks it up, so it is
@@ -87,14 +121,14 @@
    every line in it is a path. */
 .page-state-files {
     list-style: none;
-    margin: 4px 0 0;
-    padding: 14px 18px;
+    margin: 0;
+    padding: 12px 16px;
     background: #F6F7F9;
     border: 1px solid #EAEAEA;
     border-radius: 10px;
     text-align: left;
-    font-size: 13px;
-    line-height: 1.9;
+    font-size: 12.5px;
+    line-height: 1.75;
     max-width: 100%;
     overflow-x: auto;
 }
@@ -110,6 +144,12 @@ html[data-theme="dark"] .page-state { color: #8b949e; }
 html[data-theme="dark"] .page-state-title { color: #e6edf3; }
 html[data-theme="dark"] .page-spinner { border-color: #30363d; border-top-color: #A38A70; }
 html[data-theme="dark"] .page-state-error { color: #ff7b72; }
+html[data-theme="dark"] .page-state-note {
+    background: #1c1710;
+    border-color: #3a2f22;
+}
+html[data-theme="dark"] .page-state-aside { border-top-color: #30363d; }
+html[data-theme="dark"] .page-state-aside > p { color: #6e7681; }
 html[data-theme="dark"] .page-state-files {
     background: #161b22;
     border-color: #30363d;
@@ -118,4 +158,66 @@ html[data-theme="dark"] .page-state-files code { color: #8b949e; }
 
 @media (prefers-reduced-motion: reduce) {
     html[data-theme="dark"] .page-spinner { border-top-color: #30363d; }
+}
+
+/* ---------- A caught crash ------------------------------------------------
+   components/ErrorBoundary. Two variants of one block: `page` sits inside the
+   app shell with the rail and top bar still around it, and `root` replaces the
+   screen because the shell is what failed.
+
+   Deliberately not styled as an error banner. A red bar says "this request
+   failed, try again"; this says "the code broke", which the reader can do
+   nothing about and should not be shouted at over. Quiet card, plain words,
+   and the two buttons that are actually worth offering. */
+.page-state-crash {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 10px;
+    max-width: 520px;
+    margin: 48px auto;
+    padding: 28px 24px;
+    text-align: center;
+    border: 1px solid var(--ps-line, #e6e9ef);
+    border-radius: 16px;
+    background: var(--ps-card, #fff);
+}
+.page-state-crash.is-root {
+    /* No shell around it, so it centres in the viewport rather than in a main
+       column that does not exist. */
+    min-height: 100vh;
+    margin: 0 auto;
+    justify-content: center;
+    border: 0;
+    background: none;
+}
+.page-state-crash h2 {
+    margin: 0;
+    font-size: 17px; font-weight: 650; letter-spacing: -.01em;
+}
+.page-state-crash p {
+    margin: 0;
+    font-size: 13.5px; line-height: 1.55;
+    color: var(--ps-muted, #6b7684);
+}
+.page-state-detail {
+    display: block;
+    max-width: 100%;
+    margin-top: 2px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--ps-well, #f2f4f8);
+    color: var(--ps-muted, #6b7684);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    /* A message can be one clause or a paragraph of framework prose; it wraps
+       rather than stretching the card or clipping the half that names the
+       property that was null. */
+    overflow-wrap: anywhere;
+}
+.page-state-actions { display: flex; gap: 9px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+
+html[data-theme="dark"] .page-state-crash {
+    --ps-line: #28324a;
+    --ps-card: #161d2c;
+    --ps-muted: #8f9bb3;
+    --ps-well: #0f1523;
 }

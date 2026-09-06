@@ -640,6 +640,21 @@ html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
     .wk-event.is-clashing { animation: none; }
 }
 
+/* The block the top bar's search sent somebody to. Ringed for a couple of
+   seconds and then let go — pages/Calendar/Day drops the class on a timer, so
+   this is a moment of "there it is" rather than a state to clear.
+
+   The same shape as `is-clashing` above and deliberately not the same colour:
+   that ring is a problem being pointed at, this one is an answer. It does not
+   pulse either, for the same reason — a thing you were looking for does not
+   need to keep asking for attention once it has it. */
+.wk-event.is-found {
+    outline: 2.5px solid #6c5ce7;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 6px rgba(108, 92, 231, .2);
+    z-index: 6;
+}
+
 /* Drag-to-create chooser: after a drag, ask whether to make an event or a task.
    Neutral (not an error), centered on a light dismissable backdrop. */
 .wk-choose-backdrop {
@@ -687,8 +702,10 @@ html[data-theme="dark"] .wk-choose-cancel:hover { color: #e6e8f0; }
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 #addTaskModal .xp-input-field:focus { border-color: #A38A70; box-shadow: 0 0 0 3px rgba(163, 138, 112, 0.18); }
-.xp-input-field::-webkit-outer-spin-button,
-.xp-input-field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* Scoped like the rules above it. Bare, this reached the dashboard's Add Task
+   popup too, which writes the same class name from a different stylesheet. */
+#addTaskModal .xp-input-field::-webkit-outer-spin-button,
+#addTaskModal .xp-input-field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 html[data-theme="dark"] #addTaskModal .xp-input-field { background: #232a33; border-color: #2b323c; color: #e6e8f0; }
 
 /* Delete confirmation: a styled, blocking popup. The backdrop covers the whole

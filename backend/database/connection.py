@@ -44,6 +44,7 @@ JSON_COLUMNS = {
     ('user_settings', 'value'),
     ('setting_defaults', 'value'),
     ('library_items', 'tags'),
+    ('calendar_documents', 'data'),
 }
 
 _build_lock = threading.Lock()
@@ -63,6 +64,10 @@ _built = False
 # migration this list can carry.
 ADDED_COLUMNS = (
     ('tasks', 'subject', 'TEXT'),
+    # The third rating question's answer. Existing rows get NULL, which reads
+    # as "not asked" — which is exactly what it was, since the question did not
+    # exist. See data/sql/tasks.sql and REASONS in backend/api/tasks.py.
+    ('tasks', 'reason', 'TEXT'),
     # The ISO week a colour was claimed in, so the reservation can expire —
     # see backend/tracking/event.py. Existing rows get NULL, which reads as
     # "claimed before anyone was counting" and therefore as long expired.
@@ -97,6 +102,17 @@ ADDED_COLUMNS = (
     # cannot attach one to a table that already has rows, and rewriting the
     # table to add it is exactly the kind of migration ADDED_COLUMNS refuses to
     # carry. The range is enforced by the endpoint instead.
+    # What the badge wall needs a badge to carry beyond its threshold: which
+    # of the five headings it is filed under, what it is worth toward the
+    # achievement score, whether it is one of the five nobody is told about,
+    # and the title it confers if it is Ascended. Every one is additive with a
+    # null default, and a row written before they existed reads as an
+    # uncategorised, unweighted, visible badge — which is what it was.
+    ('achievements', 'category', 'TEXT'),
+    ('achievements', 'xp_reward', 'INTEGER'),
+    ('achievements', 'hidden', 'INTEGER'),
+    ('achievements', 'title', 'TEXT'),
+
     ('tasks', 'difficulty', 'INTEGER'),
     ('tasks', 'execution', 'INTEGER'),
 
@@ -106,6 +122,12 @@ ADDED_COLUMNS = (
     # gives existing rows NULL, and every reader here treats NULL and '' alike.
     ('notes', 'subject_ids', 'TEXT'),
     ('notes', 'notebook', 'TEXT'),
+
+    # The checklist under a checkpoint — a JSON array of {id, title, done}.
+    # Existing checkpoints get NULL, which the API reads as "no checklist yet"
+    # and fills with placeholders on first write, so a goal written before this
+    # existed is not a goal with a broken one. See data/sql/goals.sql.
+    ('goal_milestones', 'steps', 'TEXT'),
 )
 
 # Tables added to the app after the database was first created.
@@ -174,6 +196,66 @@ ADDED_TABLES = ('''
     CREATE INDEX IF NOT EXISTS records_user_idx ON records (user_id, kind)
 ''', '''
     CREATE INDEX IF NOT EXISTS records_name_idx ON records (user_id, name, achieved_on)
+''', '''
+    -- The last two account-scoped tables with nothing leading on user_id.
+    -- Every other one is covered, either by an index written with it or by a
+    -- composite primary key that starts with the column (focus_days,
+    -- user_achievements). `rows_for` reads through these, so a table without
+    -- one falls back to scanning every account's rows to find one account's.
+    CREATE INDEX IF NOT EXISTS goal_milestones_user_idx
+        ON goal_milestones (user_id, goal_id)
+''', '''
+    CREATE INDEX IF NOT EXISTS calendar_events_user_idx
+        ON calendar_events (user_id, date)
+''', '''
+    -- One account's whole calendar, as the JSON the views already hold.
+    -- Mirrors data/sql/events.sql; see the comment there for why this is a
+    -- document and not a table of events. It exists because until now the
+    -- calendar was in localStorage and nowhere else, so a cleared browser was
+    -- a deleted calendar and the server had no copy to restore from.
+    CREATE TABLE IF NOT EXISTS calendar_documents (
+        user_id     TEXT PRIMARY KEY REFERENCES users (username) ON DELETE CASCADE,
+        data        TEXT NOT NULL DEFAULT '{}',
+        updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+''', '''
+    -- The bell's list. Mirrors data/sql/notifications.sql, which only ever
+    -- reaches a database that does not exist yet.
+    --
+    -- `fingerprint` is what makes this a list rather than a firehose: it names
+    -- the *situation* ('overdue:2026-09-01'), not the moment, so a sweep that
+    -- finds the same situation again inserts nothing. See
+    -- backend/tracking/notify.py.
+    --
+    -- `deleted_at` is why the delete is soft. A deleted row is the memory that
+    -- its situation was already answered for, and dropping it outright would
+    -- let the next sweep put the same notification straight back — which is
+    -- exactly what "delete" has to mean it will not do.
+    --
+    -- `for_day` is the day a notification is *about*, or '' for one that is
+    -- about no particular day. Yesterday's "3 tasks are late" is not news and
+    -- is not today's count either, so it retires itself when the day turns.
+    CREATE TABLE IF NOT EXISTS notifications (
+        id           TEXT PRIMARY KEY,
+        user_id      TEXT NOT NULL REFERENCES users (username) ON DELETE CASCADE,
+        fingerprint  TEXT NOT NULL,
+        channel      TEXT NOT NULL DEFAULT 'tasks',
+        tone         TEXT NOT NULL DEFAULT 'info',
+        title        TEXT NOT NULL DEFAULT '',
+        body         TEXT NOT NULL DEFAULT '',
+        link         TEXT NOT NULL DEFAULT '',
+        for_day      TEXT NOT NULL DEFAULT '',
+        created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        shown_at     TEXT,
+        read_at      TEXT,
+        deleted_at   TEXT
+    )
+''', '''
+    CREATE UNIQUE INDEX IF NOT EXISTS notifications_print_idx
+        ON notifications (user_id, fingerprint)
+''', '''
+    CREATE INDEX IF NOT EXISTS notifications_live_idx
+        ON notifications (user_id, deleted_at)
 ''')
 
 
@@ -384,26 +466,356 @@ def write_table(table, rows, columns=None):
         con.close()
 
 
+# --------------------------------------------------------------------------
+# Reading and writing one row
+# --------------------------------------------------------------------------
+# `read_table` + `write_table` is the pair the whole backend was built on, and
+# it is the wrong pair for a change to a single row. A caller that reads every
+# task, sets one field and hands the list back makes the database do this:
+#
+#     SELECT * FROM tasks            -- 10,660 rows into Python
+#     DELETE FROM tasks              -- all of them
+#     INSERT INTO tasks ...          -- 10,660 times
+#
+# measured at 245 ms on this database for one checkbox. Three things are wrong
+# with it and only the first is speed:
+#
+#   * **It scales with everybody's data, not yours.** The tables are shared, so
+#     one account ticking off a task rewrites every account's rows. Ten users
+#     and the cost is ten times, for the same click.
+#   * **It loses writes.** Two requests read the table, each changes a
+#     different row, each writes the whole thing back. The second overwrites
+#     the first with a copy that predates it. Nothing errors; the change is
+#     simply gone. Two devices, or two tabs, is enough.
+#   * **It makes deleting feel expensive**, so code stops doing it — which is
+#     how `user_achievements` came to hold rows for badges the catalogue
+#     dropped, and how "71 earned" ended up over a wall of 68.
+#
+# The five below are the targeted versions. They are additive: `write_table`
+# stays for the callers that genuinely replace a whole table (the catalogue
+# sync, the settings reset), and every caller that changes one row moves to
+# these. `_encode` and the missing-key rules are shared with `write_table`, so
+# a row written by either reads back the same.
+
+
+def _columns_for(con, table, row):
+    """The columns of `table` that `row` has something to say about.
+
+    For UPDATE, where the dict is a list of changes: a key that is not there is
+    a column this write is not about, and is left alone.
+    """
+    schema = _schema(con, table)
+    return [name for name, _, _ in schema if name in row]
+
+
+def _insert_columns(con, table, row):
+    """The columns an INSERT of `row` names — `write_table`'s rule, exactly.
+
+    A key the row does not have is stored as NULL where the column allows one,
+    so it reads back missing, and is left out where it does not so the column's
+    DEFAULT stands in. That is the convention the whole backend reads by (see
+    the note at the top of this module), and the two write paths have to agree
+    on it or a row's shape would depend on which function wrote it — an
+    `insert_row` task getting `priority: 'medium'` from a DEFAULT where a
+    `write_table` one got NULL and read back with no priority at all.
+    """
+    return [name for name, _, nullable in _schema(con, table)
+            if name in row or nullable]
+
+
+#: How many times `insert_row` will step a colliding id before giving up.
+#: Reached only if the same millisecond is contended by more than this many
+#: writers at once, which is not a situation a bigger number rescues.
+ID_RETRIES = 25
+
+
+def insert_row(table, row, key='id'):
+    """Add one row. Returns the row, with `key` set to the id actually used.
+
+    The whole-table version of this appended to a list and rewrote everything;
+    this is the INSERT that was always underneath it.
+
+    A duplicate primary key is retried rather than raised, because ids are
+    millisecond timestamps and two writers in the same millisecond is a normal
+    thing rather than an error — see `new_id`. Any other IntegrityError is a
+    real constraint being violated and is left to raise.
+    """
+    con = connect()
+    try:
+        names = _insert_columns(con, table, row)
+        if not names:
+            return row
+        sql = 'INSERT INTO "{}" ({}) VALUES ({})'.format(
+            table,
+            ', '.join('"{}"'.format(n) for n in names),
+            ', '.join('?' for _ in names))
+
+        for _ in range(ID_RETRIES):
+            try:
+                with con:
+                    con.execute(sql, [_encode(table, n, row.get(n)) for n in names])
+                return row
+            except sqlite3.IntegrityError as clash:
+                collided = ('UNIQUE constraint failed' in str(clash)
+                            and key in names
+                            and str(row.get(key, '')).isdigit())
+                if not collided:
+                    raise
+                row[key] = str(int(row[key]) + 1)
+                with _id_lock:
+                    _last_id[table] = max(_last_id.get(table, 0), int(row[key]))
+        raise sqlite3.IntegrityError(
+            'could not find a free {}.{} after {} tries'.format(
+                table, key, ID_RETRIES))
+    finally:
+        con.close()
+
+
+def update_row(table, row_id, changes, user_id=None, key='id'):
+    """Change some columns of one row. Returns True if a row was changed.
+
+    `user_id` is the ownership check and is not optional in spirit: an UPDATE
+    matched on id alone will happily edit somebody else's row, which is the
+    same hole the API had before backend/api/guard.py. Pass it wherever the
+    table has the column, and the WHERE clause carries it.
+
+    A `changes` value of None writes NULL, which is how a field is cleared —
+    unlike `read_table`, where a missing key means the column was NULL. The
+    difference is deliberate: this says what to change, not what the row is.
+    """
+    if not changes:
+        return False
+    con = connect()
+    try:
+        names = _columns_for(con, table, changes)
+        if not names:
+            return False
+        clause = 'WHERE "{}" = ?'.format(key)
+        params = [_encode(table, n, changes.get(n)) for n in names] + [row_id]
+        if user_id is not None:
+            clause += ' AND user_id = ?'
+            params.append(user_id)
+        with con:
+            cursor = con.execute(
+                'UPDATE "{}" SET {} {}'.format(
+                    table, ', '.join('"{}" = ?'.format(n) for n in names), clause),
+                params)
+        return cursor.rowcount > 0
+    finally:
+        con.close()
+
+
+def add_to_row(table, row_id, deltas, changes=None, user_id=None, key='id'):
+    """Add to some columns of one row, in SQL. Returns the row after the write.
+
+    `UPDATE ... SET xp = COALESCE(xp, 0) + ?` rather than reading the value,
+    adding to it in Python and writing it back. The difference only shows under
+    load, and then it is the whole ballgame: thirty task completions arriving
+    at once each read `tasks_completed` as 4,120 and each wrote 4,121, so
+    twenty-nine of them vanished. Measured, on this database, before this
+    existed — the ledger got all thirty rows, because appending is safe, and
+    the counter on the account moved by one.
+
+    `changes` is for the fields that are set rather than accumulated — the
+    streak, the level, `last_task_date` — and is applied in the same statement
+    so the row is never half-written. Those still race in the sense that the
+    last writer wins, but a streak is a value derived from a date rather than a
+    running total, so two writers agreeing on it is the correct outcome.
+    """
+    if not deltas and not changes:
+        return None
+    con = connect()
+    try:
+        names = _columns_for(con, table, deltas)
+        setters = ['"{0}" = COALESCE("{0}", 0) + ?'.format(n) for n in names]
+        params = [deltas[n] for n in names]
+
+        for name in _columns_for(con, table, changes or {}):
+            setters.append('"{}" = ?'.format(name))
+            params.append(_encode(table, name, changes[name]))
+
+        if not setters:
+            return None
+        clause = 'WHERE "{}" = ?'.format(key)
+        params.append(row_id)
+        if user_id is not None:
+            clause += ' AND user_id = ?'
+            params.append(user_id)
+        with con:
+            con.execute('UPDATE "{}" SET {} {}'.format(
+                table, ', '.join(setters), clause), params)
+    finally:
+        con.close()
+    return find_row(table, row_id, user_id=user_id, key=key)
+
+
+def delete_row(table, row_id, user_id=None, key='id'):
+    """Remove one row. Returns True if there was one to remove.
+
+    Scoped by `user_id` for the reason `update_row` gives.
+    """
+    con = connect()
+    try:
+        clause = 'WHERE "{}" = ?'.format(key)
+        params = [row_id]
+        if user_id is not None:
+            clause += ' AND user_id = ?'
+            params.append(user_id)
+        with con:
+            cursor = con.execute(
+                'DELETE FROM "{}" {}'.format(table, clause), params)
+        return cursor.rowcount > 0
+    finally:
+        con.close()
+
+
+def _decode_records(con, table, records):
+    """Cursor rows as the app expects to see them.
+
+    Split out of `rows_for` because the scoped task reads further down answer a
+    different WHERE clause but must hand back rows in exactly the same shape —
+    same decoding, same dropping of NULLs. Two copies of this loop would be two
+    places for a BOOLEAN to start arriving as a 0.
+    """
+    columns = _schema(con, table)
+    if not columns:
+        return []
+    types = {name: sql_type for name, sql_type, _ in columns}
+    rows = []
+    for record in records:
+        row = {}
+        for name in record.keys():
+            value = record[name]
+            if value is not None:
+                row[name] = _decode(table, name, value, types.get(name, ''))
+        rows.append(row)
+    return rows
+
+
+def rows_for(table, user_id, order='rowid'):
+    """Every row of `table` belonging to one account, in written order.
+
+    The filter the callers were all doing in Python after reading the whole
+    table. In SQL it uses the `user_id` index, so the cost is this account's
+    rows rather than everybody's.
+    """
+    con = connect()
+    try:
+        if not _schema(con, table):
+            return []
+        query = 'SELECT * FROM "{}" WHERE user_id = ? ORDER BY {}'.format(table, order)
+        return _decode_records(con, table, con.execute(query, (user_id,)))
+    finally:
+        con.close()
+
+
+def columns_for(table, user_id, columns, order='rowid'):
+    """`rows_for`, but only the named columns.
+
+    For a caller that reads a handful of fields off every row of a big table.
+    The analytics page is the one that needed it: it walks every task the
+    account owns and reads sixteen fields, one of which — `description` — is
+    unbounded free text that nothing on that page ever looks at. Selecting the
+    sixteen leaves the descriptions in the database rather than sending them to
+    a browser that will drop them.
+
+    Names are checked against the live schema rather than trusted, for two
+    reasons that both matter. It is a table name and column names going into
+    an f-string, so an unchecked list is an injection; and a deployment whose
+    `tasks` table predates a column would otherwise take an OperationalError
+    where the honest answer is a row without that field. Unknown names are
+    dropped, which is exactly what `_decode_records` already does with a NULL.
+    """
+    con = connect()
+    try:
+        schema = _schema(con, table)
+        if not schema:
+            return []
+        known = {name for name, _, _ in schema}
+        wanted = [name for name in columns if name in known]
+        if not wanted:
+            return []
+        query = 'SELECT {} FROM "{}" WHERE user_id = ? ORDER BY {}'.format(
+            ', '.join('"{}"'.format(name) for name in wanted), table, order)
+        return _decode_records(con, table, con.execute(query, (user_id,)))
+    finally:
+        con.close()
+
+
+def find_row(table, row_id, user_id=None, key='id'):
+    """One row by id, scoped to an account when one is given, or None."""
+    con = connect()
+    try:
+        columns = _schema(con, table)
+        if not columns:
+            return None
+        types = {name: sql_type for name, sql_type, _ in columns}
+        query = 'SELECT * FROM "{}" WHERE "{}" = ?'.format(table, key)
+        params = [row_id]
+        if user_id is not None:
+            query += ' AND user_id = ?'
+            params.append(user_id)
+        record = con.execute(query, params).fetchone()
+        if record is None:
+            return None
+        row = {}
+        for name in record.keys():
+            value = record[name]
+            if value is not None:
+                row[name] = _decode(table, name, value, types.get(name, ''))
+        return row
+    finally:
+        con.close()
+
+
+#: The last id handed out per table, so two callers in the same millisecond
+#: cannot be handed the same one. Guarded by `_id_lock`.
+_last_id = {}
+_id_lock = threading.Lock()
+
+
 def new_id(table):
     """A fresh id for `table`: the current millisecond, stepped past collisions.
 
     Ids are millisecond timestamps, and two rows created inside the same
     millisecond would collide on the primary key. Stepping forward keeps ids
     ordered, which `last_task_completion` relies on.
+
+    ## Why this holds a lock
+
+    It used to be a `SELECT id` and a step past what it found, with no memory
+    between calls — so two requests arriving in the same millisecond read the
+    same set, stepped to the same free value, and were both handed it. Under
+    `write_table` that ended as a silent lost update: each rewrote the whole
+    table from its own copy and the later write won. It is visible now only
+    because `insert_row` INSERTs, and an INSERT of a duplicate primary key
+    raises rather than quietly winning.
+
+    The lock fixes the requests inside one process. `insert_row` retries on a
+    collision, which covers the rest — a second worker, or the first call after
+    a restart, when `_last_id` is empty and the table is the only memory.
     """
-    con = connect()
-    try:
-        if not _schema(con, table):
-            taken = set()
-        else:
-            taken = {str(r[0]) for r in
-                     con.execute('SELECT id FROM "{}"'.format(table))}
-    finally:
-        con.close()
-    stamp = int(datetime.now().timestamp() * 1000)
-    while str(stamp) in taken:
-        stamp += 1
-    return str(stamp)
+    with _id_lock:
+        con = connect()
+        try:
+            if not _schema(con, table):
+                highest = 0
+            else:
+                row = con.execute(
+                    'SELECT MAX(CAST(id AS INTEGER)) FROM "{}"'.format(table)
+                ).fetchone()
+                highest = int(row[0] or 0)
+        finally:
+            con.close()
+
+        stamp = int(datetime.now().timestamp() * 1000)
+        # Past the highest id in the table and past the last one this process
+        # handed out, whichever is further along.
+        floor = max(highest, _last_id.get(table, 0))
+        if stamp <= floor:
+            stamp = floor + 1
+        _last_id[table] = stamp
+        return str(stamp)
 
 
 # --------------------------------------------------------------------------
@@ -417,12 +829,169 @@ def save_users(rows):
     write_table('users', rows)
 
 
+def save_user(user):
+    """Write back one account row, matched on its id.
+
+    The pair above rewrote the whole users table, and `refresh_streak` calls
+    into it on every page load — so a page view cost one DELETE and one INSERT
+    per account in the system, and two people loading a page at the same
+    moment could each write a copy of the table that predated the other.
+
+    Matched on `id`, and **`username` is never written here**. Every
+    account-owned table has a foreign key onto `users.username`, and SQLite
+    refuses an UPDATE that moves a parent key out from under a child row. That
+    is why `write_table` turns foreign keys off for its swap, and it is why
+    renaming an account is `tracking.auth.rename_user`'s job and not this
+    function's — it moves the children across too. Leaving the column out here
+    means an ordinary save can never trip over it.
+
+    Only the keys the dict carries are written. A field is cleared by setting
+    it to None, not by deleting the key — `read_table` leaves NULL columns out
+    of the dict, so a missing key means "was already NULL" and must not be
+    read as "set this to NULL".
+    """
+    if not user or not user.get('id'):
+        return False
+    changes = {k: v for k, v in user.items() if k not in ('id', 'username')}
+    return update_row('users', user['id'], changes)
+
+
 def tasks():
     return read_table('tasks')
 
 
 def save_tasks(rows):
     write_table('tasks', rows)
+
+
+def tasks_for(username):
+    """One account's tasks. See `rows_for`."""
+    return rows_for('tasks', username)
+
+
+def save_task(task, username):
+    """Write back one task, scoped to its owner."""
+    changes = {k: v for k, v in task.items() if k != 'id'}
+    return update_row('tasks', task['id'], changes, user_id=username)
+
+
+# --------------------------------------------------------------------------
+# Asking about the tasks without reading them
+# --------------------------------------------------------------------------
+# The two questions the top bar asks on every page. Both used to be answered in
+# the browser, by filtering the account's entire task list — which is why the
+# bar needed that list at all, and why every page paid megabytes to render a
+# bell and a search box. In SQL they are an aggregate and a LIMIT 8.
+#
+# The day is passed in rather than computed here. Stored stamps are local ISO
+# text with no zone (see backend/tracking/xp.py), so "today" is the caller's
+# day, and the caller is the only one who knows it.
+
+
+def task_alert_counts(username, day):
+    """What the top bar's bell needs, as four numbers and two titles.
+
+    Answers three questions in one round trip: how many open tasks are past
+    their date (and the oldest one's title), how many are due today (and one
+    title), and whether anything at all was finished today — the last being
+    what decides whether a live streak is still at risk.
+
+    Titles come back with the counts because the panel shows one of each, and
+    a second query to fetch two strings would be the same round trip twice.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'tasks'):
+            return {'late': 0, 'late_title': None,
+                    'due_today': 0, 'due_today_title': None,
+                    'finished_today': False}
+
+        # substr(due_date, 1, 10) rather than date(due_date): the column holds
+        # either a bare day or a full stamp, and substr treats both the same
+        # way the client's .slice(0, 10) always has.
+        late = con.execute(
+            'SELECT COUNT(*) AS n, MIN(substr(due_date, 1, 10)) AS oldest '
+            'FROM tasks WHERE user_id = ? AND status != ? '
+            "AND substr(due_date, 1, 10) != '' AND substr(due_date, 1, 10) < ?",
+            (username, 'done', day)).fetchone()
+
+        late_title = None
+        if late['n']:
+            row = con.execute(
+                'SELECT title FROM tasks WHERE user_id = ? AND status != ? '
+                'AND substr(due_date, 1, 10) = ? ORDER BY rowid LIMIT 1',
+                (username, 'done', late['oldest'])).fetchone()
+            late_title = row['title'] if row else None
+
+        due = con.execute(
+            'SELECT COUNT(*) AS n FROM tasks WHERE user_id = ? AND status != ? '
+            'AND substr(due_date, 1, 10) = ?',
+            (username, 'done', day)).fetchone()
+
+        due_title = None
+        if due['n']:
+            row = con.execute(
+                'SELECT title FROM tasks WHERE user_id = ? AND status != ? '
+                'AND substr(due_date, 1, 10) = ? ORDER BY rowid LIMIT 1',
+                (username, 'done', day)).fetchone()
+            due_title = row['title'] if row else None
+
+        finished = con.execute(
+            'SELECT 1 FROM tasks WHERE user_id = ? AND status = ? '
+            'AND substr(completed_at, 1, 10) = ? LIMIT 1',
+            (username, 'done', day)).fetchone()
+
+        return {
+            'late': late['n'] or 0,
+            'late_title': late_title,
+            'due_today': due['n'] or 0,
+            'due_today_title': due_title,
+            'finished_today': finished is not None,
+        }
+    finally:
+        con.close()
+
+
+def search_tasks(username, needle, limit=8, open_only=False):
+    """One account's tasks whose title contains `needle`, unfinished first.
+
+    The ordering is the one the search panel has always applied after
+    downloading everything: a search on a to-do list is nearly always somebody
+    looking for something they still have to do.
+
+    `open_only` takes that from an ordering to a rule. The top bar's search
+    passes it, because what that panel does with a result is take the reader
+    to it — and a finished task is not somewhere anybody needs taking. It is a
+    parameter rather than the behaviour because the endpoint is a title search
+    and a caller wanting the whole record is entitled to it.
+
+    An empty needle matches nothing rather than everything — the panel shows no
+    results until something is typed, and a LIKE '%%' here would mean the one
+    query in the app that returns the whole table.
+    """
+    needle = (needle or '').strip()
+    if not needle:
+        return []
+
+    con = connect()
+    try:
+        if not _schema(con, 'tasks'):
+            return []
+        # ESCAPE, so a title search for "50%" is a search for "50%" rather than
+        # a wildcard that matches every row in the table.
+        pattern = '%' + needle.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        query = (
+            'SELECT * FROM tasks WHERE user_id = ? '
+            "AND lower(title) LIKE lower(?) ESCAPE '\\' ")
+        params = [username, pattern]
+        if open_only:
+            query += 'AND status != ? '
+            params.append('done')
+        query += 'ORDER BY (status = ?), rowid LIMIT ?'
+        params.extend(['done', int(limit)])
+        return _decode_records(con, 'tasks', con.execute(query, params))
+    finally:
+        con.close()
 
 
 def goals():
@@ -455,6 +1024,54 @@ def calendar_entries():
 
 def save_calendar_entries(rows):
     write_table('calendar_entries', rows)
+
+
+def calendar_document(username):
+    """One account's whole calendar, as the dict the client keeps.
+
+    `{}` when the account has never saved one — which, until this table
+    existed, was every account: the views wrote localStorage and nothing else.
+    A caller cannot tell "never saved" from "saved an empty calendar", and does
+    not need to; both mean there is nothing on the server to show.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'calendar_documents'):
+            return {}
+        row = con.execute(
+            'SELECT data FROM calendar_documents WHERE user_id = ?',
+            (username,)).fetchone()
+        if not row or not row['data']:
+            return {}
+        try:
+            parsed = json.loads(row['data'])
+        except (ValueError, TypeError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    finally:
+        con.close()
+
+
+def save_calendar_document(username, data):
+    """Replace one account's calendar with `data`.
+
+    A whole-document write, because that is how the client holds it: the views
+    keep one object and re-save it after every edit. Upserted on `user_id`, so
+    an account has exactly one and there is no create/update decision for a
+    caller to get wrong.
+    """
+    con = connect()
+    try:
+        con.execute(
+            'INSERT INTO calendar_documents (user_id, data, updated_at) '
+            "VALUES (?, ?, datetime('now')) "
+            'ON CONFLICT(user_id) DO UPDATE SET '
+            "data = excluded.data, updated_at = datetime('now')",
+            (username, json.dumps(data, sort_keys=True)))
+        con.commit()
+        return True
+    finally:
+        con.close()
 
 
 def calendar_events():
@@ -573,3 +1190,385 @@ def set_user_setting(username, key, value):
     rows.append({'user_id': username, 'key': key, 'value': value})
     write_table('user_settings', rows, columns=['user_id', 'key', 'value'])
     return value
+
+
+# --------------------------------------------------------------------------
+# Notifications
+# --------------------------------------------------------------------------
+# The one table in the app the reader does not create rows in. Every row is
+# written by the sweep in backend/tracking/notify.py, keyed on a fingerprint
+# that names the situation rather than the moment, and removed by the reader
+# clicking the ✕ on it.
+#
+# Written out here rather than through `read_table` / `write_table` for two
+# reasons the generic pair cannot serve: the insert has to be an INSERT OR
+# IGNORE on the fingerprint (that dedupe *is* the feature), and every read is
+# scoped by `deleted_at` as well as `user_id`, which `rows_for` does not do.
+#
+# The delete is soft. See data/sql/notifications.sql for why it has to be.
+
+#: How long a thrown-away notification is remembered. Long enough that no
+#: fingerprint it could block is still live — the day-scoped ones age out in a
+#: day, and the rest name a thing that happens once (a level, a badge, a goal's
+#: deadline) — and short enough that the table does not accumulate forever.
+TOMBSTONE_DAYS = 60
+
+#: The most live rows one account keeps. The bell is a list of what is worth
+#: acting on now, not an archive; past this the oldest are dropped outright.
+NOTIFICATION_CAP = 60
+
+NOTIFICATION_COLUMNS = (
+    'id', 'user_id', 'fingerprint', 'channel', 'tone', 'title', 'body',
+    'link', 'for_day', 'created_at', 'shown_at', 'read_at', 'deleted_at',
+)
+
+
+def notifications_for(username, channels=None):
+    """One account's live notifications, newest first.
+
+    `channels` filters to the ones whose switch in Settings is on. Passing an
+    empty collection is a real answer — every channel is off — and returns
+    nothing, which is not the same as passing None for "no filter".
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return []
+        sql = ('SELECT * FROM notifications '
+               'WHERE user_id = ? AND deleted_at IS NULL')
+        params = [username]
+        if channels is not None:
+            channels = list(channels)
+            if not channels:
+                return []
+            sql += ' AND channel IN ({})'.format(
+                ', '.join('?' for _ in channels))
+            params.extend(channels)
+        sql += ' ORDER BY rowid DESC LIMIT ?'
+        params.append(NOTIFICATION_CAP)
+        return _decode_records(con, 'notifications', con.execute(sql, params))
+    finally:
+        con.close()
+
+
+def live_fingerprints(username):
+    """Every fingerprint this account already holds, deleted ones included.
+
+    The sweep asks for this once and then decides in Python what to write,
+    rather than attempting an insert per candidate and letting most of them
+    collide. Tombstones are in it on purpose: a fingerprint that was thrown
+    away must not be offered again.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return set()
+        return {row[0] for row in con.execute(
+            'SELECT fingerprint FROM notifications WHERE user_id = ?',
+            (username,))}
+    finally:
+        con.close()
+
+
+def add_notifications(username, rows):
+    """Write new notifications. Returns the ones that were actually inserted.
+
+    `INSERT OR IGNORE` on (user_id, fingerprint), so a sweep that finds the
+    same situation again writes nothing — including when what it collides with
+    is a tombstone, which is what makes a deleted notification stay deleted.
+
+    Ids come from `new_id`, which is a millisecond stamp, so `rowid` order and
+    id order agree and "newest" means the same thing either way.
+    """
+    if not rows:
+        return []
+
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return []
+        written = []
+        stamp = datetime.now().isoformat(timespec='seconds')
+        with con:
+            for row in rows:
+                record = {
+                    'id': new_id('notifications'),
+                    'user_id': username,
+                    'fingerprint': row['fingerprint'],
+                    'channel': row.get('channel', 'tasks'),
+                    'tone': row.get('tone', 'info'),
+                    'title': row.get('title', ''),
+                    'body': row.get('body', ''),
+                    'link': row.get('link', ''),
+                    'for_day': row.get('for_day', ''),
+                    'created_at': stamp,
+                }
+                names = [n for n in NOTIFICATION_COLUMNS if n in record]
+                cursor = con.execute(
+                    'INSERT OR IGNORE INTO notifications ({}) VALUES ({})'.format(
+                        ', '.join('"{}"'.format(n) for n in names),
+                        ', '.join('?' for _ in names)),
+                    [record[n] for n in names])
+                if cursor.rowcount:
+                    written.append(record)
+        return written
+    finally:
+        con.close()
+
+
+def refresh_notification(username, fingerprint, title, body):
+    """Bring a live notification's words up to date, leaving its place alone.
+
+    The day-scoped ones describe a count that moves — three tasks are late this
+    morning and five are late this afternoon — and the alternative to editing
+    the row is putting the count in the fingerprint, which would mean a fresh
+    notification every time somebody finished a task. A deleted row is never
+    touched: it has been answered, and rewriting it would be a way of bringing
+    it back.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return False
+        with con:
+            cursor = con.execute(
+                'UPDATE notifications SET title = ?, body = ? '
+                'WHERE user_id = ? AND fingerprint = ? AND deleted_at IS NULL '
+                'AND (title != ? OR body != ?)',
+                (title, body, username, fingerprint, title, body))
+        return cursor.rowcount > 0
+    finally:
+        con.close()
+
+
+def mark_notifications(username, ids, column):
+    """Stamp `shown_at` or `read_at` on some of one account's notifications.
+
+    `column` is picked from a fixed pair rather than interpolated from the
+    caller's string — it goes into the SQL text, which is the one place in this
+    module where a caller's value would be more than a parameter.
+    """
+    if column not in ('shown_at', 'read_at'):
+        raise ValueError('mark_notifications: {!r} is not stampable'.format(column))
+    ids = [str(i) for i in (ids or [])]
+    if not ids:
+        return 0
+
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return 0
+        with con:
+            cursor = con.execute(
+                'UPDATE notifications SET "{}" = ? WHERE user_id = ? '
+                'AND "{}" IS NULL AND id IN ({})'.format(
+                    column, column, ', '.join('?' for _ in ids)),
+                [datetime.now().isoformat(timespec='seconds'), username] + ids)
+        return cursor.rowcount
+    finally:
+        con.close()
+
+
+def delete_notifications(username, ids=None):
+    """Throw notifications away. `ids` None means every live one.
+
+    Soft, and permanently so — see data/sql/notifications.sql. What the reader
+    gets is a bell that stays empty until something genuinely new happens,
+    which is only true because the row survives to say this one was answered.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return 0
+        sql = ('UPDATE notifications SET deleted_at = ? '
+               'WHERE user_id = ? AND deleted_at IS NULL')
+        params = [datetime.now().isoformat(timespec='seconds'), username]
+        if ids is not None:
+            ids = [str(i) for i in ids]
+            if not ids:
+                return 0
+            sql += ' AND id IN ({})'.format(', '.join('?' for _ in ids))
+            params.extend(ids)
+        with con:
+            cursor = con.execute(sql, params)
+        return cursor.rowcount
+    finally:
+        con.close()
+
+
+def retire_notifications(username, day):
+    """Retire live notifications about a day that has passed. Returns how many.
+
+    Yesterday's "3 tasks are past their dates" is not today's count and is not
+    news either, and a bell that keeps one per day accumulates a week of them
+    while the reader is looking at the same three late tasks. The day-scoped
+    ones therefore end with their day.
+
+    A retirement is the same soft delete the reader's ✕ performs, and that is
+    right rather than convenient: the fingerprint it leaves behind names a day
+    that cannot come round again, so it blocks nothing and it is pruned with
+    the rest.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return 0
+        with con:
+            cursor = con.execute(
+                'UPDATE notifications SET deleted_at = ? WHERE user_id = ? '
+                "AND deleted_at IS NULL AND for_day != '' AND for_day < ?",
+                (datetime.now().isoformat(timespec='seconds'), username, day))
+        return cursor.rowcount
+    finally:
+        con.close()
+
+
+def prune_notifications(username, before_day):
+    """Drop tombstones older than `before_day`, and anything past the cap.
+
+    Both halves are the same idea: this table is a working list, not a record
+    of everything the app has ever had to say. A tombstone whose fingerprint
+    can no longer recur is holding nothing back, and a live row sixty deep is
+    below the fold of a panel nobody scrolls.
+    """
+    con = connect()
+    try:
+        if not _schema(con, 'notifications'):
+            return 0
+        with con:
+            gone = con.execute(
+                'DELETE FROM notifications WHERE user_id = ? '
+                'AND deleted_at IS NOT NULL AND deleted_at < ?',
+                (username, before_day)).rowcount
+            gone += con.execute(
+                'DELETE FROM notifications WHERE user_id = ? '
+                'AND deleted_at IS NULL AND id NOT IN ('
+                '  SELECT id FROM notifications WHERE user_id = ? '
+                '  AND deleted_at IS NULL ORDER BY rowid DESC LIMIT ?)',
+                (username, username, NOTIFICATION_CAP)).rowcount
+        return gone
+    finally:
+        con.close()
+
+
+def notification_facts(username, day, tomorrow, week_ago, fortnight_ago):
+    """Everything the notification sweep needs, in one round trip.
+
+    Same argument as `task_alert_counts` above, one size up: the sweep asks
+    about tasks, XP, focus, goals, badges and records, and doing that as six
+    reads through `read_table` would mean pulling six whole tables across every
+    account in the database to answer questions about one. Every figure here is
+    an aggregate or a LIMIT, and the four days are passed in for the reason the
+    day always is — stored stamps carry no zone, so the reader's day is the
+    only right one.
+
+    The rules that turn these facts into sentences are not here. They are in
+    backend/tracking/notify.py, which is where the wording and the thresholds
+    belong.
+    """
+    facts = {
+        'late': 0, 'late_title': None,
+        'due_today': 0, 'due_today_title': None,
+        'due_tomorrow': 0, 'due_tomorrow_title': None,
+        'finished_today': 0,
+        'done_this_week': 0, 'done_last_week': 0,
+        'xp_today': 0, 'xp_this_week': 0, 'xp_last_week': 0, 'xp_best_day': 0,
+        'focus_this_week': 0, 'focus_last_week': 0,
+        'last_active_day': None,
+        'goals': [], 'badges': [], 'records': [],
+    }
+
+    con = connect()
+    try:
+        if _schema(con, 'tasks'):
+            # substr(due_date, 1, 10) rather than date(due_date): the column
+            # holds either a bare day or a full stamp, exactly as
+            # `task_alert_counts` above explains.
+            for key, clause, params in (
+                ('late', "substr(due_date, 1, 10) != '' "
+                         'AND substr(due_date, 1, 10) < ?', (day,)),
+                ('due_today', 'substr(due_date, 1, 10) = ?', (day,)),
+                ('due_tomorrow', 'substr(due_date, 1, 10) = ?', (tomorrow,)),
+            ):
+                row = con.execute(
+                    'SELECT COUNT(*) AS n, MIN(title) AS one FROM tasks '
+                    'WHERE user_id = ? AND status != ? AND ' + clause,
+                    (username, 'done') + params).fetchone()
+                facts[key] = row['n'] or 0
+                facts[key + '_title'] = row['one']
+
+            facts['finished_today'] = con.execute(
+                'SELECT COUNT(*) AS n FROM tasks WHERE user_id = ? '
+                'AND status = ? AND substr(completed_at, 1, 10) = ?',
+                (username, 'done', day)).fetchone()['n'] or 0
+
+            for key, since, until in (('done_this_week', week_ago, day),
+                                      ('done_last_week', fortnight_ago, week_ago)):
+                facts[key] = con.execute(
+                    'SELECT COUNT(*) AS n FROM tasks WHERE user_id = ? '
+                    'AND status = ? AND substr(completed_at, 1, 10) > ? '
+                    'AND substr(completed_at, 1, 10) <= ?',
+                    (username, 'done', since, until)).fetchone()['n'] or 0
+
+        if _schema(con, 'xp_events'):
+            facts['xp_today'] = con.execute(
+                'SELECT COALESCE(SUM(amount), 0) AS n FROM xp_events '
+                'WHERE user_id = ? AND date = ?',
+                (username, day)).fetchone()['n'] or 0
+            for key, since, until in (('xp_this_week', week_ago, day),
+                                      ('xp_last_week', fortnight_ago, week_ago)):
+                facts[key] = con.execute(
+                    'SELECT COALESCE(SUM(amount), 0) AS n FROM xp_events '
+                    'WHERE user_id = ? AND date > ? AND date <= ?',
+                    (username, since, until)).fetchone()['n'] or 0
+            # The best single day the ledger has ever recorded, today
+            # excluded — the question the sweep asks is whether today has
+            # beaten it, and a day cannot beat itself.
+            facts['xp_best_day'] = con.execute(
+                'SELECT COALESCE(MAX(total), 0) AS n FROM ('
+                '  SELECT SUM(amount) AS total FROM xp_events '
+                '  WHERE user_id = ? AND date != ? GROUP BY date)',
+                (username, day)).fetchone()['n'] or 0
+            last = con.execute(
+                'SELECT MAX(date) AS d FROM xp_events WHERE user_id = ?',
+                (username,)).fetchone()
+            facts['last_active_day'] = last['d'] if last else None
+
+        if _schema(con, 'focus_days'):
+            for key, since, until in (('focus_this_week', week_ago, day),
+                                      ('focus_last_week', fortnight_ago, week_ago)):
+                facts[key] = con.execute(
+                    'SELECT COALESCE(SUM(seconds), 0) AS n FROM focus_days '
+                    'WHERE user_id = ? AND date > ? AND date <= ?',
+                    (username, since, until)).fetchone()['n'] or 0
+
+        if _schema(con, 'goals'):
+            # Only what a notification can be written about: an active goal
+            # that has a date on it, or one whose arithmetic is finished but
+            # which nobody has closed.
+            facts['goals'] = [dict(row) for row in con.execute(
+                'SELECT id, title, deadline, progress, goal_type FROM goals '
+                'WHERE user_id = ? AND status = ? '
+                "AND (deadline != '' OR progress >= 100) "
+                'ORDER BY deadline LIMIT 40',
+                (username, 'active'))]
+
+        if _schema(con, 'user_achievements') and _schema(con, 'achievements'):
+            facts['badges'] = [dict(row) for row in con.execute(
+                'SELECT a.id AS id, a.name AS name, a.description AS description, '
+                'u.earned_at AS earned_at FROM user_achievements u '
+                'JOIN achievements a ON a.id = u.achievement_id '
+                'WHERE u.user_id = ? AND substr(u.earned_at, 1, 10) >= ? '
+                'ORDER BY u.earned_at DESC LIMIT 10',
+                (username, week_ago))]
+
+        if _schema(con, 'records'):
+            facts['records'] = [dict(row) for row in con.execute(
+                'SELECT id, name, value, unit, achieved_on FROM records '
+                'WHERE user_id = ? AND achieved_on >= ? '
+                'ORDER BY achieved_on DESC LIMIT 10',
+                (username, week_ago))]
+
+        return facts
+    finally:
+        con.close()

@@ -22,15 +22,22 @@ export function RequireAccount() {
     return <Loading label="Checking your account" />;
   }
 
+  // `next` carries where they were headed, so finishing the flow lands them
+  // there rather than on the home page — same contract as the backend gate.
+  //
+  // The whole URL, not just the path. The backend's version cannot do better
+  // than the path, because a fragment is never sent to a server; this one can
+  // see it, and dropping it would send the reader back to a page that has
+  // forgotten what they asked it for. `/calendar#void` is the case that
+  // matters — see hooks/useVoid.ts — and it is a link somebody can arrive on
+  // with an expired session like any other.
+  const next = encodeURIComponent(location.pathname + location.search + location.hash);
+
   if (status === 'signed-out') {
-    // `next` carries where they were headed, so finishing the flow lands them
-    // there rather than on the home page — same contract as the backend gate.
-    const next = encodeURIComponent(location.pathname);
     return <Navigate to={`/home?auth=login&next=${next}`} replace />;
   }
 
   if (!profileComplete) {
-    const next = encodeURIComponent(location.pathname);
     return <Navigate to={`/home?auth=profile&next=${next}`} replace />;
   }
 

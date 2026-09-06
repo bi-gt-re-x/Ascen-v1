@@ -29,51 +29,11 @@
  * appended after the main bundle's, so it beat dashboard.css on source order.
  *
  * Nothing replaces it. Pinning the calendar to one screen is `body.pins-viewport`
- * in styles/navbar.css, which App.tsx sets per route and which only applies
+ * in styles/rail.css, which App.tsx sets per route and which only applies
  * above 1120x640 — this rule applied at every size and broke the calendar's own
  * scrolling on a small window, which is exactly what that media query exists to
  * avoid. min-height, margin and padding are already on the body rule in
  * styles/dashboard.css, which is in the main bundle and always loaded. */
-
-
-/* Rounded navigation buttons */
-
-.nav-btn {
-
-    border-radius: 25px !important;
-
-    border: 2px solid black;
-
-    background: white;
-
-    color: black;
-
-    padding: 10px 20px;
-
-    font-weight: bold;
-
-    transition: opacity 0.3s ease, transform 0.3s ease;
-
-
-}
-
-
-.home-btn {
-
-    animation-delay: 0.2s;
-
-}
-
-
-.nav-btn:hover {
-
-    background: white;
-
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
-
-    transform: scale(1.05);
-
-}
 
 
 /* Theme selector in top right corner */
@@ -84,7 +44,7 @@
    (search "flex: 1 1 auto") sets margin: 0 and wins on equal specificity.
    The card's top offset comes from the body's padding-top instead. */
 
-.calendar-container {
+.calendar-container  {
     /* The viewport, less the two things above and below the card: the fixed top
      * bar, and the gutter the body keeps under it.
      *
@@ -1356,7 +1316,7 @@ body.classic .timestamp-section input[type="time"] {
 
 /* Modal Styles */
 
-.modal {
+.calendar-container .modal {
 
     display: none;
 
@@ -1394,7 +1354,7 @@ body.classic .timestamp-section input[type="time"] {
    The top and bottom margins are the same fraction, so the cap and the gap
    agree and the dialog sits with even air around it instead of the old
    `calc(8% - 42px)`, which was a number tuned for one form's height. */
-.modal-content {
+.calendar-container .modal-content {
 
     margin: min(5vh, 44px) auto;
 
@@ -1420,7 +1380,7 @@ body.classic .timestamp-section input[type="time"] {
 
 
 /* Week view opens the shared "Add New Event" modal 2x wider, with no horizontal scroll. */
-.modal.from-week .modal-content {
+.calendar-container .modal.from-week .modal-content {
 
     width: min(1200px, 96%);
 
@@ -1430,14 +1390,14 @@ body.classic .timestamp-section input[type="time"] {
 
 }
 
-.modal.from-week .modal-body {
+.calendar-container .modal.from-week .modal-body {
 
     overflow-x: hidden;
 
 }
 
 
-.modal-header {
+.calendar-container .modal-header {
 
     flex: none;
 
@@ -1456,7 +1416,7 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
-.modal-header h3 {
+.calendar-container .modal-header h3 {
 
     margin: 0;
 
@@ -1469,7 +1429,7 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
-.close-btn {
+.calendar-container .close-btn {
 
     font-size: 32px;
 
@@ -1486,7 +1446,7 @@ body.classic .timestamp-section input[type="time"] {
 }
 
 
-.close-btn:hover {
+.calendar-container .close-btn:hover {
 
     color: #1a237e;
 
@@ -1497,7 +1457,7 @@ body.classic .timestamp-section input[type="time"] {
    that matters: a flex item's automatic minimum is its content, so without it
    the body would refuse to shrink, push the footer off the bottom of the
    dialog, and scroll nothing. */
-.modal-body {
+.calendar-container .modal-body {
 
     flex: 1 1 auto;
 
@@ -1782,7 +1742,7 @@ html[data-theme="dark"] .event-suggest-bad { background: #2e1618; border-color: 
 html[data-theme="dark"] .event-suggest .event-suggest-link { color: #8fbcff; }
 html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297; }
 
-.modal-footer {
+.calendar-container .modal-footer {
 
     flex: none;
 
@@ -1888,22 +1848,6 @@ html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297;
     }
 
 
-    .home-btn {
-
-        padding: 8px 15px;
-
-        font-size: 12px;
-
-    }
-
-
-    .home-btn {
-
-        left: 10px !important;
-
-    }
-
-
 }
 
 
@@ -1923,11 +1867,6 @@ html[data-theme="dark"] .event-suggest-bad .event-suggest-link { color: #ff9297;
     font-size: 12px;
     text-transform: uppercase;
     color: #888;
-}
-
-.task-name {
-    font-weight: 500;
-    color: #333;
 }
 
 .task-due-time {
@@ -2039,7 +1978,7 @@ body:has(.calendar-container) .app-main {
     padding-right: 12px;
 }
 
-.calendar-container {
+.calendar-container  {
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
@@ -2353,49 +2292,87 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
    positioned absolutely so they never disturb the body flow.
    --fx-card-bg / --fx-card-border are kept because the light/dark theme
    overrides re-point them (see html[data-theme="light"] #dailyTasks below). */
+/* ---- A plan card ----------------------------------------------------------
+   The same card the rest of this page is built from: the surface, the hairline
+   and the soft shadow that `.mv-card`, `.wk-panel` and the overview tiles all
+   use. It was a heavy gradient before — near-black with a blue bloom in one
+   corner, and a tan-and-brown version of the same idea in light — which made
+   the one part of the page a reader spends the most time in the one part that
+   did not look like the app around it.
+
+   The subject's colour is still here and is now the only colour on the card: a
+   3px accent down the left edge, which is exactly how a block on the week grid
+   and a row on the tasks page already carry theirs. A card is neutral and its
+   edge says what it is about; before, the whole card was a wash and the edge
+   said nothing. */
 #dailyTasks .task-section {
-    --fx-card-bg:
-        radial-gradient(120% 150% at 0% 0%, rgba(74, 96, 148, 0.30) 0%, rgba(24, 27, 36, 0) 60%),
-        linear-gradient(160deg, #1c2029 0%, #12141b 100%);
-    --fx-card-border: rgba(255, 255, 255, 0.14);
+    --fx-card-border: var(--mv-line);
     position: relative;
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 16px;
     border-bottom: none;
     border: 1px solid var(--fx-card-border);
-    border-radius: 24px;
-    padding: 18px 62px 18px 22px;
-    background: var(--fx-card-bg);
-    color: #eef0f6;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42);
+    /* The accent is drawn as a border so the card keeps one box: an inset
+       shadow would sit under the rounded corner and a pseudo-element would
+       need its own radius to match. */
+    border-left: 3px solid var(--mv-line);
+    border-radius: 16px;
+    /* The right gutter used to be 62px, held open for a badge that floated
+       over the card. The badge is in the foot's row now and only the ⋮ needs
+       clearing, which is 40px of it. */
+    padding: 15px 40px 15px 18px;
+    background: var(--mv-surface);
+    color: var(--mv-ink);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 6px 18px rgba(16, 24, 40, .05);
+    transition: border-color .15s ease, box-shadow .15s ease;
 }
-/* Neutralise every legacy colour-coded background (difficulty / event / done)
-   so all cards share the one futuristic style. !important beats the old rules. */
+#dailyTasks .task-section:hover {
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 10px 24px rgba(16, 24, 40, .08);
+}
+/* Neutralise the legacy colour-coded backgrounds (difficulty / event / done).
+   They are written with `!important` in the ported stylesheet above, so this
+   has to be as well; without it a task card is still tinted blue by a rule
+   from the vanilla app. */
 #dailyTasks .task-section.dashboard-task.priority-high,
 #dailyTasks .task-section.dashboard-task.priority-medium,
 #dailyTasks .task-section.dashboard-task.priority-low,
 #dailyTasks .task-section.dashboard-task.task-completed,
 #dailyTasks .task-section.task-completed,
 #dailyTasks .task-section.calendar-event {
-    background: var(--fx-card-bg) !important;
-    border: 1px solid var(--fx-card-border) !important;
+    background: var(--mv-surface) !important;
+    /* Three sides, not the shorthand. `border-color` would set the left edge
+       too, and with `!important` on it nothing could paint the accent —
+       including styles/calendar/palette.css, which is loaded last precisely so
+       that it can. */
+    border-top-color: var(--fx-card-border) !important;
+    border-right-color: var(--fx-card-border) !important;
+    border-bottom-color: var(--fx-card-border) !important;
+    border-left-width: 3px !important;
     opacity: 1 !important;
 }
+/* A finished card steps back. Not dimmed — the times and the green still have
+   to read — but it stops competing with the thing still to be done, which is
+   the only card on the list anybody needs to find. Its shadow goes and its
+   title softens; the surface stays, because a second background would be a
+   third state to tell apart at a glance and the green already says this one. */
+#dailyTasks .task-section.task-completed { box-shadow: none; }
+#dailyTasks .task-section.task-completed .task-title { color: var(--mv-ink-soft); }
 
 /* Round clock icon — events only (tasks show the TASK label instead) */
 #dailyTasks .event-icon {
     flex: 0 0 auto;
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(255, 255, 255, 0.30);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--mv-line);
+    background: var(--mv-surface-soft);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #c7c9d3;
+    color: var(--mv-ink-soft);
 }
-#dailyTasks .event-icon svg { width: 26px; height: 26px; }
+#dailyTasks .event-icon svg { width: 20px; height: 20px; }
 
 /* Card body: tags → title → time, stacked */
 #dailyTasks .card-body {
@@ -2410,12 +2387,12 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
 #dailyTasks .card-tags {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 2px;
+    gap: 10px;
+    margin-bottom: 4px;
 }
 #dailyTasks .task-kind-badge {
-    background: rgba(0, 0, 0, 0.28);
-    color: #c9cbd6;
+    background: var(--mv-surface-soft);
+    color: var(--mv-ink-soft);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -2423,18 +2400,38 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     padding: 3px 9px;
     border-radius: 6px;
 }
+/* The band, as a word rather than a second pill. Two pills side by side make
+   the row look like a form of tags and give equal weight to "TASK 1", which is
+   only an index, and to the band, which is a fact about the work. One chip and
+   one label reads as "task 1, and it is a light one". */
 #dailyTasks .difficulty-badge {
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
-    padding: 3px 9px;
-    border-radius: 6px;
-    border: 1px solid transparent;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    opacity: .72;
 }
 
 
-/* Title — follows the card's own colour so it flips with the theme */
+/* Title — follows the card's own colour so it flips with the theme.
+   A task's is a `<span>` and an event's is still a field, which is what each
+   of them actually is: see components/Calendar/DayPanel.tsx. They share every
+   rule below so the two never drift apart by a pixel. */
+#dailyTasks .task-title {
+    display: block;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 #dailyTasks .task-input,
 #dailyTasks .task-input-inline,
 #dailyTasks .task-section .task-input-inline {
@@ -2452,7 +2449,22 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     text-overflow: ellipsis;
 }
 #dailyTasks .task-input::placeholder,
-#dailyTasks .task-input-inline::placeholder { color: rgba(255, 255, 255, 0.4); }
+#dailyTasks .task-input-inline::placeholder { color: var(--mv-ink-faint); }
+
+/* ---- The card's foot ------------------------------------------------------
+   The times on the left and what to do about it on the right, as one row.
+   Both halves used to float over this line absolutely, which meant every card
+   carried a `padding-right` guessed against the width of a word — three
+   different guesses for three states, and a card in a narrower column ran one
+   under the other anyway. A row cannot overlap itself. */
+#dailyTasks .card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+    min-height: 26px;
+}
 
 /* Time row (start – end). Tasks keep BOTH times even though they're read-only. */
 #dailyTasks .timestamp-section {
@@ -2460,11 +2472,26 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     align-items: center;
     gap: 6px;
     margin: 0;
+    min-width: 0;
 }
+/* A task's times, as text. The disabled `<input type="time">` they used to be
+   drew the browser's own spinner chrome and clipped "07:30 AM" to "07:30 A"
+   the moment the column narrowed. */
+#dailyTasks .task-times {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 9px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mv-ink-soft);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+#dailyTasks .task-times-dash { opacity: .6; }
 #dailyTasks .task-section .timestamp-section input[type="time"] {
     background: transparent;
     border: none;
-    color: #9a9ca6 !important;
+    color: var(--mv-ink-soft) !important;
     opacity: 1;
     font-weight: 500;
     font-size: 14px;
@@ -2473,7 +2500,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     padding: 0;
 }
 #dailyTasks .task-section .timestamp-section input[type="time"]:disabled { opacity: 1; }
-#dailyTasks .timestamp-section span { color: #9a9ca6; font-weight: 500; }
+#dailyTasks .timestamp-section span { color: var(--mv-ink-soft); font-weight: 500; }
 
 /* Subtasks removed from the calendar entirely */
 #dailyTasks .subtasks-list,
@@ -2487,7 +2514,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
 #dailyTasks .card-menu-btn {
     background: transparent;
     border: none;
-    color: #b6b8c2;
+    color: var(--mv-ink-faint);
     font-size: 20px;
     line-height: 1;
     width: 28px;
@@ -2499,17 +2526,17 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     justify-content: center;
     transition: background 0.15s ease, color 0.15s ease;
 }
-#dailyTasks .card-menu-btn:hover { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
+#dailyTasks .card-menu-btn:hover { background: var(--mv-surface-soft); color: var(--mv-ink); }
 #dailyTasks .card-menu {
     display: none;
     position: absolute;
     top: 32px;
     right: 0;
     min-width: 132px;
-    background: #20242e;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--mv-surface);
+    border: 1px solid var(--mv-line);
     border-radius: 12px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 30px rgba(16, 24, 40, .16);
     padding: 6px;
     z-index: 20;
 }
@@ -2520,7 +2547,7 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     text-align: left;
     background: transparent;
     border: none;
-    color: #e7e8ee;
+    color: var(--mv-ink);
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     font-size: 14px;
     font-weight: 500;
@@ -2528,37 +2555,32 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     border-radius: 8px;
     cursor: pointer;
 }
-#dailyTasks .card-menu-item:hover { background: rgba(255, 255, 255, 0.1); }
+#dailyTasks .card-menu-item:hover { background: var(--mv-surface-soft); }
 
-/* "Completed" badge (bottom-right) with a green check */
+/* "Completed", on the right of the card's foot. Green rather than grey: it is
+   the one word on a card that reports a result, and a result said in the same
+   colour as the times beside it is a result nobody reads. */
 #dailyTasks .completed-badge {
-    position: absolute;
-    right: 18px;
-    bottom: 16px;
+    flex: none;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     background: transparent;
     border: none;
-    color: #9a9ca6;
+    color: var(--mv-good);
     text-transform: none;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
     padding: 0;
     margin: 0;
-}
-/* The badge floats over the bottom line of the card, which is also where the
-   time row sits. A card showing a full start–end range reaches under it, so
-   hold the times clear of the badge's width. */
-#dailyTasks .task-section.task-completed .timestamp-section {
-    padding-right: 56px;
+    white-space: nowrap;
 }
 #dailyTasks .completed-badge .completed-check {
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
     padding: 2px;
     border-radius: 50%;
-    background: #2ea043;
+    background: var(--mv-good);
     color: #ffffff;
     box-sizing: border-box;
 }
@@ -2568,21 +2590,23 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
    complete" hint in the very spot the "Completed" badge will occupy once it is
    done, and hovering the title itself turns it green — so the affordance is
    where the pointer already is, and the result is where the eye already looks. */
-#dailyTasks .task-section.can-complete .task-input-inline {
+#dailyTasks .task-section.can-complete .task-title {
     cursor: pointer;
     transition: color 0.15s ease;
 }
-#dailyTasks .task-section.can-complete .task-input-inline:hover { color: #3fb950 !important; }
+#dailyTasks .task-section.can-complete .task-title:hover { color: var(--mv-good); }
+/* The hint keeps the slot the badge will occupy once the task is done, so the
+   card does not change shape at the moment it is finished. `visibility` rather
+   than `display`, for the same reason: a hidden hint still holds the width. */
 #dailyTasks .complete-hint {
-    position: absolute;
-    right: 18px;
-    bottom: 16px;
+    flex: none;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    color: #9a9ca6;
+    gap: 7px;
+    color: var(--mv-ink-soft);
     font-weight: 600;
     font-size: 13px;
+    white-space: nowrap;
     opacity: 0;
     pointer-events: none;   /* the title is what's clickable, not the hint */
     transition: opacity 0.15s ease;
@@ -2598,9 +2622,6 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
     color: inherit;
     box-sizing: border-box;
 }
-/* Hold the time row clear of the hint, exactly as a done card holds it clear
-   of the badge — otherwise a full start–end range runs under it on hover. */
-#dailyTasks .task-section.can-complete .timestamp-section { padding-right: 128px; }
 /* Mid-request: dimmed and inert until the server answers, so a second click
    can't land while the first is still in the air. */
 #dailyTasks .task-section.is-completing { opacity: 0.55; pointer-events: none; }
@@ -2844,37 +2865,11 @@ html[data-theme="light"] #dailyTasks::-webkit-scrollbar-thumb {
     background: rgba(16, 24, 40, 0.18);
 }
 
-/* Warm brown/black plan cards on the light surface — a tan fill with a brown
-   border and near-black text, so events read as brown, not plain white. */
-html[data-theme="light"] #dailyTasks .task-section {
-    --fx-card-bg: linear-gradient(160deg, #f7f0e4 0%, #eadfca 100%);
-    --fx-card-border: #6b5030;
-    color: #2c2013;
-    box-shadow: 0 6px 18px rgba(74, 56, 38, 0.20);
-}
-
-
-/* Card chrome (icon ring, TASK label, ⋮ menu, times) in warm brown/black */
-html[data-theme="light"] #dailyTasks .event-icon { border-color: #6b5030; color: #5c4227; }
-html[data-theme="light"] #dailyTasks .task-kind-badge {
-    background: rgba(92, 66, 39, 0.16);
-    color: #4a3826;
-    border: 1px solid rgba(74, 56, 38, 0.35);
-}
-html[data-theme="light"] #dailyTasks .task-section .timestamp-section input[type="time"],
-html[data-theme="light"] #dailyTasks .timestamp-section span,
-html[data-theme="light"] #dailyTasks .completed-badge,
-html[data-theme="light"] #dailyTasks .complete-hint { color: #7a6650 !important; }
-html[data-theme="light"] #dailyTasks .task-section.can-complete .task-input-inline:hover { color: #2e7d52 !important; }
-html[data-theme="light"] #dailyTasks .card-menu-btn { color: #5c4630; }
-html[data-theme="light"] #dailyTasks .card-menu-btn:hover { background: rgba(92, 66, 39, 0.16); color: #2c2013; }
-html[data-theme="light"] #dailyTasks .card-menu {
-    background: #f7f0e4;
-    border-color: #6b5030;
-    box-shadow: 0 12px 30px rgba(74, 56, 38, 0.28);
-}
-html[data-theme="light"] #dailyTasks .card-menu-item { color: #2c2013; }
-html[data-theme="light"] #dailyTasks .card-menu-item:hover { background: rgba(92, 66, 39, 0.14); }
+/* The warm brown/black plan cards are gone, and with them every override that
+   dressed them: a tan gradient, a #6b5030 border, brown chrome, brown text.
+   The card is the app’s own card now and every colour on it comes from the
+   same `--mv-*` tokens the rest of this view uses, so there is nothing left
+   for a theme to correct — see the note on `#dailyTasks .task-section`. */
 
 html[data-theme="light"] .task-counter {
     background: rgba(92, 66, 39, 0.08);
@@ -2895,14 +2890,14 @@ html[data-theme="light"] .add-section-btn:hover {
 /* ── Add/Edit/Delete Section modal in light theme: cream surface, tan-bordered
    inputs, black "Add Section" button, beige "Cancel" — matches the mockup.
    Base modal rules use navy (#1a237e); these override them in light theme. */
-html[data-theme="light"] .modal-content {
+html[data-theme="light"] .calendar-container .modal-content{
     background: #fdfbf6;
     border: 1px solid #d8c7a4;
 }
-html[data-theme="light"] .modal-header { border-bottom: 1px solid #e7dcc4; }
-html[data-theme="light"] .modal-header h3 { color: #1c140b; }
-html[data-theme="light"] .close-btn { color: #2c2013; }
-html[data-theme="light"] .close-btn:hover { color: #6b5030; }
+html[data-theme="light"] .calendar-container .modal-header{ border-bottom: 1px solid #e7dcc4; }
+html[data-theme="light"] .calendar-container .modal-header h3{ color: #1c140b; }
+html[data-theme="light"] .calendar-container .close-btn{ color: #2c2013; }
+html[data-theme="light"] .calendar-container .close-btn:hover{ color: #6b5030; }
 html[data-theme="light"] .form-group label { color: #2c2013; }
 html[data-theme="light"] .recurrence-note { color: #7a6650; }
 html[data-theme="light"] .form-group input[type="text"],
@@ -2923,7 +2918,7 @@ html[data-theme="light"] .radio-group label,
 html[data-theme="light"] .checkbox-group label { color: #2c2013; }
 html[data-theme="light"] .checkbox-group label { background: #f3ece0; }
 html[data-theme="light"] .checkbox-group label:hover { background: #e9ddc8; }
-html[data-theme="light"] .modal-footer { border-top: 1px solid #e7dcc4; }
+html[data-theme="light"] .calendar-container .modal-footer{ border-top: 1px solid #e7dcc4; }
 html[data-theme="light"] .btn-cancel {
     background: #dbc9a8;
     border: 2px solid #dbc9a8;
@@ -2943,8 +2938,8 @@ html[data-theme="light"] .btn-confirm:hover {
     border-color: #33261a;
 }
 /* Brown scrollbar inside the scrolling modal body (matches the mockup) */
-html[data-theme="light"] .modal-body::-webkit-scrollbar { width: 10px; }
-html[data-theme="light"] .modal-body::-webkit-scrollbar-thumb {
+html[data-theme="light"] .calendar-container .modal-body::-webkit-scrollbar{ width: 10px; }
+html[data-theme="light"] .calendar-container .modal-body::-webkit-scrollbar-thumb{
     background: #b79a6a;
     border-radius: 8px;
 }
@@ -3024,8 +3019,8 @@ html[data-theme="dark"] .bottom-nav {
    Reuses the calendar card's bluish-glow panel gradient and the cyan #2dd4bf
    accent from the completion ring, so the popup matches the rest of the dark
    UI (the base modal is navy/white). */
-html[data-theme="dark"] .modal { background-color: rgba(6, 8, 12, 0.62); }
-html[data-theme="dark"] .modal-content {
+html[data-theme="dark"] .calendar-container .modal{ background-color: rgba(6, 8, 12, 0.62); }
+html[data-theme="dark"] .calendar-container .modal-content{
     background:
         radial-gradient(135% 120% at 50% -12%, rgba(64, 84, 134, 0.40) 0%, rgba(18, 20, 28, 0) 58%),
         linear-gradient(168deg, #181b24 0%, #0e0f15 100%);
@@ -3035,13 +3030,13 @@ html[data-theme="dark"] .modal-content {
         0 0 40px rgba(45, 212, 191, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
-html[data-theme="dark"] .modal-header { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-html[data-theme="dark"] .modal-header h3 {
+html[data-theme="dark"] .calendar-container .modal-header{ border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .calendar-container .modal-header h3{
     color: #f4f4f6;
     text-shadow: 0 0 18px rgba(45, 212, 191, 0.25);
 }
-html[data-theme="dark"] .close-btn { color: #9a9ba4; }
-html[data-theme="dark"] .close-btn:hover { color: #2dd4bf; }
+html[data-theme="dark"] .calendar-container .close-btn{ color: #9a9ba4; }
+html[data-theme="dark"] .calendar-container .close-btn:hover{ color: #2dd4bf; }
 html[data-theme="dark"] .form-group label { color: #e7e7ec; }
 html[data-theme="dark"] .recurrence-note { color: #8b8d97; }
 html[data-theme="dark"] .form-group input[type="text"],
@@ -3064,7 +3059,7 @@ html[data-theme="dark"] .radio-group label,
 html[data-theme="dark"] .checkbox-group label { color: #e7e7ec; }
 html[data-theme="dark"] .checkbox-group label { background: rgba(255, 255, 255, 0.05); }
 html[data-theme="dark"] .checkbox-group label:hover { background: rgba(255, 255, 255, 0.10); }
-html[data-theme="dark"] .modal-footer { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .calendar-container .modal-footer{ border-top: 1px solid rgba(255, 255, 255, 0.08); }
 html[data-theme="dark"] .btn-cancel {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.18);
@@ -3086,8 +3081,8 @@ html[data-theme="dark"] .btn-confirm:hover {
     border-color: rgba(45, 212, 191, 0.85);
     box-shadow: 0 0 26px rgba(45, 212, 191, 0.5);
 }
-html[data-theme="dark"] .modal-body::-webkit-scrollbar { width: 10px; }
-html[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
+html[data-theme="dark"] .calendar-container .modal-body::-webkit-scrollbar{ width: 10px; }
+html[data-theme="dark"] .calendar-container .modal-body::-webkit-scrollbar-thumb{
     background: rgba(45, 212, 191, 0.35);
     border-radius: 8px;
 }
@@ -3344,6 +3339,16 @@ body:has(.calendar-container) *::-webkit-scrollbar {
     --mv-warm: #fbf6ea;
     --mv-warm-line: #ecdcbb;
     --mv-warm-ink: #8a6d3a;
+
+    /* The five XP bands. Fixed thresholds — see XP_BANDS in
+       utils/monthSummary — so a colour means the same thing in every month
+       and the legend under the grid can name it. */
+    --mv-band-exceptional: #17a34a;
+    --mv-band-great: #1e2b52;
+    --mv-band-good: #7c6ce0;
+    --mv-band-low: #e05a4f;
+    --mv-band-none: #eceef3;
+    --mv-band-none-ink: #98a0ad;
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     color: var(--mv-ink);
 }
@@ -3364,6 +3369,13 @@ html[data-theme="dark"] #monthView {
     --mv-warm: #1b1913;
     --mv-warm-line: #3a3327;
     --mv-warm-ink: #d3b077;
+
+    --mv-band-exceptional: #2ea043;
+    --mv-band-great: #5878d6;
+    --mv-band-good: #8b7bf0;
+    --mv-band-low: #e0605a;
+    --mv-band-none: #232a35;
+    --mv-band-none-ink: #6b7480;
 }
 
 /* The two columns. The grid takes the width it needs to stay a grid; the
@@ -3376,16 +3388,29 @@ html[data-theme="dark"] #monthView {
     flex: 1 1 auto;
     min-height: 0;
 }
+/* The grid is the page and the panel beside it is the annotation, so the split
+   is weighted that way rather than nearly evenly. At 1280 this is about 130px
+   of extra width for the month — one more line of room in every cell — and the
+   panel is still wider than the card it draws.
+
+   It scrolls its own contents, the way the column beside it always has. The
+   month, the progress strip and the three cards under them do not fit one
+   viewport and were never going to: this page is pinned (`PINNED` in App.tsx)
+   so there is no document scrollbar, and without one of its own everything
+   below the grid would be unreachable rather than merely below the fold. */
 .mv-left {
-    flex: 1 1 63%;
+    flex: 1 1 70%;
     min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 .mv-side {
-    flex: 1 1 33%;
-    min-width: 320px;
-    max-width: 560px;
+    flex: 0 1 380px;
+    min-width: 288px;
+    max-width: 460px;
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -3394,12 +3419,26 @@ html[data-theme="dark"] #monthView {
     padding-right: 2px;
 }
 
+/* Thin, rounded and theme-aware — the same scrollbar the rest of the app
+   uses, on both of the view's two scrollers. */
+.mv-left, .mv-side { scrollbar-width: thin; scrollbar-color: #c3c9d4 transparent; }
+.mv-left::-webkit-scrollbar,
+.mv-side::-webkit-scrollbar { width: 8px; }
+.mv-left::-webkit-scrollbar-track,
+.mv-side::-webkit-scrollbar-track { background: transparent; }
+.mv-left::-webkit-scrollbar-thumb,
+.mv-side::-webkit-scrollbar-thumb { background: #c3c9d4; border-radius: 8px; }
+html[data-theme="dark"] .mv-left,
+html[data-theme="dark"] .mv-side { scrollbar-color: #39414d transparent; }
+html[data-theme="dark"] .mv-left::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .mv-side::-webkit-scrollbar-thumb { background: #39414d; }
+
 /* ---- Header: what month it is, how to move through it, how to look at it -- */
 .mv-header {
     display: flex;
     align-items: center;
     gap: 14px;
-    margin-bottom: 22px;
+    margin-bottom: 14px;
     min-height: 42px;
 }
 .mv-title {
@@ -3458,39 +3497,67 @@ html[data-theme="dark"] #monthView {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
 }
-.mv-daynames { margin-bottom: 10px; }
+
+/* ---- The card ------------------------------------------------------------
+   The headings and the cells are one object. They were two, with a gap in
+   between, which read as a table somebody had dropped a row of labels above.
+   The card owns the outer border and the corners; the grid inside it draws
+   nothing but its own hairlines. */
+.mv-card {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--mv-line);
+    border-radius: 16px;
+    background: var(--mv-surface);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+    overflow: hidden;
+}
+
+.mv-daynames {
+    flex: none;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--mv-line);
+    background: var(--mv-surface-soft);
+}
 .mv-dayname {
     text-align: center;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.09em;
     color: var(--mv-ink-soft);
 }
+/* The two days most months are read around. A shade lighter than the rest, so
+   the eye finds the week boundaries without a rule being drawn for them. */
+.mv-dayname.is-weekend { color: var(--mv-ink-faint); }
 
 /* ---- The grid ------------------------------------------------------------
    Six rows always, so stepping between a five-row month and a six-row one
    does not resize the grid under the reader's cursor — and `1fr` rows rather
    than a fixed height, so the whole month fits whatever the card gives it
    without a scrollbar appearing inside a view whose job is to be looked at.
-   The hairlines are drawn by each cell's top and left border with the outer
-   edges closed by the container, which is one border per line instead of two
-   overlapping ones. */
+   The hairlines are drawn by each cell's top and left border; the card around
+   them closes the outer edges, which is one border per line instead of two
+   overlapping ones.
+
+   The rows are a definite height rather than six shares of what is left, now
+   that the column scrolls: a `1fr` row inside a scroller has nothing to be a
+   fraction *of*. `clamp` is what keeps it from being a magic number — a cell
+   of three short lines reads badly under about 76px and gains nothing past
+   about 108, and between those it tracks the window. */
 .mv-grid {
-    grid-template-rows: repeat(6, minmax(0, 1fr));
-    flex: 1 1 auto;
-    min-height: 0;
-    border: 1px solid var(--mv-line);
-    border-radius: 10px;
-    overflow: hidden;
+    grid-template-rows: repeat(6, clamp(76px, 9.5vh, 108px));
+    flex: 0 0 auto;
 }
 .mv-cell {
-    border-top: 1px solid var(--mv-line);
-    border-left: 1px solid var(--mv-line);
-    padding: 10px 12px;
+    position: relative;
+    border-top: 1px solid var(--mv-line-soft);
+    border-left: 1px solid var(--mv-line-soft);
+    padding: 8px 10px 12px;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+    align-items: stretch;
+    gap: 6px;
     min-width: 0;
     overflow: hidden;
     cursor: pointer;
@@ -3500,24 +3567,147 @@ html[data-theme="dark"] #monthView {
 .mv-cell:nth-child(-n + 7) { border-top: none; }
 .mv-cell:nth-child(7n + 1) { border-left: none; }
 .mv-cell:hover { background: var(--mv-surface-soft); }
+/* Saturday and Sunday, barely. Enough that the grid has a rhythm and the eye
+   can count weeks off it; not enough to read as a state. */
+.mv-cell.is-weekend { background: color-mix(in srgb, var(--mv-surface-soft) 55%, transparent); }
+.mv-cell.is-weekend:hover { background: var(--mv-surface-soft); }
+/* A day with nothing on it is the number and nothing else. Thirty cells each
+   saying "0 events / 0 XP" is a paragraph of noise between the reader and the
+   four days that are not empty. */
+.mv-cell.is-empty { cursor: pointer; }
 
+.mv-cell-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+}
+
+/* The corner mark: a tick on a day where everything got done, a star on today.
+   Never both — today is not finished until it is, and on the day it is the
+   tick is the better news. */
+.mv-cell-flag {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.mv-cell-flag svg { width: 11px; height: 11px; }
+.mv-cell-flag.is-clear { background: var(--mv-good-soft); color: var(--mv-good); }
+.mv-cell-flag.is-clear svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mv-cell-flag.is-today { color: #e8992c; }
+.mv-cell-flag.is-today svg { fill: currentColor; stroke: none; width: 15px; height: 15px; }
+
+/* Wraps rather than clips. A cell is a seventh of whatever the month is given,
+   and on a narrow window "9" and "475 XP" do not fit on one line — the choice
+   is between two lines and an ellipsis eating the figure the line exists for. */
+.mv-cell-meta {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 1px 8px;
+    min-width: 0;
+}
+
+/* The day's things, one segment each, along the cell's foot. A row of marks
+   rather than a figure: forty-two of anything has to be readable without being
+   read, and this way the same strip says how many, how big and how many are
+   done at once. */
+.mv-cell-marks {
+    margin-top: auto;
+    display: flex;
+    gap: 3px;
+    min-height: 4px;
+}
+.mv-mark {
+    flex: 1 1 0;
+    height: 4px;
+    border-radius: 999px;
+    /* Unfinished: the band's colour, faint. Finished: the band's colour. The
+       row is the day's progress without being a second thing to read. */
+    background: currentColor;
+    opacity: .28;
+}
+.mv-mark.is-done { opacity: 1; }
+.mv-mark.band-exceptional { color: var(--mv-band-exceptional); }
+.mv-mark.band-great       { color: var(--mv-band-great); }
+.mv-mark.band-good        { color: var(--mv-band-good); }
+.mv-mark.band-low         { color: var(--mv-band-low); }
+.mv-mark.band-none        { color: var(--mv-band-none-ink); }
+
+/* ---- The legend ----------------------------------------------------------
+   A colour that cannot be looked up is decoration. */
+.mv-legend {
+    flex: none;
+    list-style: none;
+    margin: 0;
+    padding: 11px 14px;
+    border-top: 1px solid var(--mv-line);
+    background: var(--mv-surface-soft);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 20px;
+    font-size: 11.5px;
+    color: var(--mv-ink-soft);
+}
+.mv-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.mv-legend-dot { width: 8px; height: 8px; border-radius: 999px; background: currentColor; }
+.mv-legend-dot.band-exceptional { background: var(--mv-band-exceptional); }
+.mv-legend-dot.band-great       { background: var(--mv-band-great); }
+.mv-legend-dot.band-good        { background: var(--mv-band-good); }
+.mv-legend-dot.band-low         { background: var(--mv-band-low); }
+.mv-legend-dot.band-none        { background: var(--mv-band-none); border: 1px solid var(--mv-line); }
+.mv-legend-note { color: var(--mv-ink-faint); }
+
+/* The day, as a filled badge in the band it earned. A circle rather than a
+   bare number because it is the one thing in the cell the eye lands on first,
+   and because a colour needs a shape to live in — a tinted digit is a digit
+   somebody has to squint at. */
 .mv-daynum {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 30px;
-    height: 30px;
-    padding: 0 6px;
-    border-radius: 50%;
-    font-size: 16px;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 14.5px;
     font-weight: 700;
     line-height: 1;
-    color: var(--mv-ink);
+    color: #ffffff;
+    background: var(--mv-band-great);
+    font-variant-numeric: tabular-nums;
 }
-/* Neighbouring months are context, not content: dimmed, and carrying no
-   counts at all. Clicking one still steps there. */
+.mv-daynum.band-exceptional { background: var(--mv-band-exceptional); }
+.mv-daynum.band-great       { background: var(--mv-band-great); }
+.mv-daynum.band-good        { background: var(--mv-band-good); }
+.mv-daynum.band-low         { background: var(--mv-band-low); }
+/* A day with nothing on it wears no colour at all. It is the commonest cell in
+   most months and it should be the quietest thing on the grid. */
+.mv-daynum.band-none {
+    background: transparent;
+    color: var(--mv-band-none-ink);
+    font-weight: 600;
+}
+/* Neighbouring months are context, not content: dimmed, carrying no counts and
+   wearing no band. Clicking one still steps there. */
 .mv-cell.is-outside { cursor: pointer; background: transparent; }
-.mv-cell.is-outside .mv-daynum { color: var(--mv-ink-faint); font-weight: 500; }
+.mv-cell.is-outside .mv-daynum {
+    background: transparent;
+    color: var(--mv-ink-faint);
+    font-weight: 500;
+}
 .mv-cell.is-outside:hover { background: var(--mv-surface-soft); }
 
 .mv-cell-events {
@@ -3525,35 +3715,67 @@ html[data-theme="dark"] #monthView {
     align-items: center;
     gap: 5px;
     font-size: 12.5px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--mv-ink-soft);
     white-space: nowrap;
+    flex: none;
 }
 .mv-cell-dot {
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: currentColor;
     flex: 0 0 auto;
 }
 .mv-cell-xp {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--mv-accent);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
 }
-/* A day worth nothing is not worth reading as a number in the accent colour. */
-.mv-cell-xp.is-zero { color: var(--mv-ink-faint); font-weight: 500; }
 
-/* Today is the one tinted cell, and the tint carries through to its figures. */
-.mv-cell.is-today { background: var(--mv-warm); }
-.mv-cell.is-today:hover { background: var(--mv-warm); }
+/* Today is the one tinted cell, and the tint carries through to its figures.
+   It beats the weekend shade, which is why it is written after it. */
+.mv-cell.is-today,
+.mv-cell.is-today.is-weekend { background: var(--mv-warm); }
+.mv-cell.is-today:hover,
+.mv-cell.is-today.is-weekend:hover { background: var(--mv-warm); }
 .mv-cell.is-today .mv-cell-events,
 .mv-cell.is-today .mv-cell-xp { color: var(--mv-warm-ink); }
+
 /* The day the panel on the right is showing. A ring rather than a fill, so it
    can sit on top of today's tint and on top of the load shading without
-   arguing with either. */
-.mv-cell.is-selected { box-shadow: inset 0 0 0 2px var(--mv-accent); }
+   arguing with either. Inset, so it is not clipped by the card's overflow at
+   the grid's edges — which is what happened to the four corner cells. */
+.mv-cell.is-selected { box-shadow: inset 0 0 0 2px var(--mv-accent); z-index: 1; }
+
+/* Dark. Every colour above is a token and swaps itself; the two things that
+   are not are the card's shadow — which is cast in near-black and disappears
+   on a near-black page — and the weekend tint, which `color-mix` makes too
+   faint to see once the surfaces are within a few percent of each other. */
+html[data-theme="dark"] .mv-card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+}
+html[data-theme="dark"] .mv-cell.is-weekend { background: var(--mv-surface-soft); }
+html[data-theme="dark"] .mv-cell.is-weekend:hover { background: #171b23; }
+
+/* The pastel chips. Every one of them is a light tint of its own colour, which
+   is exactly the thing that does not survive being put on a dark page — the
+   tint has to come from the same hue at low alpha instead. The inks are left
+   alone; they were chosen to read on either. */
+html[data-theme="dark"] .mv-fig-ico { background: rgba(255, 255, 255, .06); }
+html[data-theme="dark"] .mv-quick.tone-task  .mv-quick-ico,
+html[data-theme="dark"] .mv-upcoming-ico.tone-task { background: rgba(94, 128, 255, .14); color: #8fa8ff; }
+html[data-theme="dark"] .mv-quick.tone-event .mv-quick-ico,
+html[data-theme="dark"] .mv-upcoming-ico.tone-event { background: rgba(46, 160, 67, .16); color: #56d364; }
+html[data-theme="dark"] .mv-quick.tone-goal  .mv-quick-ico,
+html[data-theme="dark"] .mv-goal-ico { background: rgba(224, 96, 90, .15); color: #f08b85; }
+html[data-theme="dark"] .mv-quick.tone-note  .mv-quick-ico { background: rgba(224, 160, 60, .15); color: #e0b062; }
+html[data-theme="dark"] .dp-goal-ico { background: rgba(127, 156, 255, .14); }
+html[data-theme="dark"] .mv-analytics { background: transparent; }
 
 /* ---- The summary strip under the grid ----------------------------------- */
 .mv-summary {
@@ -3592,8 +3814,11 @@ html[data-theme="dark"] #monthView {
     color: var(--mv-ink);
 }
 .mv-summary-lead { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.mv-summary-title { font-size: 15px; font-weight: 700; color: var(--mv-ink); }
+.mv-summary-title { font-size: 16px; font-weight: 800; color: var(--mv-ink); }
 .mv-summary-sub { font-size: 13px; color: var(--mv-ink-soft); }
+/* One line of verdict, read off the same ratio the ring draws. */
+.mv-summary-verdict { font-size: 12.5px; font-weight: 600; color: var(--mv-ink-soft); }
+.mv-summary-verdict.is-good { color: var(--mv-good); }
 
 /* The three figures, each in its own column with a hairline between them. */
 .mv-summary-figs {
@@ -3602,55 +3827,282 @@ html[data-theme="dark"] #monthView {
     gap: clamp(14px, 1.6vw, 26px);
     margin-left: auto;
 }
+/* Each figure is a chip and a stack. The chip is what makes four numbers in a
+   row scannable: without it they are a paragraph of numerals in one weight and
+   the eye has nothing to land on between them. */
 .mv-summary-fig {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: flex-start;
+    gap: 10px;
     padding-left: clamp(14px, 1.6vw, 26px);
     border-left: 1px solid var(--mv-warm-line);
     min-width: 0;
 }
+.mv-fig-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mv-fig-ico {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+}
+.mv-fig-ico svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mv-fig-ico.tone-xp     { color: #5b6ee0; }
+.mv-fig-ico.tone-days   { color: #3d8bd6; }
+.mv-fig-ico.tone-goal   { color: #d98a2b; }
+.mv-fig-ico.tone-streak { color: #e0603f; }
+/* The flame is a shape, not an outline. */
+.mv-fig-ico.tone-streak svg { fill: currentColor; stroke: none; }
+/* Label above the figure, which is the order the eye wants when the numbers
+   are different shapes — "24,750" and "23 days" line up on their labels and
+   not on their first digit. */
 .mv-fig-value {
-    font-size: 21px;
+    font-size: 20px;
     font-weight: 800;
     letter-spacing: -0.01em;
     color: var(--mv-ink);
-    line-height: 1.1;
+    line-height: 1.15;
 }
-.mv-fig-label { font-size: 12.5px; color: var(--mv-ink-soft); white-space: nowrap; }
+.mv-fig-label { font-size: 12px; color: var(--mv-ink-soft); white-space: nowrap; }
 .mv-delta { font-size: 12px; font-weight: 600; white-space: nowrap; }
 .mv-delta.is-up { color: var(--mv-good); }
 .mv-delta.is-down { color: var(--mv-bad); }
 .mv-delta.is-flat { color: var(--mv-ink-faint); font-weight: 500; }
 
-.mv-analytics {
-    flex: 0 0 auto;
+/* ---- The day panel's head and its daily goal ----------------------------
+   "+ Add" is a button rather than a span with a click handler, which is what
+   it was — a control the keyboard could not reach and a screen reader called
+   nothing at all. See components/Calendar/DayPanel.tsx. */
+.dp-add {
+    flex: none;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--mv-accent);
+    color: #ffffff;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.dp-add:hover { filter: brightness(1.06); }
+.dp-add:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
+
+/* Begin the next thing. On the one card that is next, in the foot's right-hand
+   slot in place of the hint the others carry — see
+   components/Calendar/DayPanel.tsx. */
+.dp-start {
+    flex: none;
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    padding: 10px 14px;
-    border: 1px solid var(--mv-line);
-    border-radius: 12px;
-    background: var(--mv-surface);
-    color: var(--mv-ink);
-    font-family: inherit;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--mv-accent);
+    color: #ffffff;
+    font: inherit;
     font-size: 12.5px;
-    font-weight: 600;
-    line-height: 1.25;
-    text-align: left;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s ease;
 }
-.mv-analytics:hover { background: var(--mv-surface-soft); }
-.mv-analytics svg {
+.dp-start svg { width: 13px; height: 13px; fill: currentColor; }
+.dp-start:hover { filter: brightness(1.06); }
+.dp-start:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
+
+/* What the day is worth against what it is meant to be worth. */
+.dp-goal {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 14px;
+}
+.dp-goal-ico {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--mv-accent-soft);
+    color: var(--mv-accent);
+}
+.dp-goal-ico svg {
     width: 17px;
     height: 17px;
-    flex: 0 0 auto;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
+    stroke-width: 1.7;
 }
+.dp-goal-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.dp-goal-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.dp-goal-label { font-size: 13px; font-weight: 650; color: var(--mv-ink); }
+.dp-goal-figs { font-size: 12.5px; color: var(--mv-ink-soft); white-space: nowrap; }
+.dp-goal-figs strong { font-size: 14px; font-weight: 800; color: var(--mv-ink); }
+.dp-goal-track { height: 8px; border-radius: 999px; background: var(--mv-line); overflow: hidden; }
+.dp-goal-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--mv-accent);
+    transition: width .25s ease;
+}
+/* Met is the one state worth its own colour — it is the only thing on this
+   panel that can be finished. */
+.dp-goal-fill.is-met { background: var(--mv-good); }
+
+/* ---- The tools row under the strip ---------------------------------------
+   Three cards: what to add, what is coming, and what it is all for. The grid
+   and the strip above are both retrospective; this is the half of a month view
+   you can work from. See components/Calendar/MonthTools.tsx. */
+.mv-tools {
+    flex: 0 0 auto;
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.15fr) minmax(0, 1.15fr);
+    gap: 14px;
+}
+/* Below this the three sit badly side by side — Next Up's names ellipsise to
+   nothing long before the cards do. */
+@media (max-width: 1180px) {
+    .mv-tools { grid-template-columns: minmax(0, 1fr); }
+}
+
+.mv-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+.mv-quick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 4px;
+    border: 1px solid var(--mv-line);
+    border-radius: 14px;
+    background: var(--mv-surface);
+    color: var(--mv-ink-soft);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color .15s ease, transform .15s ease;
+}
+.mv-quick:hover { border-color: var(--mv-ink-faint); transform: translateY(-1px); }
+.mv-quick:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
+.mv-quick-ico {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.mv-quick-ico svg {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+/* One tone per kind, and the same four everywhere they appear on this page. */
+.mv-quick.tone-task  .mv-quick-ico { background: #eef2fd; color: #3d5cc0; }
+.mv-quick.tone-event .mv-quick-ico { background: #eaf7ef; color: #16a34a; }
+.mv-quick.tone-goal  .mv-quick-ico { background: #fdeeef; color: #d0453f; }
+.mv-quick.tone-note  .mv-quick-ico { background: #fdf4e6; color: #c07f22; }
+
+/* ---- Next Up and Goals Progress ---- */
+.mv-upcoming,
+.mv-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.mv-upcoming li,
+.mv-goals li { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.mv-upcoming-ico,
+.mv-goal-ico {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.mv-upcoming-ico svg,
+.mv-goal-ico svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mv-upcoming-ico.tone-task  { background: #eef2fd; color: #3d5cc0; }
+.mv-upcoming-ico.tone-event { background: #eaf7ef; color: #16a34a; }
+.mv-goal-ico { background: #fdeeef; color: #d0453f; }
+
+.mv-upcoming-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mv-upcoming-name {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--mv-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mv-upcoming-when { font-size: 12px; color: var(--mv-ink-soft); }
+.mv-upcoming-away { flex: none; font-size: 12px; color: var(--mv-ink-soft); white-space: nowrap; }
+
+.mv-goal-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mv-goal-name {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--mv-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mv-goal-track { height: 7px; border-radius: 999px; background: var(--mv-line); overflow: hidden; }
+.mv-goal-fill { display: block; height: 100%; border-radius: 999px; background: var(--mv-good); }
+.mv-goal-figs { flex: none; font-size: 12px; color: var(--mv-ink-soft); white-space: nowrap; }
+.mv-goal-figs strong { color: var(--mv-ink); font-weight: 700; }
+
+/* A link under the sentence it belongs to. It used to be a two-line square
+   button on the strip's far end, which ran out of room the moment a fourth
+   figure joined the row. */
+.mv-analytics {
+    align-self: flex-start;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--mv-warm-line);
+    border-radius: 999px;
+    background: var(--mv-surface);
+    color: var(--mv-accent);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 650;
+    cursor: pointer;
+}
+.mv-analytics:hover { border-color: var(--mv-accent); }
+.mv-analytics:focus-visible { outline: 2px solid var(--mv-accent); outline-offset: 2px; }
 
 /* ---- The overview column's cards ---------------------------------------- */
 .mv-card {
@@ -3721,9 +4173,14 @@ html[data-theme="light"] .mv-side .calendar-bottom-box h3 {
 .mv-side .daily-focus-holder { margin-bottom: 14px; }
 
 /* ---- Monthly Overview: four tiles --------------------------------------- */
+/* Two by two, not four across.
+   Four tiles in a column this narrow gave each about seventy pixels, which is
+   not a tile — it is a column of wrapped fragments: "Focus / Time", "13 / /
+   333", "of 1h 30m / planned". Two rows give each tile twice the width, every
+   label its own line, and the figures room to be read as figures. */
 .mv-tiles {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
 .mv-tile {
@@ -3887,15 +4344,20 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
    its scroll back because a stacked month cannot fit a viewport. */
 @media (max-width: 1180px) {
     .mv-body { flex-direction: column; overflow-y: auto; }
+    /* `flex: 1 1 70%` is a *width* while the body is a row and a *height* the
+       moment it is a column, so both columns were being squeezed to a share of
+       the window and their contents drawn over each other. Stacked, each takes
+       the height its content needs and the body scrolls past them. */
+    .mv-left,
+    .mv-side { flex: 0 0 auto; }
     .mv-side { max-width: none; min-width: 0; overflow: visible; }
-    .mv-grid { min-height: 520px; }
+    .mv-left { overflow: visible; padding-right: 0; }
     .mv-summary { flex-wrap: wrap; }
     .mv-summary-figs { margin-left: 0; }
 }
 @media (max-width: 860px) {
     .mv-header { flex-wrap: wrap; }
     .mv-headtools { margin-left: 0; }
-    .mv-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .mv-summary-figs { width: 100%; }
     .mv-summary-fig:first-child { padding-left: 0; border-left: none; }
     .mv-topday-name { width: auto; }
@@ -3926,36 +4388,36 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
 .mv-fig-value { font-size: 19px; }
 .mv-fig-label { font-size: 12px; }
 
-/* The tiles are four across in a column that is not always four tiles wide.
-   Ellipsising the labels lost the word that identified the tile ("Focus Ti…"),
-   so they wrap instead: a two-line label is still a label. */
-.mv-tiles { gap: 8px; }
-.mv-tile { padding: 11px 10px; }
-.mv-tile-label,
+/* Two across in this column is enough width for a label to stay on one line
+   and a figure to stay whole, so nothing has to wrap or ellipsise any more —
+   which is what the four-across layout spent all its rules on. The `sub` is
+   the one line long enough to still need wrapping ("of 1h 30m planned"). */
+.mv-tiles { gap: 9px; }
+.mv-tile { padding: 13px 14px; }
 .mv-tile-sub {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
-    line-height: 1.25;
+    line-height: 1.3;
 }
-.mv-tile-label { font-size: 11px; }
-.mv-tile-value { font-size: 16px; }
-.mv-tile-sub { font-size: 10.5px; }
+.mv-tile-label { font-size: 12px; }
+.mv-tile-value { font-size: 20px; }
+.mv-tile-sub { font-size: 11px; }
 
-/* The plan cards are in a narrower column than the one they were drawn for,
-   and their bottom line carries both the day's times and the hover hint that
-   finishes the task. Reserve less for the hint and set the times a size
-   smaller, so a full start–end range still reads in full. */
+/* The plan cards are in a narrower column than the one they were drawn for, so
+   the type comes down a size. Nothing has to be reserved for the badge any
+   more — the foot is a row and the two halves share it. */
 .mv-side #dailyTasks .task-section { padding: 14px 16px; }
 .mv-side #dailyTasks .task-section .timestamp-section input[type="time"] {
     font-size: 13px;
     min-width: 74px;
 }
+.mv-side #dailyTasks .task-times { font-size: 13px; gap: 7px; }
+.mv-side #dailyTasks .task-title { font-size: 17px; }
 .mv-side #dailyTasks .completed-badge,
-.mv-side #dailyTasks .complete-hint { font-size: 12px; right: 14px; bottom: 13px; }
-.mv-side #dailyTasks .task-section.can-complete .timestamp-section { padding-right: 106px; }
-.mv-side #dailyTasks .task-section.task-completed .timestamp-section { padding-right: 48px; }
+.mv-side #dailyTasks .complete-hint { font-size: 12px; }
 .mv-side #dailyTasks .card-menu-wrap { top: 11px; right: 11px; }
+.mv-side #dailyTasks .task-section { padding-right: 36px; }
 
 /* The strip is a row until it cannot be one. Without the wrap the figures ran
    over the title when the column was narrow — an overlap is the one failure a
@@ -3988,17 +4450,4 @@ html[data-theme="dark"] .mv-tile.tone-best { --tile-bg: #2a2117; --tile-ink: #e0
 .mv-summary-figs { gap: clamp(9px, 1vw, 20px); }
 .mv-summary-fig { padding-left: clamp(9px, 1vw, 20px); }
 .mv-summary-title { font-size: 14px; }
-.mv-analytics { margin-left: auto; }
 
-/* Below about 1600px the strip has more in it than the column is wide, and
-   something has to give. It is the Analytics button's words: it is the one
-   thing on the row that is a way *out* of the view rather than a fact about
-   the month, the chart icon is the same one the rest of the app uses for
-   analytics, and the button keeps its title and aria-label so nothing is lost
-   to anyone reading it any other way. The alternative was shaving a point off
-   every figure on the row, which makes the numbers harder to read in order to
-   protect a link. */
-@media (max-width: 1600px) {
-    .mv-analytics { padding: 10px 12px; }
-    .mv-analytics > span { display: none; }
-}

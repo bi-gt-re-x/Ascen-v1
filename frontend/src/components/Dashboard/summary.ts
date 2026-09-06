@@ -15,6 +15,7 @@
  */
 import { isCalendarPlaced } from '@/utils/calendarGrid';
 import type { Task, TaskPriority } from '@/types';
+import type { Spanned } from '@/utils/dayShape';
 
 /** The day part of a stored timestamp, or '' when there is not one. */
 function dayOf(stamp: string | undefined): string {
@@ -218,6 +219,13 @@ export interface WeekSummary {
  * not a question the view can ask. Same words, two honest answers, because the
  * two views are asking about different things.
  */
+/**
+ * @param mondayIso The week's first day.
+ * @param sundayIso Its last. Pass an earlier day to stop the count short —
+ *                  which is what the previous-week comparison does, so that
+ *                  three days of this week are held against three of last
+ *                  rather than against seven. See `weekBefore`.
+ */
 export function weekSummary(
   tasks: Task[],
   mondayIso: string,
@@ -252,32 +260,9 @@ export function weekSummary(
   };
 }
 
-// --------------------------------------------------------------------------
-// Top Priorities
-// --------------------------------------------------------------------------
-const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
-/**
- * What to do next: the open tasks on today's plate, hardest first.
- *
- * Ranked by priority and then by XP, because two high-priority tasks are not
- * equally urgent and XP is the only other measure of weight a task carries.
- * Scoped to today's bucket rather than to all 244 open tasks — a card headed
- * "Top Priorities" that ranks something due in December is not advice.
- *
- * Three of them. A list you are meant to act on now is short, and the card has
- * to sit level with the two beside it.
- */
-export function topPriorities(tasks: Task[], limit = 3): Task[] {
-  return [...tasks]
-    .sort((a, b) => {
-      const rank =
-        (PRIORITY_RANK[String(a.priority).toLowerCase()] ?? 2) -
-        (PRIORITY_RANK[String(b.priority).toLowerCase()] ?? 2);
-      return rank !== 0 ? rank : xpOf(b) - xpOf(a);
-    })
-    .slice(0, limit);
-}
+/* `topPriorities` stood here — the day's open tasks, hardest first, for a
+   dashboard card that turned out to be the task list re-sorted. Both are gone;
+   the note where the card was, in ./InsightCards, says why. */
 
 // --------------------------------------------------------------------------
 // Recent Activity
@@ -310,4 +295,204 @@ export function recentActivity(tasks: Task[], limit = 3): Activity[] {
     .filter((entry) => !Number.isNaN(entry.at.getTime()))
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, limit);
+}
+
+// --------------------------------------------------------------------------
+// The day's shape
+// --------------------------------------------------------------------------
+/**
+ * Today's work as spans, so `dayShape` can be asked about it.
+ *
+ * The dashboard has the same tasks the calendar draws and had no way to ask
+ * the questions a day poses — what is next, how much of the day is spoken for,
+ * what finishing the rest is worth. `utils/dayShape` answers all three and
+ * takes a structural type, so this is the whole of the adapter.
+ *
+ * Only work with a **time** takes part. A to-do nobody gave an hour to has no
+ * place in a day's shape: it is a list item, which is exactly the distinction
+ * `taskCalendarDay` draws for the calendar (utils/calendarIntensity). What is
+ * left over is still counted — see `left` and `xp` below, which are about
+ * every unfinished task on the day rather than the timed ones.
+ *
+ * Start comes from `created_at` and end from `due_date`, the same pair
+ * `dayEntries` reads for a card in the month panel (components/Calendar/entries).
+ * A task whose two ends land on the same minute is given a nominal half hour,
+ * so it is a span rather than a point the merge can never see.
+ */
+export interface DayPlan {
+  /** The timed work, for `dayShape`. Empty on a day with no times on it. */
+  spans: Spanned[];
+  /** Every unfinished task on today's plate, timed or not. */
+  left: number;
+  /** What finishing all of them is worth. */
+  xp: number;
+}
+
+/** A stamp as a grid hour, or null when it carries no usable time. */
+function gridHour(stamp: string | undefined): number | null {
+  if (!stamp) return null;
+  const at = new Date(stamp);
+  if (Number.isNaN(at.getTime())) return null;
+  const hours = at.getHours() + at.getMinutes() / 60;
+  // The grid's day runs 6 AM to 5 AM, so the small hours belong to the night
+  // before — the same wrap `minutesInGrid` applies in utils/calendarGrid.
+  return hours < 6 ? hours + 24 : hours;
+}
+
+/** The nominal length of a task whose start and end are the same moment. */
+const NOMINAL = 0.5;
+
+export function dayPlan(tasks: Task[], todayIso: string): DayPlan {
+  const spans: Spanned[] = [];
+  let left = 0;
+  let xp = 0;
+
+  tasks.forEach((task) => {
+    const due = dayOf(task.due_date);
+    if (task.status === 'done') {
+      if (dayOf(task.completed_at) !== todayIso) return;
+    } else if (task.status !== 'todo' || (due && due > todayIso)) {
+      return;
+    }
+
+    if (task.status !== 'done') {
+      left += 1;
+      xp += xpOf(task);
+    }
+
+    // Timed work only, and only where the time is actually today's.
+    if (due !== todayIso) return;
+    const end = gridHour(task.due_date);
+    if (end === null) return;
+    const started = dayOf(task.created_at) === todayIso ? gridHour(task.created_at) : null;
+    const start = started !== null && started < end ? started : end - NOMINAL;
+
+    spans.push({
+      kind: 'task',
+      start,
+      end,
+      done: task.status === 'done',
+      xp: xpOf(task),
+      title: task.title,
+    });
+  });
+
+  return { spans, left, xp };
+}
+
+// --------------------------------------------------------------------------
+// What a usual day looks like
+// --------------------------------------------------------------------------
+/**
+ * The account's own average day, so today has something to be measured against.
+ *
+ * The four stat cards were bare numbers: `6 days`, `Level 10`, `60 XP`. None of
+ * them said whether that was a good day or a bad one, which is the only thing
+ * a figure about today is actually for — nobody knows off-hand whether 60 XP is
+ * a lot for them. The month view has made this comparison for a while
+ * (`percentChange` in utils/monthSummary); the dashboard had no baseline to
+ * make it against.
+ *
+ * **Every calendar day in the window counts, including the empty ones.** A mean
+ * over "days you did something" is a mean over your good days, and measuring
+ * today against it tells almost everybody that they are behind. The honest
+ * baseline is the one that includes the days off.
+ *
+ * **Today is excluded.** A day half-lived would otherwise drag its own
+ * baseline down and read as a slump at nine in the morning.
+ *
+ * A window shorter than the account is old is left alone: the mean is over the
+ * days actually in the record, so a three-day-old account is compared against
+ * its own three days rather than against eleven days of zero it never lived.
+ */
+export interface Typical {
+  /** Tasks finished on an average day. */
+  tasks: number;
+  /** XP banked on an average day. */
+  xp: number;
+  /** How many days went into it. Zero means there is nothing to compare to. */
+  days: number;
+}
+
+/** The default window: a fortnight is two of every weekday. */
+export const TYPICAL_DAYS = 14;
+
+export function typicalDay(
+  tasks: Task[],
+  todayIso: string,
+  window = TYPICAL_DAYS,
+): Typical {
+  /* The earliest day the window reaches, as a string — every comparison in
+     this module is string-on-string so nothing here can drift a timezone. */
+  const from = new Date(`${todayIso}T00:00:00`);
+  from.setDate(from.getDate() - window);
+  const fromIso = from.toISOString().slice(0, 10);
+
+  let count = 0;
+  let xp = 0;
+  let earliest = todayIso;
+
+  tasks.forEach((task) => {
+    if (task.status !== 'done') return;
+    const day = dayOf(task.completed_at);
+    if (!day || day >= todayIso || day < fromIso) return;
+    count += 1;
+    xp += xpOf(task);
+    if (day < earliest) earliest = day;
+  });
+
+  if (count === 0) return { tasks: 0, xp: 0, days: 0 };
+
+  /* Days actually covered: the window, or the account's own history if that is
+     shorter. `earliest` is the first day with anything on it, which is the
+     closest this module can get to "when they started" without another read. */
+  const start = new Date(`${earliest}T00:00:00`).getTime();
+  const end = new Date(`${todayIso}T00:00:00`).getTime();
+  const days = Math.max(1, Math.round((end - start) / 86_400_000));
+
+  return { tasks: count / days, xp: xp / days, days };
+}
+
+/**
+ * The same week, one week earlier, counted to the same depth.
+ *
+ * The card said "10 Total Tasks" and left the reader to decide whether ten was
+ * a lot. It is a comparison now — but only an honest one if both sides cover
+ * the same stretch: on a Wednesday, three days of this week against a full
+ * seven of last is not a fall in output, it is a fall in *days*, and every
+ * figure would read as a collapse until Sunday. The month view solved this
+ * for months (`throughDay` in utils/monthSummary); this is the week's version.
+ *
+ * `daysIn` is how far into the week the reader has actually got, 1-7. A week
+ * already behind them is compared in full.
+ */
+export function weekBefore(
+  tasks: Task[],
+  mondayIso: string,
+  daysIn: number,
+): WeekSummary {
+  const monday = new Date(`${mondayIso}T00:00:00`);
+  const from = new Date(monday);
+  from.setDate(from.getDate() - 7);
+  const until = new Date(from);
+  until.setDate(until.getDate() + Math.max(0, Math.min(6, daysIn - 1)));
+
+  return weekSummary(
+    tasks,
+    from.toISOString().slice(0, 10),
+    until.toISOString().slice(0, 10),
+  );
+}
+
+/**
+ * How far into the week `todayIso` is, 1-7 — or 7 for a week already over.
+ *
+ * Counted from the week's own Monday rather than from a weekday number, so it
+ * is right for an account whose week opens on Sunday.
+ */
+export function daysIntoWeek(mondayIso: string, todayIso: string): number {
+  const monday = new Date(`${mondayIso}T00:00:00`).getTime();
+  const today = new Date(`${todayIso}T00:00:00`).getTime();
+  const gap = Math.round((today - monday) / 86_400_000);
+  return Math.max(1, Math.min(7, gap + 1));
 }

@@ -56,6 +56,30 @@ CREATE TABLE IF NOT EXISTS event_colors (
     claimed_week  TEXT
 );
 
+CREATE TABLE IF NOT EXISTS calendar_documents (
+    user_id     TEXT PRIMARY KEY REFERENCES users (username) ON DELETE CASCADE,
+
+    -- The whole calendar for one account, as the JSON the views already hold:
+    -- { "2026-7-4": { "timestamps": [ ... ], "focus": "..." }, ... }
+    --
+    -- A document rather than a row per event, and that is the point. Every
+    -- event any user of this app has ever made lived in their browser's
+    -- localStorage and nowhere else, because the month, week and day views
+    -- never called the endpoints above. The shape those endpoints model is the
+    -- old coarse one — a `time_block` of 'morning', a recurrence spelled
+    -- "mon, tue, wed" — and it cannot hold what the store actually keeps:
+    -- start and end times, subtasks, XP, and the colour family. Writing the
+    -- data through them would have lost four fields per event, so the fix was
+    -- somewhere to put the shape that exists, unchanged.
+    --
+    -- Not queryable, deliberately. Nothing queries it: the calendar is read
+    -- whole, for one account, by the client that renders it. When something
+    -- does need to ask questions of individual events, that is the moment for
+    -- a real table and a migration out of here — not before.
+    data        TEXT NOT NULL DEFAULT '{}',
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS calendar_entries_user_date_idx ON calendar_entries (user_id, date);
 CREATE INDEX IF NOT EXISTS calendar_events_date_idx ON calendar_events (date);
 

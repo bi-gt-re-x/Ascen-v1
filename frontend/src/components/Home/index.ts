@@ -7,6 +7,7 @@
  * the motion that belongs to no single section — the opening, the reveals, the
  * charts, and the last of it.
  */
+export { Analytics } from './Analytics';
 export { AuthModal, DEEP_LINKED } from './AuthModal';
 export type { AuthStep } from './AuthModal';
 export { CalendarDemo } from './CalendarDemo';

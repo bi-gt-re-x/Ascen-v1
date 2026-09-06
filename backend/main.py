@@ -27,9 +27,11 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from backend import middleware, routes
+from backend.api.guard import NotSignedIn
 from backend.config import settings
 
 
@@ -49,16 +51,57 @@ def create_app():
              "detail": exc.errors()},
             status_code=200)
 
+    @app.exception_handler(NotSignedIn)
+    async def not_signed_in(request, exc):
+        """A request to an account endpoint with no session behind it.
+
+        Raised by the dependencies in backend/api/guard.py, which every
+        endpoint that touches an account's data now depends on. 401 rather than
+        the usual 200, because this is the one failure the client acts on
+        rather than displays — see the note in guard.py.
+        """
+        return JSONResponse(
+            {"success": False, "message": "Sign in to continue."},
+            status_code=401)
+
     middleware.register(app)
 
     # Added after the gate so it runs before it — see the note above.
+    #
+    # `https_only` is what marks the cookie Secure, and it is on unless the
+    # environment says otherwise. Without it the browser will send the session
+    # over plain HTTP, where anything between the reader and the server can
+    # read it and *be* them — the cookie is the whole of the authorization now
+    # (backend/api/guard.py), so it is the one thing worth protecting.
+    #
+    # Development is the exception the flag exists for: a Secure cookie is
+    # simply never sent over the http:// dev server, so signing in locally
+    # would stop working. run.py sets ASCEN_INSECURE_COOKIES for a local run.
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key(),
         session_cookie=settings.SESSION_COOKIE,
         max_age=settings.SESSION_MAX_AGE,
         same_site='lax',
+        https_only=settings.secure_cookies(),
     )
+
+    # Compression, added last so it runs first and therefore wraps everything
+    # below it — including the JSON the API returns.
+    #
+    # This app sends a lot of JSON and none of it was compressed. The analytics
+    # page reads the account's whole task list, which on a real account is a
+    # couple of megabytes of short, extremely repetitive objects — the same
+    # sixteen keys, eight thousand times — and that is close to the best case
+    # for deflate. Narrowing the columns (see ANALYTICS_TASK_FIELDS in
+    # backend/api/analytics.py) took about a fifth off it; this takes about
+    # nine tenths off what is left, and it does so for every response the app
+    # sends rather than for one endpoint.
+    #
+    # `minimum_size` is what keeps that from being a loss: below roughly a
+    # kilobyte the gzip header and the CPU cost buy nothing, and most of this
+    # API's replies are a success flag and a sentence.
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
 
     # The Vite dev server is a separate origin during development and the
     # session cookie has to survive the hop. Nothing is cross-origin once the

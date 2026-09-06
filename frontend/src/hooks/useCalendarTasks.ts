@@ -40,11 +40,33 @@
  * on screen can no longer be trusted.
  *
  * One in-flight guard per id, so a double click cannot award the XP twice.
+ *
+ * ## And it asks the same question afterwards
+ *
+ * Finishing a task raises the rating prompt on the dashboard and on the tasks
+ * page, and for a long time it did not here — so the same task, finished from
+ * a grid block instead of a list row, went into the record with no difficulty
+ * and no execution against it. That is not a missing nicety: the Quality tab
+ * is built out of those two numbers, and an account that lives in the calendar
+ * was quietly the account analytics could say the least about.
+ *
+ * The state lives here rather than in each of the three views for the reason
+ * the completion does: Day, Week and Month all finish tasks and all three
+ * would otherwise grow their own copy, which is three chances for them to
+ * drift apart. What each view still does for itself is render the dialog —
+ * a hook cannot, and a shared one they all mount is the same component from
+ * components/Tasks that the other two pages raise, so there is one question
+ * in the app rather than four.
+ *
+ * `rating_depth` is honoured here exactly as it is there: at 'none' the prompt
+ * is never raised at all.
  */
 import { useCallback, useMemo, useState } from 'react';
+import { useSettings } from './useSettings';
 import { useUserData } from './useUserData';
 import { tasks as taskService } from '@/services';
 import { isCalendarPlaced, isoStamp } from '@/utils/calendarGrid';
+import type { RatingDepth } from '@/services/settings';
 import type { Task, UserStats } from '@/types';
 
 const NO_STATS: UserStats = {
@@ -84,11 +106,23 @@ export interface UseCalendarTasks extends TaskPatch {
   /** The id being completed right now, so its block can say so. */
   completing: string | null;
   complete: (taskId: string) => void;
+
+  // ---- The question that follows a completion ------------------------------
+  /** The task the prompt is asking about, or null when nothing is asked. */
+  rating: { id: string; name: string } | null;
+  /** How much to ask, straight from the account's preference. */
+  ratingDepth: RatingDepth;
+  /** Sends whatever was answered and writes it onto the list on screen. */
+  saveRating: (values: { difficulty?: number; execution?: number; reason?: string }) => void;
+  /** Dismissal, by any of the dialog's three routes. */
+  closeRating: () => void;
 }
 
 export function useCalendarTasks(): UseCalendarTasks {
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
+  const { prefs } = useSettings();
   const [completing, setCompleting] = useState<string | null>(null);
+  const [rating, setRating] = useState<{ id: string; name: string } | null>(null);
 
   const tasks = useMemo(
     () => (data?.tasks ?? []).filter(isCalendarPlaced),
@@ -107,7 +141,7 @@ export function useCalendarTasks(): UseCalendarTasks {
       if (!username || completing) return;
       setCompleting(taskId);
       void taskService
-        .completeTask(username, taskId)
+        .completeTask(taskId)
         .then((result) => {
           // A failed completion leaves the task exactly as it was, so nothing
           // is written here — but the page can no longer vouch for what it is
@@ -157,6 +191,20 @@ export function useCalendarTasks(): UseCalendarTasks {
               };
             }),
           }));
+
+          /* Ask how it went, now that the work is banked. Nothing waits on
+             the answer — the XP is already awarded and this dialog can be
+             dismissed, ignored or half-filled (components/Tasks/RatePrompt).
+             The title is read off the list rather than off the response,
+             because the response carries the figures that moved and not the
+             task, and a prompt that cannot name what it is asking about is a
+             prompt nobody answers. */
+          if (prefs.rating_depth !== 'none') {
+            const named = (data?.tasks ?? []).find(
+              (task) => String(task.id) === String(taskId),
+            );
+            setRating({ id: String(taskId), name: named?.title ?? 'that task' });
+          }
         })
         .catch((cause: unknown) => {
           console.error(`Calendar: completing task ${taskId} failed`, cause);
@@ -164,8 +212,36 @@ export function useCalendarTasks(): UseCalendarTasks {
         })
         .finally(() => setCompleting(null));
     },
-    [completing, mutate, reload, username],
+    [completing, data, mutate, prefs.rating_depth, reload, username],
   );
+
+  /* The ratings are a second call, deliberately: the task is done and its XP
+     is banked before this is asked, so a failure here loses an opinion rather
+     than the work. Only what was actually clicked is sent, and the answer is
+     written onto the list on screen rather than re-read — the same rule the
+     completion above follows. */
+  const saveRating = useCallback(
+    (values: { difficulty?: number; execution?: number; reason?: string }) => {
+      const target = rating;
+      setRating(null);
+      if (!username || !target) return;
+      void taskService.rateTask(target.id, values).then((result) => {
+        if (!result.success) {
+          console.error(`Calendar: rating task ${target.id} failed`, result.message);
+          return;
+        }
+        mutate((current) => ({
+          ...current,
+          tasks: current.tasks.map((task) =>
+            String(task.id) === target.id ? { ...task, ...values } : task,
+          ),
+        }));
+      });
+    },
+    [mutate, rating, username],
+  );
+
+  const closeRating = useCallback(() => setRating(null), []);
 
   return {
     tasks,
@@ -180,5 +256,9 @@ export function useCalendarTasks(): UseCalendarTasks {
     recover: reload,
     completing,
     complete,
+    rating,
+    ratingDepth: prefs.rating_depth,
+    saveRating,
+    closeRating,
   };
 }

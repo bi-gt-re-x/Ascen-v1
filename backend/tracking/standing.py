@@ -62,14 +62,29 @@ def _profile(username, user):
     total_days = max((today - created).days + 1, 1)
 
     totals = xp_tracking.daily_totals(username)
-    active_days = sum(1 for bucket in totals.values() if (bucket.get('xp') or 0) > 0)
+
+    # Days worked, on the same three counts every other surface uses: a
+    # finished task, a logged focus session, or any XP. The ledger alone is not
+    # enough — a focus session earns no XP, so an account that only logs time
+    # was reading as never having turned up, which both understated its
+    # consistency and kept it out of the cohort under `MIN_ACTIVE_DAYS`. A task
+    # finished for 0 XP files no ledger event either. See
+    # frontend/src/utils/activeDay.ts, which is the client's copy of this rule.
+    worked = {day for day, bucket in totals.items() if (bucket.get('xp') or 0) > 0}
+    worked |= {day for day, bucket in totals.items() if (bucket.get('tasks') or 0) > 0}
 
     focus_minutes = 0.0
-    for record in focus_tracking.history_for(username).values():
+    for day_iso, record in focus_tracking.history_for(username).items():
         try:
-            focus_minutes += float(record.get('seconds', 0) or 0) / 60.0
+            seconds = float(record.get('seconds', 0) or 0)
         except (TypeError, ValueError, AttributeError):
             continue
+        if seconds <= 0:
+            continue
+        focus_minutes += seconds / 60.0
+        worked.add(day_iso)
+
+    active_days = len(worked)
 
     # `record=False`: this reads every account on the instance, and the default
     # would file a dated snapshot against each of them every time somebody

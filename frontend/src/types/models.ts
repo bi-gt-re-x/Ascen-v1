@@ -49,9 +49,24 @@ export type TaskStatus = 'todo' | 'done' | 'expired';
 
 export interface Task {
   id: string;
-  user_id: string;
+  /**
+   * Who owns it. Sent up when a task is created and not read back anywhere.
+   *
+   * Optional because a task does not always arrive whole any more: the
+   * analytics page asks for sixteen columns rather than the row (see
+   * `AnalyticsTask` in services/analytics), and the alternative to marking the
+   * two missing fields optional here was a parallel task type that every util
+   * taking a `Task` would have to be widened to accept.
+   */
+  user_id?: string;
   title: string;
-  description: string;
+  /**
+   * Free text, unbounded, and read in exactly one place — the task board's
+   * search. Optional for the same reason as `user_id` above, and it is the
+   * field that made the projection worth having: it is on every row, it has no
+   * ceiling, and no page but the task list has ever looked at it.
+   */
+  description?: string;
   priority: TaskPriority;
   status: TaskStatus;
   /** The XP completing it awards. Named `xp_value` in the database. */
@@ -82,6 +97,15 @@ export interface Task {
    */
   difficulty?: number;
   execution?: number;
+  /**
+   * The one thing that made the difference, from a fixed vocabulary of twelve
+   * — six for a task that went badly, six for one that went well. See REASONS
+   * in utils/ratings.
+   *
+   * Only asked at rating_depth 'reasons', so absent is the ordinary state and
+   * means the question was not put rather than that there was no reason.
+   */
+  reason?: string;
   timer_duration?: number;
   timer_expired?: boolean;
 }
@@ -120,6 +144,44 @@ export type GoalCategory =
 export type MilestoneStatus = 'pending' | 'active' | 'done';
 
 /**
+ * One small piece of work under a checkpoint.
+ *
+ * Not a `Task`, and the difference is the same one the checkpoint itself draws
+ * against a task: a step has no XP, no due date, no timer and no priority, and
+ * never reaches the tasks page. It is the checkpoint's own breakdown — the
+ * three-to-eight things that, done, mean the checkpoint is reached.
+ *
+ * `placeholder` is derived from the title being empty, never sent up by the
+ * client: a checklist always has at least `MIN_STEPS` rows and the unwritten
+ * ones are drawn as prompts rather than counted as work planned.
+ */
+export interface MilestoneStep {
+  /** Unique within its own checklist, not across the account. */
+  id: string;
+  title: string;
+  done: boolean;
+  placeholder: boolean;
+  /**
+   * The one task this step is execution for, or null.
+   *
+   * A pointer, not ownership. The step stands whether or not anything is on
+   * the other end, and unlinking a task does not delete the step — which is
+   * the difference between this and the step simply *being* the task.
+   */
+  task_id: string | null;
+  /**
+   * When this step is meant to be done, as an ISO day, or null.
+   *
+   * Only ever set on a step with no `task_id`. A step pointing at a task takes
+   * that task's date: two dates for one piece of work is two answers to
+   * "when", and the task's is the one the calendar, the dashboard and the
+   * reminders read. Linking a task therefore clears this rather than keeping a
+   * second copy nothing else can see.
+   */
+  due: string | null;
+}
+
+/**
  * A checkpoint inside a goal.
  *
  * Not a task, and the difference is the whole reason the table exists: a task
@@ -136,6 +198,8 @@ export interface Milestone {
   /** Execution order, dense from 0. Rewritten on every reorder. */
   position: number;
   status: MilestoneStatus;
+  /** Always at least MIN_STEPS long — the API pads it. See utils/milestoneSteps. */
+  steps: MilestoneStep[];
   target_date?: string;
   completed_at?: string;
   created_at: string;
@@ -185,7 +249,7 @@ export interface Goal {
   unit: string;
   current_value: number;
   target_number: number;
-  /** Comma-separated subject ids. See `subjectIdsOf` in utils/goalModel. */
+  /** Comma-separated subject ids, split at the call sites that read them. */
   subject_ids: string;
   /** In execution order. The API sends them with every goal. */
   milestones: Milestone[];
@@ -270,7 +334,14 @@ export interface GrowthDay {
 // --------------------------------------------------------------------------
 // The report card
 // --------------------------------------------------------------------------
-export type Grade = 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
+/**
+ * The letter grades, best first.
+ *
+ * `S` is a perfect hundred and `A+` the band below it; everything under that is
+ * the conventional school scale in tens. Mirrors GRADE_BANDS in
+ * backend/tracking/analytics.py, which is where the boundaries live.
+ */
+export type Grade = 'S' | 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
 
 export interface Trend {
   direction: 'up' | 'down' | 'flat';

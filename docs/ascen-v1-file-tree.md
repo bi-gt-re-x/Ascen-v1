@@ -13,7 +13,7 @@ metadata:
 ```
 run.py                     # shim: from backend.run import app, main (run_mac.py imports app)
 run_mac.py                 # macOS runner, port 5050
-database.db                # SQLite at the ROOT — DEAD; no code opens it. Not data/ascen.db.
+# (the root database.db is gone — a dead Flask-era SQLite file nothing opened. `git show 2ce0fca:database.db` has it if it is ever wanted.)
 data/
   ascen.db                 # THE live datastore (SQLite, git-ignored). Built on first use.
   sql/                     # its schema + seed rows, one file per area. users tasks goals

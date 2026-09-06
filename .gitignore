@@ -1,13 +1,19 @@
 # Python
 __pycache__/
 *.pyc
+.pytest_cache/
 .venv/
-.venv-mac/
 .venv-fastapi/
+# Superseded interpreters kept around by hand. Same rule as the live one:
+# a virtualenv is 44MB of built wheels that requirements.txt already describes.
+.venv-fastapi.old*/
 
 # Node
 node_modules/
 frontend/dist/
+
+# Written by `npm run test:coverage`. A report of the tests, not a test.
+coverage/
 
 # Environment files. One .env at the root serves both halves — vite.config.ts
 # points envDir back here so the frontend reads the same file the backend does.
@@ -29,3 +35,7 @@ data/ascen.db-shm
 # copies of an already-ignored file; the .json exports beside them are the
 # tracked fixtures.
 data/backups/*.db
+
+# A development session key, generated on first run when SECRET_KEY is unset.
+# Per-machine and never shared — see backend/config/settings.py.
+data/.session_key

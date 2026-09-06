@@ -17,7 +17,7 @@
  * See utils/ratings for the arithmetic and for why quality is the product of
  * the two rows rather than their average.
  */
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Panel, PanelLink, PanelNote, toneVar } from './charts';
 import { GLYPHS, type GlyphName } from './glyphs';
@@ -30,7 +30,54 @@ import {
   type RatedTask,
   type RatingFinding,
   type RatingSummary,
+  type ReasonSummary,
 } from '@/utils/ratings';
+import type { RatingDepth } from '@/services/settings';
+
+// --------------------------------------------------------------------------
+// How much is asked
+// --------------------------------------------------------------------------
+/**
+ * The three levels, on the panel whose contents they decide.
+ *
+ * It is a preference and it lives in Settings too, but it belongs here as
+ * well: this is the one page where the difference between the three is
+ * visible, and a reader looking at an empty quality panel should be able to
+ * fix it from where they are standing rather than being told to go and find a
+ * switch on another page. The rail's collapse button and its row in Settings
+ * are the same arrangement — one preference, two places that own it.
+ */
+export const DEPTHS: { key: RatingDepth; label: string; hint: string }[] = [
+  { key: 'none', label: 'Nothing', hint: 'Finishing a task asks nothing. Quality falls back to average XP per task.' },
+  { key: 'ratings', label: 'Ratings', hint: 'Two star rows: how hard it was, how well it went. Everything on this tab comes from them.' },
+  { key: 'reasons', label: '+ Reasons', hint: 'The two rows and one more — what made the difference. Adds the reasons panel on Insights.' },
+];
+
+export interface DepthPickerProps {
+  value: RatingDepth;
+  busy?: boolean;
+  onPick: (next: RatingDepth) => void;
+}
+
+export function DepthPicker({ value, busy = false, onPick }: DepthPickerProps) {
+  return (
+    <div className="ax-depth" role="group" aria-label="What to ask after a finished task">
+      {DEPTHS.map((depth) => (
+        <button
+          key={depth.key}
+          type="button"
+          className={`ax-depth-pick${value === depth.key ? ' is-on' : ''}`}
+          aria-pressed={value === depth.key}
+          title={depth.hint}
+          disabled={busy}
+          onClick={() => onPick(depth.key)}
+        >
+          {depth.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // --------------------------------------------------------------------------
 // Nothing rated
@@ -45,21 +92,46 @@ import {
  * use the app rather than a state to be nagged out of. So this states what the
  * panel would show, says where the prompt appears, and stops.
  */
-function QualityEmpty({ title, shows }: { title: string; shows: string }) {
+function QualityEmpty({
+  title,
+  shows,
+  depth = 'ratings',
+  aside,
+}: {
+  title: string;
+  shows: string;
+  depth?: RatingDepth;
+  aside?: ReactNode;
+}) {
+  /* Two different silences, and telling them apart is the whole reason this
+     takes the preference. An account that has the questions switched off is
+     not going to rate anything by visiting Tasks, and pointing it there would
+     be advice that cannot work — the answer is the picker in the corner of
+     this panel. An account that has them on has simply skipped them, which is
+     allowed and stays unnagged. */
+  const off = depth === 'none';
+
   return (
-    <Panel title={title}>
+    <Panel title={title} aside={aside}>
       <div className="ax-quality-empty">
         <p>
-          <strong>Nothing rated in this window.</strong> {shows}
+          <strong>{off ? 'The questions are switched off.' : 'Nothing rated in this window.'}</strong>{' '}
+          {shows}
         </p>
         <p className="ax-muted">
-          The two star rows appear once, after you finish a task, and can be skipped — they are
-          the only thing in Ascen that is asked rather than measured, which is exactly why they
-          cannot be filled in for you. Nothing else on this page depends on them.
+          {off
+            ? 'Finishing a task asks nothing, so there is nothing here to draw. Quality on the '
+              + 'report card falls back to your average XP per task — a figure set when a task is '
+              + 'created rather than after it is done. Turn the questions on above and this fills '
+              + 'in from the next task you finish.'
+            : 'The star rows appear once, after you finish a task, and can be skipped. Nothing '
+              + 'else on this page depends on them.'}
         </p>
-        <Link to="/tasks" className="ax-btn">
-          Open Tasks
-        </Link>
+        {!off && (
+          <Link to="/tasks" className="ax-btn">
+            Open Tasks
+          </Link>
+        )}
       </div>
     </Panel>
   );
@@ -73,6 +145,10 @@ export interface QualityPanelProps {
   findings: RatingFinding[];
   bands: QualityBand[];
   span: string;
+  /** How much the account is being asked — see DepthPicker. */
+  depth?: RatingDepth;
+  /** The picker itself, rendered in the panel's title row. */
+  aside?: ReactNode;
 }
 
 const FINDING_GLYPH: Record<RatingFinding['tone'], GlyphName> = {
@@ -90,12 +166,21 @@ const FINDING_GLYPH: Record<RatingFinding['tone'], GlyphName> = {
  * easy-work-going-fine, and those need opposite responses. The bar under each
  * is out of five, which is the scale the reader answered on.
  */
-export function QualityPanel({ summary, findings, bands, span }: QualityPanelProps) {
+export function QualityPanel({
+  summary,
+  findings,
+  bands,
+  span,
+  depth,
+  aside,
+}: QualityPanelProps) {
   if (summary.rated === 0) {
     return (
       <QualityEmpty
         title="Quality of finished work"
-        shows="This would show how hard your work has been and how well it went — the two together, out of 25."
+        shows="How hard your work has been, and how well it went."
+        depth={depth}
+        aside={aside}
       />
     );
   }
@@ -109,17 +194,16 @@ export function QualityPanel({ summary, findings, bands, span }: QualityPanelPro
   return (
     <Panel
       title="Quality of finished work"
-      note={`Difficulty × execution over the ${summary.rated} task${summary.rated === 1 ? '' : 's'} you rated in ${span}.`}
+      aside={aside}
+      note={`${summary.rated} rated task${summary.rated === 1 ? '' : 's'} in ${span}`}
       footer={
         <PanelNote label="What this measures">
-          How hard you said the work was, multiplied by how well you said it went, averaged over
-          the tasks you rated. The product rather than the average of the two: a trivial task done
-          perfectly and a brutal one botched both average to the middle and are not the same week.
-          25 is a brutal task done excellently and there is no other route to it.
+          Difficulty <strong>×</strong> execution, averaged over the tasks you rated. The product,
+          not the average — <strong>25</strong> is a brutal task done excellently, and there is no
+          other route to it.
           <br />
           <br />
-          Rating is optional. Tasks you skipped are not counted as zero and are not in the
-          denominator — they are simply absent, which is why the coverage is printed above.
+          Rating is optional. Skipped tasks are absent, not zero.
         </PanelNote>
       }
     >
@@ -191,6 +275,8 @@ export function QualityPanel({ summary, findings, bands, span }: QualityPanelPro
 export interface QualityGridPanelProps {
   cells: QualityCell[];
   summary: RatingSummary;
+  /** So an empty grid can tell "skipped" apart from "switched off". */
+  depth?: RatingDepth;
 }
 
 /**
@@ -207,12 +293,13 @@ export interface QualityGridPanelProps {
  * not attempted anything hard, and a grid that only drew where the tasks are
  * would hide exactly that.
  */
-export function QualityGridPanel({ cells, summary }: QualityGridPanelProps) {
+export function QualityGridPanel({ cells, summary, depth }: QualityGridPanelProps) {
   if (summary.rated === 0) {
     return (
       <QualityEmpty
         title="Difficulty against execution"
-        shows="This would show where your rated tasks land — whether the hard ones are the ones going badly, or the easy ones."
+        shows="Where your rated tasks land."
+        depth={depth}
       />
     );
   }
@@ -222,17 +309,31 @@ export function QualityGridPanel({ cells, summary }: QualityGridPanelProps) {
   return (
     <Panel
       title="Difficulty against execution"
-      note="Every rated task placed by how hard it was and how well it went. Darker is more tasks."
+      note="Darker is more tasks"
+      claim={
+        summary.difficulty === null || summary.execution === null ? (
+          <>
+            Where your <strong>{summary.rated}</strong> rated{' '}
+            {summary.rated === 1 ? 'task' : 'tasks'} landed.
+          </>
+        ) : (
+          <>
+            Across <strong>{summary.rated}</strong> rated{' '}
+            {summary.rated === 1 ? 'task' : 'tasks'} you rate difficulty{' '}
+            <strong>{summary.difficulty.toFixed(1)}</strong> and execution{' '}
+            <strong>{summary.execution.toFixed(1)}</strong> — the grid says whether that is one
+            habit or several.
+          </>
+        )
+      }
       footer={
         <PanelNote label="How to read this">
-          Difficulty runs left to right, execution bottom to top, so the bottom-right corner is
-          hard work going badly and the top-right is hard work going well. The top-left corner —
-          easy work, done well — is the one worth watching: it is comfortable, it earns XP, and an
-          account whose cloud sits there has stopped being stretched by its own task list.
+          Difficulty runs left to right, execution bottom to top. Bottom-right is hard work going
+          badly; top-right is hard work going well. Watch the <strong>top-left</strong> — easy work
+          done well, comfortable and no longer stretching you.
           <br />
           <br />
-          Only the {summary.rated} tasks you rated appear. The {summary.finished - summary.rated}{' '}
-          you finished without rating are not plotted anywhere, at any value.
+          Only your {summary.rated} rated tasks appear.
         </PanelNote>
       }
     >
@@ -296,7 +397,7 @@ export function RatedTasksPanel({ rated, summary }: RatedTasksPanelProps) {
     return (
       <QualityEmpty
         title="Your best and worst rated work"
-        shows="This would name the tasks that scored highest and lowest, so a finding points at something you remember doing."
+        shows="Which tasks scored highest and lowest."
       />
     );
   }
@@ -338,13 +439,152 @@ export function RatedTasksPanel({ rated, summary }: RatedTasksPanelProps) {
   return (
     <Panel
       title="Your best and worst rated work"
-      note={`Scored out of ${QUALITY_MAX}. Only tasks you rated on both rows appear.`}
+      note={`Out of ${QUALITY_MAX}, rated on both rows`}
       footer={<PanelLink to="/tasks">Open Tasks</PanelLink>}
     >
       <div className="ax-rated">
         {column('Highest scoring', best, 'green')}
         {column('Lowest scoring', worst, 'amber')}
       </div>
+    </Panel>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Why it went the way it did
+// --------------------------------------------------------------------------
+export interface ReasonsPanelProps {
+  reasons: ReasonSummary;
+  findings: RatingFinding[];
+  depth: RatingDepth;
+  span: string;
+}
+
+/**
+ * The third question, counted — the only panel on this page that says *why*.
+ *
+ * Everything else in this app answers "what happened": how much, how often,
+ * how well. This is the one input that carries a cause, and it exists only
+ * because the account asked to be asked for it (rating_depth 'reasons').
+ *
+ * **The two sides are never added together.** A bar chart of all twelve words
+ * would rank "could not focus" against "had a clear run at it" as if they were
+ * competing answers to one question. They are answers to two questions, put to
+ * two different sets of tasks — the ones that went badly and the ones that went
+ * well — so they are counted, shared and drawn apart, and each share is out of
+ * its own side.
+ *
+ * Only the words actually chosen are drawn. Six zeroes under a heading is not a
+ * finding about the reader, it is a list of things this build happens to offer.
+ */
+export function ReasonsPanel({ reasons, findings, depth, span }: ReasonsPanelProps) {
+  if (depth !== 'reasons' && reasons.answered === 0) return null;
+
+  if (reasons.answered === 0) {
+    return (
+      <Panel title="What made the difference">
+        <div className="ax-quality-empty">
+          <p>
+            <strong>No reasons given in this window.</strong> Which one thing made a task hard, or
+            made it go well.
+          </p>
+          <p className="ax-muted">
+            The question appears under the two star rows after you finish a task, and can be
+            skipped like they can. It is the only thing on this page that can say <em>why</em> a
+            window went the way it did rather than what it came to.
+          </p>
+          <Link to="/tasks" className="ax-btn">
+            Open Tasks
+          </Link>
+        </div>
+      </Panel>
+    );
+  }
+
+  const sides = [
+    {
+      key: 'struggle' as const,
+      title: 'When it went badly',
+      rows: reasons.struggle,
+      total: reasons.struggled,
+      tone: 'amber',
+    },
+    {
+      key: 'went-well' as const,
+      title: 'When it went well',
+      rows: reasons.wentWell,
+      total: reasons.succeeded,
+      tone: 'green',
+    },
+  ];
+
+  return (
+    <Panel
+      title="What made the difference"
+      note={`${reasons.answered} answered in ${span}`}
+      footer={
+        <PanelNote label="Why the two sides are counted apart">
+          Which six words you are offered follows the execution star: a task rated below 3 is asked
+          what made it hard, one rated 3 or better what made it go well. They are answers to two
+          different questions put to two different sets of tasks, so each share is out of its own
+          side and the two columns are never added together.
+        </PanelNote>
+      }
+    >
+      <div className="ax-reasons">
+        {sides.map((side) => (
+          <div className="ax-reasons-side" key={side.key}>
+            <h3 className="ax-reasons-title">
+              {side.title}
+              <span className="ax-muted">
+                {side.total} {side.total === 1 ? 'task' : 'tasks'}
+              </span>
+            </h3>
+
+            {side.rows.length === 0 ? (
+              <p className="ax-muted ax-reasons-none">Nothing on this side yet.</p>
+            ) : (
+              <ul className="ax-reasons-list">
+                {side.rows.map((row) => (
+                  <li key={row.key}>
+                    <span className="ax-reasons-label">{row.label}</span>
+                    <span className="ax-factor-track">
+                      <i
+                        style={{ width: `${row.share}%`, background: toneVar(side.tone) } as CSSProperties}
+                      />
+                    </span>
+                    <span className="ax-reasons-count">
+                      {row.count}
+                      <em className="ax-tile-unit">{row.share}%</em>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* The same rows the quality panel prints its findings in, from the same
+          three tones — one list style for "what this data supports saying",
+          wherever on the page it is being said. */}
+      {findings.length > 0 && (
+        <ul className="ax-insights">
+          {findings.map((finding) => (
+            <li key={finding.headline} className={`ax-insight ax-insight-${finding.tone}`}>
+              <span
+                className="ax-insight-icon"
+                style={{ '--ico': GLYPHS[FINDING_GLYPH[finding.tone]] } as CSSProperties}
+                aria-hidden="true"
+              />
+              <div>
+                <strong>{finding.headline}</strong>
+                <span className="ax-muted">{finding.hint}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
 }

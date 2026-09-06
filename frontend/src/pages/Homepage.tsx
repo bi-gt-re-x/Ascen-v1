@@ -38,6 +38,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Ambient } from '@/components';
 import {
+  Analytics,
   AuthModal,
   CalendarDemo,
   DashboardDemo,
@@ -61,14 +62,24 @@ import {
   useReveals,
 } from '@/components/Home';
 import { useAuth, useDocumentTitle, useTheme } from '@/hooks';
+import { useSecretScripts } from '@/hooks/useSecretScripts';
 import type { AuthStep } from '@/components/Home';
 import type { Theme } from '@/types';
 import '@/styles/homepage.css';
 import '@/styles/home-motion.css';
 
-/** Where the flow finishes. Only a path on this site, never somewhere else. */
+/**
+ * Where the flow finishes. Only a path on this site, never somewhere else.
+ *
+ * With nothing to go back to the answer is the front door, not the dashboard.
+ * `/` is the one route that reads the account's chosen start page (FrontDoor
+ * in App.tsx) — naming the dashboard here instead meant signing in from the
+ * landing page always landed on the dashboard, whatever the account had asked
+ * for, and the preference only appeared to work if you happened to arrive via
+ * a gated link.
+ */
 function safeNext(raw: string | null): string {
-  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/dashboard';
+  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 }
 
 export default function Homepage() {
@@ -78,6 +89,29 @@ export default function Homepage() {
   const { status, username, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const signedIn = status === 'signed-in';
+
+  /* The two stages of the hidden chain this page carries, and the void they
+     both lead into. They are the original scripts, bound to markup rendered
+     below — the testimonial card in components/Home/sections.tsx and the
+     pentagon in the Growth Rating preview beside it — and hooks/useSecretScripts
+     explains why they are loaded rather than ported. Nothing here is reachable
+     without the clue from the dashboard, except the testimonial, which is the
+     short way in for a visitor who has no account to put a dashboard behind.
+
+     **Not until the account is known**, which is why this sits below `status`
+     rather than at the top with the other page-wide hooks.
+     frontend/secret/pentagon-egg.js reads whose unlock to look for once, at
+     load, and binds nothing at all if it does not find one — so loading it
+     while the session check is still in flight asks it about 'Default' and
+     leaves a pentagon that is inert for the rest of the visit. The session is
+     a round trip and the script is in cache, so that race is not close: it
+     loses almost every time. 'loading' is the only state worth waiting on —
+     signed out is an answer, and the testimonial's door is open to it. */
+  useSecretScripts(
+    status === 'loading'
+      ? []
+      : ['void.css', 'void.js', 'quote-egg.js', 'pentagon-egg.js'],
+  );
 
   const page = useRef<HTMLDivElement>(null);
   useIntro(page);
@@ -199,8 +233,8 @@ export default function Homepage() {
 
           <section className="lp-section">
             <SectionHead
-              title="Deep Dive on Task Management"
-              blurb="Organize your study schedule with an intuitive task manager, set priorities, and track progress effortlessly."
+              title="One list, worked through"
+              blurb="Priorities, subjects and due dates on a single list. Check something off and the XP it earned lands on the bar."
             />
             {/* The workflow, played out: a task gets checked off, the list
                 closes over it, and the XP it earned lands on the bar. */}
@@ -210,8 +244,8 @@ export default function Homepage() {
 
           <section className="lp-section">
             <SectionHead
-              title="Performance Metrics"
-              blurb="See your growth and achievements — hours logged, completion rates, and daily XP visualized."
+              title="What the hours add up to"
+              blurb="Hours logged, completion rate and efficiency, by day or by week — counted from the days you worked, not the days that passed."
             />
             <Performance />
           </section>
@@ -219,17 +253,31 @@ export default function Homepage() {
           <section className="lp-section">
             <SectionHead
               title="A calendar that works with you"
-              blurb="Organize your study schedule with simple drag-and-drop. Tasks sync onto the day you plan them."
+              blurb="Drag a task onto a day and it is scheduled there. It is the same task either way — the calendar is a second view of your list, not a second copy of it."
             />
             <CalendarDemo />
           </section>
 
           <section className="lp-section">
             <SectionHead
-              title="Streak & Level System"
-              blurb="Break large goals into achievable steps. Every completed task earns XP toward your next level."
+              title="Showing up, counted"
+              blurb="Every finished task earns XP toward the next level. The streak counts consecutive days with at least one task done — miss a day and it goes back to zero."
             />
             <StreakLevel />
+          </section>
+
+          {/* The end of the feature tour, and the only section about the app
+              thinking rather than about the reader working. It comes last of
+              the seven because it is the one that needs the other six to have
+              happened: a score made of productivity, consistency and focus
+              means nothing to someone who has not yet been shown the tasks,
+              the streak and the calendar those are measured from. */}
+          <section className="lp-section">
+            <SectionHead
+              title="Analytics that do the thinking"
+              blurb="Five measures become one Growth Score, and the score becomes a ranked list of what to change next. Every figure shows the arithmetic it came from."
+            />
+            <Analytics />
           </section>
 
           <Philosophy />

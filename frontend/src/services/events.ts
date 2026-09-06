@@ -12,6 +12,14 @@
  * Colours are tracked separately: every hex colour handed out so far, so a new
  * event can be given one that is visibly different from the rest.
  *
+ * **Neither of those two kinds is where the calendar you see comes from.** The
+ * month, week and day views draw their blocks from a per-account document —
+ * `calendarStore` / `calendarStore.save` at the bottom of this file — because
+ * that is the shape the views have always held, and the entry/event tables
+ * above cannot hold it: no start or end time, no subtasks, no XP, no colour.
+ * The wrappers above are kept because the tables and the endpoints are real and
+ * the task-sync half is still reachable, not because the calendar uses them.
+ *
  * Backend: backend/api/calendar.py.
  */
 import { del, get, post, put } from './api';
@@ -25,9 +33,8 @@ import type {
 // Entries: a task on a day
 // --------------------------------------------------------------------------
 export function listEntries(
-  username: string,
 ): Promise<ApiResult<{ entries: CalendarEntry[] }>> {
-  return get<{ entries: CalendarEntry[] }>('/api/calendar', { username });
+  return get<{ entries: CalendarEntry[] }>('/api/calendar');
 }
 
 export interface NewEntry {
@@ -38,28 +45,24 @@ export interface NewEntry {
 }
 
 export function createEntry(
-  username: string,
   entry: NewEntry,
 ): Promise<ApiResult<{ entry_id: string }>> {
-  return post<{ entry_id: string }>('/api/calendar', { username, ...entry });
+  return post<{ entry_id: string }>('/api/calendar', { ...entry });
 }
 
 export function updateEntry(
-  username: string,
   entryId: string,
   edit: Partial<NewEntry>,
 ): Promise<ApiResult<Record<string, never>>> {
   return put(`/api/calendar/${encodeURIComponent(entryId)}`, {
-    username,
     ...edit,
   });
 }
 
 export function deleteEntry(
-  username: string,
   entryId: string,
 ): Promise<ApiResult<Record<string, never>>> {
-  return del(`/api/calendar/${encodeURIComponent(entryId)}`, { username });
+  return del(`/api/calendar/${encodeURIComponent(entryId)}`);
 }
 
 // --------------------------------------------------------------------------
@@ -103,13 +106,11 @@ export function customEvents(): Promise<ApiResult<{ events: CalendarEvent[] }>> 
 
 /** Put an existing task on the calendar as an event block. */
 export function syncTaskToCalendar(
-  username: string,
   taskId: string,
   date: string,
   options: Omit<Partial<NewEvent>, 'date'> = {},
 ): Promise<ApiResult<{ entry_id: string; message: string }>> {
   return post('/api/sync_task_to_calendar', {
-    username,
     task_id: taskId,
     date,
     ...options,
@@ -118,11 +119,9 @@ export function syncTaskToCalendar(
 
 /** Complete a task and tick off every calendar entry pointing at it. */
 export function markTaskCompleted(
-  username: string,
   taskId: string,
 ): Promise<ApiResult<{ message: string }>> {
   return post('/api/mark_task_completed_in_calendar', {
-    username,
     task_id: taskId,
   });
 }
@@ -136,9 +135,8 @@ export interface CalendarProgress {
 }
 
 export function progress(
-  username: string,
 ): Promise<ApiResult<CalendarProgress>> {
-  return get<CalendarProgress>('/api/get_calendar_progress', { username });
+  return get<CalendarProgress>('/api/get_calendar_progress');
 }
 
 // --------------------------------------------------------------------------
@@ -168,8 +166,33 @@ export function addEventColor(
  * "since 12 AM today" and not "since the last time anything was recomputed".
  */
 export function xpEarnedOn(
-  username: string,
   date: string,
 ): Promise<ApiResult<{ date: string; xp_earned: number; tasks_completed: number }>> {
-  return get('/api/xp_earned_on', { username, date });
+  return get('/api/xp_earned_on', { date });
+}
+
+// --------------------------------------------------------------------------
+// The calendar itself
+// --------------------------------------------------------------------------
+/**
+ * One account's whole calendar, as the views hold it.
+ *
+ * Day keys to blocks — the exact object in utils/calendarStore, sent and
+ * received unchanged. It is a document rather than rows because that is what
+ * the client has, and because the alternative was translating it through a
+ * schema that would have dropped four fields per event.
+ *
+ * An empty `data` means the server has never been sent this calendar, which
+ * for every account predating this endpoint is the case: the browser's copy
+ * was the only copy. `useCalendarStore` reads that as "migrate", not "empty".
+ */
+export function calendarStore(): Promise<ApiResult<{ data: Record<string, unknown> }>> {
+  return get<{ data: Record<string, unknown> }>('/api/calendar_store');
+}
+
+/** Replace it. Whole-document, last write wins — see the endpoint. */
+export function saveCalendarStore(
+  data: Record<string, unknown>,
+): Promise<ApiResult<Record<string, never>>> {
+  return put<Record<string, never>>('/api/calendar_store', { data });
 }

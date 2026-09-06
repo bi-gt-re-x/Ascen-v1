@@ -9,6 +9,8 @@
  */
 export { Composer } from './Composer';
 export type { ComposerProps } from './Composer';
+export { DayComplete } from './DayComplete';
+export type { DayCompleteProps } from './DayComplete';
 export { TaskRow } from './TaskRow';
 export type { TaskRowProps } from './TaskRow';
 export { StatCards } from './Stats';

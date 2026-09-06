@@ -40,11 +40,11 @@ const STEPS = [
  * to scroll past.
  */
 const TIPS: Record<number, string> = {
-  0: 'Name the finish line, not the effort — "Reach USACO Gold", not "practise more". You want to be able to tell, on a given day, whether you got there.',
-  1: 'Write the reason you would still want this in three months. It is the thing you will read back on the week you do not feel like it.',
-  2: 'A date you half-believe beats no date: with one the app can say whether you are on pace, and without one it can only say you are still going.',
-  3: 'Pick milestones when finishing is a state you arrive at, and a number when it is something that accumulates. Most real goals are milestones.',
-  4: 'Three to six is the range that works. Each one should be a state the goal reaches, not a task you do — and dates get filled in for you.',
+  0: 'Name the finish line, not the effort — "Reach USACO Gold", not "practise more".',
+  1: 'The reason you would still want this in three months. You will read it back on a bad week.',
+  2: 'A date you half-believe beats no date. With one, the app can say whether you are on pace.',
+  3: 'Milestones when finishing is a state you arrive at, a number when it accumulates.',
+  4: 'Three to six works. Each should be a state the goal reaches, not a task you do.',
 };
 
 /** How far out a goal's date starts, when the reader has not moved it. */
@@ -193,8 +193,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
                 onChange={(event) => setTitle(event.target.value)}
               />
               <p className="gx-hint">
-                &ldquo;Reach USACO Gold&rdquo;, not &ldquo;practise more&rdquo;. A goal is
-                something you either got to or did not.
+                Something you either reached or did not.
               </p>
 
               <label htmlFor="gx-desc">Anything worth remembering about it</label>
@@ -233,9 +232,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
                 onChange={(event) => setWhy(event.target.value)}
               />
               <p className="gx-hint">
-                This is the line you will read in four months when you have stopped wanting to do
-                the work. It is the only field on this page that is for you rather than for the app
-                — nothing is computed from it.
+                For you, not the app. Nothing is computed from it.
               </p>
             </>
           )}
@@ -250,9 +247,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
                 onChange={(event) => setDeadline(event.target.value)}
               />
               <p className="gx-hint">
-                Optional, and it changes what the app can tell you: with a date it can say whether
-                you are on pace, and without one it can only say whether you are still working on
-                it.
+                Optional. With a date, the app can tell you whether you are on pace.
               </p>
 
               <label htmlFor="gx-priority">How much does it matter? ({priority} / 10)</label>
@@ -265,8 +260,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
                 onChange={(event) => setPriority(Number(event.target.value))}
               />
               <p className="gx-hint">
-                Weights it in the overall figure at the top of the page, so a goal you care about
-                moves that number more than one you do not.
+                Weights it in the overall figure at the top of the page.
               </p>
             </>
           )}
@@ -331,8 +325,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
                 </div>
               )}
               <p className="gx-hint">
-                The app will not fill a number goal in for you — it has no way to see a Codeforces
-                rating. You update the figure and it does the pace arithmetic.
+                You update the figure; the app does the pace arithmetic.
               </p>
             </>
           )}
@@ -343,8 +336,8 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
               {milestones.length > 0 && (
                 <p className="gx-hint">
                   {deadline
-                    ? `Dates are spread evenly between today and ${deadline}, the last landing on it. Move any of them from the goal's timeline.`
-                    : 'With no target date these fall a fortnight apart from today. Move any of them from the goal\u2019s timeline.'}
+                    ? `Spread evenly between today and ${deadline}. Move any from the goal's timeline.`
+                    : 'A fortnight apart from today. Move any from the goal\u2019s timeline.'}
                 </p>
               )}
               <ol className="gx-draft-list">
@@ -382,10 +375,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
                 </button>
               </form>
               <p className="gx-hint">
-                A checkpoint is a state the goal reaches, not a thing you do on a Tuesday.
-                &ldquo;Reach Silver&rdquo; is a checkpoint; &ldquo;solve ten problems&rdquo; is a
-                task, and tasks get linked to a checkpoint afterwards. Skip this if you do not know
-                them yet — you can add them from the goal at any point.
+                A state the goal reaches, not a thing you do on a Tuesday. Skip if you do not know them yet.
               </p>
             </>
           )}

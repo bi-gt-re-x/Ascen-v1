@@ -65,11 +65,11 @@ export function Hero({
           </span>
         </span>
         <h1 className="lp-hero-title">
-          Ascen: The <em>“Only”</em> App for Unstoppable Growth and Productivity
+          Ascen turns finished work into <em>numbers you can check</em>
         </h1>
         <p className="lp-hero-sub hm-rise">
-          Master every hour. Crush every goal. Ascen turns your study sessions into
-          measurable momentum — tasks, streaks, growth analytics and goals in one place.
+          Plan the work, finish it, and see where it went: tasks and a calendar,
+          streaks and XP, and a growth score you can add up yourself.
         </p>
         {/* Every call to action on this page is a pitch to a visitor who has no
             account yet. Someone already signed in has nothing left to be sold,
@@ -86,7 +86,7 @@ export function Hero({
               className="lp-btn lp-btn-primary"
               onClick={onGetStarted}
             >
-              Claim Your Productivity Breakthrough <span className="lp-chevd">▾</span>
+              Create a free account <span className="lp-chevd">▾</span>
             </button>
           )}
           <Link to="/calendar" className="lp-btn lp-btn-ghost" id="calendarBtn">
@@ -154,12 +154,24 @@ export function Hero({
   );
 }
 
+/**
+ * The three cards under the hero.
+ *
+ * `bits` is the part that was missing. Each card had a title, a sentence and a
+ * link, and the sentence was doing two jobs badly — saying what the thing is
+ * *and* listing what it can do, which is how a paragraph ends up as "organize
+ * your schedule with an intuitive task manager" and tells a reader nothing they
+ * could not have guessed from the title. The sentence now makes one claim and
+ * the row of chips under it carries the specifics, which is also the only part
+ * of a feature card anybody actually scans.
+ */
 const FEATURES = [
   {
     ico: 'lp-ico-teal',
     glyph: '📋',
     title: 'Task Management',
-    body: 'Organize your schedule with an intuitive task manager. Set priorities, add descriptions, and track progress effortlessly.',
+    body: 'Everything you have on, in one list — filtered, sorted and searchable, and a dozen of them dealt with at once.',
+    bits: ['Priorities', 'Due dates', 'Bulk actions'],
     to: '/dashboard',
     label: 'Go to Dashboard',
   },
@@ -167,15 +179,17 @@ const FEATURES = [
     ico: 'lp-ico-green',
     glyph: '🌱',
     title: 'Growth & Progress',
-    body: 'View your growth stats and achievements. Track your best streaks, completed tasks, and keep pushing forward.',
+    body: 'Your work, measured. A growth score built from five things you can check the arithmetic on yourself.',
+    bits: ['Streaks', 'Growth score', 'Records'],
     to: '/growth',
     label: 'Go to Growth',
   },
   {
     ico: 'lp-ico-gold',
     glyph: '🎯',
-    title: 'Strategic Goal Tracking',
-    body: 'Set XP, streak and task goals, then watch them auto-advance as you complete work on the dashboard.',
+    title: 'Goal Tracking',
+    body: 'Name a target in XP, tasks or streak days. It advances itself as you work — there is no second place to keep score.',
+    bits: ['XP', 'Milestones', 'Auto-advance'],
     to: '/goals',
     label: 'Go to Goals',
   },
@@ -201,16 +215,36 @@ export function FeatureStrip() {
           <span className={`lp-feat-ico ${f.ico}`}>{f.glyph}</span>
           <h3>{f.title}</h3>
           <p>{f.body}</p>
+          <ul className="lp-feat-bits">
+            {f.bits.map((bit) => (
+              <li key={bit}>{bit}</li>
+            ))}
+          </ul>
           <Link to={f.to} className="lp-link">
             {f.label} <span className="lp-arrow">→</span>
           </Link>
         </article>
       ))}
       {/* The testimonial is where the hidden chain starts on this page —
-          secret/quote-egg.js counts ten clicks on it. */}
+          secret/quote-egg.js counts ten clicks on the `.lp-quote` card itself,
+          so everything below is a child of it and the clicks still bubble.
+
+          The stars and the initial are new. A bare quote with a name under it
+          reads as filler text; the things that make a testimonial land are a
+          rating and a face, and the nearest honest thing to a face here is the
+          initial rather than a stock photograph of somebody who does not
+          exist. */}
       <article className="lp-card lp-quote">
+        <div className="lp-quote-stars" role="img" aria-label="Rated five out of five">
+          {'★★★★★'}
+        </div>
         <p>“Ascen changed how I study — I finally see my progress instead of guessing at it.”</p>
-        <span className="lp-quote-by">Sarah J. · Student</span>
+        <div className="lp-quote-foot">
+          <span className="lp-quote-face" aria-hidden="true">S</span>
+          <span className="lp-quote-by">
+            Sarah J.<small>Student · six month streak</small>
+          </span>
+        </div>
       </article>
     </section>
   );
@@ -270,32 +304,52 @@ export function TaskStats() {
           </span>
         </div>
       </div>
+      {/* Three things a task actually has, rather than three things a task
+          manager is generally said to have.
+
+          The middle one used to be "Sub-tasks — break big tasks into smaller
+          checkable steps", and a `Task` has never had any. Steps belong to a
+          milestone under a goal, and types/models.ts is explicit that a step
+          has no XP, no due date, no timer and no priority and "never reaches
+          the tasks page". So this was not soft copy, it was a feature the page
+          was inventing, in the one section devoted to the thing it was
+          inventing it about. Subjects are what actually sits in that slot: a
+          real field on a task, and the one the analytics breakdown is built
+          from.
+
+          "Reminders" went the same way for a smaller reason — nothing here
+          reminds anybody of anything. There are due dates, and there is a
+          timer, and what the timer does when it runs out is worth a sentence
+          of its own. */}
       <ul className="lp-list">
         <li>
           <span className="lp-list-ico">⭐</span>
           <div>
-            <h4>Prioritization</h4>
+            <h4>Priority</h4>
             <p>
-              Flag high-priority tasks so the most important work rises to the top and never
-              slips through.
+              Low, medium or high. The list sorts by it, so what you flagged stays at the
+              top until it is done.
             </p>
           </div>
         </li>
         <li>
-          <span className="lp-list-ico">✅</span>
+          <span className="lp-list-ico">🗂</span>
           <div>
-            <h4>Sub-tasks</h4>
+            <h4>Subjects</h4>
             <p>
-              Break big tasks into smaller checkable steps and watch each one add to your
-              momentum.
+              File a task under a subject and the XP it earns is tallied there. That tally is
+              the per-subject breakdown on the analytics page.
             </p>
           </div>
         </li>
         <li>
-          <span className="lp-list-ico">🔔</span>
+          <span className="lp-list-ico">⏱</span>
           <div>
-            <h4>Reminders</h4>
-            <p>Due dates and timers keep you accountable and on schedule for every session.</p>
+            <h4>Due dates and timers</h4>
+            <p>
+              A date puts a task on a day in the calendar. A timer runs the session, and a
+              task whose timer runs out is marked expired rather than left open.
+            </p>
           </div>
         </li>
       </ul>
@@ -337,7 +391,7 @@ const PHILOSOPHY = [
     ico: 'lp-ico-purple',
     path: <path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z" />,
     title: 'Simplicity First',
-    body: 'No clutter. Just the few tools that actually move the needle.',
+    body: 'No clutter. The few tools that change what you do tomorrow, and nothing else.',
   },
 ];
 
@@ -411,13 +465,18 @@ export function Pricing({
 
   return (
     <section className="lp-section">
+      {/* Was "Features Comparison and Pricing". There is nothing to compare —
+          one plan, everything in it, no paid tier to hold anything back — so
+          the heading was promising a table the section does not have and
+          cannot have. The blurb underneath was already saying the true and
+          shorter version of it. */}
       <SectionHead
-        title="Features Comparison and Pricing"
+        title="What it costs"
         blurb="Everything is included, free. Pick your look and get to work."
       />
       <div className="lp-split">
         <div className="lp-card lp-themes">
-          <div className="lp-stats-head">Theme Selector</div>
+          <div className="lp-stats-head">Theme</div>
           <div className="lp-swatches">
             {SWATCHES.map((swatch, i) => (
               <span
@@ -462,9 +521,26 @@ export function Pricing({
  * one at a time. The original wrote "HTML · CSS · Vanilla JS" and split it at
  * runtime; the parts are the parts, so they are written as a list.
  */
+/**
+ * What the app is actually built on.
+ *
+ * This said HTML / CSS / Vanilla JS and Python / Flask / Jinja, and carried a
+ * note explaining that the copy described the stack the port was replacing —
+ * true when it was written, and the reason to leave it alone was that what the
+ * page claims is a separate decision from how it is rendered.
+ *
+ * That reason has expired. Both of those are gone: this page is React and the
+ * server is FastAPI, so the section was no longer carrying old copy, it was
+ * carrying wrong copy — on the one card whose entire job is to be checkable.
+ * And it undersold the thing it was advertising, which is the rarer mistake.
+ *
+ * Versions come from package.json and requirements.txt. A number here is a
+ * claim like any other, so keep it to the major and let the lockfiles hold the
+ * rest.
+ */
 const TECH = [
-  { ico: 'lp-ico-teal', glyph: '🖥', title: 'Frontend', bits: ['HTML', 'CSS', 'Vanilla JS'] },
-  { ico: 'lp-ico-green', glyph: '🔧', title: 'Backend', bits: ['Python', 'Flask', 'Jinja'] },
+  { ico: 'lp-ico-teal', glyph: '🖥', title: 'Frontend', bits: ['React 19', 'TypeScript', 'Vite'] },
+  { ico: 'lp-ico-green', glyph: '🔧', title: 'Backend', bits: ['Python', 'FastAPI', 'Uvicorn'] },
   { ico: 'lp-ico-gold', glyph: '💾', title: 'Database', bits: ['SQLite'] },
   { ico: 'lp-ico-purple', glyph: '📊', title: 'Visualization', bits: ['SVG', 'Canvas'] },
 ];
@@ -472,11 +548,10 @@ const TECH = [
 export function TechStack() {
   return (
     <section className="lp-section">
-      <SectionHead title="Technology Stack" blurb="Built on a clean, dependable stack." />
-      {/* The copy here describes the stack this port is replacing — it says
-          Vanilla JS and Flask, and both are on their way out. It is carried
-          across unchanged for the same reason About Us was: what the page
-          claims is a separate decision from how it is rendered. */}
+      <SectionHead
+        title="Technology Stack"
+        blurb="A typed frontend, a typed API, and one file of SQLite you can copy to a USB stick."
+      />
       <div className="lp-tech" id="techGrid">
         <svg className="tech-wires" id="techWires" aria-hidden="true" />
         {TECH.map((t) => (
@@ -500,14 +575,46 @@ export function TechStack() {
   );
 }
 
+/**
+ * What the closing block promises, under the button.
+ *
+ * Three, because four reads as a list and two as an afterthought — and each one
+ * has to agree with something the page has already said. "Free forever" is the
+ * price tag in `Pricing` above, and the SQLite line is the same file the tech
+ * grid names. A closing block that invents a fourth claim nobody can check is
+ * the part of a landing page readers have learned to skip.
+ */
+const REASSURANCE = [
+  'Free forever — everything included',
+  'No card, no trial clock',
+  'One SQLite file, on your own server',
+];
+
 export function FinalCta({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="lp-final">
       <h2>Ready to start your ascent?</h2>
-      <p>Join and turn today&apos;s effort into tomorrow&apos;s momentum.</p>
+      {/* The second sentence used to be "Everything on this page is the real
+          app — nothing here is a screenshot." The dashboard section up the page
+          already says it, at the moment the reader is looking at the thing
+          being claimed and can check it. Repeating it here, eight sections
+          later and next to the button, argues a point nobody is still
+          disputing and takes the last line of the page away from the one
+          thing it is for. */}
+      <p>Finish one task today and the numbers start moving.</p>
       <Link to="/dashboard" className="lp-btn lp-btn-primary lp-btn-lg">
         {signedIn ? 'Go to Your Dashboard' : 'Get Started Today'}
       </Link>
+      {/* The last thing a signed-out reader wants to know is what it costs and
+          what it takes. Someone with an account has already answered both, so
+          they are shown a button and nothing else. */}
+      {!signedIn && (
+        <ul className="lp-final-notes">
+          {REASSURANCE.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -524,7 +631,15 @@ export function Footer() {
           <Link to="/terms-of-service">Terms of Service</Link>
           <a href="/careers">Careers</a>
         </nav>
-        <div className="copyright">© 2032 Study Dashboard Inc. All rights reserved.</div>
+        {/* Was "© 2032 Study Dashboard Inc." — a year six ahead of this one,
+            under a company that does not exist and a product name this app
+            stopped using. The Terms page is the one that has to be right about
+            ownership and it says the name and software belong to the project's
+            authors, so this agrees with it. The year is computed, because a
+            hardcoded one is only ever correct for twelve months. */}
+        <div className="copyright">
+          © {new Date().getFullYear()} Ascen. All rights reserved.
+        </div>
       </div>
     </footer>
   );

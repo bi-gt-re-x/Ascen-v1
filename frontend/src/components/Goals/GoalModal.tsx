@@ -185,8 +185,7 @@ export function GoalModal({
 
           {type === 'focus' && (
             <p className="gm-hint" id="focusGoalHint">
-              ⏱ Auto-completes as you log focus time (dashboard or calendar)
-              after the goal is set.
+              ⏱ Fills in as you log focus time after the goal is set.
             </p>
           )}
 

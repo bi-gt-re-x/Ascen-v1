@@ -49,8 +49,6 @@ import {
   GoalModal,
   GoalsGreeting,
   GrowthAreas,
-  Momentum,
-  NextMoves,
   Trajectory,
   GoalStats,
   GoalTable,
@@ -72,11 +70,12 @@ import {
   msUntilNextDeadline,
 } from '@/components/Goals';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
-import { useAuth, useDocumentTitle, useSubjectIndex, useUserData } from '@/hooks';
+import { useAuth, useDocumentTitle, usePageEntrance, useSubjectIndex, useUserData } from '@/hooks';
 import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewGoal } from '@/services/goals';
-import type { Goal, Milestone, MilestoneStatus, Task } from '@/types';
+import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
 import type { TabId } from '@/components/Goals';
+import { fromTitles } from '@/utils/milestoneSteps';
 import '@/styles/goals.css';
 
 /** How often to re-read while a focus goal is running. */
@@ -105,6 +104,17 @@ export default function Goals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* The goal or checkpoint the model is currently drafting a plan under, so
+     the card it belongs to can say so. Its own flag rather than `busy`: a
+     model call runs for seconds and holding the page's busy flag for it would
+     disable every other goal's buttons while one of them thinks — the same
+     reason `suggestMilestones` below is not routed through `write`. */
+  const [planning, setPlanning] = useState<string | null>(null);
+  /* The arrival cascade, which runs once — the shared one every page uses now.
+     It has to stop: the bands remount when the tab changes, and a class still
+     on the shell would replay the whole page every time somebody switched tab.
+     See hooks/usePageEntrance for why it is bound to the read. */
+  const entering = usePageEntrance(!loading);
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -124,7 +134,7 @@ export default function Goals() {
         return;
       }
       if (!quiet) setLoading(true);
-      const result = await goalService.getGoals(username);
+      const result = await goalService.getGoals();
       if (result.success) {
         setList(result.goals ?? []);
         setError(null);
@@ -201,7 +211,7 @@ export default function Goals() {
     async (task: Task) => {
       if (!username || busy) return;
       setBusy(true);
-      const result = await taskService.completeTask(username, task.id);
+      const result = await taskService.completeTask(task.id);
       setBusy(false);
       if (!result.success) {
         setError(result.message ?? 'That task could not be completed.');
@@ -213,26 +223,25 @@ export default function Goals() {
   );
 
   /**
-   * Add an action to a goal, from the goal's own card.
+   * Point a task that already exists at this goal.
    *
-   * A real task, created through the same service the tasks page uses, so it
-   * shows on the dashboard, appears on the calendar and pays the same XP. It
-   * carries the goal — and the checkpoint being worked on, where there is one —
-   * which is what makes it come back to the card it was typed on. Nothing could
-   * write that link until now; see `_link` in backend/api/tasks.py.
+   * The card no longer creates tasks — "add" there means adding a step to a
+   * checkpoint's checklist, and a step is not a task. What is left is the
+   * half that was always the more useful one: work is usually written down
+   * before the goal it turns out to serve is, and retyping it would leave two
+   * tasks where there is one piece of work. The link is written through
+   * the edit the tasks page already uses — so the task keeps its due date, its
+   * subject and its history, and simply starts counting here.
    */
-  const addAction = useCallback(
-    async (goal: Goal, title: string, milestoneId?: string) => {
+  const linkTask = useCallback(
+    async (goal: Goal, task: Task, milestoneId?: string) => {
       if (!username) return;
-      const result = await taskService.createTask(username, {
-        name: title,
-        priority: 'medium',
-        xp_reward: 25,
+      const result = await taskService.updateTask(task.id, {
         goal_id: goal.id,
-        ...(milestoneId ? { milestone_id: milestoneId } : {}),
+        milestone_id: milestoneId ?? null,
       });
       if (!result.success) {
-        setError(result.message ?? 'That action could not be added.');
+        setError(result.message ?? 'That task could not be linked.');
         return;
       }
       await Promise.all([load(true), account.reload()]);
@@ -241,13 +250,43 @@ export default function Goals() {
   );
 
   // ---- Goal writes --------------------------------------------------------
+  /**
+   * Make the goal, then have the model fill in the plan under it.
+   *
+   * The two halves are deliberately not one `write`. The goal is saved and the
+   * wizard closes on the first, because a new goal appearing should not wait
+   * several seconds on a model call — and if the call fails, or there is no
+   * key configured, what is left behind is a perfectly ordinary goal with an
+   * empty ladder, which is what creating a goal did before this existed.
+   *
+   * The plan it writes is a draft like any other: the ladder's fields are
+   * editable and `saveMilestones` overwrites the lot. The model proposes; the
+   * account owns it — the rule the planner module has always stated.
+   */
   const createGoal = useCallback(
     async (draft: NewGoal) => {
       if (!username) return;
-      const ok = await write(() => goalService.addGoal(username, draft));
-      if (ok) setWizardOpen(false);
+      const created = await goalService.addGoal(draft);
+      if (!created.success) {
+        setError(created.message ?? 'That did not work.');
+        return;
+      }
+      setWizardOpen(false);
+      await load(true);
+
+      const goalId = created.id;
+      if (!goalId) return;
+      setPlanning(goalId);
+      try {
+        const drafted = await goalService.suggestMilestones({ goalId });
+        if (!drafted.success || !drafted.milestones?.length) return;
+        await goalService.setMilestones(goalId, drafted.milestones);
+        await load(true);
+      } finally {
+        setPlanning(null);
+      }
     },
-    [username, write],
+    [username, load],
   );
 
   const saveGoal = useCallback(
@@ -255,7 +294,7 @@ export default function Goals() {
       if (!username) return;
       const ok = await write(() =>
         draft.id
-          ? goalService.updateGoal(username, draft.id, {
+          ? goalService.updateGoal(draft.id, {
               title: draft.title,
               description: draft.description,
               goal_type: draft.goal_type,
@@ -266,7 +305,7 @@ export default function Goals() {
               target_tasks: draft.target_tasks,
               target_focus: draft.target_focus,
             })
-          : goalService.addGoal(username, draft),
+          : goalService.addGoal(draft),
       );
       if (ok) {
         setModalOpen(false);
@@ -279,7 +318,7 @@ export default function Goals() {
   const setValue = useCallback(
     (goal: Goal, value: number) => {
       if (!username) return;
-      void write(() => goalService.updateGoal(username, goal.id, { current_value: value }));
+      void write(() => goalService.updateGoal(goal.id, { current_value: value }));
     },
     [username, write],
   );
@@ -287,25 +326,97 @@ export default function Goals() {
   const confirmDelete = useCallback(async () => {
     if (!username || !pendingDelete) return;
     const gone = pendingDelete.id;
-    await write(() => goalService.deleteGoal(username, gone));
+    await write(() => goalService.deleteGoal(gone));
     setPendingDelete(null);
     // The drawer was showing the goal that no longer exists.
     setOpenId((current) => (current === gone ? null : current));
   }, [username, pendingDelete, write]);
 
   // ---- Milestone writes ---------------------------------------------------
+  /**
+   * Add the checkpoint, then have the model draft its checklist.
+   *
+   * Same shape as `createGoal` above and for the same reasons: the checkpoint
+   * lands immediately, the checklist arrives after, and a failure anywhere in
+   * the second half leaves the three empty rows `add_milestone` seeds — which
+   * is exactly what a checkpoint used to be created with.
+   */
   const addMilestone = useCallback(
-    (goal: Goal, title: string) => {
+    async (goal: Goal, title: string) => {
       if (!username) return;
-      void write(() => goalService.addMilestone(username, goal.id, { title }));
+      const created = await goalService.addMilestone(goal.id, { title });
+      if (!created.success) {
+        setError(created.message ?? 'That did not work.');
+        return;
+      }
+      await load(true);
+
+      const milestoneId = created.id;
+      if (!milestoneId) return;
+      setPlanning(milestoneId);
+      try {
+        const drafted = await goalService.suggestSteps({ milestoneId });
+        if (!drafted.success || !drafted.steps?.length) return;
+        await goalService.updateMilestone(milestoneId, {
+          steps: fromTitles(drafted.steps),
+        });
+        await load(true);
+      } finally {
+        setPlanning(null);
+      }
     },
-    [username, write],
+    [username, load],
   );
 
   const setMilestoneStatus = useCallback(
     (milestone: Milestone, status: MilestoneStatus) => {
       if (!username) return;
-      void write(() => goalService.updateMilestone(username, milestone.id, { status }));
+      void write(() => goalService.updateMilestone(milestone.id, { status }));
+    },
+    [username, write],
+  );
+
+  /**
+   * Make one checkpoint the focus — the one the card draws under "Current
+   * focus" and the one new actions are linked to by default.
+   *
+   * `active` is the status that means it, and until now nothing in the app
+   * ever set it: the card fell back to the first unfinished checkpoint, which
+   * is a reasonable guess and was the only thing on offer. The API demotes any
+   * other active checkpoint on the same goal, so this is a move rather than an
+   * addition — see update_milestone in backend/api/goals.py.
+   */
+  const focusMilestone = useCallback(
+    (milestone: Milestone) => {
+      if (!username || milestone.status === 'done') return;
+      void write(() => goalService.updateMilestone(milestone.id, { status: 'active' }));
+    },
+    [username, write],
+  );
+
+  /**
+   * Call the goal itself finished.
+   *
+   * Only offered once every checkpoint is reached, and it is a request rather
+   * than an assertion: the backend re-derives status from the goal's own truth
+   * on every write, so a milestone goal is already completed by the time this
+   * is reachable and this is the confirmation. What it genuinely decides is
+   * the goals with no target to measure against, which arithmetic cannot
+   * finish and only the reader can. See `_recompute` in backend/api/goals.py.
+   */
+  const completeGoal = useCallback(
+    (goal: Goal) => {
+      if (!username || goal.status === 'completed') return;
+      void write(() => goalService.updateGoal(goal.id, { status: 'completed' }));
+    },
+    [username, write],
+  );
+
+  /** The checkpoint's own checklist, written whole. See utils/milestoneSteps. */
+  const setMilestoneSteps = useCallback(
+    (milestone: Milestone, steps: MilestoneStep[]) => {
+      if (!username) return;
+      void write(() => goalService.updateMilestone(milestone.id, { steps }));
     },
     [username, write],
   );
@@ -314,7 +425,7 @@ export default function Goals() {
   const setMilestoneDate = useCallback(
     (milestone: Milestone, date: string) => {
       if (!username) return;
-      void write(() => goalService.updateMilestone(username, milestone.id, { target_date: date }));
+      void write(() => goalService.updateMilestone(milestone.id, { target_date: date }));
     },
     [username, write],
   );
@@ -322,7 +433,7 @@ export default function Goals() {
   const removeMilestone = useCallback(
     (milestone: Milestone) => {
       if (!username) return;
-      void write(() => goalService.deleteMilestone(username, milestone.id));
+      void write(() => goalService.deleteMilestone(milestone.id));
     },
     [username, write],
   );
@@ -330,7 +441,7 @@ export default function Goals() {
   const reorder = useCallback(
     (goal: Goal, order: string[]) => {
       if (!username) return;
-      void write(() => goalService.reorderMilestones(username, goal.id, order));
+      void write(() => goalService.reorderMilestones(goal.id, order));
     },
     [username, write],
   );
@@ -350,7 +461,7 @@ export default function Goals() {
   const suggestMilestones = useCallback(
     async (goal: Goal): Promise<string[] | null> => {
       if (!username) return null;
-      const result = await goalService.suggestMilestones(username, { goalId: goal.id });
+      const result = await goalService.suggestMilestones({ goalId: goal.id });
       if (!result.success) {
         setError(result.message);
         return null;
@@ -365,7 +476,7 @@ export default function Goals() {
   const saveMilestones = useCallback(
     (goal: Goal, titles: string[]) => {
       if (!username) return Promise.resolve(false);
-      return write(() => goalService.setMilestones(username, goal.id, titles));
+      return write(() => goalService.setMilestones(goal.id, titles));
     },
     [username, write],
   );
@@ -419,7 +530,7 @@ export default function Goals() {
   return (
     <div className="gx-page">
       <Ambient />
-      <div className="gx-shell page-shell">
+      <div className={`gx-shell page-shell${entering ? ' pg-enter' : ''}`}>
         <header className="gx-head">
           <div>
             <h1>
@@ -432,7 +543,7 @@ export default function Goals() {
               </span>
               Goals
             </h1>
-            <p className="gx-quiet">Turn long-term ambitions into measurable progress.</p>
+            <p className="gx-quiet">What you are working toward.</p>
             <VisionLine goals={list} />
             {/* What you are carrying, before anything is described. The counts
                 come from the same `goalsOverview` the tiles below read. */}
@@ -457,7 +568,7 @@ export default function Goals() {
 
         {error && <ErrorState message={error} onRetry={() => void load()} />}
 
-        <div className="gx-main">
+        <div className="gx-main pg-stagger">
 
         {/* ---- Active Goals ---------------------------------------------
             One card per goal, at full width, and the card carries what used
@@ -468,9 +579,8 @@ export default function Goals() {
           <>
             {shown.length === 0 ? (
               <p className="gx-empty">
-                No outcome goals yet. An outcome is something you either got to or did not — reach
-                USACO Gold, ship Ascen v2, read 24 books — as opposed to a system goal, which is a
-                target on something the app already counts for you.
+                No outcome goals yet. Something you either reached or did not — reach USACO
+                Gold, ship Ascen v2, read 24 books.
                 <button type="button" className="gx-link" onClick={() => setWizardOpen(true)}>
                   Set your first
                 </button>
@@ -490,11 +600,21 @@ export default function Goals() {
                     }}
                     onDelete={setPendingDelete}
                     onComplete={(task) => void completeMove(task)}
-                    onAddAction={(entry, title, milestoneId) =>
-                      void addAction(entry, title, milestoneId)
+                    onLinkTask={(entry, task, milestoneId) =>
+                      void linkTask(entry, task, milestoneId)
                     }
                     onSuggest={suggestMilestones}
+                    /* The goal itself, or any checkpoint under it: the ladder
+                       being drafted is the same ladder either way. */
+                    planning={
+                      planning === goal.id ||
+                      (goal.milestones ?? []).some((stone) => stone.id === planning)
+                    }
                     onSaveStones={saveMilestones}
+                    onFocusMilestone={focusMilestone}
+                    onMilestoneSteps={setMilestoneSteps}
+                    onMilestoneStatus={setMilestoneStatus}
+                    onCompleteGoal={completeGoal}
                     nameOf={subjectName}
                   />
                 ))}
@@ -506,7 +626,7 @@ export default function Goals() {
             {outcomes.length > LIST_GOALS && (
               <Band
                 title="Also carrying"
-                hint="Past ten, a goals page stops being a plan. These are still counted everywhere; they are just not drawn as cards."
+                hint="Still counted, not drawn as cards"
               >
                 <ul className="gx-rest">
                   {outcomes.slice(LIST_GOALS).map((goal) => {
@@ -535,14 +655,14 @@ export default function Goals() {
             widest view of the smallest thing, so it goes last. */}
         {on('timeline') && (
           <>
-            <Band title="Next Milestones" hint="The checkpoint each goal is on now.">
+            <Band title="Next Milestones" hint="What each goal is on now">
               <NextMilestones goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
             </Band>
 
             {shown.length > 0 && (
               <Band
                 title="Goal Timelines"
-                hint="Each goal on its own rail — what you have reached, and what is queued."
+                hint="Reached, and queued"
               >
                 <div className="gx-rails">
                   {shown.map((goal) => (
@@ -569,7 +689,7 @@ export default function Goals() {
 
             <Band
               title="Milestone Calendar"
-              hint="Every dated checkpoint on the day it lands. Darker days carry more; pick one to see what."
+              hint="Darker days carry more"
             >
               <MilestoneCalendar goals={list} onOpen={(goal) => setOpenId(goal.id)} />
             </Band>
@@ -583,7 +703,7 @@ export default function Goals() {
         {on('system') && (
           <Band
             title="System Goals"
-            hint="Targets on figures the app already counts for you. You choose the number; the reading underneath is whatever your record says."
+            hint="You set the target, Ascen keeps the count"
           >
             <SystemGoals
               counters={counters}
@@ -606,44 +726,25 @@ export default function Goals() {
           <>
             <Band
               title="Where you stand"
-              hint="Counted off your goals — a goal is complete when its own checkpoints say so."
+              hint="Counted off your goals"
             >
               <GoalStats goals={list} />
               <OverviewStrip goals={list} tasks={tasks} />
             </Band>
 
-            <div className="gx-two gx-two-wide">
-              <Band
-                title="Next moves"
-                hint="Open tasks that name one of your goals, soonest first. Ticking one here counts exactly as it would on the dashboard."
-              >
-                <NextMoves
-                  goals={list}
-                  tasks={tasks}
-                  busy={busy}
-                  onComplete={(task) => void completeMove(task)}
-                  onOpen={(goal) => setOpenId(goal.id)}
-                />
-              </Band>
-
-              <Band title="Momentum" hint="The last seven days, counted off goal-linked work only.">
-                <Momentum goals={list} tasks={tasks} />
-              </Band>
-            </div>
-
             <Band
               title="Your trajectory"
-              hint="Where each goal stands on its own scale, and what is still to cover."
+              hint="How far each one has to go"
             >
               <Trajectory goals={outcomes} onOpen={(goal) => setOpenId(goal.id)} />
             </Band>
 
             <div className="gx-two">
-              <Band title="Goal Insights" hint="Counted off the work linked to each goal — never estimated.">
+              <Band title="Goal Insights" hint="From linked work only">
                 <GoalInsights goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
               </Band>
 
-              <Band title="Goal Health" hint="How much of what you are carrying is going to happen.">
+              <Band title="Goal Health" hint="What is going to happen">
                 <HealthRing goals={list} tasks={tasks} />
                 <HealthBreakdown
                   goals={outcomes}
@@ -655,14 +756,14 @@ export default function Goals() {
 
             <Band
               title="Growth areas"
-              hint="Your active goals grouped by field, with progress weighted by how much each matters."
+              hint="Grouped by field, weighted by priority"
             >
               <GrowthAreas goals={list} />
             </Band>
 
             <Band
               title="All Goals"
-              hint="Progress, health, the date and what is next — the same columns for every goal, so they can be read against each other."
+              hint="Same columns for every goal"
             >
               <GoalTable
                 goals={outcomes}
@@ -681,7 +782,7 @@ export default function Goals() {
             Not a tab of its own: it is one band, and the header button that
             reveals it works from wherever you are. */}
         {showCompleted && (
-          <Band title="Recently Completed" hint="Goals and milestones already behind you.">
+          <Band title="Recently Completed" hint="Already behind you">
             <RecentlyCompleted goals={list} />
           </Band>
         )}
@@ -704,6 +805,9 @@ export default function Goals() {
           onDelete={setPendingDelete}
           onAddMilestone={addMilestone}
           onMilestoneStatus={setMilestoneStatus}
+          onFocusMilestone={focusMilestone}
+          onMilestoneSteps={setMilestoneSteps}
+          onMilestoneDate={setMilestoneDate}
           onDeleteMilestone={removeMilestone}
           onReorder={reorder}
           onValue={setValue}

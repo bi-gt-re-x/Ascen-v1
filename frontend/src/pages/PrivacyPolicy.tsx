@@ -13,14 +13,18 @@
  * shared with About Us and the Terms of Service — all three were the same
  * page with different words in it.
  */
-import { useDocumentTitle } from '@/hooks';
+import { useDocumentTitle, usePageEntrance } from '@/hooks';
 import '@/styles/content-page.css';
 
 export default function PrivacyPolicy() {
   useDocumentTitle('Privacy Policy');
 
+  /* The arrival cascade. Nothing is fetched here, so the page is ready the
+     moment it mounts — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(true);
+
   return (
-    <div className="content-container">
+    <div className={`content-container${entering ? ' pg-enter' : ''}`}>
       <h1>Privacy Policy</h1>
       <p className="effective-date">Effective date: July 22, 2026</p>
 

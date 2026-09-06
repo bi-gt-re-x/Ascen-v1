@@ -321,10 +321,10 @@ function reasonFor(state: HealthState, signals: HealthSignals): string {
 
   // The worst signal is the one worth printing.
   if (daysSinceWork === null) {
-    return 'No task has been linked to this yet, so there is nothing to judge the pace by.';
+    return 'No linked task yet, so there is no pace to read.';
   }
   if (daysSinceWork >= 7) {
-    return `Nothing has been done toward this in ${daysSinceWork} days.`;
+    return `Nothing done toward this in ${daysSinceWork} days.`;
   }
   if (ahead !== null && ahead < -0.1) {
     const behind = Math.round(Math.abs(ahead) * 100);

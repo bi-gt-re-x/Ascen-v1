@@ -16,7 +16,7 @@ from backend.tracking.auth import find_user
 
 
 def _rows_for(username):
-    return [r for r in db.focus_days() if r.get('user_id') == username]
+    return db.rows_for('focus_days', username, order='date')
 
 
 def _seconds(row):
@@ -48,17 +48,54 @@ def record_day(username, day, seconds, goal_hours):
     if not find_user(db.users(), username=username):
         return None
 
-    rows = db.focus_days()
-    row = next((r for r in rows
-                if r.get('user_id') == username and r.get('date') == day), None)
-    if row is None:
-        row = {'user_id': username, 'date': day, 'seconds': 0.0, 'goal_hours': goal_hours}
-        rows.append(row)
+    # One day's row, found by its own primary key (user_id, date) rather than
+    # by reading the whole ledger — every account's, every day's — and writing
+    # all of it back to change one number.
+    row = db.find_row('focus_days', day, user_id=username, key='date')
+    kept = round(max(seconds, _seconds(row or {})), 1)
 
-    row['seconds'] = round(max(seconds, _seconds(row)), 1)
-    row['goal_hours'] = goal_hours
-    db.save_focus_days(rows)
-    return {'seconds': row['seconds'], 'goal_hours': row['goal_hours']}
+    if row is None:
+        db.insert_row('focus_days', {'user_id': username, 'date': day,
+                                     'seconds': kept, 'goal_hours': goal_hours})
+    else:
+        db.update_row('focus_days', day, {'seconds': kept, 'goal_hours': goal_hours},
+                      user_id=username, key='date')
+    return {'seconds': kept, 'goal_hours': goal_hours}
+
+
+def log_day(username, day, seconds, goal_hours):
+    """Add hand-entered time to a day's total. Returns the record, or None.
+
+    The other way in is `record_day`, which is the timer mirroring itself and
+    therefore takes the *larger* of what it holds and what it is sent — an old
+    tab with cleared localStorage must not be able to erase real work.
+
+    A person typing "I did two hours on Tuesday" into the dashboard's catch-up
+    prompt is not a mirror and the max rule is wrong for them: a Tuesday that
+    already holds twenty tracked minutes plus two typed hours is two hours and
+    twenty minutes, not two hours. So this one adds, and the two callers stay
+    separate rather than sharing a function with a mode flag — they are
+    different claims about what the number means.
+
+    `goal_hours` is only written on a day that has no row yet. A day the reader
+    actually lived through had whatever goal it had, and backfilling time onto
+    it is not a reason to rewrite the target it was measured against.
+    """
+    if not find_user(db.users(), username=username):
+        return None
+
+    row = db.find_row('focus_days', day, user_id=username, key='date')
+    total = round(_seconds(row or {}) + max(0.0, float(seconds)), 1)
+
+    if row is None:
+        db.insert_row('focus_days', {'user_id': username, 'date': day,
+                                     'seconds': total, 'goal_hours': goal_hours})
+        return {'seconds': total, 'goal_hours': goal_hours}
+
+    kept = _goal_hours(row) or goal_hours
+    db.update_row('focus_days', day, {'seconds': total, 'goal_hours': kept},
+                  user_id=username, key='date')
+    return {'seconds': total, 'goal_hours': kept}
 
 
 def history_range(username, start='', end=''):
@@ -107,9 +144,8 @@ def set_day_note(username, day, text):
     if not find_user(db.users(), username=username):
         return False
 
-    rows = [r for r in db.day_focus_notes()
-            if not (r.get('user_id') == username and r.get('date') == day)]
+    db.delete_row('day_focus_notes', day, user_id=username, key='date')
     if text:
-        rows.append({'user_id': username, 'date': day, 'text': text})
-    db.save_day_focus_notes(rows)
+        db.insert_row('day_focus_notes',
+                      {'user_id': username, 'date': day, 'text': text})
     return True

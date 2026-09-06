@@ -73,6 +73,26 @@ html[data-theme="dark"] .ax-page {
     --ax-shadow: 0 1px 2px rgba(0, 0, 0, .3);
 }
 
+/* body is a centred flex column (dashboard.css), so its child sizes to its
+   content rather than stretching, and this page never opted out — which is why
+   every tab arrived as an 800px strip in the middle of a 1440px window with a
+   third of the screen empty on the right. `--shell-fluid: 96%` below was taking
+   96% of that strip and doing exactly what it was told; the Subjects tab showed
+   it worst, because a row of four skill cards and a chart beside a radar is the
+   widest thing the page draws.
+
+   The child that shrinks is `#root`, not `<main>`: <main> is inside the React
+   mount point, and `width: 100%` of a shrink-to-fit parent is the shrink-to-fit
+   width, so naming only `.app-main` is a rule that does nothing. Goals, Notes,
+   Records, Settings and Achievements all hit this and are all fixed the same
+   way; see notes.css for the long version. Scoped with :has so no other route
+   is touched. */
+body:has(.ax-page) > #root,
+body:has(.ax-page) .app-main {
+    width: 100%;
+    min-width: 0;
+}
+
 .ax-shell {
     --shell-max: 1500px;
     --shell-fluid: 96%;
@@ -122,10 +142,6 @@ html[data-theme="dark"] .ax-page {
     line-height: 1.6;
     text-align: center;
 }
-
-/* An empty state replacing a chart takes the chart's own height, so switching
-   a picker to a metric with no data does not resize the panel. */
-.ax-empty-chart { min-height: var(--ax-chart-h, 220px); }
 
 /* One column of a panel whose other column has content. Nothing is collapsing
    here — the panel is already the height of its fuller half — and a 150px
@@ -205,6 +221,267 @@ html[data-theme="dark"] .ax-page {
    One card in the middle of the page rather than a grid of fake ones: the
    reader is not meant to scan it, they are meant to read one sentence and know
    when to come back. */
+/* ---------- Collecting ----------------------------------------------------
+   The stage before there is anything to gate. Deliberately *not* `.ax-locked`:
+   that one is a card in the middle of an empty page, which is the right shape
+   for a door and the wrong one for a page that is working — this sits at the
+   top of a tab that still has real figures under it, so it reads as the tab's
+   own opening rather than as a screen in front of it. */
+.ax-collect {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.ax-collect-head {
+    padding: 22px 24px 20px;
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    background:
+        radial-gradient(70% 120% at 0% 0%, color-mix(in srgb, var(--ax-violet) 9%, transparent), transparent 62%),
+        var(--ax-card);
+    box-shadow: var(--ax-shadow);
+}
+.ax-collect-eyebrow {
+    margin: 0 0 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ax-violet);
+}
+.ax-collect-head h2 {
+    margin: 0 0 10px;
+    font-size: 23px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.25;
+    color: var(--ax-text);
+}
+.ax-collect-lead {
+    margin: 0;
+    max-width: 68ch;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ax-muted);
+}
+
+/* The meter is toward the *next* stage, not toward the last one. See the note
+   on `progress` in utils/dataMaturity for why that matters on day six. */
+.ax-collect-next {
+    margin: 18px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-collect-meter {
+    height: 7px;
+    border-radius: 99px;
+    background: var(--ax-card-2);
+    overflow: hidden;
+}
+.ax-collect-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--ax-violet), var(--ax-blue));
+    transition: width .5s cubic-bezier(.22, 1, .36, 1);
+    min-width: 3px;
+}
+.ax-collect-count {
+    margin: 9px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+}
+.ax-collect-count strong { color: var(--ax-text); font-weight: 650; }
+
+/* What a day has to have on it to be counted, wherever a countdown appears —
+   the collecting block, the "still filling in" strip and `Locked`. One rule
+   for all three, because it is one sentence saying one thing and three
+   different sizes of it would read as three different claims. Quiet: it is the
+   footnote under the number, not a second headline. See
+   src/components/Analytics/Collecting.tsx and src/utils/activeDay.ts. */
+.ax-active-note {
+    margin: 8px 0 0;
+    max-width: 62ch;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--ax-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-collect-fill { transition: none; }
+}
+
+/* The one-line version of the block above, for the stages that no longer need
+   a card. A rule and a sentence rather than a panel: from day seven the page
+   is the real page, and a card explaining that it is still learning would sit
+   on top of something that is plainly not waiting. */
+.ax-stage-note {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 11px;
+    margin: 0;
+    padding: 11px 15px;
+    border: 1px solid var(--ax-line);
+    border-left: 3px solid var(--ax-violet);
+    border-radius: 11px;
+    background: var(--ax-card);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ax-muted);
+}
+.ax-stage-note strong { color: var(--ax-text); font-weight: 650; }
+.ax-stage-chip {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--ax-violet) 13%, transparent);
+    color: var(--ax-violet);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+/* What the rest of the page is still filling in. A quiet list, not a wall of
+   padlocks: each row is a link to the tab it names, so a reader can go and see
+   what it will say while it is still filling. */
+.ax-learning {
+    margin: 10px 0 0;
+    padding: 13px 15px 9px;
+    border: 1px solid var(--ax-line);
+    border-radius: 11px;
+    background: var(--ax-card-2);
+}
+.ax-learning-head {
+    margin: 0 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+.ax-learning ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 4px 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+/* Packed left rather than spread. The grid track this sits in is as wide as
+   the column allows, and a 1fr name column turned a three-word row into a name
+   at one end and a meter at the other with a hand-span between them. */
+.ax-learning a {
+    display: grid;
+    grid-template-columns: auto 62px auto;
+    justify-content: start;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    color: inherit;
+    text-decoration: none;
+}
+.ax-learning-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ax-learning a:hover .ax-learning-name { color: var(--ax-text); }
+.ax-learning-meter {
+    display: block;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--ax-line);
+    overflow: hidden;
+}
+.ax-learning-meter i {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: var(--ax-violet);
+}
+.ax-learning-left {
+    font-size: 11px;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* What the score is read from, under the rows it explains. */
+.ax-summary-basis {
+    margin: 14px 0 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ax-faint);
+}
+
+/* ---------- Early insight -------------------------------------------------
+   The mark a Day 4-7 panel wears, and the two panels that wear it. Set in the
+   panel's `aside` slot, so it sits on the title row where a picker would —
+   which is the right place for it: it qualifies the whole panel, not one
+   figure inside it. */
+.ax-early {
+    padding: 3px 9px;
+    border-radius: 99px;
+    border: 1px solid color-mix(in srgb, var(--ax-amber) 34%, transparent);
+    background: color-mix(in srgb, var(--ax-amber) 12%, transparent);
+    color: var(--ax-amber);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+.ax-early-foot {
+    margin-top: auto;
+    padding-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+/* What you finish, by the priority you set. Three rows at most. */
+.ax-finish { margin: 0; padding: 0; list-style: none; }
+.ax-finish li {
+    display: grid;
+    grid-template-columns: minmax(88px, auto) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+    font-size: 12.5px;
+}
+.ax-finish li:last-child { border-bottom: 0; }
+.ax-finish-name { color: var(--ax-text); font-weight: 600; }
+.ax-finish-bar {
+    display: block;
+    height: 7px;
+    border-radius: 99px;
+    background: var(--ax-card-2);
+    overflow: hidden;
+}
+.ax-finish-bar i {
+    display: block;
+    height: 100%;
+    min-width: 3px;
+    border-radius: inherit;
+    background: var(--ax-blue);
+}
+/* The priority's own tone, so the row reads as the thing it is about. */
+.ax-finish-bar i.is-high { background: var(--ax-pink); }
+.ax-finish-bar i.is-medium { background: var(--ax-amber); }
+.ax-finish-bar i.is-low { background: var(--ax-green); }
+.ax-finish-count {
+    color: var(--ax-muted);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+}
+.ax-finish-count strong { color: var(--ax-text); font-weight: 650; }
+
 .ax-locked {
     display: grid;
     place-items: center;
@@ -312,17 +589,25 @@ html[data-theme="dark"] .ax-page {
    is still coming when it has already arrived. */
 .ax-locked-empty .ax-locked-body { text-align: left; }
 
-/* ---------- The baseline ------------------------------------------------- */
-/* The one screen on this page a first-day account can finish. Same card as
-   `.ax-locked` and deliberately so — they are the two things a young account
-   sees here, and they should read as one idea rather than two designs. */
-.ax-baseline {
+/* ---------- The question phase ------------------------------------------- */
+/* The screen a new account answers before this page draws anything — see
+   src/components/Analytics/Setup.tsx. Same card as `.ax-locked` and
+   deliberately so: they are the two things a young account sees here, and they
+   should read as one idea rather than two designs.
+
+   These rules were `.ax-baseline-*` when the screen was three questions on one
+   card. They were renamed rather than duplicated when the card became a
+   sequence: the panel further down is still `.ax-baseline-*` and is a
+   different thing — one asks, the other reports — so sharing a prefix between
+   them was the collision waiting to happen that this file's own header warns
+   about. */
+.ax-setup {
     display: grid;
     place-items: start center;
     padding: 24px 0 40px;
 }
 
-.ax-baseline-body {
+.ax-setup-body {
     width: min(620px, 100%);
     background: var(--ax-card);
     border: 1px solid var(--ax-line);
@@ -331,7 +616,7 @@ html[data-theme="dark"] .ax-page {
     padding: 30px 32px 28px;
 }
 
-.ax-baseline-eyebrow {
+.ax-setup-eyebrow {
     margin: 0 0 6px;
     font-size: 11px;
     font-weight: 700;
@@ -340,7 +625,7 @@ html[data-theme="dark"] .ax-page {
     color: var(--ax-violet);
 }
 
-.ax-baseline-body h2 {
+.ax-setup-body h2 {
     margin: 0 0 12px;
     font-size: 32px;
     font-weight: 700;
@@ -349,16 +634,16 @@ html[data-theme="dark"] .ax-page {
     color: var(--ax-text);
 }
 
-.ax-baseline-lead {
+.ax-setup-lead {
     margin: 0;
     font-size: 16px;
     line-height: 1.5;
     color: var(--ax-muted);
 }
 
-.ax-baseline-q { margin-top: 26px; }
+.ax-setup-q { margin-top: 26px; }
 
-.ax-baseline-q h3 {
+.ax-setup-q h3 {
     margin: 0 0 12px;
     font-size: 13px;
     font-weight: 650;
@@ -367,7 +652,7 @@ html[data-theme="dark"] .ax-page {
     color: var(--ax-faint);
 }
 
-.ax-baseline-q h3 em {
+.ax-setup-q h3 em {
     font-style: normal;
     font-weight: 500;
     font-size: 12px;
@@ -376,9 +661,9 @@ html[data-theme="dark"] .ax-page {
 
 /* Seven buttons rather than a number input — the answer has seven possible
    values and a spinner would be three interactions for one of them. */
-.ax-baseline-days { display: flex; gap: 8px; flex-wrap: wrap; }
+.ax-setup-days { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.ax-baseline-day {
+.ax-setup-day {
     width: 52px;
     height: 50px;
     border-radius: 10px;
@@ -392,45 +677,54 @@ html[data-theme="dark"] .ax-page {
     transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
 
-.ax-baseline-day:hover { border-color: var(--ax-violet); }
+.ax-setup-day:hover { border-color: var(--ax-violet); }
 
-.ax-baseline-day.is-on {
+.ax-setup-day.is-on {
     background: var(--ax-violet);
     border-color: var(--ax-violet);
     color: #fff;
 }
 
-.ax-baseline-sessions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 8px;
+/* The week's hours, typed. This was four buttons — 25 min, 45 min, 1h, 2h —
+   and the buttons were the wrong question as well as the wrong control: they
+   asked for a sitting length, which is the figure a reader is least able to
+   state and the one the page can derive from the two it can. The field is
+   sized to the answer it takes, not to the card, so a two-character number
+   does not sit in a box the width of the page. */
+.ax-setup-hours {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-.ax-baseline-session {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 11px 12px;
-    border-radius: 10px;
+.ax-setup-hours-field {
+    width: 140px;
+    height: 62px;
+    padding: 0 14px;
+    border-radius: 12px;
     border: 1px solid var(--ax-line);
     background: var(--ax-card);
-    text-align: left;
+    color: var(--ax-text);
     font-family: inherit;
-    cursor: pointer;
-    transition: background .12s ease, border-color .12s ease;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    transition: border-color .12s ease, box-shadow .12s ease;
 }
 
-.ax-baseline-session:hover { border-color: var(--ax-violet); }
-
-.ax-baseline-session strong { font-size: 14px; font-weight: 650; color: var(--ax-text); }
-.ax-baseline-session span { font-size: 11.5px; color: var(--ax-faint); }
-
-.ax-baseline-session.is-on {
+.ax-setup-hours-field:focus {
+    outline: none;
     border-color: var(--ax-violet);
-    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ax-violet) 18%, transparent);
 }
 
-.ax-baseline-select {
+.ax-setup-hours-unit {
+    font-size: 15px;
+    color: var(--ax-muted);
+}
+
+.ax-setup-select {
     width: 100%;
     height: 40px;
     padding: 0 12px;
@@ -443,13 +737,13 @@ html[data-theme="dark"] .ax-page {
     cursor: pointer;
 }
 
-.ax-baseline-sum {
+.ax-setup-sum {
     margin: 26px 0 0;
     font-size: 15px;
     color: var(--ax-faint);
 }
 
-.ax-baseline-sum strong {
+.ax-setup-sum strong {
     color: var(--ax-text);
     font-weight: 700;
     font-size: 28px;
@@ -457,13 +751,19 @@ html[data-theme="dark"] .ax-page {
     margin-right: 4px;
 }
 
-.ax-baseline-failed {
+.ax-setup-sum em {
+    font-style: normal;
+    font-size: 13px;
+    color: var(--ax-faint);
+}
+
+.ax-setup-failed {
     margin: 14px 0 0;
     font-size: 13px;
     color: var(--ax-bad);
 }
 
-.ax-baseline-actions {
+.ax-setup-actions {
     margin-top: 22px;
     display: flex;
     align-items: center;
@@ -483,7 +783,7 @@ html[data-theme="dark"] .ax-page {
     filter: brightness(1.08);
 }
 
-.ax-baseline-skip {
+.ax-setup-skip {
     border: 0;
     background: none;
     padding: 0;
@@ -494,11 +794,277 @@ html[data-theme="dark"] .ax-page {
     text-decoration: underline;
 }
 
-.ax-baseline-set-on {
+.ax-setup-set-on {
     margin: 16px 0 0;
     font-size: 12px;
     color: var(--ax-faint);
 }
+
+/* ---- the parts one card never needed ---- */
+/* The rail, the choice cards and the tab grid: three controls that only exist
+   because the questions are now a sequence. Everything above this line is the
+   old single card's own styling, kept because the questions inside a step are
+   the same questions. */
+
+.ax-setup-rail {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+}
+
+/* Clickable, so a reader on step six can go back to step two without pressing
+   Back four times. Sized to be a target rather than a decoration. */
+.ax-setup-pip {
+    width: 26px;
+    height: 5px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ax-line);
+    cursor: pointer;
+    transition: background .16s ease, width .16s ease;
+}
+
+.ax-setup-pip.is-done { background: color-mix(in srgb, var(--ax-violet) 45%, transparent); }
+.ax-setup-pip.is-on { width: 40px; background: var(--ax-violet); }
+
+/* One question's answers, stacked. A column rather than a row because each
+   answer carries the sentence saying what it does, and three of those side by
+   side is three columns of small print. */
+.ax-setup-choices { display: grid; gap: 8px; }
+
+.ax-setup-choice {
+    display: grid;
+    gap: 4px;
+    padding: 13px 15px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+
+.ax-setup-choice:hover { border-color: var(--ax-violet); }
+
+.ax-setup-choice strong { font-size: 14.5px; font-weight: 650; color: var(--ax-text); }
+.ax-setup-choice span { font-size: 12.5px; line-height: 1.5; color: var(--ax-faint); }
+
+.ax-setup-choice.is-on {
+    border-color: var(--ax-violet);
+    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+}
+
+/* Seven tabs, so a grid rather than the stack above — the purpose lines here
+   are one line each and the reader is comparing destinations, not weighing
+   consequences. */
+.ax-setup-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px;
+}
+
+.ax-setup-tab {
+    display: grid;
+    gap: 3px;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+
+.ax-setup-tab:hover { border-color: var(--ax-violet); }
+.ax-setup-tab strong { font-size: 13.5px; font-weight: 650; color: var(--ax-text); }
+.ax-setup-tab span { font-size: 11.5px; line-height: 1.45; color: var(--ax-faint); }
+
+.ax-setup-tab.is-on {
+    border-color: var(--ax-violet);
+    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+}
+
+/* --- What each subject opens, on the Subjects tab -----------------------
+   The chapter above this says how much work went where. This says what there
+   is to learn in each, which the tab never had a route to — every subject
+   opens a lattice and the two pages had nothing joining them. */
+.ax-lattices {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 8px;
+}
+
+.ax-lattice {
+    display: grid;
+    gap: 2px;
+    padding: 11px 13px;
+    border: 1px solid var(--ax-line);
+    border-radius: 10px;
+    background: var(--ax-card-2);
+    text-decoration: none;
+    transition: border-color .12s ease;
+}
+.ax-lattice:hover { border-color: var(--ax-violet); }
+
+.ax-lattice-subject { font-size: 13.5px; font-weight: 650; color: var(--ax-text); }
+.ax-lattice-tree { font-size: 12px; color: var(--ax-muted); }
+.ax-lattice-facts {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+}
+/* The practised count is the reader's own; the rest of the line is the tree's. */
+.ax-lattice-facts b { color: var(--ax-violet); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) { .ax-lattice { transition: none; } }
+
+/* --- One subject, on its own: the skeleton ------------------------------
+   pages/SubjectAnalytics.tsx. Four panels in a two-up grid — the same rhythm
+   the Overview's rows use, so the finished page will not have to be relaid
+   out when the panels start holding figures. */
+.ax-subject-skeleton {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+/* Three grey blocks, and deliberately not a chart. A skeleton that draws a
+   plausible series shape teaches the reader to read a picture the page has not
+   earned the right to draw — so these have no scale, no axis and no motion,
+   and they sit at fixed widths that could not be mistaken for values. */
+.ax-skeleton-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 4px 0 2px;
+}
+
+.ax-skeleton-bars span {
+    height: 10px;
+    border-radius: 5px;
+    background: var(--ax-line-soft);
+}
+.ax-skeleton-bars span:nth-child(1) { width: 82%; }
+.ax-skeleton-bars span:nth-child(2) { width: 61%; }
+.ax-skeleton-bars span:nth-child(3) { width: 44%; }
+
+/* The per-subject depth question — one row per followed subject, each with the
+   branches of its lattice. A stack rather than the grid the picks above use:
+   there are at most four, each is a label and a select, and a grid of four
+   two-column rows reads as a form nobody filled in. */
+.ax-setup-depths { display: grid; gap: 10px; }
+
+.ax-setup-depth {
+    display: grid;
+    grid-template-columns: minmax(90px, 30%) 1fr;
+    align-items: center;
+    gap: 10px;
+}
+
+.ax-setup-depth-name {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--ax-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+    .ax-setup-depth { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* The subjects worth a page of their own — up to four, picked from the whole
+   catalogue. A denser grid than the tabs above because the rows carry a name
+   and nothing else: there is no consequence line to weigh, the reader is
+   scanning a list they already know for the handful they care about, and a
+   hundred subjects at the tab row's height would be a screen of scrolling. */
+.ax-setup-picks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+    /* The catalogue is a hundred rows and the card is not. Capped and scrolled
+       rather than allowed to run: the Next button has to stay reachable
+       without a trip to the bottom of the list. */
+    max-height: 46vh;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.ax-setup-pick {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease, opacity .12s ease;
+}
+
+.ax-setup-pick:hover:not(:disabled) { border-color: var(--ax-violet); }
+.ax-setup-pick strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ax-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The slot number, and it holds its width when empty so that picking a subject
+   does not shove its own name sideways. */
+.ax-setup-pick-slot {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--ax-line);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ax-faint);
+}
+
+.ax-setup-pick.is-on {
+    border-color: var(--ax-violet);
+    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+}
+.ax-setup-pick.is-on .ax-setup-pick-slot {
+    border-color: transparent;
+    background: var(--ax-violet);
+    color: #fff;
+}
+
+/* At the cap. Dimmed rather than hidden — a row that disappears when a fourth
+   is picked rearranges the list under the cursor. */
+.ax-setup-pick:disabled { opacity: .42; cursor: not-allowed; }
+
+/* The verdict beside a baseline row, and the only thing on that panel the
+   harshness setting moves. The percentage and the bar are identical at every
+   tone — see src/utils/analyticsPrefs.ts. */
+.ax-baseline-row-said {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    font-weight: 650;
+    color: var(--ax-bad);
+}
+
+.ax-baseline-row-said.is-met { color: var(--ax-good); }
 
 /* ---- The panel that pays the setup screen off ---- */
 .ax-baseline-edit {
@@ -791,6 +1357,10 @@ html[data-theme="dark"] .ax-page {
     gap: 9px;
 }
 
+/* The open tab's own sentence. Longer than the two words it replaced, so it
+   gets a measure rather than running the width of the header. */
+.ax-head-purpose { max-width: 62ch; }
+
 .ax-head p { margin: 0; font-size: 15px; color: var(--ax-muted); }
 
 .ax-head-icon {
@@ -822,6 +1392,19 @@ html[data-theme="dark"] .ax-page {
 .ax-btn { cursor: pointer; font-weight: 600; }
 .ax-btn:hover:not(:disabled) { background: var(--ax-card-2); border-color: var(--ax-violet); }
 .ax-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* The second export, and second on purpose.
+ *
+ * Same size and same shape as the report button, because it does the same kind
+ * of thing and a smaller control beside it would read as a footnote. Quieter in
+ * weight and colour, because fewer readers want it — and no icon, so the one
+ * download arrow on the row still points at the file most people came for. */
+.ax-btn-quiet {
+    font-weight: 500;
+    color: var(--ax-muted);
+    background: transparent;
+}
+.ax-btn-quiet:hover:not(:disabled) { color: var(--ax-text); background: var(--ax-card-2); }
 
 .ax-btn-icon {
     width: 14px; height: 14px;
@@ -1000,6 +1583,178 @@ html[data-theme="dark"] .ax-page {
 .ax-grid-three { grid-template-columns: repeat(3, 1fr); }
 .ax-grid-halves { grid-template-columns: 1fr 1.25fr; }
 
+/* ---------- Named groups of panels ----------------------------------------
+   The level above a panel: a heading, a line saying what the group answers,
+   and every panel that answers it folded underneath. Same collapse as the
+   claim below and as `.ax-finding-body` — one grid row, 0fr to 1fr, one inner
+   wrapper because a second child lands in an implicit auto row.
+
+   The heading is not a `.ax-panel`: a group that looked like a card would read
+   as a fourth panel that happened to contain the others. It is a rule and a
+   label, which is what a section heading is. */
+/* The rule belongs to the section, not to the button.
+ *
+ * It used to be a `border-top` on the head itself, which meant the head could
+ * never have a shape of its own: a rounded hover surface with a square rule
+ * welded across its top edge looks like a rendering fault. Moving the rule out
+ * here leaves the button free to be a rounded target, and the divided-list
+ * reading — which is the right one for a stack of groups — is unchanged. */
+.ax-group { display: flex; flex-direction: column; border-top: 1px solid var(--ax-line); }
+.ax-group + .ax-group { margin-top: 0; }
+/* The group's title is a real heading now, wrapped around the disclosure
+   button so a reader moving by heading finds the groups that organise the tab.
+   It carries a heading's default margins and size, and it should not: the
+   button inside it is what is styled. */
+.ax-group > :is(h2, h3, h4) { margin: 0; font: inherit; }
+/* A row you can tell is a row.
+ *
+ * These were a title, a note and a chevron pinned to the far right of a
+ * full-width head with nothing between them — on a wide screen the glyph ends
+ * up a hand's width from the words it opens, and the only thing that moved on
+ * hover was the title's colour. The head now lights up as one surface, so the
+ * thing the pointer is over and the thing the click will open are visibly the
+ * same object.
+ *
+ * The tint bleeds 10px past the text on both sides and takes it back in
+ * margin, so the surface is wider than the words without the words moving. */
+.ax-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: calc(100% + 20px);
+    margin: 0 -10px;
+    padding: 13px 10px;
+    border: 0;
+    border-radius: 11px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+.ax-group-head:hover { background: var(--ax-card-2); }
+.ax-group-head:hover strong { color: var(--ax-violet); }
+/* Keyboard only. A ring drawn on every click would flash across the stack as a
+   reader opened one group after another. */
+.ax-group-head:focus-visible {
+    outline: 2px solid var(--ax-violet);
+    outline-offset: -2px;
+}
+
+.ax-group-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-group-title strong {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -.015em;
+    transition: color .15s ease;
+}
+
+/* The chevron's target. See the note at `PanelGroup` in components/Analytics/charts. */
+.ax-group-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    transition: border-color .15s ease, background .15s ease;
+}
+.ax-group-head:hover .ax-group-toggle {
+    border-color: color-mix(in srgb, var(--ax-violet) 45%, transparent);
+    background: color-mix(in srgb, var(--ax-violet) 9%, transparent);
+}
+.ax-group-head:hover .ax-finding-mark { background: var(--ax-violet); }
+
+/* Open is a state worth seeing from across the page: a reader scanning a tab
+   of six groups wants to know which two they left open without opening them
+   again to find out. */
+.ax-group.is-open .ax-group-toggle {
+    border-color: color-mix(in srgb, var(--ax-violet) 45%, transparent);
+    background: color-mix(in srgb, var(--ax-violet) 12%, transparent);
+}
+.ax-group.is-open .ax-finding-mark { background: var(--ax-violet); }
+
+.ax-group-head .ax-finding-mark { margin-top: 0; flex: none; width: 12px; height: 12px; }
+.ax-group.is-open .ax-finding-mark { transform: rotate(180deg); }
+
+.ax-group-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .24s ease;
+}
+.ax-group.is-open .ax-group-body { grid-template-rows: 1fr; }
+.ax-group-body > div { overflow: hidden; min-height: 0; }
+/* The sections inside a group keep their own rhythm; the group only adds the
+   space between its heading and the first of them. */
+.ax-group.is-open .ax-group-body > div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ax-gap);
+    padding: 8px 0 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-group-body { transition: none; }
+}
+
+/* ---------- The claim ------------------------------------------------------
+   A panel given a `claim` states its finding in a sentence above the chart,
+   grid or table it read that finding off. The sentence is the fast path and
+   the picture is the proof, and both are on the page at once.
+
+   This used to be a disclosure — the claim, a "Show the workings" toggle, and
+   the content folded into a `grid-template-rows: 0fr` row underneath. It is
+   gone. A panel exists to show its evidence, and one that opens on a sentence
+   with the evidence one click away is a panel hiding the reason it is there.
+   The trailing margin is the gap the folded row used to take when open, so
+   the spacing under a claim is the spacing the page was designed around. */
+.ax-claim {
+    margin: 0 0 12px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--ax-text);
+}
+.ax-claim strong { font-weight: 700; }
+
+/* ---------- Three panel weights -------------------------------------------
+   Every panel on this page used to be the same size, the same padding and the
+   same 17px heading, in rows of two. Nine near-identical cards down a tab give
+   the eye nowhere to land and no order to read them in, which is most of why
+   the page felt like work: not the amount of data, the absence of a hierarchy
+   over it.
+
+   So three weights, set on the *section* rather than on the panel. A panel does
+   not know what row it is in and should not — `Panel` is used from four files
+   and threading a size prop through all of them would put layout inside every
+   component. The section already exists, already owns the grid, and is the
+   thing that actually changes when a row is rearranged.
+
+       ax-hero       one per tab. The chart you came to look at.
+       (default)     the standard card. Most panels.
+       ax-compact    supporting detail. A list, a figure, a footnote.
+
+   The chart height rides on the same class: `--ax-chart-h` is what every chart
+   SVG reads for its height, so raising it here makes the drawing bigger without
+   any chart component knowing a hero exists. */
+.ax-hero > .ax-panel {
+    --ax-chart-h: 320px;
+    padding: 22px 24px 18px;
+}
+.ax-hero > .ax-panel > .ax-panel-head :is(h2, h3, h4) { font-size: 20px; letter-spacing: -.02em; }
+.ax-hero > .ax-panel > .ax-panel-note { font-size: 12.5px; margin-bottom: 16px; }
+
+.ax-compact > .ax-panel {
+    --ax-chart-h: 150px;
+    padding: 12px 14px 10px;
+}
+.ax-compact > .ax-panel > .ax-panel-head :is(h2, h3, h4) { font-size: 14px; }
+.ax-compact > .ax-panel > .ax-panel-note { font-size: 11.5px; margin-bottom: 8px; }
+
 /* ---------- Panels -------------------------------------------------------- */
 .ax-panel {
     display: flex;
@@ -1022,7 +1777,12 @@ html[data-theme="dark"] .ax-page {
 
 .ax-panel-title { display: flex; align-items: center; gap: 8px; }
 
-.ax-panel h2 {
+/* A panel's title is an h2 on its own and an h3 inside a PanelGroup — the
+   nesting is real and the heading outline now says so, so the selector matches
+   the level rather than the tag. See `Heading` in components/Analytics/charts.
+   The size is the panel's, not the level's: a grouped panel is not a smaller
+   panel. */
+.ax-panel :is(h2, h3, h4) {
     margin: 0;
     font-size: 17px;
     font-weight: 650;
@@ -1049,10 +1809,28 @@ html[data-theme="dark"] .ax-page {
 }
 
 /* ---------- KPI tiles ----------------------------------------------------- */
+/* One grid for every row of figures on the page.
+   There were three of these — `.ax-tiles` at five columns, `.ax-tiles-four`,
+   `.ax-tiles-five` — which is a column count expressed as a class name, and so
+   a row that gained a figure needed a new class. The count comes from the row
+   itself now: `StatRow` sets `--ax-stat-n` from how many stats it was given. */
 .ax-tiles {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(var(--ax-stat-n, 4), minmax(0, 1fr));
     gap: var(--ax-gap);
+}
+
+/* One ladder, and it does not care how many figures the row has.
+   The three old grid classes each carried their own breakpoints — six rules
+   between them, two of which fought over 1280px and the later one won by
+   accident. Below full width the count stops being the point and the width of
+   a legible tile starts being it, so `auto-fit` takes over: a five-up row goes
+   to three and then two, a four-up row to two, without either being told. */
+@media (max-width: 1280px) {
+    .ax-tiles { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+}
+@media (max-width: 480px) {
+    .ax-tiles { grid-template-columns: 1fr; }
 }
 
 .ax-tile {
@@ -1172,6 +1950,101 @@ html[data-theme="dark"] .ax-page {
     min-height: 0;
 }
 
+/* The layer that owns the pointer, the focus ring and the readout.
+ *
+ * A wrapper around the SVG rather than the SVG itself, for two reasons that
+ * both had to be true. Firefox and Safari will not hold a tab stop on an
+ * `<svg>` dependably, so the focusable element has to be HTML; and the readout
+ * is HTML that has to be positioned against the drawing, which needs a
+ * positioned ancestor that is exactly the drawing's box. One element is both.
+ *
+ * It inherits the column flex the box used to give the SVG directly, so the
+ * chart still grows into a panel's spare height — see `.ax-chart-box`. */
+.ax-chart-plot {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* The readout and the crosshair markers sit slightly proud of the drawing
+       at the edges of the axis, and clipping them is worse than letting them
+       overhang a panel that has padding anyway. */
+    overflow: visible;
+}
+
+/* Only on keyboard focus. A ring drawn every time a reader's pointer crossed
+   the chart would be a box flashing on and off across the whole page. */
+.ax-chart-plot:focus-visible {
+    outline: 2px solid var(--ax-violet);
+    outline-offset: 3px;
+    border-radius: 8px;
+}
+
+/* No `cursor: crosshair`: the chart is read by pointing, not by aiming, and a
+   reticle over a panel a reader is scrolling past reads as a drag handle. */
+.ax-chart-plot.is-reading { cursor: default; }
+
+.ax-crosshair line {
+    stroke: var(--ax-muted);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    opacity: .55;
+}
+
+/* Ringed in the panel's own background so a marker landing on the line it
+   belongs to still reads as a marker rather than a thickening. */
+.ax-crosshair-dot { paint-order: stroke; }
+
+.ax-readout {
+    position: absolute;
+    top: 4px;
+    z-index: 2;
+    /* It follows the pointer. Letting it take the pointer would mean the
+       pointer entering it, leaving the plot, and the whole thing vanishing —
+       which reads as a chart that flickers when you try to read it. */
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 7px 10px;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    border-radius: 9px;
+    box-shadow: var(--ax-shadow);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ax-text);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-readout-when {
+    color: var(--ax-muted);
+    font-size: 10.5px;
+    letter-spacing: .02em;
+}
+
+.ax-readout-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ax-muted);
+}
+
+.ax-readout-row strong {
+    margin-left: auto;
+    padding-left: 10px;
+    color: var(--ax-text);
+    font-weight: 650;
+}
+
+.ax-readout-mark {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    flex: none;
+}
+
 .ax-chart-svg {
     display: block;
     width: 100%;
@@ -1216,7 +2089,6 @@ html[data-theme="dark"] .ax-page {
     font-size: 11.5px;
     color: var(--ax-muted);
 }
-.ax-legend-tight { margin-top: 0; gap: 12px; }
 .ax-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 
 .ax-legend-line { width: 18px; height: 2px; border-radius: 2px; }
@@ -1227,9 +2099,6 @@ html[data-theme="dark"] .ax-page {
     background: var(--ax-violet);
     opacity: .42;
 }
-
-.ax-swatch { width: 10px; height: 10px; border-radius: 3px; }
-.ax-swatch-was { background: var(--ax-line); border: 1px solid var(--ax-faint); }
 
 /* ---------- Growth score -------------------------------------------------- */
 .ax-score-head {
@@ -1382,15 +2251,6 @@ html[data-theme="dark"] .ax-page {
 }
 .ax-subject-xp { grid-area: xp; color: var(--ax-muted); font-variant-numeric: tabular-nums; }
 .ax-subject-legend .ax-delta { grid-area: delta; justify-self: end; }
-
-/* ---------- Consistency heatmap ------------------------------------------ */
-.ax-consistency-head {
-    display: flex;
-    align-items: baseline;
-    gap: 9px;
-    margin: 2px 0 2px;
-}
-.ax-consistency-head .ax-muted { font-size: 12px; }
 
 .ax-heat {
     display: flex;
@@ -1585,116 +2445,6 @@ html[data-theme="dark"] .ax-page {
     background: var(--ax-line);
 }
 
-.ax-timeline-dot {
-    width: 27px; height: 27px;
-    border-radius: 9px;
-    flex: none;
-    background: color-mix(in srgb, currentColor 16%, transparent);
-    position: relative;
-}
-.ax-timeline-dot::after {
-    content: '';
-    position: absolute;
-    inset: 6px;
-    background: currentColor;
-    -webkit-mask: var(--ico) center / contain no-repeat;
-    mask: var(--ico) center / contain no-repeat;
-}
-
-.ax-timeline-body { display: flex; flex-direction: column; min-width: 0; }
-.ax-timeline-body strong {
-    font-size: 12.5px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.ax-timeline-body .ax-muted { font-size: 11px; }
-
-.ax-timeline-reward {
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--ax-violet);
-    white-space: nowrap;
-}
-
-/* ---------- Grouped bars -------------------------------------------------- */
-/* The panel is as tall as the tallest in its row and the bars are a fixed
-   height, so the difference has to go somewhere. It used to all fall below the
-   chart, which read as a chart that had slipped off the top of its panel. This
-   takes the slack and puts the bars in the middle of it. */
-.ax-bars-fill {
-    flex: 1 1 auto;
-    display: flex;
-    align-items: center;
-    min-height: 0;
-}
-.ax-bars-fill .ax-bars { width: 100%; max-height: 100%; }
-
-.ax-bars {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: 10px;
-    align-items: end;
-    height: 210px;
-    margin-top: 6px;
-}
-
-.ax-bar-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    height: 100%;
-    min-width: 0;
-}
-
-.ax-bar-pair {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 5px;
-    flex: 1;
-    width: 100%;
-    min-height: 0;
-}
-
-.ax-bar-col {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: center;
-    height: 100%;
-    flex: 1;
-    max-width: 34px;
-    gap: 4px;
-}
-
-.ax-bar-value {
-    font-size: 9.5px;
-    font-weight: 600;
-    color: var(--ax-text);
-    white-space: nowrap;
-}
-.ax-bar-value-was { color: var(--ax-faint); font-weight: 500; }
-
-.ax-bar {
-    width: 100%;
-    border-radius: 4px 4px 0 0;
-    min-height: 2px;
-    transition: height .3s ease;
-}
-.ax-bar-now { background: var(--ax-violet); }
-.ax-bar-was { background: var(--ax-line); border: 1px solid var(--ax-line); }
-
-.ax-bar-label {
-    font-size: 10px;
-    color: var(--ax-muted);
-    text-align: center;
-    line-height: 1.25;
-}
-
 /* ---------- Compounding --------------------------------------------------- */
 .ax-figures {
     display: grid;
@@ -1716,33 +2466,6 @@ html[data-theme="dark"] .ax-page {
 }
 .ax-figure .ax-muted { font-size: 11px; }
 .ax-figure strong { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
-
-/* The callout is positioned against this, so it cannot be the chart itself —
-   but it still has to pass the panel's spare height down to it. */
-.ax-compound {
-    position: relative;
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.ax-callout {
-    position: absolute;
-    right: 4px;
-    top: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    padding: 9px 13px;
-    border-radius: 11px;
-    background: var(--ax-card);
-    border: 1px solid color-mix(in srgb, var(--ax-violet) 34%, transparent);
-    box-shadow: var(--ax-shadow);
-    text-align: center;
-}
-.ax-callout strong { font-size: 16px; font-weight: 700; color: var(--ax-violet); }
 
 /* ---------- Streaks ------------------------------------------------------- */
 .ax-streaks {
@@ -1871,10 +2594,11 @@ html[data-theme="dark"] .ax-page {
 }
 
 .ax-grid-halves-even { grid-template-columns: 1fr 1fr; }
-.ax-tiles-four { grid-template-columns: repeat(4, 1fr); }
 
-/* The insights tiles state a word, not a number, so they need a smaller face
-   than the analytics ones — "Wednesday" at 27px wraps in a quarter row. */
+/* Some rows state a word rather than a number — "Wednesday", "Mathematics" —
+   and a word at 36px wraps in a quarter of a row. `StatRow` decides this from
+   the longest value it was given, and applies it to the whole row rather than
+   to the one stat, because a row of mixed faces reads as a mistake. */
 .ax-tile-value-sm { font-size: 26px; }
 .ax-tile-dot {
     width: 9px; height: 9px;
@@ -1933,40 +2657,6 @@ html[data-theme="dark"] .ax-page {
     white-space: nowrap;
 }
 
-/* ---------- Momentum ------------------------------------------------------ */
-.ax-momentum {
-    list-style: none;
-    margin: 8px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.ax-momentum li {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: 'label now delta' 'label was was';
-    align-items: center;
-    gap: 1px 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--ax-line-soft);
-}
-.ax-momentum li:last-child { border-bottom: 0; padding-bottom: 0; }
-.ax-momentum-label { grid-area: label; font-size: 12.5px; font-weight: 500; }
-.ax-momentum-now {
-    grid-area: now;
-    font-size: 14px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-}
-.ax-momentum li .ax-delta { grid-area: delta; }
-.ax-momentum-was {
-    grid-area: was;
-    font-size: 10.5px;
-    color: var(--ax-faint);
-    text-align: right;
-}
-
 /* ---------- Balance ------------------------------------------------------- */
 .ax-balance {
     display: grid;
@@ -1991,90 +2681,6 @@ html[data-theme="dark"] .ax-page {
         conic-gradient(var(--ax-violet) var(--share), var(--ax-line-soft) 0);
 }
 .ax-balance-ring strong { font-size: 19px; font-weight: 700; }
-
-/* The subject split under the ring: one row each, largest first. Five columns
-   on one grid so the bars, the shares and the XP all line up down the panel —
-   the comparison a reader makes here is between rows, and a ragged column is
-   the fastest way to stop them making it. */
-.ax-split {
-    list-style: none;
-    margin: 16px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-    flex: 1 1 auto;
-    justify-content: space-evenly;
-}
-
-.ax-split-row {
-    display: grid;
-    grid-template-columns: minmax(64px, 1.1fr) minmax(0, 2fr) 34px 66px 78px;
-    align-items: center;
-    gap: 10px;
-    font-size: 11.5px;
-}
-
-.ax-split-name {
-    font-weight: 600;
-    color: var(--ax-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.ax-split-track {
-    height: 7px;
-    border-radius: 999px;
-    background: var(--ax-line-soft);
-    overflow: hidden;
-}
-.ax-split-track i {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: var(--ax-violet);
-    transform-origin: left;
-    animation: ax-grow-x .55s cubic-bezier(.22, .68, .3, 1) .18s both;
-}
-
-.ax-split-share {
-    font-weight: 600;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
-.ax-split-xp {
-    color: var(--ax-muted);
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
-
-/* The direction, in the same words the rows are graded by. Colour carries the
-   two that need acting on and stays quiet for the two that do not. */
-.ax-split-move {
-    font-size: 10.5px;
-    color: var(--ax-faint);
-    white-space: nowrap;
-    text-align: right;
-}
-.ax-split-row.is-up .ax-split-move { color: var(--ax-good); }
-.ax-split-row.is-down .ax-split-move { color: var(--ax-amber); }
-.ax-split-row.is-stopped .ax-split-move { color: var(--ax-bad); }
-
-/* A subject that has stopped is the one row worth finding without reading:
-   its bar goes hollow, so the panel shows a gap where work used to be. */
-.ax-split-row.is-stopped .ax-split-track i {
-    background: repeating-linear-gradient(
-        90deg,
-        color-mix(in srgb, var(--ax-violet) 34%, transparent) 0 5px,
-        transparent 5px 9px
-    );
-}
-
-/* The tail, summed. Quieter than a named subject, because it is not one. */
-.ax-split-row.is-rest .ax-split-name,
-.ax-split-row.is-rest .ax-split-share { color: var(--ax-muted); font-weight: 500; }
-.ax-split-row.is-rest .ax-split-track i { background: var(--ax-line); }
 
 /* ---------- Advice cards -------------------------------------------------- */
 .ax-advice { gap: 0; }
@@ -2111,11 +2717,9 @@ html[data-theme="dark"] .ax-page {
    "Fewer words, bigger type" (de6b1bb) set these cards at display sizes — a
    22px title over a 26px XP figure over 16px body — on the reasoning that the
    tab leads the page. At three across it made each card a poster: one
-   recommendation filled a screen, and the compact list at the foot of the same
-   tab, "Also worth doing", read the same information at half the size without
-   losing any of it. These are back at that scale. The card keeps everything it
-   gained in that pass — the labels gone, the instruction leading, the
-   arithmetic folded behind "Show the numbers" — and only the type comes down. */
+   recommendation filled a screen. These are back at that scale. The card keeps
+   everything it gained in that pass — the labels gone, the instruction leading,
+   the arithmetic folded behind "Show the numbers" — and only the type comes down. */
 .ax-advice h2 {
     margin: 0;
     font-size: 14.5px;
@@ -2162,40 +2766,6 @@ html[data-theme="dark"] .ax-page {
 }
 .ax-advice-foot .ax-muted { line-height: 1.5; }
 
-.ax-effort { display: inline-flex; gap: 3px; flex: none; padding-bottom: 2px; }
-.ax-effort i {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: var(--ax-line);
-}
-.ax-effort i.is-on { background: var(--ax-faint); }
-
-/* ---------- Also worth doing ---------------------------------------------- */
-.ax-also {
-    list-style: none;
-    margin: 10px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.ax-also li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: start;
-}
-.ax-also li > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.ax-also strong { font-size: 12.5px; font-weight: 600; }
-.ax-also .ax-muted { font-size: 11.5px; line-height: 1.5; }
-.ax-also li .ax-dot { margin-top: 5px; }
-.ax-also-impact {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--ax-good);
-    white-space: nowrap;
-}
-
 /* Each tab's own header mark. `.ax-head-icon` supplies the box and the colour;
    these swap the drawing inside it, so a reader can tell which tab they are on
    from the shape before they read the heading. */
@@ -2220,31 +2790,14 @@ html[data-theme="dark"] .ax-page {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4'/%3E%3Cpath d='M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z'/%3E%3C/svg%3E");
 }
 
-@media (max-width: 1280px) {
-    .ax-tiles-four { grid-template-columns: repeat(2, 1fr); }
-}
 @media (max-width: 1024px) {
     .ax-grid-halves-even { grid-template-columns: 1fr; }
     .ax-balance { grid-template-columns: 1fr; justify-items: center; text-align: center; }
 }
 @media (max-width: 480px) {
-    .ax-tiles-four { grid-template-columns: 1fr; }
     .ax-advice-head { grid-template-columns: auto minmax(0, 1fr); }
     .ax-advice-impact { grid-column: 2; align-items: flex-start; text-align: left; }
 }
-
-/* ---------- Foot ---------------------------------------------------------- */
-.ax-foot {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 6px 0 0;
-    color: var(--ax-faint);
-    font-size: 12px;
-    scroll-margin-top: 18px;
-}
-.ax-foot p { margin: 0; }
 
 /* ==========================================================================
    Responsive — the standard breakpoints from styles/layout.css.
@@ -2254,14 +2807,12 @@ html[data-theme="dark"] .ax-page {
    panel underneath rather than squeezing a chart into a third of a phone.
    ========================================================================== */
 @media (max-width: 1280px) {
-    .ax-tiles { grid-template-columns: repeat(3, 1fr); }
     .ax-grid-halves { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 1024px) {
     .ax-grid-trajectory,
     .ax-grid-three { grid-template-columns: 1fr; }
-    .ax-tiles { grid-template-columns: repeat(2, 1fr); }
     .ax-subject { grid-template-columns: 1fr; }
     .ax-radar { max-width: 280px; margin-inline: auto; }
     .ax-compare { margin-left: 0; }
@@ -2271,23 +2822,12 @@ html[data-theme="dark"] .ax-page {
     .ax-page { padding: 18px 0 30px; }
     .ax-head h1 { font-size: 20px; }
     .ax-figures { grid-template-columns: 1fr; }
-    .ax-callout { position: static; margin-top: 10px; }
-    .ax-bars { height: 180px; }
-}
-
-@media (max-width: 620px) {
-    /* The XP column is the one to lose first: the share beside it says the
-       same thing as a proportion, which is what this panel is about. */
-    .ax-split-row { grid-template-columns: minmax(56px, 1fr) minmax(0, 1.6fr) 32px 70px; }
-    .ax-split-xp { display: none; }
 }
 
 @media (max-width: 480px) {
-    .ax-tiles { grid-template-columns: 1fr; }
     .ax-head-actions { width: 100%; }
     .ax-btn { flex: 1; justify-content: center; }
     .ax-standing li { grid-template-columns: 78px minmax(0, 1fr) auto; }
-    .ax-bar-label { font-size: 9px; }
 }
 
 /* ==========================================================================
@@ -2388,7 +2928,18 @@ html[data-theme="dark"] .ax-page {
    opacity carry the difference now that no line on this page is patterned. */
 .ax-chart-line.is-muted { opacity: .42; }
 
-.ax-bar,
+/* A marker on a series that opted into `dots` — one reading a year on the
+   Growth tab's ratings chart, and nothing else so far.
+
+   It is a zero-length subpath with a round cap rather than a `<circle>`,
+   because the box is `preserveAspectRatio="none"` and a circle in it is an
+   ellipse of whatever eccentricity the panel's current width supplies. The
+   reason lives in full beside `dots` in components/Analytics/charts.
+
+   The dot follows its line's opacity so the muted series reads as one mark
+   rather than as a faint line wearing solid beads. */
+.ax-chart-dot.is-muted { opacity: .42; }
+
 .ax-column-bar {
     transform-origin: bottom;
     animation: ax-grow .55s cubic-bezier(.22, .68, .3, 1) .18s both;
@@ -2409,20 +2960,17 @@ html[data-theme="dark"] .ax-page {
    state on the first frame, which is what `animation: none` on a `both`-filled
    keyframe leaves behind. */
 @media (prefers-reduced-motion: reduce) {
-    .ax-bar,
     .ax-standing-track i,
-    .ax-tab,
-    .ax-chip { transition: none; }
+.ax-tab,
+.ax-chip { transition: none; }
 
     .ax-panel,
-    .ax-tiles > *,
-    .ax-chart-svg,
-    .ax-spark,
-    .ax-bar,
-    .ax-column-bar,
-    .ax-factor-track i,
-    .ax-split-track i,
-    .ax-radar-shape {
+.ax-tiles > *,
+.ax-chart-svg,
+.ax-spark,
+.ax-column-bar,
+.ax-factor-track i,
+.ax-radar-shape {
         animation: none;
     }
 }
@@ -2500,10 +3048,7 @@ html[data-theme="dark"] .ax-page {
     letter-spacing: -.015em;
     color: var(--ax-text);
 }
-
-.ax-prose-tight { margin: 4px 0 0; font-size: 12px; line-height: 1.55; }
 .ax-figures-tight { margin-bottom: 10px; }
-.ax-tiles-five { grid-template-columns: repeat(5, 1fr); }
 
 /* ==========================================================================
    Habits — visual, behavioural, historical.
@@ -3025,102 +3570,6 @@ html[data-theme="dark"] .ax-page {
 }
 
 /* ==========================================================================
-   Trends — direction, and how much of it survives the noise.
-   ========================================================================== */
-/* Five rows against a panel of five paragraphs: the direction panel beside this
-   one is the taller of the two by a long way, and a row of panels is stretched
-   to the tallest (see the note by `.ax-grid`). The convention there is that the
-   slack goes to the footer, and this panel has no footer — so it went to the
-   bottom of the card and read as a rendering fault rather than as a panel.
-
-   The rows take it instead, a fifth each, with the content centred in what it
-   gets. What that buys over letting the card end early is that the two panels
-   still finish on the same line, and the dividers stay evenly spaced whatever
-   the neighbour does. When there is no slack — a narrow screen, one column —
-   every row is its own height again and none of this applies. */
-.ax-compare-rows {
-    list-style: none;
-    margin: 8px 0 0;
-    padding: 0;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 11px;
-}
-.ax-compare-rows li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) 66px auto auto;
-    grid-template-areas: 'dot label spark now delta' '. label spark was was';
-    align-items: center;
-    align-content: center;
-    flex: 1 0 auto;
-    gap: 1px 11px;
-    padding-bottom: 11px;
-    border-bottom: 1px solid var(--ax-line-soft);
-}
-.ax-compare-rows li:last-child { border-bottom: 0; padding-bottom: 0; }
-.ax-compare-rows li .ax-dot { grid-area: dot; }
-.ax-compare-label { grid-area: label; font-size: 12.5px; font-weight: 500; }
-.ax-compare-spark { grid-area: spark; min-width: 0; }
-.ax-compare-spark .ax-spark { height: 20px; margin: 0; }
-.ax-compare-now {
-    grid-area: now;
-    font-size: 14px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-}
-.ax-compare-rows li .ax-delta { grid-area: delta; justify-self: end; }
-.ax-compare-was {
-    grid-area: was;
-    font-size: 10.5px;
-    color: var(--ax-faint);
-    text-align: right;
-}
-
-.ax-directions {
-    list-style: none;
-    margin: 8px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-.ax-directions li {
-    padding-bottom: 13px;
-    border-bottom: 1px solid var(--ax-line-soft);
-}
-.ax-directions li:last-child { border-bottom: 0; padding-bottom: 0; }
-.ax-directions header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-}
-.ax-directions header strong { font-size: 12.5px; }
-.ax-directions header .ax-delta { margin-left: auto; }
-
-/* How much of the variation the fitted line accounts for. The part of a trend
-   chart everyone leaves out, and the part that tells a reader whether the slope
-   above it is a direction or a fortnight. */
-.ax-fit {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 5px;
-    margin-bottom: 7px;
-}
-.ax-fit i {
-    display: block;
-    height: 5px;
-    min-width: 3px;
-    border-radius: 999px;
-    opacity: .55;
-    transition: width .35s ease;
-}
-.ax-fit .ax-small { white-space: nowrap; }
-
-/* ==========================================================================
    Recommendations — actionable, prioritised, improvement-focused.
    ========================================================================== */
 .ax-advice-chips {
@@ -3151,8 +3600,6 @@ html[data-theme="dark"] .ax-page {
     font-size: 10.5px;
     font-weight: 600;
 }
-
-.ax-advice-chips .ax-effort { margin-left: auto; padding-bottom: 0; }
 
 .ax-advice-foot { align-items: center; }
 
@@ -3210,7 +3657,6 @@ html[data-theme="dark"] .ax-page {
 }
 
 @media (max-width: 1280px) {
-    .ax-tiles-five { grid-template-columns: repeat(3, 1fr); }
     .ax-habit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .ax-relationship { grid-template-columns: 1fr; }
 }
@@ -3218,12 +3664,9 @@ html[data-theme="dark"] .ax-page {
 @media (max-width: 1024px) {
     .ax-buckets { grid-template-columns: 1fr; }
     .ax-tabs-major .ax-tab { flex: 0 0 auto; }
-    .ax-compare-rows li { grid-template-columns: auto minmax(0, 1fr) auto auto; }
-    .ax-compare-spark { display: none; }
 }
 
 @media (max-width: 768px) {
-    .ax-tiles-five { grid-template-columns: repeat(2, 1fr); }
     .ax-habit-grid { grid-template-columns: 1fr; }
     .ax-panel-aside { justify-content: flex-start; }
     .ax-phases li { grid-template-columns: minmax(0, 1fr) auto; }
@@ -3231,27 +3674,23 @@ html[data-theme="dark"] .ax-page {
 }
 
 @media (max-width: 480px) {
-    .ax-tiles-five { grid-template-columns: 1fr; }
     .ax-advice-foot { flex-direction: column; align-items: stretch; }
     .ax-try { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .ax-habit-track i,
-    .ax-fit i,
-    .ax-finding-body,
-    .ax-finding-mark,
-    .ax-try { transition: none; }
+.ax-finding-body,
+.ax-finding-mark,
+.ax-try { transition: none; }
 }
 
-/* ==========================================================================
-   What changed, and where to go next.
-
-   Two additions in service of the same thing: a page somebody comes back to.
-   Everything else on the Overview states where the account *is*, which reads
-   identically on every visit; these two say what moved and what to do about it.
-   ========================================================================== */
-.ax-since {
+/* The tab's opening line — one sentence, above everything, on all seven tabs.
+   A card rather than a paragraph, because it is a finding and not an
+   introduction, and tinted only when there is a direction to report. `is-up`
+   and `is-down` are the finding; a tab with nothing rising or falling gets the
+   plain card rather than a colour that means nothing. See `TabOpening`. */
+.ax-opening {
     margin: 0 0 2px;
     padding: 11px 15px;
     border-radius: 11px;
@@ -3260,12 +3699,12 @@ html[data-theme="dark"] .ax-page {
     font-size: 13.5px;
     color: var(--ax-text);
 }
-.ax-since strong { font-weight: 700; }
-.ax-since.is-up {
+.ax-opening strong { font-weight: 700; }
+.ax-opening.is-up {
     border-color: color-mix(in srgb, var(--ax-green) 34%, transparent);
     background: color-mix(in srgb, var(--ax-green) 8%, transparent);
 }
-.ax-since.is-down {
+.ax-opening.is-down {
     border-color: color-mix(in srgb, var(--ax-amber) 34%, transparent);
     background: color-mix(in srgb, var(--ax-amber) 8%, transparent);
 }
@@ -3346,6 +3785,120 @@ html[data-theme="dark"] .ax-page {
 }
 .ax-quality-empty p { margin: 0; font-size: 13.5px; line-height: 1.62; }
 .ax-quality-empty strong { color: var(--ax-text); }
+
+/* ---- How much is asked ---------------------------------------------------
+   The three levels, in the quality panel's title row. It is a preference and
+   it lives in Settings too; it is here as well because this is the page where
+   the difference between the three is visible, and a reader looking at an
+   empty panel should be able to fix it without going to find a switch
+   elsewhere. See DepthPicker in components/Analytics/Quality. */
+.ax-depth {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    border: 1px solid var(--ax-line);
+    border-radius: 9px;
+    background: var(--ax-card-2);
+}
+.ax-depth-pick {
+    padding: 4px 9px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease;
+}
+.ax-depth-pick:hover:not(:disabled) { color: var(--ax-text); }
+.ax-depth-pick.is-on {
+    background: var(--ax-card);
+    color: var(--ax-violet);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
+}
+.ax-depth-pick:disabled { cursor: default; opacity: .6; }
+
+/* ---- What made the difference --------------------------------------------
+   Two columns, one per side of the question, and they are never merged: the
+   words on the left are answers about tasks that went badly and the ones on
+   the right about tasks that went well, so a single ranked list across both
+   would be comparing answers to two different questions. See ReasonsPanel. */
+.ax-reasons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 20px 26px;
+    margin-bottom: 4px;
+}
+.ax-reasons-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-text);
+}
+.ax-reasons-title .ax-muted {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+}
+.ax-reasons-none { margin: 0; font-size: 12.5px; }
+
+.ax-reasons-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 9px;
+}
+/* The word and its count on one line, the bar under both — so the six rows
+   read as a ranked list first and a chart second. */
+.ax-reasons-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "label count"
+        "track track";
+    align-items: baseline;
+    gap: 5px 10px;
+}
+.ax-reasons-label {
+    grid-area: label;
+    font-size: 12.5px;
+    color: var(--ax-text);
+}
+.ax-reasons-list .ax-factor-track { grid-area: track; }
+.ax-reasons-count {
+    grid-area: count;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-reasons-count .ax-tile-unit { font-weight: 500; }
+
+/* The findings under the two columns get a rule above them, so the sentences
+   read as conclusions drawn from the counts rather than as a third column. */
+.ax-reasons + .ax-insights {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-depth-pick { transition: none; }
+}
 
 .ax-quality-head {
     display: flex;
@@ -3517,4 +4070,2597 @@ html[data-theme="dark"] .ax-page {
 @media (max-width: 640px) {
     .ax-rated { grid-template-columns: 1fr; }
     .ax-quality-halves li { grid-template-columns: 66px minmax(0, 1fr) auto; }
+}
+
+/* ==========================================================================
+   What to do next — the plan, and the budget it fits into
+   ==========================================================================
+   The panel that opens Recommendations. Everything else on this page reports
+   on a fortnight that has already happened; this one is about the next hour,
+   and it is laid out to be read standing up: a tag saying why, the action, the
+   reason underneath in the reader's own figures, and the minutes on the right
+   where the eye can add them up. */
+
+.ax-plan-budget {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.ax-plan-budget-btn {
+    padding: 5px 10px;
+    border: 1px solid var(--ax-line);
+    border-radius: 999px;
+    background: var(--ax-card-2);
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .16s ease, color .16s ease, border-color .16s ease;
+}
+.ax-plan-budget-btn:hover { color: var(--ax-text); border-color: var(--ax-violet); }
+.ax-plan-budget-btn.is-on {
+    background: var(--ax-violet);
+    border-color: var(--ax-violet);
+    color: #fff;
+}
+
+.ax-plan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ax-plan-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 11px 4px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-plan-row:first-child { border-top: 0; }
+
+/* The tag is the "why" in one word, and it is the first thing read. Fixed
+   width so the actions below it line up as a column rather than stepping in
+   and out with the length of the word. */
+.ax-plan-tag {
+    flex: none;
+    min-width: 74px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.5;
+}
+.ax-plan-tag.is-pink   { background: color-mix(in srgb, var(--ax-pink) 14%, transparent);   color: var(--ax-pink); }
+.ax-plan-tag.is-amber  { background: color-mix(in srgb, var(--ax-amber) 16%, transparent);  color: var(--ax-amber); }
+.ax-plan-tag.is-violet { background: color-mix(in srgb, var(--ax-violet) 14%, transparent); color: var(--ax-violet); }
+.ax-plan-tag.is-blue   { background: color-mix(in srgb, var(--ax-blue) 14%, transparent);   color: var(--ax-blue); }
+.ax-plan-tag.is-green  { background: color-mix(in srgb, var(--ax-green) 15%, transparent);  color: var(--ax-green); }
+
+.ax-plan-body { min-width: 0; }
+.ax-plan-title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ax-text);
+    line-height: 1.45;
+}
+.ax-plan-link { color: inherit; text-decoration: none; }
+.ax-plan-link:hover { color: var(--ax-violet); text-decoration: underline; }
+
+/* The reason, and the whole point of the panel — without it this is a to-do
+   list with extra steps. Quiet, but never hidden behind a click. */
+.ax-plan-why {
+    margin: 3px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+}
+
+.ax-plan-mins {
+    flex: none;
+    padding-top: 1px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The plan's own footer: what is left of the budget on the left, the re-read
+   on the right. A row rather than a stack — see the note in NextActions. */
+.ax-plan-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+.ax-plan-spare {
+    margin: 0;
+    font-size: 12px;
+    color: var(--ax-faint);
+}
+
+.ax-plan-more { margin-top: 10px; }
+.ax-plan-more > summary {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-muted);
+    cursor: pointer;
+}
+.ax-plan-more > summary:hover { color: var(--ax-violet); }
+
+.ax-plan-refresh {
+    /* The explicit width because a button left to stretch fills its row and
+       centres its own label, which put this in the middle of the card looking
+       like a primary action. */
+    align-self: baseline;
+    width: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ax-plan-refresh:hover { color: var(--ax-violet); }
+
+/* ==========================================================================
+   Growth diagnosis — the tension, the figures, the action
+   ==========================================================================
+   Three cards at most, side by side. Each is a `.ax-panel` so it inherits the
+   page's card and its entrance; everything below only arranges the inside.
+
+   The left edge carries the tone. A colour band rather than an icon, because
+   there are exactly three tones and a reader learns three colours faster than
+   they learn three glyphs — and it survives being read at a glance from the
+   other side of a desk, which an icon at this size does not. */
+
+.ax-diag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: var(--ax-gap);
+}
+
+.ax-diag {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 20px;
+}
+.ax-diag::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--ax-diag-tone, var(--ax-violet));
+}
+.ax-diag.is-good    { --ax-diag-tone: var(--ax-green); }
+.ax-diag.is-tension { --ax-diag-tone: var(--ax-amber); }
+.ax-diag.is-warning { --ax-diag-tone: var(--ax-pink); }
+
+.ax-diag-tone {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ax-diag-tone, var(--ax-violet));
+}
+
+.ax-diag-head {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -.01em;
+    color: var(--ax-text);
+}
+
+/* The evidence. Middle of the card on purpose: a reader who accepts the
+   headline skips to the action, and one who does not checks the claim here. */
+.ax-diag-detail {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ax-muted);
+}
+
+.ax-diag-action {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--ax-card-2);
+}
+.ax-diag-action p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ax-text);
+}
+.ax-diag-arrow {
+    flex: none;
+    font-weight: 700;
+    color: var(--ax-diag-tone, var(--ax-violet));
+}
+
+/* What settles the experiment. An action with no measure attached is a
+   suggestion; with one it is something the next fortnight can answer. */
+.ax-diag-watch {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ax-faint);
+}
+.ax-diag-watch strong { color: var(--ax-muted); font-weight: 700; }
+
+/* ==========================================================================
+   Discovered patterns
+   ==========================================================================
+   A list rather than cards: these are sentences, they vary a lot in length,
+   and a grid of them would be a grid of mostly empty boxes. The strength chip
+   is the load-bearing part — see the note at the top of Patterns.tsx. */
+
+.ax-pat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ax-pat-row {
+    padding: 12px 4px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-pat-row:first-child { border-top: 0; }
+
+.ax-pat-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.ax-pat-kind {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
+/* How much weight the finding can take. Deliberately legible rather than
+   subtle: a reader should be able to dismiss a weak one at a glance. */
+.ax-pat-strength {
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+.ax-pat-row.is-strong .ax-pat-strength { background: color-mix(in srgb, var(--ax-green) 15%, transparent); color: var(--ax-green); }
+.ax-pat-row.is-likely .ax-pat-strength { background: color-mix(in srgb, var(--ax-blue) 14%, transparent);  color: var(--ax-blue); }
+.ax-pat-row.is-weak   .ax-pat-strength { background: var(--ax-card-2); color: var(--ax-faint); }
+
+.ax-pat-lift {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ax-text);
+}
+
+.ax-pat-text {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--ax-text);
+}
+
+/* The counts on both sides of the split. This is what stops the sentence above
+   from being typography rather than evidence. */
+.ax-pat-basis {
+    margin: 3px 0 0;
+    font-size: 11.5px;
+    color: var(--ax-faint);
+}
+
+.ax-pat-so {
+    margin: 7px 0 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ax-muted);
+}
+.ax-pat-so strong { color: var(--ax-text); font-weight: 700; }
+
+/* ---- Narrow ------------------------------------------------------------- */
+@media (max-width: 640px) {
+    /* The tag drops above the action rather than beside it: at this width a
+       74px column and a sentence leave about twelve characters a line. */
+    .ax-plan-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .ax-plan-tag {
+        grid-column: 1 / -1;
+        justify-self: start;
+        min-width: 0;
+    }
+}
+
+/* ==========================================================================
+   Recommendations, spaced to be read
+   ==========================================================================
+   The other six tabs are scanned: a reader sweeps a row of tiles, finds the
+   figure they came for, and leaves. This one is read, top to bottom, and every
+   panel on it is prose with a number in it — the plan, the diagnosis, the
+   follow-up, the cards. At the shared 18px section gap and the shared 16px
+   panel padding, four panels of sentences stack into a single wall of type
+   with no way in.
+
+   Everything here is scoped to `.ax-view-recommendations`, set on the shell by
+   pages/Analytics. Nothing below changes any other tab. */
+
+.ax-view-recommendations {
+    gap: 30px;
+}
+
+/* The cards on this tab carry three or four paragraphs each. The extra room is
+   mostly at the bottom, where the footer control sits: a button hard against
+   the last line of body text reads as part of the sentence above it. */
+.ax-view-recommendations .ax-panel {
+    padding: 20px 22px 18px;
+}
+
+/* ---- The plan ------------------------------------------------------------ */
+/* Rows were 11px apart with a hairline between them, which at three or four
+   rows is a table. They are decisions, and each one wants to be a thing you
+   look at rather than a line you run down. */
+.ax-view-recommendations .ax-plan-row {
+    padding: 15px 4px;
+    gap: 14px;
+}
+.ax-view-recommendations .ax-plan-why { margin-top: 5px; }
+
+/* The three trailing controls — spare, more, re-read — used to sit 10px apart
+   in a stack that read as one paragraph of small grey text. The rule separates
+   the plan from the things you can do about it. */
+.ax-view-recommendations .ax-plan-foot {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-view-recommendations .ax-plan-more { margin-top: 14px; }
+
+/* ---- The diagnosis ------------------------------------------------------- */
+.ax-view-recommendations .ax-diag-grid { gap: 20px; }
+.ax-view-recommendations .ax-diag {
+    gap: 11px;
+    padding-left: 22px;
+}
+.ax-view-recommendations .ax-diag-action { padding: 12px 14px; }
+
+/* ---- The cards ----------------------------------------------------------- */
+/* The instruction is the card. It gets the room, and the finding under it gets
+   enough of a gap to read as a second thought rather than a runover line. */
+.ax-view-recommendations .ax-advice-chips { margin: 12px 0 2px; }
+.ax-view-recommendations .ax-advice-do { margin-top: 14px; }
+.ax-view-recommendations .ax-advice-why { margin-top: 10px; }
+.ax-view-recommendations .ax-advice-foot { padding-top: 18px; }
+
+/* The category row is a control for the grid under it, not a caption on the
+   panel above — so it sits nearer the thing it filters. */
+.ax-view-recommendations .ax-chips-inline { margin-bottom: 18px; }
+
+/* ---- Narrow -------------------------------------------------------------- */
+@media (max-width: 640px) {
+    .ax-view-recommendations { gap: 22px; }
+    .ax-view-recommendations .ax-panel { padding: 16px 16px 14px; }
+}
+
+/* ==========================================================================
+   The summary — the short version, at the top of the Overview
+   ==========================================================================
+   This replaced `.ax-scoreband`, which was the same slot doing a third of the
+   job: the score, its letter, two paragraphs of derivation and five labelled
+   bars. The bars are gone (`.ax-score-*` on the Trajectory row draws the same
+   five, beside the chart of the score over time, which is where they mean
+   something) and the derivation is in a disclosure at the foot of this block.
+   What is left is five sentences and a way out of each.
+
+   The styling job is restraint. This sits above `.ax-tiles`, which is already
+   a row of numbers with sparklines under them — so if this block also reaches
+   for figures-as-objects it becomes a second tile row that happens to be made
+   of prose, and the reader is back to two summaries. Hence: no fills, no
+   chips, no colour on the rows. One tinted rule at the top in the grade's own
+   colour, one badge, and then text.
+
+   The letter's colour comes from `--grade-color`, which the `.grade-*` classes
+   in growth.css set; the section carries one of those. */
+
+.ax-summary {
+    gap: 0;
+    border-top: 3px solid var(--grade-color, var(--ax-violet));
+}
+.ax-summary.is-empty { border-top-color: var(--ax-line); }
+
+/* ---------- The lead: the score, its letter, and what the letter means ---- */
+.ax-summary-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Sized down from the banner's 62px. It was the largest object on the page
+   when it was the whole opening; here it introduces five sentences and should
+   not outweigh them. */
+.ax-summary-grade {
+    flex: none;
+    display: grid;
+    place-items: center;
+    min-width: 52px;
+    height: 52px;
+    padding: 0 12px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--grade-color, var(--ax-violet)) 14%, transparent);
+    color: var(--grade-color, var(--ax-violet));
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.02em;
+}
+
+.ax-summary-lead {
+    margin: 0;
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--ax-text);
+}
+/* The figure sits inside the sentence rather than beside it — see the note at
+   the top of Summary.tsx. Big enough to be the thing the eye lands on, small
+   enough that the words around it are still part of the same statement. */
+.ax-summary-lead strong {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-summary-lead strong em {
+    font-size: 13px;
+    font-weight: 600;
+    font-style: normal;
+    color: var(--ax-faint);
+    margin-left: 1px;
+}
+
+/* ---------- The rows ------------------------------------------------------
+   Hairline-separated rather than carded. Four cards here would read as four
+   things to do; four rules read as one paragraph with the breaks marked. */
+.ax-summary-rows {
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-summary-rows li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px 20px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.ax-summary-rows li:last-child { border-bottom: 0; }
+
+.ax-summary-rows p {
+    margin: 0;
+    min-width: 0;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ax-text);
+}
+.ax-summary-rows strong {
+    font-weight: 700;
+    color: var(--ax-text);
+}
+
+/* The way out. Quiet on purpose: the sentence is the content and this is the
+   footnote that proves it, so it takes the smaller size and only gains an
+   underline when the reader goes for it. */
+.ax-summary-more {
+    flex: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-violet);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity .15s ease;
+}
+.ax-summary-more:hover { text-decoration: underline; }
+
+/* ---------- The derivation, one disclosure down -------------------------- */
+.ax-summary-how {
+    margin: 14px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-summary-how > summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ax-muted);
+    list-style: none;
+}
+.ax-summary-how > summary::-webkit-details-marker { display: none; }
+.ax-summary-how > summary::before {
+    content: '›';
+    display: inline-block;
+    margin-right: 7px;
+    color: var(--ax-faint);
+    transition: transform .15s ease;
+}
+.ax-summary-how[open] > summary::before { transform: rotate(90deg); }
+.ax-summary-how > summary:hover { color: var(--ax-text); }
+.ax-summary-how p {
+    margin: 9px 0 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ax-muted);
+}
+
+/* ==========================================================================
+   The Goals tab
+   ==========================================================================
+   It replaced Trends, and it is deliberately the plainest tab on the page:
+   four panels, no chart. Everything here is a count or a name, and a chart of
+   four numbers is decoration. The goals page draws the goals themselves. */
+
+.ax-goal-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 14px;
+}
+.ax-goal-figure {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-goal-head p { margin: 0; font-size: 12.5px; line-height: 1.5; }
+
+/* The spread, as one bar rather than four tiles — the question is proportion,
+   and four numbers side by side make the reader do the division. */
+.ax-goal-bar {
+    display: flex;
+    gap: 2px;
+    height: 9px;
+    margin: 0 0 12px;
+}
+.ax-goal-bar i { border-radius: 3px; min-width: 4px; }
+.ax-goal-bar i.is-good, .ax-goal-legend i.is-good { background: var(--ax-green); }
+.ax-goal-bar i.is-warn, .ax-goal-legend i.is-warn { background: var(--ax-amber); }
+.ax-goal-bar i.is-bad,  .ax-goal-legend i.is-bad  { background: var(--ax-pink); }
+.ax-goal-bar i.is-flat, .ax-goal-legend i.is-flat { background: var(--ax-line); }
+
+/* The four counts, as figures. They were a wrapped row of 12px labels under
+   the bar — the panel's actual answer, set smaller than its own footnotes, and
+   leaving the card to end in an inch of nothing because the row stretches both
+   halves to the height of the pace map beside it. Read as a 2x2 they carry the
+   weight they should have had, and the card fills on content rather than on a
+   spacer. */
+.ax-goal-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.ax-goal-legend li {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: center;
+}
+.ax-goal-legend i {
+    grid-row: 1 / 3;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+}
+.ax-goal-legend strong {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -.02em;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-goal-legend span { font-size: 11px; line-height: 1.3; color: var(--ax-muted); }
+/* A band with nothing in it is still a reading, and still says less than the
+   ones with something in them. */
+.ax-goal-legend li.is-zero { opacity: .45; }
+
+/* Pace, and what stands out. Both are lists of a name and a reading. */
+.ax-goal-pace, .ax-goal-notes, .ax-goal-suggest {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+/* A row is three lines now: the name and its drift, the bar, and the readings
+   under it. It was one line of name / drift / percent, which fitted the panel
+   and left the card half empty under five of them — and made the reader hold
+   "40%" and "12 days late" in their head to see that the first is why the
+   second. The bar puts the two on one axis. */
+.ax-goal-pace li {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+    font-size: 12.5px;
+}
+.ax-goal-pace li:last-child { border-bottom: 0; }
+.ax-goal-pace-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+/* Work done, on the same 0-100 axis as the notch. The notch is time gone, so a
+   bar short of its own notch is behind — the pace map's diagonal, per row. */
+.ax-goal-pace-bar {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--ax-card-2);
+}
+.ax-goal-pace-bar i {
+    display: block;
+    height: 100%;
+    min-width: 3px;
+    border-radius: 999px;
+    background: var(--ax-blue);
+}
+.ax-goal-pace li.is-late .ax-goal-pace-bar i { background: var(--ax-amber); }
+.ax-goal-pace li.is-early .ax-goal-pace-bar i { background: var(--ax-green); }
+.ax-goal-pace-bar b {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 12px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--ax-text);
+    opacity: .5;
+}
+.ax-goal-pace-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    font-size: 11.5px;
+    color: var(--ax-muted);
+}
+.ax-goal-pace-foot strong {
+    color: var(--ax-text);
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+.ax-goal-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ax-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+.ax-goal-name:hover { text-decoration: underline; }
+.ax-goal-drift { font-size: 12px; font-weight: 600; }
+.ax-goal-pace li.is-late .ax-goal-drift { color: var(--ax-amber); }
+.ax-goal-pace li.is-early .ax-goal-drift { color: var(--ax-green); }
+/* Every one of these panels is the last line of its card, and the row they sit
+   in stretches both halves to the taller one. Left with a fixed top margin the
+   shorter card ended in a footnote and then an inch of nothing; on the floor it
+   ends where the card does. `:last-child` on the key below keeps the two from
+   splitting the slack between them when a panel has both. */
+.ax-goal-foot {
+    margin: 12px 0 0;
+    margin-top: auto;
+    padding-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.ax-goal-notes li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 0 9px 12px;
+    border-left: 2px solid var(--ax-line);
+    margin: 0 0 8px;
+    font-size: 12.5px;
+}
+.ax-goal-notes li:last-child { margin-bottom: 0; }
+.ax-goal-notes li.is-good { border-left-color: var(--ax-green); }
+.ax-goal-notes li.is-watch { border-left-color: var(--ax-amber); }
+.ax-goal-notes strong { font-weight: 650; color: var(--ax-text); }
+.ax-goal-notes span { line-height: 1.5; }
+
+/* What is missing. The kind chip is the only colour, and it names the shape of
+   the goal being suggested rather than an urgency — nothing here is urgent. */
+/* This panel spans the tab, and a single file of short rows down the left of
+   it left the right half of the card empty on anything wider than a phone. As
+   tiles they fill the width, and the border that used to separate one row from
+   the next becomes the edge of each one — a rule between two columns of rows
+   would have been read as a table. */
+.ax-goal-suggest {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 10px;
+}
+.ax-goal-suggest li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 11px;
+    padding: 12px 14px;
+    border: 1px solid var(--ax-line-soft);
+    border-radius: 10px;
+    background: var(--ax-card-2);
+}
+.ax-goal-suggest div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-goal-suggest strong { font-size: 13px; font-weight: 650; color: var(--ax-text); }
+.ax-goal-suggest span { font-size: 12px; line-height: 1.5; }
+.ax-goal-kind {
+    align-self: start;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--ax-card-2);
+    color: var(--ax-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+.ax-goal-kind.is-first, .ax-goal-kind.is-subject {
+    background: color-mix(in srgb, var(--ax-violet) 14%, transparent);
+    color: var(--ax-violet);
+}
+
+/* The readings a six-month bar chart makes the reader work out by eye. Sat
+   above the chart rather than beside it: they are what the chart is a picture
+   of, and a column of numbers next to the bars would be the same data twice. */
+.ax-goal-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 10px 12px;
+    margin: 0 0 14px;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--ax-line-soft);
+    list-style: none;
+}
+.ax-goal-stats li { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ax-goal-stats strong {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.1;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.ax-goal-stats span { font-size: 10.5px; line-height: 1.35; color: var(--ax-muted); }
+
+/* The key to the pace map. Its dots carry health in the colour and priority in
+   the area, and until this existed the page said neither out loud. */
+.ax-pacemap-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 11.5px;
+}
+.ax-pacemap-key li { display: flex; align-items: center; gap: 6px; color: var(--ax-muted); }
+.ax-pacemap-key i { flex: none; width: 9px; height: 9px; border-radius: 50%; }
+.ax-pacemap-key strong { color: var(--ax-text); font-variant-numeric: tabular-nums; }
+/* The size row shows the variable rather than a value of it: an outline, so it
+   is plainly not one more state in the list above. */
+.ax-pacemap-key li.is-size i {
+    width: 11px;
+    height: 11px;
+    border: 1.5px solid var(--ax-line);
+}
+
+/* The dozen words at the head of the tab. Bigger than body text and lighter
+   than a heading: it is a sentence to be read once, not a title. */
+.ax-goal-lead {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -.01em;
+    color: var(--ax-text);
+}
+
+/* What lands next, under the spread. A hairline rule rather than a card: it is
+   the second half of one panel, not a panel inside a panel. */
+/* No `margin-top: auto` here. It pinned the block to the floor of the card and
+   opened a canyon between it and the counts above — a gap in the middle of a
+   panel reads far worse than the same gap after its last line, and the fix for
+   the gap was to give the panel something to say, not to push it around. */
+.ax-goal-soon {
+    margin: 18px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--ax-line-soft);
+}
+.ax-goal-soon h4 {
+    margin: 0 0 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+.ax-goal-soon p { margin: 0; font-size: 12.5px; line-height: 1.5; }
+.ax-goal-soon ul { margin: 0; padding: 0; list-style: none; }
+.ax-goal-soon li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: 12.5px;
+}
+.ax-goal-soon a {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ax-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+.ax-goal-soon a:hover { text-decoration: underline; }
+.ax-goal-soon li span { flex: none; font-size: 11.5px; }
+
+/* ---------- The pace map -------------------------------------------------
+   Time gone against work done. The diagonal is the whole chart, so it is the
+   most strongly drawn thing in the frame and everything else is scaffolding
+   held well back from it. */
+.ax-pacemap {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+.ax-pacemap-plot { fill: var(--ax-card-2); stroke: none; }
+.ax-pacemap-grid { stroke: var(--ax-line-soft); stroke-width: 1; }
+/* The deadline. Dashed, because it is a boundary rather than a reading. */
+.ax-pacemap-deadline {
+    stroke: var(--ax-line);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+}
+.ax-pacemap-pace {
+    stroke: var(--ax-violet);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+    opacity: .75;
+}
+.ax-pacemap-dot {
+    stroke: var(--ax-card);
+    stroke-width: 1.5;
+    opacity: .92;
+}
+/* Outside the svg — see the note in GoalsView. `deadline` sits under the
+   dashed line rather than at the right edge, because the plot runs past it. */
+.ax-pacemap-axis {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 2px 0;
+    padding-right: 16.7%;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
+/* ---------- What you said against what you did ---------------------------
+   Two bars per row on one scale. Overlaid rather than stacked: the reading is
+   the difference between them, and two rows of bars an inch apart make the
+   reader measure it by eye across a gap. */
+.ax-goal-effort { margin: 0; padding: 0; list-style: none; }
+.ax-goal-effort li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+.ax-goal-effort li:last-child { border-bottom: 0; }
+.ax-goal-effort-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+.ax-goal-effort-count {
+    flex: none;
+    font-size: 11px;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+}
+.ax-goal-effort-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ax-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ax-goal-effort-bars {
+    position: relative;
+    display: block;
+    height: 14px;
+}
+.ax-goal-effort-bars i {
+    position: absolute;
+    left: 0;
+    height: 6px;
+    min-width: 2px;
+    border-radius: 999px;
+}
+.ax-goal-effort-bars i.is-said {
+    top: 0;
+    background: color-mix(in srgb, var(--ax-violet) 38%, transparent);
+}
+.ax-goal-effort-bars i.is-did {
+    top: 8px;
+    background: var(--ax-blue);
+}
+.ax-goal-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 12px 0 0;
+    font-size: 11.5px;
+    color: var(--ax-muted);
+}
+.ax-goal-key:last-child { margin-top: auto; padding-top: 12px; }
+.ax-goal-key span { display: flex; align-items: center; gap: 7px; }
+.ax-goal-key i { width: 14px; height: 5px; border-radius: 999px; }
+.ax-goal-key i.is-said { background: color-mix(in srgb, var(--ax-violet) 38%, transparent); }
+.ax-goal-key i.is-did { background: var(--ax-blue); }
+
+/* The one-line additions on Insights and Subjects. A strip, not a panel: a
+   titled card around a single figure is how a tab about behaviour becomes a
+   tab about goals. */
+.ax-goal-line {
+    margin: 0;
+    padding: 11px 15px;
+    border-radius: 11px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ax-text);
+}
+.ax-goal-line strong { font-weight: 700; }
+
+/* The goals' own advice on the Recommendations tab. */
+.ax-goal-advice { margin: 0; padding: 0; list-style: none; }
+.ax-goal-advice li {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--ax-line-soft);
+    font-size: 12.5px;
+}
+.ax-goal-advice li:last-child { border-bottom: 0; }
+.ax-goal-advice strong { font-size: 13px; font-weight: 650; color: var(--ax-text); }
+.ax-goal-advice span { line-height: 1.55; }
+.ax-goal-advice li.is-urgent strong { color: var(--ax-amber); }
+
+/* On a phone the hand-off drops under the sentence it belongs to rather than
+   squeezing it into a column two words wide. */
+@media (max-width: 640px) {
+    /* Four readings across a phone leave the fourth alone on a second row.
+       Two by two is the same four figures without the orphan. */
+    .ax-goal-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .ax-summary-head { gap: 13px; }
+    .ax-summary-grade { min-width: 46px; height: 46px; font-size: 22px; }
+    .ax-summary-lead { font-size: 15px; }
+    .ax-summary-lead strong { font-size: 23px; }
+    .ax-summary-rows li {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    .ax-summary-rows p { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-summary-how > summary::before,
+    .ax-summary-more { transition: none; }
+}
+
+/* ---------- The Growth tab's verdict --------------------------------------
+   The tab's whole claim, set at the top in the biggest type on the page: the
+   span, the finding in five words, the two ratings as then-and-now pairs, and
+   the full sentence under them.
+
+   It replaced a paragraph. The arc sentence used to be the first and only
+   thing above the charts, at 16.5px, and a reader arriving at five years of
+   their own record met body text and then four equal blocks — so the one
+   statement that answers the question they came with was the least visible
+   thing on the tab. This is that statement given the weight it was always
+   carrying.
+
+   ## The tone is set on the section and inherited
+
+   `Verdict` puts `.ax-tone-green`, `.ax-tone-amber` or `.ax-tone-blue` on the
+   block according to which way the news runs, and those set nothing but
+   `color`. So the accents in here — the rule along the top, the eyebrow, the
+   wash — are all `currentColor`, and the block recolours from one class with
+   no second set of rules per tone.
+
+   The consequence worth knowing: every text child that is *not* meant to be
+   the tone colour has to say so, because it would otherwise inherit it. The
+   headline, the figures and the sentence all set their own colour below, and
+   that is deliberate rather than redundant. */
+.ax-gy-verdict {
+    position: relative;
+    margin-bottom: var(--ax-gap);
+    padding: 24px 26px 20px;
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    /* The wash is the tone at seven per cent, top-down and gone by halfway, so
+       the block reads as lit from its own heading rather than as a tinted card
+       — over the page's normal card colour, which is what everything else in
+       the column sits on. */
+    background:
+        linear-gradient(180deg, color-mix(in srgb, currentColor 7%, transparent), transparent 58%),
+        var(--ax-card);
+    box-shadow: var(--ax-shadow);
+    overflow: hidden;
+}
+
+/* The one line of pure tone. A whole tinted border reads as an alert; a rule
+   along the top reads as a heading, which is what this block is. */
+.ax-gy-verdict::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: currentColor;
+}
+
+.ax-gy-eyebrow {
+    margin: 0 0 6px;
+    color: currentColor;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The biggest type on the page, and the reason the block exists. Held to a
+   readable measure so a five-word finding cannot run the full width of a
+   desktop column and stop being a headline. */
+.ax-gy-headline {
+    max-width: 22ch;
+    margin: 0 0 20px;
+    color: var(--ax-text);
+    font-size: 30px;
+    font-weight: 750;
+    line-height: 1.15;
+    letter-spacing: -0.028em;
+}
+
+/* ---------- The two ratings, then and now ----------------------------------
+   Two of them, side by side, in the same type — the pair is the claim, and a
+   layout that set the rising figure large and the steady one as a footnote
+   would be exactly the flattery the tab is built to avoid.
+
+   `auto-fit` rather than a fixed pair: at a narrow width they stack, and the
+   divider between them becomes the divider above the second one. */
+.ax-gy-moves {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 18px 28px;
+    margin-bottom: 18px;
+}
+
+.ax-gy-move + .ax-gy-move {
+    padding-left: 28px;
+    border-left: 1px solid var(--ax-line);
+}
+
+.ax-gy-move-label {
+    margin: 0 0 4px;
+    color: currentColor;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+/* The gloss on what the rating actually asked. Two words, set back, on the
+   same line — a reader who has not rated a task in months should not have to
+   remember which of the two rows is which. */
+.ax-gy-move-label em {
+    color: var(--ax-faint);
+    font-style: normal;
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.ax-gy-figures {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.05;
+}
+
+/* Where it started: the same size as where it ended, and set back in weight
+   and colour rather than in scale. Shrinking it would make the comparison
+   look like a headline figure with a footnote, and it is a comparison. */
+.ax-gy-was {
+    color: var(--ax-faint);
+    font-size: 28px;
+    font-weight: 500;
+}
+
+.ax-gy-arrow {
+    color: var(--ax-line);
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.ax-gy-now {
+    color: var(--ax-text);
+    font-size: 34px;
+    font-weight: 750;
+    letter-spacing: -0.03em;
+}
+
+.ax-gy-of {
+    color: var(--ax-faint);
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 600;
+}
+
+.ax-gy-move-note {
+    margin: 6px 0 0;
+    color: var(--ax-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+/* ---------- The Growth tab's opening line ----------------------------------
+   The tab's whole argument in one sentence, so it is set as a statement rather
+   than as a paragraph: held to a readable measure instead of running the full
+   width of the page. It sits at the foot of the verdict block now, under the
+   figures it is the long form of, so it carries a rule above it rather than
+   the space it used to need below.
+
+   It borrowed `.ax-goal-lead` at first, which is the Goals tab's headline and
+   is sized for a page that has a tile row directly under it. */
+.ax-gy-lead {
+    max-width: 68ch;
+    margin: 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--ax-line-soft);
+    color: var(--ax-muted);
+    font-size: 14.5px;
+    font-weight: 500;
+    line-height: 1.55;
+    letter-spacing: -0.004em;
+}
+
+/* ---------- The ratings chart's key ----------------------------------------
+   In the panel's title row, because "which line is which" is the first
+   question anybody asks of a two-line chart and a key printed under the
+   drawing answers it after the reader has already guessed.
+
+   The swatch is a line rather than a square: it is standing for a line, and at
+   this size a square reads as a category chip. */
+.ax-gy-legend {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ax-gy-legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.ax-gy-key {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    background: currentColor;
+}
+
+/* The muted series, keyed the way it is drawn — same colour, less of it. The
+   figure is the same .42 the line itself carries. */
+.ax-gy-key.is-muted { opacity: .42; }
+
+@media (max-width: 620px) {
+    .ax-gy-verdict { padding: 20px 18px 16px; }
+    .ax-gy-headline { font-size: 24px; margin-bottom: 16px; }
+    .ax-gy-was { font-size: 24px; }
+    .ax-gy-now { font-size: 29px; }
+    /* Stacked, so the divider that separated the two columns now separates the
+       two rows. */
+    .ax-gy-move + .ax-gy-move {
+        padding: 16px 0 0;
+        border-left: 0;
+        border-top: 1px solid var(--ax-line);
+    }
+    .ax-gy-legend { gap: 10px; }
+    .ax-gy-legend li { font-size: 11px; }
+}
+
+/* ---------- The Growth tab's year table ------------------------------------
+   Six-ish rows of nine figures, compared across two axes at once, which is the
+   one job a table does better than any picture. The rules here are about
+   making a dense grid scannable rather than about decorating it: the year is a
+   row header and holds its column, the figures are tabular so the digits line
+   up down the page, and execution — the column the tab's whole argument rests
+   on — is the only one given ink.
+
+   `--ax-gy-min` keeps the table from crushing its columns on a narrow screen;
+   below that width the wrapper scrolls rather than the page doing so, which is
+   the rule every wide block on this page follows. */
+.ax-gy-scroll {
+    overflow-x: auto;
+    margin-top: 4px;
+}
+
+.ax-gy {
+    --ax-gy-min: 620px;
+    width: 100%;
+    min-width: var(--ax-gy-min);
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.ax-gy th,
+.ax-gy td {
+    padding: 9px 10px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* The year, and the only column that is words rather than figures. */
+.ax-gy thead th:first-child,
+.ax-gy tbody th {
+    text-align: left;
+}
+
+.ax-gy thead th {
+    padding-top: 0;
+    border-bottom: 1px solid var(--ax-line);
+    color: var(--ax-faint);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.ax-gy tbody tr + tr th,
+.ax-gy tbody tr + tr td {
+    border-top: 1px solid var(--ax-line-soft);
+}
+
+.ax-gy tbody th {
+    color: var(--ax-text);
+    font-weight: 700;
+}
+
+.ax-gy tbody td {
+    color: var(--ax-muted);
+    /* Digits in a column are compared down, not read across, so they are set
+       to one width. Proportional figures make a column of numbers ragged and
+       the comparison the table exists for harder than it needs to be. */
+    font-variant-numeric: tabular-nums;
+}
+
+/* Qualifies the two columns after it rather than being a reading of its own. */
+.ax-gy tbody td.is-aside {
+    color: var(--ax-faint);
+    font-size: 12px;
+}
+
+/* The column the tab's argument rests on. */
+.ax-gy tbody td.is-lead {
+    color: var(--ax-text);
+    font-weight: 700;
+}
+
+/* A year the account was present for and did nothing in. Kept, because a gap
+   in the middle of a record is a fact about it, and set back because it is not
+   a reading. */
+.ax-gy tbody tr.is-quiet th,
+.ax-gy tbody tr.is-quiet td {
+    color: var(--ax-faint);
+}
+
+/* Marked rather than dropped: its totals are real and lower than a whole
+   year's, and nothing else on the row says which. */
+.ax-gy-part {
+    display: inline-block;
+    margin-left: 7px;
+    padding: 1px 7px;
+    border: 1px solid var(--ax-line);
+    border-radius: 999px;
+    color: var(--ax-faint);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: none;
+}
+
+/* The three readings under the standing panel. A definition list's shape
+   without the markup: label left, figure right, one per row. */
+.ax-gy-notes {
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+}
+
+.ax-gy-notes li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    font-size: 13px;
+}
+
+.ax-gy-notes li + li {
+    border-top: 1px solid var(--ax-line-soft);
+}
+
+.ax-gy-notes span { color: var(--ax-muted); }
+
+.ax-gy-notes strong {
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.ax-gy-notes em {
+    color: var(--ax-faint);
+    font-style: normal;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   The Growth tab's periods
+   ==========================================================================
+   The tab asks "how have I changed", which is a different question from every
+   other tab's, and it is built out of pairs: a period and the one before it, a
+   score and the score it moved from, a grade and the grade it was. Nearly
+   every rule below is about setting two figures beside each other so the
+   movement between them is the thing the eye lands on — hence the repeated
+   shape of a set-back "was", an arrow, and a bold "now".
+
+   Everything here is `ax-gp-`. The `ax-gy-` block further up is the *other*
+   half of the tab, the year-on-year rating reading, which survives folded at
+   the foot of the page; the two prefixes are deliberately not shared because
+   they answer different questions from different data. */
+
+/* ---------- The period row -------------------------------------------------
+   The control and the summary at once: six cards, each stating what it grew
+   by, and pressing one opens it below. Building a selector *and* a row of
+   period cards would have put two rows of the same six words at the top of the
+   page, one of them answering a question the other had already asked. */
+.ax-gp-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(164px, 1fr));
+    gap: 12px;
+}
+
+.ax-gp-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 12px 14px;
+    border: 1px solid var(--ax-line);
+    border-radius: var(--ax-radius);
+    background: var(--ax-card);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.ax-gp-card:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--ax-violet) 45%, var(--ax-line));
+    transform: translateY(-1px);
+}
+
+/* The chosen one, marked on the border and the shadow rather than by filling
+   it: a solid card in a row of outlined ones reads as a different kind of
+   thing, and this is the same kind of thing, selected. */
+.ax-gp-card.is-on {
+    border-color: var(--ax-violet);
+    box-shadow: 0 0 0 1px var(--ax-violet), var(--ax-shadow);
+}
+
+.ax-gp-card:disabled { cursor: default; opacity: .6; }
+
+.ax-gp-card-label {
+    color: var(--ax-muted);
+    font-size: 11.5px;
+    font-weight: 650;
+    letter-spacing: .02em;
+}
+
+.ax-gp-card-value {
+    font-size: 21px;
+    font-weight: 750;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ax-faint);
+}
+
+/* Only the direction is coloured, and only once it is a direction: a movement
+   under the threshold in `HELD` is the window sliding rather than the reader
+   changing, and colouring it green would be announcing the calendar. */
+.ax-gp-card.is-up .ax-gp-card-value { color: var(--ax-green); }
+.ax-gp-card.is-down .ax-gp-card-value { color: var(--ax-amber); }
+
+.ax-gp-card-note {
+    color: var(--ax-faint);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-gp-eyebrow {
+    margin: 0 0 10px;
+    color: currentColor;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+/* The number the tab exists to state. */
+.ax-gp-big {
+    color: var(--ax-text);
+    font-size: 52px;
+    font-weight: 780;
+    line-height: 1;
+    letter-spacing: -.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- The shared then-and-now shape ---------------------------------- */
+.ax-gp-was {
+    color: var(--ax-faint);
+    font-weight: 550;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Between a "was" and an "is", everywhere on the tab. `--ax-line` was the
+   first try and it is the *border* token — correct for a hairline and far too
+   quiet for a glyph carrying the relationship between two figures. */
+.ax-gp-arrow { color: var(--ax-faint); font-weight: 600; }
+
+/* ---------- The chart ------------------------------------------------------
+   The one interactive drawing on the page. The SVG carries the paths and
+   nothing else; the rule, the pins and the tooltip are HTML laid over it,
+   because the box is `preserveAspectRatio: none` and anything drawn inside it
+   is stretched by whatever ratio the panel's width supplies. See
+   components/Analytics/GrowthLine. */
+.ax-gp-chart {
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+}
+
+.ax-gp-y {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: none;
+    /* The x-axis strip sits inside the plot beside it, so the ticks have to
+       stop short of it or they drift down against the dates. */
+    padding-bottom: 22px;
+    color: var(--ax-faint);
+    font-size: 10.5px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-gp-plot { position: relative; flex: 1 1 auto; min-width: 0; }
+
+.ax-gp-box {
+    position: relative;
+    height: var(--ax-gp-h, 260px);
+    /* The pointer readout is driven by the box's own width, so it must be the
+       element the pointer events land on and the element the SVG fills. */
+    touch-action: pan-y;
+}
+
+.ax-gp-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.ax-gp-line { transition: opacity .18s ease; }
+
+/* The rule under the pointer, and one pin per line where it crosses. */
+.ax-gp-rule {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--ax-line);
+    pointer-events: none;
+}
+
+.ax-gp-pin {
+    position: absolute;
+    left: 50%;
+    width: 9px;
+    height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    border-radius: 50%;
+    /* Ringed in the card colour so a pin on a gridline still reads as a pin
+       and two pins that land on each other stay two. */
+    box-shadow: 0 0 0 2px var(--ax-card);
+}
+
+.ax-gp-x {
+    position: relative;
+    height: 22px;
+    margin-top: 2px;
+    color: var(--ax-faint);
+    font-size: 10.5px;
+}
+
+/* Positioned rather than spread, because the labels mark specific points on
+   the line and `space-between` would put them where the flexbox wants. The
+   first and last are nudged inward so neither hangs off the plot. */
+.ax-gp-x span {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+.ax-gp-x span:first-child { transform: none; }
+.ax-gp-x span:last-child { transform: translateX(-100%); }
+
+.ax-gp-tip {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    min-width: 150px;
+    padding: 9px 11px;
+    border: 1px solid var(--ax-line);
+    border-radius: 10px;
+    background: var(--ax-card);
+    box-shadow: var(--ax-shadow);
+    pointer-events: none;
+}
+
+/* Anchored away from the pointer, so the box never covers the part of the line
+   the reader is reading. */
+.ax-gp-tip.is-left { right: auto; left: 8px; }
+
+.ax-gp-tip-date {
+    margin: 0 0 6px;
+    color: var(--ax-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+
+.ax-gp-tip ul { list-style: none; margin: 0; padding: 0; }
+
+.ax-gp-tip li {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.ax-gp-tip li strong {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.ax-gp-tip-key {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex: none;
+}
+
+/* ---------- The metric toggles --------------------------------------------
+   In the panel's title row rather than under the chart, for the reason the
+   ratings legend gives: "which line is which" is the first question anybody
+   asks of a multi-line chart, and a key below the drawing answers it after the
+   reader has already guessed. These are a legend that can be pressed. */
+.ax-gp-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.ax-gp-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--ax-line);
+    border-radius: 999px;
+    background: none;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: border-color .16s ease, color .16s ease;
+}
+
+.ax-gp-toggle.is-on {
+    border-color: currentColor;
+    color: currentColor;
+}
+.ax-gp-toggle:hover { border-color: currentColor; }
+
+/* ---------- The two movers ------------------------------------------------- */
+.ax-gp-mover {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+
+.ax-gp-mover-icon {
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border-radius: 10px;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / 19px 19px no-repeat;
+    mask: var(--ico) center / 19px 19px no-repeat;
+}
+
+.ax-gp-mover-name {
+    margin: 0;
+    color: var(--ax-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.ax-gp-mover-asks {
+    margin: 0 0 8px;
+    color: var(--ax-faint);
+    font-size: 12px;
+}
+
+/* ---------- Then and now, one row per metric ------------------------------- */
+.ax-gp-rows { list-style: none; margin: 0; padding: 0; }
+
+.ax-gp-metric { padding: 14px 0; }
+.ax-gp-metric + .ax-gp-metric { border-top: 1px solid var(--ax-line-soft); }
+
+.ax-gp-metric-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ax-gp-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+    align-self: center;
+}
+
+.ax-gp-metric-name {
+    color: var(--ax-text);
+    font-size: 13.5px;
+    font-weight: 700;
+}
+
+.ax-gp-metric-asks {
+    color: var(--ax-faint);
+    font-size: 11.5px;
+}
+
+.ax-gp-metric-scores {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin: 6px 0 8px;
+    font-size: 26px;
+    font-weight: 750;
+    letter-spacing: -.025em;
+    line-height: 1.05;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-gp-metric-scores .ax-gp-was { font-size: 22px; }
+
+.ax-gp-change {
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ax-faint);
+}
+.ax-gp-change.is-up { color: var(--ax-green); }
+.ax-gp-change.is-down { color: var(--ax-amber); }
+
+/* The bar is the score, not the change: it is there so five rows can be
+   compared down the page at a glance, which a column of percentages cannot be.
+   The "was" sits behind the "now" rather than beside it, so the visible
+   overhang either side *is* the movement. */
+.ax-gp-bar {
+    position: relative;
+    display: block;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+
+.ax-gp-bar-was,
+.ax-gp-bar-now {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 999px;
+}
+
+.ax-gp-bar-was { background: var(--ax-line); }
+.ax-gp-bar-now { background: currentColor; opacity: .85; }
+
+.ax-gp-metric-raw {
+    margin: 8px 0 0;
+    color: var(--ax-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.ax-gp-metric-raw strong { color: var(--ax-text); font-weight: 650; }
+
+/* ---------- What changed --------------------------------------------------- */
+/* Two or three across when the panel has the width for it. The list is four
+   or five short sentences, and a full-width panel running them one to a line
+   is a strip of text with two-thirds of the card empty beside it. */
+.ax-gp-changes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 0 24px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ax-gp-changes li {
+    position: relative;
+    padding: 9px 0 9px 20px;
+    color: var(--ax-muted);
+    font-size: 13.5px;
+    line-height: 1.55;
+    border-top: 1px solid var(--ax-line-soft);
+}
+
+/* The first row of the grid has no rule above it, whichever column it is in.
+   `li + li` was the rule before the list became a grid and drew a line above
+   the second column's first item, which is a line across the middle of
+   nothing. */
+.ax-gp-changes li:nth-child(-n + 2) { border-top: 0; }
+
+.ax-gp-changes li::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 16px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--ax-violet);
+}
+
+.ax-gp-changes strong { color: var(--ax-text); font-weight: 700; }
+
+/* ---------- The milestone feed ---------------------------------------------
+   A rail with a mark per entry. The line is drawn on the list rather than per
+   item so it runs continuously between the marks instead of restarting at
+   every one. */
+.ax-gp-feed {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 22px;
+}
+
+.ax-gp-feed::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 10px;
+    bottom: 10px;
+    width: 1px;
+    background: var(--ax-line);
+}
+
+.ax-gp-feed li {
+    position: relative;
+    padding: 9px 0;
+}
+
+.ax-gp-feed-mark {
+    position: absolute;
+    left: -22px;
+    top: 15px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--ax-violet);
+    box-shadow: 0 0 0 3px var(--ax-card);
+}
+
+/* The peak is a different kind of event from a grade crossing — a high-water
+   mark rather than a threshold — so it is marked differently rather than
+   being labelled differently and drawn the same. */
+.ax-gp-feed li.is-best .ax-gp-feed-mark { background: var(--ax-amber); }
+
+.ax-gp-feed-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0;
+}
+
+.ax-gp-feed-head strong { color: var(--ax-text); font-size: 13.5px; font-weight: 700; }
+.ax-gp-feed-head time { color: var(--ax-faint); font-size: 11.5px; flex: none; }
+
+.ax-gp-feed-detail {
+    margin: 2px 0 0;
+    color: var(--ax-muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+    .ax-gp-big { font-size: 40px; }
+    .ax-gp-metric-scores { font-size: 22px; }
+    .ax-gp-metric-scores .ax-gp-was { font-size: 19px; }
+    /* The toggles lead the panel on a narrow screen rather than being pushed
+       to a second right-aligned line under the title. */
+    .ax-gp-toggles { justify-content: flex-start; }
+    .ax-gp-tip { min-width: 120px; font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ax-gp-card { transition: none; }
+    .ax-gp-card:hover:not(:disabled) { transform: none; }
+}
+
+/* The letter band beside a metric's score. Set back and small: it is a
+   coarser reading of the number next to it, not a second figure — a grade
+   alone hides a metric that climbed eight points inside one band, and a number
+   alone hides that 79 and 80 are a boundary. */
+.ax-gp-letter {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 2px 8px;
+    border: 1px solid var(--ax-line);
+    border-radius: 999px;
+    color: var(--ax-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+/* ==========================================================================
+   The Growth tab's own surface
+   ==========================================================================
+   Every other tab reads as a report: white cards on a light ground, the page's
+   five series colours used sparingly, nothing louder than the figure it is
+   labelling. That is right for six tabs whose job is to be checked.
+
+   This tab is not being checked, it is being *read* — a reader arrives with one
+   question and leaves with one answer — and it earns a surface of its own: a
+   darker ground, cards that sit on it rather than in it, and the five measures
+   given saturated, unmistakable hues so a line, a card, a bar and a toggle
+   that mean the same metric are obviously the same colour across the page.
+
+   ## Scoped, not global
+
+   All of it hangs off `.ax-view-growth`, which pages/Analytics puts on the
+   shell for whichever tab is open. Custom properties inherit, so redeclaring
+   the tokens recolours this tab and touches none of the other six — the
+   alternative was a second stylesheet with a second copy of the panel rules in
+   it, which is how two looks become two codebases.
+
+   The tokens are declared on `.ax-page:has(.ax-view-growth)` rather than on
+   the shell itself, and that is not a stylistic choice. The page element is
+   what paints the ground behind everything, and a custom property set on a
+   child does not exist on its parent — so declaring `--ax-gp-ground` on the
+   shell and reading it from `.ax-page` resolved to nothing, the `background`
+   declaration was thrown out as invalid, and the tab drew on whatever was
+   behind it. Declaring them one level up means the same block serves the
+   ground *and* cascades down to everything inside it.
+
+   ## Both themes, from one set of decisions
+
+   The dark palette is the designed one and the light palette is derived from
+   it rather than invented beside it: the same five hues, darkened until they
+   hold their contrast on a light ground, and the same relationships between
+   ground, card and line. That is why they are written as one block with one
+   override rather than as two independent themes — a change to what "the
+   consistency colour" means is one line, in one place, in both. */
+.ax-page:has(.ax-view-growth) {
+    /* The five, as this tab uses them. Deliberately more saturated than the
+       page's defaults: on the other tabs a series colour is a label, and here
+       it is the identity of a measure carried across four different controls. */
+    --ax-blue: #3b82f6;      /* productivity */
+    --ax-green: #16a34a;     /* consistency  */
+    --ax-amber: #d97706;     /* quality      */
+    --ax-violet: #7c3aed;    /* efficiency   */
+    --ax-pink: #db2777;      /* focus        */
+
+    /* The mean of the four, which is not a fifth measure and does not get a
+       measure's hue. See OVERALL_COLOR in tabs/GrowthTab. */
+    --ax-gp-overall: #64748b;
+
+    --ax-gp-ground: #eef1f6;
+    --ax-gp-card: #ffffff;
+    --ax-gp-line: #dfe4ec;
+    --ax-gp-rule: #cbd5e1;
+
+    /* Wider than the page's 16, and the sections below space to match. The
+       tab is read top to bottom in one pass rather than scanned panel by
+       panel, and at the shared gap the six rows ran together into one block
+       of card. */
+    --ax-gap: 18px;
+    background: var(--ax-gp-ground);
+}
+
+html[data-theme="dark"] .ax-page:has(.ax-view-growth) {
+    /* The designed palette. Brighter than the page's dark tokens because these
+       sit on a darker ground and have to carry a 2px line at 600 units wide. */
+    --ax-blue: #4d9fff;
+    --ax-green: #3ddc84;
+    --ax-amber: #f5b642;
+    --ax-violet: #b57bff;
+    --ax-pink: #ff7ab8;
+
+    --ax-gp-overall: #c9d3e0;
+
+    --ax-gp-ground: #080b12;
+    --ax-gp-card: #0f141d;
+    --ax-gp-line: #1c2431;
+    --ax-gp-rule: #263041;
+
+    --ax-card: var(--ax-gp-card);
+    --ax-card-2: #141a25;
+    --ax-line: var(--ax-gp-line);
+    --ax-line-soft: #161d28;
+    --ax-text: #e8eef7;
+    --ax-muted: #8b98ab;
+    --ax-faint: #66748a;
+    --ax-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+}
+
+.ax-view-growth .ax-panel {
+    background: var(--ax-gp-card);
+    border-color: var(--ax-gp-line);
+    padding: 18px 20px 16px;
+}
+
+/* The gap between rows. `.ax-shell` sets 18 for every tab and the sections
+   inside it inherit nothing, so the rhythm of this tab is set here. */
+.ax-view-growth > .ax-section + .ax-section { margin-top: 6px; }
+
+/* A row of panels keeps the same air between its columns as between the rows,
+   so the page has one spacing rather than two that nearly agree. */
+.ax-view-growth .ax-grid { gap: var(--ax-gap); }
+
+/* Uppercased, tracked, and small — a panel title on this tab is a *label* over
+   a block of reading rather than a heading in a report. */
+.ax-view-growth .ax-panel :is(h2, h3, h4),
+.ax-gp-heading {
+    font-size: 12px;
+    font-weight: 750;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ax-muted);
+}
+
+.ax-gp-heading { margin: 0 0 12px; }
+
+/* The line under a panel title. It carries the panel's whole subtitle and was
+   sitting a hair under it at the shared 12px, which on an uppercased label
+   reads as one two-line heading rather than as a heading and a gloss. */
+.ax-view-growth .ax-panel > .ax-panel-note { margin-bottom: 16px; }
+
+/* ---------- The strip: the mean, and its five terms ------------------------
+   One `auto-fit` track list and a span, so the row is six across on a desktop,
+   three and three on a tablet and a stack on a phone with no breakpoint per
+   arrangement.
+
+   The overall card takes its extra width with `grid-column: span 2` rather
+   than by being its own `1.5fr` track in front of the repeat. That was the
+   first attempt and it collapsed the whole row to one column: `auto-fit` beside
+   a flexible track cannot resolve a repetition count, so it resolves to one,
+   and every card went full width in a stack. */
+.ax-gp-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.ax-gp-overall { grid-column: span 2; }
+
+.ax-gp-overall,
+.ax-gp-metric-card {
+    padding: 18px 20px;
+    border: 1px solid var(--ax-gp-line);
+    border-radius: var(--ax-radius);
+    background: var(--ax-gp-card);
+    box-shadow: var(--ax-shadow);
+    min-width: 0;
+    /* One height for the row whichever card carries the longest sentence, so
+       six cards across do not step up and down along their undersides. */
+    min-height: 104px;
+}
+
+.ax-gp-overall {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    /* The one card that is lit. It is the answer; the five beside it are the
+       working, and a working that glowed as brightly would make the row read
+       as six equal figures. */
+    background:
+        linear-gradient(150deg, color-mix(in srgb, var(--ax-violet) 12%, transparent), transparent 70%),
+        var(--ax-gp-card);
+}
+
+.ax-gp-eyebrow {
+    margin: 0;
+    color: var(--ax-muted);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+}
+
+.ax-gp-big {
+    color: var(--ax-violet);
+    font-size: 40px;
+    font-weight: 780;
+    line-height: 1.05;
+    letter-spacing: -.035em;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-gp-overall-note {
+    margin: 2px 0 0;
+    color: var(--ax-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.ax-gp-overall-note strong { color: var(--ax-text); font-weight: 700; }
+
+.ax-gp-metric-card {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ax-gp-metric-card-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: var(--ax-text);
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+/* The little rising arrow beside each name. Drawn rather than a glyph so it
+   can flip for a measure that fell without a second character to find. */
+.ax-gp-trend {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 17 9 11 13 15 21 7'/%3E%3Cpolyline points='15 7 21 7 21 13'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 17 9 11 13 15 21 7'/%3E%3Cpolyline points='15 7 21 7 21 13'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.ax-gp-metric-card.is-down .ax-gp-trend { transform: scaleY(-1); }
+.ax-gp-metric-card.is-held .ax-gp-trend { opacity: .45; }
+
+.ax-gp-metric-card-value {
+    color: currentColor;
+    font-size: 25px;
+    font-weight: 760;
+    letter-spacing: -.03em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.ax-gp-metric-card-grade {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    color: var(--ax-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+.ax-gp-metric-card-grade > span:last-child { color: currentColor; }
+
+/* ---------- The segmented period control ----------------------------------
+   In the chart's header, because the period is a property of the chart before
+   it is a property of anything else on the tab. */
+.ax-gp-tabs {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--ax-gp-line);
+    border-radius: 10px;
+    background: var(--ax-card-2);
+}
+
+.ax-gp-tab {
+    padding: 5px 11px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+}
+
+.ax-gp-tab.is-on {
+    background: color-mix(in srgb, var(--ax-violet) 20%, transparent);
+    color: var(--ax-text);
+}
+.ax-gp-tab:hover:not(.is-on):not(:disabled) { color: var(--ax-text); }
+.ax-gp-tab:disabled { cursor: default; }
+
+/* ---------- The metric toggles, as a row of checkboxes --------------------- */
+.ax-gp-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 0 0 14px;
+}
+
+.ax-gp-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ax-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 620;
+    cursor: pointer;
+}
+
+/* A real box rather than a pill: this is a set of independent on/off choices,
+   and a row of pills reads as a set of alternatives where one wins. */
+.ax-gp-check {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    border: 1.5px solid var(--ax-gp-rule);
+    border-radius: 4px;
+    background: none;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.ax-gp-toggle.is-on { color: currentColor; }
+.ax-gp-toggle.is-on .ax-gp-check {
+    border-color: currentColor;
+    background: currentColor
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 13 10 18 19 6'/%3E%3C/svg%3E")
+        center / 10px 10px no-repeat;
+}
+
+/* ---------- The chart -------------------------------------------------- */
+.ax-gp-timeline > .ax-panel { padding: 18px 20px 14px; }
+
+/* Dashed, so it reads as a summary of the lines under it rather than as
+   another reading taken alongside them. */
+.ax-gp-line.is-overall {
+    stroke-dasharray: 5 4;
+    opacity: .85;
+}
+
+/* The overall toggle, keyed to the same near-neutral as its line. */
+.ax-gp-toggle.is-overall { color: var(--ax-gp-overall); }
+
+/* A reading on every point. It follows its line's colour, and is ringed in the
+   card so two lines crossing stay two. */
+.ax-gp-point { paint-order: stroke; }
+
+/* The milestone rules. Dashed, drawn behind everything, and captioned above
+   the plot so the label never sits on the data. */
+.ax-gp-mark {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px dashed var(--ax-gp-rule);
+    pointer-events: none;
+}
+
+.ax-gp-mark-glyph {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    line-height: 1;
+    color: var(--ax-muted);
+}
+
+.ax-gp-mark-label {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    /* A definite width, not a maximum. The rule this sits on is `width: 0` —
+       it is a hairline — so an absolutely positioned child inside it has no
+       available width to shrink-wrap against, and `max-width` left the caption
+       to break at every space and settle at the width of its longest word:
+       "Reached C" came out as two lines of one word each. */
+    width: 132px;
+    color: var(--ax-faint);
+    font-size: 10.5px;
+    font-weight: 650;
+    line-height: 1.25;
+    text-align: center;
+    text-wrap: balance;
+}
+
+/* Room above the plot for the milestone captions, so they are not clipped by
+   the panel and do not sit over the top gridline. */
+.ax-gp-plot { padding-top: 34px; }
+.ax-gp-y { padding-top: 34px; }
+
+/* Where each line ends, on the axis. Both the label and the reading. */
+.ax-gp-ends {
+    position: absolute;
+    top: 0;
+    right: -6px;
+    bottom: 0;
+    width: 0;
+    pointer-events: none;
+}
+
+.ax-gp-end {
+    position: absolute;
+    left: 0;
+    transform: translate(0, -50%);
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: var(--ax-gp-card);
+    font-size: 10.5px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The plot needs room on the right for those pills. */
+.ax-gp-chart { padding-right: 26px; }
+
+/* ---------- Then and now, as two dated columns ----------------------------
+   The two column headings carry the dates, so every "68 -> 82" below them is
+   anchored to a pair of real windows rather than to the words "then" and
+   "now". Without them the panel states fifteen numbers and never says which
+   fortnight any of them belongs to. */
+.ax-gp-when {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 4px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--ax-line-soft);
+}
+
+.ax-gp-when > span {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.ax-gp-when > span:last-child { text-align: right; }
+
+.ax-gp-when b {
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+.ax-gp-when .is-then b { color: var(--ax-blue); }
+.ax-gp-when .is-now b { color: var(--ax-green); }
+.ax-gp-when em {
+    color: var(--ax-faint);
+    font-size: 11.5px;
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The panel's own footer: the one figure the five rows add up to. */
+.ax-gp-total {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--ax-violet) 12%, transparent);
+    color: var(--ax-text);
+    font-size: 13.5px;
+    font-weight: 700;
+    text-align: center;
+}
+.ax-gp-total strong { color: var(--ax-violet); font-weight: 780; }
+
+/* Two panels sharing one column of a row, so a tall neighbour is matched by
+   two short ones rather than by one short one and a band of nothing. */
+.ax-gp-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ax-gap);
+    min-width: 0;
+}
+.ax-gp-stack > .ax-panel { flex: 1 1 auto; }
+
+/* ---------- The mover panel ----------------------------------------------- */
+.ax-gp-mover {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 6px;
+}
+
+.ax-gp-mover-icon {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 9px;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+    position: relative;
+}
+
+.ax-gp-mover-icon::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    background: currentColor;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+}
+
+.ax-gp-mover-name {
+    margin: 0;
+    color: currentColor;
+    font-size: 20px;
+    font-weight: 760;
+    letter-spacing: -.02em;
+}
+
+.ax-gp-mover-pill {
+    margin-left: auto;
+    padding: 4px 12px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+.ax-gp-mover-pill.is-best { color: var(--ax-green); }
+.ax-gp-mover-pill.is-worst { color: var(--ax-amber); }
+
+.ax-gp-mover-asks {
+    margin: 0 0 12px;
+    color: var(--ax-muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+/* The quantities the score was computed from. The bar is the *after* value on
+   the quantity's own scale, and the tick is where it started — so the gap
+   between them is the change, at a glance, without a second number. */
+.ax-gp-parts { list-style: none; margin: 0 0 12px; padding: 0; }
+
+.ax-gp-parts li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(80px, 1.05fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    font-size: 12px;
+}
+.ax-gp-parts li + li { border-top: 1px solid var(--ax-line-soft); }
+
+.ax-gp-part-label { color: var(--ax-muted); }
+
+.ax-gp-part-bar {
+    position: relative;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+
+.ax-gp-part-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 999px;
+    background: var(--ax-blue);
+}
+.ax-gp-parts li.is-down .ax-gp-part-fill { background: var(--ax-amber); }
+.ax-gp-parts li.is-held .ax-gp-part-fill { background: var(--ax-faint); }
+
+/* Where the quantity started, as a hairline on the bar. */
+.ax-gp-part-was {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: var(--ax-text);
+    opacity: .5;
+}
+
+.ax-gp-part-value {
+    color: var(--ax-muted);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+.ax-gp-part-value strong { color: var(--ax-text); font-weight: 700; }
+
+/* Pushed to the foot of the panel. A row of panels is stretched to the tallest
+   of them (see `.ax-grid`), and a metric with two component rows beside one
+   with five left a band of nothing under the short one — the same raggedness
+   `.ax-panel-foot` uses `margin-top: auto` to avoid. */
+.ax-gp-mover-why {
+    display: flex;
+    gap: 9px;
+    margin: auto 0 0;
+    padding: 11px 12px;
+    border-radius: 10px;
+    background: var(--ax-card-2);
+    color: var(--ax-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.ax-gp-mover-why strong { color: var(--ax-text); font-weight: 700; }
+.ax-gp-mover-why-mark { color: var(--ax-violet); flex: none; }
+
+/* ---------- The period cards ---------------------------------------------- */
+.ax-gp-card {
+    position: relative;
+    gap: 5px;
+    padding: 15px 16px 0;
+    overflow: hidden;
+    /* The note under the figure wraps to one or two lines depending on the
+       period, and a row of cards whose sparklines start at different heights
+       reads as six unrelated cards rather than as one row. */
+    min-height: 132px;
+}
+
+.ax-gp-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ax-gp-card-go { color: var(--ax-faint); font-size: 15px; line-height: 1; }
+
+.ax-gp-card-value { font-size: 24px; }
+
+.ax-gp-card-note { padding-bottom: 12px; line-height: 1.5; }
+
+/* The card's own shape, bled to the edges along the bottom. It is a texture
+   rather than a chart — see `Spark` — so it carries no axis and no labels.
+
+   The tone is set once here as `color`, and the line, the rule and the
+   gradient's stops all take it from `currentColor`. That is what lets the
+   fill be a gradient at all: a `<linearGradient>` lives in `<defs>` and
+   inherits nothing from the element that references it, so `currentColor` on
+   its stops is the only way its hue can follow the card's direction without a
+   rule — and a hard-coded stop — per tone. */
+.ax-gp-spark {
+    display: block;
+    width: calc(100% + 32px);
+    height: 34px;
+    margin: auto -16px 0;
+    color: var(--ax-faint);
+}
+.ax-gp-spark.is-up { color: var(--ax-green); }
+.ax-gp-spark.is-down { color: var(--ax-amber); }
+
+.ax-gp-spark-line { stroke: currentColor; }
+
+/* The rule at the period's first reading. Faint enough to read as the floor
+   of the shape rather than as a second line crossing it. */
+.ax-gp-spark-base {
+    stroke: currentColor;
+    stroke-width: 1;
+    opacity: .3;
+}
+
+@media (max-width: 900px) {
+    .ax-gp-overall { grid-column: 1 / -1; }
+    .ax-gp-tabs { flex-wrap: wrap; }
 }

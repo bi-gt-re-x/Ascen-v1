@@ -18,7 +18,6 @@ import {
   gridHours,
   hourLabel,
   nowLabel,
-  nowOffset,
   type Block,
 } from '@/utils/calendarGrid';
 
@@ -78,6 +77,8 @@ export interface DayColumnProps {
    * and the pair it reports are two of them.
    */
   flagged?: readonly Block[] | null;
+  /** A task block to paint for a moment — see `marked` on GridBlockProps. */
+  markedTaskId?: string | null;
 }
 
 export function DayColumn({
@@ -92,6 +93,7 @@ export function DayColumn({
   onComplete,
   completingId,
   flagged,
+  markedTaskId = null,
 }: DayColumnProps) {
   return (
     <div
@@ -123,6 +125,7 @@ export function DayColumn({
           onComplete={onComplete}
           completing={block.kind === 'task' && completingId === block.id}
           flagged={flagged?.includes(block)}
+          marked={block.kind === 'task' && markedTaskId === block.id}
         />
       ))}
 
@@ -131,7 +134,3 @@ export function DayColumn({
   );
 }
 
-/** Where the now line goes on a day, or null when that day is not today. */
-export function nowFor(iso: string, todayIso: string, at: Date): number | null {
-  return iso === todayIso ? nowOffset(at) : null;
-}

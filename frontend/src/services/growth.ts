@@ -32,15 +32,14 @@ export interface GrowthSeries {
  * small.
  */
 export function series(
-  username: string,
   days = 30,
 ): Promise<ApiResult<GrowthSeries>> {
-  return get<GrowthSeries>('/api/get_growth_data', { username, days });
+  return get<GrowthSeries>('/api/get_growth_data', { days });
 }
 
 /** The five-metric graded report card. Files a snapshot as a side effect. */
-export function ratings(username: string): Promise<ApiResult<Ratings>> {
-  return get<Ratings>('/api/get_growth_ratings', { username });
+export function ratings(): Promise<ApiResult<Ratings>> {
+  return get<Ratings>('/api/get_growth_ratings');
 }
 
 export interface XpSnapshot {
@@ -72,6 +71,6 @@ export interface XpSnapshot {
   };
 }
 
-export function xpSnapshot(username: string): Promise<ApiResult<XpSnapshot>> {
-  return get<XpSnapshot>('/api/get_xp_data', { username });
+export function xpSnapshot(): Promise<ApiResult<XpSnapshot>> {
+  return get<XpSnapshot>('/api/get_xp_data');
 }

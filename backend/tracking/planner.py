@@ -65,16 +65,42 @@ COUNT = 5
 # ---------------------------------------------------------------------------
 # Anthropic
 # ---------------------------------------------------------------------------
-# Opus 5 — the checkpoints are the whole value of the feature and a weaker
-# plan is worse than none. Thinking is on by default on this model, which is
-# what we want here: the five have to be sequential and non-overlapping, and
-# that is a reasoning problem rather than a recall one.
-ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL') or 'claude-opus-5'
+# Sonnet 5. Thinking is on by default here as it was on Opus, which is the
+# property this actually depends on: the five have to be sequential and
+# non-overlapping, and that is a reasoning problem rather than a recall one.
+# `thinking` is left unset because omitting it on this model runs adaptive.
+ANTHROPIC_MODEL_DEFAULT = 'claude-sonnet-5'
 
-# Room for the thinking as well as the answer — on Opus 5 `max_tokens` caps
-# both together, and five titles that arrive truncated are five titles the
-# JSON parse rejects.
+
+def model() -> str:
+    """Which model answers. Read per call, for the reason `provider()` is."""
+    return os.environ.get('ANTHROPIC_MODEL') or ANTHROPIC_MODEL_DEFAULT
+
+# Room for the thinking as well as the answer — `max_tokens` is a hard limit
+# on the two together, and five titles that arrive truncated are five titles
+# the JSON parse rejects. 16k is the recommended ceiling for a request that
+# does not stream, which this one does not: it is one short answer and the
+# page is holding a spinner for it.
 ANTHROPIC_MAX_TOKENS = 16000
+
+def workspace_id() -> str:
+    """The workspace a request acts in, or '' when there is none to name.
+
+    Sent as `anthropic-workspace-id`. An identity-linked key belongs to a
+    person rather than to a workspace, and the API refuses it with a 400 until
+    the request names one. A key that is not identity-linked neither needs
+    this nor is sent it — empty means the header is omitted entirely rather
+    than sent blank, which is its own 400.
+
+    **Read per call, and that is the whole point.** This was a module constant
+    for one commit, and a constant is evaluated at import — which is before
+    `load_dotenv()` runs in any of the three entry points. The result was that
+    setting ANTHROPIC_WORKSPACE_ID in .env did nothing at all: the header was
+    never sent, the API kept asking for the workspace, and the error kept
+    telling the reader to do the thing they had already done. `provider()`
+    says the same thing three functions down and has since it was written.
+    """
+    return os.environ.get('ANTHROPIC_WORKSPACE_ID') or ''
 
 # ---------------------------------------------------------------------------
 # Hugging Face
@@ -143,6 +169,56 @@ Answer with JSON and nothing else — no explanation, no markdown fence:
 {"milestones": ["first", "second", "third", "fourth", "fifth"]}
 """
 
+# ---------------------------------------------------------------------------
+# The second job: one checkpoint's checklist
+# ---------------------------------------------------------------------------
+# What a checkpoint's checklist holds, and so what is asked for. Between
+# MIN_STEPS and MAX_STEPS in backend/api/goals.py, because the column is
+# padded up to the first and cut at the second — asking for a number outside
+# that range means asking for rows that will be silently added or dropped.
+STEP_COUNT = 5
+
+# The distinction the milestone prompt spends its words keeping apart is the
+# one this prompt spends its words inverting. A checkpoint is a state; a step
+# is the work that gets there, and here the actions are exactly what is
+# wanted. Said plainly, because a model that has been told "not an action"
+# about milestones will otherwise hedge toward states here too.
+SYSTEM_STEPS = """\
+You break one checkpoint of a long-term goal into the actions that reach it, \
+for a study-planning app.
+
+A step is an ACTION SOMEBODY DOES — a piece of work that can be sat down to \
+and finished. This is the opposite of the checkpoint above it, which is a \
+state being reached:
+
+  Checkpoint: "Solving Silver DP problems unassisted"
+  Step (right): "Work through the knapsack chapter"
+  Step (wrong): "Confident with knapsack problems"
+
+The second is a state. States are what checkpoints are; you are writing the \
+work underneath one.
+
+Rules for the set you return:
+- Exactly five, in the order they would be done.
+- Each is a single sitting or a small run of them, not a term's project.
+- Concrete to this checkpoint and its subject. "Practise more" says nothing.
+- Ten words or fewer each, starting with a verb.
+- Together they are enough that finishing all five reaches the checkpoint.
+"""
+
+STEPS_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'steps': {
+            'type': 'array',
+            'items': {'type': 'string'},
+            'description': 'The five steps, in the order they would be done.',
+        },
+    },
+    'required': ['steps'],
+    'additionalProperties': False,
+}
+
 
 class PlannerUnavailable(RuntimeError):
     """The model could not be reached, or was not configured.
@@ -201,9 +277,15 @@ NO_KEY = (
 # ---------------------------------------------------------------------------
 # The brief
 # ---------------------------------------------------------------------------
-def _ask(goal: str) -> str:
-    """The user turn. Everything the account has said about the goal."""
-    return ('Break this goal into its five checkpoints.\n\n' + goal)
+def _ask(goal: str, instruction: str = '') -> str:
+    """The user turn. Everything the account has said about the thing.
+
+    `instruction` is what to do with it, and it differs between the two jobs
+    this module does — five checkpoints for a goal, or a checklist for one
+    checkpoint. The brief underneath is built the same way for both.
+    """
+    lead = instruction or 'Break this goal into its five checkpoints.'
+    return (lead + '\n\n' + goal)
 
 
 def _brief(title: str, why: str = '', description: str = '',
@@ -248,7 +330,7 @@ def _strings(value) -> List[str]:
                              if isinstance(inner, str))
         return found
     if isinstance(value, dict):
-        for key in ('milestones', 'checkpoints', 'result', 'items'):
+        for key in ('milestones', 'checkpoints', 'steps', 'result', 'items'):
             if key in value:
                 return _strings(value[key])
         # A single-key object wrapping the list under a name we did not guess.
@@ -321,7 +403,22 @@ SCHEMA = {
 }
 
 
-def _from_anthropic(brief: str) -> str:
+def from_anthropic(brief: str, system: str = None, schema: dict = None,
+                   instruction: str = '', model_id: str = '',
+                   max_tokens: int = 0) -> str:
+    """One schema-constrained answer from Anthropic, as raw text.
+
+    Public, and named without the underscore, because a second module now
+    calls it: backend/tracking/subject_brief.py asks a different question with
+    a different prompt and schema. What is shared is everything around the
+    question — building the client, the workspace header, the refusal check,
+    and the two error messages that took a while to word. Duplicating those
+    would mean a second copy of the identity-linked-key explanation, which is
+    the one message here a reader actually has to act on.
+
+    `model_id` and `max_tokens` default to this module's own, so the goals
+    page's two calls are unchanged by the parameter existing.
+    """
     try:
         import anthropic
     except ImportError as exc:  # pragma: no cover - dependency is in requirements
@@ -330,19 +427,80 @@ def _from_anthropic(brief: str) -> str:
             '.venv-fastapi/bin/python -m pip install -r requirements.txt'
         ) from exc
 
-    client = anthropic.Anthropic()
+    # The header is omitted rather than sent empty when there is no workspace
+    # to name: a blank one is refused the same way a missing one is.
+    workspace = workspace_id()
+    client = anthropic.Anthropic(
+        default_headers=({'anthropic-workspace-id': workspace}
+                         if workspace else None))
     try:
         response = client.messages.create(
-            model=ANTHROPIC_MODEL,
-            max_tokens=ANTHROPIC_MAX_TOKENS,
-            system=SYSTEM,
+            model=model_id or model(),
+            max_tokens=max_tokens or ANTHROPIC_MAX_TOKENS,
+            system=system or SYSTEM,
+            # `high` is this model's own default, and the level its guidance
+            # calls the balance of cost against intelligence. It was 'medium'
+            # under Opus, and carrying that down a tier would have been two
+            # step-downs at once — medium here is described as comparable to
+            # the *previous* Sonnet at high, and a weak plan is worse than no
+            # plan. Raise to 'xhigh' if the checkpoints come back shallow;
+            # that is the documented lever, rather than prompting around it.
             output_config={
-                'effort': 'medium',
-                'format': {'type': 'json_schema', 'schema': SCHEMA},
+                'effort': 'high',
+                'format': {'type': 'json_schema', 'schema': schema or SCHEMA},
             },
-            messages=[{'role': 'user', 'content': _ask(brief)}],
+            messages=[{'role': 'user', 'content': _ask(brief, instruction)}],
         )
     except Exception as exc:  # noqa: BLE001 - every failure reads the same here
+        # One exception to "every failure reads the same": a key that belongs
+        # to a person rather than to a workspace is refused until the request
+        # names one, and the raw 400 for it is the API talking to a developer.
+        # This module's errors are shown on the goals page, so it says what to
+        # do instead of what happened.
+        if 'anthropic-workspace-id' in str(exc):
+            # Two different failures reach here and the reader can only act on
+            # the right one if they are told apart: nothing set, or something
+            # set that the API would not take. Saying "put it in .env" to
+            # somebody who has already put it in .env is how the last version
+            # of this message sent a reader in a circle.
+            if workspace_id():
+                raise PlannerUnavailable(
+                    'Anthropic would not accept the workspace id in '
+                    'ANTHROPIC_WORKSPACE_ID ({!r}). Check it against the id in '
+                    'the console URL with the workspace open.'.format(
+                        workspace_id())) from exc
+            raise PlannerUnavailable(
+                'This Anthropic key is identity-linked: it belongs to a person '
+                'rather than to a workspace, so every request has to name the '
+                'workspace it acts in. Two ways out, and the second is less to '
+                'maintain: set ANTHROPIC_WORKSPACE_ID in .env to the id in the '
+                'console URL with the workspace open, or make a workspace API '
+                'key in that workspace and use it instead — a key that already '
+                'belongs to a workspace needs none of this. Restart whatever '
+                'read .env either way.') from exc
+        # The other three answers a correctly-configured install actually
+        # gets. All of them arrive as a 400 or 401 carrying a sentence written
+        # for whoever wrote the client, and all of them are shown to somebody
+        # looking at a page in an app — so each one says what to do instead of
+        # what the API said. The catch-all below still exists for everything
+        # not on this list; it is a floor, not the plan.
+        text = str(exc)
+        if 'credit balance' in text:
+            raise PlannerUnavailable(
+                'This Anthropic account is out of API credits, so the model '
+                'cannot be called. Add credits under Plans & Billing in the '
+                'Anthropic console — API credits are separate from a Claude '
+                'subscription, and a Pro or Max plan does not include them.'
+            ) from exc
+        if 'authentication_error' in text or 'invalid x-api-key' in text:
+            raise PlannerUnavailable(
+                'Anthropic did not accept the key in ANTHROPIC_API_KEY. Check '
+                'it has not been revoked, and that it was copied whole.'
+            ) from exc
+        if 'rate_limit' in text:
+            raise PlannerUnavailable(
+                'Anthropic is rate-limiting this key. Try again in a minute.'
+            ) from exc
         raise PlannerUnavailable(
             'Could not reach the model: {}'.format(exc)) from exc
 
@@ -351,13 +509,18 @@ def _from_anthropic(brief: str) -> str:
     # sentence on the page.
     if response.stop_reason == 'refusal':
         raise PlannerUnavailable(
-            'The model declined to plan this goal. Try rewording the title.')
+            'The model declined to plan this. Try rewording the title.')
 
     return next((block.text for block in response.content
                  if block.type == 'text'), '')
 
 
-def _from_huggingface(brief: str) -> str:
+#: The name the two calls in this module were written against.
+_from_anthropic = from_anthropic
+
+
+def _from_huggingface(brief: str, system: str = None,
+                      instruction: str = '') -> str:
     try:
         import httpx
     except ImportError as exc:  # pragma: no cover - arrives with anthropic
@@ -371,8 +534,8 @@ def _from_huggingface(brief: str) -> str:
         'max_tokens': HF_MAX_TOKENS,
         'temperature': HF_TEMPERATURE,
         'messages': [
-            {'role': 'system', 'content': SYSTEM + JSON_RULE},
-            {'role': 'user', 'content': _ask(brief)},
+            {'role': 'system', 'content': (system or SYSTEM) + JSON_RULE},
+            {'role': 'user', 'content': _ask(brief, instruction)},
         ],
         # Honoured by some providers behind the router and ignored by the
         # rest, which is why `_titles` does not depend on it. Asking costs
@@ -448,3 +611,41 @@ def suggest_milestones(title, why='', description='', category='',
             'The model returned {} checkpoints instead of {}. Try again.'.format(
                 len(cleaned), COUNT))
     return cleaned[:COUNT]
+
+
+def suggest_steps(milestone, goal='', why='', description='', category='',
+                  unit='', target='') -> List[str]:
+    """Five steps for one checkpoint, in the order they would be done.
+
+    The goal is passed as well as the checkpoint because a checkpoint title is
+    six words and frequently meaningless alone: "Silver DP unassisted" is a
+    different checklist under "Reach USACO Gold" than it would be under a
+    goal about teaching. The model gets both and is asked about the one.
+
+    Raises `PlannerUnavailable` on everything the page should say out loud,
+    exactly as `suggest_milestones` does — a checklist that cannot be drafted
+    is a checkpoint with the blank rows it would have had anyway.
+    """
+    if not (milestone or '').strip():
+        raise PlannerUnavailable('A checkpoint needs a title before it can be broken down.')
+
+    using = provider()
+    if not using:
+        raise PlannerUnavailable(NO_KEY)
+
+    brief = _brief(goal or milestone, why, description, category, unit, target)
+    if goal.strip():
+        brief += '\n\nCheckpoint to break down: {}'.format(milestone.strip())
+    else:
+        brief = 'Checkpoint to break down: {}'.format(milestone.strip())
+    instruction = 'Break this checkpoint into the five steps that reach it.'
+
+    text = (_from_huggingface(brief, SYSTEM_STEPS, instruction) if using == 'huggingface'
+            else _from_anthropic(brief, SYSTEM_STEPS, STEPS_SCHEMA, instruction))
+
+    cleaned = [str(entry).strip() for entry in _titles(text) if str(entry).strip()]
+    if len(cleaned) < STEP_COUNT:
+        raise PlannerUnavailable(
+            'The model returned {} steps instead of {}. Try again.'.format(
+                len(cleaned), STEP_COUNT))
+    return cleaned[:STEP_COUNT]

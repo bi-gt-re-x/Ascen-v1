@@ -49,16 +49,19 @@
  * reads as a table. Nothing moves under `prefers-reduced-motion` — see
  * hooks/useCountUp.
  *
- * **Why this is not the analytics tab.** The Records tab under Analytics
- * (components/Growth/BenchmarksChapter) is about *standing*: where the last
- * thirty days rank against every other thirty. This page is about the high
- * scores themselves. Both read the same history and ask different things of it.
+ * **Why this is not the analytics page.** There was a Records tab under
+ * Analytics, about *standing*: where the last thirty days rank against every
+ * other thirty. It is the Growth tab now
+ * (components/Analytics/tabs/GrowthTab), which asks how far the account has
+ * come across its whole life and kept that percentile as one panel. This page
+ * is about the high scores themselves. All three read the same history and ask
+ * different things of it.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { ErrorState, Loading } from '@/components';
 import { Glyph } from '@/components/Growth/GrowthPanels';
 import { RecordModal } from '@/components/Records/RecordModal';
-import { useApi, useCountUp, useDocumentTitle, useUserData } from '@/hooks';
+import { useApi, useCountUp, useDocumentTitle, usePageEntrance, useUserData } from '@/hooks';
 import { growth as growthService, records as recordService } from '@/services';
 import type { GrowthSeries } from '@/services/growth';
 import type { RecordDraft, RecordKind, RecordRow } from '@/services/records';
@@ -361,7 +364,7 @@ export default function Records() {
   const seriesCall = useCallback(
     () =>
       username
-        ? growthService.series(username, 0)
+        ? growthService.series(0)
         : Promise.resolve({ success: false as const, message: 'Sign in to see your records.' }),
     [username],
   );
@@ -370,7 +373,7 @@ export default function Records() {
   const listCall = useCallback(
     () =>
       username
-        ? recordService.list(username)
+        ? recordService.list()
         : Promise.resolve({ success: false as const, message: 'Sign in to see your records.' }),
     [username],
   );
@@ -448,7 +451,7 @@ export default function Records() {
   const saveRecord = useCallback(
     async (draft: RecordDraft) => {
       if (!username) return;
-      const ok = await write(() => recordService.save(username, draft));
+      const ok = await write(() => recordService.save(draft));
       if (ok) setModal({ open: false, kind: draft.kind });
     },
     [username, write],
@@ -457,7 +460,7 @@ export default function Records() {
   const deleteRecord = useCallback(
     async (entry: RecordRow) => {
       if (!username) return;
-      const ok = await write(() => recordService.remove(username, entry.id));
+      const ok = await write(() => recordService.remove(entry.id));
       if (ok) setModal({ open: false, kind: entry.kind });
     },
     [username, write],
@@ -470,6 +473,12 @@ export default function Records() {
   const derived = useMemo(() => personalRecords(all, tasks, streak), [all, streak, tasks]);
   const chase = useMemo(() => recordChase(all, streak), [all, streak]);
 
+  /* The arrival cascade. All three reads have to land before there is a page
+     to animate — see hooks/usePageEntrance. */
+  const entering = usePageEntrance(
+    !series.loading && !account.loading && !logged.loading,
+  );
+
   if (series.loading || account.loading || logged.loading) {
     return <Loading label="Reading your record" />;
   }
@@ -480,12 +489,12 @@ export default function Records() {
   const open = (kind: RecordKind, entry?: RecordRow) => setModal({ open: true, kind, entry });
 
   return (
-    <div className="rc-page">
+    <div className={`rc-page${entering ? ' pg-enter' : ''}`}>
       {/* ---- 1. Hero ------------------------------------------------------ */}
       <header className="rc-hero">
         <div className="rc-hero-text">
           <h1 className="rc-title">Your Records</h1>
-          <p className="rc-sub">A history of your best performances and biggest milestones.</p>
+          <p className="rc-sub">Your best, and the day you hit it.</p>
           <div className="rc-hero-tools">
             <button type="button" className="rc-btn is-primary" onClick={() => open('record')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
@@ -530,9 +539,7 @@ export default function Records() {
 
         {bests.length === 0 ? (
           <p className="rc-empty">
-            Nothing logged yet. “Add record” takes a name, a figure and a date — AMC 8, 25 out of
-            25, August 12th — and beating it later is another entry under the same name, which is
-            what draws the line further down.
+            Nothing logged yet. “Add record” takes a name, a figure and a date.
           </p>
         ) : (
           <ul className="rc-bests">
@@ -632,9 +639,7 @@ export default function Records() {
           </div>
           {milesShut ? null : milestones.length === 0 ? (
             <p className="rc-empty">
-              A milestone is a thing that happened once — first AIME problem solved, first
-              full-stack project. No figure, just the fact. Give two of them the same category
-              and that category becomes a key milestone they fold up into.
+              Something that happened once — no figure, just the fact.
             </p>
           ) : (
             <ul className="rc-miles">
@@ -778,14 +783,12 @@ export default function Records() {
       <section className="rc-section rc-derived">
         <h2 className="rc-section-title">⚙️ Tracked automatically</h2>
         <p className="rc-note">
-          These are Ascen's own count of your work — nothing here is logged by hand, and nothing
-          above is counted from it.
+          Ascen's own count. Nothing here is logged by hand.
         </p>
 
         {all.length < NEED_DAYS ? (
           <p className="rc-empty">
-            There is nothing to beat yet. Finish some work over the next few days and this fills
-            itself in.
+            Nothing to beat yet. Finish some work and this fills in.
           </p>
         ) : (
           <>

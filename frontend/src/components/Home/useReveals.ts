@@ -26,7 +26,7 @@ import { reduced } from '@/utils/homePlay';
 type Direction = 'left' | 'right' | 'up';
 
 /** The grids whose children alternate in from the sides. */
-const GRIDS = '.lp-strip, .lp-split, .lp-perf, .lp-streak-grid, .lp-philo, .lp-tech';
+const GRIDS = '.lp-strip, .lp-split, .lp-perf, .lp-ax, .lp-streak-grid, .lp-philo, .lp-tech';
 
 export function useReveals(root: RefObject<HTMLElement | null>): void {
   useEffect(() => {

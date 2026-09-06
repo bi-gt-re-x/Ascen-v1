@@ -16,6 +16,17 @@ import { fileURLToPath, URL } from 'node:url';
  * proxied too, because the old pages' assets — the avatars, the 80 calendar
  * icons, the logo — are served by the backend out of utils/, and the React app
  * uses the same ones.
+ *
+ * The last three are *pages*, not endpoints: the ones backend/routes/pages.py
+ * still renders from Jinja, listed in backend/routes/spa.py as the half React
+ * has not taken over. They have to be here because of how a dev server answers
+ * an unknown path — it serves index.html, so React's catch-all route sees a
+ * path it does not know and redirects to /home. That is silent: the link works
+ * in production, where one server owns both halves, and in development it just
+ * quietly goes somewhere else. The footer's Careers and Contact Support did
+ * exactly that, and so did /engine at the end of the hidden chain, which is
+ * how this was noticed. Anything moved out of pages.py should lose its line
+ * here at the same time.
  */
 const api = {
   target: 'http://127.0.0.1:5050',
@@ -39,6 +50,9 @@ export default defineConfig({
       '/static': api,
       '/auth': api,
       '/verify': api,
+      '/careers': api,
+      '/contact-support': api,
+      '/engine': api,
     },
   },
   build: {

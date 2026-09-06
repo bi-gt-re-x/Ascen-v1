@@ -53,19 +53,40 @@ export interface UseApiResult<T> {
   mutate: (update: (current: T) => T) => void;
 }
 
+export interface UseApiOptions {
+  /**
+   * Whether to call at all. Default true.
+   *
+   * For a request nothing on screen wants yet. A disabled `useApi` makes no
+   * request and reports `loading: false` — not "waiting", but "nobody asked" —
+   * and keeps whatever it last fetched, so switching back does not blank the
+   * page. Turning it on runs the call; turning it off again does not discard
+   * the answer.
+   *
+   * This exists for the account's task list, which is megabytes and which most
+   * pages never read. See context/UserDataProvider.
+   */
+  enabled?: boolean;
+}
+
 /**
  * @param call  The request. Must be stable (useCallback) or wrapped in one,
  *              or this re-runs on every render.
  * @param deps  Re-fetch when these change. Defaults to just `call`.
+ * @param options  See `UseApiOptions`.
  */
 export function useApi<T>(
   call: () => Promise<ApiResult<T>>,
   deps: readonly unknown[] = [],
+  options: UseApiOptions = {},
 ): UseApiResult<T> {
+  const enabled = options.enabled !== false;
+
   const [state, setState] = useState<State<T>>({
     data: null,
     error: null,
-    pending: true,
+    // A disabled call is not pending: nothing has been asked for.
+    pending: enabled,
   });
 
   // Bumped on every run; a response whose ticket is no longer current is
@@ -81,6 +102,13 @@ export function useApi<T>(
   }, []);
 
   const run = useCallback(() => {
+    // `reload` on a disabled call is a no-op rather than a request. The caller
+    // that would have wanted the answer is the caller that has not asked yet.
+    if (!enabled) {
+      setState((previous) => ({ ...previous, pending: false }));
+      return;
+    }
+
     const mine = ++ticket.current;
     setState((previous) => ({ ...previous, pending: true, error: null }));
 
@@ -112,8 +140,9 @@ export function useApi<T>(
       });
     // `call` is intentionally not a dependency: callers pass an inline arrow
     // more often than not, and `deps` is the honest list of what it closes over.
+    // `enabled` is, because flipping it on is exactly when the call should run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, enabled]);
 
   useEffect(run, [run]);
 

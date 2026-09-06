@@ -32,6 +32,7 @@ import {
   WeekSidebar,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
+import { RatePrompt } from '@/components/Tasks';
 import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
   useCalendarStore,
@@ -40,6 +41,7 @@ import {
   useDocumentTitle,
   useNow,
   useNowScroll,
+  useSettings,
   useSubjectIndex,
   useSubjects,
 } from '@/hooks';
@@ -52,6 +54,7 @@ import {
   type DroppedBlock,
 } from '@/hooks/useGridDrag';
 import { focus as focusService } from '@/services';
+import { weekStartDay } from '@/services/settings';
 import { dates } from '@/utils';
 import {
   blockLabel,
@@ -78,12 +81,16 @@ import '@/styles/calendar/day.css';
 // note at the top of it.
 import '@/styles/calendar/palette.css';
 
-/** Monday of the week a date falls in. */
-function mondayOf(date: Date): Date {
-  const monday = new Date(date);
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  return monday;
+/**
+ * The first day of the week a date falls in.
+ *
+ * Which day that *is* is the account's to say (Settings, Calendar), so this
+ * takes it rather than assuming Monday. Everything else on the page counts
+ * seven days forward from whatever comes back, so the grid, the overview, the
+ * per-day XP line and the title all move together when it changes.
+ */
+function weekOf(date: Date, startsOn: 0 | 1): Date {
+  return dates.startOfWeek(date, startsOn);
 }
 
 /** "16:30" as "4:30 PM". Empty in, "All Day" out — an entry with no time has none. */
@@ -96,10 +103,10 @@ function clockLabel(hhmm: string): string {
 }
 
 /** "July 13 – July 19, 2026". */
-function weekTitle(monday: Date): string {
-  const sunday = dates.addDays(monday, 6);
+function weekTitle(opens: Date): string {
+  const closes = dates.addDays(opens, 6);
   const long = (date: Date) => dates.formatDate(date, { month: 'long', day: 'numeric' });
-  return `${long(monday)} – ${long(sunday)}, ${sunday.getFullYear()}`;
+  return `${long(opens)} – ${long(closes)}, ${closes.getFullYear()}`;
 }
 
 export default function Week() {
@@ -117,6 +124,10 @@ export default function Week() {
     refresh,
     completing,
     complete,
+    rating,
+    ratingDepth,
+    saveRating,
+    closeRating,
   } = account;
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
@@ -127,8 +138,16 @@ export default function Week() {
   const subjectList = useSubjects(username);
   const now = useNow();
   const navigate = useNavigate();
+  const { prefs } = useSettings();
 
-  const [monday, setMonday] = useState(() => mondayOf(new Date()));
+  /* The day the week starts on, from the account's preferences. It arrives a
+     moment after the page does, so the week on screen is re-anchored below
+     rather than only being right on the second visit. */
+  const startsOn = weekStartDay(prefs);
+  const [opens, setOpens] = useState(() => weekOf(new Date(), startsOn));
+  useEffect(() => {
+    setOpens((current) => weekOf(current, startsOn));
+  }, [startsOn]);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem('wkSidebarCollapsed') === '1';
@@ -146,7 +165,7 @@ export default function Week() {
    * wandering.
    */
   const [mini, setMini] = useState(() => {
-    const start = mondayOf(new Date());
+    const start = weekOf(new Date(), startsOn);
     return { year: start.getFullYear(), month: start.getMonth() };
   });
   /** True while the overview column is showing the subject library instead. */
@@ -158,16 +177,16 @@ export default function Week() {
   const actions = useBlockActions(username, store, tasks, account);
   const scroller = useRef<HTMLDivElement>(null);
 
-  const mondayIso = dates.isoDate(monday);
-  const sundayIso = dates.isoDate(dates.addDays(monday, 6));
+  const opensIso = dates.isoDate(opens);
+  const closesIso = dates.isoDate(dates.addDays(opens, 6));
   const todayIso = dates.isoDate(now);
-  const currentMondayIso = dates.isoDate(mondayOf(now));
-  const thisWeek = mondayIso === currentMondayIso;
+  const thisWeekIso = dates.isoDate(weekOf(now, startsOn));
+  const thisWeek = opensIso === thisWeekIso;
 
   const days = useMemo(
     () =>
       Array.from({ length: 7 }, (_, index) => {
-        const date = dates.addDays(monday, index);
+        const date = dates.addDays(opens, index);
         return {
           date,
           iso: dates.isoDate(date),
@@ -175,19 +194,19 @@ export default function Week() {
           label: dates.formatDate(date, { month: 'short', day: 'numeric' }),
         };
       }),
-    [monday],
+    [opens],
   );
 
   useEffect(() => {
     if (!username) return;
     let live = true;
-    void focusService.history(username, mondayIso, sundayIso).then((result) => {
+    void focusService.history(opensIso, closesIso).then((result) => {
       if (live && result.success) setHistory(result.days);
     });
     return () => {
       live = false;
     };
-  }, [mondayIso, sundayIso, username]);
+  }, [opensIso, closesIso, username]);
 
   /** Opening the week lands on the current hour — see hooks/useNowScroll. */
   const centerOnNow = useNowScroll(scroller, !loading && thisWeek);
@@ -240,7 +259,7 @@ export default function Week() {
   const overview = useMemo(() => {
     const inWeek = (stamp: string | undefined) => {
       const day = (stamp || '').slice(0, 10);
-      return Boolean(day) && day >= mondayIso && day <= sundayIso;
+      return Boolean(day) && day >= opensIso && day <= closesIso;
     };
 
     const weekTasks = tasks.filter((task) => inWeek(task.created_at));
@@ -252,14 +271,14 @@ export default function Week() {
       xp: done.reduce((sum, task) => sum + (Number(task.xp_value) || 0), 0),
     };
 
-    const past = mondayIso < currentMondayIso;
-    const frozen = loadWeekSnapshots(username)[mondayIso];
+    const past = opensIso < thisWeekIso;
+    const frozen = loadWeekSnapshots(username)[opensIso];
     if (past && frozen) return frozen;
     // A past week seen for the first time freezes now; the current week keeps
     // its snapshot current. A future week has nothing to record.
-    if (mondayIso <= currentMondayIso) saveWeekSnapshot(username, mondayIso, live);
+    if (opensIso <= thisWeekIso) saveWeekSnapshot(username, opensIso, live);
     return live;
-  }, [currentMondayIso, mondayIso, sundayIso, tasks, username]);
+  }, [thisWeekIso, opensIso, closesIso, tasks, username]);
 
   /**
    * Focused against planned.
@@ -279,7 +298,7 @@ export default function Week() {
     });
 
     const today = history[todayIso];
-    if (todayIso >= mondayIso && todayIso <= sundayIso) {
+    if (todayIso >= opensIso && todayIso <= closesIso) {
       focusedSeconds += Math.max(session.focused, Number(today?.seconds) || 0);
       plannedHours += session.goalHours;
     } else if (today) {
@@ -288,7 +307,7 @@ export default function Week() {
     }
 
     return { focused: focusedSeconds, planned: plannedHours * 3600 };
-  }, [history, mondayIso, session.focused, session.goalHours, sundayIso, todayIso]);
+  }, [history, opensIso, session.focused, session.goalHours, closesIso, todayIso]);
 
   /**
    * The seven days, as the sidebar's sparkline and streak dots need them.
@@ -346,8 +365,8 @@ export default function Week() {
    * that happened, and the day it happened on is the day it was finished.
    */
   const breakdown = useMemo(
-    () => subjectXp(tasks, subjects, mondayIso, sundayIso),
-    [mondayIso, subjects, sundayIso, tasks],
+    () => subjectXp(tasks, subjects, opensIso, closesIso),
+    [opensIso, subjects, closesIso, tasks],
   );
 
   /**
@@ -368,7 +387,7 @@ export default function Week() {
 
     tasks.forEach((task) => {
       const day = (task.created_at || '').slice(0, 10);
-      if (!day || day < mondayIso || day > sundayIso) return;
+      if (!day || day < opensIso || day > closesIso) return;
       // Anything unrecognised counts as low, which is how the grid colours it.
       const key = String(task.priority || '').toLowerCase();
       const bucket = counts.get(key) ?? counts.get('low');
@@ -381,7 +400,7 @@ export default function Week() {
     });
 
     return order.map((row) => ({ ...row, ...counts.get(row.key)! }));
-  }, [mondayIso, sundayIso, tasks]);
+  }, [opensIso, closesIso, tasks]);
 
   /**
    * What is coming after the week on screen — tasks by due date, events by the
@@ -401,7 +420,7 @@ export default function Week() {
       });
 
     const entries = tasks
-      .filter((task) => task.status === 'todo' && day(task.due_date) > sundayIso)
+      .filter((task) => task.status === 'todo' && day(task.due_date) > closesIso)
       .map((task) => ({
         id: `task-${task.id}`,
         iso: day(task.due_date),
@@ -413,7 +432,7 @@ export default function Week() {
 
     Object.entries(store.data).forEach(([key, entry]) => {
       const iso = isoOf(key);
-      if (iso <= sundayIso) return;
+      if (iso <= closesIso) return;
       entry.timestamps.forEach((section, index) => {
         if (section.isDashboardTask) return; // already counted as a task
         entries.push({
@@ -437,7 +456,7 @@ export default function Week() {
         when,
         date: pretty(iso),
       }));
-  }, [store.data, sundayIso, tasks]);
+  }, [store.data, closesIso, tasks]);
 
   /** A block's menu, resolved back to the thing the dialogs work on. */
   const openFor = useCallback(
@@ -530,19 +549,22 @@ export default function Week() {
   );
 
   /** Moving the week re-syncs the mini-month to the month that week starts in. */
-  const goToWeek = useCallback((date: Date) => {
-    const start = mondayOf(date);
-    setMonday(start);
-    setMini({ year: start.getFullYear(), month: start.getMonth() });
-  }, []);
+  const goToWeek = useCallback(
+    (date: Date) => {
+      const start = weekOf(date, startsOn);
+      setOpens(start);
+      setMini({ year: start.getFullYear(), month: start.getMonth() });
+    },
+    [startsOn],
+  );
 
   /* Not a functional update: it has to set the mini-month too, and queueing
      that from inside an updater makes the updater a side effect — which React
-     is free to run twice. `monday` in the closure is the state this render was
+     is free to run twice. `opens` in the closure is the state this render was
      drawn from, which is the week the arrow the reader pressed belongs to. */
   const stepWeek = useCallback(
-    (weeks: number) => goToWeek(dates.addDays(monday, weeks * 7)),
-    [goToWeek, monday],
+    (weeks: number) => goToWeek(dates.addDays(opens, weeks * 7)),
+    [goToWeek, opens],
   );
 
   const stepMini = useCallback(
@@ -579,7 +601,7 @@ export default function Week() {
           controls instead of two stacked ones. */}
       <div className={`wk-header${collapsed ? ' sidebar-collapsed' : ''}`}>
         <div className="wk-headmain">
-          <h2 className="wk-title">{weekTitle(monday)}</h2>
+          <h2 className="wk-title">{weekTitle(opens)}</h2>
           <div className="wk-nav">
             <button
               type="button"
@@ -793,8 +815,9 @@ export default function Week() {
           mini={{
             year: mini.year,
             month: mini.month,
-            from: mondayIso,
-            to: sundayIso,
+            from: opensIso,
+            to: closesIso,
+            weekStart: startsOn,
             onStep: stepMini,
             onPick: (iso) => goToWeek(dates.fromIsoDate(iso)),
           }}
@@ -851,6 +874,20 @@ export default function Week() {
             const pair = clash.conflict;
             if (pair) openFor(pair[which], clash.iso, 'delete');
           }}
+        />
+      )}
+
+      {/* The same question the dashboard and the tasks page ask after a
+          completion, from the same component — a task finished on a grid
+          block goes into the record with the same two numbers against it as
+          one ticked off a list. Raised by useCalendarTasks, which honours the
+          account's rating_depth and never opens this at 'none'. */}
+      {rating && (
+        <RatePrompt
+          taskName={rating.name}
+          depth={ratingDepth}
+          onSubmit={saveRating}
+          onClose={closeRating}
         />
       )}
     </CalendarShell>

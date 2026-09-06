@@ -31,9 +31,10 @@ is not in the database.
 import re
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.config import subjects as catalogue
 from backend.database import connection as db
@@ -63,13 +64,11 @@ MAX_CUSTOM = 40
 
 
 class NewSubject(BaseModel):
-    username: str = ''
     name: str = ''
     family: Optional[str] = None
 
 
 class Recolour(BaseModel):
-    username: str = ''
     # None clears the choice and hands the subject back to the palette.
     family: Optional[str] = None
 
@@ -96,9 +95,7 @@ def usage(username: Optional[str]):
     if not username:
         return {}
     counts = {}
-    for task in db.tasks():
-        if task.get('user_id') != username:
-            continue
+    for task in db.tasks_for(username):
         subject_id = task.get('subject')
         if not subject_id:
             continue
@@ -143,7 +140,7 @@ def own_ids(username):
 
 
 @router.get('/api/subjects')
-def subjects(username: str = ''):
+def subjects(username: str = Depends(current_username)):
     """The account's own subjects, then the hundred, most-used first."""
     counts = usage(username)
     rows = _rows(username)
@@ -176,10 +173,8 @@ def subjects(username: str = ''):
 
 
 @router.post('/api/subjects')
-def create(body: NewSubject):
+def create(body: NewSubject, username: str = Depends(current_username)):
     """Add a subject of this account's own."""
-    if not body.username:
-        return fail('Username required')
 
     name = ' '.join(str(body.name or '').split())[:MAX_NAME]
     if not name:
@@ -196,64 +191,62 @@ def create(body: NewSubject):
     if family is not None and family not in FAMILIES:
         return fail('Unknown colour')
 
-    rows = db.user_subjects()
-    mine = [r for r in rows if r.get('user_id') == body.username]
+    mine = db.rows_for('user_subjects', username)
     if any(r['subject_id'] == subject_id for r in mine):
         return fail('You already have a subject called that')
     if len([r for r in mine if r.get('custom')]) >= MAX_CUSTOM:
         return fail('That is as many subjects as one account can add')
 
-    rows.append({
-        'user_id': body.username,
+    added = db.insert_row('user_subjects', {
+        'user_id': username,
         'subject_id': subject_id,
         'name': name,
         'family': family,
         'custom': True,
     })
-    db.save_user_subjects(rows)
-    return ok(subject=_custom_entry(rows[-1], 0))
+    return ok(subject=_custom_entry(added, 0))
 
 
 @router.patch('/api/subjects/{subject_id}/color')
-def recolour(subject_id: str, body: Recolour):
+def recolour(subject_id: str, body: Recolour,
+             username: str = Depends(current_username)):
     """Choose a colour for a subject — one of the account's own, or one of the
     hundred. `family: null` gives the subject back to the palette."""
-    if not body.username:
-        return fail('Username required')
 
     family = body.family
     if family is not None and family not in FAMILIES:
         return fail('Unknown colour')
 
-    known = bool(catalogue.get(subject_id)) or subject_id in own_ids(body.username)
+    known = bool(catalogue.get(subject_id)) or subject_id in own_ids(username)
     if not known:
         return fail('No such subject')
 
-    rows = db.user_subjects()
-    for row in rows:
-        if row.get('user_id') == body.username and row['subject_id'] == subject_id:
-            # Clearing the colour on a catalogue subject leaves a row that says
-            # nothing; drop it rather than store "this account has no opinion".
-            if family is None and not row.get('custom'):
-                rows.remove(row)
-            else:
-                row['family'] = family
-            break
+    # This table is keyed on (user_id, subject_id) rather than an `id`, so the
+    # row operations are pointed at `subject_id` as the key.
+    row = db.find_row('user_subjects', subject_id, user_id=username, key='subject_id')
+    if row:
+        # Clearing the colour on a catalogue subject leaves a row that says
+        # nothing; drop it rather than store "this account has no opinion".
+        if family is None and not row.get('custom'):
+            db.delete_row('user_subjects', subject_id, user_id=username,
+                          key='subject_id')
+        else:
+            db.update_row('user_subjects', subject_id, {'family': family},
+                          user_id=username, key='subject_id')
     else:
-        rows.append({
-            'user_id': body.username,
+        db.insert_row('user_subjects', {
+            'user_id': username,
             'subject_id': subject_id,
             'name': '',
             'family': family,
             'custom': False,
         })
 
-    db.save_user_subjects(rows)
     return ok(subject_id=subject_id, family=family)
 
 
 @router.delete('/api/subjects/{subject_id}')
-def remove(subject_id: str, username: str = ''):
+def remove(subject_id: str, username: str = Depends(current_username)):
     """Delete one of the account's own subjects.
 
     Tasks already filed under it keep the id. They draw as unfiled — the same
@@ -261,13 +254,8 @@ def remove(subject_id: str, username: str = ''):
     rewritten, because a delete here is about the picker and should not reach
     into the record of work already done.
     """
-    if not username:
-        return fail('Username required')
     if subject_id not in own_ids(username):
         return fail('That is not one of yours to delete')
 
-    db.save_user_subjects([
-        row for row in db.user_subjects()
-        if not (row.get('user_id') == username and row['subject_id'] == subject_id)
-    ])
+    db.delete_row('user_subjects', subject_id, user_id=username, key='subject_id')
     return ok(subject_id=subject_id)

@@ -27,9 +27,10 @@ where the ordering is wrong.
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking.auth import load_user
@@ -44,7 +45,6 @@ BODY_MAX = 20000
 
 
 class SaveNote(BaseModel):
-    username: Optional[str] = None
     #: Absent on a create, present on an edit. The row's own id, never reused.
     id: Optional[str] = None
     title: str = ''
@@ -61,7 +61,6 @@ class SaveNote(BaseModel):
 
 
 class DeleteNote(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
 
 
@@ -90,7 +89,7 @@ def _mine(username):
     only ordering the page ever wants, and two callers sorting the same list
     two ways is how a list stops agreeing with itself after a write.
     """
-    rows = [row for row in db.notes() if row.get('user_id') == username]
+    rows = db.rows_for('notes', username)
     rows.sort(
         key=lambda row: (
             0 if row.get('pinned') else 1,
@@ -151,7 +150,7 @@ def _clean(note: SaveNote):
 
 
 @router.get('/api/notes')
-def list_notes(username: str = ''):
+def list_notes(username: str = Depends(current_username)):
     """Every note this account has, in the order the page draws them."""
     if not _known(username):
         return fail('Sign in to see your notes.')
@@ -159,7 +158,7 @@ def list_notes(username: str = ''):
 
 
 @router.post('/api/notes/save')
-def save_note(note: SaveNote):
+def save_note(note: SaveNote, username: str = Depends(current_username)):
     """Create a note, or replace the writable fields of one that exists.
 
     One endpoint for both because the difference is a single branch and the
@@ -167,7 +166,7 @@ def save_note(note: SaveNote):
     failure rather than a create: silently making a new note out of a failed
     edit would lose whatever the reader thought they were editing.
     """
-    username = (note.username or '').strip()
+    username = (username or '').strip()
     if not _known(username):
         return fail('Sign in to save a note.')
 
@@ -175,16 +174,15 @@ def save_note(note: SaveNote):
     if not fields['title'] and not fields['body'].strip():
         return fail('A note needs a title or something written in it.')
 
-    rows = db.notes()
-
     if note.id:
-        for row in rows:
-            if str(row.get('id')) == str(note.id) and row.get('user_id') == username:
-                row.update(fields)
-                row['updated_at'] = _now()
-                db.save_notes(rows)
-                return ok(note=row)
-        return fail('That note does not exist.')
+        row = db.find_row('notes', note.id, user_id=username)
+        if not row:
+            return fail('That note does not exist.')
+        row.update(fields)
+        row['updated_at'] = _now()
+        db.update_row('notes', row['id'],
+                      {**fields, 'updated_at': row['updated_at']}, user_id=username)
+        return ok(note=row)
 
     stamp = _now()
     row = {
@@ -194,24 +192,17 @@ def save_note(note: SaveNote):
         'created_at': stamp,
         'updated_at': stamp,
     }
-    rows.append(row)
-    db.save_notes(rows)
+    row = db.insert_row('notes', row)
     return ok(note=row)
 
 
 @router.post('/api/notes/delete')
-def delete_note(request: DeleteNote):
+def delete_note(request: DeleteNote, username: str = Depends(current_username)):
     """Remove one note. There is no trash — a note is the reader's to discard."""
-    username = (request.username or '').strip()
+    username = (username or '').strip()
     if not _known(username):
         return fail('Sign in to delete a note.')
 
-    rows = db.notes()
-    kept = [row for row in rows
-            if not (str(row.get('id')) == str(request.id)
-                    and row.get('user_id') == username)]
-    if len(kept) == len(rows):
+    if not db.delete_row('notes', request.id, user_id=username):
         return fail('That note does not exist.')
-
-    db.save_notes(kept)
     return ok(id=request.id)

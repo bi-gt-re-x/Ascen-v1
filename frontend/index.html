@@ -7,6 +7,24 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="description" content="Ascen — a gamified productivity tracker: tasks, XP, streaks, a calendar, goals and growth analytics." />
     <title>Ascen</title>
+
+    <!-- The typefaces, actually fetched.
+         Twelve stylesheets have asked for `'Inter'` since the app was written
+         and nothing ever loaded it, so every one of them has been quietly
+         rendering in Segoe UI or whatever the machine had. The four after it
+         are the faces the notes toolbar offers: a note that says `{serif}` has
+         to get a serif rather than the browser's idea of one.
+
+         `preconnect` to both hosts because the stylesheet and the font files
+         come from different origins, and the second connection is otherwise
+         not opened until the CSS has parsed. `display=swap` so text paints in
+         the fallback immediately rather than staying invisible. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@600;700&family=Caveat:wght@500;700&display=swap"
+    />
     <script>
       /* The theme, before the first paint.
        *

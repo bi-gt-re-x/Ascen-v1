@@ -37,11 +37,14 @@ analytics on the page, not to the percentage. See utils/goalHealth.ts on the
 front end, which is where "is this on track" is decided.
 """
 from datetime import date, datetime, timedelta
+import json
+import re
 from typing import Any, List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from backend.api.guard import current_username
 from backend.api.reply import fail, ok
 from backend.database import connection as db
 from backend.tracking import focus as focus_tracking
@@ -82,7 +85,6 @@ EDITABLE = ('title', 'description', 'status', 'goal_type',
 # What the endpoints accept
 # --------------------------------------------------------------------------
 class AddGoal(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
     title: Optional[str] = None
     description: str = ''
@@ -113,7 +115,6 @@ class UpdateGoal(BaseModel):
     """Only the fields actually sent are written, so every one is optional and
     the write below reads `model_fields_set` rather than testing truthiness."""
     id: Optional[str] = None
-    username: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
@@ -142,12 +143,10 @@ class UpdateGoal(BaseModel):
 
 class DeleteGoal(BaseModel):
     goal_id: Optional[str] = None
-    username: Optional[str] = None
 
 
 # ---- Milestones ----------------------------------------------------------
 class AddMilestone(BaseModel):
-    username: Optional[str] = None
     goal_id: Optional[str] = None
     title: Optional[str] = None
     note: str = ''
@@ -155,21 +154,22 @@ class AddMilestone(BaseModel):
 
 
 class UpdateMilestone(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
     title: Optional[str] = None
     note: Optional[str] = None
     status: Optional[str] = None
     target_date: Optional[str] = None
+    # The whole checklist, sent entire rather than as a per-step edit. It is at
+    # most eight short rows, and one write of the list cannot interleave with
+    # another the way "add a step" and "tick step 2" can.
+    steps: Optional[List[Any]] = None
 
 
 class DeleteMilestone(BaseModel):
-    username: Optional[str] = None
     id: Optional[str] = None
 
 
 class ReorderMilestones(BaseModel):
-    username: Optional[str] = None
     goal_id: Optional[str] = None
     # Milestone ids in the order they should be executed.
     order: List[str] = []
@@ -182,7 +182,6 @@ class SuggestMilestones(BaseModel):
     said about it is read from the row — or pass a `title` for a goal that does
     not exist yet, which is what the creation wizard has.
     """
-    username: Optional[str] = None
     goal_id: Optional[str] = None
     title: Optional[str] = None
     why: str = ''
@@ -190,8 +189,21 @@ class SuggestMilestones(BaseModel):
     category: str = ''
 
 
+class SuggestSteps(BaseModel):
+    """Ask the model for one checkpoint's checklist. Writes nothing.
+
+    `milestone_id` is the ordinary case and carries its goal with it. `title`
+    is for a checkpoint being drafted that has no row yet, and takes
+    `goal_id` alongside it so the model is told what the checkpoint is for —
+    a six-word checkpoint title on its own is frequently not enough to break
+    down.
+    """
+    milestone_id: Optional[str] = None
+    goal_id: Optional[str] = None
+    title: Optional[str] = None
+
+
 class SetMilestones(BaseModel):
-    username: Optional[str] = None
     goal_id: Optional[str] = None
     # The checkpoint titles the goal should have, in execution order.
     titles: List[str] = []
@@ -205,7 +217,6 @@ class UpdateGoalProgress(BaseModel):
 
 
 class AutoApplyTaskXp(BaseModel):
-    username: Optional[str] = None
     xp: Any = 0
 
 
@@ -322,11 +333,161 @@ def _spread_dates(count, deadline, today=None):
     ]
 
 
+# --------------------------------------------------------------------------
+# The checklist under a checkpoint
+# --------------------------------------------------------------------------
+# How many small pieces of work a checkpoint is broken into. Three is a floor
+# rather than a default: a checkpoint you cannot name three pieces of is either
+# already small enough to be a task, or has not been thought about yet, and the
+# empty rows are the prompt to do that thinking. There is no way to go below
+# it from the UI or from here — `_clean_steps` pads back up to three whatever
+# it is handed.
+MIN_STEPS = 3
+
+# The ceiling. A checkpoint needing more than this is two checkpoints.
+MAX_STEPS = 8
+
+# One step's title. Long enough for a real sentence, short enough that the card
+# can draw three of them without becoming a document.
+STEP_MAX = 120
+
+# What the three seeded rows say. They are prompts rather than content, and are
+# flagged `placeholder` so every reader can tell the difference — the card draws
+# them muted, and nothing counts an unfilled row as work planned.
+PLACEHOLDERS = (
+    'Name the first piece of work',
+    'Name the second',
+    'Name what finishes it',
+)
+
+
+def _clean_due(value):
+    """An ISO day, or None.
+
+    Anything that is not a date this app could have written is dropped rather
+    than stored and printed back as a broken one — the front end sends what an
+    `<input type="date">` produced, and everything else is either a client bug
+    or somebody posting by hand.
+    """
+    text = str(value or '').strip()[:10]
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text).isoformat()
+    except ValueError:
+        return None
+
+
+def _fresh_step_id(taken):
+    """A short id unique within one checklist. Ids are per-milestone, not global."""
+    n = 1
+    while f's{n}' in taken:
+        n += 1
+    return f's{n}'
+
+
+def _clean_steps(value):
+    """Whatever came in, as a checklist that satisfies the rules.
+
+    Total about what it accepts, because it is fed three quite different
+    things: a JSON string off a database row, a list off a request body, and
+    NULL from a checkpoint written before this column existed. All three have
+    the same honest answer — the steps that could be read, padded to `MIN_STEPS`
+    with placeholders and cut at `MAX_STEPS`.
+
+    Padding rather than rejecting is deliberate. A request that sends two steps
+    is not an error to report to somebody who was editing a checklist; it is a
+    checklist with a row they have not written yet.
+    """
+    raw = value
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw) if raw.strip() else []
+        except (ValueError, TypeError):
+            raw = []
+    if not isinstance(raw, list):
+        raw = []
+
+    out, taken = [], set()
+    for entry in raw[:MAX_STEPS]:
+        if not isinstance(entry, dict):
+            continue
+        # Squashed as well as trimmed, and cut afterwards. utils/milestoneSteps
+        # does exactly this on the way in, and a server that only stripped
+        # would store a title the client had already shown differently.
+        title = re.sub(r'\s+', ' ', str(entry.get('title') or '')).strip()[:STEP_MAX]
+        step_id = str(entry.get('id') or '').strip() or _fresh_step_id(taken)
+        if step_id in taken:
+            step_id = _fresh_step_id(taken)
+        taken.add(step_id)
+        # The one task this step is execution for, if the reader linked one.
+        # A step is still not a task — this is a pointer, and the step stands
+        # whether or not anything is on the other end of it.
+        #
+        # An emptied row loses it, for the same reason it loses its tick: a
+        # pointer hanging off a row with no text is a task attached to
+        # nothing. utils/milestoneSteps drops it on the way in too.
+        task_id = (str(entry.get('task_id') or '').strip() or None) if title else None
+
+        # A date of its own, and only where there is nothing else holding one.
+        # A step pointing at a task takes that task's due date — two dates for
+        # one piece of work is two answers to "when", and the one on the task
+        # is the one the calendar, the dashboard and the reminders all read.
+        # So linking a task drops the step's own date rather than keeping a
+        # second copy that nothing else can see.
+        due = _clean_due(entry.get('due')) if (title and not task_id) else None
+        out.append({
+            'id': step_id,
+            'title': title,
+            'task_id': task_id,
+            'due': due,
+            'done': bool(entry.get('done')),
+            # Derived, never trusted from the caller: an untitled row is a
+            # placeholder and a titled one is not. Taking the client's flag
+            # would let a stale one grey out work somebody had written.
+            'placeholder': not title,
+        })
+
+    while len(out) < MIN_STEPS:
+        title = PLACEHOLDERS[len(out)] if len(out) < len(PLACEHOLDERS) else ''
+        step_id = _fresh_step_id(taken)
+        taken.add(step_id)
+        out.append({'id': step_id, 'title': title, 'task_id': None, 'due': None,
+                    'done': False, 'placeholder': True})
+
+    return out
+
+
+def _steps_column(steps):
+    """The checklist as it is stored. Placeholders are not written out."""
+    return json.dumps([
+        {'id': s['id'], 'title': s['title'], 'done': s['done'],
+         'task_id': s['task_id'], 'due': s['due']}
+        for s in steps if not s['placeholder']
+    ])
+
+
+def _seed_steps():
+    """The column value a brand-new checkpoint is created with."""
+    return _steps_column(_clean_steps([]))
+
+
 def _milestones_of(rows, goal_id):
-    """One goal's checkpoints, in execution order."""
+    """One goal's checkpoints, in execution order, each with its checklist.
+
+    `steps` leaves here as a list rather than as the JSON string it is stored
+    as, and always with at least `MIN_STEPS` entries — including for the rows
+    that predate the column, which read as NULL and come out as three
+    placeholders. The front end therefore never has to parse anything or count
+    to three itself.
+    """
     mine = [row for row in rows if row.get('goal_id') == goal_id]
-    return sorted(mine, key=lambda row: (row.get('position') or 0,
+    mine = sorted(mine, key=lambda row: (row.get('position') or 0,
                                          str(row.get('id') or '')))
+    # Copies. `create_goal` runs rows through here that it has not inserted
+    # yet, and parsing `steps` in place would hand the insert a Python list
+    # where the column wants text.
+    return [dict(row, steps=_clean_steps(row.get('steps'))) for row in mine]
 
 
 def _recompute(goal, milestones=None):
@@ -375,17 +536,37 @@ def _recompute(goal, milestones=None):
     return goal
 
 
+def _save_goal(goal, username):
+    """Write back one goal. The row, not the table.
+
+    Everything here used to read `db.goals()`, change one dict in the list and
+    call `db.save_goals(goals)` — a DELETE and a full re-INSERT of every goal
+    every account has, to move one number. Small tables, so the cost was never
+    the point; the point is that two requests each rewriting the whole table
+    from their own copy is how one of them silently disappears. See the note on
+    `write_table` in backend/database/connection.py.
+    """
+    return db.update_row('goals', goal['id'],
+                         {k: v for k, v in goal.items() if k != 'id'},
+                         user_id=username)
+
+
+def _save_stone(stone, username):
+    """Write back one checkpoint. Same reasoning as `_save_goal`."""
+    return db.update_row('goal_milestones', stone['id'],
+                         {k: v for k, v in stone.items() if k != 'id'},
+                         user_id=username)
+
+
 def _recompute_goal(goal_id, username):
     """Re-derive one goal after something under it changed. Saves if it moved."""
-    goals = db.goals()
-    goal = next((g for g in goals
-                 if g.get('id') == goal_id and g.get('user_id') == username), None)
+    goal = db.find_row('goals', goal_id, user_id=username)
     if not goal:
         return None
     before = (goal.get('progress'), goal.get('status'), goal.get('target_value'))
-    _recompute(goal, _milestones_of(db.goal_milestones(), goal_id))
+    _recompute(goal, _milestones_of(db.rows_for('goal_milestones', username), goal_id))
     if (goal.get('progress'), goal.get('status'), goal.get('target_value')) != before:
-        db.save_goals(goals)
+        _save_goal(goal, username)
     return goal
 
 
@@ -406,7 +587,7 @@ def apply_task_xp(username, xp):
     if not username or xp <= 0:
         return {"updated": [], "completed": []}
 
-    goals = db.goals()
+    goals = db.rows_for('goals', username)
     updated = []
     completed = []
 
@@ -426,9 +607,8 @@ def apply_task_xp(username, xp):
         updated.append(info)
         if is_done:
             completed.append(info)
+        _save_goal(goal, username)
 
-    if updated:
-        db.save_goals(goals)
     return {"updated": updated, "completed": completed}
 
 
@@ -438,26 +618,21 @@ def apply_task_completion(username):
     Mirrors how earned XP advances every active XP goal. Runs server-side on
     each completion, so the goals page reflects it whether or not it is open.
     """
-    goals = db.goals()
-    changed = False
-    for goal in _goals_of(goals, username, 'tasks', unfinished=True):
+    for goal in _goals_of(db.rows_for('goals', username), username, 'tasks',
+                          unfinished=True):
         target = goal.get('target_tasks', 0) or 0
         new_value = (goal.get('current_tasks', 0) or 0) + 1
         if target and new_value > target:
             new_value = target
         goal['current_tasks'] = new_value
         _recompute(goal)
-        changed = True
-    if changed:
-        db.save_goals(goals)
+        _save_goal(goal, username)
 
 
 @router.post('/api/auto_apply_task_xp')
-def auto_apply_task_xp(body: AutoApplyTaskXp):
+def auto_apply_task_xp(body: AutoApplyTaskXp, username: str = Depends(current_username)):
     """Apply a completed task's XP to the user's active XP goals."""
-    if not body.username:
-        return fail('Username required')
-    return ok(**apply_task_xp(body.username, body.xp))
+    return ok(**apply_task_xp(username, body.xp))
 
 
 # --------------------------------------------------------------------------
@@ -477,12 +652,10 @@ def sync_streak_goals(username):
         return
     # Decay a stale streak first so goals follow the same live value everywhere.
     if xp_tracking.refresh_streak(user):
-        db.save_users(users)
+        db.save_user(user)
     current_streak = user.get('current_streak', 0) or 0
 
-    goals = db.goals()
-    changed = False
-    for goal in _goals_of(goals, username, 'streak'):
+    for goal in _goals_of(db.rows_for('goals', username), username, 'streak'):
         target = goal.get('target_streak', 0) or 0
         # Cap at the target so a completed goal reads "N / N Days".
         new_value = min(current_streak, target) if target else current_streak
@@ -492,9 +665,7 @@ def sync_streak_goals(username):
         _recompute(goal)
         if (goal.get('current_streak'), goal.get('status'),
                 goal.get('progress'), goal.get('target_value')) != before:
-            changed = True
-    if changed:
-        db.save_goals(goals)
+            _save_goal(goal, username)
 
 
 def sync_focus_goals(username):
@@ -504,13 +675,12 @@ def sync_focus_goals(username):
     — the account's lifetime tracked seconds minus the baseline recorded at
     creation — and it completes on its own the moment that reaches the target.
     """
-    goals = db.goals()
-    pending = _goals_of(goals, username, 'focus', unfinished=True)
+    pending = _goals_of(db.rows_for('goals', username), username, 'focus',
+                        unfinished=True)
     if not pending:
         return
 
     total_now = focus_tracking.total_seconds(username)
-    changed = False
     for goal in pending:
         target_min = goal.get('target_focus', 0) or 0
         try:
@@ -525,17 +695,15 @@ def sync_focus_goals(username):
         _recompute(goal)
         if (goal.get('current_focus'), goal.get('status'),
                 goal.get('progress'), goal.get('target_value')) != before:
-            changed = True
-    if changed:
-        db.save_goals(goals)
+            _save_goal(goal, username)
 
 
 # --------------------------------------------------------------------------
 # The API
 # --------------------------------------------------------------------------
 @router.post('/api/add_goal')
-def add_goal(body: AddGoal):
-    if not body.username or not body.title:
+def add_goal(body: AddGoal, username: str = Depends(current_username)):
+    if not username or not body.title:
         return fail('Username and title are required')
 
     targets = {
@@ -567,10 +735,9 @@ def add_goal(body: AddGoal):
     goal_id = body.id or db.new_id('goals')
     category = body.category if body.category in CATEGORIES else 'other'
 
-    goals = db.goals()
     goal = {
         "id": goal_id,
-        "user_id": body.username,
+        "user_id": username,
         "title": body.title,
         "description": body.description,
         "progress": 0,
@@ -588,7 +755,7 @@ def add_goal(body: AddGoal):
         "current_focus": 0,
         # Focus goals count time from now on, so remember the lifetime total
         # they start from: progress is (total later - this baseline).
-        "focus_baseline_seconds": (focus_tracking.total_seconds(body.username)
+        "focus_baseline_seconds": (focus_tracking.total_seconds(username)
                                    if measure == 'focus' else 0),
         "priority": _clamp_priority(body.priority),
         "deadline": body.deadline,
@@ -607,37 +774,39 @@ def add_goal(body: AddGoal):
     }
 
     titles = [title.strip() for title in body.milestones if title and title.strip()]
-    rows = db.goal_milestones()
+    rows = db.rows_for('goal_milestones', username)
+    fresh = []
     if titles:
         now = datetime.now().isoformat()
         dates = _spread_dates(len(titles), body.deadline)
         for position, title in enumerate(titles):
-            rows.append({
-                "id": _fresh_milestone_id(rows),
+            fresh.append({
+                "id": _fresh_milestone_id(rows + fresh),
                 "goal_id": goal_id,
-                "user_id": body.username,
+                "user_id": username,
                 "title": title,
                 "note": '',
                 "position": position,
                 "status": 'pending',
                 "target_date": dates[position],
+                "steps": _seed_steps(),
                 "created_at": now,
             })
 
-    _recompute(goal, _milestones_of(rows, goal_id))
-    goals.append(goal)
+    _recompute(goal, _milestones_of(rows + fresh, goal_id))
     # Goals first: a milestone row names a goal that has to exist by the time
-    # the milestone write runs its foreign-key check.
-    db.save_goals(goals)
-    if titles:
-        db.save_goal_milestones(rows)
-    return ok(message='Goal added successfully', id=goal_id)
+    # the milestone insert runs its foreign-key check. Foreign keys are ON for
+    # these writes — unlike `write_table`, which has to switch them off to swap
+    # a table — so the ordering is enforced rather than merely intended.
+    goal = db.insert_row('goals', goal)
+    for stone in fresh:
+        stone['goal_id'] = goal['id']
+        db.insert_row('goal_milestones', stone)
+    return ok(message='Goal added successfully', id=goal['id'])
 
 
 @router.get('/api/get_goals')
-def get_goals(username: str = ''):
-    if not username:
-        return fail('Username required')
+def get_goals(username: str = Depends(current_username)):
 
     # Bring the self-tracking goals up to date before handing them over.
     sync_streak_goals(username)
@@ -649,8 +818,8 @@ def get_goals(username: str = ''):
     active_days = {day for day in (xp_tracking.event_day(e) for e in events) if day}
     avg_xp_per_day = round(total_xp / len(active_days)) if active_days else 0
 
-    mine = [g for g in db.goals() if g.get('user_id') == username]
-    rows = db.goal_milestones()
+    mine = db.rows_for('goals', username)
+    rows = db.rows_for('goal_milestones', username)
     for goal in mine:
         # Named `measure` on the way out whatever it is on the way in, so the
         # front end never has to know that an old row leaves the column empty.
@@ -661,13 +830,11 @@ def get_goals(username: str = ''):
 
 
 @router.post('/api/update_goal')
-def update_goal(body: UpdateGoal):
-    if not body.id or not body.username:
+def update_goal(body: UpdateGoal, username: str = Depends(current_username)):
+    if not body.id or not username:
         return fail('Goal ID and username required')
 
-    goals = db.goals()
-    goal = next((g for g in goals
-                 if g.get('id') == body.id and g.get('user_id') == body.username), None)
+    goal = db.find_row('goals', body.id, user_id=username)
     if not goal:
         return fail('Goal not found')
 
@@ -688,48 +855,33 @@ def update_goal(body: UpdateGoal):
     # target to disagree with it — see the note there.
     if 'status' in sent and body.status in ('active', 'completed'):
         goal['status'] = body.status
-    _recompute(goal, _milestones_of(db.goal_milestones(), goal.get('id')))
+    _recompute(goal, _milestones_of(db.rows_for('goal_milestones', username),
+                                    goal.get('id')))
 
-    db.save_goals(goals)
+    _save_goal(goal, username)
     return ok()
 
 
 @router.post('/api/delete_goal')
-def delete_goal(body: DeleteGoal):
+def delete_goal(body: DeleteGoal, username: str = Depends(current_username)):
     if not body.goal_id:
         return fail('Goal ID required')
 
-    goals = db.goals()
-    if body.username:
-        kept = [g for g in goals
-                if not (g.get('id') == body.goal_id and g.get('user_id') == body.username)]
-    else:
-        kept = [g for g in goals if g.get('id') != body.goal_id]
-
-    # The checkpoints go with it, and they go first. `write_table` swaps rows
-    # with foreign keys off and checks the table it wrote on the way out, so
-    # the ON DELETE CASCADE on goal_milestones.goal_id never fires — leaving
-    # the milestones behind would not fail this write, it would fail the next
-    # write to *that* table, from somewhere else entirely.
-    rows = db.goal_milestones()
-    remaining = [row for row in rows if row.get('goal_id') != body.goal_id]
-    if len(remaining) != len(rows):
-        db.save_goal_milestones(remaining)
-
-    db.save_goals(kept)
+    # The checkpoints go with it, and they no longer have to be swept up by
+    # hand: `goal_milestones.goal_id` declares ON DELETE CASCADE and this is a
+    # real DELETE, so SQLite carries them. The old code deleted them itself
+    # because `write_table` swaps rows with foreign keys switched off, which
+    # meant the cascade never fired and orphaned checkpoints would surface as a
+    # failure in some later, unrelated write to that table.
+    db.delete_row('goals', body.goal_id, user_id=username)
 
     # The tasks stay. A task that was done for a goal was still done, and its
     # XP is already in the ledger; what it loses is the link, which is what
     # `the link` reads as "no goal" from here on.
-    tasks = db.tasks()
-    touched = False
-    for task in tasks:
+    for task in db.tasks_for(username):
         if task.get('goal_id') == body.goal_id:
-            task['goal_id'] = None
-            task['milestone_id'] = None
-            touched = True
-    if touched:
-        db.save_tasks(tasks)
+            db.update_row('tasks', task['id'],
+                          {'goal_id': None, 'milestone_id': None}, user_id=username)
 
     return ok()
 
@@ -738,21 +890,20 @@ def delete_goal(body: DeleteGoal):
 # Milestones
 # --------------------------------------------------------------------------
 @router.post('/api/add_milestone')
-def add_milestone(body: AddMilestone):
-    if not body.username or not body.goal_id or not body.title:
+def add_milestone(body: AddMilestone, username: str = Depends(current_username)):
+    if not username or not body.goal_id or not body.title:
         return fail('Username, goal and title are required')
 
-    goals = db.goals()
-    if not any(g.get('id') == body.goal_id and g.get('user_id') == body.username
-               for g in goals):
+    if not db.find_row('goals', body.goal_id, user_id=username):
         return fail('Goal not found')
 
-    rows = db.goal_milestones()
+    rows = db.rows_for('goal_milestones', username)
     mine = _milestones_of(rows, body.goal_id)
-    rows.append({
-        "id": _fresh_milestone_id(rows),
+    new_id = _fresh_milestone_id(rows)
+    db.insert_row('goal_milestones', {
+        "id": new_id,
         "goal_id": body.goal_id,
-        "user_id": body.username,
+        "user_id": username,
         "title": body.title,
         "note": body.note,
         # On the end. A checkpoint added later is one the plan grew, not one
@@ -760,21 +911,23 @@ def add_milestone(body: AddMilestone):
         "position": len(mine),
         "status": 'pending',
         "target_date": body.target_date,
+        # Three empty rows, not none. See MIN_STEPS.
+        "steps": _seed_steps(),
         "created_at": datetime.now().isoformat(),
     })
-    db.save_goal_milestones(rows)
-    _recompute_goal(body.goal_id, body.username)
-    return ok()
+    _recompute_goal(body.goal_id, username)
+    # The id goes back for the same reason `/api/add_goal` returns one: the
+    # caller's next move is usually about the row it just made, and finding it
+    # again by title is a guess when two checkpoints are named the same thing.
+    return ok(id=new_id)
 
 
 @router.post('/api/update_milestone')
-def update_milestone(body: UpdateMilestone):
-    if not body.username or not body.id:
+def update_milestone(body: UpdateMilestone, username: str = Depends(current_username)):
+    if not username or not body.id:
         return fail('Username and milestone ID required')
 
-    rows = db.goal_milestones()
-    row = next((r for r in rows
-                if r.get('id') == body.id and r.get('user_id') == body.username), None)
+    row = db.find_row('goal_milestones', body.id, user_id=username)
     if not row:
         return fail('Milestone not found')
 
@@ -783,6 +936,9 @@ def update_milestone(body: UpdateMilestone):
         if field in sent and getattr(body, field) is not None:
             row[field] = getattr(body, field)
 
+    if 'steps' in sent and body.steps is not None:
+        row['steps'] = _steps_column(_clean_steps(body.steps))
+
     if 'status' in sent and body.status in ('pending', 'active', 'done'):
         row['status'] = body.status
         # The date it was reached, kept only while it is reached. Reopening a
@@ -790,45 +946,54 @@ def update_milestone(body: UpdateMilestone):
         # something that is not complete.
         row['completed_at'] = datetime.now().isoformat() if body.status == 'done' else None
 
-    db.save_goal_milestones(rows)
-    _recompute_goal(row.get('goal_id'), body.username)
+        # One focus per goal. `active` is what the card reads to decide which
+        # checkpoint it is drawing, and it takes the first it finds — so two
+        # active rows is not a visible conflict, it is a card that quietly
+        # stops following the one you last clicked. Demote the others here
+        # rather than trusting every caller to send two requests in order.
+        if body.status == 'active':
+            for other in _milestones_of(db.rows_for('goal_milestones', username),
+                                        row.get('goal_id')):
+                if other.get('id') != row.get('id') and other.get('status') == 'active':
+                    db.update_row('goal_milestones', other['id'],
+                                  {'status': 'pending'}, user_id=username)
+
+    _save_stone(row, username)
+    _recompute_goal(row.get('goal_id'), username)
     return ok()
 
 
 @router.post('/api/delete_milestone')
-def delete_milestone(body: DeleteMilestone):
-    if not body.username or not body.id:
+def delete_milestone(body: DeleteMilestone, username: str = Depends(current_username)):
+    if not username or not body.id:
         return fail('Username and milestone ID required')
 
-    rows = db.goal_milestones()
-    row = next((r for r in rows
-                if r.get('id') == body.id and r.get('user_id') == body.username), None)
+    row = db.find_row('goal_milestones', body.id, user_id=username)
     if not row:
         return fail('Milestone not found')
     goal_id = row.get('goal_id')
 
-    kept = [r for r in rows if r is not row]
+    db.delete_row('goal_milestones', body.id, user_id=username)
+
     # Close the gap, so the remaining checkpoints are 0..n-1 with no hole where
-    # the deleted one was.
+    # the deleted one was. Only the ones that actually moved are written.
+    kept = db.rows_for('goal_milestones', username)
     for position, remaining in enumerate(_milestones_of(kept, goal_id)):
-        remaining['position'] = position
-    db.save_goal_milestones(kept)
+        if remaining.get('position') != position:
+            db.update_row('goal_milestones', remaining['id'],
+                          {'position': position}, user_id=username)
 
-    tasks = db.tasks()
-    touched = False
-    for task in tasks:
+    for task in db.tasks_for(username):
         if task.get('milestone_id') == body.id:
-            task['milestone_id'] = None
-            touched = True
-    if touched:
-        db.save_tasks(tasks)
+            db.update_row('tasks', task['id'],
+                          {'milestone_id': None}, user_id=username)
 
-    _recompute_goal(goal_id, body.username)
+    _recompute_goal(goal_id, username)
     return ok()
 
 
 @router.post('/api/reorder_milestones')
-def reorder_milestones(body: ReorderMilestones):
+def reorder_milestones(body: ReorderMilestones, username: str = Depends(current_username)):
     """Write a new execution order for one goal's checkpoints.
 
     Ids the goal does not own are ignored rather than rejected, and any of its
@@ -836,28 +1001,27 @@ def reorder_milestones(body: ReorderMilestones):
     A reorder is a drag on a list, and a list that refuses to move because the
     page was a moment out of date is worse than one that does its best.
     """
-    if not body.username or not body.goal_id:
+    if not username or not body.goal_id:
         return fail('Username and goal ID required')
 
-    rows = db.goal_milestones()
-    mine = _milestones_of(rows, body.goal_id)
+    # Scoped to the caller by the read, so the ownership check below is now
+    # about the goal rather than about the rows.
+    mine = _milestones_of(db.rows_for('goal_milestones', username), body.goal_id)
     if not mine:
         return fail('Goal has no milestones')
-    if any(row.get('user_id') != body.username for row in mine):
-        return fail('Goal not found')
 
     by_id = {row.get('id'): row for row in mine}
     ordered = [by_id[mid] for mid in body.order if mid in by_id]
     ordered += [row for row in mine if row not in ordered]
     for position, row in enumerate(ordered):
-        row['position'] = position
-
-    db.save_goal_milestones(rows)
+        if row.get('position') != position:
+            db.update_row('goal_milestones', row['id'],
+                          {'position': position}, user_id=username)
     return ok()
 
 
 @router.post('/api/suggest_milestones')
-def suggest_milestones(body: SuggestMilestones):
+def suggest_milestones(body: SuggestMilestones, username: str = Depends(current_username)):
     """Five checkpoint titles for a goal, from the model. Writes nothing.
 
     A draft, not a plan: the page puts these in five editable fields and only
@@ -865,17 +1029,13 @@ def suggest_milestones(body: SuggestMilestones):
     readable message rather than an error status, because the page shows it on
     the goal — a suggestion that cannot be made is not a broken request.
     """
-    if not body.username:
-        return fail('Username required')
 
     title = (body.title or '').strip()
     why, description, category = body.why, body.description, body.category
     unit = target = ''
 
     if body.goal_id:
-        goal = next((g for g in db.goals()
-                     if g.get('id') == body.goal_id
-                     and g.get('user_id') == body.username), None)
+        goal = db.find_row('goals', body.goal_id, user_id=username)
         if not goal:
             return fail('Goal not found')
         # The row is the better source: it has what the wizard collected, and
@@ -900,8 +1060,53 @@ def suggest_milestones(body: SuggestMilestones):
     return ok(milestones=titles)
 
 
+@router.post('/api/suggest_steps')
+def suggest_steps(body: SuggestSteps, username: str = Depends(current_username)):
+    """Five step titles for one checkpoint, from the model. Writes nothing.
+
+    The same contract as `/api/suggest_milestones` above and for the same
+    reasons: a draft the page puts in editable rows, and every failure back as
+    a readable message rather than an error status. `/api/update_milestone`
+    is what saves them, exactly as it saves a checklist typed by hand.
+    """
+    title = (body.title or '').strip()
+    goal_id = body.goal_id
+
+    if body.milestone_id:
+        row = db.find_row('goal_milestones', body.milestone_id, user_id=username)
+        if not row:
+            return fail('Checkpoint not found')
+        title = title or (row.get('title') or '')
+        goal_id = goal_id or row.get('goal_id')
+
+    if not title:
+        return fail('A checkpoint title is required')
+
+    # What the goal says about itself, so the checkpoint is broken down for
+    # the thing it belongs to rather than in the abstract.
+    goal_title = why = description = category = unit = target = ''
+    if goal_id:
+        goal = db.find_row('goals', goal_id, user_id=username)
+        if goal:
+            goal_title = goal.get('title') or ''
+            why = goal.get('why') or ''
+            description = goal.get('description') or ''
+            category = goal.get('category') or ''
+            unit = goal.get('unit') or ''
+            if _measure_of(goal) == 'number' and goal.get('target_number'):
+                target = str(goal.get('target_number'))
+
+    try:
+        titles = planner.suggest_steps(
+            title, goal=goal_title, why=why, description=description,
+            category=category, unit=unit, target=target)
+    except planner.PlannerUnavailable as exc:
+        return fail(str(exc))
+    return ok(steps=titles)
+
+
 @router.post('/api/set_milestones')
-def set_milestones(body: SetMilestones):
+def set_milestones(body: SetMilestones, username: str = Depends(current_username)):
     """Write a goal's whole checkpoint list at once.
 
     The suggestion flow's other half, and the one write that had no endpoint:
@@ -915,7 +1120,7 @@ def set_milestones(body: SetMilestones):
     at it loose. Rows past the end of the list are deleted, and their tasks are
     unlinked exactly as `delete_milestone` does it.
     """
-    if not body.username or not body.goal_id:
+    if not username or not body.goal_id:
         return fail('Username and goal ID required')
 
     titles = [str(title).strip() for title in body.titles if str(title).strip()]
@@ -924,57 +1129,53 @@ def set_milestones(body: SetMilestones):
     if len(titles) > planner.COUNT:
         return fail('A goal takes at most {} checkpoints'.format(planner.COUNT))
 
-    goals = db.goals()
-    if not any(g.get('id') == body.goal_id and g.get('user_id') == body.username
-               for g in goals):
+    if not db.find_row('goals', body.goal_id, user_id=username):
         return fail('Goal not found')
 
-    rows = db.goal_milestones()
+    rows = db.rows_for('goal_milestones', username)
     mine = _milestones_of(rows, body.goal_id)
     now = datetime.now().isoformat()
 
     for position, title in enumerate(titles):
         if position < len(mine):
-            mine[position]['title'] = title
-            mine[position]['position'] = position
+            db.update_row('goal_milestones', mine[position]['id'],
+                          {'title': title, 'position': position}, user_id=username)
             continue
-        rows.append({
+        rows.append(db.insert_row('goal_milestones', {
             "id": _fresh_milestone_id(rows),
             "goal_id": body.goal_id,
-            "user_id": body.username,
+            "user_id": username,
             "title": title,
             "note": '',
             "position": position,
             "status": 'pending',
             "target_date": '',
             "created_at": now,
-        })
+        }))
 
-    dropped = {row.get('id') for row in mine[len(titles):]}
-    if dropped:
-        rows = [row for row in rows if row.get('id') not in dropped]
-        tasks = db.tasks()
-        touched = False
-        for task in tasks:
-            if task.get('milestone_id') in dropped:
-                task['milestone_id'] = None
-                touched = True
-        if touched:
-            db.save_tasks(tasks)
+    # Whatever the new list is shorter than the old one by. The tasks that
+    # pointed at a dropped checkpoint lose the link and keep themselves.
+    for extra in mine[len(titles):]:
+        for task in db.tasks_for(username):
+            if task.get('milestone_id') == extra['id']:
+                db.update_row('tasks', task['id'],
+                              {'milestone_id': None}, user_id=username)
+        db.delete_row('goal_milestones', extra['id'], user_id=username)
 
-    db.save_goal_milestones(rows)
-    _recompute_goal(body.goal_id, body.username)
+    _recompute_goal(body.goal_id, username)
     return ok()
 
 
 @router.post('/api/update_goal_progress')
-def update_goal_progress(body: UpdateGoalProgress):
+def update_goal_progress(body: UpdateGoalProgress,
+                         username: str = Depends(current_username)):
     """Add to one goal's counter by hand, capped at its target."""
     if not body.goal_id:
         return fail('Goal ID required')
 
-    goals = db.goals()
-    goal = next((g for g in goals if str(g.get('id')) == str(body.goal_id)), None)
+    # Scoped to the owner. Without that this advanced any goal in the table
+    # by name, including somebody else's.
+    goal = db.find_row('goals', body.goal_id, user_id=username)
     if not goal:
         return fail('Goal not found')
 
@@ -996,7 +1197,7 @@ def update_goal_progress(body: UpdateGoalProgress):
     goal['status'] = status
     goal['progress'] = _progress(new_value, target)
     goal['target_value'] = target
-    db.save_goals(goals)
+    _save_goal(goal, username)
 
     return ok(
         goal_type=goal_type,

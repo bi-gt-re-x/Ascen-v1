@@ -17,14 +17,21 @@
  * degrees without a single page's height arithmetic changing. `Topbar` gave it
  * a height again and those same pages gave the height back, untouched.
  *
- * Collapsing works the same way it always did, through the same class and the
- * same localStorage key: `html.nav-collapsed` drops `--rail-w` to a strip wide
- * enough for the icons, and every page widens into it without knowing why.
+ * Collapsing works the same way it always did, through the same class:
+ * `html.nav-collapsed` drops `--rail-w` to a strip wide enough for the icons,
+ * and every page widens into it without knowing why. What changed is where the
+ * answer is kept. It is a preference on the account now (Settings, Appearance),
+ * so a rail folded on the laptop is folded on the tablet — and the localStorage
+ * key it used to live in alone is still written, as a cache: the account's
+ * answer arrives a moment after the first paint, and without something to open
+ * on, a collapsed rail would swing open and shut on every load.
  *
- * The rank and XP in the foot are the one thing here that reads account data.
- * The rail is mounted outside the router, so that is one call for the session
- * rather than one per page — and because it never unmounts, it would otherwise
- * still be showing the level you had when you opened the app. The dashboard
+ * The rank and XP in the foot are the one thing here that reads account data,
+ * and it reads `/api/stats` — six integers — rather than the account's whole
+ * task list, which is what it used to arrive attached to. The rail is mounted
+ * outside the router, so that is one call for the session rather than one per
+ * page — and because it never unmounts, it would otherwise still be showing
+ * the level you had when you opened the app. The dashboard
  * announces `ascen:stats-changed` when a completion moves the total, and this
  * listens. A custom event rather than shared state because that is the whole of
  * the dependency: one number, one direction, no reply.
@@ -37,11 +44,16 @@
  * to the top bar's account menu, which is also where the avatar picker went
  * when the plate that used to open it stopped existing.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { useAuth, useUserData } from '@/hooks';
+import { useAuth, useMediaQuery, useSettings, useStats, useSubjectIndex } from '@/hooks';
+import { followedSubjects } from '@/utils/analyticsPrefs';
+import { useChainAccount } from '@/hooks/useChainAccount';
+import { useTitleEgg } from '@/hooks/useTitleEgg';
 import { format } from '@/utils';
 import { rankFor } from '@/utils/mastery';
+import { earnedTitle } from '@/utils/easterEgg';
+import { AUTOMATIC, chooseTitle, chosenTitle, titlesFor } from '@/utils/rankTitle';
 import '@/styles/rail.css';
 
 const COLLAPSE_KEY = 'topnavCollapsed';
@@ -61,7 +73,51 @@ interface Tab {
    * is plainly on the analytics page.
    */
   also?: string[];
+  /**
+   * Path prefixes this entry should light up for.
+   *
+   * `also` is exact matches, which cannot express a route with an id in it —
+   * `/analytics/subject/:subjectId` is one URL per subject the account
+   * follows, and listing them would mean the rail knowing the catalogue.
+   */
+  under?: string[];
+  /**
+   * Whether this entry unfolds into a menu, and which one.
+   *
+   * The rows are not in `TABS` because they are not static: they come from the
+   * account's own answer to a setup question (`analytics_subjects`) joined
+   * against its subject catalogue, neither of which a module-level constant
+   * can hold. So the table carries the marker and the component builds the
+   * rows — which keeps the one entry that has a menu from turning `TABS` into
+   * a tree that nine other entries pay for.
+   */
+  menu?: 'analytics';
+  /**
+   * Show this one in the phone's bottom bar.
+   *
+   * Four of the ten, because a bar is only as wide as the phone. All ten were
+   * laid out across 375px and the last two — Records and Settings — were
+   * simply off the end of the screen: measured at x 352-393 and 395-436, with
+   * nothing to scroll. Two whole sections of the app were unreachable on a
+   * phone. The other six are one tap away behind More.
+   *
+   * These four because they are the ones a phone is *for*: what is on today,
+   * what is next, what is due, and what it is all toward. The reference pages
+   * — analytics, records, the skill tree — are what a desk is for.
+   */
+  phone?: boolean;
 }
+
+/**
+ * The width below which the rail lies down along the bottom of the screen.
+ *
+ * The same 640px as the `@media (max-width: 640px)` block in styles/rail.css,
+ * and the duplication is the point of naming it: below this the rail is not a
+ * narrower rail, it is a different component with four tabs and a sheet. CSS
+ * cannot express "render six of these somewhere else", so the breakpoint has
+ * to exist in both places. If one moves, move the other.
+ */
+const PHONE = '(max-width: 640px)';
 
 const stroke = {
   viewBox: '0 0 24 24',
@@ -83,6 +139,7 @@ const stroke = {
 const TABS: Tab[] = [
   {
     to: '/dashboard',
+    phone: true,
     label: 'Dashboard',
     icon: (
       <svg {...stroke}>
@@ -95,6 +152,7 @@ const TABS: Tab[] = [
   },
   {
     to: '/calendar',
+    phone: true,
     label: 'Calendar',
     icon: (
       <svg {...stroke}>
@@ -120,12 +178,17 @@ const TABS: Tab[] = [
     also: [
       '/analytics',
       '/analytics/records',
+      '/analytics/goals',
       '/trends',
       '/habits',
       '/insights',
       '/subjects',
       '/growth',
     ],
+    // The per-subject pages, which are one URL each and so cannot be listed.
+    under: ['/analytics/subject/'],
+    // The only entry in this table that unfolds. See `Tab.menu`.
+    menu: 'analytics',
     icon: (
       <svg {...stroke}>
         <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
@@ -141,6 +204,7 @@ const TABS: Tab[] = [
   // see `Tab.also` above, and the `/growth` redirect in App.tsx.
   {
     to: '/tasks',
+    phone: true,
     label: 'Tasks',
     icon: (
       <svg {...stroke}>
@@ -150,6 +214,7 @@ const TABS: Tab[] = [
   },
   {
     to: '/goals',
+    phone: true,
     label: 'Goals',
     icon: (
       <svg {...stroke}>
@@ -231,12 +296,28 @@ const TABS: Tab[] = [
   },
 ];
 
+/**
+ * Whether an entry is the page currently open.
+ *
+ * `NavLink` answers this for the entry's own path and nothing else, and three
+ * places here need the whole answer — the column, the phone's More button, and
+ * the sheet. Written once so the three cannot drift: an entry lit in the
+ * column and dark in the sheet is a rail that disagrees with itself about
+ * where the reader is.
+ */
+function onPage(tab: Tab, pathname: string): boolean {
+  if (tab.to === pathname) return true;
+  if (tab.also?.includes(pathname)) return true;
+  return Boolean(tab.under?.some((prefix) => pathname.startsWith(prefix)));
+}
+
 export function Rail() {
-  const { status } = useAuth();
-  const { data, reload } = useUserData();
+  const { status, username } = useAuth();
+  const { stats, reload } = useStats();
   // Only for `Tab.also` — NavLink handles its own path on every other entry.
   const { pathname } = useLocation();
 
+  const { prefs, ready, update } = useSettings();
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(COLLAPSE_KEY) === '1';
@@ -244,6 +325,14 @@ export function Rail() {
       return false; // private mode: the rail just starts open
     }
   });
+
+  // The account's answer, once it has arrived, is the one that counts — the
+  // cache above was only ever a guess at it. This is also what makes the switch
+  // on the settings page move the rail: the preference changes, and this hears.
+  useEffect(() => {
+    if (ready) setCollapsed(prefs.nav_collapsed);
+  }, [prefs.nav_collapsed, ready]);
+
   // `nav-collapsed` on <html> is what shrinks --rail-w; every page sizes itself
   // off that variable, so the page grows into the space on its own.
   useEffect(() => {
@@ -255,6 +344,16 @@ export function Rail() {
     }
   }, [collapsed]);
 
+  /* Applied here and stored in the background. A rail that waited for a round
+     trip before folding would feel broken on a slow connection, and there is
+     nothing to roll back to if the write fails — the class is already right,
+     and the next load reads the cache. */
+  const flip = useCallback(() => {
+    const next = !collapsed;
+    setCollapsed(next);
+    void update({ nav_collapsed: next });
+  }, [collapsed, update]);
+
   // The level below is read once for the session; this is how it hears that
   // finishing something has moved it.
   useEffect(() => {
@@ -264,17 +363,90 @@ export function Rail() {
   }, [reload]);
 
   const signedIn = status === 'signed-in';
-  const level = data ? format.levelForTotalXp(data.stats.xp) : null;
+  const level = stats ? format.levelForTotalXp(stats.xp) : null;
   /* The same twenty band names the skill trees use, read off the account level
      rather than a subject's. One ladder of names across the app: "Adept" has to
      mean the same distance travelled wherever it is printed, or it is
      decoration. */
   const rank = level ? rankFor(level.level) : null;
 
+  /* Below the breakpoint the bar shows four tabs and a More sheet; above it,
+     all ten in a column. See PHONE and the `phone` flag on Tab. */
+  const phone = useMediaQuery(PHONE);
+  const shown = phone ? TABS.filter((tab) => tab.phone) : TABS;
+  const rest = phone ? TABS.filter((tab) => !tab.phone) : [];
+
+  /**
+   * The subjects under Analytics, and whether the menu is open.
+   *
+   * The catalogue is cached module-wide and read by a dozen components
+   * already, so this costs the rail no request of its own — see
+   * hooks/useSubjects. The join drops ids the catalogue no longer holds, which
+   * is what keeps a subject deleted after it was nominated from leaving a row
+   * that opens a page about nothing.
+   */
+  const catalogue = useSubjectIndex(username);
+  const followed = followedSubjects(prefs.analytics_subjects, catalogue);
+
+  /* Open when the reader is already on one of these pages, and remembered
+     while they are not. Two rules rather than one because they answer
+     different questions: a reader who has just landed on a subject page should
+     see where they are in the rail without opening anything, and a reader who
+     opened the menu to browse should not have it fold every time they click a
+     row in it. */
+  const inSubjects = pathname.startsWith('/analytics/subject/');
+  const [menuOpen, setMenuOpen] = useState(inSubjects);
+  useEffect(() => {
+    if (inSubjects) setMenuOpen(true);
+  }, [inSubjects]);
+
+  /* Closed on arrival, and closed again the moment the reader lands
+     somewhere — a sheet still open over the page it just navigated to is a
+     sheet the reader has to dismiss to see what they asked for. */
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => setMoreOpen(false), [pathname]);
+
+  /* The title, and the three dots beside it. `picked` is held here rather than
+     read from storage on every render so that choosing one repaints the rail
+     immediately; utils/rankTitle is where it is written down. */
+  const [titlesOpen, setTitlesOpen] = useState(false);
+  const [picked, setPicked] = useState(() => chosenTitle(username ?? ''));
+  useEffect(() => setPicked(chosenTitle(username ?? '')), [username]);
+  useEffect(() => setTitlesOpen(false), [pathname]);
+
+  const pick = useCallback(
+    (name: string) => {
+      chooseTitle(username ?? '', name);
+      setPicked(name);
+      setTitlesOpen(false);
+    },
+    [username],
+  );
+
+  /* Every band reached, best first — and the secret title if the chain has
+     handed one out, which is a question about *this* account and so waits for
+     one. Empty until the account read lands, which is also when the whole
+     plate below appears. */
+  const account = useChainAccount();
+  const titles = level && account ? titlesFor(level.level, earnedTitle(account)) : [];
+  /* A pick the account can no longer justify falls back to the band. See
+     `titleShown` in utils/rankTitle for the case that causes. */
+  const title = picked && titles.includes(picked) ? picked : rank;
+
+  /* Ten clicks on that title open the hidden chain. The rail is the only
+     thing on screen from every page, which is why the door is here and the
+     room is on the dashboard — see hooks/useTitleEgg.ts. */
+  const { titleRef, onTitleClick } = useTitleEgg();
+
   return (
     <nav className="rail" aria-label="Main">
-      {/* The mark is a span, not a link: secret/easter-egg.js counts clicks on
-          it. The wordmark beside it is the link home.
+      {/* Mark and wordmark are both the link home. The mark used to be a bare
+          span, because the easter egg counted clicks on it and had to cancel
+          the navigation to do so — a logo that quietly stopped going home in
+          dark mode. The egg's ten clicks live on the dashboard's daily quote
+          now (hooks/useQuoteEgg.ts), which is not a link and has nothing to
+          cancel, so the mark is a link again and behaves like one in both
+          themes.
 
           The mark is drawn inline rather than loaded from /static/images: the
           file is a one-colour near-black glyph, which needed `mix-blend-mode:
@@ -284,7 +456,7 @@ export function Rail() {
           lighten in dark like everything else. Same geometry as the file, so
           the two marks are still the same mark. */}
       <div className="rail-brand">
-        <span className="rail-brand-mark" id="topnavBrandMark">
+        <NavLink className="rail-brand-mark" to="/home" aria-label="Ascen home">
           <svg viewBox="0 0 100 100" aria-hidden="true">
             <path
               className="rail-mark-body"
@@ -301,7 +473,7 @@ export function Rail() {
               transform="rotate(30 72.5 64.5)"
             />
           </svg>
-        </span>
+        </NavLink>
         <NavLink className="rail-brand-name" to="/home">
           Ascen
         </NavLink>
@@ -317,7 +489,7 @@ export function Rail() {
           aria-expanded={!collapsed}
           aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
           title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-          onClick={() => setCollapsed((value) => !value)}
+          onClick={flip}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />
@@ -326,20 +498,142 @@ export function Rail() {
       </div>
 
       <div className="rail-links">
-        {TABS.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            className={({ isActive }) =>
-              `rail-link${isActive || tab.also?.includes(pathname) ? ' active' : ''}`
-            }
-            title={tab.label}
+        {shown.map((tab) => {
+          /* The menu is drawn only where it can be read and only when it has
+             something in it. Collapsed, the rail is a strip of icons with no
+             labels, so a list of subject names has nowhere to go; on a phone
+             the rail is a bottom bar and Analytics lives in the More sheet;
+             and with nothing followed, a disclosure that opens onto a single
+             row called "Overall" is a click that changes nothing. Each of
+             those is the entry behaving as it always did. */
+          const menu = tab.menu === 'analytics' && followed.length > 0 && !collapsed && !phone;
+          const link = (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              className={({ isActive }) =>
+                `rail-link${isActive || onPage(tab, pathname) ? ' active' : ''}`
+              }
+              title={tab.label}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </NavLink>
+          );
+
+          if (!menu) return link;
+
+          return (
+            <div className="rail-group" key={tab.to}>
+              <div className="rail-group-head">
+                {link}
+                {/* Beside the link rather than wrapping it, so the row still
+                    goes to Analytics in one click. A parent that only opens a
+                    menu makes the reader take two clicks to reach the page
+                    they named, which is the commonest way a nav like this
+                    gets worse than the flat list it replaced. */}
+                <button
+                  type="button"
+                  className={`rail-disclose${menuOpen ? ' is-open' : ''}`}
+                  aria-expanded={menuOpen}
+                  aria-controls="rail-analytics-menu"
+                  aria-label={menuOpen ? 'Hide your subjects' : 'Show your subjects'}
+                  title={menuOpen ? 'Hide your subjects' : 'Show your subjects'}
+                  onClick={() => setMenuOpen((was) => !was)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}
+                       strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m8 10 4 4 4-4" />
+                  </svg>
+                </button>
+              </div>
+
+              {menuOpen && (
+                <div className="rail-sub" id="rail-analytics-menu">
+                  {/* Named, and first. The page that has always been here is
+                      one of the things in this menu now rather than the thing
+                      the menu hangs off, and leaving it unnamed would make the
+                      four subjects look like the whole of Analytics.
+
+                      `end` because `/analytics` is a prefix of every subject
+                      path: without it this row would be lit on all of them. */}
+                  <NavLink
+                    to="/analytics"
+                    end
+                    className={({ isActive }) => `rail-sub-link${isActive ? ' active' : ''}`}
+                  >
+                    Overall
+                  </NavLink>
+                  {followed.map((subject) => (
+                    <NavLink
+                      key={subject.id}
+                      to={`/analytics/subject/${encodeURIComponent(subject.id)}`}
+                      className={({ isActive }) => `rail-sub-link${isActive ? ' active' : ''}`}
+                      /* The full name on hover; the row prints the short form
+                         when the subject has one, because the rail is narrow
+                         and "Environmental Science" is not. */
+                      title={subject.name}
+                    >
+                      {subject.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* The other six, on a phone. Lit when the reader is on one of them,
+            so the bar still answers "where am I" for every page in the app
+            rather than only for the four it has room to name. */}
+        {phone && (
+          <button
+            type="button"
+            className={`rail-link rail-more${moreOpen ? ' is-open' : ''}${
+              rest.some((tab) => onPage(tab, pathname)) ? ' active' : ''
+            }`}
+            aria-expanded={moreOpen}
+            aria-haspopup="menu"
+            onClick={() => setMoreOpen((was) => !was)}
           >
-            {tab.icon}
-            <span>{tab.label}</span>
-          </NavLink>
-        ))}
+            <svg {...stroke}>
+              <circle cx="5" cy="12" r="1.6" />
+              <circle cx="12" cy="12" r="1.6" />
+              <circle cx="19" cy="12" r="1.6" />
+            </svg>
+            <span>More</span>
+          </button>
+        )}
       </div>
+
+      {phone && moreOpen && (
+        <>
+          {/* Tapping anywhere else closes it, which is what a sheet has to do
+              on a device with no Escape key. */}
+          <button
+            type="button"
+            className="rail-sheet-scrim"
+            aria-label="Close menu"
+            onClick={() => setMoreOpen(false)}
+          />
+          <div className="rail-sheet" role="menu">
+            {rest.map((tab) => (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                role="menuitem"
+                className={({ isActive }) =>
+                  `rail-sheet-link${isActive || onPage(tab, pathname) ? ' active' : ''}`
+                }
+                onClick={() => setMoreOpen(false)}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* The dark-mode switch stood here until it moved to the top bar, where
           the rest of the app's controls already were. See components/Topbar. */}
@@ -355,16 +649,80 @@ export function Rail() {
               {/* The whole name when the rail is open, the level's number when
                   it is a strip. "Grand Champion" in 54px of usable width is an
                   ellipsis, and an ellipsis is not a rank. */}
-              <span className="rail-rank-title" title={`${rank} · Level ${level.level}`}>
-                {rank}
-              </span>
+              <div className="rail-rank-head">
+                {/* No role, no tabIndex, no cursor: this is where the hidden
+                    chain starts, and a title that announced itself as a button
+                    would be advertising it. What it looks like is a label, and
+                    for anybody not counting to ten that is all it is. */}
+                <span
+                  className="rail-rank-title"
+                  title={`${title} · Level ${level.level}`}
+                  ref={titleRef}
+                  onClick={onTitleClick}
+                >
+                  {title}
+                </span>
+                <button
+                  type="button"
+                  className={`rail-rank-more${titlesOpen ? ' is-open' : ''}`}
+                  aria-label="Choose your title"
+                  aria-expanded={titlesOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setTitlesOpen((was) => !was)}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="5" cy="12" r="1.7" />
+                    <circle cx="12" cy="12" r="1.7" />
+                    <circle cx="19" cy="12" r="1.7" />
+                  </svg>
+                </button>
+              </div>
               <span className="rail-rank-num" aria-hidden="true">
                 {level.level}
               </span>
 
+              {titlesOpen && (
+                <>
+                  {/* Anywhere else closes it. A button rather than a document
+                      listener, for the same reason the More sheet uses one:
+                      the scrim is also what stops a stray click landing on the
+                      page behind a menu the reader has finished with. */}
+                  <button
+                    type="button"
+                    className="rail-title-scrim"
+                    aria-label="Close title menu"
+                    onClick={() => setTitlesOpen(false)}
+                  />
+                  <div className="rail-title-menu" role="menu">
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={picked === AUTOMATIC}
+                      className={`rail-title-opt${picked === AUTOMATIC ? ' active' : ''}`}
+                      onClick={() => pick(AUTOMATIC)}
+                    >
+                      <span>Automatic</span>
+                      <small>{rank}</small>
+                    </button>
+                    {titles.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={picked === name}
+                        className={`rail-title-opt${picked === name ? ' active' : ''}`}
+                        onClick={() => pick(name)}
+                      >
+                        <span>{name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
               <div className="rail-xp-row">
                 <span>Level {level.level}</span>
-                <span>{format.number(data?.stats.xp ?? 0)} XP</span>
+                <span>{format.number(stats?.xp ?? 0)} XP</span>
               </div>
               <div
                 className="rail-xp-bar"

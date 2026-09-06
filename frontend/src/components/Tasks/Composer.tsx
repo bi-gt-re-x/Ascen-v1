@@ -11,28 +11,47 @@
  * have applied anyway, and asking for five fields to write down "email Mr Chen"
  * is how a task list stops being used.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SubjectPicker } from '@/components';
 import type { Subject } from '@/services/subjects';
 import type { NewTask } from '@/services/tasks';
+import type { Task } from '@/types';
 import { MAX_TASK_XP, MIN_TASK_XP, XP_BANDS, xpToBand, xpToPriority } from '@/utils/priority';
 
 export interface ComposerProps {
   subjects: Subject[];
   busy: boolean;
   onAdd: (task: NewTask) => void;
+  /** What a new task is worth before the reader changes it. From Settings. */
+  defaultXp: number;
+  /** Only used when the reader has not moved the XP field off its default:
+      priority is otherwise derived from what the task is worth, and a stored
+      preference should not override a number the reader just typed. */
+  defaultPriority: Task['priority'];
 }
 
-/** What a task is worth when the reader does not say. Matches the backend's. */
-const DEFAULT_XP = MIN_TASK_XP;
-
-export function Composer({ subjects, busy, onAdd }: ComposerProps) {
+export function Composer({ subjects, busy, onAdd, defaultXp, defaultPriority }: ComposerProps) {
   const [name, setName] = useState('');
-  const [xp, setXp] = useState(DEFAULT_XP);
+  const [xp, setXp] = useState(defaultXp);
   const [due, setDue] = useState('');
   const [subject, setSubject] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const field = useRef<HTMLInputElement>(null);
+
+  /* The preferences are read near the root and land a moment after the page
+     does, so the form is often built before the account's default XP is known.
+     Following it until the reader touches the field is what makes the
+     preference true here rather than true-if-you-reload — and stopping there
+     is what stops it from resetting a number they just typed. */
+  const touched = useRef(false);
+  useEffect(() => {
+    if (!touched.current) setXp(defaultXp);
+  }, [defaultXp]);
+
+  const chooseXp = (value: number) => {
+    touched.current = true;
+    setXp(value);
+  };
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -41,10 +60,12 @@ export function Composer({ subjects, busy, onAdd }: ComposerProps) {
     // Clamped on the way out, the way both task dialogs do it. `min` and `max`
     // on a number input are advice to the spinner, not a limit on what can be
     // typed into it.
-    const worth = Math.max(MIN_TASK_XP, Math.min(MAX_TASK_XP, Number(xp) || DEFAULT_XP));
+    const worth = Math.max(MIN_TASK_XP, Math.min(MAX_TASK_XP, Number(xp) || defaultXp));
     onAdd({
       name: title,
-      priority: xpToPriority(worth),
+      // The preference stands while the XP field is untouched; past that the
+      // number the reader typed is the better answer and decides it.
+      priority: worth === defaultXp ? defaultPriority : xpToPriority(worth),
       xp_reward: worth,
       due_date: due || null,
       subject,
@@ -103,7 +124,7 @@ export function Composer({ subjects, busy, onAdd }: ComposerProps) {
               value={xpToBand(xp)}
               onChange={(event) => {
                 const band = XP_BANDS.find((entry) => entry.label === event.target.value);
-                if (band) setXp(band.from);
+                if (band) chooseXp(band.from);
               }}
             >
               {XP_BANDS.map((band) => (
@@ -126,7 +147,7 @@ export function Composer({ subjects, busy, onAdd }: ComposerProps) {
               min={MIN_TASK_XP}
               max={MAX_TASK_XP}
               value={xp}
-              onChange={(event) => setXp(Number(event.target.value))}
+              onChange={(event) => chooseXp(Number(event.target.value))}
             />
           </label>
 

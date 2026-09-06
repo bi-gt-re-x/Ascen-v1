@@ -132,14 +132,3 @@ export function dayEntries(
   );
 }
 
-/** The day's completion: how many of its tasks are done, and the share. */
-export function dayProgress(entries: DayEntry[]): { done: number; total: number; percent: number } {
-  const counted = entries.filter((entry) => entry.kind === 'task' || entry.name.trim() !== '');
-  const done = counted.filter((entry) => entry.completed).length;
-  const total = counted.length;
-  return {
-    done,
-    total,
-    percent: total > 0 ? Math.round((done / total) * 100) : 0,
-  };
-}

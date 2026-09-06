@@ -30,26 +30,30 @@ import {
   MonthGrid,
   MonthSidebar,
   MonthSummaryBar,
+  MonthTools,
   ViewSwitcher,
   dayEntries,
 } from '@/components/Calendar';
 import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
+import { RatePrompt } from '@/components/Tasks';
 import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
   useCalendarStore,
   useCalendarTasks,
   useDayFocus,
   useDocumentTitle,
+  useSettings,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
 import { useFocusSession } from '@/hooks/useFocusSession';
-import { focus as focusService } from '@/services';
+import { focus as focusService, goals as goalService } from '@/services';
+import { weekStartDay } from '@/services/settings';
 import { dates } from '@/utils';
-import { buildIntensityIndex } from '@/utils/calendarIntensity';
+import { isCalendarPlaced } from '@/utils/calendarGrid';
 import { isoOf } from '@/utils/calendarStore';
 import { monthFigures, monthInsight } from '@/utils/monthSummary';
-import type { DayEntry } from '@/components/Calendar';
-import type { FocusHistory } from '@/types';
+import type { DayEntry, Upcoming } from '@/components/Calendar';
+import type { FocusHistory, Goal } from '@/types';
 import '@/styles/calendar/month.css';
 import '@/styles/calendar/week.css';
 import '@/styles/calendar/day.css';
@@ -66,19 +70,48 @@ export default function Month() {
   useDocumentTitle('Calendar · Month');
 
   const account = useCalendarTasks();
-  const { tasks, username, loading, hasData, refreshing, error, refresh, completing, complete } =
-    account;
+  const {
+    tasks,
+    username,
+    loading,
+    hasData,
+    refreshing,
+    error,
+    refresh,
+    completing,
+    complete,
+    rating,
+    ratingDepth,
+    saveRating,
+    closeRating,
+  } = account;
   const store = useCalendarStore(username);
   const dayFocus = useDayFocus(username);
   const session = useFocusSession(username);
   const navigate = useNavigate();
+  const { prefs, dailyGoal } = useSettings();
 
   const [cursor, setCursor] = useState(() => new Date());
   // The day the panel is showing. Today, until another is picked.
   const [selectedKey, setSelectedKey] = useState(() => keyOf(new Date()));
   const [history, setHistory] = useState<FocusHistory>({});
+  /* The account's goals, for the Goals Progress card under the grid. Read once
+     per account rather than per month: a goal is not a fact about September,
+     and stepping the grid should not re-ask for one. */
+  const [goals, setGoals] = useState<Goal[]>([]);
 
   const actions = useBlockActions(username, store, tasks, account);
+
+  useEffect(() => {
+    if (!username) return;
+    let live = true;
+    void goalService.getGoals().then((result) => {
+      if (live && result.success) setGoals(result.goals ?? []);
+    });
+    return () => {
+      live = false;
+    };
+  }, [username]);
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
@@ -96,7 +129,7 @@ export default function Month() {
     let live = true;
     const start = dates.isoDate(new Date(year, month - 1, 1));
     const end = dates.isoDate(new Date(year, month + 1, 0));
-    void focusService.history(username, start, end).then((result) => {
+    void focusService.history(start, end).then((result) => {
       if (live && result.success) setHistory(result.days);
     });
     return () => {
@@ -122,14 +155,6 @@ export default function Month() {
       },
     };
   }, [history, session.focused, session.goalHours]);
-
-  // Recounted on every render rather than cached: first load, the fetch
-  // landing, a completion and a month change all change the answer, and a
-  // stale shading is a lie about how heavy a day was.
-  const intensity = useMemo(
-    () => buildIntensityIndex(tasks, year, month),
-    [month, tasks, year],
-  );
 
   const figures = useMemo(
     () => monthFigures(year, month, tasks, store.data, focusHistory),
@@ -207,6 +232,55 @@ export default function Month() {
 
   const selectedIso = isoOf(selectedKey);
 
+  /**
+   * What is coming, forwards from today.
+   *
+   * Deliberately not scoped to the month on screen, unlike everything else on
+   * this page: a deadline four days out matters just as much when it falls
+   * after the 30th, and a panel called Next Up that stops at a month boundary
+   * is answering the calendar's question rather than the reader's.
+   *
+   * Tasks come from the database and events from the store, which is the same
+   * split the grid draws from — and the same rule applies to both: only what
+   * the calendar was told about (`show_on_calendar`) is a dated thing.
+   */
+  const upcoming = useMemo<Upcoming[]>(() => {
+    const todayIso = dates.isoDate();
+    const rows: Upcoming[] = [];
+
+    tasks.forEach((task) => {
+      if (!isCalendarPlaced(task) || task.status === 'done' || !task.due_date) return;
+      const at = new Date(task.due_date);
+      if (Number.isNaN(at.getTime())) return;
+      const iso = dates.isoDate(at);
+      if (iso < todayIso) return;
+      rows.push({
+        key: `t:${task.id}`,
+        name: task.title,
+        iso,
+        at: at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
+        kind: 'task',
+      });
+    });
+
+    Object.entries(store.data).forEach(([key, day]) => {
+      const iso = isoOf(key);
+      if (iso < todayIso) return;
+      day.timestamps.forEach((section, index) => {
+        if (section.isDashboardTask) return;
+        rows.push({
+          key: `e:${key}:${index}`,
+          name: section.task || 'An event',
+          iso,
+          at: section.startTime || '',
+          kind: 'event',
+        });
+      });
+    });
+
+    return rows.sort((a, b) => a.iso.localeCompare(b.iso) || a.at.localeCompare(b.at));
+  }, [store.data, tasks]);
+
   const editEvent = useCallback(
     (entry: DayEntry) => {
       if (!entry.section) return;
@@ -255,7 +329,7 @@ export default function Month() {
           year={year}
           month={month}
           selectedKey={selectedKey}
-          intensity={intensity}
+          weekStart={weekStartDay(prefs)}
           days={figures.days}
           onStep={(delta) => setCursor(new Date(year, month + delta, 1))}
           onToday={goToday}
@@ -276,7 +350,28 @@ export default function Month() {
             avgGoal={figures.avgGoal}
             previous={previous}
             previousName={previousName}
+            streak={Number(account.stats.current_streak) || 0}
+            bestStreak={Number(account.stats.best_streak) || 0}
             onViewAnalytics={() => navigate('/analytics')}
+          />
+
+          <MonthTools
+            upcoming={upcoming}
+            goals={goals}
+            onAddTask={() =>
+              actions.open({
+                type: 'add-task',
+                iso: selectedIso,
+                defaults: { startTime: '09:00', endTime: '10:00' },
+              })
+            }
+            onAddEvent={() =>
+              actions.open({
+                type: 'add-event',
+                iso: selectedIso,
+                defaults: { startTime: '09:00', endTime: '10:00' },
+              })
+            }
           />
         </MonthGrid>
 
@@ -287,6 +382,15 @@ export default function Month() {
                 and this field edits the first without disturbing them. */}
             <DayPanel
               entries={entries}
+              /* The account's daily XP target — the same one the dashboard's
+                 panel fills and Settings sets. `figures.days` already counts
+                 what each day banked, so the earned half is a lookup rather
+                 than a second sum. */
+              goalXp={dailyGoal}
+              earnedXp={
+                figures.days.find((day) => day.key === selectedKey)?.earned ?? 0
+              }
+              goalDay={selectedKey === keyOf(new Date())}
               focusText={dayFocus.primary(selectedIso)}
               onFocusChange={(text) => dayFocus.setPrimary(selectedIso, text)}
               onAddEvent={() =>
@@ -308,6 +412,11 @@ export default function Month() {
               }}
               onComplete={complete}
               completingId={completing}
+              /* The account's focus session — the same one the dashboard's
+                 panel and the Day view's ring drive. The button on the next
+                 task begins it; it does not claim to be timing that task. */
+              onStart={session.start}
+              focusRunning={session.running}
             />
           </section>
 
@@ -326,6 +435,20 @@ export default function Month() {
       </div>
 
       <BlockDialogs actions={actions} username={username} />
+
+      {/* The same question the dashboard and the tasks page ask after a
+          completion, from the same component — a task finished on a grid
+          block goes into the record with the same two numbers against it as
+          one ticked off a list. Raised by useCalendarTasks, which honours the
+          account's rating_depth and never opens this at 'none'. */}
+      {rating && (
+        <RatePrompt
+          taskName={rating.name}
+          depth={ratingDepth}
+          onSubmit={saveRating}
+          onClose={closeRating}
+        />
+      )}
     </CalendarShell>
   );
 }

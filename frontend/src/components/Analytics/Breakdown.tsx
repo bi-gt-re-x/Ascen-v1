@@ -7,10 +7,10 @@
  * than at three different periods.
  */
 import type { CSSProperties } from 'react';
-import { Panel, Radar, TONES, toneVar, type RadarAxis, PanelLink, PanelNote } from './charts';
-import { GLYPHS, type GlyphName } from './glyphs';
-import { HEAT_WEEKDAYS, type HeatRow, type ReachedMilestone } from '@/utils/growthSummary';
+import { Panel, Radar, TONES, toneVar, type RadarAxis, PanelNote } from './charts';
+import { HEAT_WEEKDAYS, type HeatRow } from '@/utils/growthSummary';
 import type { SubjectXpRow } from '@/utils/subjectXp';
+import type { BalanceShape } from '@/utils/behaviour';
 
 /** `HEAT_WEEKDAYS` spelled out. Same order — Sunday first — or the rows lie. */
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -25,18 +25,33 @@ export interface SubjectPanelProps {
   rows: SubjectXpRow[];
   /** The same subjects over the period before, for the per-row change. */
   previous: Map<string, number>;
+  /** The concentration reading, where the tab has one. */
+  balance?: BalanceShape;
 }
 
 /**
- * XP by subject, as a web and a legend.
+ * XP by subject: the web, the legend, and what the shape of it means.
  *
  * The legend carries the numbers because a radar cannot: a polygon says which
  * subjects dominate at a glance and refuses to say by how much, which is
  * exactly the division of labour wanted here. The percentage beside each row is
  * that subject against its own showing in the previous period — a subject can
  * be growing while the account as a whole is flat, and that is worth seeing.
+ *
+ * ## It absorbed the balance panel
+ *
+ * "What you spend yourself on" sat directly beneath this on the Insights tab
+ * and answered the same question from the same figures — a second ring, a
+ * second list of the same subjects in the same order. Two panels, one of which
+ * had a footer link to the tab it was already on.
+ *
+ * What that panel had and this one did not was the *reading*: the share going
+ * to the leader, whether that is depth or a single point of failure, and which
+ * subjects have quietly stopped. None of that is derivable from the web, so it
+ * came across whole and sits under the legend. The duplicated half — a second
+ * enumeration of the subjects — is what went.
  */
-export function SubjectPanel({ rows, previous }: SubjectPanelProps) {
+export function SubjectPanel({ rows, previous, balance }: SubjectPanelProps) {
   const peak = Math.max(...rows.map((row) => row.xp), 1);
   const axes: RadarAxis[] = rows.map((row) => ({
     label: row.label,
@@ -44,12 +59,12 @@ export function SubjectPanel({ rows, previous }: SubjectPanelProps) {
   }));
 
   return (
-    <Panel title="Subject Growth (XP Earned)" footer={<PanelLink to="/insights">See how the balance is shifting</PanelLink>}>
+    <Panel title="Subject Growth (XP Earned)" note="Where the XP actually goes">
       {rows.length === 0 ? (
         <p className="ax-empty">No finished tasks carry a subject in this window yet.</p>
       ) : (
         <div className="ax-subject">
-          <Radar axes={axes} />
+          <Radar axes={axes} label="XP earned by subject" />
           <ul className="ax-subject-legend">
             {rows.map((row, index) => {
               const was = previous.get(row.key) ?? 0;
@@ -77,7 +92,56 @@ export function SubjectPanel({ rows, previous }: SubjectPanelProps) {
           </ul>
         </div>
       )}
+
+      {balance && rows.length > 0 && <BalanceReading balance={balance} />}
     </Panel>
+  );
+}
+
+/**
+ * The concentration reading, from the panel this one absorbed.
+ *
+ * A ring and two sentences: how much of the effort goes to the leading subject,
+ * what that concentration means, and which subjects had real work early in the
+ * range and none since — which a total cannot show you, because a total still
+ * counts them.
+ */
+function BalanceReading({ balance }: { balance: BalanceShape }) {
+  return (
+    <div className="ax-balance">
+      <div
+        className="ax-balance-ring"
+        style={{ '--share': `${balance.concentration}%` } as CSSProperties}
+      >
+        <strong>{balance.concentration}%</strong>
+        <span className="ax-muted ax-small">on {balance.leader ?? '—'}</span>
+      </div>
+      <div>
+        <p className="ax-prose">
+          {balance.leader === null ? (
+            'No finished task carries a subject yet.'
+          ) : balance.concentration >= 45 ? (
+            <>
+              Nearly half your effort goes to <strong>{balance.leader}</strong>. That is depth, and
+              a single point of failure.
+            </>
+          ) : (
+            <>
+              <strong>{balance.leader}</strong> leads, but nothing dominates — your effort is
+              spread across <strong>{balance.carrying} subjects</strong>. Balanced, and a slower
+              route to depth.
+            </>
+          )}
+        </p>
+        {balance.fading.length > 0 && (
+          <p className="ax-prose">
+            <strong>{balance.fading.join(', ')}</strong> had real work early in this range and{' '}
+            {balance.fading.length === 1 ? 'has' : 'have'} had none since. A total would still
+            count it.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -106,27 +170,23 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
   return (
     <Panel
       title="Consistency Over Time"
+      claim={
+        <>
+          You worked on <strong>{rate}%</strong> of days
+          {delta === null
+            ? '.'
+            : delta === 0
+              ? `, unchanged ${compareLabel}.`
+              : `, ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points ${compareLabel}.`}
+        </>
+      }
       footer={
         <PanelNote label="What moves this">
-          The share of days in the window with any work recorded on them. Nothing else feeds
-          it — not how much, not how long, not what it was for. A fifteen-minute day and a
-          six-hour day count the same, which is the point: this measures showing up, and the
-          panels beside it measure everything you did once you had.
+          The share of days with <strong>any</strong> work on them. A fifteen-minute day and a
+          six-hour day count the same — this measures showing up, nothing else.
         </PanelNote>
       }
     >
-      <div className="ax-consistency-head">
-        <strong className="ax-big">{rate}%</strong>
-        <span className="ax-muted">Average consistency</span>
-      </div>
-      {delta === null ? (
-        <span className="ax-delta ax-delta-none">No earlier period</span>
-      ) : (
-        <span className={`ax-delta ax-delta-${delta >= 0 ? 'up' : 'down'}`}>
-          {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)} points {compareLabel}
-        </span>
-      )}
-
       <div className="ax-heat">
         {/* Three-letter names rather than `HEAT_WEEKDAYS`' initials, which are
             S M T W T F S — two pairs that read identically. The order is that
@@ -189,50 +249,3 @@ export function ConsistencyPanel({ rate, previousRate, rows, compareLabel }: Con
 // --------------------------------------------------------------------------
 // Milestones
 // --------------------------------------------------------------------------
-/** A colour and a drawing per ladder, so a row is recognisable before it is read. */
-const MILESTONE_LOOK: Record<string, { tone: string; glyph: GlyphName }> = {
-  xp: { tone: 'violet', glyph: 'sparkle' },
-  focus: { tone: 'blue', glyph: 'clock' },
-  streak: { tone: 'amber', glyph: 'flame' },
-};
-
-export function MilestonePanel({ reached }: { reached: ReachedMilestone[] }) {
-  // Newest first, and only as many as the panel has room for beside two charts.
-  const shown = [...reached].reverse().slice(0, 5);
-
-  return (
-    <Panel title="Milestone Timeline" footer={<PanelLink to="/trends">See the pace behind these</PanelLink>}>
-      {shown.length === 0 ? (
-        <p className="ax-empty">No milestones cleared yet — the first is 1,000 XP.</p>
-      ) : (
-        <ol className="ax-timeline">
-          {shown.map((entry) => {
-            const look = MILESTONE_LOOK[entry.kind] ?? MILESTONE_LOOK.xp!;
-            return (
-            <li key={`${entry.kind}-${entry.name}`}>
-              <span
-                className="ax-timeline-dot"
-                style={
-                  { color: toneVar(look.tone), '--ico': GLYPHS[look.glyph] } as CSSProperties
-                }
-                aria-hidden="true"
-              />
-              <div className="ax-timeline-body">
-                <strong>{entry.name}</strong>
-                <span className="ax-muted">
-                  {new Date(`${entry.on}T00:00:00`).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </span>
-              </div>
-              <span className="ax-timeline-reward">+{entry.reward.toLocaleString()} XP</span>
-            </li>
-            );
-          })}
-        </ol>
-      )}
-    </Panel>
-  );
-}

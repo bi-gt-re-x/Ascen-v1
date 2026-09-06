@@ -768,14 +768,22 @@ html[data-theme="dark"] .lp-cal-body.is-target { background: rgba(124, 131, 255,
 /* ============================================================
    Feature cards
    ============================================================ */
+/* `--hm-lift` is the curve the whole page rises on — the same one styles/homepage.css
+   gives the plain cards and the buttons. It was four properties on one 320ms
+   `--hm-ease` here, which is a decelerate meant for entrances: on a hover it
+   made the card arrive and stop dead while its shadow was still spreading. The
+   shadow now outlasts the travel slightly, which is what reads as weight. */
 .lp-feature {
-    transition: transform 320ms var(--hm-ease), box-shadow 320ms var(--hm-ease),
-                background 320ms var(--hm-ease), border-color 320ms var(--hm-ease);
+    --hm-lift: cubic-bezier(.22, .84, .34, 1);
+    transition: transform 300ms var(--hm-lift), box-shadow 380ms var(--hm-lift),
+                background 300ms var(--hm-ease), border-color 260ms var(--hm-ease);
 }
-.lp-feature .lp-feat-ico { transition: transform 380ms var(--hm-ease); }
+/* The icon leads the card by a hair and settles after it — a rotation on the
+   same duration as the lift reads as one rigid object tilting. */
+.lp-feature .lp-feat-ico { transition: transform 460ms cubic-bezier(.2, .9, .3, 1.08); }
 .lp-arrow {
     display: inline-block;
-    transition: transform 300ms var(--hm-ease);
+    transition: transform 300ms cubic-bezier(.22, .84, .34, 1);
 }
 .lp-feature:hover {
     transform: translate3d(0, -10px, 0);
@@ -784,7 +792,10 @@ html[data-theme="dark"] .lp-cal-body.is-target { background: rgba(124, 131, 255,
     border-color: var(--lp-accent);
 }
 .lp-feature:hover .lp-feat-ico { transform: rotate(-8deg) scale(1.08); }
-.lp-feature:hover .lp-arrow { transform: translateX(6px); }
+.lp-feature:hover .lp-arrow { transform: translate3d(6px, 0, 0); }
+/* The link's arrow moves on the link's own hover too, not only the card's, so
+   a reader who goes straight for the link still gets the answer. */
+.lp-link:hover .lp-arrow { transform: translate3d(6px, 0, 0); }
 html[data-theme="dark"] .lp-feature:hover { box-shadow: 0 22px 46px rgba(0, 0, 0, 0.55); }
 
 /* ============================================================
@@ -975,6 +986,88 @@ html[data-theme="dark"] .lp-final::before {
 }
 
 /* ============================================================
+   Analytics — the dial sweeps, the bars fill, the rail lights
+   ============================================================
+   The armed/unarmed shape the demos use: the plain rules below are the
+   *finished* panel, and `.ax-armed` is the only thing that empties it. The
+   markup ships with that class on (as the task and dashboard demos do) so the
+   panel cannot flash filled before it is armed; components/Home/Analytics.tsx
+   takes it off a paint later, and puts it back when the panel scrolls away.
+
+   Writing the start state as the override rather than the default is what makes
+   the reduced-motion block at the foot of this file a short one: it re-states
+   the finished values under `.ax-armed` and nothing has to be re-derived. */
+
+/* The dial. Its dash offset is written into the markup at the finished score,
+   so the sweep is one transition from a closed ring — and editing a factor
+   moves where it stops without touching this file. The slight overshoot in the
+   easing is what makes it read as a needle settling rather than a bar filling. */
+.lp-ax-ring-arc {
+    transition: stroke-dashoffset 1500ms cubic-bezier(.22, .84, .3, 1);
+}
+.ax-armed .lp-ax-ring-arc { stroke-dashoffset: var(--ax-ring-len, 340); }
+
+/* The glow behind it comes up with the sweep rather than being there first. */
+.lp-ax-dial::before { transition: opacity 900ms var(--hm-ease) 300ms; }
+.ax-armed .lp-ax-dial::before { opacity: 0; }
+
+/* `--ax-to` is each bar's real width, written onto the element by
+   components/Home/Analytics.tsx along with the delay that staggers it. Width is
+   the transitioned property rather than a transform because these bars sit in
+   an `overflow: hidden` track with rounded ends: scaleX would stretch the
+   rounding and slide the gradient, and the gradient is the point. */
+.lp-ax-track i {
+    width: var(--ax-to, 0%);
+    transition: width 1200ms var(--hm-ease);
+}
+.ax-armed .lp-ax-track i { width: 0; }
+
+/* A light travelling the length of each bar as it fills, once. Purely a
+   highlight: it is on a pseudo-element inside the clipped track, so it cannot
+   reach past the bar's own end. */
+.lp-ax-track i::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .55), transparent 80%);
+    transform: translateX(-100%);
+}
+.lp-ax-wrap:not(.ax-armed) .lp-ax-track i::after {
+    animation: axSheen 1400ms var(--hm-ease-soft) forwards;
+}
+@keyframes axSheen {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(100%); }
+}
+
+/* The curve draws itself left to right, after the dial has committed. */
+.lp-ax-spark polyline {
+    stroke-dasharray: 260;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1100ms var(--hm-ease) 400ms;
+}
+.ax-armed .lp-ax-spark polyline { stroke-dashoffset: 260; }
+
+.lp-ax-rise { transition: opacity 500ms var(--hm-ease) 1100ms, transform 500ms var(--hm-ease) 1100ms; }
+.ax-armed .lp-ax-rise { opacity: 0; transform: translateX(-6px); }
+
+/* The values are counted, not transitioned — but they must not sit at their
+   finished figure for the frame before the count starts. */
+.lp-ax-val, .lp-ax-num { transition: opacity 420ms var(--hm-ease); }
+.ax-armed .lp-ax-val, .ax-armed .lp-ax-num { opacity: 0; }
+
+/* The rail stays dark until the numbers have settled; .ax-lit releases it and
+   the per-chip delay walks it left to right. */
+.lp-ax-tab {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 380ms var(--hm-ease), transform 380ms var(--hm-ease),
+                color .18s ease, border-color .18s ease;
+}
+.lp-ax-wrap.ax-lit .lp-ax-tab { opacity: 1; transform: none; }
+
+/* ============================================================
    Less motion, please
    ============================================================
    Nothing drifts, nothing draws, nothing waits its turn. The curtain is not
@@ -1012,6 +1105,21 @@ html[data-theme="dark"] .lp-final::before {
     .cal-armed .lp-ev { opacity: 1; transform: none; }
     .td-task, .td-box, .td-box svg, .td-xp-bar i, .lp-ev, .lp-cal-body { transition: none; }
 
+    /* Analytics: dial round, bars at their widths, curve drawn, rail shown.
+       The component's `still` puts the figures straight at their values. */
+    .ax-armed .lp-ax-ring-arc { stroke-dashoffset: var(--ax-ring-end, 0); }
+    .ax-armed .lp-ax-track i { width: var(--ax-to, 0%); }
+    .ax-armed .lp-ax-spark polyline { stroke-dashoffset: 0; }
+    .ax-armed .lp-ax-val,
+    .ax-armed .lp-ax-num,
+    .ax-armed .lp-ax-rise,
+    .ax-armed .lp-ax-dial::before { opacity: 1; }
+    .ax-armed .lp-ax-rise { transform: none; }
+    .lp-ax-wrap .lp-ax-tab { opacity: 1; transform: none; }
+    .lp-ax-track i::after { animation: none; }
+    .lp-ax-ring-arc, .lp-ax-track i, .lp-ax-spark polyline,
+    .lp-ax-val, .lp-ax-num, .lp-ax-rise, .lp-ax-tab, .lp-ax-dial::before { transition: none; }
+
     /* Charts, gauge, streak and timeline: drawn, filled and counted already. */
     .sk-flames span,
     .sk-flames.is-lit span,
@@ -1041,7 +1149,8 @@ html[data-theme="dark"] .lp-final::before {
     .tr-armed .lp-trend .tr-arrow { opacity: 1; transform: none; }
     .lp-final::before { transition: none; }
     .lp-feature, .lp-feature .lp-feat-ico, .lp-arrow, .ph-ico path, .lp-phi,
-    .lp-techitem, .tech-bit, .tech-wire, .lp-trend .tr-arrow, .lp-btn-lg { transition: none; }
+    .lp-techitem, .tech-bit, .tech-wire, .lp-trend .tr-arrow, .lp-btn-lg,
+    .lp-feat-bits li { transition: none; }
     html.theme-shift, html.theme-shift * { transition: none !important; }
 
     .hm-rise, .hm-word, .hm-pop,

@@ -384,6 +384,14 @@ html[data-theme='dark'] .tk-page {
 }
 .tk-menu-note button:hover { text-decoration: underline; }
 .tk-menu-item.is-bad { color: var(--tk-red); }
+
+/* ---------- The goal picker ----------------------------------------------
+   A second panel in the same slot rather than a flyout: at this width a
+   submenu opening sideways would leave the viewport on a narrow screen, and
+   the row menu is already the full width of the choice it offers. */
+.tk-menu-panel.is-goals { max-height: 300px; overflow-y: auto; }
+.tk-menu-item.is-back { color: var(--tk-muted); font-size: 12.5px; }
+.tk-menu-empty { margin: 8px 10px; font-size: 12.5px; color: var(--tk-faint); }
 .tk-menu-item.is-pick input { accent-color: var(--tk-violet); }
 .tk-menu-clear {
     margin-top: 4px;
@@ -396,17 +404,31 @@ html[data-theme='dark'] .tk-page {
 .tk-menu-clear:hover { color: var(--tk-violet); }
 
 /* ---------- Chips --------------------------------------------------------- */
-.tk-chips { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-.tk-chip-set { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tk-chip-subjects { position: relative; padding-left: 22px; }
-/* The rule between the two sets: they filter different things and reading them
-   as one row of nine chips is the misreading worth spending a border on. */
-.tk-chip-subjects::before {
-    content: '';
-    position: absolute; left: 0; top: 50%;
-    width: 1px; height: 22px;
-    transform: translateY(-50%);
-    background: var(--tk-line);
+.tk-chips { display: flex; align-items: center; gap: 10px 20px; flex-wrap: wrap; }
+.tk-chip-set { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+
+/* What each run of chips actually filters.
+ *
+ * There are three sets here and there were eighteen chips in them, and until
+ * these labels existed the row was one undifferentiated wall of pills — the
+ * reader had to know from the words which control they were touching. Worse,
+ * "Medium" appears in two of the three sets, once as a priority and once as a
+ * size, and nothing on the page said which was which.
+ *
+ * This replaces the single rule that used to sit before the subjects. One
+ * divider across three sets separated the second from the third and said
+ * nothing about the first, and a divider cannot say *what* it divides. A
+ * divider also breaks when a set wraps to the next line, where it lands at the
+ * head of the row looking like a stray mark; a label reads the same wherever
+ * the set ends up. */
+.tk-chip-label {
+    flex: none;
+    padding-right: 1px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--tk-faint);
 }
 .tk-chip {
     display: inline-flex; align-items: center; gap: 6px;
@@ -459,7 +481,7 @@ html[data-theme='dark'] .tk-page {
 }
 
 /* ---------- Groups -------------------------------------------------------- */
-.tk-group { display: flex; flex-direction: column; gap: 9px; }
+.tk-group { display: flex; flex-direction: column; gap: 12px; }
 .tk-group-head { display: flex; flex-direction: column; gap: 1px; }
 .tk-group-toggle {
     display: flex; align-items: center; gap: 9px;
@@ -486,7 +508,10 @@ html[data-theme='dark'] .tk-page {
 .tk-group-caret.is-shut { transform: rotate(-90deg); }
 .tk-group-head .tk-quiet { font-size: 12px; }
 
-.tk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+/* 12px, not 8. A row pads itself by 15px, so at 8px the space *between* two
+   tasks was smaller than the space inside one and a screen of them read as a
+   single striped block rather than as a list of separate things to do. */
+.tk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 
 /* ---------- A row --------------------------------------------------------- */
 .tk-row {
@@ -495,7 +520,7 @@ html[data-theme='dark'] .tk-page {
     grid-template-columns: auto minmax(0, 1fr) auto auto auto;
     align-items: center;
     gap: 13px;
-    padding: 13px 15px 13px 18px;
+    padding: 15px 15px 15px 18px;
     border: 1px solid var(--tk-line);
     border-radius: 12px;
     background: var(--tk-card);
@@ -506,7 +531,7 @@ html[data-theme='dark'] .tk-page {
    the row's own rounded corner is not squared off by a 3px block of colour. */
 .tk-row::before {
     content: '';
-    position: absolute; left: 0; top: 8px; bottom: 8px;
+    position: absolute; left: 0; top: 10px; bottom: 10px;
     width: 3px;
     border-radius: 0 3px 3px 0;
     background: var(--tk-violet);
@@ -517,6 +542,26 @@ html[data-theme='dark'] .tk-page {
 .tk-row.is-done { opacity: .55; }
 .tk-row.is-done .tk-title { text-decoration: line-through; }
 .tk-row.is-busy { opacity: .6; pointer-events: none; }
+
+/* A row somebody was *sent* to — the top bar's search navigates to
+   /tasks?task=<id> and the page reveals it. It fades out on its own after a
+   couple of seconds (see the note in pages/Tasks.tsx), so this is a moment of
+   "there it is" rather than a state the reader has to clear.
+
+   Painted with a ring rather than a fill: the row already carries a priority
+   stripe and a done state, and a background would argue with both. */
+.tk-row.is-found {
+    border-color: var(--tk-violet);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tk-violet) 22%, transparent);
+    animation: tk-found .5s ease-out;
+}
+@keyframes tk-found {
+    from { box-shadow: 0 0 0 9px color-mix(in srgb, var(--tk-violet) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .tk-row.is-found { animation: none; }
+}
+html[data-motion="reduced"] .tk-row.is-found { animation: none; }
 
 .tk-check { display: grid; place-items: center; cursor: pointer; }
 .tk-check input { position: absolute; opacity: 0; width: 0; height: 0; }
@@ -567,6 +612,11 @@ html[data-theme='dark'] .tk-page {
 .tk-row-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .tk-row-meta span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--tk-faint); }
 .tk-row-meta span.is-late { color: var(--tk-red); }
+/* The goal a task is execution for. Violet like the XP figure, because both
+   are the row saying what the work counts toward rather than what it is. */
+.tk-row-meta span.tk-goal-chip { color: var(--tk-violet); font-weight: 600; }
+.tk-goal-chip { max-width: 240px; }
+.tk-goal-chip svg { flex: none; }
 .tk-row-meta i { display: grid; place-items: center; }
 .tk-row-meta svg { width: 13px; height: 13px; }
 
@@ -602,7 +652,34 @@ html[data-theme='dark'] .tk-page {
 }
 
 /* ---------- The rail ------------------------------------------------------ */
-.tk-rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; }
+/* Sticky, and therefore capped.
+ *
+ * `position: sticky` with no ceiling is only correct while the rail is shorter
+ * than the window. Once it is taller — four panels, a 168px dial among them, on
+ * any laptop — it pins at `top` and everything past the fold becomes
+ * unreachable: the page scroll moves the list beside it and the rail stays
+ * exactly where it is, so the last panel can only be seen by scrolling all the
+ * way to the bottom of the document, and never at all when the list is shorter
+ * than the rail.
+ *
+ * The cap is the window less the 20px it stands off at top and the same again
+ * at the bottom, and the overflow gives it a scroller of its own. The inline
+ * padding is for `.tk-side`'s shadow: `overflow-y: auto` makes this a scroll
+ * box on both axes, so without room to spend the shadow would be sliced flat
+ * down both edges. The negative margin puts the column back where it was. */
+.tk-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    /* The page behind should not start scrolling when the rail runs out. */
+    overscroll-behavior: contain;
+    padding-inline: 6px;
+    margin-inline: -6px;
+}
 .tk-side {
     display: flex; flex-direction: column; gap: 12px;
     padding: 16px;
@@ -757,7 +834,17 @@ html[data-theme='dark'] .tk-page {
    reader loses least by scrolling to. */
 @media (max-width: 1240px) {
     .tk-body { grid-template-columns: minmax(0, 1fr); }
-    .tk-rail { position: static; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+    /* Not sticky here, so not capped either — a static rail with a max-height
+       would clip its own panels with nothing to scroll them back. */
+    .tk-rail {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+        max-height: none;
+        overflow: visible;
+        padding-inline: 0;
+        margin-inline: 0;
+    }
 }
 /* The controls give up their words before they give up their row. The three
    menus at full width are "Filter · Group: Due date · Sort: Due date", which is

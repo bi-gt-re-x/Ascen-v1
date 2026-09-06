@@ -74,10 +74,17 @@ export function FindingCard({ finding }: { finding: Finding }) {
         <strong>{finding.headline}</strong>
         <span className="ax-finding-mark" aria-hidden="true" />
       </button>
-      {/* One wrapper, and it has to stay one: the collapse is a grid row going
-          to 0fr, and a second child would land in an implicit auto row that the
-          0fr never touches. See `.ax-finding-body` in styles/analytics.css. */}
-      <div className="ax-finding-body">
+      {/*
+        One wrapper, and it has to stay one: the collapse is a grid row going
+        to 0fr, and a second child would land in an implicit auto row that the
+        0fr never touches. See `.ax-finding-body` in styles/analytics.css.
+
+        `inert` while shut, because that collapse hides the evidence from the
+        eye and from nothing else — `overflow: hidden` leaves it in the
+        accessibility tree, so `aria-expanded="false"` claimed the finding was
+        folded away while a screen reader read the workings out anyway.
+      */}
+      <div className="ax-finding-body" inert={!open}>
         <div>
           <p className="ax-prose">{finding.detail}</p>
           <StrengthChip strength={finding.strength} />
@@ -106,8 +113,7 @@ export function WhyPanel({
         <Waiting notice={notice} />
       ) : findings.length === 0 ? (
         <p className="ax-empty">
-          Nothing moved far enough between the last two periods to have a cause worth naming. A flat
-          stretch is a real answer — it means the routine is doing the work rather than a push.
+          Nothing moved far enough to have a cause worth naming.
         </p>
       ) : (
         <ul className="ax-findings">
@@ -139,8 +145,7 @@ export function HowPanel({
         <Waiting notice={notice} />
       ) : findings.length === 0 ? (
         <p className="ax-empty">
-          Your record does not yet separate into conditions that produce different results. That
-          needs both a spread of session lengths and a few dozen finished tasks to compare.
+          Not enough spread yet to separate conditions that produce different results.
         </p>
       ) : (
         <ul className="ax-findings">
@@ -174,9 +179,7 @@ export function WorkingPanel({ wins }: { wins: Win[] }) {
     >
       {wins.length === 0 ? (
         <p className="ax-empty">
-          Nothing has improved measurably against the previous period. That is not a failure — a
-          steady account produces an empty panel here, and the alternative would be inventing
-          encouragement, which is worth nothing once you notice it.
+          Nothing improved measurably against the previous period.
         </p>
       ) : (
         <ul className="ax-wins">
@@ -228,7 +231,7 @@ export function RelationshipsPanel({
               ? {
                   ready: false,
                   message:
-                    'There are not enough paired observations to look for relationships yet. These need a couple of months of days with both focus time and finished tasks on them.',
+                    'Not enough paired days yet — these need both focus time and finished tasks.',
                 }
               : notice
           }
@@ -301,12 +304,9 @@ export function CurrentStatePanel({ state, span }: { state: CurrentState; span: 
         </span>
       }
     >
-      <p className="ax-prose ax-prose-lead">{state.sentence}</p>
-      <p className="ax-prose">{state.weakness}</p>
-      <p className="ax-prose ax-muted ax-small">
-        This is a description of the record, not a judgement of it. What to do about it is the
-        Recommendations tab — this one only claims to say where you are.
-      </p>
+      {/* `state.sentence` is not here: it is the tab's opening line, in the
+          slot above the first section. This panel is what follows from it. */}
+      <p className="ax-prose ax-prose-lead">{state.weakness}</p>
     </Panel>
   );
 }

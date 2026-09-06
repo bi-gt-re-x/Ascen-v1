@@ -27,12 +27,84 @@ export interface UserData {
  * Reading this also decays a streak that went stale overnight, so it is the
  * call that makes every page agree on the streak.
  */
-export function getUserData(username: string): Promise<ApiResult<UserData>> {
-  return get<UserData>('/api/get_user_data', { username });
+export function getUserData(): Promise<ApiResult<UserData>> {
+  return get<UserData>('/api/get_user_data');
 }
 
-export function listTasks(username: string): Promise<ApiResult<{ tasks: Task[] }>> {
-  return get<{ tasks: Task[] }>('/api/tasks', { username });
+/**
+ * The six numbers, without the task list.
+ *
+ * The read every page makes. `getUserData` above is the same six numbers plus
+ * several megabytes of tasks, which is why it is no longer what the rail and
+ * the top bar call — see context/StatsProvider.
+ *
+ * This is also the call that decays a streak gone stale overnight. Exactly one
+ * endpoint does that (backend/api/dashboard.py says why it is this one), so
+ * this is the read that makes every page agree on the streak.
+ */
+export function getStats(): Promise<ApiResult<{ stats: UserStats }>> {
+  return get<{ stats: UserStats }>('/api/stats');
+}
+
+/**
+ * Three counts about the account's tasks. Counted in SQL, not by filtering a
+ * list.
+ *
+ * **The bell no longer reads this.** It is a list of rows now — see
+ * services/notifications and backend/tracking/notify.py — because a count
+ * cannot be deleted, and being able to throw a notification away is the whole
+ * of what the bell was missing.
+ *
+ * Kept for the reason the calendar entry wrappers in services/events are: the
+ * endpoint is real, cheap and correct, and this file is the shape of the API
+ * rather than a list of what happens to be called this week.
+ */
+export interface Alerts {
+  /** Open tasks whose date has passed, and the oldest one's title. */
+  late: number;
+  late_title: string | null;
+  /** Open tasks dated today, and one of their titles. */
+  due_today: number;
+  due_today_title: string | null;
+  /** Whether anything at all has been finished today. */
+  finished_today: boolean;
+}
+
+/**
+ * @param day The caller's local ISO day. Sent rather than left to the server
+ *            because stored stamps carry no timezone, so "today" is the
+ *            reader's day and only the reader knows it.
+ */
+export function getAlerts(day: string): Promise<ApiResult<{ alerts: Alerts }>> {
+  return get<{ alerts: Alerts }>('/api/alerts', { day });
+}
+
+/**
+ * Title search for the top bar's panel.
+ *
+ * Was a `.filter()` over the account's whole task list, which is most of why
+ * the top bar needed that list. Unfinished results come first, which is the
+ * ordering the panel has always applied.
+ *
+ * @param openOnly Drop the finished ones. The top bar passes this: what it
+ *                 does with a result is take the reader to it, and a finished
+ *                 task is not somewhere anybody needs taking. It also matters
+ *                 because the server caps the answer at eight — without it a
+ *                 word appearing in nine done tasks and one live one comes
+ *                 back without the live one.
+ */
+export function searchTasks(
+  query: string,
+  openOnly = false,
+): Promise<ApiResult<{ tasks: Task[] }>> {
+  return get<{ tasks: Task[] }>('/api/tasks/search', {
+    q: query,
+    open: openOnly ? 1 : undefined,
+  });
+}
+
+export function listTasks(): Promise<ApiResult<{ tasks: Task[] }>> {
+  return get<{ tasks: Task[] }>('/api/tasks');
 }
 
 // --------------------------------------------------------------------------
@@ -67,10 +139,9 @@ export interface NewTask {
 }
 
 export function createTask(
-  username: string,
   task: NewTask,
 ): Promise<ApiResult<{ task_id: string }>> {
-  return post<{ task_id: string }>('/api/tasks', { username, ...task });
+  return post<{ task_id: string }>('/api/tasks', { ...task });
 }
 
 /**
@@ -89,21 +160,26 @@ export interface TaskEdit {
   completed?: boolean;
   /** `null` clears it; leaving it out leaves whatever is stored alone. */
   subject?: string | null;
+  /**
+   * The goal this task is execution for. `null` unlinks it; leaving it out
+   * leaves the stored link alone. Checked against the account's own goals
+   * server-side, so a stale id unlinks rather than failing the write.
+   */
+  goal_id?: string | null;
+  milestone_id?: string | null;
 }
 
 export function updateTask(
-  username: string,
   taskId: string,
   edit: TaskEdit,
 ): Promise<ApiResult<Record<string, never>>> {
-  return put(`/api/tasks/${encodeURIComponent(taskId)}`, { username, ...edit });
+  return put(`/api/tasks/${encodeURIComponent(taskId)}`, { ...edit });
 }
 
 export function deleteTask(
-  username: string,
   taskId: string,
 ): Promise<ApiResult<Record<string, never>>> {
-  return del(`/api/tasks/${encodeURIComponent(taskId)}`, { username });
+  return del(`/api/tasks/${encodeURIComponent(taskId)}`);
 }
 
 /**
@@ -119,13 +195,11 @@ export function deleteTaskWithoutTracking(
 }
 
 export function pushDueDate(
-  username: string,
   taskId: string,
   dueDate: string,
 ): Promise<ApiResult<Record<string, never>>> {
   return post('/api/update_task_due_date', {
     id: taskId,
-    username,
     due_date: dueDate,
   });
 }
@@ -162,11 +236,9 @@ export interface CompletionResult {
 }
 
 export function completeTask(
-  username: string,
   taskId: string,
 ): Promise<ApiResult<CompletionResult>> {
   return post<CompletionResult>('/api/complete_task', {
-    username,
     task_id: taskId,
   });
 }
@@ -175,6 +247,8 @@ export interface TaskRating {
   task_id: string;
   difficulty?: number;
   execution?: number;
+  /** Null when the answer was taken back, absent when it was never asked. */
+  reason?: string | null;
 }
 
 /**
@@ -185,16 +259,16 @@ export interface TaskRating {
  * prompt that follows is answered, dismissed, or fails to reach the server —
  * nobody's XP sits behind a dialog.
  *
- * Either rating may be omitted. A reader who answers one row and closes the
- * dialog keeps the answer they gave.
+ * Any of the three may be omitted. A reader who answers one row and closes the
+ * dialog keeps the answer they gave. `reason` is only ever sent by an account
+ * whose rating_depth is 'reasons'; the server drops a word it does not know
+ * rather than failing the whole call over it.
  */
 export function rateTask(
-  username: string,
   taskId: string,
-  ratings: { difficulty?: number; execution?: number },
+  ratings: { difficulty?: number; execution?: number; reason?: string },
 ): Promise<ApiResult<TaskRating>> {
   return post<TaskRating>('/api/rate_task', {
-    username,
     task_id: taskId,
     ...ratings,
   });
@@ -207,9 +281,8 @@ export function rateTask(
  * through to its console — `at` changes, and that is the signal.
  */
 export function lastCompletion(
-  username: string,
 ): Promise<ApiResult<{ xp: number | null; at: string | null }>> {
-  return get('/api/last_task_completion', { username });
+  return get('/api/last_task_completion');
 }
 
 // --------------------------------------------------------------------------
@@ -217,12 +290,10 @@ export function lastCompletion(
 // --------------------------------------------------------------------------
 /** Fold a batch of XP and completions into today's single ledger row. */
 export function trackDailyXp(
-  username: string,
   xpEarned: number,
   tasksCompleted: number,
 ): Promise<ApiResult<{ message: string }>> {
   return post('/api/track_daily_xp', {
-    username,
     xp_earned: xpEarned,
     tasks_completed: tasksCompleted,
   });

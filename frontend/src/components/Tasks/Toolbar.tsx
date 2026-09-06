@@ -476,6 +476,7 @@ export function Toolbar({
 
       <div className="tk-chips">
         <div className="tk-chip-set">
+          <span className="tk-chip-label">Priority</span>
           <button
             type="button"
             className={`tk-chip${query.priorities.length === 0 ? ' is-on' : ''}`}
@@ -507,6 +508,7 @@ export function Toolbar({
             they have to open to read the state of is one they open to find out
             what they already chose. */}
         <div className="tk-chip-set">
+          <span className="tk-chip-label">XP</span>
           <button
             type="button"
             className={`tk-chip${query.bands.length === 0 ? ' is-on' : ''}`}
@@ -528,7 +530,8 @@ export function Toolbar({
         </div>
 
         {subjects.length > 0 && (
-          <div className="tk-chip-set tk-chip-subjects">
+          <div className="tk-chip-set">
+            <span className="tk-chip-label">Subject</span>
             {shown.map((subject) => (
               <button
                 key={subject.id}

@@ -33,11 +33,15 @@ body:has(.dash) .app-main {
 .dash {
     width: 100%;
     max-width: 1370px;
-    margin: 26px auto 28px;
-    padding: 0 24px;
+    margin: 30px auto 36px;
+    padding: 0 26px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    /* The page is seven bands deep — greeting, figures, what's next, the two
+       panels, the three cards, what to change, the quote. At 20px they read as
+       one wall of boxes; the extra air is what lets each band be looked at on
+       its own. */
+    gap: 28px;
     box-sizing: border-box;
     text-align: left;
 }
@@ -141,6 +145,7 @@ body:has(.dash) .app-main {
 .dash-ico-week   { background: #F0F2F5; color: #6C757D; }
 .dash-ico-flag   { background: #F0F2F5; color: #6C757D; }
 .dash-ico-pulse  { background: #F0F2F5; color: #6C757D; }
+.dash-ico-goal   { background: #F0F2F5; color: #6C757D; }
 
 /* ---- The big figure the Focus and Streak cards lead with ---------------- */
 .dash-big {
@@ -281,6 +286,16 @@ body:has(.dash) .app-main {
 .dash-xp-today strong { color: #22A06B; font-weight: 700; }
 .dash-xp-today svg { color: #22A06B; flex: none; }
 
+/* Today's XP against the goal the account chose. Pushed to the far end of the
+   line so the figure and the target it is measured against are the two things
+   on it, one at each edge. */
+.dash-xp-goal {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: #98a1ae;
+    white-space: nowrap;
+}
+
 /* ---- The bars ----------------------------------------------------------- */
 .dash-bar {
     height: 8px;
@@ -328,6 +343,10 @@ body:has(.dash) .app-main {
     height: var(--dash-row-h);
     min-height: 0;
 }
+
+/* The focus panel turned off in Settings. The list takes the width back rather
+   than keeping a 508px column of nothing beside it. */
+.dash-main.is-solo { grid-template-columns: minmax(0, 1fr); }
 
 /* ---- The card shell the three panels share ------------------------------ */
 .dash-panel {
@@ -597,6 +616,9 @@ body:has(.dash) .app-main {
 /* ==========================================================================
    THE THREE SUMMARY CARDS
    ========================================================================== */
+/* Three: the week, the goals, and what just happened. It was three before as
+   well, but one of them was Top Priorities — the task list again, re-sorted —
+   and goals have taken the slot. See the note in pages/Dashboard.tsx. */
 .dash-insights {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -611,13 +633,14 @@ body:has(.dash) .app-main {
 .dash-week-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    gap: 18px 10px;
     margin: 0;
 }
+/* No border. Four bordered cells inside a bordered card inside a page of
+   cards is three frames deep, and the frames were carrying no information the
+   spacing does not — which is most of what made this row feel busy. */
 .dash-week-cell {
-    border: 1.5px solid #EFEDE9;
-    border-radius: 10px;
-    padding: 12px 8px;
+    padding: 4px 2px;
     text-align: center;
     min-width: 0;
 }
@@ -632,43 +655,31 @@ body:has(.dash) .app-main {
     color: #6C757D;
     line-height: 1.25;
 }
+/* What the figure was at this point last week. A sign rather than an arrow:
+   four cells in a small grid means four of these, and four arrows is a texture
+   rather than a signal. The words are under the grid, once — see `Against`. */
+.dash-week-vs {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.dash-week-vs-note {
+    margin: 14px 0 0;
+    text-align: center;
+    font-size: 0.7rem;
+    color: #9AA0A6;
+}
+.dash-week-vs.is-up   { color: #1F8A54; }
+.dash-week-vs.is-down { color: #C0392B; }
 
-/* ---- Top Priorities ----------------------------------------------------- */
-.dash-priority-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 11px;
-}
-.dash-priority-list li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    font-size: 0.9rem;
-    color: #2C302E;
-}
-.dash-priority-rank { color: #9AA0A6; flex: none; }
-.dash-priority-name {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.dash-badge {
-    flex: none;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 0.72rem;
-    font-weight: 600;
-}
-.dash-badge.tone-high { background: #FDECEC; color: #C0392B; }
-.dash-badge.tone-med  { background: #FFF4E5; color: #B26B00; }
-.dash-badge.tone-low  { background: #F0F2F5; color: #6C757D; }
+/* The Top Priorities list and the priority pill it wore both stood here, and
+   both went with the card — see the note in components/Dashboard/InsightCards.
+   The pill was `.dash-badge`, and nothing else on the dashboard wore one: the
+   task rows in the panel above carry their priority as a coloured dot and a
+   word (`.dash-task-tag`), which is a different thing that happens to say the
+   same fact. */
 
 /* ---- Recent Activity ---------------------------------------------------- */
 .dash-activity-list {
@@ -730,13 +741,28 @@ body:has(.dash) .app-main {
    strip — those rules key off `.focus-panel`, which is why the panel keeps
    that class.
    ========================================================================== */
+/* `--dash-fold` is the *ceiling* the fold animates from, not a height. It has
+   to sit above the tallest these sections ever get, because anything shorter
+   does not clip them — `overflow` is visible, so the content simply spills out
+   and paints over whatever is below.
+
+   400px was fine for the four stat cards in one row and wrong the moment they
+   stacked. Measured on a 375px screen: `.dash-stats` was a 400px box holding
+   780px of cards and `.dash-insights` a 400px box holding 697px, so the
+   dashboard drew its Tasks panel straight through the Focus Time card — 162px
+   of overlap, on every phone, on the app's first screen.
+
+   It is raised rather than removed because the fold needs two numbers to
+   travel between; `none` does not animate to `0`. See the breakpoints below,
+   where stacking begins. */
 .dash-greeting,
 .dash-stats,
 .dash-insights,
 .quote-container {
+    --dash-fold: 400px;
     transition: opacity 0.45s ease, transform 0.6s ease,
                 margin 0.6s ease, max-height 0.6s ease;
-    max-height: 400px;
+    max-height: var(--dash-fold);
 }
 html.focus-mode .dash-greeting,
 html.focus-mode .dash-stats,
@@ -786,6 +812,15 @@ html.focus-mode .dash-main .dash-tasks { order: 1; min-height: 0; }
    NARROWER SCREENS
    ========================================================================== */
 @media (max-width: 1240px) {
+    /* Two across, then one: from here down these sections are as tall as their
+       contents stacked, and the fold's ceiling has to clear that. Tied to the
+       viewport rather than to a pixel count, so it scales with the device
+       instead of needing a new number the next time a card is added. */
+    .dash-greeting,
+    .dash-stats,
+    .dash-insights,
+    .quote-container { --dash-fold: 250vh; }
+
     .dash-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dash-insights { grid-template-columns: minmax(0, 1fr); }
 
@@ -828,7 +863,6 @@ html[data-theme="dark"] .dash-xp-level,
 html[data-theme="dark"] .dash-figure dd,
 html[data-theme="dark"] .dash-week-cell dd,
 html[data-theme="dark"] .dash-task-name,
-html[data-theme="dark"] .dash-priority-list li,
 html[data-theme="dark"] .dash-activity-name strong {
     color: #e6edf3;
 }
@@ -852,7 +886,7 @@ html[data-theme="dark"] .dash-tab {
 html[data-theme="dark"] .dash-task-head,
 html[data-theme="dark"] .dash-task-empty,
 html[data-theme="dark"] .dash-task-nodue,
-html[data-theme="dark"] .dash-priority-rank {
+html[data-theme="dark"] .dash-xp-goal {
     color: #6e7681;
 }
 
@@ -889,18 +923,266 @@ html[data-theme="dark"] .dash-ico-focus  { background: #13291d; color: #7ee0a6; 
 html[data-theme="dark"] .dash-ico-streak { background: #2e2116; color: #e79f23; }
 html[data-theme="dark"] .dash-ico-week,
 html[data-theme="dark"] .dash-ico-flag,
+html[data-theme="dark"] .dash-ico-goal,
 html[data-theme="dark"] .dash-ico-pulse  { background: #21262d; color: #8b949e; }
 
 html[data-theme="dark"] .dash-task-tag.tone-high { color: #ff9297; }
 html[data-theme="dark"] .dash-task-tag.tone-med  { color: #f4d47c; }
 html[data-theme="dark"] .dash-task-tag.tone-low  { color: #8b949e; }
 
-html[data-theme="dark"] .dash-badge.tone-high { background: #2e1618; color: #ff9297; }
-html[data-theme="dark"] .dash-badge.tone-med  { background: #2e2716; color: #f4d47c; }
-html[data-theme="dark"] .dash-badge.tone-low  { background: #21262d; color: #8b949e; }
 
 html[data-theme="dark"] .dash-xp-today strong,
 html[data-theme="dark"] .dash-xp-today svg,
 html[data-theme="dark"] .dash-activity-xp,
 html[data-theme="dark"] .dash-task-xp { color: #7ee0a6; }
 html[data-theme="dark"] .dash-bar-green .dash-bar-fill { background: #2ea56f; }
+
+/* ---- "What now" ----------------------------------------------------------
+   One line, full width, between the figures and the list. Everything above it
+   is about the day so far and everything below is a list; this is the only
+   thing on the page about the next hour, which is why it is a band of its own
+   rather than a fourth thing inside a panel. See components/Dashboard/NextUp. */
+.dash-next {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 22px;
+    border: 1px solid #EAEAEA;
+    border-radius: 16px;
+    background: #FFFFFF;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 6px 18px rgba(16, 24, 40, .04);
+}
+/* A day with nothing left is the one state here that is good news. */
+.dash-next.is-clear { border-color: #CDE9D8; background: #F4FBF7; }
+
+.dash-next-ico {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #F0F2F5;
+    color: #6C757D;
+}
+.dash-next.is-clear .dash-next-ico { background: #DFF3E8; color: #1F8A54; }
+.dash-next-ico svg {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.dash-next-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.dash-next-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #9297A3;
+}
+.dash-next-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #2C302E;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The facts, right-aligned and each a figure over its word. Only the true ones
+   are drawn — a day with no times has no span to report and says nothing
+   rather than "0h booked". */
+.dash-next-facts { flex: none; display: flex; align-items: center; gap: 26px; }
+.dash-next-fact { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.dash-next-fact em {
+    font-style: normal;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2C302E;
+    white-space: nowrap;
+}
+.dash-next-fact small { font-size: 11px; color: #9297A3; white-space: nowrap; }
+
+/* ---- What it is for ------------------------------------------------------ */
+.dash-goals-all {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6d5ae0;
+    text-decoration: none;
+}
+.dash-goals-all:hover { text-decoration: underline; }
+
+.dash-goal-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.dash-goal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.dash-goal-name {
+    font-size: 0.9rem;
+    font-weight: 650;
+    color: #2C302E;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dash-goal-pct { flex: none; font-size: 0.85rem; font-weight: 700; color: #6C757D; }
+.dash-goal-track {
+    display: block;
+    height: 7px;
+    margin: 7px 0 5px;
+    border-radius: 999px;
+    background: #F0F2F5;
+    overflow: hidden;
+}
+.dash-goal-fill { display: block; height: 100%; border-radius: 999px; background: #6d5ae0; }
+/* Behind its own pace. The bar is the only place on this card where a colour
+   is a judgement, and it is the reason the goal was picked for the slot. */
+.dash-goal-fill.is-late { background: #E69500; }
+.dash-goal-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12px;
+    color: #6C757D;
+}
+.dash-goal-late { flex: none; font-weight: 650; color: #C0392B; }
+
+.dash-empty { margin: 0; font-size: 0.85rem; line-height: 1.6; color: #6C757D; }
+.dash-empty a { color: #6d5ae0; }
+
+/* ---- Dark ---------------------------------------------------------------- */
+html[data-theme="dark"] .dash-next { background: #161b22; border-color: #30363d; box-shadow: none; }
+html[data-theme="dark"] .dash-next.is-clear { background: #10201a; border-color: #1f4634; }
+html[data-theme="dark"] .dash-next-ico { background: #21262d; color: #8b949e; }
+html[data-theme="dark"] .dash-next.is-clear .dash-next-ico { background: #14301f; color: #3fb950; }
+html[data-theme="dark"] .dash-next-name,
+html[data-theme="dark"] .dash-next-fact em,
+html[data-theme="dark"] .dash-goal-name { color: #e6edf3; }
+html[data-theme="dark"] .dash-next-label,
+html[data-theme="dark"] .dash-next-fact small,
+html[data-theme="dark"] .dash-goal-pct,
+html[data-theme="dark"] .dash-goal-foot,
+html[data-theme="dark"] .dash-empty { color: #8b949e; }
+html[data-theme="dark"] .dash-goal-track { background: #21262d; }
+html[data-theme="dark"] .dash-goal-fill { background: #8b7bf0; }
+html[data-theme="dark"] .dash-goal-fill.is-late { background: #e0b062; }
+html[data-theme="dark"] .dash-goal-late { color: #f08b85; }
+html[data-theme="dark"] .dash-goals-all,
+html[data-theme="dark"] .dash-empty a { color: #9d8bff; }
+
+/* ---- Narrow -------------------------------------------------------------- */
+@media (max-width: 900px) {
+    /* The facts go before the name does: on a phone the answer to "what now"
+       is the name, and three figures beside it are what crowd it out. */
+    .dash-next-facts { display: none; }
+}
+
+/* ---- Direction on the stat cards ----------------------------------------
+   Today held against the account's own average day — see `typicalDay` in
+   components/Dashboard/summary. It rides on the card's title so it takes no
+   line of its own, on a page that does not fit one screen. */
+.dash-trend {
+    display: block;
+    margin: -4px 0 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+/* An account with no history behind it keeps the space so the four cards in
+   the row still line up with one another, and says nothing in it. */
+.dash-trend.is-none { min-height: 15px; }
+.dash-trend.is-up   { color: #1F8A54; }
+.dash-trend.is-down { color: #C0392B; }
+.dash-trend.is-flat { color: #9297A3; font-weight: 600; }
+
+/* The focus card's baseline, beside its goal rather than in the title: that
+   card's title already carries an icon, and the goal is the line the figure is
+   read against anyway. */
+.dash-stat-usual { margin-left: 6px; color: #9AA0A6; }
+
+html[data-theme="dark"] .dash-trend.is-up   { color: #3fb950; }
+html[data-theme="dark"] .dash-trend.is-down { color: #f85149; }
+html[data-theme="dark"] .dash-trend.is-flat,
+html[data-theme="dark"] .dash-stat-usual    { color: #6e7681; }
+
+html[data-theme="dark"] .dash-week-vs.is-up   { color: #3fb950; }
+html[data-theme="dark"] .dash-week-vs.is-down { color: #f85149; }
+
+/* ---- What to change ------------------------------------------------------
+   One line, under the row that reports. Quieter than the "up next" strip at
+   the top of the page: that one is about the next hour and this one is about a
+   habit, so it does not compete with the panels between them for attention.
+   See components/Dashboard/NextMove. */
+.dash-move {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 22px;
+    border: 1px solid #EAEAEA;
+    border-radius: 16px;
+    background: #FAFBFC;
+}
+.dash-move-ico {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #EFEBFB;
+    color: #6d5ae0;
+}
+.dash-move-ico svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+}
+.dash-move-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dash-move-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #9297A3;
+}
+.dash-move-title { font-size: 0.95rem; font-weight: 700; color: #2C302E; }
+.dash-move-why { font-size: 0.82rem; line-height: 1.5; color: #6C757D; }
+.dash-move-all {
+    flex: none;
+    align-self: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6d5ae0;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.dash-move-all:hover { text-decoration: underline; }
+
+html[data-theme="dark"] .dash-move { background: #0f141b; border-color: #30363d; }
+html[data-theme="dark"] .dash-move-ico { background: #1b1733; color: #9d8bff; }
+html[data-theme="dark"] .dash-move-title { color: #e6edf3; }
+html[data-theme="dark"] .dash-move-label,
+html[data-theme="dark"] .dash-move-why { color: #8b949e; }
+html[data-theme="dark"] .dash-move-all { color: #9d8bff; }
+
+@media (max-width: 700px) {
+    .dash-move { flex-wrap: wrap; }
+    .dash-move-all { align-self: flex-start; margin-left: 48px; }
+}
+
+html[data-theme="dark"] .dash-week-vs-note { color: #6e7681; }

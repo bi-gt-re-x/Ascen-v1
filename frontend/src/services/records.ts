@@ -50,17 +50,16 @@ export interface RecordDraft {
   achieved_on?: string;
 }
 
-export function list(username: string): Promise<ApiResult<{ records: RecordRow[] }>> {
-  return get<{ records: RecordRow[] }>('/api/records', { username });
+export function list(): Promise<ApiResult<{ records: RecordRow[] }>> {
+  return get<{ records: RecordRow[] }>('/api/records');
 }
 
 export function save(
-  username: string,
   draft: RecordDraft,
 ): Promise<ApiResult<{ record: RecordRow }>> {
-  return post<{ record: RecordRow }>('/api/records/save', { username, ...draft });
+  return post<{ record: RecordRow }>('/api/records/save', { ...draft });
 }
 
-export function remove(username: string, id: string): Promise<ApiResult<{ id: string }>> {
-  return post<{ id: string }>('/api/records/delete', { username, id });
+export function remove(id: string): Promise<ApiResult<{ id: string }>> {
+  return post<{ id: string }>('/api/records/delete', { id });
 }

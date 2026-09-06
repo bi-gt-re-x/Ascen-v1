@@ -27,7 +27,7 @@
  *
  * The headline is still split into words here rather than in the JSX, because
  * splitting it in the markup would mean writing the sentence as a list of words
- * — unreadable, and it would break the <em> around "Only".
+ * — unreadable, and it would break the <em> the headline carries.
  */
 import { useEffect, type RefObject } from 'react';
 import { reduced } from '@/utils/homePlay';
@@ -115,7 +115,7 @@ function delay(el: HTMLElement | null, ms: number): void {
 
 /**
  * Walks the heading and wraps each word in its own span, in place, so the <em>
- * around "Only" keeps its element and its styling. The spaces stay as real text
+ * in the headline keeps its element and its styling. The spaces stay as real text
  * nodes between the spans — wrap them too and the line would stop breaking
  * where it should.
  */

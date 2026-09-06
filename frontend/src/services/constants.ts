@@ -25,6 +25,8 @@ export const GROWTH_WINDOW_DAYS = 30;
 export const MAX_FOCUS_SECONDS = 86_400;
 export const MIN_GOAL_HOURS = 0.5;
 export const MAX_GOAL_HOURS = 12;
+/** The most one hand-entered catch-up may claim for a day. A day holds 24h. */
+export const MAX_LOG_MINUTES = 1440;
 
 /** Backend: api/goals.py clamps to this range. */
 export const MIN_PRIORITY = 1;

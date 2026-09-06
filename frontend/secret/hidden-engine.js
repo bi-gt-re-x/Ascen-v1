@@ -16,6 +16,33 @@
         catch (e) { return false; }
     }
 
+    /**
+     * Bind a title to this account, and put it on.
+     *
+     * Two keys, because the rail asks two separate questions. `ascenTitle:<user>`
+     * is "has this account earned the secret title" — it is what puts the title
+     * in the rail's three-dot list at all, and what retires the chain (see
+     * frontend/src/utils/easterEgg.ts). `ascenRankTitle:<user>` is "which of my
+     * titles am I wearing", the ordinary chooser's key (utils/rankTitle.ts).
+     *
+     * Writing only the first is what this room used to do, and it made the
+     * button a liar: it said TITLE EQUIPPED, the reader walked back to the
+     * dashboard, and the rail still said Apprentice. The title was merely
+     * *available* — two clicks deep in a menu nobody thinks to open on the way
+     * out of a secret room. Reaching the end of the chain is the equip.
+     *
+     * The band titles stay in that menu, so this is a default and not a
+     * sentence: anyone who preferred Grand Champion can go back to it.
+     */
+    function wearTitle(name) {
+        var v = String(name == null ? '' : name).trim().slice(0, 24) || 'Admin';
+        try {
+            localStorage.setItem('ascenTitle:' + user(), v);
+            localStorage.setItem('ascenRankTitle:' + user(), v);
+        } catch (e) {}
+        return v;
+    }
+
     var stability = 99.99, draining = false;
 
     var LOGS = {
@@ -348,7 +375,7 @@
         var btn = ar.querySelector('#arEquip');
         var done = ar.querySelector('#arDone');
         btn.addEventListener('click', function () {
-            try { localStorage.setItem('ascenTitle:' + user(), 'Admin'); } catch (e) {}
+            wearTitle('Admin');
             btn.disabled = true;
             btn.textContent = '✓ TITLE EQUIPPED :: Admin';
             btn.classList.add('equipped');
@@ -438,8 +465,11 @@
         var setBtn = ac.querySelector('#acSetTitle');
         var hint = ac.querySelector('#acTitleHint');
         function setTitle(v) {
-            v = (v || '').trim().slice(0, 24) || 'Admin';
-            try { localStorage.setItem('ascenTitle:' + user(), v); } catch (e) {}
+            /* Renaming keeps it worn — the label above this field says DISPLAYED
+               TITLE, and a rename that left the rail on the old name would be
+               worse than no rename at all: the old name is gone, so the rail
+               would fall back to the band. */
+            v = wearTitle(v);
             hint.textContent = 'title set to "' + v + '" — it now shows on the dashboard.';
             hint.classList.add('ok');
             if (he) reactCore(he, false);
@@ -484,10 +514,9 @@
             case 'help': acLog(ac, 'title <name> · whoami · sudo <..> · clear · exit · (anything else just works)'); break;
             case 'whoami': acLog(ac, 'administrator'); break;
             case 'title':
-                var v = parts.slice(1).join(' ');
-                try { localStorage.setItem('ascenTitle:' + user(), (v || 'Admin').slice(0, 24)); } catch (e) {}
-                acLog(ac, 'title updated → ' + (v || 'Admin'));
-                var ti = ac.querySelector('#acTitle'); if (ti) ti.value = (v || 'Admin');
+                var v = wearTitle(parts.slice(1).join(' '));
+                acLog(ac, 'title updated → ' + v);
+                var ti = ac.querySelector('#acTitle'); if (ti) ti.value = v;
                 break;
             case 'sudo': acLog(ac, 'granted.'); break;
             case 'clear': ac.querySelector('#acLog').innerHTML = ''; break;

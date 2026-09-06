@@ -223,6 +223,54 @@
 .day-focus-pct { font-weight: 700; color: #7a6aa8; }
 .day-sidebar .wk-progress-bar { background: linear-gradient(90deg, #8b7aa8, #a893c9); }
 
+/* ---- Up next -------------------------------------------------------------
+   The one thing the grid beside this is worst at: it draws every block and
+   leaves the reader to find the one that matters against a moving red line. */
+.day-next-when {
+    font-size: 12px; font-weight: 700; color: #a8845c;
+    white-space: nowrap;
+}
+.day-next-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; border-radius: 12px;
+    background: #fafbfc; border: 1px solid #eef0f4;
+}
+/* Something happening now is the only state here worth a colour. */
+.day-next-card.is-running { border-color: #cdbb99; background: #fbf6ea; }
+.day-next-icon {
+    flex: none; width: 36px; height: 36px; border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fff; border: 1px solid #eef0f4;
+}
+.day-next-icon .cal-ico { width: 18px; height: 18px; }
+.day-next-main { flex: 1 1 auto; min-width: 0; }
+.day-next-name {
+    font-size: 14px; font-weight: 700; color: #2c302e;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.day-next-sub { font-size: 12px; color: #9297ab; margin-top: 2px; }
+
+/* ---- How the day is booked -----------------------------------------------
+   One band from the first start to the last end, with the booked runs on it.
+   The runs are merged in utils/dayShape, so two blocks over the same hour are
+   one mark here — which is the whole reason this is a band and not a sum. */
+.day-band-span { font-size: 12px; font-weight: 600; color: #9297ab; white-space: nowrap; }
+.day-band {
+    position: relative; height: 12px; border-radius: 999px;
+    background: #f0f1f4; overflow: hidden;
+}
+.day-band-run {
+    position: absolute; top: 0; bottom: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #8b7aa8, #a893c9);
+}
+/* A run whose every block is finished. The day's progress, drawn where the
+   day's shape is — green because that is what finished is everywhere else in
+   this sidebar. */
+.day-band-run.is-done { background: linear-gradient(90deg, #2e9e6b, #56c191); }
+.day-band-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.5; color: #6b7280; }
+.day-band-note strong { color: #2c302e; font-weight: 700; }
+
 /* Daily Overview stat tiles: label on top, big number, small sub. */
 .day-stats .wk-stat { padding: 14px 14px; }
 .wk-stat-sub { font-size: 12px; color: #9297ab; margin-top: 2px; }
@@ -252,11 +300,39 @@
 .day-tasks-left { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .day-task-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #d3d9e2; }
 .day-task-item:first-child { border-top: none; }
+/* The checkbox, and it is a real one now.
+   It was a bare `span` for a long time — a circle the exact size and shape of
+   a checkbox, sitting beside a task, that did nothing when clicked. The only
+   thing that finished the task was clicking its *name*. The tick inside is
+   hidden until the row is hovered or the button is focused, so a list of five
+   reads as five tasks rather than as five empty boxes. */
 .day-task-ring {
-    flex: none; width: 18px; height: 18px; border-radius: 999px;
+    flex: none; width: 20px; height: 20px; border-radius: 999px;
     border: 2px solid #cfd3db; box-sizing: border-box;
+    padding: 0; background: transparent; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: transparent;
+    transition: border-color .14s ease, background .14s ease, color .14s ease;
 }
-.day-task-ring.is-done { border-color: #2e9e6b; background: #2e9e6b; }
+.day-task-ring svg {
+    width: 12px; height: 12px; fill: none;
+    stroke: currentColor; stroke-width: 3.2;
+    stroke-linecap: round; stroke-linejoin: round;
+}
+.day-task-item:hover .day-task-ring,
+.day-task-ring:focus-visible { border-color: #2e9e6b; color: #2e9e6b; }
+.day-task-ring:hover { background: #2e9e6b; border-color: #2e9e6b; color: #fff; }
+.day-task-ring:focus-visible { outline: 2px solid #2e9e6b; outline-offset: 2px; }
+.day-task-ring:disabled { cursor: default; opacity: .5; }
+.day-task-ring.is-done { border-color: #2e9e6b; background: #2e9e6b; color: #fff; }
+
+/* What finishing it is worth. The row already carried a difficulty pill and
+   said nothing about the reward, which is the half of a to-do list this app is
+   actually built on. */
+.day-task-xp {
+    flex: none; font-size: 12px; font-weight: 700; color: #7a6aa8;
+    font-variant-numeric: tabular-nums;
+}
 .day-task-name { flex: 1 1 auto; min-width: 0; font-size: 14px; color: #2c302e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The difficulty pill. One neutral chip for all three bands: the word in it is
    already the whole message, and red / amber / grey made the sidebar's loudest
@@ -370,3 +446,17 @@ html[data-theme="dark"] .day-task-name { color: #e6e9f0; }
 html[data-theme="dark"] .day-task-item { border-color: #21262d; }
 html[data-theme="dark"] .day-task-diff { background: #1c222c; color: #aab2c0; }
 html[data-theme="dark"] .day-task-ring { border-color: #3a424e; }
+html[data-theme="dark"] .day-task-item:hover .day-task-ring,
+html[data-theme="dark"] .day-task-ring:focus-visible { border-color: #3fb950; color: #3fb950; }
+html[data-theme="dark"] .day-task-ring:hover { background: #3fb950; border-color: #3fb950; color: #0d1117; }
+html[data-theme="dark"] .day-task-xp { color: #a893c9; }
+html[data-theme="dark"] .day-next-card { background: #0f141b; border-color: #21262d; }
+html[data-theme="dark"] .day-next-card.is-running { background: #1b1913; border-color: #3a3327; }
+html[data-theme="dark"] .day-next-icon { background: #161b22; border-color: #21262d; }
+html[data-theme="dark"] .day-next-name { color: #e6e9f0; }
+html[data-theme="dark"] .day-next-sub,
+html[data-theme="dark"] .day-band-span { color: #7d8797; }
+html[data-theme="dark"] .day-next-when { color: #c9a87c; }
+html[data-theme="dark"] .day-band { background: #1c222c; }
+html[data-theme="dark"] .day-band-note { color: #9aa3b1; }
+html[data-theme="dark"] .day-band-note strong { color: #e6e9f0; }

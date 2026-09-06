@@ -10,6 +10,12 @@
  * The times on a card are only the ones the entry actually has. A to-do that
  * reached the day by being finished has no start, and shows a lone end rather
  * than an empty field beside a dash.
+ *
+ * The daily goal sits above the list, because it is what the list is *for*:
+ * the cards say what there is to do and the bar says how much of the day's
+ * target the finished ones have already bought. It is the same goal the
+ * dashboard's XP panel and the settings page hold — one number, three places
+ * that read it.
  */
 import { useEffect, useState } from 'react';
 import { xpToDifficulty, xpToPriority, type XpBand } from '@/utils/priority';
@@ -18,6 +24,16 @@ import type { TaskPriority } from '@/types';
 
 export interface DayPanelProps {
   entries: DayEntry[];
+  /**
+   * The account's daily XP target, and what this day has banked against it.
+   *
+   * Only meaningful on today — a goal is a thing about the day you are in —
+   * so `goalDay` says whether to draw it at all rather than the panel guessing
+   * from the entries.
+   */
+  goalXp: number;
+  earnedXp: number;
+  goalDay: boolean;
   focusText: string;
   onFocusChange: (text: string) => void;
   onAddEvent: () => void;
@@ -27,6 +43,17 @@ export interface DayPanelProps {
   onRetimeEvent: (entry: DayEntry, field: 'startTime' | 'endTime', value: string) => void;
   onComplete: (taskId: string) => void;
   completingId?: string | null;
+  /**
+   * Start the focus session. Drawn on the first unfinished task of the day and
+   * nowhere else: a Start on every card is six ways to begin the same one
+   * timer, and the next thing is the only one anybody means.
+   *
+   * The session is the account's, not the task's — the same one the dashboard's
+   * Focus panel and the Day view's ring drive. Nothing here claims otherwise.
+   */
+  onStart?: () => void;
+  /** Whether that session is already running, which makes Start a no-op. */
+  focusRunning?: boolean;
 }
 
 /**
@@ -51,6 +78,23 @@ function difficulty(xp: number, priority?: string): { band: XpBand; tone: TaskPr
       ? priority
       : xpToPriority(xp);
   return { band: xpToDifficulty(xp), tone };
+}
+
+/**
+ * "07:30 AM" — a stored `HH:MM` as the card prints it.
+ *
+ * The card used to hand the string to a disabled `<input type="time">` and let
+ * the browser format it, which draws its own spinner chrome and clips the
+ * meridiem off the end in a narrow column. Empty in, empty out: a to-do that
+ * reached the day by being finished has no start and shows only an end.
+ */
+function clockLabel(value: string): string {
+  const [hours, minutes] = String(value || '').split(':');
+  const hour = Number(hours);
+  if (!Number.isFinite(hour) || minutes === undefined) return '';
+  const suffix = hour < 12 ? 'AM' : 'PM';
+  const clock = hour % 12 === 0 ? 12 : hour % 12;
+  return `${String(clock).padStart(2, '0')}:${minutes.slice(0, 2)} ${suffix}`;
 }
 
 function EventIcon() {
@@ -89,6 +133,9 @@ function CheckIcon({ className }: { className: string }) {
 
 export function DayPanel({
   entries,
+  goalXp,
+  earnedXp,
+  goalDay,
   focusText,
   onFocusChange,
   onAddEvent,
@@ -98,8 +145,11 @@ export function DayPanel({
   onRetimeEvent,
   onComplete,
   completingId,
+  onStart,
+  focusRunning = false,
 }: DayPanelProps) {
   let taskNumber = 0;
+  let nextClaimed = false;
 
   // Only one card's menu is open at a time, and a click anywhere else closes
   // it — including a click on one of its own items, which has already acted.
@@ -120,15 +170,39 @@ export function DayPanel({
             {/* The original only ever made an event by dragging a slot on the
                 week grid, which left the month view with no way to add one at
                 all. It has one now. */}
-            <span
-              className="day-panel-link"
-              role="button"
-              tabIndex={0}
-              onClick={onAddEvent}
-            >
-              + Add Event
-            </span>
+            <button type="button" className="dp-add" onClick={onAddEvent}>
+              + Add
+            </button>
           </div>
+
+          {/* What the day is worth against what it is meant to be worth. Drawn
+              only on today: on any other day the bar would be measuring a
+              finished day against a target nobody was holding at the time. */}
+          {goalDay && goalXp > 0 && (
+            <div className="dp-goal">
+              <span className="dp-goal-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="8.5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="12" cy="12" r="1" />
+                </svg>
+              </span>
+              <span className="dp-goal-main">
+                <span className="dp-goal-row">
+                  <span className="dp-goal-label">Daily Goal</span>
+                  <span className="dp-goal-figs">
+                    <strong>{earnedXp.toLocaleString()}</strong> / {goalXp.toLocaleString()} XP
+                  </span>
+                </span>
+                <span className="dp-goal-track">
+                  <i
+                    className={`dp-goal-fill${earnedXp >= goalXp ? ' is-met' : ''}`}
+                    style={{ width: `${Math.min(100, Math.round((earnedXp / goalXp) * 100))}%` }}
+                  />
+                </span>
+              </span>
+            </div>
+          )}
 
           <div className="daily-focus-holder">
             <input
@@ -152,6 +226,10 @@ export function DayPanel({
               if (isTask) taskNumber += 1;
 
               const canComplete = isTask && !entry.completed && Boolean(entry.taskId);
+              /* The first thing still to do. `nextUp` is claimed once and then
+                 stays claimed, so exactly one card carries the Start. */
+              const isNext = canComplete && !nextClaimed;
+              if (isNext) nextClaimed = true;
               const level = difficulty(entry.xp, entry.priority);
               const classes = [
                 'task-section',
@@ -189,43 +267,113 @@ export function DayPanel({
                       </div>
                     )}
 
-                    <input
-                      type="text"
-                      className="task-input-inline"
-                      value={entry.name}
-                      placeholder="What will you do..."
-                      readOnly={isTask}
-                      role={canComplete ? 'button' : undefined}
-                      title={canComplete ? 'Click to mark complete' : undefined}
-                      onClick={() => {
-                        if (canComplete && entry.taskId) onComplete(entry.taskId);
-                      }}
-                      onChange={(event) => onRenameEvent(entry, event.target.value)}
-                    />
+                    {/* A task's name is text and an event's is a field, which
+                        is what each of them actually is. The task's was an
+                        `<input readOnly>` — a box with a caret and no ellipsis,
+                        pretending to be editable and looking like a form on a
+                        card that is not one. */}
+                    {isTask ? (
+                      <span
+                        className="task-title"
+                        role={canComplete ? 'button' : undefined}
+                        tabIndex={canComplete ? 0 : undefined}
+                        title={canComplete ? 'Click to mark complete' : entry.name}
+                        onClick={() => {
+                          if (canComplete && entry.taskId) onComplete(entry.taskId);
+                        }}
+                        onKeyDown={(event) => {
+                          if (!canComplete || !entry.taskId) return;
+                          if (event.key !== 'Enter' && event.key !== ' ') return;
+                          event.preventDefault();
+                          onComplete(entry.taskId);
+                        }}
+                      >
+                        {entry.name}
+                      </span>
+                    ) : (
+                      <input
+                        type="text"
+                        className="task-input-inline"
+                        value={entry.name}
+                        placeholder="What will you do..."
+                        onChange={(event) => onRenameEvent(entry, event.target.value)}
+                      />
+                    )}
 
-                    <div className="timestamp-section">
-                      {entry.startTime && (
-                        <input
-                          type="time"
-                          className="start-time"
-                          value={entry.startTime}
-                          disabled={isTask}
-                          onChange={(event) =>
-                            onRetimeEvent(entry, 'startTime', event.target.value)
-                          }
-                        />
+                    {/* The card's foot: the times on the left, what to do
+                        about it on the right. Both used to float over this row
+                        absolutely, which meant every card carried a
+                        `padding-right` guessed against the width of a word —
+                        and a card in a narrower column ran one under the
+                        other. A row cannot overlap itself. */}
+                    <div className="card-foot">
+                      <div className="timestamp-section">
+                        {/* A task's times are plain text, because a task's
+                            times are not editable here — a disabled
+                            `<input type="time">` draws the browser's own
+                            spinner chrome and clips "07:30 AM" to "07:30 A"
+                            the moment the column narrows. An event's stay
+                            fields, because an event's times *are* editable. */}
+                        {isTask ? (
+                          <span className="task-times">
+                            {clockLabel(entry.startTime)}
+                            {entry.startTime && entry.endTime && (
+                              <span className="task-times-dash">–</span>
+                            )}
+                            {clockLabel(entry.endTime)}
+                          </span>
+                        ) : (
+                          <>
+                            {entry.startTime && (
+                              <input
+                                type="time"
+                                className="start-time"
+                                value={entry.startTime}
+                                onChange={(event) =>
+                                  onRetimeEvent(entry, 'startTime', event.target.value)
+                                }
+                              />
+                            )}
+                            {entry.startTime && entry.endTime && <span>-</span>}
+                            {entry.endTime && (
+                              <input
+                                type="time"
+                                className="end-time"
+                                value={entry.endTime}
+                                onChange={(event) =>
+                                  onRetimeEvent(entry, 'endTime', event.target.value)
+                                }
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {isTask && entry.completed && (
+                        <span className="completed-badge">
+                          Completed <CheckIcon className="completed-check" />
+                        </span>
                       )}
-                      {entry.startTime && entry.endTime && <span>-</span>}
-                      {entry.endTime && (
-                        <input
-                          type="time"
-                          className="end-time"
-                          value={entry.endTime}
-                          disabled={isTask}
-                          onChange={(event) =>
-                            onRetimeEvent(entry, 'endTime', event.target.value)
-                          }
-                        />
+                      {isNext && onStart ? (
+                        <button
+                          type="button"
+                          className="dp-start"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onStart();
+                          }}
+                        >
+                          {focusRunning ? 'Focusing' : 'Start'}
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 5.5v13l11-6.5z" />
+                          </svg>
+                        </button>
+                      ) : (
+                        canComplete && (
+                          <span className="complete-hint">
+                            Mark complete <CheckIcon className="completed-check" />
+                          </span>
+                        )
                       )}
                     </div>
                   </div>
@@ -263,17 +411,6 @@ export function DayPanel({
                       </button>
                     </div>
                   </div>
-
-                  {isTask && entry.completed && (
-                    <span className="completed-badge">
-                      Completed <CheckIcon className="completed-check" />
-                    </span>
-                  )}
-                  {canComplete && (
-                    <span className="complete-hint">
-                      Mark complete <CheckIcon className="completed-check" />
-                    </span>
-                  )}
 
                   {entry.subtasks && entry.subtasks.length > 0 && (
                     <ul className="subtasks-list">

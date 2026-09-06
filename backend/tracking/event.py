@@ -29,14 +29,13 @@ def _new_id(table):
 # Entries: a task on a day
 # --------------------------------------------------------------------------
 def entries_for(username):
-    return [e for e in db.calendar_entries() if e.get('user_id') == username]
+    return db.rows_for('calendar_entries', username)
 
 
 def create_entry(username, data):
     """Place a task (or a bare time block) on a day."""
-    entries = db.calendar_entries()
     entry_id = data.get('id') or _new_id('calendar_entries')
-    entries.append({
+    entry = db.insert_row('calendar_entries', {
         "id": entry_id,
         "user_id": username,
         "date": data.get('date', ''),
@@ -44,43 +43,40 @@ def create_entry(username, data):
         "task_id": data.get('task_id', None),
         "created_at": datetime.now().isoformat(),
     })
-    db.save_calendar_entries(entries)
-    return entry_id
+    return entry['id']
 
 
 def update_entry(entry_id, username, data):
     """Change a placed entry's day, block or task. False if it isn't theirs."""
-    entries = db.calendar_entries()
-    for entry in entries:
-        if entry.get('id') == entry_id and entry.get('user_id') == username:
-            for field in ('date', 'time_block', 'task_id'):
-                if field in data:
-                    entry[field] = data[field]
-            db.save_calendar_entries(entries)
-            return True
-    return False
+    changes = {field: data[field]
+               for field in ('date', 'time_block', 'task_id') if field in data}
+    if not changes:
+        # Nothing sent to change, but the entry still has to be theirs for the
+        # answer to be True — otherwise a caller learns which ids exist.
+        return db.find_row('calendar_entries', entry_id, user_id=username) is not None
+    return db.update_row('calendar_entries', entry_id, changes, user_id=username)
 
 
 def delete_entry(entry_id, username=None):
     """Drop an entry — scoped to one account when a username is given."""
-    entries = db.calendar_entries()
-    if username:
-        kept = [e for e in entries
-                if not (e.get('id') == entry_id and e.get('user_id') == username)]
-    else:
-        kept = [e for e in entries if e.get('id') != entry_id]
-    db.save_calendar_entries(kept)
+    db.delete_row('calendar_entries', entry_id, user_id=username)
 
 
 # --------------------------------------------------------------------------
 # Events: standalone calendar blocks
 # --------------------------------------------------------------------------
-def create_event(name, day, time_block, recurrence_month=None,
+def create_event(username, name, day, time_block, recurrence_month=None,
                  recurrence_week=None, end_date=None, description=''):
-    """A new standalone calendar event."""
-    events = db.calendar_events()
+    """A new standalone calendar event, belonging to one account.
+
+    `user_id` was not written until now, and `custom_events` did not filter on
+    it, so every event anybody created was on everybody's calendar. The column
+    was always in the schema (calendar_events references users.username with
+    ON DELETE CASCADE); nothing was putting a value in it.
+    """
     event = {
         "id": _new_id('calendar_events'),
+        "user_id": username,
         "name": name,
         "recurrence-month": recurrence_month or None,
         "recurrence-week": recurrence_week or None,
@@ -92,20 +88,23 @@ def create_event(name, day, time_block, recurrence_month=None,
         "created_at": datetime.now().isoformat(),
         "is_default": False,
     }
-    events.append(event)
-    db.save_calendar_events(events)
+    event = db.insert_row('calendar_events', event)
     return {"success": True, "entry_id": event["id"], "message": "Calendar event created"}
 
 
-def delete_event(event_id):
-    """Delete a custom event. Built-in (default) events are protected."""
-    events = db.calendar_events()
-    event = next((e for e in events if e.get('id') == event_id), None)
+def delete_event(event_id, username):
+    """Delete one of this account's custom events. Defaults are protected.
+
+    An event belonging to somebody else answers "not found" rather than
+    "not yours": the two are the same fact to a caller who should not have
+    known the id existed.
+    """
+    event = db.find_row('calendar_events', event_id, user_id=username)
     if not event:
         return {"success": False, "message": "Event not found"}
     if event.get('is_default', False):
         return {"success": False, "message": "Cannot delete default events"}
-    db.save_calendar_events([e for e in events if e.get('id') != event_id])
+    db.delete_row('calendar_events', event_id, user_id=username)
     return {"success": True, "message": "Calendar event deleted"}
 
 
@@ -113,19 +112,22 @@ def default_events():
     return [e for e in db.calendar_events() if e.get('is_default', False)]
 
 
-def custom_events():
-    return [e for e in db.calendar_events() if not e.get('is_default', False)]
+def custom_events(username):
+    """This account's own events. The defaults are everybody's; these are not."""
+    return [e for e in db.rows_for('calendar_events', username)
+            if not e.get('is_default', False)]
 
 
 def sync_task(task_id, username, day, time_block=None, recurrence_month=None,
               recurrence_week=None, end_date=None, name=None):
     """Put an existing task on the calendar as an event block."""
-    task = next((t for t in db.tasks()
-                 if t.get('id') == task_id and t.get('user_id') == username), None)
+    task = db.find_row('tasks', task_id, user_id=username)
 
-    events = db.calendar_events()
     entry = {
         "id": _new_id('calendar_events'),
+        # Stamped for the same reason `create_event` stamps it: without it the
+        # block belongs to nobody, and `custom_events` shows it to everybody.
+        "user_id": username,
         "name": name or (task.get('title', 'Untitled') if task else 'Untitled'),
         "recurrence-month": recurrence_month or None,
         "recurrence-week": recurrence_week or None,
@@ -136,30 +138,24 @@ def sync_task(task_id, username, day, time_block=None, recurrence_month=None,
         "completed": False,
         "created_at": datetime.now().isoformat(),
     }
-    events.append(entry)
-    db.save_calendar_events(events)
+    entry = db.insert_row('calendar_events', entry)
     return {"success": True, "entry_id": entry["id"], "message": "Task synced to calendar"}
 
 
 def mark_task_completed(task_id, username):
     """Complete a task and tick off every calendar entry pointing at it."""
-    tasks = db.tasks()
-    task = next((t for t in tasks
-                 if t.get('id') == task_id and t.get('user_id') == username), None)
-    if not task:
+    if not db.find_row('tasks', task_id, user_id=username):
         return {"success": False, "message": "Task not found"}
 
-    task['status'] = 'done'
-    db.save_tasks(tasks)
+    db.update_row('tasks', task_id, {'status': 'done'}, user_id=username)
 
-    entries = db.calendar_entries()
+    now = datetime.now().isoformat()
     updated = 0
-    for entry in entries:
-        if entry.get('task_id') == task_id and entry.get('user_id') == username:
-            entry['completed'] = True
-            entry['completed_at'] = datetime.now().isoformat()
+    for entry in db.rows_for('calendar_entries', username):
+        if entry.get('task_id') == task_id:
+            db.update_row('calendar_entries', entry['id'],
+                          {'completed': True, 'completed_at': now}, user_id=username)
             updated += 1
-    db.save_calendar_entries(entries)
 
     return {"success": True,
             "message": "Task marked as completed in calendar. "

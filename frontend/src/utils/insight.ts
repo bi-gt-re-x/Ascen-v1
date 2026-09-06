@@ -25,6 +25,7 @@
  * against.
  */
 import type { GrowthDay, Task } from '@/types';
+import { activeRate } from './activeDay';
 import type { BalanceShape, ClockShape, RhythmShape, WeekShape } from './behaviour';
 import { hourLabel } from './behaviour';
 
@@ -112,7 +113,7 @@ export function unlock(have: number, need: number, what: string): Unlock {
   const short = need - have;
   return {
     ready: false,
-    message: `Keep using Ascen for ${short} more ${short === 1 ? 'day' : 'days'} to unlock ${what}. There is not enough here yet to say anything about it that would still be true next week.`,
+    message: `${short} more ${short === 1 ? 'day' : 'days'} of use and this shows ${what}.`,
   };
 }
 
@@ -153,6 +154,11 @@ export function whyFindings(days: GrowthDay[], window = 30): Finding[] {
   const before = days.slice(-window * 2, -window);
   if (now.length < 7 || before.length !== now.length) return out;
 
+  /* Days that *earned*, not days worked — narrower than `isActiveDay` on
+     purpose. The finding below states an identity: a period's total is working
+     days times XP on a working day. That only holds if the days counted are
+     the ones the XP came from, so a focus-only day does not belong in this
+     particular denominator. See utils/activeDay. */
   const activeOf = (rows: GrowthDay[]) => rows.filter((day) => num(day.xp_earned) > 0);
   const sum = (rows: GrowthDay[]) => rows.reduce((total, day) => total + num(day.xp_earned), 0);
 
@@ -229,8 +235,8 @@ export function whyFindings(days: GrowthDay[], window = 30): Finding[] {
         steadier ? 'narrowed' : 'widened'
       } from ${spreadWas.toFixed(2)} to ${spreadNow.toFixed(2)} (standard deviation over the mean). ${
         steadier
-          ? 'A narrower spread tends to go with a routine that is running rather than being decided each morning.'
-          : 'A wider spread usually means the work is being done in bursts, which is more fragile than the same total spread evenly.'
+          ? 'A routine that is running, rather than decided each morning.'
+          : 'Work in bursts. More fragile than the same total spread evenly.'
       }`,
       strength: 'likely',
       tone: steadier ? 'green' : 'amber',
@@ -260,6 +266,9 @@ export function howFindings(
   const out: Finding[] = [];
 
   // ---- how long a productive sitting runs --------------------------------
+  /* Both, and an `&&` rather than the usual `||`: this finding correlates one
+     against the other, so a day missing either has no point to plot. Not the
+     shared "day worked" test — see utils/activeDay. */
   const focusDays = days.filter((day) => num(day.focus_minutes) > 0 && num(day.xp_earned) > 0);
   if (focusDays.length >= 12) {
     const sorted = [...focusDays].sort((a, b) => num(a.focus_minutes) - num(b.focus_minutes));
@@ -333,8 +342,8 @@ export function howFindings(
           easy,
         )}% of low-priority ones. ${
           hard >= easy
-            ? 'The work that matters is getting through; the small stuff is what silently accumulates.'
-            : 'The important work is what slips, which usually means it is being scheduled last rather than first.'
+            ? 'What matters is getting through. The small stuff piles up.'
+            : 'The important work slips — it is being scheduled last.'
         }`,
         strength: strengthOf(0.4, Math.min(high.length, low.length)),
         tone: 'amber',
@@ -351,8 +360,8 @@ export function howFindings(
       )} and ${hourLabel(clock.coreWindow.to)}`,
       detail: `${clock.coreWindow.share}% of your completions fall inside that run of hours. ${
         clock.coreWindow.share >= 60
-          ? 'That is a well-established working window rather than a preference, and anything you schedule elsewhere is competing with your worst hours.'
-          : 'That is a loose window — your work is spread across the day rather than anchored to a part of it.'
+          ? 'A working window, not a preference. Anything scheduled elsewhere competes with your worst hours.'
+          : 'A loose window — spread across the day rather than anchored to it.'
       }`,
       strength: clock.coreWindow.share >= 60 ? 'strong' : 'likely',
       tone: 'blue',
@@ -433,8 +442,7 @@ export function whatsWorking(
       'blue',
     );
 
-    const rate = (rows: GrowthDay[]) =>
-      (rows.filter((day) => num(day.xp_earned) > 0).length / rows.length) * 100;
+    const rate = activeRate;
     const nowRate = rate(now);
     const wasRate = rate(before);
     if (nowRate - wasRate >= 4) {
@@ -515,7 +523,7 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
       strength,
       reading:
         strength === 'weak'
-          ? `Too loose to lean on — r = ${r.toFixed(2)} over ${n} observations is not a pattern you should plan around yet.`
+          ? `Too loose to lean on — r = ${r.toFixed(2)} over ${n} observations.`
           : r >= 0
             ? positive
             : negative,
@@ -524,6 +532,9 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
     });
   };
 
+  /* Days that earned, because XP is an axis on every chart below and a day
+     with none of it is a point at zero rather than a point. Narrower than
+     `isActiveDay` on purpose; see utils/activeDay. */
   const active = days.filter((day) => num(day.xp_earned) > 0);
 
   add(
@@ -532,8 +543,8 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
     active
       .filter((day) => num(day.focus_minutes) > 0)
       .map((day) => [num(day.focus_minutes), num(day.xp_earned)] as [number, number]),
-    'Longer focus days tend to be higher-XP days. That is the least surprising relationship on this page and the most useful, because focus time is the half of it you can decide.',
-    'Your longer focus days are not your higher-XP days, which usually means focus time is being logged against work that does not produce tasks.',
+    'Longer focus days are higher-XP days. Focus time is the half you decide.',
+    'Your longer focus days are not your higher-XP days — focus is being logged against work that produces no tasks.',
     'green',
   );
 
@@ -541,8 +552,8 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
     'rel-tasks-xp',
     'Tasks finished → XP earned',
     active.map((day) => [num(day.tasks_completed), num(day.xp_earned)] as [number, number]),
-    'Your XP tracks the number of tasks you close rather than which ones — so the size of a day is mostly decided by how many things you finish, not how big they were.',
-    'Your XP does not follow your task count, which means a few large tasks are carrying your totals.',
+    'Your XP tracks how many tasks you close, not which ones.',
+    'Your XP does not follow your task count — a few large tasks carry your totals.',
     'violet',
   );
 
@@ -553,7 +564,7 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
       .filter((day) => num(day.focus_minutes) > 0 && num(day.avg_task_xp) > 0)
       .map((day) => [num(day.focus_minutes), num(day.avg_task_xp)] as [number, number]),
     'Longer sittings appear to go with larger individual tasks — depth rather than volume.',
-    'Longer sittings tend to go with smaller individual tasks, which can be a sign of a long session spent on many small things.',
+    'Longer sittings go with smaller tasks — a long session spent on many small things.',
     'blue',
   );
 
@@ -581,8 +592,8 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
         top > 0 && bottom / top <= 0.5
           ? `Your best weekday carries ${(top / Math.max(bottom, 1)).toFixed(
               1,
-            )}× your worst. The week is not flat, so any plan that treats every day as interchangeable will not survive contact with yours.`
-          : 'Your weekdays carry roughly comparable loads. A flat week is rarer than it sounds and it is what makes long streaks possible.',
+            )}× your worst. The week is not flat — do not plan as though it were.`
+          : 'Your weekdays carry comparable loads. A flat week is what makes long streaks possible.',
       points: normalise(weekPairs),
       tone: 'amber',
     });
@@ -606,8 +617,8 @@ export function relationships(days: GrowthDay[], tasks: Task[], week: WeekShape)
     'rel-planning',
     'Tasks scheduled → tasks finished',
     [...byWeek.values()].map((entry) => [entry.dated, entry.done] as [number, number]),
-    'Weeks in which you schedule more are weeks in which you finish more. Whether the planning causes it or simply marks the weeks you were already going to have is not something this page can tell you.',
-    'Scheduling more in a week does not go with finishing more of it, so the dates on your tasks are currently decoration rather than a plan.',
+    'Weeks you schedule more are weeks you finish more. Which causes which, this page cannot say.',
+    'Scheduling more does not go with finishing more — the dates on your tasks are decoration, not a plan.',
     'pink',
   );
 
@@ -643,8 +654,7 @@ export function currentState(
 ): CurrentState {
   const now = days.slice(-window);
   const before = days.slice(-window * 2, -window);
-  const rate = (rows: GrowthDay[]) =>
-    rows.length ? (rows.filter((day) => num(day.xp_earned) > 0).length / rows.length) * 100 : 0;
+  const rate = activeRate;
 
   const nowRate = rate(now);
   const wasRate = rate(before);

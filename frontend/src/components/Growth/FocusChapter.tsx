@@ -144,7 +144,7 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
       <section className="gr-panel gr-span-2 gr-heat gr-plan" data-window={window}>
         <PanelHead
           title="Consistency"
-          hint={`One square per day, shaded by the XP earned on it against the busiest of the last ${shape.days} days — darkest is the most, faintest is the least, empty is a day with nothing. Tap one to read what was planned for it and how much of that got done.`}
+          hint={`One square a day across ${shape.days} — darkest is the busiest`}
         >
           <Seg
             value={window}
@@ -266,13 +266,12 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
       <section className="gr-panel gr-span-2 gr-chart-panel">
         <PanelHead
           title="Planned against completed"
-          hint="Each bar is one week: the share of that week's planned tasks that were finished. A week nothing was planned for has no bar, because nothing was promised. The line is a straight fit through the weeks that do have one."
+          hint="How much of each week's plan you finished"
           note={planned > 0 ? `${WEEKS} weeks` : 'nothing planned yet'}
         />
         {planned === 0 ? (
           <p className="gr-empty">
-            No task in these weeks carried a due date, so there is no plan to measure against.
-            Give a task a date and this fills in.
+            No due dates in these weeks, so there is no plan to measure against.
           </p>
         ) : (
           <WeeklyPlot weeks={weeks} />
@@ -283,7 +282,7 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
       <section className="gr-panel gr-mix">
         <PanelHead
           title="Focus depth"
-          hint={`Days that had any tracked focus, split by how long it ran. Nothing here measures distraction — a session records its length and nothing about what happened inside it — so the bands are stated in minutes and the reference day is ${FOCUS_REFERENCE_MINUTES} minutes.`}
+          hint={`Focus days by length, against a ${FOCUS_REFERENCE_MINUTES}-minute day`}
           note={`${mix.focusDays} of ${mix.totalDays} days`}
         />
         {mix.focusDays === 0 ? (
@@ -328,12 +327,12 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
       <section className="gr-panel gr-span-2">
         <PanelHead
           title="Habit stability"
-          hint={`Up to ${HABIT_ROWS} subjects, ranked by how many days you have worked in them. Everything but the trend is counted from the day the account was created rather than over a recent window — a habit is a claim about months, and a thirty-day one would call a subject you kept up for half a year and left alone in July a dead habit. The account has no notion of a planned session, so the denominator is your own best week rather than a target nobody set.`}
+          hint={`Your ${HABIT_ROWS} steadiest subjects, counted since day one`}
           note={habits.length ? `since day one · ${habits[0]!.spanDays} days` : undefined}
         />
         {habits.length === 0 ? (
           <p className="gr-empty">
-            No finished task carries a subject yet, so there is no recurring work to follow.
+            No finished task carries a subject yet.
           </p>
         ) : (
           <ul className="gr-habits">
@@ -377,7 +376,7 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
         <PanelHead
           title="Consistency over time"
           icon="trend"
-          hint="The same 30-day score, read at four points. Each is measured the same way, which is what makes the column a progression rather than four unrelated numbers."
+          hint="The same 30-day score at four points"
         />
         <ul className="gr-trail">
           {trail.map((point) => (
@@ -403,7 +402,7 @@ export function FocusChapter({ all, tasks, subjects, streak }: FocusChapterProps
       <section className="gr-panel gr-span-2 gr-recov">
         <PanelHead
           title="Getting back on"
-          hint="Days are ranked against your own median working day, not a fixed figure. The recovery rate is the share of quiet runs you came back from within a day."
+          hint="Ranked against your own median day"
           note={`${recovery.totalDays} days on record`}
         />
         <div className="gr-recov-row">

@@ -73,15 +73,11 @@ def choose_avatar(username, name):
     """Store an account's pick. False if the name is not one of the fifty."""
     if not username or name not in AVATARS:
         return False
-    rows = db.read_table('user_settings')
-    for row in rows:
-        if row.get('user_id') == username and row.get('key') == SETTING_KEY:
-            row['value'] = name
-            row.pop('updated_at', None)   # let the column's default restamp it
-            break
-    else:
-        rows.append({'user_id': username, 'key': SETTING_KEY, 'value': name})
-    db.write_table('user_settings', rows)
+    # Keyed on (user_id, key), so the delete-then-insert is the upsert. Two
+    # statements rather than the whole table, which is what this was.
+    db.delete_row('user_settings', SETTING_KEY, user_id=username, key='key')
+    db.insert_row('user_settings',
+                  {'user_id': username, 'key': SETTING_KEY, 'value': name})
     return True
 
 

@@ -18,9 +18,9 @@
  * cannot disagree. A window with no period before it says so rather than
  * printing a rise from nothing as an infinite one.
  */
-import type { CSSProperties } from 'react';
-import { Delta, Sparkline, type Tone } from './charts';
-import { GLYPHS, type GlyphName } from './glyphs';
+import { StatRow, type Stat } from './StatRow';
+import { showsSessionVolume, showsTaskVolume } from '@/utils/analyticsPrefs';
+import type { LogStyle } from '@/services/settings';
 import type { GrowthSummaryFigures, TileSeries } from '@/utils/growthSummary';
 
 export interface TilesProps {
@@ -31,23 +31,28 @@ export interface TilesProps {
   scoreSeries: number[];
   /** "vs previous 2 years" — the window's own words for its baseline. */
   compareLabel: string;
+  /**
+   * Which volume the row prints behind the three rates.
+   *
+   * The three rates never move: they are the argument, and they are the same
+   * three at every setting. What the account said it records decides what sits
+   * behind them — a count of tasks for somebody who ticks things off, hours for
+   * somebody who logs the time, both for somebody who does both. A reader who
+   * never finishes a task and works four hours a day was being shown a volume
+   * of zero as the fourth figure on the page. See utils/analyticsPrefs.
+   */
+  logStyle?: LogStyle;
 }
 
-interface TileSpec {
-  key: string;
-  label: string;
-  value: string;
-  /** The small trailing unit — "XP/day", "/10". Not every tile carries one. */
-  unit?: string;
-  delta: number | null;
-  series: number[];
-  tone: Tone;
-  glyph: GlyphName;
-  hint: string;
-}
-
-export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: TilesProps) {
-  const tiles: TileSpec[] = [
+export function Tiles({
+  figures,
+  sparks,
+  score,
+  scoreSeries,
+  compareLabel,
+  logStyle,
+}: TilesProps) {
+  const stats: Stat[] = [
     {
       key: 'productivity',
       glyph: 'trend',
@@ -57,7 +62,7 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       delta: figures.xpPerDay.delta,
       series: sparks.xp,
       tone: 'violet',
-      hint: 'XP per day of the window, not per day something happened — a fortnight off pulls this down, which is the point.',
+      hint: 'XP per day of the window, not per day worked. Time off pulls it down.',
     },
     {
       key: 'consistency',
@@ -67,7 +72,9 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       delta: figures.consistency.delta,
       series: sparks.consistency,
       tone: 'amber',
-      hint: 'The share of days in the window with any work on them. A fifteen-minute day counts the same as a six-hour one — this measures showing up.',
+      hint:
+        'Share of days you finished a task, logged a focus session, or earned any XP. '
+        + 'This measures showing up.',
     },
     {
       key: 'quality',
@@ -84,24 +91,44 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
       tone: 'pink',
       hint:
         figures.ratedTasks === 0
-          ? 'How hard your tasks were times how well they went, from the star rows after a completed task. Optional — nothing here is filled in until you rate something.'
-          : `How hard each task was times how well it went, out of 25, over the ${figures.ratedTasks} of ${figures.finishedTasks} finished tasks you rated in this window.`,
+          ? 'Difficulty × execution, from the star rows after a task. Optional.'
+          : `Difficulty × execution out of 25, over the ${figures.ratedTasks} of ${figures.finishedTasks} tasks you rated.`,
     },
-    {
-      key: 'tasks',
-      glyph: 'check',
-      label: 'Tasks Completed',
-      value: figures.tasks.value.toLocaleString(),
-      delta: figures.tasks.delta,
-      series: sparks.tasks,
-      tone: 'green',
-      hint: 'The volume behind the three rates beside it, counted on the day each task was finished.',
-    },
+    ...(showsTaskVolume(logStyle)
+      ? [
+          {
+            key: 'tasks',
+            glyph: 'check' as const,
+            label: 'Tasks Completed',
+            value: figures.tasks.value.toLocaleString(),
+            delta: figures.tasks.delta,
+            series: sparks.tasks,
+            tone: 'green' as const,
+            hint: 'The volume behind the three rates beside it, counted on the day each task was finished.',
+          },
+        ]
+      : []),
+    ...(showsSessionVolume(logStyle)
+      ? [
+          {
+            key: 'focus',
+            glyph: 'clock' as const,
+            label: 'Focus Time',
+            value: figures.focusHours.value.toFixed(1),
+            unit: 'h',
+            delta: figures.focusHours.delta,
+            series: sparks.focusHours,
+            tone: 'blue' as const,
+            hint: 'The hours logged in the window — the other volume behind the three rates.',
+          },
+        ]
+      : []),
     {
       key: 'score',
       glyph: 'sparkle',
       label: 'Growth Score',
       value: score === null ? '—' : score.toFixed(1),
+      unit: score === null ? undefined : '/10',
       // The score has no recorded history to compare against — see SAMPLE in
       // ./data. A tile with no baseline says so rather than inventing one.
       delta: null,
@@ -111,30 +138,5 @@ export function Tiles({ figures, sparks, score, scoreSeries, compareLabel }: Til
     },
   ];
 
-  return (
-    <div className="ax-tiles">
-      {tiles.map((tile) => (
-        <article className="ax-tile" key={tile.key}>
-          <header>
-            <span
-              className={`ax-tile-icon ax-tone-${tile.tone}`}
-              style={{ '--ico': GLYPHS[tile.glyph] } as CSSProperties}
-              aria-hidden="true"
-            />
-            <span className="ax-tile-label">{tile.label}</span>
-            <span className="ax-info" title={tile.hint} aria-label={tile.hint}>
-              ?
-            </span>
-          </header>
-          <strong className="ax-tile-value">
-            {tile.value}
-            {tile.key === 'score' && score !== null && <em className="ax-tile-unit">/10</em>}
-            {tile.unit && <em className="ax-tile-unit">{tile.unit}</em>}
-          </strong>
-          <Delta value={tile.delta} suffix={compareLabel} />
-          <Sparkline values={tile.series} tone={tile.tone} />
-        </article>
-      ))}
-    </div>
-  );
+  return <StatRow stats={stats} compare={compareLabel} />;
 }

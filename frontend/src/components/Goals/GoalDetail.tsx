@@ -11,12 +11,13 @@
  * a route would put a page load and a scroll position between those two
  * moments for no gain.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { HealthChip, MilestoneTrack, ProgressBar, categoryOf } from './Outcome';
 import { fmtGoalNumber, formatGoalDate, goalNumbers } from './numbers';
 import { goalHealth, goalPace } from '@/utils/goalHealth';
 import { bottleneckOf, goalActions, goalReading } from '@/utils/goalAnalytics';
-import type { Goal, Milestone, MilestoneStatus, Task } from '@/types';
+import { MilestoneChecklist } from './MilestoneChecklist';
+import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
 
 export interface GoalDetailProps {
   goal: Goal;
@@ -27,6 +28,12 @@ export interface GoalDetailProps {
   onDelete: (goal: Goal) => void;
   onAddMilestone: (goal: Goal, title: string) => void;
   onMilestoneStatus: (milestone: Milestone, status: MilestoneStatus) => void;
+  /** Make this the checkpoint the goal is currently on. */
+  onFocusMilestone: (milestone: Milestone) => void;
+  /** Write this checkpoint's checklist, whole. */
+  onMilestoneSteps: (milestone: Milestone, steps: MilestoneStep[]) => void;
+  /** When this checkpoint is meant to be reached. Empty string clears it. */
+  onMilestoneDate: (milestone: Milestone, date: string) => void;
   onDeleteMilestone: (milestone: Milestone) => void;
   onReorder: (goal: Goal, order: string[]) => void;
   /** Raise the figure on a number goal. */
@@ -44,6 +51,15 @@ export function GoalDetail(props: GoalDetailProps) {
   const category = categoryOf(goal);
   const rows = goal.milestones ?? [];
   const linked = tasks.filter((task) => task.goal_id === goal.id);
+
+  /* Due dates of every task on the account, so a step linked to one can print
+     the date it is taking rather than the word "task". Built once here rather
+     than searched per step: a goal with eight checkpoints of eight steps would
+     otherwise scan the task list sixty-four times per render. */
+  const taskDue = useMemo(
+    () => new Map(tasks.map((task) => [task.id, task.due_date])),
+    [tasks],
+  );
 
   const [draft, setDraft] = useState('');
   const [value, setValue] = useState('');
@@ -185,14 +201,37 @@ export function GoalDetail(props: GoalDetailProps) {
                 >
                   {row.status === 'done' ? '✓' : index === rows.findIndex((r) => r.status !== 'done') ? '→' : '○'}
                 </button>
-                <div className="gx-ms-body">
-                  <span className="gx-ms-title">{row.title}</span>
-                  {row.status === 'done' && row.completed_at ? (
-                    <span className="gx-quiet">reached {formatGoalDate(row.completed_at)}</span>
-                  ) : row.target_date ? (
-                    <span className="gx-quiet">due {formatGoalDate(row.target_date)}</span>
-                  ) : null}
-                </div>
+                {/* The body is the focus control. The tick beside it already
+                    owns "reached / not reached", so clicking the title had no
+                    meaning to take — and "which one am I on" was previously
+                    unsayable: the card guessed at the first unfinished one and
+                    the reader had no way to disagree with it. A finished
+                    checkpoint is not a thing you can be working on, so it
+                    renders as plain text rather than as a dead button. */}
+                {row.status === 'done' ? (
+                  <div className="gx-ms-body">
+                    <span className="gx-ms-title">{row.title}</span>
+                    {row.completed_at ? (
+                      <span className="gx-quiet">reached {formatGoalDate(row.completed_at)}</span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="gx-ms-body is-pickable"
+                    disabled={busy}
+                    aria-pressed={row.status === 'active'}
+                    title={row.status === 'active' ? 'This is the current focus' : 'Make this the current focus'}
+                    onClick={() => props.onFocusMilestone(row)}
+                  >
+                    <span className="gx-ms-title">{row.title}</span>
+                    {row.status === 'active' ? (
+                      <span className="gx-ms-focus-tag">current focus</span>
+                    ) : row.target_date ? (
+                      <span className="gx-quiet">due {formatGoalDate(row.target_date)}</span>
+                    ) : null}
+                  </button>
+                )}
                 <span className="gx-ms-tools">
                   <button type="button" disabled={busy || index === 0} onClick={() => move(index, -1)} aria-label="Move up">
                     ↑
@@ -205,10 +244,31 @@ export function GoalDetail(props: GoalDetailProps) {
                   >
                     ↓
                   </button>
+                  {/* Done is a fact and gets a date printed; anything ahead
+                      is a plan and gets a control. The same split the goal
+                      timeline makes — see `gx-tl-set` in ./Outcome. */}
+                  {row.status !== 'done' && (
+                    <label className="gx-ms-date" title="When this checkpoint is meant to be reached">
+                      <span aria-hidden="true">{row.target_date ? '📅' : '+'}</span>
+                      <input
+                        type="date"
+                        value={row.target_date ? String(row.target_date).slice(0, 10) : ''}
+                        disabled={busy}
+                        aria-label={`When to reach ${row.title}`}
+                        onChange={(event) => props.onMilestoneDate(row, event.target.value)}
+                      />
+                    </label>
+                  )}
                   <button type="button" disabled={busy} onClick={() => props.onDeleteMilestone(row)} aria-label="Delete">
                     ×
                   </button>
                 </span>
+                <MilestoneChecklist
+                  steps={row.steps}
+                  busy={busy}
+                  taskDue={taskDue}
+                  onChange={(steps) => props.onMilestoneSteps(row, steps)}
+                />
               </li>
             ))}
           </ol>
@@ -312,8 +372,7 @@ export function GoalDetail(props: GoalDetailProps) {
 
           <p className="gx-quiet gx-caveat">
             Counted from the {linked.length} task{linked.length === 1 ? '' : 's'} linked to this
-            goal, not estimated. Hours are not shown because this app records focus time per day
-            rather than per task, so there is no honest per-goal figure to give.
+            goal, not estimated.
           </p>
         </section>
 
@@ -333,8 +392,7 @@ export function GoalDetail(props: GoalDetailProps) {
               ))}
             </ul>
             <p className="gx-quiet gx-caveat">
-              Nothing here changes on its own. Moving a target date or cutting a target is a
-              decision about what you are trying to do, and the app does not get to make it.
+              Nothing here changes on its own. Moving a target is your call.
             </p>
           </section>
         )}

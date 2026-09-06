@@ -12,310 +12,12 @@
 
 }
 
-/* Three bare `body` rules stood in this file — here, and at the two places
- * marked below. They are gone.
- *
- * Every one of them set an overflow, and an overflow on `body` other than
- * `visible` stops it propagating to the viewport, at which point the page will
- * not scroll at all. That did not matter while growth was a served page and
- * `body` meant *this* page; in the React app this stylesheet is fetched when
- * /growth or /analytics mounts and then stays in the document, so after one
- * visit the dashboard could not be scrolled either.
- *
- * What each was reaching for is already handled: min-height, margin and padding
- * by the always-loaded body rule in styles/dashboard.css, and whether the page
- * is pinned to one screen by `body.pins-viewport` in styles/navbar.css, which
- * App.tsx sets per route and unpins below 1120x640. Horizontal clipping that
- * this page actually needs belongs on .growth-container, not on body. */
-
-
-/* Rounded navigation buttons */
-.nav-btn {
-    border-radius: 25px !important;
-    border: 2px solid black;
-    background: white;
-    color: black;
-    padding: 10px 20px;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    animation: fadeIn 0.8s ease-out;
-}
-
-.home-btn {
-    animation-delay: 0.2s;
-}
-
-
-.nav-btn:hover {
-    background: white;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
-    transform: scale(1.05);
-}
-
-/* Position buttons at bottom */
-.home-btn {
-    position: fixed !important;
-    bottom: 20px !important;
-    top: auto !important;
-}
-
-.home-btn {
-    left: 20px !important;
-}
-
-
-/* Theme selector in top right corner */
-
-
-/* Main growth container - centers content on the page */
-.growth-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    height: auto;
-    padding: 24px;
-    box-sizing: border-box;
-    /* No fadeIn here: the whole page already fades in once via
-       styles/page-fade.css, and this one left a translateY(20px) on the
-       container that pushed its bottom past the viewport. */
-}
-
-/* Tab Navigation */
-.tab-navigation {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    padding: 0 20px;
-}
-
-.tab-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 25px;
-    background-color: #f0f0f0;
-    color: #2C302E;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Century Gothic', sans-serif;
-    border: 2px solid #e0e0e0;
-}
-
-.tab-btn:hover {
-    background-color: #e8e8e8;
-    transform: translateY(-2px);
-}
-
-.tab-btn.active {
-    background-color: #2C302E;
-    color: white;
-    border-color: #2C302E;
-}
-
-/* Tab Content */
-.tab-content {
-    position: relative;
-    height: calc(100% - 120px);
-}
-
-.tab-pane {
-    display: none;
-    animation: fadeIn 0.5s ease-out;
-}
-
-.tab-pane.active {
-    display: block;
-}
-
-/* White rounded rectangle with navy blue/blackish edges */
-.growth-card {
-    background: white;
-    border-radius: 50px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 40px;
-    /* Fluid width via .page-shell: min(--shell-fluid, --shell-max), centered.
-       Shrinks with the viewport instead of a fixed design width. */
-    --shell-fluid: 97%;
-    --shell-max: 1680px;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        0 4px 16px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    border: 2px solid #2C302E;
-    position: relative;
-    top: 50px;
-    animation: fadeIn 1s ease-out;
-}
-
-/* Darker edge effect */
-.growth-card::before {
-    opacity: 0;
-    animation: fadeIn 0.5s ease-out forwards;
-    animation-delay: 1s;
-}
-
-/* Growth title styling */
-.growth-card h1 {
-    color: black;
-    text-align: center;
-    margin-bottom: 10px;
-    font-size: 2.2em;
-    font-weight: 300;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    animation: fadeIn 1.2s ease-out;
-}
-
 /* Card header with navigation button */
 .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
-}
-
-/* Daily XP navigation button */
-
-
-/* Growth description styling */
-.growth-card p {
-    color: #424242;
-    text-align: center;
-    font-size: 1.1em;
-    line-height: 1.4;
-    margin-bottom: 20px;
-    animation: fadeIn 1.4s ease-out;
-}
-
-/* Chart Container */
-.chart-container {
-    width: 100%;
-    /* Height follows the canvas inside (a later rule already forced auto). */
-    margin: 10px 0;
-    position: relative;
-    background: white;
-    border-radius: 10px;
-    padding: 15px;
-    padding-left: 30px;
-    padding-bottom: 30px;
-    box-sizing: border-box;
-}
-
-/* Chart Canvas */
-#growthChart,
-#dailyXpChart,
-#averageXpChart,
-#cumulativeFocusChart,
-#dailyFocusChart {
-    width: 100%;
-    height: 100%;
-    border-radius: 5px;
-    background: white;
-    margin-top: 10px;
-    margin-left: 0;
-    opacity: 1;
-}
-
-/* Fade-in animation for chart containers when switching tabs */
-.chart-container.fade-in {
-    animation: fadeIn 0.5s ease-out;
-}
-
-.tab-pane {
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.tab-pane.active {
-    opacity: 1;
-}
-
-/* Chart Title */
-.chart-title {
-    text-align: center;
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #2C302E;
-    margin-bottom: 10px;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .growth-card {
-        margin: 20px auto;
-        padding: 30px 20px;
-    }
-
-    .growth-card h1 {
-        font-size: 2em;
-    }
-
-    .growth-card p {
-        font-size: 1.1em;
-    }
-
-}
-
-/* Theme integration */
-body.classic .growth-card {
-    border-color: #37474f;
-}
-
-body.classic .growth-card h1,
-body.classic .growth-card p {
-    color: black;
-}
-
-
-/* Professional Theme Navy Blue Glow Effects */
-
-
-/* ============================================================
-   MODERN GROWTH ANALYTICS LOOK (matches the reference design)
-   ============================================================ */
-/* Cleaner card: light edge, soft shadow */
-.growth-card {
-    border: 1px solid #e6e8f0 !important;
-    border-radius: 28px !important;
-    box-shadow: 0 12px 34px rgba(44, 48, 46, 0.08) !important;
-}
-
-/* Uppercase, spaced, muted title */
-.growth-card h1 {
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-weight: 400;
-    color: #2C302E;
-    font-size: 1.9em;
-    text-shadow: none;
-}
-
-/* Tab pills */
-.tab-btn {
-    background-color: #f2f3f7;
-    border: 1px solid #e4e6ee;
-    color: #5a6072;
-    font-weight: 600;
-    box-shadow: none;
-}
-
-.tab-btn:hover {
-    background-color: #e9ebf2;
-    transform: translateY(-1px);
-}
-
-.tab-btn.active {
-    background-color: #2C302E;
-    color: #ffffff;
-    border-color: #2C302E;
-}
-
-/* Chart title */
-.chart-title {
-    color: #2C302E;
-    letter-spacing: 0.01em;
 }
 
 /* "See Average XP Ratings" card */
@@ -325,351 +27,6 @@ body.classic .growth-card p {
     display: block;
     width: 100%;
     height: 100%;
-}
-
-
-/* ============================================================
-   LAYOUT: taller card, ratings card sits just below the chart,
-   and a refined professional bottom navigation bar.
-   ============================================================ */
-/* (the second bare `body` rule was here — see the note at the top) */
-
-/* Card grows with its content; a single min-height lives on #growthCard below. */
-.growth-card {
-    height: auto;
-}
-
-/* Size the main growth card and anchor its bottom "See Average XP Ratings"
-   button 10px above the card's bottom edge. Flex column lets the button be
-   pushed to the bottom (margin-top: auto) so the card can be extended a bit
-   without leaving a gap below the button. */
-#growthCard {
-    padding-bottom: 0;
-    display: flex;
-    flex-direction: column;
-    /* Neutralize the base card's +50px relative shift and bottom margin. */
-    top: 0;
-    margin-bottom: 0;
-    margin-top: 24px;
-}
-
-/* Let the chart area size to its content instead of a fixed calc height */
-.tab-content {
-    height: auto;
-}
-
-/* Ratings card flows right under the chart, 5px below it */
-
-
-/* Professional floating bottom navigation */
-.bottom-nav {
-    position: relative;
-    transform: none;
-    margin: 28px auto 36px;
-    background: #ffffff;
-    backdrop-filter: none;
-    border: 1px solid #e6e8f0;
-    border-radius: 999px;
-    padding: 8px 10px;
-    display: inline-flex;
-    gap: 4px;
-    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
-    width: fit-content;
-}
-
-/* ============================================================
-   AUTHORITATIVE OVERRIDES (kept last so they win over the
-   original bottom-nav / ratings rules above)
-   ============================================================ */
-/* Let the tab/chart area size to its content so nothing overflows below it */
-.tab-content {
-    height: auto !important;
-}
-
-/* Ratings card flows right under the chart, 5px below it */
-
-
-/* Professional floating bottom navigation */
-.bottom-nav {
-    position: relative;
-    transform: none;
-    margin: 28px auto 36px;
-    background: #ffffff;
-    backdrop-filter: none;
-    border: 1px solid #e6e8f0;
-    border-radius: 999px;
-    padding: 8px 10px;
-    display: inline-flex;
-    gap: 4px;
-    box-shadow: 0 14px 34px rgba(44, 48, 46, 0.12);
-    width: fit-content;
-}
-
-/* Size the chart container to its content (title + fixed-height canvas) so the
-   chart never overflows onto the ratings card below it. The x-axis labels are
-   drawn inside the canvas, so no bottom padding is needed. */
-.chart-container {
-    height: auto;
-    margin: 0;
-    padding-bottom: 0;
-}
-
-#growthChart,
-#dailyXpChart,
-#averageXpChart,
-#cumulativeFocusChart,
-#dailyFocusChart {
-    /* Responsive height, small floor so short screens aren't forced tall.
-       (The later rule wins; kept in sync so both agree.) */
-    height: clamp(180px, 34vh, 340px);
-    margin: 0;
-    display: block;
-}
-
-/* ============================================================
-   GROWTH RATINGS VIEW — two-card redesign (#blankCard)
-   ============================================================ */
-/* Wrapper is a transparent container holding two white cards. */
-.ratings-view {
-    /* Sizing via the shared .page-shell class (caps set on #ratingsView below). */
-    margin: 0 auto;
-    box-sizing: border-box;
-}
-
-
-/* --- Top card: header --- */
-
-
-/* --- Top card: stat boxes --- */
-
-
-/* --- Top card: "See Growth Analytics Charts" button --- */
-
-
-/* --- Charge card --- */
-
-
-/* Charge bar: light track, gradient fill, white segment dividers, in-flow. */
-
-
-/* ============================================================
-   GROWTH RATINGS VIEW — 2x taller cards, growing downward.
-   Each card is a flex column with a min-height of twice its
-   natural height; space-evenly spreads the extra room as even,
-   natural spacing. The view stays top-anchored (24px), so the
-   cards extend downward without moving the top.
-   ============================================================ */
-
-
-/* Top card: 332px -> 664px */
-.ratings-view .rt-card:not(.charge-card) {
-    min-height: 664px;
-}
-
-/* Charge card: 209px -> 418px */
-
-
-/* Taller stat boxes and charge bar so the enlarged cards feel filled,
-   not just padded. */
-
-
-/* Let space-evenly own the vertical rhythm: drop the fixed margins that
-   would otherwise stack on top of the distributed spacing. */
-
-
-/* ============================================================
-   NO VERTICAL SCROLL — fit the whole growth page (both the
-   analytics charts view and the ratings view) within a single
-   viewport. The container is exactly 100vh and clips any
-   overflow; the cards are sized (mostly in vh) to stay inside.
-   ============================================================ */
-/* (the third was here, as `html, body` — same note) */
-
-.growth-container {
-    min-height: calc(100vh - var(--topnav-h, 64px));
-    box-sizing: border-box;
-    overflow: visible;
-    justify-content: flex-start;
-    padding-top: 20px;
-    padding-bottom: 16px;
-}
-
-/* Pinned page (see styles/topnav.css): fill exactly what the nav leaves and
-   no more, so a card taller than the space scrolls in here rather than
-   pushing the window. */
-@media (min-width: 1120px) and (min-height: 640px) {
-    .growth-container {
-        height: 100%;
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-    }
-}
-
-/* --- Analytics view: size the card to its content and use a
-       shorter, viewport-relative chart so it never overflows --- */
-#growthCard {
-    margin-top: 0;
-}
-
-#growthChart,
-#dailyXpChart,
-#averageXpChart,
-#cumulativeFocusChart,
-#dailyFocusChart {
-    height: clamp(180px, 34vh, 340px);
-}
-
-/* --- Ratings view: shrink both cards back down to fit one screen --- */
-.ratings-view .rt-card:not(.charge-card) {
-    min-height: 40vh;
-}
-
-
-/* ============================================================
-   Extend both the analytics card and the ratings view: 55px
-   taller at the top, 30px taller at the bottom (still within
-   the single non-scrolling viewport).
-   ============================================================ */
-/* Analytics card stays extended via min-height, but the title sits at the very
-   top of the card (normal top padding). The button, which has margin-top:auto,
-   is pushed to the bottom, so the extra height opens up between chart and button. */
-#growthCard {
-    padding-top: 30px;
-    padding-bottom: 30px;
-    /* Single source of the card's height. vh is safe now that the card is no
-       longer CSS-zoomed; 78vh keeps the "extended card" look and still fits
-       720p-height screens without scrolling. */
-    min-height: 78vh;
-}
-
-/* Pin the "Growth Analytics" title to the very top of the card. */
-#growthCard .card-header {
-    margin-top: 0;
-}
-
-#growthCard .card-header h1 {
-    margin-top: 0;
-}
-
-/* Ratings view: top card extends 55px up, charge card extends 30px down. */
-.ratings-view .rt-card:not(.charge-card) {
-    min-height: calc(40vh + 55px);
-}
-
-
-/* Nudge only the tab buttons + chart down 10px. The header stays put (it's
-   above this), and the bottom button stays anchored (its margin-top:auto just
-   absorbs 10px less free space). */
-#growthCard .tab-navigation {
-    margin-top: 34px;
-}
-
-/* ============================================================
-   THEME SELECTOR (fixed, top-right) + DARK THEME
-   ============================================================ */
-.theme-selector-wrap {
-    position: fixed;
-    top: 18px;
-    right: 24px;
-    z-index: 300;
-}
-
-
-/* --- DARK THEME --- */
-/* Scoped to this page, for the reason the note at the top of this file gives:
- * the stylesheet is fetched when /growth or /analytics mounts and then stays in
- * the document, so a bare `body` rule dresses every other page for the rest of
- * the session — and this one carried `!important`, so it won over the flat
- * #0d1117 in styles/dashboard.css that the dashboard and the calendar want.
- *
- * The background-color is not a duplicate of the gradient's darker stop. A
- * `background` shorthand sets the colour to transparent, and `fixed` pins the
- * gradient to the viewport rather than to the page — so with the colour left
- * out there was nothing solid behind it. A body background propagates to the
- * page canvas, which is what paints the overscroll, so the moment the scroll
- * rubber-banded past the top the gap fell through to the browser's default
- * white. Same at the bottom, and at either side. */
-html[data-theme="dark"] body:has(.growth-container) {
-    background: radial-gradient(135% 120% at 82% -10%, #161b22 0%, #0d1117 52%) fixed;
-    background-color: #0d1117;
-    color: #e6e8f0;
-}
-
-body.dark .growth-card {
-    background: #161b22 !important;
-    border: 1px solid #30363d !important;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45) !important;
-}
-
-body.dark .growth-card h1 {
-    color: #e6e8f0;
-}
-
-/* Chart sits directly on the dark card; the canvas draws light lines/labels. */
-body.dark .chart-container {
-    background: transparent;
-}
-
-body.dark .chart-title {
-    color: #e6e8f0;
-}
-
-body.dark #growthChart,
-body.dark #dailyXpChart,
-body.dark #averageXpChart,
-body.dark #cumulativeFocusChart,
-body.dark #dailyFocusChart {
-    background: transparent;
-}
-
-/* Tabs */
-body.dark .tab-btn {
-    background-color: #21262D;
-    border-color: #30363D;
-    color: #c9d1d9;
-}
-
-body.dark .tab-btn.active {
-    background-color: #A38A70;
-    border-color: #A38A70;
-    color: #0D1117;
-}
-
-/* Theme selector in dark */
-
-/* ============================================================
-   GROWTH RATINGS v2 — graded report card
-   ============================================================ */
-/* The report card fills most of the screen — a wide centered column with a
-   clean, professional sans-serif throughout. */
-#ratingsView.ratings-view {
-    /* Fluid width via .page-shell: width = min(--shell-fluid, --shell-max).
-       This view is also height-fit-zoomed by fit-scale.js (fitShrinkHeight),
-       which shrinks the whole panel by `zoom` to fit short screens. With zoom
-       applied, the browser paints width = min(fluid% of viewport, max * zoom).
-       A modest --shell-max (e.g. 1440px) made `max * zoom` the binding term on
-       laptops (e.g. MacBook Air ~0.74 zoom -> 1440*0.74 = 1067px, only ~74% of
-       a 1440px viewport), so the cards stayed narrow no matter the fluid %.
-       Setting a large --shell-max lets the fluid % win instead, so the cards
-       fill ~95%+ of the width on small screens. It can never overflow: the
-       fluid% term always caps the painted width below the viewport. On big
-       screens tall enough that no zoom is needed, the cards cap at --shell-max.
-       Vertical height is unchanged — the height-fit zoom always fills the same
-       available vertical space regardless of width. Phones (<900px) stack. */
-    --shell-fluid: 98%;
-    --shell-max: 2400px;
-    margin-top: 10px;   /* nudge the cards down from the top */
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    /* Two roughly-equal columns: Grade card (left) + scoring details (right).
-       display is set to flex by showRatings() when the view is revealed. */
-    align-items: stretch;
-    gap: 30px;
-}
-
-.ratings-main {
-    flex: 1.1 1 0;
-    min-width: 0;
 }
 
 /* --- Left: Grade summary card --- */
@@ -754,15 +111,6 @@ body.dark .tab-btn.active {
 
 .grade-table tbody tr:last-child td { border-bottom: none; }
 .grade-table tbody tr:hover td { background: #fafbfc; }
-.gt-metric { font-weight: 600; color: #1f2430; white-space: nowrap; }
-.gt-emoji { margin-right: 8px; }
-.grade-table .gt-badge.grade-badge {
-    min-width: 34px;
-    height: 30px;
-    padding: 0 10px;
-    border-radius: 9px;
-    font-size: 15px;
-}
 
 /* How it's calculated */
 .grade-calc {
@@ -906,7 +254,6 @@ body.dark .detail-card:hover {
 
 body.dark .grade-card-title,
 body.dark .details-title,
-body.dark .gt-metric,
 body.dark .grade-calc-title,
 body.dark .detail-body h3 { color: #e6e8f0; }
 body.dark .grade-unified,
@@ -927,9 +274,6 @@ body.dark .grade-charts-btn {
 }
 
 body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
-/* --- Overall hero: skinny, always at the top --- */
-
-
 /* "vs last week" momentum line, directly under the overall score */
 
 
@@ -958,9 +302,6 @@ body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
     font-size: 42px;
 }
 
-/* --- 2x2 metric grid --- */
-
-
 /* Pin each card's grade badge to the card's top-right corner (a direct child
    of the card, so it anchors to the card, not the name row). */
 
@@ -971,14 +312,10 @@ body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
 /* Week-over-week % chip on each card */
 
 
-/* --- Grade colour system: S gold, A green, B blue, C yellow, D orange, F red --- */
-.grade-S { --grade-color: #cf9a12; --grade-shadow: rgba(207, 154, 18, 0.38); }
-.grade-A { --grade-color: #16a34a; --grade-shadow: rgba(22, 163, 74, 0.30); }
-.grade-B { --grade-color: #2563eb; --grade-shadow: rgba(37, 99, 235, 0.30); }
-.grade-C { --grade-color: #eab308; --grade-shadow: rgba(234, 179, 8, 0.30); }
-.grade-D { --grade-color: #ed7014; --grade-shadow: rgba(237, 112, 20, 0.30); }
-.grade-F { --grade-color: #dc2626; --grade-shadow: rgba(220, 38, 38, 0.30); }
-.grade-none { --grade-color: #9ca3af; --grade-shadow: rgba(156, 163, 175, 0.22); }
+/* The grade colour tokens moved to styles/grades.css, which main.tsx loads for
+   every page — the analytics Overview shows a grade now and this was the wrong
+   place for a token three pages read. The badge rules below stay: they dress a
+   growth-page component, and they read the tokens rather than defining them. */
 /* S is special: a gold gradient with dark text. C/none use dark text on their
    lighter fills so the letter stays readable. */
 .grade-badge.grade-S {
@@ -988,81 +325,13 @@ body.dark .grade-charts-btn:hover { border-color: #C9A86A; }
 
 .grade-badge.grade-C { color: #3a2f00; }
 .grade-badge.grade-none { color: #ffffff; }
-/* --- Wide, prominent "See Growth Ratings" button (on the charts view) --- */
-.see-ratings-wrap {
-    margin-top: auto;      /* anchor to the bottom of the charts card */
-    padding-top: 16px;     /* nudged up 10px */
-    display: flex;
-    justify-content: center;
-}
-
-.see-ratings-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    width: 100%;
-    max-width: 660px;
-    padding: 22px 46px;                                              /* bigger */
-    font-family: 'Inter', sans-serif;
-    font-size: 20px;                                                /* bigger */
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    /* Light theme: white fill, black border, tan text. */
-    color: #A8845C;                                                 /* tan text */
-    background: #ffffff;                                            /* white fill */
-    border: 2px solid #1c1c1c;                                      /* black border */
-    border-radius: 16px;
-    cursor: pointer;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 10px 26px rgba(44, 48, 46, 0.12);
-    transition: transform 0.2s ease, box-shadow 0.25s ease, background 0.25s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.see-ratings-btn:hover {
-    transform: translateY(-3px);
-    background: #fbf7f0;                                            /* subtle warm tint */
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
-                0 14px 32px rgba(168, 132, 92, 0.22);
-}
-
-/* --- Dark theme: neutral slate + gold, glassy cards --- */
-
-
-/* Dark theme: black/dark-fill button with a light-brown outline and light-tan
-   text (this dark style is intentionally dark-theme only). */
-body.dark .see-ratings-btn {
-    color: #E7D3B3;                                                 /* light tan text */
-    background: linear-gradient(145deg, #24211d 0%, #1a1815 100%);  /* dark fill */
-    border-color: #B08D5F;                                          /* light brown outline */
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 26px rgba(0, 0, 0, 0.5);
-}
-
-body.dark .see-ratings-btn:hover {
-    background: linear-gradient(145deg, #2a2622 0%, #1f1c18 100%);
-    border-color: #C9A86A;                                          /* outline brightens */
-    /* Warm glow ring on hover. */
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06),
-                0 14px 32px rgba(176, 141, 95, 0.30),
-                0 0 0 4px rgba(176, 141, 95, 0.14);
-}
 
 /* Narrow screens (below the fit-scale zoom threshold): drop the fixed design
    widths, stack to a single column, and scale the type and badges down so
    nothing overflows on phones. Matches PHONE_MAX in fit-scale.js. */
 @media (max-width: 900px) {
-    .growth-card {
-        width: auto;
-        max-width: 100%;
-        min-height: 0;
-    }
 
-    #ratingsView.ratings-view {
-        width: 100%;
-        max-width: 100%;
-        flex-direction: column;   /* stack: report first, then the scales */
-    }
-
-    .ratings-main, .ratings-scales { flex: 1 1 auto; width: 100%; }
+    .ratings-scales { flex: 1 1 auto; width: 100%; }
        /* too crowded on phones */
 
 
@@ -1071,209 +340,6 @@ body.dark .see-ratings-btn:hover {
 
     .grade-badge { min-width: 38px; height: 38px; font-size: 19px; padding: 0 10px; }
 }
-
-/* Phone (≤480px): let the pill nav wrap instead of overflowing */
-@media (max-width: 480px) {
-    .bottom-nav {
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: calc(100% - 1.5rem);
-    }
-}
-
-/* ============================================================
-   FULL BLEED — the page is the container
-   ============================================================
-   The analytics used to live on a card: a white (or dark) rounded panel inset
-   from every edge, so the charts were drawn inside a box inside a page, with
-   two sets of margins between the data and the screen. The panel is gone. What
-   was its chrome — background, border, radius, shadow — is dropped, its width
-   caps are lifted to the full page, and the room it was spending on itself goes
-   to the charts, which are now half again as tall. */
-#growthCard.growth-card {
-    --shell-fluid: 100%;
-    --shell-max: 100%;
-    background: transparent !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    padding: 6px clamp(20px, 3.4vw, 56px) 0;
-    margin-top: 6px;
-    top: 0;
-}
-/* The themed rules paint the card per theme; there is no card to paint now. */
-body.dark #growthCard.growth-card,
-body.classic #growthCard.growth-card,
-html[data-theme="dark"] #growthCard.growth-card,
-html[data-theme="light"] #growthCard.growth-card {
-    background: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-}
-
-/* The charts take the space back: from a third of the screen to well over half,
-   with a floor that keeps them readable on short laptops and a cap so an
-   enormous monitor doesn't stretch one line across a whole wall. */
-#growthChart,
-#dailyXpChart,
-#averageXpChart,
-#cumulativeFocusChart,
-#dailyFocusChart {
-    height: clamp(260px, 56vh, 760px);
-}
-
-/* The tab row and the title breathe a little wider now that the page is theirs. */
-#growthCard .tabs { margin-bottom: 22px; }
-#growthCard .chart-title { margin-bottom: 18px; }
-
-/* The report card side of the page spans it too. */
-#ratingsView.ratings-view {
-    --shell-fluid: 100%;
-    --shell-max: 100%;
-    padding-inline: clamp(20px, 3.4vw, 56px);
-    gap: clamp(20px, 2.4vw, 40px);
-}
-
-/* The chart's own white panel goes with the card. In the dark theme it was
-   already transparent — the chart drew straight onto the surface behind it —
-   and now it does that in the light theme too, so the graph sits on the page
-   itself in both. */
-.chart-container {
-    background: transparent;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 0 0 8px;
-}
-#growthChart,
-#dailyXpChart,
-#averageXpChart,
-#cumulativeFocusChart,
-#dailyFocusChart {
-    background: transparent;
-}
-
-/* ============================================================
-   The charts card fits the screen it is given
-   ============================================================
-
-   This page used to carry two views — the charts and the graded report card —
-   and the sizing above is from when it had to accommodate both. The report
-   card is its own page now (Analytics), so the charts card can simply fill
-   what the top bar leaves.
-
-   It could not before: `min-height: 78vh` plus fixed paddings, a 34px gap
-   above the tabs and a chart clamped at `34vh` added up past the viewport on a
-   laptop screen, and the "See Analytics" button at the bottom fell below the
-   fold with no page scroll to reach it.
-
-   So the card becomes a flex column pinned to the available height, and the
-   canvas takes the slack. That works because growth.js sizes each drawing
-   buffer from the canvas's own rendered box and redraws on resize
-   (`resizeCanvases`), so the chart follows the layout rather than fixing it.
-
-   Below 560px tall the page goes back to scrolling — see the base rules — and
-   this does not apply. */
-@media (min-height: 560px) {
-    .growth-container {
-        padding-top: 10px;
-        padding-bottom: 12px;
-    }
-
-    #growthCard {
-        /* One source of height, replacing the 78vh floor. */
-        min-height: 0;
-        height: calc(100vh - var(--topnav-h, 64px) - 22px);
-        padding-top: 20px;
-        padding-bottom: 20px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    /* The title sits closer to the tabs than it did: that gap was most of what
-       pushed the button off screen. */
-    #growthCard .card-header { margin-bottom: 0; }
-    #growthCard .tab-navigation { margin-top: clamp(8px, 2vh, 34px); }
-
-    /* Everything between the tabs and the button shares the slack. */
-    #growthCard .tab-content { flex: 1 1 auto; min-height: 0; }
-    #growthCard .tab-pane.active {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        min-height: 0;
-    }
-    #growthCard .chart-container {
-        flex: 1 1 auto;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-    }
-    #growthCard .chart-title { flex: none; }
-
-    #growthChart,
-    #dailyXpChart,
-    #averageXpChart,
-    #cumulativeFocusChart,
-    #dailyFocusChart {
-        flex: 1 1 auto;
-        height: auto;
-        min-height: 150px;
-    }
-
-    /* margin-top:auto already anchors this; with the card now exactly the
-       height of the screen, that anchor is the bottom of the screen. */
-    #growthCard .see-ratings-wrap { flex: none; padding-top: 12px; }
-}
-
-/* ==========================================================================
-   THE ANALYTICS PAGE
-
-   Everything below replaces the page this stylesheet used to dress. It was one
-   card holding one chart, which is why the rules above pin `#growthCard` to the
-   viewport and stretch the canvas into whatever is left: with a single chart on
-   the page, filling the screen is the right answer.
-
-   It is a chart and six panels now, so it is a document again — it scrolls, the
-   canvas has a height of its own, and /growth came off the pinned list in
-   App.tsx. The overrides here are deliberately last in the file and specific
-   enough to win, rather than deleting rules the two viewport media queries
-   above still weave through.
-   ========================================================================== */
-
-/* The card was a 28px-radius, black-bordered, shadowed panel around the whole
-   page. The page *is* the panel now — its cards are the panels — so the outer
-   one steps back to being a plain container. */
-#growthCard.growth-card {
-    background: transparent;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    padding: 0 0 48px;
-    height: auto;
-    min-height: 0;
-    top: 0;
-    margin-top: 22px;
-    display: block;
-    animation: none;
-    --shell-max: 1320px;
-}
-
-/* ---- The graph paper behind it ------------------------------------------
-   The dashboard's ambient layer, on the dashboard's terms — see
-   components/Ambient.tsx and styles/ambient.css for the grid, the slow
-   gradient and the drifting field it is made of.
-
-   It goes to `z-index: -1` here for the reason it does on the dashboard: the
-   layer is fixed and positioned, so at 0 it would sit above every static panel
-   on the page, and lifting the panels instead would mean naming every one of
-   them — including the dropdown menus, which carry z-indexes of their own and
-   would be flattened by a blanket rule. Below zero it is behind all of them at
-   once, and it still shows, because a body background propagates to the page
-   canvas and is painted below even a negative layer.
-
-   The panels are opaque so the paper reads between them rather than through
-   them, which is what makes a page of cards look like cards on a desk. */
-.growth-container .hm-ambient { z-index: -1; }
 
 
 /* ---- The page's colours -------------------------------------------------
@@ -1285,13 +351,12 @@ html[data-theme="light"] #growthCard.growth-card {
 
    The accent is the design's purple, and it is this page's alone. The rest of
    the app is brown — the rail, the calendar, the dashboard — and the two do not
-   meet: every rule that paints purple here is scoped to `#growthCard`, so
-   nothing leaks out of this page. `--accent` is the one name for it; the three
+   meet: every rule that paints purple here is scoped to `.gr-scope`, so
+   nothing leaks out of the analytics page. `--accent` is the one name for it; the three
    companions are the tint it sits on (`--accent-soft`), the ink that reads on
    top of it (`--accent-ink`), and the pressed/hover step (`--accent-deep`).
    Reach for those rather than writing the hex again, or the next theme is four
    find-and-replaces instead of one block. */
-#growthCard,
 .gr-scope {
     --tone-blue: #4f7fe0;
     --tone-purple: #7c5cd6;
@@ -1318,113 +383,6 @@ html[data-theme="light"] #growthCard.growth-card {
     --ink-faint: #9aa0ad;
 }
 
-/* ---- Header: what the page is, and what it is about ---------------------- */
-.gr-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-bottom: 22px;
-}
-.gr-headline { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
-.gr-headline-ico {
-    flex: none; margin-top: 3px;
-    width: 38px; height: 38px; border-radius: 12px;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: var(--accent-soft); color: var(--accent);
-}
-#growthCard .gr-title,
-.gr-scope .gr-title {
-    /* Left-aligned, sentence case, its own size — the base rule centres an
-       uppercase, letter-spaced h1, which was the old card's masthead. */
-    margin: 0;
-    text-align: left;
-    text-transform: none;
-    letter-spacing: -0.01em;
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--ink);
-    text-shadow: none;
-    animation: none;
-}
-#growthCard .gr-sub,
-.gr-scope .gr-sub {
-    margin: 5px 0 0;
-    text-align: left;
-    font-size: 0.92rem;
-    color: var(--ink-quiet);
-    animation: none;
-}
-.gr-header-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-
-/* ---- Dropdown -----------------------------------------------------------
-   The range picker, the chart's series and the chart's window are one shape.
-   `.is-compact` is the version that sits inside a panel head beside a title
-   rather than in the page header. */
-.gr-drop { position: relative; }
-.gr-drop-btn {
-    display: inline-flex; align-items: center; gap: 9px;
-    padding: 9px 14px; border-radius: 11px;
-    border: 1px solid #e4e6ee; background: var(--panel-bg);
-    font: inherit; font-size: 13.5px; font-weight: 600; color: #2c302e;
-    cursor: pointer; transition: border-color .15s ease, background .15s ease;
-}
-.gr-drop-btn:hover { border-color: #c9ccd8; background: #fafbfc; }
-.gr-drop-value { white-space: nowrap; }
-.gr-drop-caret { display: inline-flex; color: var(--ink-faint); margin-left: -2px; }
-.gr-drop.is-compact .gr-drop-btn {
-    gap: 6px; padding: 6px 9px; border-radius: 9px;
-    font-size: 12px; font-weight: 600;
-}
-.gr-drop-menu {
-    position: absolute; right: 0; top: calc(100% + 6px); z-index: 40;
-    min-width: 168px; margin: 0; padding: 6px; list-style: none;
-    background: var(--panel-bg); border: 1px solid #e4e6ee; border-radius: 12px;
-    box-shadow: 0 12px 32px rgba(16, 24, 40, .14);
-}
-.gr-drop-item {
-    display: block; width: 100%; text-align: left;
-    padding: 9px 11px; border: 0; border-radius: 8px; background: none;
-    font: inherit; font-size: 13.5px; color: var(--ink-soft); cursor: pointer;
-}
-.gr-drop-item:hover { background: #f4f5f8; }
-.gr-drop-item.is-active { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
-
-/* ---- Export -------------------------------------------------------------
-   The same shape as the picker beside it, because they are the same kind of
-   thing: two controls on the range, one choosing it and one taking it away. */
-.gr-export {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 9px 14px; border-radius: 11px;
-    border: 1px solid #e4e6ee; background: var(--panel-bg);
-    font: inherit; font-size: 13.5px; font-weight: 600; color: #2c302e;
-    cursor: pointer; transition: border-color .15s ease, background .15s ease;
-}
-.gr-export:hover:not(:disabled) { border-color: #c9ccd8; background: #fafbfc; }
-.gr-export:disabled { opacity: .5; cursor: default; }
-
-/* ---- Tabs: left-aligned, as the design has them -------------------------- */
-#growthCard .tab-navigation {
-    justify-content: flex-start;
-    padding: 0;
-    margin: 0 0 20px;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-#growthCard .tab-btn {
-    padding: 9px 17px; border-radius: 999px; font-size: 13.5px;
-}
-/* The chosen chapter is the accent, as the design draws it. Id-scoped because
-   the base rules paint it `#2C302E`, and `body.dark .tab-btn.active` paints it
-   the app's gold — both out-weigh a bare class, and neither belongs on this
-   page. */
-#growthCard .tab-btn.active {
-    background-color: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-ink);
-}
-#growthCard .tab-btn.active:hover { background-color: var(--accent-deep); border-color: var(--accent-deep); }
 
 /* ---- The grid -----------------------------------------------------------
    Three columns, the third wider than the other two, and three rows:
@@ -1499,8 +457,7 @@ html[data-theme="light"] #growthCard.growth-card {
    is a single screen, and these are what keep it one — a row an inch taller
    than drawn, three times over, is the difference between a dashboard and a
    scroll. */
-.gr-summary, .gr-heat, .gr-skills { width: 100%; }
-.gr-grid > .gr-summary { aspect-ratio: 11 / 8; min-height: 400px; }  /* row 1, from col 3 */
+.gr-heat { width: 100%; }  /* row 1, from col 3 */
 /* The heatmap has no ratio, only a floor, and the floor is the same at every
    window. It carried `aspect-ratio: 2 / 1` while weeks were rows and the cells
    stretched to fill whatever height the row gave them. They are squares now —
@@ -1511,8 +468,7 @@ html[data-theme="light"] #growthCard.growth-card {
    The floor used to move with the window, which meant the card grew and shrank
    as the reader touched the toggle and took the rest of the page with it. One
    floor now, tall enough to hold seven rows at the cell ceiling above. */
-.gr-grid > .gr-heat { min-height: 420px; }                           /* row 2, from col 2 */
-.gr-grid > .gr-skills  { aspect-ratio: 5 / 4;  min-height: 331px; }  /* row 3, from col 2 */
+.gr-grid > .gr-heat { min-height: 420px; }  /* row 3, from col 2 */
 
 /* Below three columns the pairings change — the summary sits beside the donut,
    the heatmap beside the milestones — so a ratio drawn for a third of a wide
@@ -1521,8 +477,6 @@ html[data-theme="light"] #growthCard.growth-card {
 @media (max-width: 1080px) {
     .gr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gr-chart-panel { grid-column: span 2; }
-    .gr-grid > .gr-summary,
-    .gr-grid > .gr-skills { aspect-ratio: auto; min-height: 0; }
     /* The heatmap keeps its floor here. The others drop theirs because their
        contents reflow at two columns; seven rows of squares do not, and a map
        that is 420px tall on a wide screen and 200px on a narrower one is the
@@ -1554,8 +508,6 @@ html[data-theme="light"] #growthCard.growth-card {
 /* The body of a panel: whatever is left under the title, and no more. Only the
    lists that can genuinely run long get a scrollbar; the rest simply fit. */
 .gr-panel > .gr-tiles,
-.gr-panel > .gr-donut-row,
-.gr-panel > .gr-miles,
 .gr-panel > .gr-insight-list,
 .gr-skill-list {
     flex: 1 1 auto;
@@ -1565,9 +517,9 @@ html[data-theme="light"] #growthCard.growth-card {
     /* The wheel stops at the edge of the list instead of carrying on into the
        page. Reading to the bottom of the milestones and finding the whole page
        has moved on is the same surprise as zooming the chart and finding it has
-       scrolled — see the wheel listener in components/Growth/GrowthChart for
-       the other half of this, which `contain` cannot fix because the canvas
-       does not scroll at all. */
+       scrolled. The chart that had the other half of this — a wheel listener on
+       a canvas `contain` could not help, because the canvas did not scroll at
+       all — has since been deleted along with its renderer. */
     overscroll-behavior: contain;
 }
 .gr-panel > .gr-empty { flex: 1 1 auto; }
@@ -1599,30 +551,10 @@ html[data-theme="light"] #growthCard.growth-card {
     margin: 0; flex: 0 1 auto; min-width: 0; flex-wrap: wrap;
 }
 .gr-panel-note { flex: none; font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
-.gr-panel-link {
-    flex: none;
-    border: 1px solid var(--inset-edge); background: var(--inset-bg);
-    padding: 5px 11px; border-radius: 999px;
-    font: inherit; font-size: 11.5px; font-weight: 600; color: var(--ink-quiet);
-    cursor: pointer; transition: border-color .15s ease, color .15s ease;
-}
-.gr-panel-link:hover { border-color: #d8dae2; color: var(--ink); }
-/* The footer button two panels end on — full width, so it reads as the panel's
-   own way out rather than as a link that happens to be last. */
-.gr-panel-cta {
-    flex: none; margin-top: 12px;
-    display: block; width: 100%;
-    padding: 9px 12px; border-radius: 10px;
-    border: 1px solid var(--inset-edge); background: var(--inset-bg);
-    font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-quiet);
-    cursor: pointer; transition: border-color .15s ease, color .15s ease;
-}
-.gr-panel-cta:hover { border-color: #d8dae2; color: var(--ink); }
 /* Id-scoped because these are `p`, and the old card's `.growth-card p` — 1.1em,
    centred — out-specifies a bare class. It was quietly winning: the Insights
    panel rendered at nearly 18px, centred, which is also what stopped its card
    from fitting the height the grid now gives it. */
-#growthCard .gr-empty,
 .gr-scope .gr-empty { margin: 0; font-size: 13px; color: var(--ink-faint); font-style: italic; text-align: left; }
 .gr-hint {
     display: inline-flex; align-items: center;
@@ -1639,8 +571,8 @@ html[data-theme="light"] #growthCard.growth-card {
    **They play on mount and only on mount.** A CSS animation runs when the
    element enters the document, so arriving at the page plays them and a
    refresh — which re-renders the same elements with new numbers — does not.
-   That is the rule the chart follows too (see components/Growth/GrowthChart):
-   a panel that re-grew itself every time the data was re-read would be a tic,
+   That was the rule the canvas chart followed too, before it was deleted: a
+   panel that re-grew itself every time the data was re-read would be a tic,
    not an entrance. The exception is deliberate: the figures do travel to a new
    value on a refresh, because that number genuinely changed and the movement
    is what says so. See hooks/useCountUp.
@@ -1672,25 +604,22 @@ html[data-theme="light"] #growthCard.growth-card {
    is wanted before and during the run and never after it, and an `inset(0 0 0
    0)` left on the element makes it a containing block for nothing and a
    stacking context for no reason. */
-.gr-spark,
-.gr-trend-svg,
 .gr-lt-svg { animation: grWipe 1.15s cubic-bezier(.33, 1, .68, 1) backwards; }
 /* Behind the wipe that is uncovering them, not after it: the wipe reaches the
    far edge at 1.15s, and a dot two thirds along lands at about .8s. */
 .gr-lt-dot { animation: grPop .32s cubic-bezier(.2, .7, .3, 1) both;
     animation-delay: calc(.1s + (var(--i, 0) / var(--n, 1)) * 1.05s); }
-.gr-mile-fill,
 .gr-skill-fill { animation: grGrow .95s cubic-bezier(.22, 1, .36, 1) .1s both; }
 
 @media (prefers-reduced-motion: reduce) {
-    .gr-spark, .gr-trend-svg, .gr-lt-svg,
-    .gr-lt-dot, .gr-mile-fill, .gr-skill-fill,
-    .gr-donut-slice { animation: none; }
+    .gr-lt-svg,
+.gr-lt-dot,
+.gr-skill-fill { animation: none; }
 }
 
 /* ---- The chapters --------------------------------------------------------
    The five "isn't built yet" placeholder rules used to live here. Every tab is
-   a page of real panels now (components/Growth/Chapters), and they are drawn
+   a page of real panels now (components/Growth/*Chapter.tsx), and they are drawn
    with the classes above rather than any of their own — the same card, tiles,
    bar rows and lines the Overview uses, because they are the same page from a
    different angle. What follows is the little the Overview had no need for.
@@ -1701,31 +630,11 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-lt-line.tone-future { stroke: var(--tone-purple); opacity: .45; }
 .gr-lt-dot.tone-future { background: var(--tone-purple); opacity: .5; }
 .gr-lt-key.tone-future { background: var(--tone-purple); opacity: .5; }
-/* Where measurement stops and the line becomes a forecast. */
-.gr-lt-grid.gr-split { stroke: var(--ink-faint); opacity: .5; }
-
-/* ---- The chart panel -----------------------------------------------------
-   It keeps the renderer but drops the card look `.chart-container` carried
-   when it was alone on the page — and, more importantly, the sizing. The
-   `min-height: 560px` block above stretches the canvas to fill a card pinned
-   to the viewport, and those rules are written against `#growthCard`, so they
-   out-specify a plain class. Every override here is id-scoped for that reason
-   rather than out of habit: the canvas has a height of its own now and the
-   page scrolls past it. */
-.gr-chart-head { align-items: flex-start; }
-.gr-chart-tools { flex: none; display: flex; align-items: center; gap: 7px; }
-#growthCard .gr-chart-panel .chart-container,
-.gr-scope .gr-chart-panel .chart-container {
-    background: transparent; border-radius: 0; box-shadow: none;
-    padding: 0; margin: 0;
-    flex: 1 1 auto; min-height: 0;
-    display: flex; flex-direction: column;
-}
-/* The canvas takes what the row leaves rather than naming a height of its own
-   — the row is the fixed thing now. It repaints on mount and on window resize
-   (see components/Growth/GrowthChart), and both are when this box can change
-   size, so the buffer never goes stale against the box. */
-#growthCard .gr-chart-panel canvas,
+/* The canvas took what the row left rather than naming a height of its own —
+   the row is the fixed thing. It repainted on mount and on window resize, both
+   of which are when this box can change size, so the buffer never went stale
+   against it. The canvas and its renderer are gone; the sizing stays because
+   the row it belongs to is still drawn. */
 .gr-scope .gr-chart-panel canvas {
     /* Basis 0, not auto: the buffer the renderer sets gives the element an
        intrinsic height, and taking that as the basis makes it overshoot the
@@ -1737,43 +646,6 @@ html[data-theme="light"] #growthCard.growth-card {
     min-height: 0;
     margin-top: 0;
 }
-/* Below three columns the rows are content-sized again, so a canvas that only
-   ever takes what is left would take nothing. It names a height there, as it
-   did before the rows were fixed. Written after the rule above rather than
-   beside the matching grid query, because the two selectors weigh the same and
-   the later one has to be this one. */
-@media (max-width: 1080px) {
-    #growthCard .gr-chart-panel canvas { flex: none; height: 260px; }
-}
-
-/* ---- The strip under the chart ------------------------------------------
-   Five figures the line above cannot answer. A rule between each, and none
-   before the first — a leading divider reads as a column that fell off. */
-.gr-strip {
-    flex: none;
-    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
-    margin: 15px 0 0; padding-top: 13px;
-    border-top: 1px solid var(--panel-edge);
-}
-.gr-strip-cell { min-width: 0; padding: 0 12px; border-left: 1px solid var(--inset-edge); }
-.gr-strip-cell:first-child { border-left: 0; padding-left: 0; }
-.gr-strip dt { margin: 0 0 4px; font-size: 10.5px; color: var(--ink-quiet); }
-.gr-strip dd { margin: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-.gr-strip strong { font-size: 15px; font-weight: 800; color: var(--ink); white-space: nowrap; }
-.gr-strip-note { font-size: 10.5px; color: var(--ink-faint); }
-@media (max-width: 760px) {
-    .gr-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .gr-strip-cell { border-left: 0; padding: 0; }
-}
-
-/* A percentage against the period before — up is the app's green, down its
-   red, and the sign is written out so it does not rest on the colour alone. */
-.gr-chip {
-    flex: none; padding: 1px 6px; border-radius: 999px;
-    font-size: 10px; font-weight: 700; white-space: nowrap;
-}
-.gr-chip.is-up { background: #e3f3ea; color: var(--tone-green); }
-.gr-chip.is-down { background: #fbeaea; color: var(--tone-red); }
 
 /* ---- Growth Summary: four tiles, then the curve -------------------------- */
 .gr-tiles {
@@ -1811,102 +683,6 @@ html[data-theme="light"] #growthCard.growth-card {
 .gr-tile-foot.is-down { color: var(--tone-red); }
 .gr-tile-foot.is-quiet { color: #a8aebb; font-weight: 500; font-style: italic; }
 
-/* The tile's own days, along the bottom of it. No axis and no scale — the
-   figure above is the number, this is only the shape. */
-.gr-spark {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    width: 100%; height: 26px;
-    pointer-events: none;
-}
-.gr-spark-line { fill: none; stroke-width: 1.6; }
-.gr-spark-fill { stroke: none; }
-.gr-spark.tone-xp     .gr-spark-line { stroke: var(--tone-blue); }
-.gr-spark.tone-tasks  .gr-spark-line { stroke: var(--tone-purple); }
-.gr-spark.tone-perday .gr-spark-line { stroke: var(--tone-green); }
-.gr-spark.tone-focus  .gr-spark-line { stroke: var(--tone-amber); }
-.gr-spark.tone-xp     .gr-spark-fill { fill: rgba(44, 90, 160, .13); }
-.gr-spark.tone-tasks  .gr-spark-fill { fill: rgba(124, 79, 168, .13); }
-.gr-spark.tone-perday .gr-spark-fill { fill: rgba(31, 122, 90, .13); }
-.gr-spark.tone-focus  .gr-spark-fill { fill: rgba(184, 137, 45, .13); }
-
-/* ---- Growth Trend -------------------------------------------------------
-   The pace curve, under the tiles it explains. Both lines run 0–100% — the
-   share of the range banked by each day — so the axis never moves and the
-   only thing that changes is the path. See `growthTrend`. */
-.gr-trend {
-    flex: none; margin-top: 13px; padding-top: 12px;
-    border-top: 1px solid var(--panel-edge);
-}
-.gr-trend-title {
-    display: block; margin-bottom: 8px;
-    font-size: 11px; font-weight: 600; color: var(--ink-quiet);
-}
-.gr-trend-row { display: flex; align-items: stretch; gap: 12px; }
-.gr-trend-plot { flex: 1 1 auto; min-width: 0; display: flex; gap: 7px; height: 76px; }
-/* The ticks column and the plot share a baseline: both stop 14px short of the
-   bottom, which is the strip the month names sit in. */
-.gr-trend-ticks {
-    flex: none; padding-bottom: 14px;
-    display: flex; flex-direction: column; justify-content: space-between;
-    font-size: 9px; color: var(--ink-faint); text-align: right;
-}
-.gr-trend-box { position: relative; flex: 1 1 auto; min-width: 0; }
-.gr-trend-svg { position: absolute; left: 0; right: 0; top: 0; bottom: 14px; width: 100%; height: calc(100% - 14px); }
-.gr-trend-grid { stroke: var(--inset-edge); stroke-width: 1; }
-.gr-trend-line { fill: none; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
-.gr-trend-line.tone-xp { stroke: var(--tone-purple); }
-.gr-trend-line.tone-tasks { stroke: var(--tone-green); }
-.gr-trend-marks { position: absolute; left: 0; right: 0; bottom: 0; height: 14px; }
-.gr-trend-marks span {
-    position: absolute; top: 2px; transform: translateX(-50%);
-    font-size: 9px; color: var(--ink-faint); white-space: nowrap;
-}
-.gr-trend-badge {
-    flex: none; width: 108px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 1px; padding: 8px 6px; text-align: center;
-    border-radius: 12px; background: var(--inset-bg); border: 1px solid var(--inset-edge);
-}
-.gr-trend-badge strong { font-size: 20px; font-weight: 800; line-height: 1.1; }
-.gr-trend-badge strong.is-up { color: var(--tone-green); }
-.gr-trend-badge strong.is-down { color: var(--tone-red); }
-.gr-trend-badge span { font-size: 10px; color: var(--ink-quiet); }
-.gr-trend-badge span.is-quiet { font-size: 9.5px; color: var(--ink-faint); }
-
-/* ---- XP by Category ------------------------------------------------------
-   Five hues and a grey for the remainder, the same ladder the week calendar's
-   breakdown uses and re-chosen against the dark surface rather than lightened.
-   Held as variables so the ring and its legend cannot drift apart. */
-/* The ladder is the design's, in the design's order: blue, purple, orange,
-   green, pink, then grey for the remainder. Order matters — the legend is
-   sorted by size, so slice 1 is the biggest subject and gets the hue the mock
-   gives the biggest subject. */
-.gr-category {
-    --sub-1: #4f7fe0; --sub-2: #7c5cd6; --sub-3: #e08a2c;
-    --sub-4: #24a06b; --sub-5: #d94f6a; --sub-other: #a8aebb;
-}
-.gr-donut-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.gr-donut { position: relative; flex: none; width: 132px; height: 132px; }
-.gr-donut svg { width: 100%; height: 100%; display: block; }
-.gr-donut-track { fill: none; stroke: var(--inset-edge); stroke-width: 15; }
-.gr-donut-slice { fill: none; stroke-width: 15; }
-.gr-donut-slice.tone-sub-1 { stroke: var(--sub-1); }
-.gr-donut-slice.tone-sub-2 { stroke: var(--sub-2); }
-.gr-donut-slice.tone-sub-3 { stroke: var(--sub-3); }
-.gr-donut-slice.tone-sub-4 { stroke: var(--sub-4); }
-.gr-donut-slice.tone-sub-5 { stroke: var(--sub-5); }
-.gr-donut-slice.tone-sub-other { stroke: var(--sub-other); }
-
-/* The glow the design gives the ring: the same arcs again, blurred, under the
-   crisp ones. A `drop-shadow` per slice would be four filters and would light
-   the inside of the ring as much as the outside; a blurred copy behind spreads
-   both ways from the stroke, which is what a glow looks like. The blur is in
-   user units — the viewBox is 140 across for a 132px box, so it is near enough
-   pixels — and 6 of them clears the 8.5 units of margin the ring leaves inside
-   the box, so nothing is cropped at the edge. */
-.gr-donut-glow { filter: blur(6px); opacity: .5; }
-html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
-
 /* The ring drawing itself, one slice after another, clockwise from the top.
    The keyframe has only a `from`: the `to` is the element's own computed
    `stroke-dasharray`, which is the slice's share and is set inline per slice —
@@ -1917,29 +693,6 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 @keyframes grDonutIn {
     from { stroke-dasharray: 0 100; }
 }
-.gr-donut-slice {
-    animation: grDonutIn .85s cubic-bezier(.22, 1, .36, 1) both;
-    animation-delay: calc(var(--i, 0) * .11s);
-}
-.gr-donut-centre {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    pointer-events: none;
-}
-.gr-donut-centre strong { font-size: 19px; font-weight: 800; color: var(--ink); line-height: 1.1; }
-.gr-donut-centre span { font-size: 10.5px; color: var(--ink-quiet); }
-
-.gr-legend { list-style: none; margin: 0; padding: 0; flex: 1 1 150px; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-.gr-legend li { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; }
-.gr-legend-dot { flex: none; width: 9px; height: 9px; border-radius: 3px; }
-.gr-legend-dot.tone-sub-1 { background: var(--sub-1); }
-.gr-legend-dot.tone-sub-2 { background: var(--sub-2); }
-.gr-legend-dot.tone-sub-3 { background: var(--sub-3); }
-.gr-legend-dot.tone-sub-4 { background: var(--sub-4); }
-.gr-legend-dot.tone-sub-5 { background: var(--sub-5); }
-.gr-legend-dot.tone-sub-other { background: var(--sub-other); }
-.gr-legend-name { color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.gr-legend-value { margin-left: auto; flex: none; color: var(--ink-quiet); font-size: 11.5px; white-space: nowrap; }
 
 /* ---- XP Heatmap ----------------------------------------------------------
    A calendar the way every activity map is drawn: **a week is a column and a
@@ -2113,38 +866,6 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-seg-opt:hover { color: var(--ink); }
 .gr-seg-opt.is-active { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(16, 24, 40, .08); }
 
-/* ---- Milestones ----------------------------------------------------------
-   One row per ladder — total XP, hours focused, days in a row — so the three
-   are different kinds of progress rather than three rungs of one. The colour
-   is the ladder's, and it runs through the icon and the bar together. */
-.gr-miles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-.gr-mile { display: flex; align-items: flex-start; gap: 11px; min-width: 0; }
-.gr-mile-ico {
-    flex: none; width: 32px; height: 32px; border-radius: 10px;
-    display: inline-flex; align-items: center; justify-content: center;
-}
-.gr-mile-ico.tone-xp     { background: #f4eefb; color: var(--tone-purple); }
-.gr-mile-ico.tone-focus  { background: #eaf5f0; color: var(--tone-green); }
-.gr-mile-ico.tone-streak { background: #fdf3e6; color: var(--tone-amber); }
-.gr-mile-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.gr-mile-name { font-size: 13px; font-weight: 700; color: var(--ink); }
-.gr-mile-sub { font-size: 11px; color: var(--ink-faint); }
-.gr-mile-track { height: 6px; border-radius: 999px; background: var(--inset-edge); overflow: hidden; margin-top: 6px; }
-.gr-mile-fill { display: block; height: 100%; border-radius: 999px; background: var(--tone-purple); }
-.gr-mile-fill.tone-focus { background: var(--tone-green); }
-.gr-mile-fill.tone-streak { background: var(--tone-amber); }
-/* The badge carries its row's colour rather than one flat gold, so the three
-   ladders read as three at a glance — the same tone as the icon and the bar
-   beside it, which is the rule the whole page follows. */
-.gr-mile-reward {
-    flex: none; align-self: flex-start;
-    padding: 4px 9px; border-radius: 999px;
-    background: #f4eefb; color: var(--tone-purple);
-    font-size: 10.5px; font-weight: 700; white-space: nowrap;
-}
-.gr-mile-reward.tone-focus  { background: #eaf5f0; color: var(--tone-green); }
-.gr-mile-reward.tone-streak { background: #fdf3e6; color: var(--tone-amber); }
-
 /* ---- Long Term Progress --------------------------------------------------
    Four running totals over months. The axis is XP; the other three are scaled
    to fit beside it and carry their own totals in the legend — see
@@ -2189,8 +910,7 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 /* The ends tuck in rather than centring on the axis they sit at: a label
    centred on 0% or 100% hangs half its width outside the panel, which at a
    narrow width is a horizontal scrollbar on the whole page. */
-.gr-lt-marks span:first-child, .gr-trend-marks span:first-child { transform: none; }
-.gr-trend-marks span:last-child { transform: translateX(-100%); }
+.gr-lt-marks span:first-child { transform: none; }
 /* `.is-end` rather than `:last-child`: the long term chart only labels a bucket
    where a month opens, so its final label is often not at the right edge and
    tucking it in would drag it a full width off its own tick. */
@@ -2259,9 +979,7 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-insight-ico.tone-watch { background: #f4eefb; color: var(--tone-purple); }
 .gr-insight-ico.tone-note  { background: #fdf3e6; color: var(--tone-amber); }
 /* Id-scoped for the same reason as .gr-empty above — see the note there. */
-#growthCard .gr-insight-head,
 .gr-scope .gr-insight-head { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--ink); text-align: left; }
-#growthCard .gr-insight-hint,
 .gr-scope .gr-insight-hint { margin: 2px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--ink-quiet); text-align: left; }
 
 /* ==========================================================================
@@ -2376,7 +1094,6 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-hero-grade.g-D { --g-ink: #d1660f; --g-bg: #fdeee2; --g-edge: #f4d5ba; }
 .gr-hero-grade.g-F { --g-ink: var(--tone-red);   --g-bg: #fbeaee; --g-edge: #f3ccd6; }
 
-#growthCard .gr-hero-foot,
 .gr-scope .gr-hero-foot {
     margin: 9px 0 0; text-align: left;
     font-size: 11.5px; line-height: 1.45; color: var(--ink-quiet);
@@ -2546,7 +1263,6 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-mix-delta.is-up { color: var(--tone-green); }
 .gr-mix-delta.is-down { color: var(--tone-red); }
 .gr-mix-delta.is-quiet { color: var(--ink-faint); }
-#growthCard .gr-mix-foot,
 .gr-scope .gr-mix-foot {
     flex: none; margin: 12px 0 0; text-align: left;
     font-size: 10.5px; line-height: 1.4; color: var(--ink-faint);
@@ -2630,7 +1346,6 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 }
 .gr-recov-figure strong { font-size: 40px; font-weight: 800; line-height: 1; color: var(--accent); letter-spacing: -0.02em; }
 .gr-recov-figure > span { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
-#growthCard .gr-recov-figure p,
 .gr-scope .gr-recov-figure p {
     margin: 7px 0 0; text-align: left;
     font-size: 11.5px; line-height: 1.5; color: var(--ink-quiet);
@@ -2821,170 +1536,12 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
 .gr-movers-pct { flex: none; font-weight: 800; color: var(--ink-quiet); }
 .gr-movers-pct.is-up { color: var(--tone-green); }
 
-/* ---- The ladder ----------------------------------------------------------
-   Rungs across the page with a line through them. Cleared ones are filled, the
-   one being climbed is ringed, the rest are outlines — which is the whole
-   grammar, and it is the same one the mastery track uses a column at a time. */
-.gr-ladder {
-    list-style: none; margin: 0; padding: 6px 0 2px;
-    display: flex; align-items: flex-start; gap: 0;
-    overflow-x: auto; scrollbar-width: thin;
-}
-.gr-ladder-step {
-    position: relative; flex: 1 1 0; min-width: 74px;
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-    text-align: center;
-}
-/* The line joining a rung to the one before it, so the first has none. */
-.gr-ladder-step::before {
-    content: ''; position: absolute; top: 10px; right: 50%; left: -50%;
-    height: 2px; background: var(--inset-edge);
-}
-.gr-ladder-step:first-child::before { display: none; }
-.gr-ladder-step.is-done::before { background: var(--accent); }
-.gr-ladder-mark {
-    position: relative; z-index: 1;
-    width: 22px; height: 22px; border-radius: 999px;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: var(--panel-bg); border: 2px solid var(--inset-edge); color: var(--accent-ink);
-}
-.gr-ladder-step.is-done .gr-ladder-mark { background: var(--accent); border-color: var(--accent); }
-.gr-ladder-step.is-current .gr-ladder-mark {
-    border-color: var(--accent); background: var(--panel-bg);
-    box-shadow: 0 0 0 4px var(--accent-soft);
-}
-.gr-ladder-value { font-size: 13px; font-weight: 800; color: var(--ink); }
-.gr-ladder-step.is-future .gr-ladder-value { color: var(--ink-faint); }
-.gr-ladder-sub { font-size: 9.5px; color: var(--ink-faint); white-space: nowrap; }
-
-/* ---- Benchmark categories ------------------------------------------------ */
-.gr-cats {
-    flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin;
-    overscroll-behavior: contain;
-    display: flex; flex-direction: column; gap: 16px;
-}
-.gr-cat-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-.gr-cat-name { margin: 0; font-size: 12px; font-weight: 800; color: var(--ink); }
-.gr-cat-note { font-size: 10.5px; color: var(--ink-faint); }
-.gr-cat-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-/* Four things across a row: what it is, what it came to, the bar, the share.
-   They were on a 12px gutter with the name column able to shrink to 90px, and
-   at two-thirds of a 1200px page that put "Focus minutes" hard against
-   "1,240 was 980 best 1,510" with the three figures wrapping onto two lines
-   under a bar that had not moved. The columns are wider and the gutter is
-   bigger, the figures no longer wrap, and each row carries its own padding and
-   rule so the block reads as rows rather than as a paragraph of numbers. */
-.gr-cat-row {
-    display: grid;
-    grid-template-columns: minmax(108px, 0.95fr) minmax(0, 1.55fr) minmax(78px, 1fr) auto;
-    align-items: center; gap: 18px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--inset-edge);
-}
-.gr-cat-row:last-child { border-bottom: 0; padding-bottom: 0; }
-@media (max-width: 900px) {
-    .gr-cat-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
-    .gr-cat-track { display: none; }
-}
-.gr-cat-label { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
-.gr-cat-figures { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
-.gr-cat-figures strong { font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; }
-.gr-cat-figures span { font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; }
-.gr-cat-track { height: 6px; border-radius: 999px; background: var(--inset-edge); overflow: hidden; }
-.gr-cat-fill {
-    display: block; height: 100%; border-radius: 999px; background: var(--accent);
-    animation: grGrow .95s cubic-bezier(.22, 1, .36, 1) .1s both;
-}
-.gr-cat-pct {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11.5px; font-weight: 800; color: var(--ink); white-space: nowrap;
-}
-.gr-cat-pct .gr-chip { font-style: normal; }
-
-/* ---- Personal records ---------------------------------------------------- */
-.gr-records {
-    flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin;
-    overscroll-behavior: contain;
-    list-style: none; margin: 0; padding: 0;
-    display: flex; flex-direction: column; gap: 2px;
-}
-.gr-record {
-    display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center; gap: 10px;
-    padding: 9px 0; border-bottom: 1px solid var(--inset-edge);
-}
-.gr-record:last-child { border-bottom: 0; }
-.gr-record-ico {
-    grid-row: span 2;
-    width: 26px; height: 26px; border-radius: 9px;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: var(--accent-soft); color: var(--accent);
-}
-.gr-record-name { font-size: 11.5px; color: var(--ink-quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gr-record-value { font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; }
-.gr-record-on { grid-column: 2 / span 2; font-size: 10px; color: var(--ink-faint); }
-
-/* ---- Goals, read as benchmarks ------------------------------------------- */
-.gr-goals {
-    flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin;
-    overscroll-behavior: contain;
-    list-style: none; margin: 0; padding: 0;
-    display: flex; flex-direction: column; gap: 12px;
-}
-/* The sentence an account with no goals set gets, where four invented rows
-   used to be. */
-#growthCard .gr-goals-note,
-.gr-scope .gr-goals-note {
-    flex: none; margin: 0 0 12px;
-    font-size: 10.5px; line-height: 1.45; color: var(--ink-faint);
-}
-/* The count of what the panel is not showing.
-   It needs no `margin-top: auto`: the list above it is `flex: 1 1 auto`, so the
-   slack in a card stretched to its neighbour's height is already taken there
-   and this line sits on the floor — level with the end of "Reading these"
-   beside it, which is the point of capping the list in the first place. */
-#growthCard .gr-goals-foot,
-.gr-scope .gr-goals-foot {
-    flex: none; margin: 12px 0 0;
-    font-size: 10.5px; line-height: 1.45; color: var(--ink-faint);
-}
-.gr-goal {
-    display: flex; flex-direction: column; gap: 7px;
-    padding: 12px 14px; border-radius: 13px;
-    background: var(--inset-bg); border: 1px solid var(--inset-edge);
-}
-.gr-goal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
-.gr-goal-name {
-    font-size: 12.5px; font-weight: 700; color: var(--ink);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
-}
-/* The verdict, in the app's own three colours: green for ahead, blue for on
-   track, amber for behind. Amber rather than red on purpose — a goal behind
-   its pace is a goal that needs a look, not a failure. */
-.gr-goal-flag {
-    flex: none; padding: 3px 9px; border-radius: 999px;
-    font-size: 9.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
-    background: var(--inset-bg); border: 1px solid var(--inset-edge); color: var(--ink-faint);
-}
-.gr-goal-flag.is-ahead   { background: #e6f5ee; border-color: #c8e8d9; color: var(--tone-green); }
-.gr-goal-flag.is-on-track { background: #ebf1fc; border-color: #cfdcf6; color: var(--tone-blue); }
-.gr-goal-flag.is-behind  { background: #fdf2e4; border-color: #f3ddbe; color: var(--tone-amber); }
-.gr-goal-flag.is-done    { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
-.gr-goal-track { height: 7px; border-radius: 999px; background: var(--inset-edge); overflow: hidden; }
-.gr-goal-fill {
-    display: block; height: 100%; border-radius: 999px;
-    background: linear-gradient(90deg, var(--tone-purple), var(--accent));
-    animation: grGrow .95s cubic-bezier(.22, 1, .36, 1) .1s both;
-}
-.gr-goal-foot {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    flex-wrap: wrap; font-size: 10.5px; color: var(--ink-quiet);
-}
-.gr-goal-foot .is-quiet { color: var(--ink-faint); font-style: italic; }
-
 @media (prefers-reduced-motion: reduce) {
-    .gr-wk-fill, .gr-habit-fill, .gr-trail-fill, .gr-skillcard-fill,
-    .gr-track-fill, .gr-cat-fill, .gr-goal-fill { animation: none; }
+    .gr-wk-fill,
+.gr-habit-fill,
+.gr-trail-fill,
+.gr-skillcard-fill,
+.gr-track-fill { animation: none; }
     .gr-hero-card, .gr-skillcard, .gr-plan .gr-heat-cell { transition: none; }
     .gr-hero-card:hover, .gr-skillcard:hover { transform: none; }
     .gr-plan .gr-heat-cell:hover { transform: none; }
@@ -2999,7 +1556,6 @@ html[data-theme="dark"] .gr-donut-glow { opacity: .75; }
    is the variables at the top of this section being re-pointed, which is the
    whole reason they are variables.
    ========================================================================== */
-html[data-theme="dark"] #growthCard,
 html[data-theme="dark"] .gr-scope {
     --tone-blue: #4a8ff5;
     --tone-purple: #a78bfa;
@@ -3023,51 +1579,18 @@ html[data-theme="dark"] .gr-scope {
     --ink-quiet: #98a1b2;
     --ink-faint: #7b8494;
 }
-html[data-theme="dark"] #growthCard.growth-card { background: transparent; }
 html[data-theme="dark"] .gr-panel {
     box-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 6px 16px rgba(0, 0, 0, .22);
 }
 html[data-theme="dark"] .gr-hint { color: #5b6472; }
 
-html[data-theme="dark"] .gr-drop-btn,
-html[data-theme="dark"] .gr-drop-menu,
-html[data-theme="dark"] .gr-export {
-    background: #161b22; border-color: #2b3242; color: #e6e9f0;
-}
-html[data-theme="dark"] .gr-drop-btn:hover,
-html[data-theme="dark"] .gr-export:hover:not(:disabled) { background: #1c222c; border-color: #39414f; }
-html[data-theme="dark"] .gr-drop-item { color: var(--ink-soft); }
-html[data-theme="dark"] .gr-drop-item:hover { background: #1c222c; }
-html[data-theme="dark"] .gr-panel-link:hover { border-color: #39414f; color: var(--ink); }
-html[data-theme="dark"] .gr-panel-cta:hover { border-color: #39414f; }
-
-html[data-theme="dark"] .gr-chip.is-up { background: rgba(34, 160, 107, .16); color: var(--tone-green); }
-html[data-theme="dark"] .gr-chip.is-down { background: rgba(224, 77, 112, .16); color: var(--tone-red); }
-
 html[data-theme="dark"] .gr-tile-ico.tone-xp     { background: #16233a; color: var(--tone-blue); }
 html[data-theme="dark"] .gr-tile-ico.tone-tasks  { background: #241a36; color: var(--tone-purple); }
 html[data-theme="dark"] .gr-tile-ico.tone-perday { background: #10261e; color: var(--tone-green); }
 html[data-theme="dark"] .gr-tile-ico.tone-focus  { background: #2b2312; color: var(--tone-amber); }
-html[data-theme="dark"] .gr-spark.tone-xp     .gr-spark-fill { fill: rgba(80, 137, 232, .16); }
-html[data-theme="dark"] .gr-spark.tone-tasks  .gr-spark-fill { fill: rgba(180, 140, 232, .16); }
-html[data-theme="dark"] .gr-spark.tone-perday .gr-spark-fill { fill: rgba(63, 191, 143, .16); }
-html[data-theme="dark"] .gr-spark.tone-focus  .gr-spark-fill { fill: rgba(216, 180, 94, .16); }
-
-html[data-theme="dark"] .gr-mile-ico.tone-xp     { background: #241a36; }
-html[data-theme="dark"] .gr-mile-ico.tone-focus  { background: #10261e; }
-html[data-theme="dark"] .gr-mile-ico.tone-streak { background: #2b2312; }
-html[data-theme="dark"] .gr-mile-reward { background: #241a36; }
-html[data-theme="dark"] .gr-mile-reward.tone-focus  { background: #10261e; }
-html[data-theme="dark"] .gr-mile-reward.tone-streak { background: #2b2312; }
 html[data-theme="dark"] .gr-insight-ico.tone-good  { background: #10261e; }
 html[data-theme="dark"] .gr-insight-ico.tone-watch { background: #241a36; }
 html[data-theme="dark"] .gr-insight-ico.tone-note  { background: #2b2312; }
-
-html[data-theme="dark"] .gr-category {
-    --sub-1: #4a8ff5; --sub-2: #a78bfa; --sub-3: #f0932b;
-    --sub-4: #34d399; --sub-5: #f0637e; --sub-other: #5b6472;
-}
-html[data-theme="dark"] .gr-donut-track { stroke: #1c222c; background: none; }
 
 /* The dark ladder. One place, and both the squares and the gradient key under
    them read from it — see the note beside the light one. */
@@ -3083,10 +1606,7 @@ html[data-theme="dark"] .gr-seg-opt { color: var(--ink-faint); }
 html[data-theme="dark"] .gr-seg-opt:hover { color: var(--ink); }
 html[data-theme="dark"] .gr-seg-opt.is-active { background: #232a33; color: var(--ink); box-shadow: none; }
 
-html[data-theme="dark"] .gr-mile-track,
-html[data-theme="dark"] .gr-trend-grid,
 html[data-theme="dark"] .gr-lt-grid { stroke: #232a33; }
-html[data-theme="dark"] .gr-mile-track { background: #232a33; }
 
 /* ---- The chapters, dark -------------------------------------------------
    Most of the section above is already dark-correct: every rule in it reaches
@@ -3113,10 +1633,6 @@ html[data-theme="dark"] .gr-hero-grade.g-C { --g-ink: var(--tone-amber); --g-bg:
 html[data-theme="dark"] .gr-hero-grade.g-D { --g-ink: #f0a35a; --g-bg: #2b1d12; --g-edge: #43301b; }
 html[data-theme="dark"] .gr-hero-grade.g-F { --g-ink: var(--tone-red);   --g-bg: #2d151c; --g-edge: #45222c; }
 
-html[data-theme="dark"] .gr-goal-flag.is-ahead    { background: #10261e; border-color: #1c3a2e; }
-html[data-theme="dark"] .gr-goal-flag.is-on-track { background: #16233a; border-color: #223353; }
-html[data-theme="dark"] .gr-goal-flag.is-behind   { background: #2b2312; border-color: #43371b; }
-
 html[data-theme="dark"] .gr-skillcard:hover { border-color: #39414f; }
 html[data-theme="dark"] .gr-skillcard.is-picked {
     box-shadow: 0 0 0 1px var(--accent), 0 10px 26px rgba(0, 0, 0, .4);
@@ -3124,10 +1640,8 @@ html[data-theme="dark"] .gr-skillcard.is-picked {
 html[data-theme="dark"] .gr-radar-area { fill: rgba(124, 92, 245, .26); }
 html[data-theme="dark"] .gr-mix-bar,
 html[data-theme="dark"] .gr-habit-track,
-html[data-theme="dark"] .gr-goal-track,
 html[data-theme="dark"] .gr-skillcard-track { background: #0b0f15; }
 html[data-theme="dark"] .gr-trail-track,
-html[data-theme="dark"] .gr-cat-track,
 html[data-theme="dark"] .gr-track-rail { background: #232a33; }
 html[data-theme="dark"] .gr-mix-seg.tone-missed,
 html[data-theme="dark"] .gr-mix-dot.tone-missed { background: #2f3846; }
