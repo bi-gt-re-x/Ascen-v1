@@ -30,6 +30,7 @@ const PREFS: SetupPrefs = {
   analytics_home_tab: DEFAULTS.analytics_home_tab,
   analytics_subjects: DEFAULTS.analytics_subjects,
   analytics_subject_depth: DEFAULTS.analytics_subject_depth,
+  analytics_ambitions: DEFAULTS.analytics_ambitions,
 };
 
 const SUBJECTS = [{ id: 'maths', label: 'Mathematics' }];

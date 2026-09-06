@@ -518,6 +518,11 @@ class SubjectBrief(BaseModel):
 
     subject: str = ''
     span: str = ''
+    #: What the reader said they are chasing here, and where they say they are.
+    #: Their words, not a measurement — see `analytics_ambitions` in settings.
+    aim: str = ''
+    level: str = ''
+    checkpoints: List[str] = []
     score: Optional[int] = None
     grade: Optional[str] = None
     finished: Optional[int] = None
@@ -581,6 +586,10 @@ def write_subject_brief(body: SubjectBrief, username: str = Depends(current_user
     findings = {
         'subject': name,
         'span': (body.span or '').strip()[:BRIEF_TEXT],
+        'aim': (body.aim or '').strip()[:BRIEF_TEXT * 2],
+        'level': (body.level or '').strip()[:BRIEF_TEXT * 2],
+        'checkpoints': [str(entry).strip()[:BRIEF_TEXT]
+                        for entry in (body.checkpoints or [])[:12] if str(entry).strip()],
         'score': body.score,
         'grade': body.grade,
         'finished': body.finished,

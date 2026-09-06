@@ -972,3 +972,29 @@
     font-size: 12.5px;
     color: var(--ax-good);
 }
+
+/* What the reader said the subject is for, under the verdict.
+   Quieter than the verdict above it on purpose: that line is a reading of
+   their record and this one is a sentence they wrote, and the page should not
+   present the two at the same weight. */
+.sb-topline-aim {
+    margin: 12px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+}
+
+.sb-topline-aim span {
+    display: inline-block;
+    margin-right: 7px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sb-band) 14%, transparent);
+    color: color-mix(in srgb, var(--sb-band) 70%, var(--ax-text));
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.sb-topline-aim em { font-style: normal; color: var(--ax-faint); }

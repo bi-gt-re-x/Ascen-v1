@@ -97,11 +97,21 @@ export type SetupPrefs = Pick<
   | 'analytics_home_tab'
   | 'analytics_subjects'
   | 'analytics_subject_depth'
+  | 'analytics_ambitions'
 >;
 
 export interface SetupAnswers {
   baseline: BaselineValues;
   prefs: SetupPrefs;
+  /**
+   * The checkpoints written against each followed subject, by subject id.
+   *
+   * Separate from `prefs` because they are not a preference and do not live in
+   * that store — they are their own row (backend/api/subjects.py), and the
+   * page saves them with their own call. They ride in the same answers object
+   * so that the flow still has exactly one moment where everything lands.
+   */
+  milestones: Record<string, string[]>;
 }
 
 export interface AnalyticsSetupProps {
@@ -274,6 +284,17 @@ export function AnalyticsSetup({
   const [depth, setDepth] = useState<Record<string, string>>(
     () => ({ ...prefs.analytics_subject_depth }),
   );
+
+  /* What each followed subject is *for*, and where the reader says they are.
+     Held as one map so the step below is one screen for all four picks. */
+  const [ambitions, setAmbitions] = useState<Record<string, { aim: string; level: string }>>(
+    () => ({ ...prefs.analytics_ambitions }),
+  );
+
+  /* The checkpoints, as the newline-separated text the field actually holds.
+     Split on the way out rather than on every keystroke: a list that re-joined
+     itself as you typed would eat the blank line you were about to write on. */
+  const [checkpoints, setCheckpoints] = useState<Record<string, string>>({});
   const [logStyle, setLogStyle] = useState<LogStyle>(prefs.analytics_log_style);
   const [tone, setTone] = useState<AnalyticsTone>(prefs.analytics_tone);
   const [detail, setDetail] = useState<AnalyticsDetail>(prefs.analytics_detail);
@@ -318,6 +339,21 @@ export function AnalyticsSetup({
        come back the day the subject was picked again — an answer the reader
        gave once and has no way to see. */
     setDepth((was) => {
+      if (!was[id]) return was;
+      const next = { ...was };
+      delete next[id];
+      return next;
+    });
+    /* And its aim and its checkpoints. Same reason as the branch above: an
+       answer stored against a subject nobody follows is one the reader has no
+       way to see, and it would come back the day they picked it again. */
+    setAmbitions((was) => {
+      if (!was[id]) return was;
+      const next = { ...was };
+      delete next[id];
+      return next;
+    });
+    setCheckpoints((was) => {
       if (!was[id]) return was;
       const next = { ...was };
       delete next[id];
@@ -559,6 +595,70 @@ export function AnalyticsSetup({
         });
       }
 
+      /* What each pick is *for*. Only when something is followed: an aim for a
+         subject nobody is following has nowhere to be read. */
+      if (followed.length > 0) {
+        list.push({
+          key: 'aims',
+          title: 'What are you chasing in each of these?',
+          lead:
+            'Long-term, in your own words — "get to Mathcounts Nationals", "read a paper '
+            + 'without the glossary". This is not a goal and it never becomes one: no number, '
+            + 'no date, nothing to tick off, and it does not appear on your goals page. It is '
+            + 'what tells your analytics what the work is for, so what it suggests next is '
+            + 'aimed at where you are going rather than at whichever measure happens to be '
+            + 'lowest. Every field here is optional.',
+          body: (
+            <div className="ax-setup-aims">
+              {followed.map((id) => {
+                const subject = pickable.find((entry) => entry.id === id);
+                if (!subject) return null;
+                const held = ambitions[id] ?? { aim: '', level: '' };
+                const write = (patch: Partial<{ aim: string; level: string }>) =>
+                  setAmbitions((was) => ({ ...was, [id]: { ...held, ...patch } }));
+                return (
+                  <div className="ax-setup-aim" key={id}>
+                    <h4>{subject.label}</h4>
+                    <label>
+                      <span>What are you chasing?</span>
+                      <input
+                        className="ax-setup-select"
+                        value={held.aim}
+                        maxLength={240}
+                        placeholder="Where you want this to get to"
+                        onChange={(event) => write({ aim: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>Where are you now?</span>
+                      <input
+                        className="ax-setup-select"
+                        value={held.level}
+                        maxLength={240}
+                        placeholder="The level you are at today"
+                        onChange={(event) => write({ level: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>Checkpoints along the way, one per line</span>
+                      <textarea
+                        className="ax-setup-select ax-setup-lines"
+                        rows={3}
+                        value={checkpoints[id] ?? ''}
+                        placeholder={'The stages between here and there\nOne per line'}
+                        onChange={(event) =>
+                          setCheckpoints((was) => ({ ...was, [id]: event.target.value }))
+                        }
+                      />
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          ),
+        });
+      }
+
       list.push({
         key: 'subject',
         title: 'Is most of this for one subject?',
@@ -652,8 +752,8 @@ export function AnalyticsSetup({
 
     return list;
   }, [
-    clamped, days, depth, detail, focus, followed, homeTab, hours, logStyle, minutes, pickable,
-    tone, weeklyHours,
+    ambitions, checkpoints, clamped, days, depth, detail, focus, followed, homeTab, hours,
+    logStyle, minutes, pickable, tone, weeklyHours,
   ]);
 
   const total = steps.length;
@@ -680,7 +780,24 @@ export function AnalyticsSetup({
         analytics_subject_depth: Object.fromEntries(
           Object.entries(depth).filter(([id]) => followed.includes(id)),
         ),
+        analytics_ambitions: Object.fromEntries(
+          Object.entries(ambitions)
+            .filter(([id, held]) => followed.includes(id) && (held.aim.trim() || held.level.trim()))
+            .map(([id, held]) => [id, { aim: held.aim.trim(), level: held.level.trim() }]),
+        ),
       },
+      /* Split here rather than in the caller, because the field holds the text
+         the reader typed and the store holds a list — and blank lines between
+         checkpoints are how people space a list out while writing it. */
+      milestones: Object.fromEntries(
+        Object.entries(checkpoints)
+          .filter(([id]) => followed.includes(id))
+          .map(([id, text]): [string, string[]] => [
+            id,
+            text.split('\n').map((line) => line.trim()).filter(Boolean),
+          ])
+          .filter(([, lines]) => lines.length > 0),
+      ),
     });
     setSaving(false);
     if (!done) setFailed(true);

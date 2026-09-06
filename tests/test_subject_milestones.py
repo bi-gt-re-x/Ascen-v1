@@ -134,3 +134,72 @@ def test_without_a_key_the_draft_says_so(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()['success'] is False
     assert 'ANTHROPIC_API_KEY' in response.json()['message']
+
+
+# ---------------------------------------------------------------------------
+# What the account says it is chasing
+# ---------------------------------------------------------------------------
+def test_the_ambition_is_a_preference_and_never_a_goal(client):
+    """It is the sentence that says what the work is for, not a commitment.
+
+    A goal on the goals page has a number, a date and progress read off the
+    record. "Get to Mathcounts Nationals" has none of those, and putting it
+    there would give it a progress bar nobody can honestly fill in.
+    """
+    client.post('/api/settings', json={'values': {'analytics_ambitions': {
+        'mathematics': {'aim': 'Mathcounts Nationals', 'level': 'State qualifier'},
+    }}})
+
+    got = client.get('/api/settings').json()['settings']['analytics_ambitions']
+    assert got['mathematics']['aim'] == 'Mathcounts Nationals'
+    assert got['mathematics']['level'] == 'State qualifier'
+
+    # And nothing reached the goals table.
+    assert client.get('/api/get_goals').json()['goals'] == []
+
+
+def test_an_ambition_with_neither_field_is_dropped(client):
+    """A subject the reader skipped has no ambition, not an empty one.
+
+    An empty record would reach the model as an aim it could not make out.
+    """
+    client.post('/api/settings', json={'values': {'analytics_ambitions': {
+        'mathematics': {'aim': '', 'level': ''},
+        'music': {'aim': 'Grade 8', 'level': ''},
+    }}})
+    got = client.get('/api/settings').json()['settings']['analytics_ambitions']
+
+    assert 'mathematics' not in got
+    assert got['music']['aim'] == 'Grade 8'
+
+
+def test_a_flat_string_where_a_record_belongs_is_refused(client):
+    """The value is two fields. A client sending one string has a bug."""
+    assert client.post('/api/settings', json={
+        'values': {'analytics_ambitions': {'mathematics': 'Nationals'}},
+    }).status_code == 400
+
+
+def test_the_brief_carries_the_aim_and_the_stages():
+    """Without them the model is reading a table with no destination."""
+    from backend.tracking import subject_brief
+
+    brief = subject_brief.brief_from({
+        'subject': 'Mathematics',
+        'aim': 'Mathcounts Nationals',
+        'level': 'State qualifier',
+        'checkpoints': ['Comfortable with proofs', 'Silver DP unassisted'],
+    })
+
+    assert 'Mathcounts Nationals' in brief
+    assert 'State qualifier' in brief
+    assert brief.index('Comfortable with proofs') < brief.index('Silver DP unassisted')
+
+
+def test_the_brief_says_nothing_about_an_aim_that_was_never_set():
+    """An empty line reads as an aim the model could not make out."""
+    from backend.tracking import subject_brief
+
+    brief = subject_brief.brief_from({'subject': 'Mathematics', 'score': 61})
+    assert 'chasing' not in brief
+    assert 'Where they say they are' not in brief

@@ -190,6 +190,45 @@ def _id_map(limit, item_max=64):
     return check
 
 
+#: How long a stated aim or level may be. Long enough for a sentence, short
+#: enough that it cannot carry a paragraph into a model prompt.
+AMBITION_TEXT_MAX = 240
+
+
+def _ambition_map(limit):
+    """What the account says it is chasing in a subject, and where it is now.
+
+    Keyed by subject id, valued by `{aim, level}` — two short strings. It is a
+    third structural validator rather than a reuse of `_id_map` because the
+    value is a record and not an id: squeezing two fields into one delimited
+    string would make every reader parse it, and the first reader to forget
+    would silently show somebody their level where their aim should be.
+
+    Both fields are free text and neither is required. An entry with nothing in
+    either is dropped rather than stored, because a subject the reader skipped
+    is a subject with no ambition set, and an empty record would read to the
+    model as an aim it could not make out.
+
+    Nothing here checks the subject is followed or even exists. It cannot —
+    the follow list moves independently — and every reader joins against the
+    live catalogue.
+    """
+    def check(value):
+        if not isinstance(value, dict):
+            return None
+        kept = {}
+        for key, record in value.items():
+            if not isinstance(key, str) or not isinstance(record, dict):
+                return None
+            ident = key.strip()[:64]
+            aim = str(record.get('aim') or '').strip()[:AMBITION_TEXT_MAX]
+            level = str(record.get('level') or '').strip()[:AMBITION_TEXT_MAX]
+            if ident and (aim or level) and len(kept) < limit:
+                kept[ident] = {'aim': aim, 'level': level}
+        return kept
+    return check
+
+
 _ISO_DAY = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
 
@@ -312,6 +351,17 @@ FIELDS: Dict[str, Any] = {
     #: reader following Mathematics without naming a branch gets the subject's
     #: own root tree, which is what `treeForSubject` already returns.
     'analytics_subject_depth': ({}, _id_map(ANALYTICS_SUBJECTS_MAX)),
+    #: What the account is chasing in each followed subject, and where it says
+    #: it is now. `{subject_id: {aim, level}}`.
+    #:
+    #: **This is not a goal and never becomes one.** A goal on the goals page
+    #: is a commitment with a number, a date and progress read off the record;
+    #: this is the sentence that says what the work is *for*, which most people
+    #: can write long before any of that. It lives here because its only reader
+    #: is the analytics page and the model that writes that page's read-out —
+    #: putting it on the goals page would turn "get to Mathcounts Nationals"
+    #: into a row with a progress bar nobody can honestly fill in.
+    'analytics_ambitions': ({}, _ambition_map(ANALYTICS_SUBJECTS_MAX)),
 
     # Notifications.
     #

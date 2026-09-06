@@ -147,6 +147,19 @@ export interface Prefs {
    */
   analytics_subject_depth: Record<string, string>;
   /**
+   * What the account is chasing in each followed subject, and where it says it
+   * is now. Keyed by subject id.
+   *
+   * **Not a goal, and it never becomes one.** A goal on the goals page is a
+   * commitment with a number, a date and progress read off the record. This is
+   * the sentence that says what the work is *for* — "get to Mathcounts
+   * Nationals", "read a paper without the glossary" — which most people can
+   * write long before any of that exists. Its only readers are the analytics
+   * page and the model that writes that page's read-out, which is why it lives
+   * in preferences rather than in the goals table.
+   */
+  analytics_ambitions: Record<string, { aim: string; level: string }>;
+  /**
    * The notification switches. One master, one for the on-screen half, and one
    * per channel — the same six as `NotificationChannel` in
    * services/notifications.
@@ -230,6 +243,7 @@ export const DEFAULTS: Prefs = {
   analytics_standing: true,
   analytics_subjects: [],
   analytics_subject_depth: {},
+  analytics_ambitions: {},
   /* Every channel on. The bell is quiet when the record is quiet — nothing is
      generated on a schedule (backend/tracking/notify.py) — so the honest
      default is on, and the switches are here for the reader who decides one

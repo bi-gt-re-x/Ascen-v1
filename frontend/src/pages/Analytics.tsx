@@ -132,6 +132,7 @@ import {
   type View,
 } from '@/components/Analytics';
 import { useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
+import { saveSubjectMilestones } from '@/services/analytics';
 import { PATTERN_DAYS, RECENT_DAYS } from '@/utils/recent';
 import { buildReport, reportFilename } from '@/utils/report';
 import { buildSeriesCsv, seriesFilename } from '@/utils/seriesCsv';
@@ -333,6 +334,20 @@ export default function Analytics() {
       const saved = await data.saveBaseline(answers.baseline);
       if (!saved) return false;
       await update({ ...answers.prefs, analytics_setup_done: true });
+      /* Three stores now, and the third is the loosest of them on purpose.
+         Checkpoints are their own row rather than a preference, so they are
+         their own call — and a failure here is a subject whose stages did not
+         save, over a page that is otherwise fully configured. That is worth
+         far less than blocking the flow on it, which is why nothing waits on
+         the result and the screen closes either way. */
+      await Promise.all(
+        Object.entries(answers.milestones).map(([subject, titles]) =>
+          saveSubjectMilestones(
+            subject,
+            titles.map((title, at) => ({ id: `m${at}-${Date.now()}`, title, done: false })),
+          ),
+        ),
+      );
       setEditingSetup(false);
       return true;
     },

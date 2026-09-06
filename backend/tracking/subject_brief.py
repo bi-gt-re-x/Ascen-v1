@@ -101,13 +101,38 @@ without the number or make a different claim.
 You also do not know anything about this person beyond the brief. No \
 inferences about their schedule, their exams, their age, or their reasons.
 
+WHAT YOU DO KNOW THAT THE APP DOES NOT
+
+Two things, and they are the reason a model is doing this at all.
+
+**The subject.** What a task at a given difficulty in this subject usually \
+involves, what is worth drilling, and what somebody chasing the stated aim \
+should be pointed at next — a specific competition, exam, syllabus or body of \
+work, by name. That is knowledge about the world, not a claim about the \
+reader, and naming one is often the single most useful line on the page. Say \
+plainly that it is a suggestion.
+
+**What the pattern means.** The brief gives you the difficulty bands and the \
+reasons given when a session went badly. Those support real readings: work \
+attempted at the top difficulty with execution falling off says something \
+different from work that goes wrong at every level, and reasons like being \
+interrupted or losing focus say something different again from not knowing \
+where to start. Name the pattern when the figures support it — "the ceiling is \
+high and the errors are careless" is a finding; the same sentence with no \
+figures behind it is a horoscope.
+
+What you still may not do is invent a figure. If you want to say a particular \
+topic is the weak one, you may only do so if the brief names it — the app \
+records a subject and a difficulty and nothing finer, so there is no per-topic \
+accuracy anywhere and you must not produce one.
+
 WHAT TO WRITE
 
-`reading` — two or three sentences on what these findings mean together. Say \
-the thing the numbers are evidence for, not the numbers again: the reader can \
-see the table. If one finding explains another, that connection is the most \
-useful sentence on the page. If the record is thin, say that plainly instead \
-of overreading it.
+`reading` — two or three sentences on what these findings mean together, read \
+against what they said they are chasing. Say the thing the numbers are \
+evidence for, not the numbers again: the reader can see the table. If one \
+finding explains another, that connection is the most useful sentence on the \
+page. If the record is thin, say that plainly instead of overreading it.
 
 `practice` — what to work on next, most valuable first. This is where you are \
 allowed to know things the app does not: what a task at that difficulty in \
@@ -122,7 +147,10 @@ number you are asked to supply.
 - `focus`: two to four specific things to drill, a few words each, concrete \
 to the subject.
 - `why`: one sentence, and it must cite a figure from the findings — this is \
-what makes the recommendation checkable rather than a horoscope.
+what makes the recommendation checkable rather than a horoscope. The one \
+exception is a block whose whole point is something outside the record — a \
+named competition or syllabus to aim at — where the `why` says what it would \
+do for the aim they stated.
 
 Order matters: if there is a goal in the brief and it is behind, the first \
 practice block should be the one that serves it.
@@ -218,6 +246,24 @@ def brief_from(findings: Dict[str, Any]) -> str:
         value = findings.get(key)
         if value not in (None, '', []):
             lines.append(_line(label, value))
+
+    # What the reader said the work is for, and where they say they are. Not
+    # measured and not presented as if it were — it is the sentence they wrote
+    # in the setup questions, and it is what makes "what next" answerable.
+    aim = str(findings.get('aim') or '').strip()
+    level = str(findings.get('level') or '').strip()
+    if aim:
+        lines.append('')
+        lines.append('What they say they are chasing in this subject: {}'.format(aim))
+    if level:
+        lines.append('Where they say they are now: {}'.format(level))
+
+    checkpoints = [str(entry).strip() for entry in (findings.get('checkpoints') or [])
+                   if str(entry).strip()]
+    if checkpoints:
+        lines.append('The stages they wrote between here and there:')
+        for at, title in enumerate(checkpoints, 1):
+            lines.append('  {}. {}'.format(at, title))
 
     rates = findings.get('rates') or []
     if rates:

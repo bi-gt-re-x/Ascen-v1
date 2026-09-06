@@ -312,6 +312,10 @@ export function growthPeriods(period: PeriodKey = '30d'): Promise<ApiResult<Grow
 export interface BriefFindings {
   subject: string;
   span: string;
+  /** What the reader said they are chasing, and where they say they are. */
+  aim: string;
+  level: string;
+  checkpoints: string[];
   score: number | null;
   grade: string | null;
   finished: number;

@@ -82,7 +82,7 @@ import {
   type SubjectBrief,
   type SubjectMilestone,
 } from '@/services/analytics';
-import { addGoal, getGoals } from '@/services/goals';
+import { getGoals } from '@/services/goals';
 import { format } from '@/utils';
 import '@/styles/analytics.css';
 import '@/styles/subject.css';
@@ -140,7 +140,7 @@ function Panel({
 export default function SubjectAnalytics() {
   const { subjectId = '' } = useParams();
   const { username } = useAuth();
-  const { prefs } = useSettings();
+  const { prefs, update } = useSettings();
   const catalogue = useSubjectIndex(username);
   const subject = catalogue.get(subjectId);
 
@@ -232,6 +232,12 @@ export default function SubjectAnalytics() {
     const result = await writeSubjectBrief({
       subject: subject.name,
       span: WINDOWS.find((option) => option.key === span)?.label ?? '',
+      /* What this subject is for, in the reader's own words. It is what turns
+         "your hardest band is weakest" into "and here is what to chase next" —
+         without it the model is reading a table with no destination. */
+      aim: ambition?.aim ?? '',
+      level: ambition?.level ?? '',
+      checkpoints: milestones.filter((entry) => !entry.done).map((entry) => entry.title),
       score: model.score,
       grade: model.grade,
       finished: model.finished,
@@ -294,6 +300,7 @@ export default function SubjectAnalytics() {
    * stages into the goal, and the goal is what orders the recommendations at
    * the top of this page — so the loop closes here.
    */
+  const ambition = prefs.analytics_ambitions[subjectId];
   const [milestones, setMilestones] = useState<SubjectMilestone[]>([]);
   const [adding, setAdding] = useState('');
   const [draft, setDraft] = useState<GoalDraft | null>(null);
@@ -343,36 +350,43 @@ export default function SubjectAnalytics() {
     else setDraftError(result.message || 'Could not draft a goal.');
   }, [milestones, model, subject]);
 
-  /* The draft becomes a real goal through the ordinary endpoint, with the
-     ordinary validation — nothing here is a back door. `subject_ids` is what
-     makes it show up in "What this subject is for" above and start ordering
-     the recommendations; the checkpoints are copied across so the goal owns
-     its own from that moment. */
-  const createGoal = useCallback(async () => {
+  /**
+   * Keeping a draft writes it here, not to the goals page.
+   *
+   * It drafted a goal through `/api/add_goal` for one commit, and that was the
+   * wrong store. A goal on the goals page is a commitment with a number, a
+   * date and progress read off the record; "get to Mathcounts Nationals" is
+   * none of those, and putting it there would have given it a progress bar
+   * nobody can honestly fill in. What it actually is is the sentence that says
+   * what this subject is *for* — so it lands in `analytics_ambitions`, beside
+   * the aim the setup questions ask for, where the read-out above can read it.
+   *
+   * The stages become this subject's checkpoints, which is the same store the
+   * list above already edits.
+   */
+  const keepDraft = useCallback(async () => {
     if (!draft) return;
-    const deadline = new Date();
-    deadline.setDate(deadline.getDate() + draft.weeks * 7);
-    const result = await addGoal({
-      title: draft.title,
-      goal_type: 'tasks',
-      measure: 'number',
-      why: draft.why,
-      unit: draft.unit,
-      target_number: draft.target,
-      current_value: 0,
-      target_tasks: draft.target,
-      deadline: deadline.toISOString().slice(0, 10),
-      subject_ids: subjectId,
-      milestones: draft.milestones,
+    const saved = await update({
+      analytics_ambitions: {
+        ...prefs.analytics_ambitions,
+        [subjectId]: {
+          aim: `${draft.title} — ${draft.target} ${draft.unit} over ${draft.weeks} weeks`,
+          level: prefs.analytics_ambitions[subjectId]?.level ?? '',
+        },
+      },
     });
-    if (result.success) {
-      setCreated(true);
-      setDraft(null);
-      goals.reload();
-    } else {
-      setDraftError(result.message || 'Could not create the goal.');
+    if (!saved) {
+      setDraftError('Could not keep that. Try again.');
+      return;
     }
-  }, [draft, goals, subjectId]);
+    if (draft.milestones.length > 0) {
+      putMilestones(
+        draft.milestones.map((title, at) => ({ id: `d${at}-${Date.now()}`, title, done: false })),
+      );
+    }
+    setCreated(true);
+    setDraft(null);
+  }, [draft, prefs.analytics_ambitions, putMilestones, subjectId, update]);
 
   /* The volume chart's own ceiling. A floor of 1 keeps a window with a single
      quiet period from producing a "0" top tick over a line that is not flat. */
@@ -481,6 +495,16 @@ export default function SubjectAnalytics() {
                 )}
               </p>
               <p className="sb-topline-line">{model.headline.verdict}</p>
+              {/* What the reader said this is all for. Under the verdict
+                  because it is the thing the verdict is a verdict *against* —
+                  and quieter than it, because it is their sentence rather than
+                  a reading of their record. */}
+              {ambition?.aim && (
+                <p className="sb-topline-aim">
+                  <span>Chasing</span> {ambition.aim}
+                  {ambition.level && <em> · at {ambition.level} now</em>}
+                </p>
+              )}
             </section>
 
             {/* ---- The path, under the verdict --------------------- */}
@@ -983,8 +1007,8 @@ export default function SubjectAnalytics() {
 
                   {created && (
                     <p className="sb-draft-made" role="status">
-                      Created. It is in <Link className="ax-link" to="/goals">your goals</Link> and
-                      in "What this subject is for" above.
+                      Kept. It is what this subject is aimed at now, and its stages are in the
+                      list above. It stays here — nothing was added to your goals page.
                     </p>
                   )}
 
@@ -1008,8 +1032,8 @@ export default function SubjectAnalytics() {
                         </ol>
                       )}
                       <div className="sb-tree-actions">
-                        <button type="button" className="ax-btn ax-btn-primary" onClick={() => void createGoal()}>
-                          Create this goal
+                        <button type="button" className="ax-btn ax-btn-primary" onClick={() => void keepDraft()}>
+                          Keep this as what I am chasing
                         </button>
                         <button type="button" className="ax-btn ax-btn-quiet" onClick={() => setDraft(null)}>
                           Discard
