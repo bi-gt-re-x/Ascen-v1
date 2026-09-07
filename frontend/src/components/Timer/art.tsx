@@ -105,15 +105,23 @@ const NEAR_D = ridge(NEAR, 180);
  * of it, and drawing that is the difference between three silhouettes stacked
  * up and three mountains standing at three distances.
  *
- * `preserveAspectRatio` pins it to the bottom-right so the peaks stay put as
- * the card changes width and the sky is what gets cropped.
+ * `meet` rather than `slice`, and that is the difference between a range and a
+ * fragment of one. `slice` scales a picture to *cover* its box and discards
+ * whatever hangs over the edge — so on a tall hero, where the box is much
+ * squarer than the drawing, the range was scaled to twice its size and its
+ * left third thrown away. What that threw away was the fade below: the mask
+ * lives in the drawing's own coordinates, so cropping the drawing cropped the
+ * fade, and the range ended in exactly the hard vertical line the mask exists
+ * to prevent. `meet` scales to *fit*, so the whole range is always in the box,
+ * whatever shape the card is; anchoring to the bottom-right keeps it sitting
+ * in the corner and leaves the spare room above it, which is empty sky.
  */
 export function HeroRange() {
   return (
     <svg
       className="pom-art-range"
       viewBox="0 0 420 180"
-      preserveAspectRatio="xMaxYMax slice"
+      preserveAspectRatio="xMaxYMax meet"
       aria-hidden="true"
     >
       <defs>
@@ -189,6 +197,11 @@ export function HeroRange() {
  * flat dark rectangle with a hint of a peak in it: the good half of the scene
  * had been cropped off and nobody could see what was missing. Framing the
  * viewBox on the strip the card actually is keeps the horizon in the picture.
+ *
+ * `slice` stays, unlike the range above, and the difference is what each one
+ * is. The range is a motif in a corner and has to be whole; this is a backdrop
+ * and has to reach every edge, because a gap between a picture and the card it
+ * fills is worse than a crop.
  */
 export function QuoteScene() {
   return (
