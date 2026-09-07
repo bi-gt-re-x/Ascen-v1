@@ -340,7 +340,8 @@ TASK_COLUMNS = (
 SEED_YEAR_LOW, SEED_YEAR_HIGH = '1000000000000', '1099999999999'
 
 
-def clear(con, user: str, ahead_from: date, keep_seed_year: bool = False) -> int:
+def clear(con, user: str, ahead_from: date, behind_to: date,
+          keep_seed_year: bool = False) -> int:
     """Everything this script has ever written for `user`, and nothing else."""
     gone = con.execute('DELETE FROM tasks WHERE ' + OWNED, owned_args(user)).rowcount
     if not keep_seed_year:
@@ -352,7 +353,7 @@ def clear(con, user: str, ahead_from: date, keep_seed_year: bool = False) -> int
     for table in ('focus_days', 'metric_snapshots'):
         gone += con.execute(
             'DELETE FROM {} WHERE user_id = ? AND date BETWEEN ? AND ?'.format(table),
-            (user, BEHIND_FROM, BEHIND_TO)).rowcount
+            (user, WRITTEN_SINCE, behind_to.isoformat())).rowcount
     # The notes are the year ahead rather than the year behind, so they are the
     # one range measured from today. A --clear run on a later day leaves the
     # few days it has since walked past; they are notes on a calendar, and the
@@ -365,19 +366,68 @@ def clear(con, user: str, ahead_from: date, keep_seed_year: bool = False) -> int
     return gone
 
 
-#: The year of record this script writes, and the only dates it may delete a
-#: focus day or a report-card row from.
+#: The earliest date any version of this script has written a focus day or a
+#: report-card row to, and therefore the floor on what it may delete.
 #:
-#: Those tables are keyed by (user, date) and carry no id, so unlike tasks and
-#: the ledger there is no mark saying which rows are this script's — the date
-#: range *is* the mark, and it has to be exactly the range that gets written.
-#: It was `>= BEHIND_FROM` with no upper bound to begin with, which read as
-#: "everything from the year I write onwards" and deleted the account's real
-#: focus history and every report card the app itself had recorded since. A
-#: seeding script may overwrite what it wrote; it may not take the record with
-#: it on the way past.
-BEHIND_FROM = '2024-09-07'
-BEHIND_TO = '2025-09-06'
+#: Those two tables are keyed by (user, date) and carry no id, so unlike tasks
+#: and the ledger there is no mark saying which rows are this script's — the
+#: date range *is* the mark. It was `>= BEHIND_FROM` with no upper bound to
+#: begin with, which read as "everything from the year I write onwards" and
+#: deleted the account's real focus history and every report card the app
+#: itself had recorded since. A seeding script may overwrite what it wrote; it
+#: may not take the record with it on the way past. So the delete stays bounded
+#: on both sides: this floor below, and the run's own last written day above.
+WRITTEN_SINCE = '2024-09-07'
+
+
+def behind_window(today: date) -> tuple[date, date]:
+    """The year of record: the 365 days ending yesterday.
+
+    Measured from today rather than frozen into the file. The window used to be
+    a pair of literals, and a literal year of record is only correct for the
+    twelve months after it is typed — a year later the account has a full
+    history that stops dead a year ago, every "this week" panel in the app
+    reads empty, and the seed looks like a bug in the app rather than a stale
+    constant. It ends yesterday because today belongs to the year *ahead*: the
+    calendar's blocks for today are things still to do, and a day cannot
+    sensibly be both already lived and still coming.
+    """
+    last = today - timedelta(days=1)
+    return last - timedelta(days=364), last
+
+
+def streaks(tasks, last_day: date):
+    """The streak the written record implies: the run ending `last_day`, and the best.
+
+    The account's streak is a stored counter, not something the app derives on
+    read — `current_streak` is bumped as tasks are finished and reset once a
+    whole day passes without one. A seed that writes a year of finished work and
+    leaves that counter alone therefore produces an account with a year of
+    daily effort behind it and a streak of zero on the front page, which reads
+    as a broken app rather than as a seeded one. So the counter is written from
+    the same rows the rest of the account is written from.
+
+    The current run has to end on the last day written: the record stops
+    yesterday, and a streak that ended a week before that is a streak the app
+    would have already dropped to zero.
+    """
+    worked = {row[11][:10] for row in tasks}
+
+    current = 0
+    day = last_day
+    while day.isoformat() in worked:
+        current += 1
+        day -= timedelta(days=1)
+
+    best = run = 0
+    previous = None
+    for iso_day in sorted(worked):
+        this = date.fromisoformat(iso_day)
+        run = run + 1 if previous and (this - previous).days == 1 else 1
+        best = max(best, run)
+        previous = this
+
+    return current, max(best, current)
 
 
 def top_up(con, user: str, target: int, before: str):
@@ -434,14 +484,14 @@ def main():
     rng = random.Random(args.seed)
     today = date.today()
     ahead_from = today
-    behind_from = date.fromisoformat(BEHIND_FROM)
-    behind_days = (date.fromisoformat(BEHIND_TO) - behind_from).days + 1
+    behind_from, behind_to = behind_window(today)
+    behind_days = (behind_to - behind_from).days + 1
 
     con = sqlite3.connect(DB)
     con.execute('PRAGMA foreign_keys = ON')
     try:
         with con:
-            gone = clear(con, args.user, ahead_from,
+            gone = clear(con, args.user, ahead_from, behind_to,
                          keep_seed_year=args.keep_seed_year)
             if args.clear:
                 # `users.xp` is the ledger's sum and nothing else, so taking
@@ -450,11 +500,14 @@ def main():
                     'SELECT COALESCE(SUM(amount), 0),'
                     ' COALESCE(SUM(COALESCE(tasks_completed, 1)), 0)'
                     ' FROM xp_events WHERE user_id = ?', (args.user,)).fetchone()
+                # The streak counter is written from the record too, so it
+                # comes back out with it rather than being left standing over
+                # a year of work that is no longer there.
                 con.execute(
-                    'UPDATE users SET xp = ?, level = ?, tasks_completed = ?'
-                    ' WHERE username = ?',
+                    'UPDATE users SET xp = ?, level = ?, tasks_completed = ?,'
+                    ' current_streak = 0, day_state = ? WHERE username = ?',
                     (left[0], level_for_total_xp(left[0])['level'], left[1],
-                     args.user))
+                     'newday', args.user))
                 print('{}: removed {} rows, ledger back to {:,} XP'.format(
                     args.user, gone, left[0]))
                 return
@@ -498,16 +551,23 @@ def main():
             # 100. Aim at the middle of it rather than the floor: a later task
             # finished in the app should not tip the account back a level.
             floor = 100 * (args.level - 1) * args.level // 2
-            added, total = top_up(con, args.user, floor + 4_000, BEHIND_FROM)
+            added, total = top_up(con, args.user, floor + 4_000,
+                                  behind_from.isoformat())
 
             ledger = con.execute(
                 'SELECT COALESCE(SUM(amount), 0), COALESCE(SUM(COALESCE(tasks_completed, 1)), 0)'
                 ' FROM xp_events WHERE user_id = ?', (args.user,)).fetchone()
             levels = level_for_total_xp(ledger[0])
+            # The streak the year behind implies, alongside the ledger it
+            # implies — both are stored counters, and both have to agree with
+            # the rows underneath them.
+            run, best = streaks(behind, behind_to)
             con.execute(
                 'UPDATE users SET xp = ?, level = ?, tasks_completed = ?,'
-                ' daily_goal = 300 WHERE username = ?',
-                (ledger[0], levels['level'], ledger[1], args.user))
+                ' daily_goal = 300, current_streak = ?, best_streak = ?,'
+                ' last_task_date = ?, day_state = ? WHERE username = ?',
+                (ledger[0], levels['level'], ledger[1], run, best,
+                 behind_to.isoformat(), 'newday', args.user))
 
         print('{}: cleared {}, wrote {} ahead + {} behind'.format(
             args.user, gone, len(ahead), len(behind)))
@@ -515,6 +575,8 @@ def main():
             len(notes), len(focus), len(cards)))
         print('  ledger {:,} XP ({:,} topped up) -> level {}'.format(
             ledger[0], added, levels['level']))
+        print('  record {} to {}, streak {} (best {})'.format(
+            behind_from, behind_to, run, best))
     finally:
         con.close()
 

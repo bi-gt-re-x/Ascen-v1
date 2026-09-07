@@ -16,6 +16,7 @@ app had recorded since along with it.
 """
 import os
 import sys
+from datetime import date, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))), 'scripts'))
@@ -105,11 +106,45 @@ def test_the_level_target_is_reachable_from_the_ledger():
 
 def test_the_bounded_windows_are_bounded():
     """The bug: an unbounded DELETE on the tables with no id to mark."""
-    assert seed_alpha.BEHIND_FROM < seed_alpha.BEHIND_TO
     source = open(seed_alpha.__file__, encoding='utf-8').read()
-    body = source[source.index('def clear('):source.index('def top_up(')]
+    body = source[source.index('def clear('):source.index('def streaks(')]
     # Every delete on a date-keyed table names both ends.
     for table in ('focus_days', 'metric_snapshots', 'day_focus_notes'):
         assert table in body, table
     assert 'date >= ?' not in body, 'an unbounded date delete is back'
     assert body.count('BETWEEN ? AND ?') >= 2
+    # The floor is a literal and the ceiling is the run's own last written day,
+    # so the range is closed at both ends however far the calendar has moved.
+    assert 'WRITTEN_SINCE' in body and 'behind_to' in body
+
+
+def test_the_year_of_record_ends_yesterday():
+    """It used to be a pair of literals, and a literal year of record is only
+    right for the twelve months after it is typed. A year later the account's
+    history stopped dead a year ago and every "this week" panel read empty."""
+    for today in (date(2026, 9, 7), date(2027, 3, 1), date(2028, 2, 29)):
+        start, last = seed_alpha.behind_window(today)
+        assert last == today - timedelta(days=1)
+        assert (last - start).days == 364
+        # And never into the year ahead, which is what today belongs to.
+        assert last < today
+        assert seed_alpha.WRITTEN_SINCE < last.isoformat()
+
+
+def test_the_streak_agrees_with_the_record():
+    """A year of finished work and a streak of zero reads as a broken app.
+    `streaks` is what stops the two disagreeing."""
+    def worked(*days):
+        return [(None,) * 11 + ('{}T20:00:00'.format(d),) for d in days]
+
+    last = date(2026, 9, 6)
+    # A run ending on the last day written is the current streak.
+    assert seed_alpha.streaks(
+        worked('2026-09-04', '2026-09-05', '2026-09-06'), last) == (3, 3)
+    # A gap before the end means the app would already have dropped it.
+    assert seed_alpha.streaks(
+        worked('2026-08-01', '2026-08-02', '2026-08-03'), last) == (0, 3)
+    # The best is the longest run anywhere, never below the current one.
+    assert seed_alpha.streaks(
+        worked('2026-07-01', '2026-07-02', '2026-07-03', '2026-07-04',
+               '2026-09-05', '2026-09-06'), last) == (2, 4)
