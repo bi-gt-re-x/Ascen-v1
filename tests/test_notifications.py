@@ -323,14 +323,52 @@ def test_nothing_is_raised_about_an_empty_week(client):
 # Housekeeping
 # --------------------------------------------------------------------------
 def test_old_tombstones_are_pruned(overdue):
+    """A tombstone stops being useful once its fingerprint cannot recur.
+
+    ## The two clocks, and why `far` is measured from the real one
+
+    This test has to move time forward, and there are two clocks to move.
+
+    `sweep` takes the day from the request — that is what lets every other test
+    in this file pretend it is DAY — and the prune cutoff is computed from it,
+    as `day - TOMBSTONE_DAYS`. But `deleted_at` is stamped by
+    `delete_notifications` from the server's wall clock, which no parameter
+    reaches. So the tombstone is written in real time and judged in simulated
+    time, and the test only means what it says while the two agree.
+
+    Measured from DAY, as this was, they stopped agreeing on 2026-09-03: `far`
+    was 2026-11-02, the cutoff 2026-09-03, and the tombstone carried whatever
+    today actually was. The suite passed until that date and failed every day
+    after — not because pruning broke, but because the calendar moved.
+
+    So `far` is measured from `date.today()`, the clock that writes the value
+    being tested. The offset is what matters here, not the date: this asks
+    whether a tombstone older than the window is dropped, and any pair of days
+    that far apart asks it.
+    """
     doomed = _list(overdue)[0]
     overdue.delete('/api/notifications/%s' % doomed['id'])
     assert doomed['fingerprint'] in db.live_fingerprints('tester')
 
-    far = (date.fromisoformat(DAY)
-           + timedelta(days=notify.TOMBSTONE_DAYS + 2)).isoformat()
+    far = (date.today() + timedelta(days=notify.TOMBSTONE_DAYS + 2)).isoformat()
     _list(overdue, day=far)
     assert doomed['fingerprint'] not in db.live_fingerprints('tester')
+
+
+def test_a_tombstone_inside_the_window_is_kept(overdue):
+    """The other side of it, and the half that does the work.
+
+    Pruning everything would pass the test above just as well. What a tombstone
+    is *for* is stopping a notification the reader dismissed from being written
+    again the next time the sweep runs, so one inside the window has to survive
+    a sweep — including a sweep on a later day.
+    """
+    doomed = _list(overdue)[0]
+    overdue.delete('/api/notifications/%s' % doomed['id'])
+
+    near = (date.today() + timedelta(days=notify.TOMBSTONE_DAYS - 2)).isoformat()
+    _list(overdue, day=near)
+    assert doomed['fingerprint'] in db.live_fingerprints('tester')
 
 
 def test_signed_out_is_a_401(anon):

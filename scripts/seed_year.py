@@ -69,6 +69,7 @@ this can be run repeatedly without stacking. `--clear` removes them and stops.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import random
 import sqlite3
@@ -100,6 +101,39 @@ LEGACY_TAG = '[seeded:year]'
 # What `description` gets now: the same empty string every other task carries
 # when nobody wrote a note on it.
 TAG = ''
+
+# How the reserved window is divided between accounts.
+#
+# `base` used to be `int(SEED_ID_LOW)` flat, so every run wrote ids 1000000000000
+# upward whatever it was seeding. That is fine for one account and wrong for two:
+# the second run hit `UNIQUE constraint failed: tasks.id` on its first row, and
+# neither `--user` nor `--seed` changed anything, because neither reached the id.
+# Seeding a demo account beside an existing one is exactly what this script is
+# for, so it could not do its own job twice.
+#
+# The window is 1e11 wide, so it is cut into blocks and each account is given
+# one, chosen by hashing its name. blake2b rather than `hash()`, which is salted
+# per process for strings and would move an account's block on every run.
+#
+# A block holds a million rows — a year of this week is about 3,900 — and there
+# are a hundred thousand blocks. The last id in the last block is exactly
+# SEED_ID_HIGH, so every id this writes is 13 digits and inside the window
+# `OWNED` matches on.
+SEED_BLOCK = 1_000_000
+SEED_BLOCKS = 100_000
+
+
+def id_base(user: str, seed: int) -> int:
+    """Where this account's ids start. Stable for a name, distinct between them.
+
+    `seed` is folded in so there is something to turn when two names land in the
+    same block — a one in a hundred thousand accident, and the error it causes
+    says to do this.
+    """
+    key = '{}\x00{}'.format(user, seed).encode()
+    block = int(hashlib.blake2b(key, digest_size=8).hexdigest(), 16) % SEED_BLOCKS
+    return int(SEED_ID_LOW) + block * SEED_BLOCK
+
 
 # The WHERE clause matching rows this script owns.
 OWNED = (
@@ -309,11 +343,18 @@ def minutes(hhmm: str) -> int:
 def build(user: str, start: date, days: int, min_xp: int, seed: int):
     rng = random.Random(seed)
     rows = []
-    base = int(SEED_ID_LOW)
+    base = id_base(user, seed)
 
     def add(day, title, subject, priority, xp, span=None):
         """One task. `span` is (start, end) for a block, None for a to-do."""
         idx = len(rows)
+        if idx >= SEED_BLOCK:
+            # A million rows is about 250 years of this week. Reaching it means
+            # something is wrong with --days, not that the block is too small.
+            raise SystemExit(
+                'Refusing to write more than {:,} rows: an account\'s id block '
+                'holds that many, and past it this would overwrite the next '
+                'account\'s.'.format(SEED_BLOCK))
         if span:
             created, due = stamp(day, span[0]), stamp(day, span[1])
             on_cal = 1
@@ -532,10 +573,21 @@ def main():
             return
 
         rows = build(args.user, start, args.days, args.min_xp, args.seed)
-        con.executemany(
-            'INSERT INTO tasks (id, user_id, title, description, priority, status,'
-            ' xp_value, subject, due_date, show_on_calendar, created_at)'
-            ' VALUES (?,?,?,?,?,?,?,?,?,?,?)', rows)
+        try:
+            con.executemany(
+                'INSERT INTO tasks (id, user_id, title, description, priority, status,'
+                ' xp_value, subject, due_date, show_on_calendar, created_at)'
+                ' VALUES (?,?,?,?,?,?,?,?,?,?,?)', rows)
+        except sqlite3.IntegrityError as exc:
+            # Two names hashed into one block — see `id_base`. One in a hundred
+            # thousand, and the way out is a different --seed, so say so rather
+            # than leaving a UNIQUE constraint message to be worked out.
+            con.rollback()
+            raise SystemExit(
+                '{}\n\n{} collides with ids already in the database. Its block is '
+                'chosen from --seed, so run this again with a different one:\n'
+                '    python3 scripts/seed_year.py --user {} --seed {}'.format(
+                    exc, args.user, args.user, args.seed + 1))
         con.commit()
 
         finished = 0
