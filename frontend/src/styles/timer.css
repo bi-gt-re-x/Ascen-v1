@@ -112,10 +112,13 @@ html[data-theme="dark"] .pom-page {
     font-size: .88rem;
 }
 .pom-date {
+    display: inline-flex; align-items: center; gap: 7px;
     color: var(--pom-muted);
     font-size: .82rem;
     white-space: nowrap;
 }
+.pom-head-sun { font-size: 1.5rem; line-height: 1; }
+.pom-head-text { flex: 1; }
 
 .pom-link {
     padding: 0;
@@ -212,6 +215,9 @@ html[data-theme="dark"] .pom-page {
 
 /* ---- Hero ---------------------------------------------------------------- */
 .pom-hero {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
     display: grid;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr) 232px;
     gap: 26px;
@@ -228,8 +234,18 @@ html[data-theme="dark"] .pom-page {
     box-shadow: var(--pom-shadow);
     transition: background-image .5s ease;
 }
+/* The mountains sit behind everything in the card and take no clicks. */
+.pom-art-range {
+    position: absolute;
+    right: 0; bottom: 0;
+    width: min(62%, 560px);
+    height: 74%;
+    z-index: -1;
+    pointer-events: none;
+}
+
 .pom-badge {
-    display: inline-block;
+    display: inline-flex; align-items: center; gap: 6px;
     padding: 4px 11px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--pom-now) 16%, transparent);
@@ -251,7 +267,10 @@ html[data-theme="dark"] .pom-page {
 .pom-picks { display: grid; gap: 10px; }
 .pom-pick {
     position: relative;
-    display: block;
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    align-items: center;
+    gap: 11px;
     padding: 11px 14px;
     border: 1px solid var(--pom-line);
     border-radius: 12px;
@@ -268,7 +287,15 @@ html[data-theme="dark"] .pom-page {
     transform: translateY(-70%) rotate(45deg);
     pointer-events: none;
 }
-.pom-pick-top { display: flex; flex-direction: column; gap: 2px; }
+.pom-pick-glyph {
+    display: grid; place-items: center;
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: var(--pom-card-2);
+    font-size: .92rem;
+}
+.pom-pick-top { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pom-pick-top b, .pom-pick-top i { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pom-pick-top b { font-size: .88rem; font-weight: 700; }
 .pom-pick-top i { color: var(--pom-muted); font-size: .74rem; font-style: normal; }
 /* The native control sits invisibly over the card so the whole thing is the
@@ -286,6 +313,7 @@ html[data-theme="dark"] .pom-page {
 .pom-pick:focus-within { border-color: var(--pom-now); }
 
 .pom-start {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
     width: 100%;
     height: 50px;
     margin-top: 16px;
@@ -307,6 +335,7 @@ html[data-theme="dark"] .pom-page {
     list-style: none;
 }
 .pom-perks li {
+    display: inline-flex; align-items: center; gap: 6px;
     padding: 4px 11px;
     border-radius: 999px;
     background: var(--pom-card-2);
@@ -408,8 +437,35 @@ html[data-theme="dark"] .pom-page {
     gap: 14px; margin-bottom: 18px;
 }
 .pom-panel-head h2 {
+    display: inline-flex; align-items: center; gap: 9px;
     margin: 0;
     font-size: 1.06rem; font-weight: 750; letter-spacing: -.015em;
+}
+.pom-panel-head h2 > span { font-size: 1.02rem; }
+
+/* The segmented control the range and the grain both use. */
+.pom-toggle {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 11px;
+    background: var(--pom-card-2);
+}
+.pom-toggle button {
+    padding: 6px 13px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--pom-muted);
+    font: inherit; font-size: .77rem; font-weight: 650;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+.pom-toggle button:hover { color: var(--pom-text); }
+.pom-toggle button.is-on {
+    background: var(--pom-card);
+    color: var(--pom-focus);
+    box-shadow: 0 1px 3px rgba(20, 28, 46, .10);
 }
 .pom-split {
     display: grid;
@@ -471,10 +527,26 @@ html[data-theme="dark"] .pom-page {
     font-size: 1.3rem; font-weight: 750;
     font-variant-numeric: tabular-nums; letter-spacing: -.02em;
 }
-.pom-tile-delta { color: var(--pom-green); font-size: .72rem; font-weight: 600; }
+.pom-tile-delta {
+    color: var(--pom-green);
+    font-size: .71rem; font-weight: 650;
+}
+.pom-tile-delta i { color: var(--pom-faint); font-style: normal; font-weight: 500; }
+.pom-tile-delta.is-down { color: var(--pom-rose); }
+.pom-tile-delta.is-flat { color: var(--pom-faint); font-weight: 500; }
+.pom-tile-icon { font-size: .92rem; }
 
 /* The week */
-.pom-week { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--pom-line); }
+/* The week's bars and the quote, side by side the way the design has them. */
+.pom-lower {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 18px;
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--pom-line);
+}
+.pom-week { min-width: 0; }
 .pom-week h3 {
     margin: 0 0 14px;
     color: var(--pom-muted);
@@ -761,4 +833,167 @@ html[data-theme="dark"] .pom-page {
     .pom-ring-run, .pom-donut-run, .pom-bar-fill,
     .pom-overall-bar span, .pom-level-bar span, .pom-hero { transition: none; }
     .pom-card:hover, .pom-choice:hover { transform: none; }
+}
+
+/* ---- The quote, over its own sky ----------------------------------------- */
+.pom-quote {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 178px;
+    margin: 0;
+    padding: 20px;
+    border-radius: 16px;
+    isolation: isolate;
+}
+.pom-art-scene {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    z-index: -1;
+    pointer-events: none;
+}
+/* The scene is bright at the horizon, so the text gets its own floor to sit
+   on rather than relying on the picture staying dark where the words are. */
+.pom-quote::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(10, 8, 30, .10) 0%, rgba(10, 8, 30, .62) 72%);
+}
+.pom-quote blockquote {
+    margin: 0;
+    color: #fff;
+    font-size: .95rem; font-weight: 600; line-height: 1.5;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, .45);
+}
+.pom-quote figcaption {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, .78);
+    font-size: .78rem; font-weight: 600;
+}
+
+/* ---- The line ------------------------------------------------------------ */
+.pom-line { width: 100%; height: auto; overflow: visible; }
+.pom-line-rule { stroke: var(--pom-line); stroke-width: 1; }
+.pom-line-tick { fill: var(--pom-faint); font-size: 10px; font-weight: 600; }
+.pom-line-area { fill: url(#pom-line-fill); }
+.pom-line-run {
+    fill: none;
+    stroke: var(--pom-focus);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.pom-line-halo { fill: var(--pom-focus); opacity: .18; }
+.pom-line-dot { fill: var(--pom-focus); stroke: var(--pom-card); stroke-width: 2.5; }
+
+/* ---- Goals and tasks, with their chevrons -------------------------------- */
+.pom-goals li {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 44px 16px;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--pom-line);
+}
+.pom-goal-icon {
+    display: grid; place-items: center;
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--pom-focus) 13%, transparent);
+    color: var(--pom-focus);
+    font-size: .82rem;
+}
+.pom-goal-main { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.pom-chev { width: 16px; height: 16px; color: var(--pom-faint); }
+
+.pom-check {
+    width: 17px; height: 17px; flex-shrink: 0;
+    border: 1.8px solid var(--pom-line);
+    border-radius: 5px;
+}
+.pom-tasks-when {
+    color: var(--pom-faint);
+    font-size: .74rem; font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ---- Level --------------------------------------------------------------- */
+.pom-split.is-level { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+.pom-level {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    margin-top: 18px;
+    padding: 22px 24px;
+    border-radius: var(--pom-radius);
+    background: linear-gradient(120deg, #1e1b4b, #4c1d95 55%, #1e3a8a);
+    color: #fff;
+    box-shadow: var(--pom-shadow);
+}
+.pom-level-gem {
+    display: grid; place-items: center;
+    width: 46px; height: 46px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .14);
+    font-size: 1.2rem;
+}
+.pom-level-cta {
+    padding: 10px 18px;
+    border-radius: 11px;
+    background: #fff;
+    color: #3b1e8f;
+    font-size: .84rem; font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.pom-level-cta:hover { background: rgba(255, 255, 255, .9); }
+
+.pom-levelcard {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+}
+.pom-level-trophy {
+    display: grid; place-items: center;
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--pom-amber) 15%, transparent);
+    font-size: 1.1rem;
+}
+.pom-levelcard-body { min-width: 0; }
+.pom-levelcard-top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10px; margin-bottom: 9px;
+}
+.pom-levelcard-top strong { font-size: 1rem; font-weight: 750; }
+.pom-levelcard-top span {
+    color: var(--pom-muted);
+    font-size: .78rem; font-variant-numeric: tabular-nums;
+}
+.pom-level-bar {
+    height: 9px;
+    border-radius: 999px;
+    background: var(--pom-line);
+    overflow: hidden;
+}
+.pom-level .pom-level-bar { background: rgba(255, 255, 255, .18); }
+.pom-level-bar span {
+    display: block; height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #fbbf24, #f472b6);
+    transition: width .4s ease;
+}
+
+@media (max-width: 900px) {
+    .pom-lower { grid-template-columns: minmax(0, 1fr); }
+    .pom-split.is-level { grid-template-columns: minmax(0, 1fr); }
+    .pom-level { grid-template-columns: 46px minmax(0, 1fr); }
+    .pom-level-cta { grid-column: 2; justify-self: start; }
 }
