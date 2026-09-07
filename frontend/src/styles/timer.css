@@ -1,0 +1,418 @@
+/* ==========================================================================
+   timer.css — the pomodoro page. See src/pages/Timer.tsx.
+
+   Tokens on the page root and redeclared for dark, the same shape every other
+   page here uses, so the page follows the theme instead of being light-only
+   and hoping.
+
+   The one idea in the layout: the clock is the page. It is the largest thing
+   on it by a long way, because the reader is either about to start a session
+   or is in one, and in both cases the number they want is the same number.
+   The ten styles sit below it as a picker, not as a menu to get through first.
+   ========================================================================== */
+
+body:has(.tm-page) > #root,
+body:has(.tm-page) .app-main {
+    width: 100%;
+    min-width: 0;
+}
+
+.tm-page {
+    --tm-card: #ffffff;
+    --tm-card-2: #f7f8fb;
+    --tm-line: #e6e9ef;
+    --tm-text: #1f2733;
+    --tm-muted: #6b7684;
+    --tm-faint: #98a1ae;
+
+    /* One colour per phase, and they are not decorative: the ring, the label
+       and the state of the page all read from the same three, so a glance at
+       any of them says the same thing. */
+    --tm-focus: #6c5ce7;
+    --tm-break: #1f8a54;
+    --tm-long: #2f6fd0;
+
+    --tm-radius: 16px;
+    --tm-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1100px;
+    margin-inline: auto;
+    padding: 26px 24px 60px;
+    color: var(--tm-text);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+html[data-theme="dark"] .tm-page {
+    --tm-card: #161d2c;
+    --tm-card-2: #1b2334;
+    --tm-line: #28324a;
+    --tm-text: #e7ecf6;
+    --tm-muted: #8f9bb3;
+    --tm-faint: #6d7a94;
+
+    --tm-focus: #a78bfa;
+    --tm-break: #46c483;
+    --tm-long: #6aa6f5;
+
+    --tm-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+}
+
+/* ---- Header -------------------------------------------------------------- */
+.tm-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+.tm-title {
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+.tm-sub {
+    margin: 4px 0 0;
+    max-width: 46ch;
+    color: var(--tm-muted);
+    font-size: .9rem;
+    line-height: 1.55;
+}
+
+.tm-link {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--tm-muted);
+    font: inherit;
+    font-size: .84rem;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.tm-link:hover { color: var(--tm-text); }
+
+/* ---- Buttons ------------------------------------------------------------- */
+.tm-btn {
+    padding: 10px 18px;
+    border: 1px solid var(--tm-line);
+    border-radius: 10px;
+    background: var(--tm-card);
+    color: var(--tm-text);
+    font: inherit;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+.tm-btn:hover { background: var(--tm-card-2); }
+.tm-btn.is-primary {
+    min-width: 128px;
+    border-color: transparent;
+    background: var(--tm-focus);
+    color: #fff;
+}
+.tm-btn.is-primary:hover { filter: brightness(1.06); }
+.tm-btn:disabled { opacity: .45; cursor: not-allowed; }
+.tm-btn:disabled:hover { filter: none; }
+
+/* ---- The setup ----------------------------------------------------------- */
+.tm-setup {
+    padding: 30px 28px 26px;
+    border: 1px solid var(--tm-line);
+    border-radius: var(--tm-radius);
+    background: var(--tm-card);
+    box-shadow: var(--tm-shadow);
+}
+.tm-step {
+    margin: 0 0 8px;
+    color: var(--tm-faint);
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+}
+.tm-setup h2 {
+    margin: 0 0 10px;
+    font-size: 1.32rem;
+    font-weight: 700;
+    letter-spacing: -.015em;
+}
+.tm-setup-lead {
+    margin: 0 0 22px;
+    max-width: 62ch;
+    color: var(--tm-muted);
+    font-size: .92rem;
+    line-height: 1.6;
+}
+.tm-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+}
+.tm-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 16px 15px;
+    border: 1px solid var(--tm-line);
+    border-radius: 12px;
+    background: var(--tm-card-2);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+.tm-choice:hover { border-color: var(--tm-focus); }
+.tm-choice.is-on {
+    border-color: var(--tm-focus);
+    box-shadow: inset 0 0 0 1px var(--tm-focus);
+}
+.tm-choice-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .98rem;
+    font-weight: 700;
+}
+.tm-choice-nums {
+    color: var(--tm-text);
+    font-size: .84rem;
+    font-weight: 600;
+}
+.tm-choice-hint {
+    color: var(--tm-muted);
+    font-size: .82rem;
+    line-height: 1.5;
+}
+.tm-tag {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tm-focus) 16%, transparent);
+    color: var(--tm-focus);
+    font-size: .64rem;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+.tm-setup-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+/* ---- The clock ----------------------------------------------------------- */
+.tm-clock-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 34px 28px 28px;
+    border: 1px solid var(--tm-line);
+    border-radius: var(--tm-radius);
+    background: var(--tm-card);
+    box-shadow: var(--tm-shadow);
+}
+.tm-clock-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+}
+.tm-dial {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+.tm-dial-track {
+    fill: none;
+    stroke: var(--tm-line);
+    stroke-width: 10;
+}
+.tm-dial-run {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    /* The ring is the only moving thing on the page, so it is the only thing
+       that gets a transition — and a short one, because it is redrawn twice a
+       second and a long ease would never arrive. */
+    transition: stroke-dashoffset .3s linear;
+}
+.tm-dial-run.is-focus { stroke: var(--tm-focus); }
+.tm-dial-run.is-break { stroke: var(--tm-break); }
+.tm-dial-run.is-long { stroke: var(--tm-long); }
+
+.tm-clock-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+.tm-phase {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+}
+.tm-phase.is-focus { color: var(--tm-focus); }
+.tm-phase.is-break { color: var(--tm-break); }
+.tm-phase.is-long { color: var(--tm-long); }
+.tm-time {
+    font-size: 3.1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em;
+    line-height: 1.05;
+}
+.tm-round {
+    color: var(--tm-muted);
+    font-size: .82rem;
+}
+.tm-phase-note {
+    margin: 16px 0 0;
+    color: var(--tm-muted);
+    font-size: .88rem;
+    text-align: center;
+}
+
+.tm-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.tm-today {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 34px;
+    margin: 26px 0 0;
+    padding-top: 20px;
+    border-top: 1px solid var(--tm-line);
+    width: 100%;
+}
+.tm-today div { text-align: center; }
+.tm-today dt {
+    color: var(--tm-muted);
+    font-size: .76rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.tm-today dd {
+    margin: 3px 0 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.tm-today-note {
+    margin: 12px 0 0;
+    max-width: 54ch;
+    color: var(--tm-faint);
+    font-size: .8rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* ---- The ten ------------------------------------------------------------- */
+.tm-styles { margin-top: 34px; }
+.tm-styles h2 {
+    margin: 0 0 6px;
+    font-size: 1.14rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+.tm-styles-lead {
+    margin: 0 0 18px;
+    max-width: 64ch;
+    color: var(--tm-muted);
+    font-size: .88rem;
+    line-height: 1.55;
+}
+.tm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.tm-card {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    height: 100%;
+    padding: 16px 16px 14px;
+    border: 1px solid var(--tm-line);
+    border-radius: 12px;
+    background: var(--tm-card);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .15s ease, transform .15s ease;
+}
+.tm-card:hover {
+    border-color: var(--tm-focus);
+    transform: translateY(-1px);
+}
+.tm-card.is-on {
+    border-color: var(--tm-focus);
+    box-shadow: inset 0 0 0 1px var(--tm-focus);
+}
+.tm-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.tm-card-name {
+    font-size: 1rem;
+    font-weight: 700;
+}
+.tm-card-nums {
+    color: var(--tm-text);
+    font-size: .86rem;
+}
+.tm-card-nums strong {
+    font-size: 1.02rem;
+    font-variant-numeric: tabular-nums;
+}
+.tm-card-sep {
+    margin: 0 7px;
+    color: var(--tm-faint);
+}
+.tm-card-who {
+    flex: 1;
+    color: var(--tm-muted);
+    font-size: .82rem;
+    line-height: 1.5;
+}
+.tm-card-foot {
+    padding-top: 9px;
+    border-top: 1px solid var(--tm-line);
+    color: var(--tm-faint);
+    font-size: .76rem;
+}
+
+@media (max-width: 640px) {
+    .tm-page { padding: 20px 16px 48px; }
+    .tm-head { flex-direction: column; gap: 8px; }
+    .tm-clock-wrap { width: 220px; height: 220px; }
+    .tm-time { font-size: 2.6rem; }
+    .tm-controls .tm-btn { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-dial-run { transition: none; }
+    .tm-card:hover { transform: none; }
+}

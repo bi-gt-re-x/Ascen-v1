@@ -30,6 +30,9 @@ GATED_PATHS = ('/dashboard', '/calendar', '/goals', '/growth', '/analytics',
                '/skill-trees', '/growth-tree',
                # Notes are the account's own writing and nobody else's.
                '/notes',
+               # The timer shows the account's own focus hours against its own
+               # goal, and banks more of them.
+               '/timer',
                # Both read the account's own record: settings is what it has
                # chosen, achievements is what it has earned.
                '/settings', '/achievements',

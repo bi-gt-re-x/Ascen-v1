@@ -34,8 +34,10 @@ const PHONE = '(max-width: 640px)';
 
 /** The four the phone bar keeps, in the order the rail lists them. */
 const PHONE_TABS = ['Dashboard', 'Calendar', 'Tasks', 'Goals'];
-/** The six behind More. Records and Settings are the two that used to fall off. */
-const SHEET_TABS = ['Analytics', 'Skill Tree', 'Notes', 'Achievements', 'Records', 'Settings'];
+/** The seven behind More. Records and Settings are the two that used to fall off. */
+const SHEET_TABS = [
+  'Analytics', 'Skill Tree', 'Notes', 'Timer', 'Achievements', 'Records', 'Settings',
+];
 
 /**
  * The catalogue the rail joins the account's picks against.
@@ -240,7 +242,7 @@ describe('the Analytics entry, which is the one that unfolds', () => {
 });
 
 describe('on a phone', () => {
-  it('shows the four tabs a phone is for, and hides the other six', () => {
+  it('shows the four tabs a phone is for, and hides the other seven', () => {
     // Ten tabs across 375px put Records at x 352-393 and Settings at 395-436
     // — off the end of the screen, with nothing to scroll. Two whole sections
     // of the app were unreachable.
@@ -255,7 +257,7 @@ describe('on a phone', () => {
     });
   });
 
-  it('keeps the other six one tap away behind More', () => {
+  it('keeps the other seven one tap away behind More', () => {
     renderWithProviders(<Rail />);
     act(() => media.set(PHONE, true));
 
@@ -272,7 +274,7 @@ describe('on a phone', () => {
     });
   });
 
-  it('accounts for every destination — four visible plus six behind More', () => {
+  it('accounts for every destination — four visible plus seven behind More', () => {
     // The invariant that matters more than either list: nothing is dropped.
     // A tab added to TABS without a `phone` decision still has a way in.
     renderWithProviders(<Rail />);
@@ -294,6 +296,7 @@ describe('on a phone', () => {
         '/goals',
         '/skill-trees',
         '/notes',
+        '/timer',
         '/achievements',
         '/records',
         '/settings',

@@ -32,6 +32,7 @@ const Analytics = lazy(() => import('@/pages/Analytics'));
 const SubjectAnalytics = lazy(() => import('@/pages/SubjectAnalytics'));
 const SkillTrees = lazy(() => import('@/pages/SkillTrees'));
 const Notes = lazy(() => import('@/pages/Notes'));
+const Timer = lazy(() => import('@/pages/Timer'));
 const Records = lazy(() => import('@/pages/Records'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Achievements = lazy(() => import('@/pages/Achievements'));
@@ -257,6 +258,7 @@ export default function App() {
                   describe. */}
               <Route path="/skill-trees" element={<SkillTrees />} />
               <Route path="/notes" element={<Notes />} />
+              <Route path="/timer" element={<Timer />} />
               <Route path="/records" element={<Records />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/:section" element={<Settings />} />

@@ -261,6 +261,20 @@ const TABS: Tab[] = [
     ),
   },
   {
+    // Under Notes, because both are places you go *to* rather than results you
+    // come back for — the pages above this point report on work that is
+    // already done, and these two are where some of it happens.
+    to: '/timer',
+    label: 'Timer',
+    icon: (
+      <svg {...stroke}>
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9.5V13l2.5 1.5" />
+        <path d="M9 2h6" />
+      </svg>
+    ),
+  },
+  {
     to: '/achievements',
     label: 'Achievements',
     icon: (

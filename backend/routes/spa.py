@@ -61,6 +61,9 @@ SPA_ROUTES = (
     '/growth-tree',
     # Free-form notes. The one page whose contents the app does not score.
     '/notes',
+    # The focus timer with a pomodoro cycle over it. The session it runs is the
+    # account's ordinary one — see src/pages/Timer.tsx.
+    '/timer',
     # The calendar is one page in three views. It was one URL and a script
     # that swapped panes; it is three routes now, and /calendar keeps working
     # by redirecting to the week — see src/App.tsx.
