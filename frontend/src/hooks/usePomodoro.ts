@@ -38,11 +38,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UseFocusSession } from '@/hooks/useFocusSession';
 import {
+  DEFAULT_LEVEL,
   DEFAULT_STYLE,
+  goalHoursFor,
   lengthOf,
+  levelFor,
   next,
   styleFor,
   type Cycle,
+  type Level,
   type Phase,
   type Style,
 } from '@/components/Timer/pomodoro';
@@ -55,26 +59,49 @@ const TICK_MS = 500;
 
 interface Stored {
   styleId: string;
+  /** Which intensity level is chosen. Drives the day's target. */
+  levelId: number;
   phase: Phase;
   done: number;
   /** Epoch ms this phase ends, or null when paused. */
   endsAt: number | null;
   /** Milliseconds left, meaningful only while paused. */
   leftMs: number;
+  /**
+   * Focus intervals finished today, and the day they were finished on.
+   *
+   * Kept beside the cycle rather than derived from it, because `done` is reset
+   * by every long break and by changing style — it counts a cycle, and this
+   * counts a day. The date is stored with it so the count rolls over at
+   * midnight without anything having to notice midnight.
+   */
+  dayIso: string;
+  doneToday: number;
 }
 
 function key(user: string): string {
   return `pomodoro:${user}`;
 }
 
-function fresh(styleId: string): Stored {
+function todayIso(): string {
+  const d = new Date();
+  const p = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function fresh(styleId: string, levelId = DEFAULT_LEVEL, keep?: Stored): Stored {
   const style = styleFor(styleId);
   return {
     styleId: style.id,
+    levelId,
     phase: 'focus',
     done: 0,
     endsAt: null,
     leftMs: style.focus * 60_000,
+    // A reset is a reset of the *cycle*. The day's count is a fact about the
+    // day and survives it, or Reset would be a way to un-work an afternoon.
+    dayIso: keep?.dayIso ?? todayIso(),
+    doneToday: keep?.doneToday ?? 0,
   };
 }
 
@@ -86,12 +113,18 @@ function load(user: string): Stored {
     const style = styleFor(saved.styleId);
     const phase: Phase =
       saved.phase === 'break' || saved.phase === 'long' ? saved.phase : 'focus';
+    const today = todayIso();
     return {
       styleId: style.id,
+      levelId: levelFor(saved.levelId).id,
       phase,
       done: Number(saved.done) || 0,
       endsAt: typeof saved.endsAt === 'number' ? saved.endsAt : null,
       leftMs: Number(saved.leftMs) || lengthOf(style, phase) * 60_000,
+      dayIso: today,
+      // Yesterday's count is not today's. Read against the stored day rather
+      // than trusted, so the tile is right on a page left open overnight.
+      doneToday: saved.dayIso === today ? Number(saved.doneToday) || 0 : 0,
     };
   } catch {
     // A private window, cleared site data, or a value from an older shape.
@@ -121,9 +154,16 @@ export interface UsePomodoro {
   pause: () => void;
   /** End this phase now and move to the next one, running. */
   skip: () => void;
-  /** Back to the first focus interval, paused. */
+  /** Back to the first focus interval, paused. The day's count survives it. */
   reset: () => void;
   choose: (styleId: string) => void;
+  /** The chosen intensity, and what it is aiming at. */
+  level: Level;
+  /** Focus intervals finished today, against `level.target`. */
+  doneToday: number;
+  setLevel: (levelId: number) => void;
+  /** The focus goal this level and style imply, in hours. */
+  goalHours: number;
 }
 
 export function usePomodoro(
@@ -156,30 +196,33 @@ export function usePomodoro(
     let cycle: Cycle = { phase: from.phase, done: from.done };
     let endsAt = from.endsAt ?? at;
     let walked = 0;
+    // Every step *out of* a focus phase is one finished pomodoro. Counted on
+    // the walk rather than after it, so catching up on several missed phases
+    // credits each of them exactly once.
+    const today = todayIso();
+    let doneToday = from.dayIso === today ? from.doneToday : 0;
 
     while (endsAt <= at && walked < MAX_CATCH_UP) {
+      if (cycle.phase === 'focus') doneToday += 1;
       cycle = next(style, cycle);
       endsAt += lengthOf(style, cycle.phase) * 60_000;
       walked += 1;
     }
 
-    if (endsAt <= at) {
-      // Too much missed to believe anyone was here. See the note above.
-      return {
-        styleId: style.id,
-        phase: cycle.phase,
-        done: cycle.done,
-        endsAt: null,
-        leftMs: lengthOf(style, cycle.phase) * 60_000,
-      };
-    }
-    return {
+    const common = {
       styleId: style.id,
+      levelId: from.levelId,
       phase: cycle.phase,
       done: cycle.done,
-      endsAt,
-      leftMs: endsAt - at,
+      dayIso: today,
+      doneToday,
     };
+
+    if (endsAt <= at) {
+      // Too much missed to believe anyone was here. See the note above.
+      return { ...common, endsAt: null, leftMs: lengthOf(style, cycle.phase) * 60_000 };
+    }
+    return { ...common, endsAt, leftMs: endsAt - at };
   }, []);
 
   // The clock. Re-renders while running, and rolls the phase over when one
@@ -219,6 +262,7 @@ export function usePomodoro(
   }, [running, state.phase, focus]);
 
   const style = styleFor(state.styleId);
+  const level = levelFor(state.levelId);
   const total = lengthOf(style, state.phase) * 60_000;
   const leftMs = running
     ? Math.max(0, (state.endsAt as number) - Date.now())
@@ -249,14 +293,26 @@ export function usePomodoro(
   }, [advance, write]);
 
   const reset = useCallback(() => {
-    write(fresh(latest.current.styleId));
+    const current = latest.current;
+    write(fresh(current.styleId, current.levelId, current));
   }, [write]);
 
   const choose = useCallback(
     (styleId: string) => {
       // A new style is a new cycle: keeping the phase would leave somebody
-      // three rounds into a method they have just stopped using.
-      write(fresh(styleId));
+      // three rounds into a method they have just stopped using. The day's
+      // count is not part of the cycle and carries over.
+      const current = latest.current;
+      write(fresh(styleId, current.levelId, current));
+    },
+    [write],
+  );
+
+  const setLevel = useCallback(
+    (levelId: number) => {
+      // Only the aim changes; a sitting already under way is not interrupted
+      // by deciding how many of them the day is for.
+      write({ ...latest.current, levelId: levelFor(levelId).id });
     },
     [write],
   );
@@ -273,5 +329,9 @@ export function usePomodoro(
     skip,
     reset,
     choose,
+    level,
+    doneToday: state.dayIso === todayIso() ? state.doneToday : 0,
+    setLevel,
+    goalHours: goalHoursFor(level, style),
   };
 }

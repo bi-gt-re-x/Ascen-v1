@@ -35,6 +35,21 @@
 
 export type Phase = 'focus' | 'break' | 'long';
 
+/**
+ * The ten card colours.
+ *
+ * One per style rather than one per family: the grid is the only place all ten
+ * are seen together, and a reader picking from it is looking for the one they
+ * used last, which they remember as a colour before they remember as a name.
+ */
+export type Tone =
+  | 'green' | 'blue' | 'purple' | 'rose' | 'amber'
+  | 'indigo' | 'teal' | 'violet' | 'cyan' | 'slate';
+
+export type IconName =
+  | 'leaf' | 'bolt' | 'rocket' | 'target' | 'sun'
+  | 'star' | 'book' | 'atom' | 'clock' | 'wave';
+
 export interface Style {
   id: string;
   name: string;
@@ -48,6 +63,10 @@ export interface Style {
   rounds: number;
   /** One short line on the card. The numbers beside it say the rest. */
   who: string;
+  /** Which colour the card is tinted with, and its icon draws in. */
+  tone: Tone;
+  /** Key into ICONS in Styles.tsx. A glyph, so ten cards are scannable. */
+  icon: IconName;
 }
 
 /**
@@ -66,6 +85,8 @@ export const STYLES: Style[] = [
     long: 15,
     rounds: 4,
     who: 'When starting is the hard part.',
+    tone: 'green',
+    icon: 'leaf',
   },
   {
     id: 'short-burst',
@@ -75,6 +96,8 @@ export const STYLES: Style[] = [
     long: 10,
     rounds: 4,
     who: 'Drills, flashcards, admin.',
+    tone: 'blue',
+    icon: 'bolt',
   },
   {
     id: 'sprint',
@@ -84,6 +107,8 @@ export const STYLES: Style[] = [
     long: 20,
     rounds: 3,
     who: 'Tiring work, generous breaks.',
+    tone: 'purple',
+    icon: 'rocket',
   },
   {
     id: 'classic',
@@ -93,6 +118,8 @@ export const STYLES: Style[] = [
     long: 15,
     rounds: 4,
     who: 'The default. Start here.',
+    tone: 'rose',
+    icon: 'target',
   },
   {
     id: 'extended',
@@ -102,6 +129,8 @@ export const STYLES: Style[] = [
     long: 20,
     rounds: 4,
     who: 'Room to finish a thought.',
+    tone: 'amber',
+    icon: 'sun',
   },
   {
     id: 'animedoro',
@@ -111,6 +140,8 @@ export const STYLES: Style[] = [
     long: 20,
     rounds: 1,
     who: 'Long evenings, real breaks.',
+    tone: 'indigo',
+    icon: 'star',
   },
   {
     id: 'study-hall',
@@ -120,6 +151,8 @@ export const STYLES: Style[] = [
     long: 30,
     rounds: 2,
     who: 'The length of a school period.',
+    tone: 'teal',
+    icon: 'book',
   },
   {
     id: 'deep-work',
@@ -129,6 +162,8 @@ export const STYLES: Style[] = [
     long: 30,
     rounds: 2,
     who: 'Essays, proofs, code, practice.',
+    tone: 'violet',
+    icon: 'atom',
   },
   {
     id: 'desktime',
@@ -138,6 +173,8 @@ export const STYLES: Style[] = [
     long: 17,
     rounds: 1,
     who: 'The 52/17 ratio, from the study.',
+    tone: 'cyan',
+    icon: 'clock',
   },
   {
     id: 'ultradian',
@@ -147,6 +184,8 @@ export const STYLES: Style[] = [
     long: 20,
     rounds: 1,
     who: 'One full attention cycle.',
+    tone: 'slate',
+    icon: 'wave',
   },
 ];
 
@@ -270,3 +309,57 @@ export const NEARBY: Record<Sitting, string[]> = {
   medium: ['classic', 'extended', 'animedoro'],
   long: ['study-hall', 'deep-work', 'ultradian'],
 };
+
+// --------------------------------------------------------------------------
+// Intensity
+// --------------------------------------------------------------------------
+/**
+ * How much you are going for today, as a level.
+ *
+ * The second half of the hero's pair: the style says how long one sitting is,
+ * this says how many of them you are aiming at. Together they are the whole of
+ * "pick your focus", and both are real settings rather than flavour — the
+ * target is what `2 / 8 pomodoros` counts against, and it moves the day's
+ * focus goal with it, which is the figure the dashboard and the report card
+ * already read.
+ *
+ * ## What a level deliberately does not do
+ *
+ * It does not multiply XP. A level that paid 20% more for the same finished
+ * task would make the ledger a function of a dropdown, and the ledger is what
+ * every analytic in the app counts from — the same reason there is no XP for
+ * running the timer at all. Harder here means *more sittings aimed at*, and
+ * the extra XP that follows is the extra work, counted the ordinary way.
+ */
+export interface Level {
+  id: number;
+  name: string;
+  /** Pomodoros aimed at in a day. */
+  target: number;
+  hint: string;
+}
+
+export const LEVELS: Level[] = [
+  { id: 1, name: 'Level 1 · Easy', target: 2, hint: 'A short sitting to get going.' },
+  { id: 2, name: 'Level 2 · Steady', target: 4, hint: 'A normal working evening.' },
+  { id: 3, name: 'Level 3 · Focused', target: 6, hint: 'A full afternoon of it.' },
+  { id: 4, name: 'Level 4 · Hard', target: 8, hint: 'Longer focus. Bigger rewards.' },
+  { id: 5, name: 'Level 5 · Relentless', target: 10, hint: 'A day given over to the work.' },
+];
+
+export const DEFAULT_LEVEL = 4;
+
+export function levelFor(id: number | null | undefined): Level {
+  return LEVELS.find((level) => level.id === id) ?? LEVELS[DEFAULT_LEVEL - 1]!;
+}
+
+/**
+ * The focus goal a level implies, in hours.
+ *
+ * Its target of sittings times the style's own focus length — so choosing
+ * Ultradian at Level 4 asks for a great deal more of the day than Classic at
+ * Level 4 does, which is true and is the point of choosing both.
+ */
+export function goalHoursFor(level: Level, style: Style): number {
+  return Math.round((level.target * style.focus) / 60 * 2) / 2;
+}

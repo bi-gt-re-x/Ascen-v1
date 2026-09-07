@@ -14,7 +14,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   BY_ID,
+  DEFAULT_LEVEL,
   DEFAULT_STYLE,
+  LEVELS,
+  goalHoursFor,
+  levelFor,
   NEARBY,
   RECOMMENDED,
   STYLES,
@@ -68,6 +72,14 @@ describe('the list', () => {
       expect(style.long).toBeGreaterThanOrEqual(style.rest);
       expect(style.rounds).toBeGreaterThanOrEqual(1);
     }
+  });
+
+  it('gives every style its own colour and glyph', () => {
+    // The grid is the only place all ten are seen together, and it is scanned
+    // by colour before it is read. Two styles sharing a tint is two styles
+    // nobody can tell apart at a glance.
+    expect(new Set(STYLES.map((s) => s.tone)).size).toBe(10);
+    expect(new Set(STYLES.map((s) => s.icon)).size).toBe(10);
   });
 
   it('falls back rather than throwing on an id it does not know', () => {
@@ -194,5 +206,36 @@ describe('what the setup offers', () => {
     const shortest = (ids: string[]) => Math.min(...ids.map((id) => BY_ID[id]!.focus));
     expect(shortest(NEARBY.short)).toBeLessThan(shortest(NEARBY.medium));
     expect(shortest(NEARBY.medium)).toBeLessThan(shortest(NEARBY.long));
+  });
+});
+
+
+describe('intensity', () => {
+  it('offers five levels, harder meaning more sittings', () => {
+    expect(LEVELS).toHaveLength(5);
+    const targets = LEVELS.map((level) => level.target);
+    expect([...targets].sort((a, b) => a - b)).toEqual(targets);
+  });
+
+  it('falls back to the default for an id it does not know', () => {
+    expect(levelFor(99).id).toBe(DEFAULT_LEVEL);
+    expect(levelFor(null).id).toBe(DEFAULT_LEVEL);
+    expect(levelFor(2).id).toBe(2);
+  });
+
+  it('asks for more of the day at a longer style', () => {
+    // The goal is the level's sittings times the style's own length, so the
+    // same level means something different under Classic and Ultradian — which
+    // is the point of choosing both.
+    const level = levelFor(4);
+    expect(goalHoursFor(level, BY_ID.classic!)).toBeLessThan(
+      goalHoursFor(level, BY_ID.ultradian!),
+    );
+  });
+
+  it('turns a level into a plausible number of hours', () => {
+    // Level 4 on Classic is eight 25-minute sittings: 3h20, to the nearest half.
+    expect(goalHoursFor(levelFor(4), BY_ID.classic!)).toBe(3.5);
+    expect(goalHoursFor(levelFor(1), BY_ID.gentle!)).toBe(0.5);
   });
 });
