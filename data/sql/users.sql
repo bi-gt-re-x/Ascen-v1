@@ -13,8 +13,10 @@ CREATE TABLE IF NOT EXISTS users (
     name              TEXT,
     email             TEXT UNIQUE,
 
-    -- pbkdf2 hash. Accounts made before hashing hold a plaintext value here
-    -- and are upgraded on their next successful sign-in.
+    -- pbkdf2 hash, and only ever that: `check_password` in
+    -- backend/tracking/auth.py has no plaintext branch, so a value here that
+    -- is not a hash opens nothing. An empty string is the deliberate way to
+    -- say "no password signs this account in" — see the note above the rows.
     password_hash     TEXT NOT NULL DEFAULT '',
     provider          TEXT CHECK (provider IN ('local', 'google')),
 
@@ -53,9 +55,31 @@ CREATE INDEX IF NOT EXISTS users_verify_token_idx ON users (verify_token)
     WHERE verify_token IS NOT NULL;
 
 -- ---- rows: users ----
-INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1781399054117', 'gayguy', NULL, NULL, 'pbkdf2:sha256:1000000$Mvvru7nu5tlPpx5R$1bb3211089b5bd19bed9ebd7a65922214b3256438012df96c37a9eb9851ab477', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 5343, 10, 160, 0, 0, 1, '2026-07-21', 'newday', '2026-06-13T20:04:14.120090');
-INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1781715970833', 'fettywhopper', NULL, NULL, 'dick', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1782923188347', 'men', NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 4621, 10, 70, 0, 0, 3, '2026-07-23', 'newday', NULL);
-INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1784731823389', 'fatty', NULL, NULL, 't', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-22T09:50:23.389568');
-INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1784926246867', 'dude', NULL, NULL, '2', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 20, 1, 2, NULL, 1, 1, '2026-07-26', 'newday', '2026-07-24T15:50:46.867453');
-INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1785084084815', 'SMYLES', 'Myles Zhang', 'hanwenks@gmail.com', 'pbkdf2:sha256:1000000$eRfYTkavaouvqBY3$a3d9a2f056dbbed56cef0e8a018d5cac4141bb1611f03b62fadf80f5cddf8c2e', 'local', TRUE, NULL, '2026-07-26T11:41:24.815441', '2026-07-26T11:41:31.343809', TRUE, 'light', 200, 180, 2, 3, NULL, 1, 1, '2026-07-26', 'newday', '2026-07-26T11:41:24.815441');
+--
+-- Six demo accounts, and every one of them is furniture: the tasks, goals,
+-- focus days and analytics in the other seed files hang off these usernames,
+-- so the app comes up with something to draw rather than six empty pages.
+--
+-- None of them is a person and none of them can be signed into. That is the
+-- point of the two columns that look empty:
+--
+--   * The names and addresses are example.test placeholders. This file used to
+--     carry a real name, a real e-mail address and the pbkdf2 hash of a real
+--     password, because it was written by exporting a live database — and it
+--     is committed, so that was a person's account details in the repository,
+--     and in every clone of it.
+--
+--   * `password_hash` is '' on all six, which `check_password` answers False
+--     to before it looks at anything. Two of these rows used to hold the
+--     password itself in the clear ('dick', 't'), which the old plaintext
+--     branch accepted: publishing this file published two working logins.
+--
+-- A seeded account that can be signed into is a backdoor with a changelog, so
+-- the rule for anything added here is that it stays furniture: give it data to
+-- make the demo worth looking at, never a credential.
+INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1781399054117', 'demo', 'Demo Account', 'demo@example.test', '', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 5343, 10, 160, 0, 0, 1, '2026-07-21', 'newday', '2026-06-13T20:04:14.120090');
+INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1781715970833', 'riley', 'Riley Quinn', 'riley@example.test', '', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1782923188347', 'avery', 'Avery Stone', 'avery@example.test', '', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 4621, 10, 70, 0, 0, 3, '2026-07-23', 'newday', NULL);
+INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1784731823389', 'casey', 'Casey Brooks', 'casey@example.test', '', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 0, 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-07-22T09:50:23.389568');
+INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1784926246867', 'jordan', 'Jordan Reyes', 'jordan@example.test', '', NULL, NULL, NULL, NULL, NULL, NULL, 'light', NULL, 20, 1, 2, NULL, 1, 1, '2026-07-26', 'newday', '2026-07-24T15:50:46.867453');
+INSERT INTO users (id, username, name, email, password_hash, provider, email_verified, verify_token, verify_sent_at, verified_at, profile_complete, theme, daily_goal, xp, level, tasks_completed, charge, current_streak, best_streak, last_task_date, day_state, created_at) VALUES ('1785084084815', 'morgan', 'Morgan Lee', 'morgan@example.test', '', 'local', TRUE, NULL, '2026-07-26T11:41:24.815441', '2026-07-26T11:41:31.343809', TRUE, 'light', 200, 180, 2, 3, NULL, 1, 1, '2026-07-26', 'newday', '2026-07-26T11:41:24.815441');

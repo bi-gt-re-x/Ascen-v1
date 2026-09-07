@@ -29,15 +29,15 @@ CREATE TABLE IF NOT EXISTS day_focus_notes (
 );
 
 -- ---- rows: focus_days ----
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('gayguy', '2026-07-22', 240, 2.5);
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('gayguy', '2026-07-23', 77, 2);
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('gayguy', '2026-07-24', 2849, 2);
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('men', '2026-07-22', 30245, 12);
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('men', '2026-07-23', 178, 2);
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('men', '2026-07-24', 9, 3.5);
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('dude', '2026-07-25', 438, 12);
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('dude', '2026-07-26', 4, 2);
-INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('SMYLES', '2026-07-26', 118, 2);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('demo', '2026-07-22', 240, 2.5);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('demo', '2026-07-23', 77, 2);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('demo', '2026-07-24', 2849, 2);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('avery', '2026-07-22', 30245, 12);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('avery', '2026-07-23', 178, 2);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('avery', '2026-07-24', 9, 3.5);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('jordan', '2026-07-25', 438, 12);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('jordan', '2026-07-26', 4, 2);
+INSERT INTO focus_days (user_id, date, seconds, goal_hours) VALUES ('morgan', '2026-07-26', 118, 2);
 
 -- ---- rows: day_focus_notes ----
-INSERT INTO day_focus_notes (user_id, date, text) VALUES ('dude', '2026-07-25', 'gh');
+INSERT INTO day_focus_notes (user_id, date, text) VALUES ('jordan', '2026-07-25', 'gh');

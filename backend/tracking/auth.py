@@ -25,11 +25,13 @@ configured and gains the real thing the moment credentials exist:
     "Continue with Google" button appears and works. Without them the button
     stays hidden rather than showing a control that cannot work.
 
-Accounts live in the users table in users.sql alongside the ones that already
-existed. Those legacy accounts have a plaintext `password_hash` and no e-mail; they keep
-working — sign-in accepts a legacy plaintext match and upgrades it to a real
-hash on the spot, and an account with no `email_verified` field is treated as
-verified so nobody is locked out.
+Accounts live in the users table in users.sql. An account with no
+`email_verified` field predates the e-mail flow and is treated as verified, so
+nobody is locked out by a column that did not exist when they signed up.
+
+Passwords are pbkdf2 hashes and nothing else: `check_password` has no plaintext
+branch, and the note on it says why that branch could not survive the app being
+reachable from anywhere but this machine.
 
 This module holds the rules only. The HTTP endpoints are in
 backend/routes/auth.py.
@@ -114,21 +116,37 @@ def _is_hashed(value):
 
 
 def check_password(user, password):
-    """True when `password` opens this account.
+    """True when `password` opens this account. Hashes only.
 
-    Accounts made before this module stored the password in the clear; those
-    still match, and the caller upgrades them to a hash on a successful
-    sign-in.
+    ## Why there is no plaintext branch any more
+
+    Accounts made before this module stored the password in the clear, and this
+    function used to end `return stored == password` so those kept working,
+    upgrading themselves to a hash on the next successful sign-in. That was a
+    reasonable bargain while the app ran on one laptop and the only rows it
+    could match were the author's own.
+
+    It is not one for anything reachable from the internet. The branch means
+    the column is trusted to say what it holds: any row whose `password_hash`
+    is not recognisably a hash is compared literally, so a value that arrives
+    there by any route — a seed file, an import, a restore, a bad migration —
+    becomes a working password that is *also* readable by anyone who can see
+    the row. data/sql/users.sql shipped exactly that: two accounts whose stored
+    value was the password, in a file in the repository.
+
+    So a stored value that is not a hash now opens nothing. The accounts that
+    branch existed for are gone from the seed (see the note in users.sql), and
+    an account that somehow still holds one is locked rather than guessable —
+    it can be recovered through the e-mail flow, which is the path a forgotten
+    password is supposed to take.
     """
     stored = user.get('password_hash') or ''
-    if not stored:
+    if not stored or not _is_hashed(stored):
         return False
-    if _is_hashed(stored):
-        try:
-            return check_password_hash(stored, password)
-        except (ValueError, TypeError):
-            return False
-    return stored == password
+    try:
+        return check_password_hash(stored, password)
+    except (ValueError, TypeError):
+        return False
 
 
 def hash_password(password):

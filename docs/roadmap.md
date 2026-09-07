@@ -38,12 +38,14 @@ only two SQL-running functions are `read_table` and `write_table`. What is left
 is putting the server-only types back in `data/sql/` and pointing those two
 functions at a connection pool; the steps are in [database.md](database.md).
 
-**Hash the remaining plaintext passwords.** Legacy accounts upgrade themselves
-on their next sign-in; the ones that never sign in stay plaintext.
+**~~Hash the remaining plaintext passwords.~~** Done, by removing the branch
+that read them: `check_password` accepts hashes only, and the seeded accounts
+that held plaintext values now hold `''`, which opens nothing.
 
-**Rotate `SECRET_KEY` out of the default.** It falls back to a hard-coded dev
-value when the environment doesn't set one, which is fine locally and not
-anywhere else.
+**~~Rotate `SECRET_KEY` out of the default.~~** Done — there is no literal
+fallback left; an unset `SECRET_KEY` generates a per-machine key into a
+git-ignored file. Deployments must still set it explicitly, and
+`backend/config/settings.py` says why.
 
 ## Later
 

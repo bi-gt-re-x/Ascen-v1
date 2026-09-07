@@ -259,6 +259,58 @@ ADDED_TABLES = ('''
 ''')
 
 
+# Tables whose *constraints* changed, and the DDL to rebuild them with.
+#
+# ADDED_COLUMNS and ADDED_TABLES are additive and can afford to be: adding a
+# column or a table cannot invalidate a row that is already there. A CHECK
+# constraint is the one shape change that is not additive and still has to
+# happen, because SQLite cannot alter one in place — the table has to be built
+# again beside the old one, copied into, and swapped.
+#
+# That makes this the sharpest tool in the file, so it is deliberately narrow:
+#
+#   * `test` is what decides whether a rebuild is needed at all. It is asked of
+#     the table's stored DDL, so the question is "is this database already the
+#     new shape?" rather than "have I run this before?" — there is no flag to
+#     get wrong, and running it twice is a no-op exactly as the lists above are.
+#   * `columns` is written out rather than taken as `SELECT *`, so a rebuild
+#     copies the columns this code knows about and fails loudly rather than
+#     silently reordering if the table drifts.
+#   * Only a *widening* belongs here. Narrowing a CHECK would delete the rows
+#     that no longer pass, which is the data loss ADDED_COLUMNS refuses to
+#     carry, and no entry may do it.
+REBUILT_TABLES = (
+    {
+        # The grade CHECK that did not know about 'A+'. See the note in
+        # data/sql/analytics.sql: the band has existed in GRADE_BANDS for as
+        # long as the scorer has, and every account that scored 96-99 on a
+        # metric got a 500 out of /api/get_growth_ratings instead of a report
+        # card. Widening the list is the whole fix; nothing else about the
+        # table changes.
+        'table': 'metric_snapshots',
+        'test': lambda ddl: "'A+'" in ddl,
+        'columns': ('user_id', 'date', 'metric', 'score', 'grade', 'detail'),
+        'create': '''
+            CREATE TABLE metric_snapshots (
+                user_id  TEXT NOT NULL REFERENCES users (username) ON DELETE CASCADE,
+                date     TEXT NOT NULL,
+                metric   TEXT NOT NULL CHECK (metric IN ('productivity', 'quality',
+                                                         'consistency', 'efficiency',
+                                                         'focus', 'overall')),
+                score    INTEGER NOT NULL CHECK (score BETWEEN 0 AND 100),
+                grade    TEXT NOT NULL CHECK (grade IN ('S', 'A+', 'A', 'B', 'C', 'D', 'F')),
+                detail   TEXT DEFAULT '{}',
+                PRIMARY KEY (user_id, date, metric)
+            )
+        ''',
+        'indexes': ('''
+            CREATE INDEX IF NOT EXISTS metric_snapshots_user_metric_idx
+                ON metric_snapshots (user_id, metric, date DESC)
+        ''',),
+    },
+)
+
+
 # --------------------------------------------------------------------------
 # The connection
 # --------------------------------------------------------------------------
@@ -280,11 +332,42 @@ def _build(path):
         con.close()
 
 
+def _rebuild_table(con, spec):
+    """Rebuild one table under a widened constraint, keeping every row.
+
+    A no-op unless `test` says the stored DDL is still the old shape, so this
+    runs on every start and does nothing on all but the first.
+    """
+    row = con.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (spec['table'],)).fetchone()
+    # No such table: a database built before this part of the app existed.
+    # ADDED_TABLES' problem, not this one's.
+    if not row or not row[0] or spec['test'](row[0]):
+        return False
+
+    table = spec['table']
+    columns = ', '.join('"{}"'.format(name) for name in spec['columns'])
+    # Foreign keys are off on this connection (only `connect` turns them on),
+    # which is what the swap below needs: the table is dropped while other
+    # tables still reference it.
+    con.execute('ALTER TABLE "{}" RENAME TO "{}__old"'.format(table, table))
+    con.execute(spec['create'])
+    con.execute('INSERT INTO "{}" ({}) SELECT {} FROM "{}__old"'.format(
+        table, columns, columns, table))
+    con.execute('DROP TABLE "{}__old"'.format(table))
+    # The old table's indexes went with it; the new one's are named the same.
+    for statement in spec.get('indexes', ()):
+        con.execute(statement)
+    return True
+
+
 def _catch_up(path):
     """Bring an existing database up to the shape the app expects.
 
-    Tables first, then columns: a column cannot be added to a table that is not
-    there, and the tables here are new ones rather than new shapes of old ones.
+    Tables first, then columns, then the constraint rebuilds: a column cannot
+    be added to a table that is not there, and a rebuild has to copy the
+    columns the two lists above have already put in place.
     """
     con = sqlite3.connect(path)
     try:
@@ -299,6 +382,8 @@ def _catch_up(path):
                 continue
             con.execute('ALTER TABLE "{}" ADD COLUMN "{}" {}'.format(
                 table, column, sql_type))
+        for spec in REBUILT_TABLES:
+            _rebuild_table(con, spec)
         con.commit()
     finally:
         con.close()

@@ -91,9 +91,11 @@ millisecond can no longer share one.
 the account so a page renders without recomputing, and is recalculated from the
 total on every completion.
 
-**Older passwords are plaintext.** Accounts predating hashing hold a plaintext
-`password_hash`; sign-in accepts them and rewrites the field as a pbkdf2 hash
-the first time each is used.
+**Passwords are hashes, and only hashes.** `check_password` has no plaintext
+branch: a `password_hash` that is not recognisably a hash opens nothing. The
+branch that accepted legacy plaintext values — and rewrote them on first
+sign-in — is gone, because it made the column trusted to say what it held, and
+`data/sql/users.sql` shipped two rows where it held the password itself.
 
 ## Starting over
 

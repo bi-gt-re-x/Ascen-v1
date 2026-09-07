@@ -81,10 +81,10 @@ def _home(**params):
 def login(request: Request, body: Login):
     """Sign in with a username or an e-mail address.
 
-    Accounts made before the e-mail flow stored their password in the clear;
-    those still open, and a successful sign-in quietly replaces the stored
-    value with a real hash, so each account upgrades itself the first time it
-    is used.
+    Passwords are checked against a hash and nothing else. This used to carry
+    the other half of the legacy-plaintext bargain — match the stored value
+    literally, then quietly rewrite it as a hash — and both halves are gone
+    together; see `check_password` in backend/tracking/auth.py for why.
     """
     identifier = str(body.username or body.email or '').strip()
     password = str(body.password or '')
@@ -98,11 +98,6 @@ def login(request: Request, body: Login):
     if not auth.is_verified(user):
         return fail('Confirm your e-mail first — check your inbox.',
                     unverified=True, email=user.get('email'))
-
-    # Upgrade a legacy plaintext password now that we have seen it.
-    if user.get('password_hash') == password:
-        user['password_hash'] = auth.hash_password(password)
-        db.save_user(user)
 
     payload = auth.sign_in(request, user)
     return _with_theme(ok(

@@ -165,3 +165,52 @@ def test_a_busy_account_does_not_read_as_a_failing_one(client):
     result = card(client)['overall']
     assert result['grade'] not in ('F', 'D'), result
     assert result['score'] >= 70, result
+
+
+# --------------------------------------------------------------------------
+def test_every_grade_the_scorer_can_produce_can_be_stored(client):
+    """The bug: 'A+' was a grade the table would not hold.
+
+    `GRADE_BANDS` has returned 'A+' for the 96-99 band for as long as the
+    scorer has existed, and `metric_snapshots.grade` allowed six letters that
+    did not include it. `save_snapshot` writes a row per metric on every read
+    of the card, so a single metric landing in that band raised IntegrityError
+    and /api/get_growth_ratings answered 500 — to exactly the accounts scoring
+    best on something.
+
+    This asserts the two lists against each other rather than re-testing one
+    band, because the failure was a disagreement between them: any future
+    letter added to the scorer is caught here on the day it is added, instead
+    of on the day somebody earns it.
+    """
+    for score in range(0, 101):
+        letter = analytics.grade_for_score(score)
+        db.write_table('metric_snapshots', [{
+            'user_id': 'tester', 'date': '2026-01-01', 'metric': 'overall',
+            'score': score, 'grade': letter, 'detail': {},
+        }])
+        stored = db.rows_for('metric_snapshots', 'tester')
+        assert stored[-1]['grade'] == letter, (score, letter)
+
+
+def test_a_top_band_snapshot_can_be_written(client):
+    """The same bug at the line that raised it.
+
+    `save_snapshot` writes one row per metric on every read of the card, so it
+    is the call that turned a 96-99 score into an IntegrityError and a 500.
+    The band is forced here rather than worked toward with seeded tasks: the
+    five metrics are computed, and a test that hoped one of them would land
+    between 96 and 99 would pass for the wrong reason on most runs — which is
+    exactly what the first version of this test did.
+    """
+    rows = [{
+        'user_id': 'tester', 'date': '2026-01-01', 'metric': metric,
+        'score': 97, 'grade': analytics.grade_for_score(97), 'detail': {},
+    } for metric in ('productivity', 'quality', 'consistency', 'efficiency',
+                     'focus', 'overall')]
+
+    db.save_metric_snapshots(rows)
+
+    stored = analytics.history('tester', metric='overall')
+    assert stored[-1]['grade'] == 'A+', stored[-1]
+    assert client.get('/api/get_growth_ratings').status_code == 200
