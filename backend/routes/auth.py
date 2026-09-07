@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from backend.api.reply import fail, ok
+from backend.config import settings
 from backend.config.settings import THEME_COOKIE_MAX_AGE
 from backend.database import connection as db
 from backend.tracking import auth, avatar
@@ -192,9 +193,27 @@ def signup(request: Request, body: Signup):
     request.session['pending_user'] = user['username']
 
     sent, link = auth.send_verification(user, request)
-    return ok(email=email, sent=sent,
-              dev_link=None if sent else link,
-              message='Check your inbox to confirm {}.'.format(email))
+    reply = _verification_reply(sent, link, email=email)
+    return ok(**reply, message=(
+        'Check your inbox to confirm {}.'.format(email) if reply['sent'] or reply['dev_link']
+        else 'Your account is made, but the confirmation e-mail could not be '
+             'sent. Try "Send it again" in a moment.'))
+
+
+def _verification_reply(sent, link, **extra):
+    """The half of a verification response that depends on where it ran.
+
+    The link only ever goes back to the caller in development — see `dev_mode`
+    in backend/config/settings.py for why this is asked directly rather than
+    inferred from the send having failed. Everywhere else a failure to send is
+    reported as one, because the alternative is a reader watching an inbox
+    nothing is coming to.
+    """
+    if sent:
+        return dict(extra, sent=True, dev_link=None)
+    if settings.dev_mode():
+        return dict(extra, sent=False, dev_link=link)
+    return dict(extra, sent=False, dev_link=None, mail_failed=True)
 
 
 @router.post('/api/auth/resend')
@@ -211,8 +230,11 @@ def resend(request: Request, body: Resend):
     auth.new_verify_token(user)
     db.save_user(user)
     sent, link = auth.send_verification(user, request)
-    return ok(sent=sent, dev_link=None if sent else link,
-              message='Sent again to {}.'.format(user.get('email')))
+    reply = _verification_reply(sent, link)
+    return ok(**reply, message=(
+        'Sent again to {}.'.format(user.get('email'))
+        if reply['sent'] or reply['dev_link']
+        else 'That still did not send. Try again in a few minutes.'))
 
 
 @router.get('/verify/{token}')

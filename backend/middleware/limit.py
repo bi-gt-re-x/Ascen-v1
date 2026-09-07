@@ -38,9 +38,24 @@ per-account budget is generous enough that a real person sharing an office
 network never reaches it, and tight enough to make a slow distributed guessing
 run take months.
 
-**Only failures count.** A successful sign-in clears both counters, so somebody
-who typed their password wrong twice and then got it right starts fresh, and a
-long-lived session refreshing pages is never throttled at all.
+**On the credential endpoints, only failures count.** A successful sign-in
+clears both counters, so somebody who typed their password wrong twice and then
+got it right starts fresh, and a long-lived session refreshing pages is never
+throttled at all.
+
+## The money endpoints are the other way round
+
+The three `suggest_*` paths are not a way in and are not guessed at; they are a
+way to spend somebody else's Anthropic key, and their cost lands when they
+*work*. Charging them as failures did not limit them — it un-limited them,
+because the middleware clears a key on success, so every working request wiped
+the budget it had just spent and a loop of them never reached a limit.
+
+They are `charge=CALLS`: every request counts, nothing clears. And they are
+keyed per **account** rather than only per address, because the account is what
+spends the money — a shared school network is one address for hundreds of
+readers, and a phone is a new address every hour. The per-IP budget stays as a
+much larger backstop against one host working through a pile of accounts.
 
 ## What this is not
 
@@ -64,16 +79,54 @@ from starlette.responses import JSONResponse, Response
 from backend.config import settings
 
 
+#: What a request costs against its budget.
+#:
+#: `FAILURES` is the guessing case and the original one: only a refused attempt
+#: is counted, and a success clears the counter, so the budget is *consecutive
+#: failures* and somebody who mistypes twice and then signs in is never
+#: throttled.
+#:
+#: `CALLS` is the opposite, and the endpoints that spend money need it. Their
+#: cost is on the way *out*, not on a refusal — a successful draft is the one
+#: that bills Anthropic. Counted as failures, they were not limited at all:
+#: every successful call cleared the budget it had just spent, so a loop of
+#: working requests never reached the limit. Under CALLS every request counts
+#: and nothing clears.
+FAILURES = 'failures'
+CALLS = 'calls'
+
+
 class Policy:
     """How many attempts, over how long, and what to say when they run out."""
 
-    def __init__(self, limit, seconds, message, by_ip=True, by_identity=None):
+    def __init__(self, limit, seconds, message, by_ip=True, by_identity=None,
+                 by_account=False, charge=FAILURES, ip_limit=None):
         self.limit = limit
         self.seconds = seconds
         self.message = message
         self.by_ip = by_ip
         #: Field in the JSON body to key a second, per-subject budget on.
         self.by_identity = by_identity
+        #: Key a budget on the signed-in account, read from the session.
+        #:
+        #: Not from the body. `username` is a field the client still sends and
+        #: the server deliberately drops (see backend/api/guard.py), so keying
+        #: on it would let a caller spell a new account each request and hold a
+        #: fresh budget every time. The session is the only thing on a request
+        #: that says who is asking and cannot be chosen by whoever asks.
+        self.by_account = by_account
+        #: FAILURES or CALLS. See the note above.
+        self.charge = charge
+        #: A separate budget for the per-IP key, when one address should be
+        #: allowed more than one account is.
+        #:
+        #: This is for the endpoints metered per account. There, the account is
+        #: the real limit and the address is a backstop: it stops one host
+        #: burning the key through a pile of accounts, and it must not be the
+        #: number that a shared network reaches first. A school is one address
+        #: for hundreds of readers, so an IP budget equal to one reader's is a
+        #: limit on the school, which is the bug rather than the feature.
+        self.ip_limit = ip_limit
 
 
 #: Path -> policy. The whole answer to what is throttled.
@@ -96,8 +149,24 @@ LIMITS = {
         limit=5, seconds=3600,
         message='Too many e-mails requested. Check your inbox, then try again.',
         by_identity='email'),
+    # --- the three that spend money -------------------------------------
+    #
+    # All three are `charge=CALLS` and keyed per account as well as per IP.
+    #
+    # CALLS because their cost lands on success. As failures they were not
+    # limited at all: the middleware clears a key when a request works, so a
+    # loop of *successful* drafts cleared its own budget every time round and
+    # the limit below was never reached by the only traffic that bills
+    # anything.
+    #
+    # Per account because per IP is the wrong unit for a signed-in endpoint. A
+    # shared network — a school, which is who this app is for — is one key for
+    # everybody on it, so one person planning an afternoon of goals locks out
+    # the rest; and one person on a phone is a new key every time the network
+    # hands them a different address. The account is the thing actually
+    # spending the money, so it is the thing to meter.
     '/api/suggest_milestones': Policy(
-        limit=20, seconds=3600,
+        limit=20, seconds=3600, by_account=True, charge=CALLS, ip_limit=200,
         message='Too many suggestions for now. Try again in a little while.'),
     # The same money, and now spent without anybody pressing anything: a
     # checkpoint drafts its checklist as it is created, so this is reached by
@@ -105,8 +174,20 @@ LIMITS = {
     # because there are five checkpoints under every goal and each one asks
     # once — twenty would stop a single afternoon's planning.
     '/api/suggest_steps': Policy(
-        limit=60, seconds=3600,
+        limit=60, seconds=3600, by_account=True, charge=CALLS, ip_limit=600,
         message='Too many checklists drafted for now. Try again in a little while.'),
+    # Missed when it was written, and the most expensive of the three: it is
+    # the only one that asks for Opus (MODEL_DEFAULT in
+    # backend/tracking/subject_goal.py) rather than Sonnet. It had no line
+    # here at all, so it was not metered in any direction — an account could
+    # hold the button down and bill the key for as long as it liked.
+    #
+    # Lower than the other two because it is one draft per subject rather than
+    # one per checkpoint: a reader with a dozen subjects who redrafts each of
+    # them twice is still inside it.
+    '/api/suggest_subject_goal': Policy(
+        limit=30, seconds=3600, by_account=True, charge=CALLS, ip_limit=300,
+        message='Too many goals drafted for now. Try again in a little while.'),
 }
 
 #: The per-account budget for login, which is looser than the per-IP one — see
@@ -230,6 +311,21 @@ def _identity_of(body, field):
     return str(value).strip().lower()
 
 
+def _account_of(request):
+    """The signed-in account this request belongs to, or ''.
+
+    Read straight off the session, which is a signed cookie the caller cannot
+    forge — the same source backend/api/guard.py uses to decide whose data an
+    endpoint touches.
+    """
+    try:
+        return str(request.session.get('username') or '').strip().lower()
+    except (AssertionError, KeyError, AttributeError):
+        # No SessionMiddleware on this request (a unit test building the app
+        # without it). No account, rather than an exception out of middleware.
+        return ''
+
+
 async def throttle(request, call_next):
     """Count failures on the paths in LIMITS, and refuse once they run out.
 
@@ -267,12 +363,17 @@ async def throttle(request, call_next):
     keys = []
     if policy.by_ip:
         keys.append(('{}|ip|{}'.format(request.url.path, client_ip(request)),
-                     policy.limit))
+                     policy.ip_limit or policy.limit))
     if policy.by_identity:
         who = _identity_of(body, policy.by_identity)
         if who:
             keys.append(('{}|who|{}'.format(request.url.path, who),
                          policy.limit * IDENTITY_MULTIPLIER))
+    if policy.by_account:
+        account = _account_of(request)
+        if account:
+            keys.append(('{}|acct|{}'.format(request.url.path, account),
+                         policy.limit))
 
     for key, limit in keys:
         allowed, retry_after = attempts.check(key, limit, policy.seconds)
@@ -295,7 +396,13 @@ async def throttle(request, call_next):
         media_type=response.media_type,
     )
 
-    if _failed(response.status_code, body_bytes):
+    if policy.charge == CALLS:
+        # The request itself is the cost, so it counts however it turned out
+        # and nothing clears. See the note on CALLS: charging these as failures
+        # meant every successful call wiped the budget it had just spent.
+        for key, _ in keys:
+            attempts.record(key, policy.seconds)
+    elif _failed(response.status_code, body_bytes):
         for key, _ in keys:
             attempts.record(key, policy.seconds)
     else:

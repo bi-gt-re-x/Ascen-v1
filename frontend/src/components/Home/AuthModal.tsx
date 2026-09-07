@@ -106,6 +106,9 @@ export function AuthModal({
   const [google, setGoogle] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
   const [devLink, setDevLink] = useState<string | null>(null);
+  /* The mail did not go out and there is no link to offer instead — so the
+     inbox screen must not tell somebody to go and watch an empty inbox. */
+  const [mailFailed, setMailFailed] = useState(false);
   const [chosenTheme, setChosenTheme] = useState<Theme>('light');
   const [chosenGoal, setChosenGoal] = useState(100);
   const [password, setPassword] = useState('');
@@ -250,6 +253,7 @@ export function AuthModal({
       }
       setPendingEmail(result.email || email);
       setDevLink(result.dev_link);
+      setMailFailed(Boolean(result.mail_failed));
       go('inbox');
     } catch {
       say('Could not reach the server.');
@@ -261,7 +265,8 @@ export function AuthModal({
     try {
       const result = await authService.resendVerification(pendingEmail);
       setDevLink(result.success ? result.dev_link : null);
-      say(result.message || '', result.success ? 'info' : 'error');
+      setMailFailed(Boolean(result.success && result.mail_failed));
+      say(result.message || '', result.success && !result.mail_failed ? 'info' : 'error');
     } catch {
       say('Could not reach the server.');
     }
@@ -441,9 +446,19 @@ export function AuthModal({
         <section className={`auth-step${step === 'inbox' ? '' : ' hidden'}`} data-step="inbox">
           <div className="auth-inbox-mark">✉</div>
           <p className="auth-inbox-text">
-            We sent a verification link to{' '}
-            <strong id="inboxEmail">{pendingEmail || 'your e-mail'}</strong>. Open it to
-            confirm your address.
+            {mailFailed ? (
+              <>
+                Your account is made, but the confirmation e-mail to{' '}
+                <strong id="inboxEmail">{pendingEmail || 'your e-mail'}</strong> could not
+                be sent. Nothing is coming yet — try again in a moment.
+              </>
+            ) : (
+              <>
+                We sent a verification link to{' '}
+                <strong id="inboxEmail">{pendingEmail || 'your e-mail'}</strong>. Open it to
+                confirm your address.
+              </>
+            )}
           </p>
           {/* With no mail server configured the link has nowhere to go, so the
               popup shows it directly — the flow stays walkable end to end on a

@@ -46,12 +46,21 @@ def main():
     would have handed the insecure default to every deployment that imported
     the app — the opposite of what it is for.
 
-    An explicit ASCEN_INSECURE_COOKIES in the environment still wins, so this
-    only fills in a default.
+    ASCEN_DEV is set here for the same reason and with the same reasoning. It
+    is what lets the sign-up popup show the verification link when there is no
+    mail server, so the accounts flow can be walked in a fresh clone — and it
+    is a secret handed to whoever asked, so it belongs to the development
+    server and to nothing else. A deployment imports `backend.run:app` and
+    never reaches this function, so it does not get it. See `dev_mode` in
+    config/settings.py.
+
+    An explicit value in the environment still wins for both, so this only
+    fills in defaults.
     """
     import uvicorn
 
     os.environ.setdefault('ASCEN_INSECURE_COOKIES', '1')
+    os.environ.setdefault('ASCEN_DEV', '1')
 
     uvicorn.run('backend.run:app',
                 host='127.0.0.1',

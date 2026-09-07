@@ -144,6 +144,37 @@ def secure_cookies():
         '1', 'true', 'yes', 'on')
 
 
+def dev_mode():
+    """Whether this process may hand secrets to its own client.
+
+    Off unless `ASCEN_DEV` says otherwise, and like `secure_cookies` the
+    default is the half that matters.
+
+    ## What it gates
+
+    The verification link. With no mail server configured, `send_verification`
+    cannot send anything, so the sign-up popup used to print the link itself —
+    which is what keeps the flow walkable in a fresh clone with no SMTP
+    account, and it is a good reason.
+
+    It was gated on whether the mail went out, and that is the wrong question.
+    It reads as "am I in development?" and it is not: an install that is
+    deployed without MAIL_USERNAME answers it exactly the same way, and so does
+    a *configured* one for as long as its mail server is refusing connections.
+    Either way the server hands the caller a token confirming an address they
+    have not proven they own — so anybody could sign up as anybody and verify
+    it on the spot, and a transient SMTP outage was enough to open it on an
+    install that had been correct the day before.
+
+    So the question is asked directly. `run.py` sets this for a local run, for
+    the same reason it sets the cookie flag and in the same place; nothing
+    deployed should, and a deployment that loses its mail server now fails to
+    send a link rather than giving it away.
+    """
+    return os.environ.get('ASCEN_DEV', '').strip().lower() in (
+        '1', 'true', 'yes', 'on')
+
+
 def secret_key():
     """What the session cookie is signed with.
 

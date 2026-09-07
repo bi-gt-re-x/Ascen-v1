@@ -206,18 +206,109 @@ def test_every_credential_endpoint_is_limited(app):
         'these accept credentials and have no rate limit: %s' % missing)
 
 
-def test_the_ai_endpoint_is_limited(app):
-    """It spends money at Anthropic on every call. See LIMITS."""
-    assert '/api/suggest_milestones' in limit.LIMITS
+def test_every_model_endpoint_is_limited(app):
+    """Every path that asks a model for something has a policy, and the right
+    shape of one.
 
+    This used to be two tests naming two paths, which is how
+    /api/suggest_subject_goal came to have no limit at all: it was written
+    later, it asks for Opus rather than Sonnet, and nothing here was looking
+    for it. So this walks the routes, like the credential test above.
 
-def test_the_other_ai_endpoint_is_limited(app):
-    """Same money, and reached without anybody pressing a button.
+    The shape is asserted as well as the presence, because a policy with the
+    wrong one does not limit these:
 
-    A checkpoint drafts its own checklist as it is created, so this one is
-    spent by ordinary use rather than by a button somebody chose to press.
+      * `charge=CALLS`, since their cost lands on success. Under the default
+        every working call clears the budget it just spent.
+      * `by_account`, since the account is what spends the money. Per address
+        alone meters a whole school as one reader.
     """
-    assert '/api/suggest_steps' in limit.LIMITS
+    spenders = []
+    for route in app.routes:
+        path = getattr(route, 'path', '')
+        methods = getattr(route, 'methods', set()) or set()
+        if 'POST' in methods and 'suggest' in path:
+            spenders.append(path)
+
+    assert spenders, 'no model endpoints found — have they been renamed?'
+
+    missing = [p for p in spenders if p not in limit.LIMITS]
+    assert missing == [], 'these spend money and have no rate limit: %s' % missing
+
+    for path in spenders:
+        policy = limit.LIMITS[path]
+        assert policy.charge == limit.CALLS, path
+        assert policy.by_account, path
+        # The address budget is a backstop, not the limit a shared network
+        # reaches first.
+        assert (policy.ip_limit or policy.limit) > policy.limit, path
+
+
+def test_a_paid_call_is_counted_even_when_it_works(app, monkeypatch):
+    """The bug: success cleared the budget it had just spent.
+
+    `/api/set_theme` stands in for a model endpoint here — it is a POST that
+    succeeds — so the middleware's counting can be tested without asking
+    Anthropic for anything. Under the old default these ten calls would each
+    clear the counter and the eleventh would sail through.
+    """
+    monkeypatch.setitem(limit.LIMITS, '/api/set_theme', limit.Policy(
+        limit=3, seconds=3600, charge=limit.CALLS, by_account=True,
+        message='Enough.'))
+    client = sign_in(app, make_account('spender'))
+
+    for attempt in range(3):
+        reply = client.post('/api/set_theme', json={'theme': 'dark'})
+        assert reply.json().get('success'), (attempt, reply.json())
+
+    refused = client.post('/api/set_theme', json={'theme': 'dark'})
+    assert refused.status_code == 429, refused.json()
+
+
+def test_a_failed_call_still_clears_on_the_credential_endpoints(app):
+    """The other mode is untouched: FAILURES still forgives a success."""
+    assert limit.LIMITS['/api/login'].charge == limit.FAILURES
+
+
+def test_two_accounts_on_one_address_have_their_own_budgets(app, monkeypatch):
+    """Why the account is keyed at all.
+
+    A school is one address. If the address were the only key, the first
+    reader to plan an afternoon of goals would spend everybody's budget.
+    """
+    monkeypatch.setitem(limit.LIMITS, '/api/set_theme', limit.Policy(
+        limit=2, seconds=3600, charge=limit.CALLS, by_account=True,
+        ip_limit=100, message='Enough.'))
+
+    first = sign_in(app, make_account('classmate_one'))
+    second = sign_in(app, make_account('classmate_two'))
+
+    for _ in range(2):
+        assert first.post('/api/set_theme', json={'theme': 'dark'}).json()['success']
+    assert first.post('/api/set_theme', json={'theme': 'dark'}).status_code == 429
+
+    # The second reader has not spent anything, and shares the address.
+    assert second.post('/api/set_theme', json={'theme': 'dark'}).json()['success']
+
+
+def test_the_account_key_comes_from_the_session_not_the_body(app, monkeypatch):
+    """A caller cannot buy a fresh budget by naming a different account.
+
+    `username` is still in the bodies the client sends and is dropped by the
+    server (backend/api/guard.py). If the limiter read it instead of the
+    session, spelling a new one each request would be a way round the meter.
+    """
+    monkeypatch.setitem(limit.LIMITS, '/api/set_theme', limit.Policy(
+        limit=2, seconds=3600, charge=limit.CALLS, by_account=True,
+        ip_limit=100, message='Enough.'))
+    client = sign_in(app, make_account('honest'))
+
+    for _ in range(2):
+        client.post('/api/set_theme', json={'theme': 'dark'})
+
+    refused = client.post('/api/set_theme',
+                          json={'theme': 'dark', 'username': 'somebody_else'})
+    assert refused.status_code == 429, refused.json()
 
 
 def test_signup_is_limited(app, anon):
@@ -286,3 +377,68 @@ def test_the_dev_flag_is_the_only_way_to_turn_that_off(fresh_db, monkeypatch):
     session = [c for c in cookies if c.startswith('session=')]
     assert session
     assert 'secure' not in session[0]
+
+
+# --------------------------------------------------------------------------
+# The verification link, and who is allowed to see it
+# --------------------------------------------------------------------------
+def _signup(monkeypatch, dev, email='newcomer@example.test'):
+    """Sign up with no mail server configured, under a given ASCEN_DEV."""
+    from backend.main import create_app
+
+    # No mail server: this is the state that used to hand the link back, and
+    # it is also what a deployment looks like when its SMTP is misconfigured.
+    monkeypatch.delenv('MAIL_USERNAME', raising=False)
+    monkeypatch.delenv('MAIL_PASSWORD', raising=False)
+    if dev is None:
+        monkeypatch.delenv('ASCEN_DEV', raising=False)
+    else:
+        monkeypatch.setenv('ASCEN_DEV', dev)
+
+    client = TestClient(create_app())
+    return client.post('/api/auth/signup', json={
+        'name': 'A Newcomer', 'email': email, 'password': 'Testpass123!',
+    }).json()
+
+
+def test_the_verification_link_is_not_handed_to_the_caller_by_default(
+        fresh_db, monkeypatch):
+    """The bug: signing up as somebody else, and confirming it yourself.
+
+    With no mail server the popup used to print the link so the flow stayed
+    walkable — gated on whether the send succeeded, which is *also* true of a
+    deployed install with no SMTP, and of a configured one whose mail server
+    is refusing connections. Either way the server handed the caller a token
+    confirming an address they had not proven they own.
+    """
+    reply = _signup(monkeypatch, None)
+    assert reply['success'] is True
+    assert reply['dev_link'] is None, reply
+    assert reply['sent'] is False
+    # And it says so, rather than sending the reader to watch an empty inbox.
+    assert reply.get('mail_failed') is True, reply
+
+
+def test_the_dev_flag_is_the_only_way_to_see_it(fresh_db, monkeypatch):
+    """It still has to work, or the accounts flow cannot be walked locally."""
+    reply = _signup(monkeypatch, '1', email='local@example.test')
+    assert reply['success'] is True
+    assert reply['dev_link'], reply
+    assert '/verify/' in reply['dev_link']
+
+
+def test_a_resend_does_not_leak_it_either(fresh_db, monkeypatch):
+    """The other endpoint that sends the same mail, and the same token."""
+    from backend.main import create_app
+
+    monkeypatch.delenv('MAIL_USERNAME', raising=False)
+    monkeypatch.delenv('MAIL_PASSWORD', raising=False)
+    monkeypatch.delenv('ASCEN_DEV', raising=False)
+
+    client = TestClient(create_app())
+    client.post('/api/auth/signup', json={
+        'name': 'A Newcomer', 'email': 'again@example.test',
+        'password': 'Testpass123!'})
+    reply = client.post('/api/auth/resend', json={'email': 'again@example.test'}).json()
+
+    assert reply['dev_link'] is None, reply
