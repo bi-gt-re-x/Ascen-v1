@@ -54,9 +54,15 @@ describe('the list', () => {
     expect([...lengths].sort((a, b) => a - b)).toEqual(lengths);
   });
 
-  it('describes every style, because the card has a line for it', () => {
+  it('describes every style in one short line', () => {
+    // Capped, not just required. The cards carried three lines of prose each
+    // and the page read as an essay; the numbers are in a bigger typeface than
+    // any sentence, so a description long enough to restate them is one that
+    // will not be read. One line, and the grid stays scannable.
     for (const style of STYLES) {
-      expect(style.who.length).toBeGreaterThan(20);
+      expect(style.who.length).toBeGreaterThan(15);
+      expect(style.who.length).toBeLessThanOrEqual(34);
+      expect(style.who.split(' ').length).toBeLessThanOrEqual(7);
       expect(style.focus).toBeGreaterThan(0);
       expect(style.rest).toBeGreaterThan(0);
       expect(style.long).toBeGreaterThanOrEqual(style.rest);

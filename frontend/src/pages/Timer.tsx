@@ -3,32 +3,32 @@
  *
  * ## Why this is a page and not a bigger Focus panel
  *
- * The dashboard's Focus panel is a stopwatch: it starts, it counts, it stops,
- * and every minute it banks is a minute somebody had to decide to keep sitting
- * for. That is the right control to have beside a task list, and it is the
- * wrong one to be the only one, because the hard part of a long session is not
- * starting it — it is knowing when to stop, and trusting that stopping is part
- * of the plan rather than giving up.
- *
- * A pomodoro answers that by deciding in advance. So this page is the same
- * session with a cycle over it, and it is a page because choosing the cycle,
- * watching it, and reading what it has banked are three things that want room.
+ * The dashboard's Focus panel is a stopwatch: every minute it banks is a minute
+ * somebody had to decide to keep sitting for. That is the right control beside
+ * a task list and the wrong one to be the only one, because the hard part of a
+ * long session is not starting it — it is knowing when to stop, and trusting
+ * that stopping is part of the plan rather than giving up. A pomodoro answers
+ * that by deciding in advance.
  *
  * ## It is the same hours
  *
  * A running focus phase runs the account's focus session, so what happens here
- * lands in the same place a session started from the dashboard does — the
- * Focus card, the calendar, the focus metric on the report card. There is no
- * second ledger and no "timer XP". See hooks/usePomodoro for how the phase
- * drives it.
+ * lands where a session started from the dashboard does — the Focus card, the
+ * calendar, the focus metric. No second ledger. See hooks/usePomodoro.
  *
- * ## The setup asks one question
+ * ## The page says as little as it can
  *
- * How long can you sit? Everything else about these ten styles follows from
- * that, and a second question would be asking somebody to specify something
- * they can only find out by trying it. It runs once, remembers, and stays
- * reachable from the header afterwards — a reader whose answer changes in
- * October should not have to clear their browser storage to say so.
+ * It was wordier: a subtitle, a sentence under the clock, a paragraph under the
+ * stats, a lead over the picker, and three lines of prose on every one of the
+ * ten cards. All of it was true and none of it was being read, because somebody
+ * opening a timer is either about to start or already running and wants one
+ * number either way.
+ *
+ * So the things that can be shown are shown — the ring is the phase and the
+ * progress, the pips are the round, the bar is the day against its goal — and
+ * what is left in words is one line per card. The rule for anything added here
+ * is that a sentence has to earn its place against a shape that could say the
+ * same thing.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth, useDocumentTitle, usePageEntrance } from '@/hooks';
@@ -40,7 +40,6 @@ import {
   SITTINGS,
   STYLES,
   clock,
-  cycleMinutes,
   focusShare,
   styleFor,
   type Phase,
@@ -48,18 +47,10 @@ import {
 } from '@/components/Timer/pomodoro';
 import '@/styles/timer.css';
 
-/** What the phase is called on screen. */
 const PHASE_LABEL: Record<Phase, string> = {
   focus: 'Focus',
   break: 'Break',
   long: 'Long break',
-};
-
-/** One line under the clock, saying what this phase is for. */
-const PHASE_NOTE: Record<Phase, string> = {
-  focus: 'Work on one thing until this runs out.',
-  break: 'Stand up. This one is short on purpose.',
-  long: 'Properly away from it. The next round starts fresh.',
 };
 
 const SETUP_KEY = 'pomodoro:setup';
@@ -96,14 +87,11 @@ function Setup({
   if (!sitting) {
     return (
       <section className="tm-setup" aria-labelledby="tm-setup-q">
-        <p className="tm-step">Setting up · step 1 of 2</p>
-        <h2 id="tm-setup-q">How long can you sit before you need to stop?</h2>
-        <p className="tm-setup-lead">
-          Not how long you wish you could — how long you actually last on a normal
-          day. Every one of these methods is an answer to that, and picking the
-          wrong one is why the famous twenty-five minutes does not work for
-          everybody.
+        <p className="tm-step">
+          <span className="tm-dot is-on" />
+          <span className="tm-dot" />
         </p>
+        <h2 id="tm-setup-q">How long can you sit?</h2>
         <div className="tm-choices">
           {SITTINGS.map((option) => (
             <button
@@ -121,24 +109,21 @@ function Setup({
           ))}
         </div>
         <button type="button" className="tm-link" onClick={onSkip}>
-          Skip — just show me the timer
+          Skip
         </button>
       </section>
     );
   }
 
-  const offered = NEARBY[sitting];
   return (
     <section className="tm-setup" aria-labelledby="tm-setup-q2">
-      <p className="tm-step">Setting up · step 2 of 2</p>
-      <h2 id="tm-setup-q2">Start with this one.</h2>
-      <p className="tm-setup-lead">
-        The middle one is the usual answer for that. The other two are the same
-        idea shorter and longer — you can change it any time, and the picker
-        below the timer has all ten.
+      <p className="tm-step">
+        <span className="tm-dot" />
+        <span className="tm-dot is-on" />
       </p>
+      <h2 id="tm-setup-q2">Start with one of these.</h2>
       <div className="tm-choices">
-        {offered.map((id) => {
+        {NEARBY[sitting].map((id) => {
           const style = styleFor(id);
           return (
             <button
@@ -150,13 +135,9 @@ function Setup({
             >
               <span className="tm-choice-label">
                 {style.name}
-                {RECOMMENDED[sitting] === id && (
-                  <em className="tm-tag">Suggested</em>
-                )}
+                {RECOMMENDED[sitting] === id && <em className="tm-tag">Suggested</em>}
               </span>
-              <span className="tm-choice-nums">
-                {style.focus} min work · {style.rest} min break
-              </span>
+              <Numbers focus={style.focus} rest={style.rest} />
               <span className="tm-choice-hint">{style.who}</span>
             </button>
           );
@@ -172,7 +153,7 @@ function Setup({
           disabled={!chosen}
           onClick={() => chosen && onPick(chosen)}
         >
-          Use {chosen ? styleFor(chosen).name : 'this'}
+          Start
         </button>
       </div>
     </section>
@@ -180,24 +161,74 @@ function Setup({
 }
 
 // --------------------------------------------------------------------------
-// The dial
+// Pieces
 // --------------------------------------------------------------------------
-/** The ring. Stroke-dashoffset against a known circumference, so no layout. */
+/** The two figures that define a style, sized so they read before the name. */
+function Numbers({ focus, rest }: { focus: number; rest: number }) {
+  return (
+    <span className="tm-nums">
+      <span className="tm-num">
+        <b>{focus}</b>
+        <i>work</i>
+      </span>
+      <span className="tm-num-sep" aria-hidden="true" />
+      <span className="tm-num is-rest">
+        <b>{rest}</b>
+        <i>break</i>
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The ring, and the only moving thing on the page.
+ *
+ * Two arcs: a track, and the run drawn with `stroke-dashoffset` against a known
+ * circumference so nothing reflows as it fills. The gradient is per phase and
+ * defined here rather than in CSS because a stroke cannot take one from a
+ * custom property — SVG wants a paint server, so there are three.
+ */
 function Dial({ percent, phase }: { percent: number; phase: Phase }) {
-  const r = 86;
+  const r = 88;
   const circumference = 2 * Math.PI * r;
   return (
     <svg className="tm-dial" viewBox="0 0 200 200" aria-hidden="true">
+      <defs>
+        {(['focus', 'break', 'long'] as Phase[]).map((name) => (
+          <linearGradient key={name} id={`tm-g-${name}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={`var(--tm-${name})`} />
+            <stop offset="100%" stopColor={`var(--tm-${name}-2)`} />
+          </linearGradient>
+        ))}
+      </defs>
       <circle className="tm-dial-track" cx="100" cy="100" r={r} />
       <circle
-        className={`tm-dial-run is-${phase}`}
+        className="tm-dial-run"
         cx="100"
         cy="100"
         r={r}
+        stroke={`url(#tm-g-${phase})`}
         strokeDasharray={circumference}
         strokeDashoffset={circumference * (1 - percent / 100)}
       />
     </svg>
+  );
+}
+
+/** Rounds as pips. A style with one round has nothing to count, so nothing shows. */
+function Pips({ rounds, done, phase }: { rounds: number; done: number; phase: Phase }) {
+  if (rounds < 2) return null;
+  return (
+    <span className="tm-pips" aria-label={`Round ${Math.min(done + 1, rounds)} of ${rounds}`}>
+      {Array.from({ length: rounds }, (_, at) => (
+        <span
+          key={at}
+          className={`tm-pip${at < done ? ' is-done' : ''}${
+            at === done && phase === 'focus' ? ' is-now' : ''
+          }`}
+        />
+      ))}
+    </span>
   );
 }
 
@@ -227,18 +258,11 @@ export default function Timer() {
   );
 
   const { style, phase, done, running, remaining, percent } = pomodoro;
-  const goalSeconds = session.goalHours * 3600;
 
   return (
     <div className={`tm-page${entering ? ' pg-enter' : ''}`}>
       <header className="tm-head">
-        <div>
-          <h1 className="tm-title">Timer</h1>
-          <p className="tm-sub">
-            A shape for a session. The hours it banks are the same ones the rest
-            of the app counts.
-          </p>
-        </div>
+        <h1 className="tm-title">Timer</h1>
         {!setup && (
           <button type="button" className="tm-link" onClick={() => setSetup(true)}>
             Set up again
@@ -250,21 +274,17 @@ export default function Timer() {
         <Setup onPick={(id) => finish(id)} onSkip={() => finish()} />
       ) : (
         <>
-          <section className="tm-clock-card" aria-live="polite">
+          <section className={`tm-clock-card is-${phase}`}>
             <div className="tm-clock-wrap">
               <Dial percent={percent} phase={phase} />
-              <div className="tm-clock-text">
-                <span className={`tm-phase is-${phase}`}>{PHASE_LABEL[phase]}</span>
+              <div className="tm-clock-text" aria-live="polite">
+                <span className="tm-phase">{PHASE_LABEL[phase]}</span>
                 <span className="tm-time">{clock(remaining)}</span>
-                <span className="tm-round">
-                  {style.rounds > 1
-                    ? `Round ${Math.min(done + 1, style.rounds)} of ${style.rounds}`
-                    : style.name}
-                </span>
+                <span className="tm-style-name">{style.name}</span>
               </div>
             </div>
 
-            <p className="tm-phase-note">{PHASE_NOTE[phase]}</p>
+            <Pips rounds={style.rounds} done={done} phase={phase} />
 
             <div className="tm-controls">
               <button
@@ -274,40 +294,56 @@ export default function Timer() {
               >
                 {running ? 'Pause' : 'Start'}
               </button>
-              <button type="button" className="tm-btn" onClick={pomodoro.skip}>
-                Skip {PHASE_LABEL[phase].toLowerCase()}
+              <button
+                type="button"
+                className="tm-btn is-icon"
+                onClick={pomodoro.skip}
+                aria-label={`Skip ${PHASE_LABEL[phase].toLowerCase()}`}
+                title={`Skip ${PHASE_LABEL[phase].toLowerCase()}`}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 5l9 7-9 7V5Z" strokeLinejoin="round" />
+                  <path d="M19 5v14" strokeLinecap="round" />
+                </svg>
               </button>
-              <button type="button" className="tm-btn" onClick={pomodoro.reset}>
-                Reset
+              <button
+                type="button"
+                className="tm-btn is-icon"
+                onClick={pomodoro.reset}
+                aria-label="Reset"
+                title="Reset"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 12a8 8 0 1 0 2.5-5.8" strokeLinecap="round" />
+                  <path d="M4 4v4h4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </button>
             </div>
 
-            <dl className="tm-today">
-              <div>
-                <dt>Focused today</dt>
-                <dd>{fmtHM(session.focused)}</dd>
+            {/* The day, as a bar rather than three figures and a paragraph.
+                It is the one number here that is not about this sitting. */}
+            <div className="tm-goal">
+              <div className="tm-goal-top">
+                <span>
+                  <strong>{fmtHM(session.focused)}</strong> today
+                </span>
+                <span className="tm-goal-of">{fmtHM(session.goalHours * 3600)} goal</span>
               </div>
-              <div>
-                <dt>Daily goal</dt>
-                <dd>{fmtHM(goalSeconds)}</dd>
+              <div
+                className="tm-goal-bar"
+                role="progressbar"
+                aria-valuenow={session.percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Focus goal"
+              >
+                <span style={{ width: `${session.percent}%` }} />
               </div>
-              <div>
-                <dt>Of goal</dt>
-                <dd>{session.percent}%</dd>
-              </div>
-            </dl>
-            <p className="tm-today-note">
-              Counted into the same day the dashboard and the calendar show. A
-              break does not count, which is the point of calling it one.
-            </p>
+            </div>
           </section>
 
           <section className="tm-styles" aria-labelledby="tm-styles-h">
             <h2 id="tm-styles-h">Ten ways to divide an hour</h2>
-            <p className="tm-styles-lead">
-              Sorted by how long you sit. Changing one starts its cycle from the
-              beginning — you are choosing a method, not editing this round.
-            </p>
             <ul className="tm-grid">
               {STYLES.map((option) => {
                 const on = option.id === style.id;
@@ -323,18 +359,11 @@ export default function Timer() {
                         <span className="tm-card-name">{option.name}</span>
                         {on && <em className="tm-tag">In use</em>}
                       </span>
-                      <span className="tm-card-nums">
-                        <strong>{option.focus}</strong> min work
-                        <span className="tm-card-sep">·</span>
-                        <strong>{option.rest}</strong> min break
-                      </span>
+                      <Numbers focus={option.focus} rest={option.rest} />
                       <span className="tm-card-who">{option.who}</span>
                       <span className="tm-card-foot">
-                        {option.rounds > 1
-                          ? `${option.rounds} rounds, then ${option.long} min`
-                          : `${option.long} min break`}
-                        <span className="tm-card-sep">·</span>
-                        {focusShare(option)}% of {cycleMinutes(option)} min is work
+                        {option.rounds > 1 && <span>×{option.rounds}</span>}
+                        <span>{focusShare(option)}% work</span>
                       </span>
                     </button>
                   </li>

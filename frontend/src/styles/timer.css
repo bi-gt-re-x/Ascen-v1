@@ -1,14 +1,14 @@
 /* ==========================================================================
    timer.css — the pomodoro page. See src/pages/Timer.tsx.
 
-   Tokens on the page root and redeclared for dark, the same shape every other
-   page here uses, so the page follows the theme instead of being light-only
-   and hoping.
+   Tokens on the page root, redeclared for dark, the same shape every other
+   page here uses.
 
-   The one idea in the layout: the clock is the page. It is the largest thing
-   on it by a long way, because the reader is either about to start a session
-   or is in one, and in both cases the number they want is the same number.
-   The ten styles sit below it as a picker, not as a menu to get through first.
+   The layout has one idea: the clock is the page. Everything else — the pips,
+   the goal bar, the ten cards — is sized against it and none of it competes.
+   That is also why so little of this page is words: the ring carries the phase
+   and the progress, the pips carry the round, the bar carries the day, and a
+   sentence that repeated any of them was cut.
    ========================================================================== */
 
 body:has(.tm-page) > #root,
@@ -25,19 +25,22 @@ body:has(.tm-page) .app-main {
     --tm-muted: #6b7684;
     --tm-faint: #98a1ae;
 
-    /* One colour per phase, and they are not decorative: the ring, the label
-       and the state of the page all read from the same three, so a glance at
-       any of them says the same thing. */
+    /* One pair per phase — the ring is a gradient between them, and the same
+       first colour is what the label and the pips use, so a glance at any of
+       the three says the same thing. */
     --tm-focus: #6c5ce7;
+    --tm-focus-2: #a78bfa;
     --tm-break: #1f8a54;
+    --tm-break-2: #46c483;
     --tm-long: #2f6fd0;
+    --tm-long-2: #6aa6f5;
 
-    --tm-radius: 16px;
-    --tm-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+    --tm-radius: 18px;
+    --tm-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 30px rgba(16, 24, 40, .06);
 
     box-sizing: border-box;
     width: 100%;
-    max-width: 1100px;
+    max-width: 1080px;
     margin-inline: auto;
     padding: 26px 24px 60px;
     color: var(--tm-text);
@@ -52,34 +55,36 @@ html[data-theme="dark"] .tm-page {
     --tm-muted: #8f9bb3;
     --tm-faint: #6d7a94;
 
-    --tm-focus: #a78bfa;
-    --tm-break: #46c483;
-    --tm-long: #6aa6f5;
+    --tm-focus: #8b7cf8;
+    --tm-focus-2: #c4b5fd;
+    --tm-break: #35b478;
+    --tm-break-2: #6ee7b7;
+    --tm-long: #4b8ef0;
+    --tm-long-2: #93c5fd;
 
-    --tm-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    --tm-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .28);
     color-scheme: dark;
 }
+
+/* The phase's own colour, so the card, the label and the pips read from one
+   place instead of each carrying a modifier. */
+.tm-clock-card.is-focus { --tm-now: var(--tm-focus); --tm-now-2: var(--tm-focus-2); }
+.tm-clock-card.is-break { --tm-now: var(--tm-break); --tm-now-2: var(--tm-break-2); }
+.tm-clock-card.is-long  { --tm-now: var(--tm-long);  --tm-now-2: var(--tm-long-2); }
 
 /* ---- Header -------------------------------------------------------------- */
 .tm-head {
     display: flex;
-    align-items: flex-start;
+    align-items: baseline;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 22px;
+    margin-bottom: 20px;
 }
 .tm-title {
     margin: 0;
     font-size: 1.7rem;
     font-weight: 800;
     letter-spacing: -.02em;
-}
-.tm-sub {
-    margin: 4px 0 0;
-    max-width: 46ch;
-    color: var(--tm-muted);
-    font-size: .9rem;
-    line-height: 1.55;
 }
 
 .tm-link {
@@ -89,84 +94,96 @@ html[data-theme="dark"] .tm-page {
     color: var(--tm-muted);
     font: inherit;
     font-size: .84rem;
-    text-decoration: underline;
     cursor: pointer;
 }
-.tm-link:hover { color: var(--tm-text); }
+.tm-link:hover { color: var(--tm-text); text-decoration: underline; }
 
 /* ---- Buttons ------------------------------------------------------------- */
 .tm-btn {
-    padding: 10px 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    padding: 0 20px;
     border: 1px solid var(--tm-line);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--tm-card);
     color: var(--tm-text);
     font: inherit;
-    font-size: .9rem;
-    font-weight: 600;
+    font-size: .93rem;
+    font-weight: 650;
     cursor: pointer;
-    transition: background .15s ease, border-color .15s ease;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
 }
 .tm-btn:hover { background: var(--tm-card-2); }
+.tm-btn:active { transform: translateY(1px); }
 .tm-btn.is-primary {
-    min-width: 128px;
+    min-width: 132px;
     border-color: transparent;
-    background: var(--tm-focus);
+    background: linear-gradient(135deg, var(--tm-now, var(--tm-focus)), var(--tm-now-2, var(--tm-focus-2)));
     color: #fff;
+    box-shadow: 0 6px 18px -6px var(--tm-now, var(--tm-focus));
 }
-.tm-btn.is-primary:hover { filter: brightness(1.06); }
+.tm-btn.is-primary:hover { filter: brightness(1.05); }
+.tm-btn.is-icon {
+    width: 46px;
+    padding: 0;
+    color: var(--tm-muted);
+}
+.tm-btn.is-icon svg { width: 19px; height: 19px; }
+.tm-btn.is-icon:hover { color: var(--tm-text); }
 .tm-btn:disabled { opacity: .45; cursor: not-allowed; }
-.tm-btn:disabled:hover { filter: none; }
+.tm-btn:disabled:hover { filter: none; background: var(--tm-card); }
 
 /* ---- The setup ----------------------------------------------------------- */
 .tm-setup {
-    padding: 30px 28px 26px;
+    padding: 32px 28px 26px;
     border: 1px solid var(--tm-line);
     border-radius: var(--tm-radius);
     background: var(--tm-card);
     box-shadow: var(--tm-shadow);
 }
+/* Two dots rather than "step 1 of 2" — it is two steps, and saying so in
+   words costs a line to carry four characters of information. */
 .tm-step {
-    margin: 0 0 8px;
-    color: var(--tm-faint);
-    font-size: .7rem;
-    font-weight: 700;
-    letter-spacing: .13em;
-    text-transform: uppercase;
+    display: flex;
+    gap: 6px;
+    margin: 0 0 14px;
 }
+.tm-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--tm-line);
+}
+.tm-dot.is-on { background: var(--tm-focus); }
+
 .tm-setup h2 {
-    margin: 0 0 10px;
-    font-size: 1.32rem;
-    font-weight: 700;
-    letter-spacing: -.015em;
-}
-.tm-setup-lead {
-    margin: 0 0 22px;
-    max-width: 62ch;
-    color: var(--tm-muted);
-    font-size: .92rem;
-    line-height: 1.6;
+    margin: 0 0 20px;
+    font-size: 1.45rem;
+    font-weight: 750;
+    letter-spacing: -.02em;
 }
 .tm-choices {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 12px;
 }
 .tm-choice {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 16px 16px 15px;
+    gap: 8px;
+    padding: 18px 16px;
     border: 1px solid var(--tm-line);
-    border-radius: 12px;
+    border-radius: 14px;
     background: var(--tm-card-2);
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
-    transition: border-color .15s ease, background .15s ease;
+    transition: border-color .15s ease, transform .15s ease;
 }
-.tm-choice:hover { border-color: var(--tm-focus); }
+.tm-choice:hover { border-color: var(--tm-focus); transform: translateY(-1px); }
 .tm-choice.is-on {
     border-color: var(--tm-focus);
     box-shadow: inset 0 0 0 1px var(--tm-focus);
@@ -175,25 +192,20 @@ html[data-theme="dark"] .tm-page {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: .98rem;
+    font-size: 1rem;
     font-weight: 700;
-}
-.tm-choice-nums {
-    color: var(--tm-text);
-    font-size: .84rem;
-    font-weight: 600;
 }
 .tm-choice-hint {
     color: var(--tm-muted);
-    font-size: .82rem;
-    line-height: 1.5;
+    font-size: .83rem;
+    line-height: 1.45;
 }
 .tm-tag {
     padding: 2px 7px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--tm-focus) 16%, transparent);
+    background: color-mix(in srgb, var(--tm-focus) 15%, transparent);
     color: var(--tm-focus);
-    font-size: .64rem;
+    font-size: .62rem;
     font-style: normal;
     font-weight: 700;
     letter-spacing: .07em;
@@ -207,21 +219,66 @@ html[data-theme="dark"] .tm-page {
     margin-top: 22px;
 }
 
+/* ---- The two numbers ----------------------------------------------------- */
+/* Sized so they read before the name does: on a picker of ten, the figures
+   are what somebody is actually comparing. */
+.tm-nums {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.tm-num {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+.tm-num b {
+    font-size: 1.42rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em;
+    line-height: 1;
+}
+.tm-num i {
+    color: var(--tm-muted);
+    font-size: .72rem;
+    font-style: normal;
+}
+.tm-num.is-rest b { color: var(--tm-muted); font-weight: 650; }
+.tm-num-sep {
+    width: 1px;
+    height: 15px;
+    background: var(--tm-line);
+}
+
 /* ---- The clock ----------------------------------------------------------- */
 .tm-clock-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 34px 28px 28px;
+    padding: 40px 28px 30px;
     border: 1px solid var(--tm-line);
     border-radius: var(--tm-radius);
-    background: var(--tm-card);
+    /* A wash of the phase colour at the top, so the card itself changes with
+       the session rather than only the ring inside it.
+
+       Written as two properties rather than one `background:` shorthand. In
+       the shorthand the colour is the final layer's, which made the card's
+       base colour and its wash one declaration — and the base then did not
+       follow the theme, leaving a white card in dark mode. Two properties, two
+       things, and each one can be read on its own. */
+    background-color: var(--tm-card);
+    background-image:
+        radial-gradient(120% 70% at 50% -12%,
+            color-mix(in srgb, var(--tm-now) 13%, transparent) 0%,
+            transparent 62%);
     box-shadow: var(--tm-shadow);
+    transition: background .4s ease;
 }
 .tm-clock-wrap {
     position: relative;
-    width: 260px;
-    height: 260px;
+    width: 300px;
+    height: 300px;
 }
 .tm-dial {
     width: 100%;
@@ -231,20 +288,16 @@ html[data-theme="dark"] .tm-page {
 .tm-dial-track {
     fill: none;
     stroke: var(--tm-line);
-    stroke-width: 10;
+    stroke-width: 12;
 }
 .tm-dial-run {
     fill: none;
-    stroke-width: 10;
+    stroke-width: 12;
     stroke-linecap: round;
-    /* The ring is the only moving thing on the page, so it is the only thing
-       that gets a transition — and a short one, because it is redrawn twice a
-       second and a long ease would never arrive. */
+    /* The only transition on the page, and a linear one: this is redrawn twice
+       a second, so an ease would never arrive before the next frame. */
     transition: stroke-dashoffset .3s linear;
 }
-.tm-dial-run.is-focus { stroke: var(--tm-focus); }
-.tm-dial-run.is-break { stroke: var(--tm-break); }
-.tm-dial-run.is-long { stroke: var(--tm-long); }
 
 .tm-clock-text {
     position: absolute;
@@ -253,93 +306,100 @@ html[data-theme="dark"] .tm-page {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 6px;
 }
 .tm-phase {
-    font-size: .72rem;
+    color: var(--tm-now);
+    font-size: .7rem;
     font-weight: 800;
-    letter-spacing: .15em;
+    letter-spacing: .18em;
     text-transform: uppercase;
 }
-.tm-phase.is-focus { color: var(--tm-focus); }
-.tm-phase.is-break { color: var(--tm-break); }
-.tm-phase.is-long { color: var(--tm-long); }
 .tm-time {
-    font-size: 3.1rem;
+    font-size: 3.6rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -.02em;
-    line-height: 1.05;
+    letter-spacing: -.035em;
+    line-height: 1;
 }
-.tm-round {
-    color: var(--tm-muted);
-    font-size: .82rem;
+.tm-style-name {
+    color: var(--tm-faint);
+    font-size: .8rem;
 }
-.tm-phase-note {
-    margin: 16px 0 0;
-    color: var(--tm-muted);
-    font-size: .88rem;
-    text-align: center;
+
+/* ---- Rounds, as pips ----------------------------------------------------- */
+.tm-pips {
+    display: flex;
+    gap: 7px;
+    margin-top: 22px;
+}
+.tm-pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--tm-line);
+    transition: background .3s ease, transform .3s ease;
+}
+.tm-pip.is-done { background: var(--tm-now); }
+.tm-pip.is-now {
+    background: var(--tm-now);
+    transform: scale(1.5);
+    opacity: .55;
 }
 
 .tm-controls {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 22px;
 }
 
-.tm-today {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px 34px;
-    margin: 26px 0 0;
-    padding-top: 20px;
+/* ---- The day ------------------------------------------------------------- */
+.tm-goal {
+    width: min(340px, 100%);
+    margin-top: 30px;
+    padding-top: 22px;
     border-top: 1px solid var(--tm-line);
-    width: 100%;
 }
-.tm-today div { text-align: center; }
-.tm-today dt {
+.tm-goal-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
     color: var(--tm-muted);
-    font-size: .76rem;
-    letter-spacing: .04em;
-    text-transform: uppercase;
+    font-size: .84rem;
 }
-.tm-today dd {
-    margin: 3px 0 0;
-    font-size: 1.25rem;
+.tm-goal-top strong {
+    color: var(--tm-text);
+    font-size: 1.05rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
-.tm-today-note {
-    margin: 12px 0 0;
-    max-width: 54ch;
-    color: var(--tm-faint);
-    font-size: .8rem;
-    line-height: 1.5;
-    text-align: center;
+.tm-goal-of { color: var(--tm-faint); }
+.tm-goal-bar {
+    height: 7px;
+    margin-top: 9px;
+    border-radius: 999px;
+    background: var(--tm-line);
+    overflow: hidden;
+}
+.tm-goal-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--tm-focus), var(--tm-focus-2));
+    transition: width .4s ease;
 }
 
 /* ---- The ten ------------------------------------------------------------- */
-.tm-styles { margin-top: 34px; }
+.tm-styles { margin-top: 40px; }
 .tm-styles h2 {
-    margin: 0 0 6px;
-    font-size: 1.14rem;
+    margin: 0 0 16px;
+    font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: -.01em;
 }
-.tm-styles-lead {
-    margin: 0 0 18px;
-    max-width: 64ch;
-    color: var(--tm-muted);
-    font-size: .88rem;
-    line-height: 1.55;
-}
 .tm-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
     gap: 12px;
     margin: 0;
     padding: 0;
@@ -348,22 +408,23 @@ html[data-theme="dark"] .tm-page {
 .tm-card {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 10px;
     width: 100%;
     height: 100%;
-    padding: 16px 16px 14px;
+    padding: 16px;
     border: 1px solid var(--tm-line);
-    border-radius: 12px;
+    border-radius: 14px;
     background: var(--tm-card);
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
-    transition: border-color .15s ease, transform .15s ease;
+    transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
 .tm-card:hover {
     border-color: var(--tm-focus);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: var(--tm-shadow);
 }
 .tm-card.is-on {
     border-color: var(--tm-focus);
@@ -376,43 +437,45 @@ html[data-theme="dark"] .tm-page {
     gap: 8px;
 }
 .tm-card-name {
-    font-size: 1rem;
+    font-size: .97rem;
     font-weight: 700;
-}
-.tm-card-nums {
-    color: var(--tm-text);
-    font-size: .86rem;
-}
-.tm-card-nums strong {
-    font-size: 1.02rem;
-    font-variant-numeric: tabular-nums;
-}
-.tm-card-sep {
-    margin: 0 7px;
-    color: var(--tm-faint);
 }
 .tm-card-who {
     flex: 1;
     color: var(--tm-muted);
     font-size: .82rem;
-    line-height: 1.5;
+    line-height: 1.45;
 }
 .tm-card-foot {
-    padding-top: 9px;
+    display: flex;
+    gap: 6px;
+    padding-top: 10px;
     border-top: 1px solid var(--tm-line);
+}
+.tm-card-foot span {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--tm-card-2);
     color: var(--tm-faint);
-    font-size: .76rem;
+    font-size: .71rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 640px) {
     .tm-page { padding: 20px 16px 48px; }
-    .tm-head { flex-direction: column; gap: 8px; }
-    .tm-clock-wrap { width: 220px; height: 220px; }
-    .tm-time { font-size: 2.6rem; }
-    .tm-controls .tm-btn { flex: 1 1 auto; }
+    .tm-clock-card { padding: 30px 18px 24px; }
+    .tm-clock-wrap { width: 250px; height: 250px; }
+    .tm-time { font-size: 3rem; }
+    .tm-controls { width: 100%; }
+    .tm-controls .tm-btn.is-primary { flex: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .tm-dial-run { transition: none; }
-    .tm-card:hover { transform: none; }
+    .tm-dial-run,
+    .tm-goal-bar span,
+    .tm-pip,
+    .tm-clock-card { transition: none; }
+    .tm-card:hover,
+    .tm-choice:hover { transform: none; }
 }

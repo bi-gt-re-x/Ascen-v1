@@ -13,8 +13,9 @@
  *
  * Each one is a real, named method rather than a slider position, because
  * "Ultradian" is a thing somebody can go and read about and "82 minutes" is
- * not. The `who` line is what the picker shows: it says when the style is
- * right, not what the numbers are — the numbers are already on the card.
+ * not. `who` is one short line saying when the style is right — the numbers
+ * are already on the card in a bigger typeface than any sentence, so a
+ * description that restated them would be the third time of asking.
  *
  * ## What a cycle is
  *
@@ -45,7 +46,7 @@ export interface Style {
   long: number;
   /** Focus intervals before the long break. 1 means the style has none. */
   rounds: number;
-  /** When this one is the right choice. Shown on the card. */
+  /** One short line on the card. The numbers beside it say the rest. */
   who: string;
 }
 
@@ -64,7 +65,7 @@ export const STYLES: Style[] = [
     rest: 5,
     long: 15,
     rounds: 4,
-    who: 'For a day you cannot get started on. Ten minutes is short enough to be worth beginning.',
+    who: 'When starting is the hard part.',
   },
   {
     id: 'short-burst',
@@ -73,7 +74,7 @@ export const STYLES: Style[] = [
     rest: 3,
     long: 10,
     rounds: 4,
-    who: 'Flashcards, drills, admin — work made of many small pieces you can put down between.',
+    who: 'Drills, flashcards, admin.',
   },
   {
     id: 'sprint',
@@ -82,7 +83,7 @@ export const STYLES: Style[] = [
     rest: 10,
     long: 20,
     rounds: 3,
-    who: 'A long break for a short sitting. Good when the work is tiring rather than long.',
+    who: 'Tiring work, generous breaks.',
   },
   {
     id: 'classic',
@@ -91,7 +92,7 @@ export const STYLES: Style[] = [
     rest: 5,
     long: 15,
     rounds: 4,
-    who: 'The original, and still the right first answer if you have no reason to prefer another.',
+    who: 'The default. Start here.',
   },
   {
     id: 'extended',
@@ -100,7 +101,7 @@ export const STYLES: Style[] = [
     rest: 5,
     long: 20,
     rounds: 4,
-    who: 'Classic with room to finish a thought. Reading, revision, problem sets.',
+    who: 'Room to finish a thought.',
   },
   {
     id: 'animedoro',
@@ -109,7 +110,7 @@ export const STYLES: Style[] = [
     rest: 20,
     long: 20,
     rounds: 1,
-    who: 'Forty on, twenty off, and the twenty is genuinely off. Built for long evenings.',
+    who: 'Long evenings, real breaks.',
   },
   {
     id: 'study-hall',
@@ -118,7 +119,7 @@ export const STYLES: Style[] = [
     rest: 15,
     long: 30,
     rounds: 2,
-    who: 'A school period. Fits homework and lessons because that is the length they were written for.',
+    who: 'The length of a school period.',
   },
   {
     id: 'deep-work',
@@ -127,7 +128,7 @@ export const STYLES: Style[] = [
     rest: 10,
     long: 30,
     rounds: 2,
-    who: 'Long enough to get past the setting-up. Essays, proofs, code, practice.',
+    who: 'Essays, proofs, code, practice.',
   },
   {
     id: 'desktime',
@@ -136,7 +137,7 @@ export const STYLES: Style[] = [
     rest: 17,
     long: 17,
     rounds: 1,
-    who: 'The ratio from DeskTime’s study of its most productive users. Oddly specific, and it holds up.',
+    who: 'The 52/17 ratio, from the study.',
   },
   {
     id: 'ultradian',
@@ -145,7 +146,7 @@ export const STYLES: Style[] = [
     rest: 20,
     long: 20,
     rounds: 1,
-    who: 'One full attention cycle. The longest here, and the one to stop treating as a default.',
+    who: 'One full attention cycle.',
   },
 ];
 
@@ -245,9 +246,9 @@ export function clock(seconds: number): string {
 export type Sitting = 'short' | 'medium' | 'long';
 
 export const SITTINGS: { id: Sitting; label: string; hint: string }[] = [
-  { id: 'short', label: 'Not long', hint: 'Ten to twenty minutes before I need to move.' },
-  { id: 'medium', label: 'About half an hour', hint: 'Long enough to finish something, not a whole afternoon.' },
-  { id: 'long', label: 'A long stretch', hint: 'I lose an hour without noticing when it is going well.' },
+  { id: 'short', label: 'Not long', hint: '10–20 minutes.' },
+  { id: 'medium', label: 'Half an hour', hint: 'Enough to finish something.' },
+  { id: 'long', label: 'A long stretch', hint: 'I lose an hour without noticing.' },
 ];
 
 /** What the setup lands on for each answer. */
