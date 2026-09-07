@@ -228,9 +228,9 @@ html[data-theme="dark"] .pom-page {
     background-color: var(--pom-card);
     background-image:
         radial-gradient(90% 120% at 0% 0%,
-            color-mix(in srgb, var(--pom-now) 16%, transparent) 0%, transparent 60%),
+            color-mix(in srgb, var(--pom-now) 22%, transparent) 0%, transparent 66%),
         radial-gradient(80% 120% at 100% 100%,
-            color-mix(in srgb, var(--pom-now-2) 18%, transparent) 0%, transparent 62%);
+            color-mix(in srgb, var(--pom-now-2) 24%, transparent) 0%, transparent 68%);
     box-shadow: var(--pom-shadow);
     transition: background-image .5s ease;
 }
@@ -442,6 +442,15 @@ html[data-theme="dark"] .pom-page {
     font-size: 1.06rem; font-weight: 750; letter-spacing: -.015em;
 }
 .pom-panel-head h2 > span { font-size: 1.02rem; }
+/* A heading with a line under it, where a panel needs to say what window it
+   is describing. `baseline` on the head would align the link to the *second*
+   line, so the title and its line become one block first. */
+.pom-panel-title { min-width: 0; }
+.pom-panel-title p {
+    margin: 3px 0 0;
+    color: var(--pom-muted);
+    font-size: .78rem;
+}
 
 /* The segmented control the range and the grain both use. */
 .pom-toggle {
@@ -568,7 +577,7 @@ html[data-theme="dark"] .pom-page {
     max-width: 42px;
     min-height: 4px;
     border-radius: 8px 8px 4px 4px;
-    background: linear-gradient(180deg, var(--pom-focus), var(--pom-focus-2));
+    background: linear-gradient(180deg, var(--pom-focus), var(--pom-blue));
     transition: height .4s ease;
 }
 .pom-bar-name { color: var(--pom-faint); font-size: .7rem; }
@@ -659,17 +668,20 @@ html[data-theme="dark"] .pom-page {
 .pom-rating {
     display: flex; flex-direction: column; align-items: center; gap: 5px;
     padding: 15px 8px 13px;
-    border: 1px solid var(--pom-line);
+    border: 1px solid color-mix(in srgb, var(--tone, var(--pom-focus)) 22%, var(--pom-line));
     border-radius: 14px;
-    background: var(--pom-card-2);
+    background: color-mix(in srgb, var(--tone, var(--pom-focus)) 7%, var(--pom-card));
 }
+/* Filled, with the letter reversed out of it. A grade is the loudest thing in
+   this panel and the design treats it as a badge rather than as a tint. */
 .pom-rating-disc {
     display: grid; place-items: center;
     width: 38px; height: 38px;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--tone, var(--pom-focus)) 16%, transparent);
-    color: var(--tone, var(--pom-focus));
+    background: var(--tone, var(--pom-focus));
+    color: #fff;
     font-size: .92rem; font-weight: 800;
+    box-shadow: 0 4px 10px -4px var(--tone, var(--pom-focus));
 }
 .pom-rating-name { color: var(--pom-muted); font-size: .75rem; }
 .pom-rating-score { font-size: .92rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -755,11 +767,13 @@ html[data-theme="dark"] .pom-page {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     font-size: .87rem;
 }
+/* The subject's own colour, hashed from its name in pages/Timer.tsx so the
+   same subject is the same colour on every row it appears on. */
 .pom-tasks-tag {
     padding: 2px 9px;
     border-radius: 999px;
-    background: var(--pom-card-2);
-    color: var(--pom-muted);
+    background: color-mix(in srgb, var(--tone, var(--pom-slate)) 15%, transparent);
+    color: var(--tone, var(--pom-muted));
     font-size: .7rem; font-weight: 600;
     text-transform: capitalize;
 }
@@ -805,7 +819,7 @@ html[data-theme="dark"] .pom-page {
 .pom-level-bar span {
     display: block; height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #fbbf24, #f472b6);
+    background: linear-gradient(90deg, var(--pom-focus), var(--pom-blue));
     transition: width .4s ease;
 }
 
@@ -881,6 +895,11 @@ html[data-theme="dark"] .pom-page {
 .pom-line-rule { stroke: var(--pom-line); stroke-width: 1; }
 .pom-line-tick { fill: var(--pom-faint); font-size: 10px; font-weight: 600; }
 .pom-line-area { fill: url(#pom-line-fill); }
+/* The label on the best day. Dark in both themes, like every tooltip in the
+   app — it sits over the chart's own fill, not over the page. */
+.pom-line-tip rect { fill: #1f2740; }
+.pom-line-tip-day { fill: rgba(255, 255, 255, .72); font-size: 9px; font-weight: 600; }
+.pom-line-tip-num { fill: #fff; font-size: 11px; font-weight: 750; }
 .pom-line-run {
     fill: none;
     stroke: var(--pom-focus);
@@ -900,12 +919,15 @@ html[data-theme="dark"] .pom-page {
     padding: 11px 0;
     border-bottom: 1px solid var(--pom-line);
 }
+/* Tinted from `--tone`, which the row sets with a pom-tone-* class. Four
+   identical purple squares down the side of four different goals is a column
+   of decoration; four colours is a column you can find your place in. */
 .pom-goal-icon {
     display: grid; place-items: center;
     width: 34px; height: 34px;
     border-radius: 10px;
-    background: color-mix(in srgb, var(--pom-focus) 13%, transparent);
-    color: var(--pom-focus);
+    background: color-mix(in srgb, var(--tone, var(--pom-focus)) 14%, transparent);
+    color: var(--tone, var(--pom-focus));
     font-size: .82rem;
 }
 .pom-goal-main { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
@@ -987,7 +1009,7 @@ html[data-theme="dark"] .pom-page {
 .pom-level-bar span {
     display: block; height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #fbbf24, #f472b6);
+    background: linear-gradient(90deg, var(--pom-focus), var(--pom-blue));
     transition: width .4s ease;
 }
 

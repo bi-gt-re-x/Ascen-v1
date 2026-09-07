@@ -61,6 +61,42 @@ type RangeId = (typeof RANGES)[number]['id'];
 const GRAINS = ['Daily', 'Weekly', 'Monthly'] as const;
 type Grain = (typeof GRAINS)[number];
 
+/**
+ * The tones a row of goals or a column of tags rotates through.
+ *
+ * The names are the `pom-tone-*` classes in styles/timer.css, which is where
+ * each one is bound to a colour — the same vocabulary the ten method cards and
+ * the stat tiles already use, so nothing here invents a palette of its own.
+ */
+const TONES = ['blue', 'green', 'amber', 'purple', 'teal', 'rose', 'indigo', 'violet'] as const;
+
+/**
+ * A stable tone for a subject.
+ *
+ * Hashed rather than counted, so the second Maths tag on the list is the same
+ * blue as the first. A rotation by row index would colour the same subject
+ * differently depending on what happened to be above it, which is worse than
+ * no colour at all: it looks like it means something and it does not.
+ */
+function toneFor(name: string): string {
+  let sum = 0;
+  for (let at = 0; at < name.length; at += 1) {
+    sum = (sum * 31 + name.charCodeAt(at)) >>> 0;
+  }
+  return TONES[sum % TONES.length]!;
+}
+
+/** A due date as the reader thinks of it, rather than as it is stored. */
+function due(date: string | null | undefined, today: Date): string {
+  if (!date) return 'No date';
+  const day = date.slice(0, 10);
+  if (day === iso(today)) return 'Today';
+  if (day === iso(shift(today, 1))) return 'Tomorrow';
+  if (day === iso(shift(today, -1))) return 'Yesterday';
+  const at = new Date(`${day}T00:00:00`);
+  return at.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 function setupDone(user: string): boolean {
   try {
     return window.localStorage.getItem(`${SETUP_KEY}:${user}`) === '1';
@@ -274,6 +310,17 @@ function Line({ points }: { points: { label: string; hours: number }[] }) {
       <path className="pom-line-run" d={path} />
       <circle className="pom-line-halo" cx={best.x} cy={best.y} r="8" />
       <circle className="pom-line-dot" cx={best.x} cy={best.y} r="4.5" />
+      {/* The best day, labelled. The dot alone marks the peak without saying
+          what it was worth, and the one figure a reader wants off this chart
+          is the size of their best day — which otherwise has to be estimated
+          against an axis. Nudged inboard at the ends so the box cannot hang
+          off the side of the chart. */}
+      <g className="pom-line-tip"
+        transform={`translate(${Math.min(w - pad.right - 34, Math.max(pad.left + 34, best.x))} ${Math.max(30, best.y - 14)})`}>
+        <rect x="-34" y="-30" width="68" height="34" rx="8" />
+        <text className="pom-line-tip-day" y="-16" textAnchor="middle">{best.label}</text>
+        <text className="pom-line-tip-num" y="-3" textAnchor="middle">{fmtHM(best.hours * 3600)}</text>
+      </g>
       {xy.map((p, at) => (at % every === 0 ? (
         <text key={`${p.label}-${at}`} className="pom-line-tick" x={p.x} y={h - 7}
           textAnchor="middle">{p.label}</text>
@@ -619,7 +666,10 @@ export default function Timer() {
 
             <section className="pom-panel">
               <header className="pom-panel-head">
-                <h2><span aria-hidden="true">🗓️</span> Growth Ratings</h2>
+                <div className="pom-panel-title">
+                  <h2><span aria-hidden="true">🗓️</span> Growth Ratings</h2>
+                  <p>Your overall growth this week</p>
+                </div>
                 <Link className="pom-link" to="/analytics">View details →</Link>
               </header>
               {metrics ? (
@@ -655,9 +705,10 @@ export default function Timer() {
               </header>
               {activeGoals.length ? (
                 <ul className="pom-goals">
-                  {activeGoals.map((goal) => (
+                  {activeGoals.map((goal, at) => (
                     <li key={goal.id}>
-                      <span className="pom-goal-icon" aria-hidden="true">◈</span>
+                      <span className={`pom-goal-icon pom-tone-${TONES[at % TONES.length]}`}
+                        aria-hidden="true">◈</span>
                       <span className="pom-goal-main">
                         <span className="pom-goal-title">{goal.title}</span>
                         <span className="pom-goal-bar">
@@ -683,10 +734,12 @@ export default function Timer() {
                     <li key={task.id}>
                       <span className="pom-check" aria-hidden="true" />
                       <span className="pom-tasks-title">{task.title}</span>
-                      {task.subject && <span className="pom-tasks-tag">{task.subject}</span>}
-                      <span className="pom-tasks-when">
-                        {task.due_date ? task.due_date.slice(0, 10) : 'No date'}
-                      </span>
+                      {task.subject && (
+                        <span className={`pom-tasks-tag pom-tone-${toneFor(task.subject)}`}>
+                          {task.subject}
+                        </span>
+                      )}
+                      <span className="pom-tasks-when">{due(task.due_date, today)}</span>
                       {CHEVRON}
                     </li>
                   ))}
