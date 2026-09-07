@@ -19,6 +19,13 @@ from backend.config import settings                       # noqa: E402
 
 settings.load_dotenv()
 
+# Running this file directly is the development server, so it gets the flags
+# that say so. An import — which is what a deployment does — does not. The
+# reasoning is in `dev_defaults` in backend/config/settings.py, and it has to
+# happen before create_app() below, which reads all of them as it builds.
+if __name__ == '__main__':
+    settings.dev_defaults()
+
 from backend.main import create_app                       # noqa: E402
 
 app = create_app()
@@ -46,21 +53,13 @@ def main():
     would have handed the insecure default to every deployment that imported
     the app — the opposite of what it is for.
 
-    ASCEN_DEV is set here for the same reason and with the same reasoning. It
-    is what lets the sign-up popup show the verification link when there is no
-    mail server, so the accounts flow can be walked in a fresh clone — and it
-    is a secret handed to whoever asked, so it belongs to the development
-    server and to nothing else. A deployment imports `backend.run:app` and
-    never reaches this function, so it does not get it. See `dev_mode` in
-    config/settings.py.
-
-    An explicit value in the environment still wins for both, so this only
-    fills in defaults.
+    That flag and ASCEN_DEV are both set by `dev_defaults` above, which the
+    entry points call *before* the app is built — they have to, because
+    `create_app` reads all of it at construction, and the deployment check
+    inside it refuses to start without SECRET_KEY. Setting them here would be
+    too late for the app this module already made.
     """
     import uvicorn
-
-    os.environ.setdefault('ASCEN_INSECURE_COOKIES', '1')
-    os.environ.setdefault('ASCEN_DEV', '1')
 
     uvicorn.run('backend.run:app',
                 host='127.0.0.1',

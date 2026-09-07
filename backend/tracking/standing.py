@@ -42,13 +42,20 @@ MIN_ACTIVE_DAYS = 3
 
 # Other qualifying accounts needed before a placement is worth printing.
 #
-# Three is the point where a rank says more than "ahead of somebody": against
-# one other account every measure is a coin toss, against two it is a podium.
-# It is deliberately low because the panel prints the cohort size next to the
-# figures — a reader told they are top 25% of four accounts has been given the
-# number *and* what it is worth, which is the honest version of a small sample
-# rather than a hidden one.
-COHORT_FLOOR = 3
+# This was 3, on the reasoning that the panel prints the cohort size beside the
+# figures, so a small sample was disclosed rather than hidden. The disclosure is
+# real and it is not enough. Against five other accounts the panel printed "Top
+# 1.0%" — a figure whose finest honest step is twenty points, written to one
+# decimal place, in the house style of a number that means something. A reader
+# does not do that arithmetic; they read a percentile, because that is what it
+# looks like. Naming the sample under a figure the figure itself misrepresents
+# corrects nobody.
+#
+# Twenty is where a rank starts to survive one person joining or leaving: it is
+# the point at which a single account is a five-point move rather than a
+# twenty-point one, which is roughly the precision `_top_percent` is allowed to
+# print at that size. It is a floor on being worth saying at all, not a target.
+COHORT_FLOOR = 20
 
 # The measures, in the order the panel lists them. The labels and colours are
 # the frontend's business; these keys are the contract between the two.
@@ -115,10 +122,21 @@ def _top_percent(mine, others):
     beaten = sum(1 for value in others if value < mine)
     tied = sum(1 for value in others if value == mine)
     share = (beaten + tied * 0.5) / len(others)
+    percent = (1.0 - share) * 100.0
+
+    # Rounded to what the cohort can actually resolve, rather than to one
+    # decimal place always. With `n` others the finest real step is 100/n, so
+    # against 5 accounts every placement is a multiple of 20 and "Top 1.0%" is
+    # a decimal point of pure invention. Against 500 it is genuinely a matter
+    # of tenths, and this returns tenths. The figure is allowed to be as
+    # precise as the sample behind it and no more.
+    step = max(100.0 / len(others), 0.1)
+    percent = round(percent / step) * step
+
     # Bounded away from both ends: "top 0%" claims the reader is beyond every
     # account that could exist, and "top 100%" is not a thing anyone wants read
     # about them.
-    return max(1.0, min(99.0, round((1.0 - share) * 100.0, 1)))
+    return max(1.0, min(99.0, round(percent, 1)))
 
 
 def standing(username):

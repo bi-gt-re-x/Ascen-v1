@@ -225,24 +225,34 @@ export function FeatureStrip() {
           </Link>
         </article>
       ))}
-      {/* The testimonial is where the hidden chain starts on this page —
+      {/* This card is where the hidden chain starts on this page —
           secret/quote-egg.js counts ten clicks on the `.lp-quote` card itself,
-          so everything below is a child of it and the clicks still bubble.
+          so everything inside it is a child and the clicks still bubble. That
+          is the only reason the card has to stay; what is *in* it changed.
 
-          The stars and the initial are new. A bare quote with a name under it
-          reads as filler text; the things that make a testimonial land are a
-          rating and a face, and the nearest honest thing to a face here is the
-          initial rather than a stock photograph of somebody who does not
-          exist. */}
+          It used to be a testimonial: five stars, a quote about how Ascen
+          changed somebody's studying, and "Sarah J. · Student · six month
+          streak" under an initial in a circle. Sarah does not exist. That was
+          harmless while this ran on one laptop and nobody but its author ever
+          loaded the page, and it stops being harmless the moment the page is
+          on a domain — an invented five-star review from an invented student
+          is not a placeholder any more, it is a fake endorsement, and the
+          people it would work on are the ones deciding whether to trust a
+          study tool with their year.
+
+          So the card says something true instead. There is no user to quote
+          yet, and saying that plainly is a better argument than a fake quote
+          is. */}
       <article className="lp-card lp-quote">
-        <div className="lp-quote-stars" role="img" aria-label="Rated five out of five">
-          {'★★★★★'}
-        </div>
-        <p>“Ascen changed how I study — I finally see my progress instead of guessing at it.”</p>
+        <p className="lp-quote-kicker">Why this exists</p>
+        <p>
+          “Every tracker I tried could tell me what I had planned. None of them could
+          tell me whether the week had actually gone well, or just felt like it.”
+        </p>
         <div className="lp-quote-foot">
-          <span className="lp-quote-face" aria-hidden="true">S</span>
           <span className="lp-quote-by">
-            Sarah J.<small>Student · six month streak</small>
+            The reason Ascen counts what it counts
+            <small>No reviews yet — this is the first version to be public</small>
           </span>
         </div>
       </article>

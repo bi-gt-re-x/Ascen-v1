@@ -242,6 +242,86 @@ def _generated_key():
         return key
 
 
+def dev_defaults():
+    """Fill in the flags that mean "this is a laptop". Called by entry points.
+
+    ## Why this is a function rather than a default
+
+    Three things read the environment before the app exists: the session
+    cookie's Secure flag, the verification link's dev gate, and
+    `deployment_problems` below, which refuses to start without SECRET_KEY and
+    APP_BASE_URL. All three default to the *deployed* answer, which is the
+    whole point of them — an install that says nothing is treated as one that
+    is reachable from somewhere.
+
+    So these have to reach `python run.py` and must not reach a deployment,
+    and what separates those is which entry point ran, not which module was
+    imported. The repo-root run.py and `python backend/run.py` are the
+    development server and call this before the app is built; something
+    deployed points an ASGI server at `backend.run:app`, which imports that
+    module and calls nothing.
+
+    It lives here rather than beside those entry points because importing
+    backend.run builds the app as a side effect — so anything that has to run
+    *before* the app is built cannot be imported from the module that builds
+    it. This one is safe to import from anywhere.
+
+    The reloader is why calling it once is enough: `main` hands uvicorn an
+    import string, and the worker re-imports with the parent's environment.
+
+    An explicit value in the environment still wins, so this only fills in.
+    """
+    os.environ.setdefault('ASCEN_INSECURE_COOKIES', '1')
+    os.environ.setdefault('ASCEN_DEV', '1')
+
+
+class Misconfigured(RuntimeError):
+    """A deployment is missing something it cannot safely run without."""
+
+
+def deployment_problems():
+    """What is unset that a deployed install has to set. Empty in dev.
+
+    ## Why this refuses to start rather than warning
+
+    Both of these have a fallback that works, which is exactly what makes them
+    dangerous: nothing looks wrong until it is, and by then the damage is
+    already sitting in somebody's browser.
+
+    `SECRET_KEY` falls back to a per-machine generated file. On one box that is
+    genuinely fine — it is random, it is 0600, it is not in the repository. It
+    is *silently* wrong everywhere else: two instances behind a load balancer
+    each sign with their own key and reject each other's cookies, and a
+    container rebuild signs the whole userbase out. Both read as "the app keeps
+    logging me out" rather than as a missing variable.
+
+    `APP_BASE_URL` falls back to the origin of the request that is asking,
+    which is the `Host` header — something the caller writes. It is the origin
+    baked into verification links, so with an unset value and a proxy that
+    passes `Host` through, a request carrying somebody else's hostname mints a
+    confirmation link pointing at their server. The token in it is the account.
+
+    Neither is a decision this code can make on a deployment's behalf, and both
+    are one line of environment. So `ASCEN_DEV` is taken as the statement that
+    this is a laptop, and its absence as the statement that it is not.
+    """
+    if dev_mode():
+        return []
+    problems = []
+    if not os.environ.get('SECRET_KEY', '').strip():
+        problems.append(
+            'SECRET_KEY is unset. Sessions would be signed with a per-machine '
+            'key that changes on rebuild and differs between instances. '
+            "Generate one with: python -c 'import secrets; "
+            "print(secrets.token_urlsafe(48))'")
+    if not os.environ.get('APP_BASE_URL', '').strip():
+        problems.append(
+            'APP_BASE_URL is unset. Verification links would be built from the '
+            'Host header the caller sent. Set it to the origin this app is '
+            'reachable at, e.g. https://ascen.example.')
+    return problems
+
+
 def load_dotenv(path=None):
     """Read KEY=value lines from a .env file into the environment.
 

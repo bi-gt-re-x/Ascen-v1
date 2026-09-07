@@ -725,23 +725,21 @@ html[data-theme="dark"] .lp-trend.up { color: #4ade80; }
     border-color: color-mix(in srgb, var(--lp-accent) 35%, var(--lp-border));
 }
 
-/* ---- The testimonial ---- */
-.lp-quote-stars {
-    color: var(--lp-gold);
-    font-size: .95rem;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
+/* ---- The quote card ----
+   Was a testimonial, with five gold stars and an initial in a gradient circle
+   for a student who did not exist. Both of those were doing the work of making
+   an invented review look like a real one, so both are gone with it — see the
+   note in components/Home/sections.tsx. */
+/* Scoped through the card because `.lp-quote p` above sets the quote's colour
+   and is a class-plus-element — more specific than a bare class, so a plain
+   `.lp-quote-kicker` lost to it and the label rendered in the body colour. */
+.lp-quote .lp-quote-kicker {
+    margin: 0 0 8px;
+    font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--lp-muted);
 }
 .lp-quote-foot { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-.lp-quote-face {
-    display: grid; place-items: center;
-    width: 34px; height: 34px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--lp-accent), var(--lp-accent-2));
-    color: #fff;
-    font-size: .85rem; font-weight: 800;
-}
 .lp-quote-by small {
     display: block;
     margin-top: 1px;
@@ -1391,6 +1389,39 @@ body.auth-open { overflow: hidden; }
 .auth-strength-bar span.lvl-4 { background: #63b06a; }
 .auth-strength-bar span.lvl-5 { background: #2e9e6b; }
 .auth-strength-label { margin-top: 5px; font-size: 12px; color: #7c8798; }
+
+/* Age and terms, ticked before an account can be made.
+   Laid out as a row so the box sits beside the sentence rather than above it,
+   and `align-items: flex-start` so a wrapped sentence keeps the box on its
+   first line instead of centring it against two. */
+.auth-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #5b6474;
+    cursor: pointer;
+}
+.auth-consent input {
+    flex-shrink: 0;
+    /* Nudged down onto the text's first baseline; a checkbox aligned to the
+       top of the line box sits visibly high next to 12.5px text. */
+    margin-top: 2px;
+    accent-color: #a8845c;
+    cursor: pointer;
+}
+.auth-consent a { color: #a8845c; text-decoration: underline; }
+.auth-consent a:hover { color: #8d6c47; }
+/* The button is disabled until the box is ticked, so it has to look it —
+   otherwise a reader who has not read the line reads a broken button. */
+.auth-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.auth-primary:disabled:hover { background: #141a22; box-shadow: none; }
 
 /* "Check your inbox" */
 .auth-inbox-mark { font-size: 40px; text-align: center; color: #a8845c; }

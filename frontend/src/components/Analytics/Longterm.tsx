@@ -11,7 +11,7 @@
 import type { CSSProperties } from 'react';
 import { Panel, PanelLink, PanelNote, toneVar } from './charts';
 import { GLYPHS, type GlyphName } from './glyphs';
-import { formatPercentile } from './score';
+import { rankLabel } from './score';
 import type { Standing, StandingKey } from '@/services/analytics';
 import type { Insight } from '@/utils/growthSummary';
 
@@ -168,7 +168,7 @@ export function StandingPanel({ standing }: StandingPanelProps) {
       claim={
         best ? (
           <>
-            You are in the <strong>top {formatPercentile(best.percentile!)}%</strong> on{' '}
+            You are in the <strong>{rankLabel(best.percentile!).toLowerCase()}</strong> on{' '}
             {STANDING[best.key]!.label.toLowerCase()}, your strongest measure against everybody
             else.
           </>
@@ -193,8 +193,10 @@ export function StandingPanel({ standing }: StandingPanelProps) {
               </span>
               {/* Through the same formatter as the badge on the score panel, so
                   the two places this page states a percentile state it the same
-                  way — one said "Top 17.7%" beside the other's "Top 18%". */}
-              <span className="ax-standing-rank">Top {formatPercentile(row.percentile)}%</span>
+                  way — one said "Top 17.7%" beside the other's "Top 18%". And
+                  `rankLabel` turns the bottom half around, because "Top 99%"
+                  described this account's *worst* measure. */}
+              <span className="ax-standing-rank">{rankLabel(row.percentile)}</span>
             </li>
           );
         })}

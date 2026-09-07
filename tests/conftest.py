@@ -42,6 +42,15 @@ _TMP = tempfile.mkdtemp(prefix='ascen-tests-')
 os.environ['ASCEN_DB'] = os.path.join(_TMP, 'test.db')
 os.environ['SECRET_KEY'] = 'tests-do-not-need-a-real-one'
 
+# `create_app` refuses to start without these two unless ASCEN_DEV says the
+# install is a laptop (see `deployment_problems` in backend/config/settings.py).
+# They are set here rather than by setting ASCEN_DEV, deliberately: several
+# tests in test_ratelimit.py build an app with ASCEN_DEV *unset*, because that
+# is how they check that a deployed install does not hand the verification link
+# back to whoever asked. Those tests need the deployed answer to that question
+# and a startable app at the same time, which is what these two give them.
+os.environ['APP_BASE_URL'] = 'http://testserver'
+
 # The session cookie is marked Secure by default, and a Secure cookie is never
 # sent over http:// — which is what TestClient speaks. Left on, every test that
 # signs in would appear to sign in and then be anonymous on the next request.

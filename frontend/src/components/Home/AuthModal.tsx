@@ -109,6 +109,8 @@ export function AuthModal({
   /* The mail did not go out and there is no link to offer instead — so the
      inbox screen must not tell somebody to go and watch an empty inbox. */
   const [mailFailed, setMailFailed] = useState(false);
+  /* Ticked before an account can be created — see the note by the box. */
+  const [consented, setConsented] = useState(false);
   const [chosenTheme, setChosenTheme] = useState<Theme>('light');
   const [chosenGoal, setChosenGoal] = useState(100);
   const [password, setPassword] = useState('');
@@ -244,6 +246,12 @@ export function AuthModal({
     const form = new FormData(event.currentTarget);
     const name = String(form.get('name') ?? '').trim();
     const email = String(form.get('email') ?? '').trim();
+    if (!form.get('consent')) {
+      // The button is disabled without it; this is for the Enter key and for
+      // anything that submits the form without going through the button.
+      say('Tick the box to confirm your age and agree to the terms.');
+      return;
+    }
     say('Creating your account…', 'info');
     try {
       const result = await authService.signup(name, email, password);
@@ -433,7 +441,39 @@ export function AuthModal({
                 {strength.label}
               </div>
             </div>
-            <button type="submit" className="auth-primary">
+            {/* One box for both, because they are one decision: whether to
+                open an account here on the stated terms. Two boxes to tick is
+                two boxes to tick without reading.
+
+                The age half is not decoration. Ascen is built for students and
+                much of its audience is at school, and an account here is an
+                e-mail address plus a term's worth of what somebody works on
+                and when — which is a different kind of record to hold about a
+                twelve-year-old than about an adult, and a different set of
+                rules (COPPA in the US, and the GDPR age of consent in the EU,
+                which several member states set above 13). Asking is what makes
+                the answer in the privacy policy true. */}
+            <label className="auth-consent" htmlFor="createConsent">
+              <input
+                type="checkbox"
+                id="createConsent"
+                name="consent"
+                checked={consented}
+                onChange={(event) => setConsented(event.target.checked)}
+              />
+              <span>
+                I am 13 or older, and I agree to the{' '}
+                <a href="/terms-of-service" target="_blank" rel="noreferrer">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="/privacy-policy" target="_blank" rel="noreferrer">
+                  Privacy Policy
+                </a>
+                .
+              </span>
+            </label>
+            <button type="submit" className="auth-primary" disabled={!consented}>
               Create Account
             </button>
           </form>

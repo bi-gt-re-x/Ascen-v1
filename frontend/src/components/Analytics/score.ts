@@ -182,6 +182,23 @@ export function formatPercentile(percentile: number): string {
   return value < 10 || value > 99 ? value.toFixed(1) : String(Math.round(value));
 }
 
+/**
+ * A placement, said the way round that a reader will understand it.
+ *
+ * "Top 99%" is arithmetically what a percentile of 99 is, and it reads as
+ * praise. It was on the focus row of the standing panel for an account with no
+ * focus time at all — last of everybody, described in the same words as first.
+ * Nobody misreads "Bottom 1%".
+ *
+ * The turn is at the median, so the phrasing follows which half somebody is
+ * in rather than switching at some threshold of politeness. `percentile` is
+ * the backend's, where a *low* number is a good one.
+ */
+export function rankLabel(percentile: number): string {
+  if (percentile <= 50) return `Top ${formatPercentile(percentile)}%`;
+  return `Bottom ${formatPercentile(100 - percentile)}%`;
+}
+
 /** "Top 8% of Ascen users" — the badge's whole line, in one place. */
 export function percentileLabel(score: number | null): string | null {
   if (score === null) return null;

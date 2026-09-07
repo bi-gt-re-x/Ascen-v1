@@ -442,3 +442,96 @@ def test_a_resend_does_not_leak_it_either(fresh_db, monkeypatch):
     reply = client.post('/api/auth/resend', json={'email': 'again@example.test'}).json()
 
     assert reply['dev_link'] is None, reply
+
+
+# --------------------------------------------------------------------------
+# What a deployment has to say for itself, and what every response carries
+# --------------------------------------------------------------------------
+def _problems(monkeypatch, **env):
+    from backend.config import settings
+
+    for name in ('ASCEN_DEV', 'SECRET_KEY', 'APP_BASE_URL'):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    return settings.deployment_problems()
+
+
+def test_a_deployment_must_name_its_key_and_its_origin(monkeypatch):
+    """Both have a fallback that works and is quietly wrong off a laptop.
+
+    A generated SECRET_KEY signs everyone out on a rebuild and disagrees with
+    itself across instances; an unset APP_BASE_URL builds verification links
+    out of the Host header, which the caller writes.
+    """
+    problems = _problems(monkeypatch)
+    assert len(problems) == 2, problems
+    assert any('SECRET_KEY' in p for p in problems)
+    assert any('APP_BASE_URL' in p for p in problems)
+
+
+def test_the_dev_flag_is_what_says_this_is_a_laptop(monkeypatch):
+    """And it has to work, or a fresh clone cannot be run at all."""
+    assert _problems(monkeypatch, ASCEN_DEV='1') == []
+
+
+def test_each_one_is_reported_on_its_own(monkeypatch):
+    """Setting one must not silence the other."""
+    assert [p for p in _problems(monkeypatch, SECRET_KEY='x') if 'SECRET_KEY' in p] == []
+    assert [p for p in _problems(monkeypatch, APP_BASE_URL='https://x.example')
+            if 'APP_BASE_URL' in p] == []
+
+
+def test_the_app_refuses_to_start_on_a_problem(monkeypatch, fresh_db):
+    """Not a warning in a log nobody reads. It does not come up."""
+    from backend.config import settings
+    from backend.main import create_app
+
+    monkeypatch.delenv('ASCEN_DEV', raising=False)
+    monkeypatch.delenv('SECRET_KEY', raising=False)
+    with pytest.raises(settings.Misconfigured):
+        create_app()
+
+
+def test_every_response_carries_the_security_headers(client):
+    """On every response, because one that misses is the one an attack picks.
+
+    The gate answers some requests with a redirect and the limiter answers
+    others with a 429, and both go through the same middleware — so a page, an
+    API reply and a refusal are all checked here.
+    """
+    from backend.middleware import headers as headers_mw
+
+    for response in (client.get('/dashboard'),
+                     client.get('/api/get_goals'),
+                     client.get('/privacy-policy')):
+        for name, value in headers_mw.STATIC.items():
+            assert response.headers.get(name) == value, (response.url, name)
+
+
+def test_the_page_cannot_be_framed(client):
+    """Clickjacking, and the settings page has a Delete my account button."""
+    response = client.get('/dashboard')
+    assert "frame-ancestors 'none'" in response.headers['Content-Security-Policy']
+    assert response.headers['X-Frame-Options'] == 'DENY'
+
+
+def test_hsts_is_not_sent_over_plain_http(client):
+    """Sent over http it is ignored, and pinning localhost for a year would
+    make every project on this machine unreachable in that browser."""
+    assert 'Strict-Transport-Security' not in client.get('/dashboard').headers
+
+
+def test_hsts_is_sent_behind_a_proxy_that_says_it_is_https(client, monkeypatch):
+    """The forwarded scheme is believed only when the deployment says there is
+    a proxy in front — the same claim the rate limiter needs for the client
+    address, and the same flag answering it."""
+    monkeypatch.setenv('ASCEN_TRUST_PROXY', '1')
+    response = client.get('/dashboard', headers={'X-Forwarded-Proto': 'https'})
+    assert response.headers.get('Strict-Transport-Security', '').startswith('max-age=')
+
+
+def test_the_forwarded_scheme_is_ignored_without_that_flag(client):
+    """Otherwise any caller could turn HSTS on for a host that cannot serve it."""
+    response = client.get('/dashboard', headers={'X-Forwarded-Proto': 'https'})
+    assert 'Strict-Transport-Security' not in response.headers

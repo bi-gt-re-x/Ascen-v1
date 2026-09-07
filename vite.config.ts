@@ -59,6 +59,27 @@ export default defineConfig({
     // Relative to `root`, so the bundle lands in frontend/dist.
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: true,
+
+    /*
+     * Source maps are off unless asked for, and `hidden` would not have been
+     * enough.
+     *
+     * This was `true`, and backend/routes/spa.py mounts dist/assets as static
+     * files, so every map was served: 29 of them, 2.2MB for the main bundle
+     * alone. A map carries the original source, comments included — and the
+     * comments in this repository are long, and several of them describe
+     * vulnerabilities by explaining the shape of what used to be there. That
+     * is a considerate thing to write for whoever maintains this and a
+     * generous thing to hand a stranger.
+     *
+     * `hidden` only drops the `//# sourceMappingURL` line at the end of the
+     * bundle. The file is still written and still served, and its name is the
+     * bundle's name with `.map` on the end — which anybody reading the page
+     * source already has. It hides the maps from devtools, not from people.
+     *
+     * So they are not generated. Set ASCEN_SOURCEMAPS=1 for a build you intend
+     * to debug, and do not deploy that one.
+     */
+    sourcemap: process.env.ASCEN_SOURCEMAPS === '1',
   },
 });

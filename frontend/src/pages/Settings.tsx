@@ -1431,10 +1431,19 @@ export default function Settings() {
             ),
           },
           {
+            // This said "On the machine running Ascen. Nothing is uploaded
+            // anywhere." / "This device", which was true of a laptop and is a
+            // false statement on a hosted install — everything here is in the
+            // server's database, which is a different promise and a weaker
+            // one. It is the same claim the privacy policy used to make; both
+            // were written when the only machine was the author's.
             id: 'storage',
             label: 'Where your data lives',
-            hint: 'On the machine running Ascen. Nothing is uploaded anywhere.',
-            control: <span className="st-fixed">This device</span>,
+            hint:
+              'In the database on the server running Ascen — not in this browser. ' +
+              'It is not sold, and it is not shared with anyone; the Privacy Policy ' +
+              'says what is kept and what leaves.',
+            control: <span className="st-fixed">This server</span>,
           },
         ],
       },

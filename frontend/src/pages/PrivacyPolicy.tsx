@@ -1,13 +1,35 @@
 /**
  * The privacy policy.
  *
- * Ported from the privacy-policy.html template, word for word — the wording
- * of a published policy is not something a port gets to improve, so the text
- * below is the text that page served.
+ * ## Why this was rewritten
  *
- * What is not carried over is the Home button that floated in the corner.
- * Those pages had no navigation of their own, so they grew one; this app has
- * the top bar on every route, and the wordmark in it goes to the same place.
+ * The previous version was ported word for word from privacy-policy.html, on
+ * the principle that a published policy is not something a port gets to
+ * improve. That was right about ports and wrong about this text, because the
+ * text described a different product: it said data was stored "locally — in
+ * your browser's local storage and in data files on the machine running the
+ * app" and that it "never leaves your device unless you copy it yourself".
+ *
+ * That was true when the only machine running Ascen was the author's laptop.
+ * On a hosted install every word of it is false — the data is in a database on
+ * a server, reached over the network, and the account holder is not the person
+ * who administers it. A privacy policy that is wrong in the reader's favour is
+ * worse than none: it is the document they would point at afterwards.
+ *
+ * So this version says what the code does, and each section is checkable
+ * against it:
+ *
+ *   e-mail and verification    backend/routes/auth.py, tracking/auth.py
+ *   what is stored, and where  data/sql/*.sql, database/connection.py
+ *   the model features         tracking/planner.py, tracking/subject_goal.py
+ *   comparison between users   tracking/standing.py
+ *   cookies                    main.py (session), routes/theme.py
+ *   deletion                   the Reset and delete section of Settings
+ *
+ * If one of those changes, this page changes with it. **It is a description of
+ * the software, not legal advice** — anyone deploying this to real users
+ * should have it reviewed, and should fill in the operator and contact details
+ * in section 10, which this repository cannot know.
  *
  * The card, the headings and the dark theme live in styles/content-page.css,
  * shared with About Us and the Terms of Service — all three were the same
@@ -26,97 +48,168 @@ export default function PrivacyPolicy() {
   return (
     <div className={`content-container${entering ? ' pg-enter' : ''}`}>
       <h1>Privacy Policy</h1>
-      <p className="effective-date">Effective date: July 22, 2026</p>
+      <p className="effective-date">Effective date: September 6, 2026</p>
 
       <p>
         Ascen (&quot;we&quot;, &quot;us&quot;, or &quot;the app&quot;) is a study and
-        productivity tracker. This policy explains what information the app handles, how it
-        is stored, and the choices you have. The short version: your data stays with you.
+        productivity tracker. This policy explains what the app collects, where it is
+        kept, who else can see it, and what you can do about it. The short version: it is
+        held on the server that runs Ascen, it is not sold or shared for advertising, and
+        you can export or delete all of it from Settings at any time.
       </p>
 
       <h2>1. Information We Collect</h2>
-      <p>Ascen stores only the information you create while using the app:</p>
+      <p>Things you give us when you make an account:</p>
       <ul>
         <li>
-          <strong>Profile data</strong> — your display name, level, XP, and streak history.
+          <strong>Your e-mail address</strong> — used to confirm the account, to sign you
+          in, and to send account e-mail. Nothing else is sent to it.
         </li>
         <li>
-          <strong>Tasks and goals</strong> — task titles, descriptions, priorities,
-          sub-tasks, due dates, and goal targets you set.
+          <strong>Your name and username</strong> — the name greets you; the username is
+          what everything you make is filed under.
+        </li>
+        <li>
+          <strong>Your password</strong> — stored only as a pbkdf2 hash. It cannot be read
+          back, by us or by anyone with the database.
+        </li>
+        <li>
+          <strong>If you sign in with Google</strong> — we receive your e-mail address and
+          name from Google to identify the account. We never receive your Google password.
+        </li>
+      </ul>
+      <p>Things the app records as you use it:</p>
+      <ul>
+        <li>
+          <strong>Tasks and goals</strong> — titles, descriptions, priorities, subjects,
+          due dates, checkpoints, and the ratings you give a task when you finish it.
         </li>
         <li>
           <strong>Calendar entries</strong> — events and scheduled tasks you place on the
           calendar.
         </li>
         <li>
-          <strong>Activity metrics</strong> — focus session durations, tasks completed, and
-          XP events used to build your growth charts.
+          <strong>Notes and records</strong> — anything you write on those pages.
         </li>
         <li>
-          <strong>Preferences</strong> — settings such as your chosen theme (light or dark).
+          <strong>Activity metrics</strong> — focus session durations, tasks completed, XP
+          events, and streaks. These are what the analytics pages are computed from.
+        </li>
+        <li>
+          <strong>Preferences</strong> — theme, daily goal, start page, and the answers
+          you give the analytics setup.
         </li>
       </ul>
       <p>
         We do not collect payment information, precise location, contacts, or advertising
-        identifiers. Ascen has no ads and no analytics trackers.
+        identifiers. Ascen has no ads, no third-party analytics and no tracking pixels.
       </p>
 
-      <h2>2. How Your Data Is Stored</h2>
+      <h2>2. Where Your Data Is Kept</h2>
       <p>
-        All of your data is stored locally — in your browser&apos;s local storage and in
-        data files on the machine running the app. Your information is not uploaded to a
-        cloud service, sold, or shared with third parties. It never leaves your device
-        unless you copy it yourself.
+        On the server running Ascen, in a single database, sent to and from your browser
+        over the network. It is <strong>not</strong> stored only on your device, and it is
+        readable by whoever administers that server — which is the ordinary situation for
+        a hosted application, and worth stating plainly rather than leaving you to assume
+        otherwise.
+      </p>
+      <p>
+        Your browser also keeps two cookies: a signed session cookie that says you are
+        signed in, and a cookie remembering your chosen theme. The session cookie is the
+        whole of your authorisation, which is why it is marked Secure and HttpOnly and
+        cannot be read by scripts on the page.
       </p>
 
       <h2>3. How We Use Your Information</h2>
-      <p>Your data is used solely to make the app work for you:</p>
+      <p>Only to run the app for you:</p>
       <ul>
-        <li>Displaying your tasks, goals, and calendar.</li>
-        <li>Calculating streaks, XP, levels, and growth ratings.</li>
-        <li>Rendering your progress charts and statistics.</li>
+        <li>Displaying your tasks, goals, notes and calendar.</li>
+        <li>Calculating streaks, XP, levels, growth ratings and recommendations.</li>
+        <li>Sending account e-mail — verification, and nothing marketing.</li>
         <li>Remembering your preferences between sessions.</li>
       </ul>
+      <p>We do not profile you for advertising, and we do not sell or rent anything.</p>
 
-      <h2>4. Sharing and Third Parties</h2>
+      <h2>4. Third Parties</h2>
+      <p>There are two, and both only in specific circumstances:</p>
+      <ul>
+        <li>
+          <strong>An AI provider, when you ask for a draft.</strong> The buttons that
+          suggest checkpoints for a goal, steps for a checkpoint, or a goal for a subject
+          send a short brief to an external model — the title, description and reason you
+          wrote, the checkpoints you have already written, and summary counts such as how
+          many tasks you finished and how many hours you logged. Depending on how this
+          install is configured that provider is Anthropic or Hugging Face. Nothing is
+          sent unless you press one of those buttons or create a checkpoint, and your
+          e-mail address, password and notes are never included.
+        </li>
+        <li>
+          <strong>Google, if you use &quot;Continue with Google&quot;.</strong> Standard
+          OAuth: you sign in at Google, and Google tells us your e-mail and name.
+        </li>
+      </ul>
       <p>
-        We do not share, sell, rent, or trade your information with anyone. Ascen does not
-        integrate third-party advertising, analytics, or social networks.
+        Fonts are loaded from Google Fonts, which means your browser makes a request to
+        Google&apos;s servers for them. Beyond that, nothing about you is shared with
+        anyone, and none of the above is advertising.
       </p>
 
-      <h2>5. Data Retention and Deletion</h2>
+      <h2>5. Comparison With Other Users</h2>
       <p>
-        Your data remains stored until you delete it. You can remove individual tasks,
-        goals, and calendar entries in the app at any time. Because data is stored locally,
-        you can also delete the app&apos;s data files or clear your browser storage to
-        remove everything permanently.
+        The &quot;Where You Stand&quot; panel places you against other accounts on this
+        install — how much XP you have earned, how consistent you have been, and so on.
+        This uses figures from other accounts to work out your rank, and figures from your
+        account to work out theirs. Nobody is ever shown another person&apos;s name, tasks,
+        goals or notes; the only thing anyone sees is their own position and the size of
+        the group. The comparison is not shown at all until enough accounts have a
+        comparable record for a rank to mean anything.
       </p>
 
-      <h2>6. Security</h2>
+      <h2>6. Data Retention and Deletion</h2>
       <p>
-        Because your data is stored locally, its security depends primarily on the security
-        of your own device. We recommend keeping your operating system up to date and
-        protecting your device with a password.
+        Your data is kept until you remove it. Individual tasks, goals, notes and calendar
+        entries can be deleted as you go. Settings → Reset and delete will clear your
+        finished tasks, your whole task list, your level and XP, or everything you have
+        made — and &quot;Delete this account&quot; removes the account and everything in
+        it permanently. None of those can be undone and there is no backup, so Settings →
+        Data &amp; export will give you the whole account as JSON, or a table at a time as
+        CSV, first.
       </p>
 
-      <h2>7. Children&apos;s Privacy</h2>
+      <h2>7. Security</h2>
       <p>
-        Ascen is a study tool suitable for general audiences. It does not knowingly collect
-        personal information beyond what you enter yourself, and no information is
-        transmitted to us or anyone else.
+        Passwords are stored as pbkdf2 hashes and never in readable form. Sessions are
+        signed cookies that cannot be forged or read by page scripts. Sign-in attempts are
+        rate limited. Your data is only as safe as the server it is on, so it should be
+        served over HTTPS and kept up to date — and no system is perfect: please use a
+        password you do not use anywhere else.
       </p>
 
-      <h2>8. Changes to This Policy</h2>
+      <h2>8. Children&apos;s Privacy</h2>
+      <p>
+        Ascen is built for students, and much of its audience is at school. It is not
+        directed at children under 13, and accounts should not be created for them. If you
+        are under 13, please do not sign up; if you believe a child under 13 has created an
+        account, contact us using the details in section 10 and we will delete it and its
+        data. Depending on where you are, a parent or guardian may have the right to see,
+        correct or delete what is held about their child — the same contact reaches us for
+        that.
+      </p>
+
+      <h2>9. Changes to This Policy</h2>
       <p>
         If this policy changes, the updated version will be posted on this page with a new
-        effective date. Continued use of the app after changes take effect constitutes
-        acceptance of the revised policy.
+        effective date. Where a change materially affects what is collected or who it is
+        shared with, we will say so in the app rather than relying on you to re-read this
+        page.
       </p>
 
-      <h2>9. Contact</h2>
+      <h2>10. Contact</h2>
       <p>
-        Questions about this policy? Reach out through the project&apos;s repository or the
-        contact information provided where you obtained the app.
+        Questions about this policy, or a request to see or delete what is held about you,
+        go to whoever operates this installation of Ascen — their contact details belong
+        here, and are the ones given where you signed up. For the software itself, reach
+        out through the project&apos;s repository.
       </p>
     </div>
   );

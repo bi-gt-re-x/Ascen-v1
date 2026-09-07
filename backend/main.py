@@ -36,6 +36,17 @@ from backend.config import settings
 
 
 def create_app():
+    # Before anything is built. Both of these have a fallback that works and is
+    # quietly wrong once the app is not on one laptop, so an install that has
+    # not said it is a laptop has to say what its origin and its signing key
+    # are. See `deployment_problems` in backend/config/settings.py.
+    problems = settings.deployment_problems()
+    if problems:
+        raise settings.Misconfigured(
+            'Refusing to start.\n\n' + '\n\n'.join('  * ' + p for p in problems)
+            + '\n\nIf this is a development machine, set ASCEN_DEV=1 — '
+              '`python run.py` does it for you.')
+
     app = FastAPI(
         title='Ascen',
         description='A gamified productivity tracker: tasks, XP, streaks, '
