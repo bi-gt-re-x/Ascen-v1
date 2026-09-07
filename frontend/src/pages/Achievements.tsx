@@ -74,7 +74,7 @@ import type { Badge, Category, Metric } from '@/services/achievements';
 import '@/styles/achievements.css';
 
 /** The filter's options. "All" first, then the five headings. */
-const FILTERS = ['All Achievements', 'Productivity', 'Consistency', 'Learning', 'Milestones', 'Special'] as const;
+const FILTERS = ['All Achievements', 'Productivity', 'Consistency', 'Learning', 'Mastery', 'Milestones', 'Special'] as const;
 type Filter = (typeof FILTERS)[number];
 
 /** How many of the most recent earnings lead the page. */
@@ -124,6 +124,14 @@ const GLYPH = {
     <path d="M12 2.5l1.8 5.3a4 4 0 002.4 2.4l5.3 1.8-5.3 1.8a4 4 0 00-2.4 2.4L12 21.5l-1.8-5.3a4 4 0 00-2.4-2.4L2.5 12l5.3-1.8a4 4 0 002.4-2.4z" />
   ),
   levelUp: <path d="m5 13.5 7-7 7 7M5 20l7-7 7 7" />,
+  lattice: (
+    <>
+      <path d="M12 6.6v4.2m0 0L6.8 15m5.2-4.2L17.2 15" />
+      <circle cx="12" cy="4.6" r="2.1" />
+      <circle cx="6" cy="17" r="2.1" />
+      <circle cx="18" cy="17" r="2.1" />
+    </>
+  ),
   flame: <path d="M12 22a6.5 6.5 0 006.5-6.5c0-5-5-7-4.5-13-4 2.2-6.5 5.6-6.5 9.5a4 4 0 01-1.2-2.7S5.5 12.5 5.5 15.5A6.5 6.5 0 0012 22Z" />,
   target: (
     <>
@@ -317,6 +325,9 @@ const METRIC_GLYPH: Record<Metric, ReactNode> = {
   focus_days: GLYPH.clock,
   focus_best: GLYPH.clock,
   subjects: GLYPH.layers,
+  trees: GLYPH.lattice,
+  trees_deep: GLYPH.lattice,
+  tree_best: GLYPH.lattice,
   notes: GLYPH.book,
   goals: GLYPH.target,
   records: GLYPH.medal,
@@ -404,11 +415,12 @@ function glyphFor(badge: Badge): ReactNode {
   return BADGE_GLYPH[badge.id] ?? METRIC_GLYPH[badge.metric as Metric] ?? GLYPH.star;
 }
 
-/** The five headings, drawn. The same drawing the category's badges carry. */
+/** The six headings, drawn. The same drawing the category's badges carry. */
 const CATEGORY_GLYPH: Record<Category, ReactNode> = {
   Productivity: GLYPH.target,
   Consistency: GLYPH.flame,
   Learning: GLYPH.book,
+  Mastery: GLYPH.lattice,
   Milestones: GLYPH.trophy,
   Special: GLYPH.star,
 };

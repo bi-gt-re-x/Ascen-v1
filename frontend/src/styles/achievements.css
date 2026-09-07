@@ -5,7 +5,7 @@
 
        .ac-band      the ring and three figures — how far along the wall is
        .ac-recent    the last four earned, largest, because they are the news
-       .ac-cats      five chips, one per heading, each of them its own filter
+       .ac-cats      six chips, one per heading, each of them its own filter
        .ac-grid      the hundred, as tiles, in two headed halves
 
    ## Difficulty is a colour, and it is the only colour
@@ -404,6 +404,7 @@ html[data-theme="dark"] .ac-mark-tick svg { color: #10151f; }
 .ac-cat.cat-productivity { --t: var(--ac-green); }
 .ac-cat.cat-consistency { --t: var(--ac-flame); }
 .ac-cat.cat-learning { --t: var(--ac-violet); }
+.ac-cat.cat-mastery { --t: var(--ac-rose); }
 .ac-cat.cat-milestones { --t: var(--ac-blue); }
 .ac-cat.cat-special { --t: var(--ac-gold); }
 

@@ -30,10 +30,12 @@ export type Metric =
   | 'streak' | 'active_days' | 'perfect_days' | 'months'
   | 'early' | 'weekend' | 'night'
   | 'focus' | 'focus_days' | 'focus_best'
-  | 'subjects' | 'notes' | 'goals' | 'records';
+  | 'subjects' | 'notes' | 'goals' | 'records'
+  | 'trees' | 'trees_deep' | 'tree_best';
 
-/** The five headings the wall is filed under. */
-export type Category = 'Productivity' | 'Consistency' | 'Learning' | 'Milestones' | 'Special';
+/** The six headings the wall is filed under. */
+export type Category =
+  | 'Productivity' | 'Consistency' | 'Learning' | 'Mastery' | 'Milestones' | 'Special';
 
 export interface Badge {
   id: string;

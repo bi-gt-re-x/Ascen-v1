@@ -67,14 +67,21 @@ from fastapi import APIRouter, Depends
 
 from backend.api.guard import current_username
 from backend.api.reply import fail, ok
+from backend.config.skill_trees import TREES as SKILL_TREES, tree_for
 from backend.database import connection as db
 from backend.tracking.auth import load_user
 from backend.tracking.xp import event_day, level_for_total_xp
 
 router = APIRouter(tags=['achievements'])
 
-#: The five headings the wall is filed under, in reading order.
-CATEGORIES = ('Productivity', 'Consistency', 'Learning', 'Milestones', 'Special')
+#: The six headings the wall is filed under, in reading order.
+#:
+#: Mastery is the skill trees. It is its own heading rather than more Learning
+#: badges because it answers a different question: Learning counts what was
+#: done, Mastery counts how far into a subject it went. A hundred hours of
+#: focus and a lattice half filled in are both worth saying, and neither is a
+#: bigger version of the other.
+CATEGORIES = ('Productivity', 'Consistency', 'Learning', 'Mastery', 'Milestones', 'Special')
 
 #: What each difficulty rating is called. 1 is a first afternoon, 5 is a year
 #: of the app taken seriously.
@@ -168,6 +175,24 @@ CATALOGUE = (
     ('notes-200',    'Archivist',             'Write 200 notes.',                                 'notes',       200,   3, 'Learning'),
     ('notes-500',    'A Library of Your Own', 'Write 500 notes.',                                 'notes',       500,   5, 'Learning'),
 
+    # ---- Mastery: how far into a subject the work actually went ---------
+    #
+    # Measured on the skill trees, and on the account's own XP rather than on
+    # the trees' authored `percent` — see `_tree_standing`.
+    ('trees-1',      'First Lattice',         'Reach a skill tree.',                              'trees',       1,     1, 'Mastery'),
+    ('trees-3',      'Three Fronts',          'Reach 3 different skill trees.',                   'trees',       3,     1, 'Mastery'),
+    ('trees-8',      'Broad Front',           'Reach 8 different skill trees.',                   'trees',       8,     2, 'Mastery'),
+    ('trees-15',     'Wide Curriculum',       'Reach 15 different skill trees.',                  'trees',       15,    3, 'Mastery'),
+    ('trees-25',     'Whole Shelf',           'Reach 25 different skill trees.',                  'trees',       25,    4, 'Mastery'),
+    ('tree-25',      'Foot in the Door',      'Get a quarter of the way into a skill tree.',      'tree_best',   25,    1, 'Mastery'),
+    ('tree-50',      'Halfway Up',            'Get halfway into a skill tree.',                   'tree_best',   50,    2, 'Mastery'),
+    ('tree-75',      'Three Quarters',        'Get three quarters of the way into a skill tree.', 'tree_best',   75,    3, 'Mastery'),
+    ('tree-100',     'Topped Out',            'Cover a whole skill tree.',                        'tree_best',   100,   4, 'Mastery'),
+    ('deep-trees-1', 'Depth',                 'Get halfway into 1 skill tree.',                   'trees_deep',  1,     2, 'Mastery'),
+    ('deep-trees-3', 'Three Deep',            'Get halfway into 3 skill trees.',                  'trees_deep',  3,     3, 'Mastery'),
+    ('deep-trees-6', 'Specialist',            'Get halfway into 6 skill trees.',                  'trees_deep',  6,     4, 'Mastery'),
+    ('deep-trees-10', 'Many Mountains',       'Get halfway into 10 skill trees.',                 'trees_deep',  10,    5, 'Mastery'),
+
     # ---- Milestones: the numbers the app counts in ----------------------
     ('xp-1000',      'Getting Going',         'Earn 1,000 XP.',                                   'xp',          1000,  1, 'Milestones'),
     ('xp-5000',      'Five Thousand',         'Earn 5,000 XP.',                                   'xp',          5000,  1, 'Milestones'),
@@ -220,6 +245,7 @@ HIDDEN = (
     ('hidden-polymath',  'Polymath',           'Finish tasks in 40 different subjects.',     'subjects', 40,    None),
     ('hidden-iron-will', 'Iron Will',          'Hold a 500-day streak.',                     'streak',   500,   None),
     ('hidden-10k-hours', 'Ten Thousand Hours', 'Log 10,000 hours of focus.',                 'focus',    10000, None),
+    ('hidden-cartographer', 'Cartographer',    'Reach 45 different skill trees.',             'trees',    45,    None),
     ('hidden-ascended',  'Ascended',           'Reach level 250.',                           'level',    250,   'Ascended'),
 )
 
@@ -244,6 +270,9 @@ METRIC_LABELS = {
     'focus_days': 'days',
     'focus_best': 'hours',
     'subjects': 'subjects',
+    'trees': 'trees',
+    'trees_deep': 'trees',
+    'tree_best': '% of a tree',
     'notes': 'notes',
     'goals': 'goals',
     'records': 'records',
@@ -350,6 +379,47 @@ def _hour_and_day(stamp):
     return when.hour, when.weekday()
 
 
+def _tree_standing(done):
+    """How far into each skill tree the account's finished work has actually got.
+
+    ## Why this is computed and not read
+
+    A tree's nodes carry a `state` and a `percent`, and neither is evidence
+    about anybody: they are authored illustration, the same on every account —
+    see the note in frontend/src/skills/subjectTrees.ts. A badge counted on
+    them would be earned by everyone the moment they signed up, which is not a
+    badge, it is a decoration.
+
+    What *is* per-account is the XP filed under the subjects that route to a
+    tree. So a tree's standing is the account's own XP in it against what the
+    lattice is worth, and every figure underneath is a re-reading of the task
+    rows — the same rule the rest of this module follows.
+
+    ## Capped at 100
+
+    A subject can be worked past what its lattice covers: Alpha's mathematics
+    is twice the Mathematics tree. Uncapped, "get halfway into 3 trees" would
+    be reachable by grinding one subject until the arithmetic said 300%, which
+    is the opposite of what the badge is for. Covering a tree is covering it.
+
+    Returns (trees reached, best percent, trees at or past half).
+    """
+    earned = {}
+    for row in done:
+        tree = tree_for((row.get('subject') or '').strip())
+        if tree is None:
+            continue
+        earned[tree] = earned.get(tree, 0) + float(row.get('xp_value') or 0)
+
+    shares = []
+    for tree, xp in earned.items():
+        worth = SKILL_TREES.get(tree, ('', 0))[1]
+        if worth > 0:
+            shares.append(min(100, int(xp / worth * 100)))
+
+    return len(earned), max(shares, default=0), sum(1 for s in shares if s >= 50)
+
+
 def _figures(username, user):
     """The account's current value for every metric a badge is measured on.
 
@@ -359,6 +429,7 @@ def _figures(username, user):
     """
     mine = db.tasks_for(username)
     done = [row for row in mine if row.get('status') == 'done']
+    trees, tree_best, trees_deep = _tree_standing(done)
 
     per_day = {}
     early = night = weekend = priority = 0
@@ -440,6 +511,9 @@ def _figures(username, user):
         'focus_days': sum(1 for row in focus_rows if float(row.get('seconds') or 0) > 0),
         'focus_best': int(focus_best // 3600),
         'subjects': len(subjects),
+        'trees': trees,
+        'tree_best': tree_best,
+        'trees_deep': trees_deep,
         'notes': len(db.rows_for('notes', username)),
         'goals': sum(
             1 for row in db.rows_for('goals', username)
