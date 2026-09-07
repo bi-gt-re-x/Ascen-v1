@@ -128,9 +128,21 @@ export function TodayCard({
  * as the colour so the line still reads without it — the same rule the month
  * view's `Delta` follows.
  *
- * Silent in the two cases where a comparison would be a lie: an account with
- * no history behind it, and a baseline of zero, which every number is
- * infinitely better than.
+ * Silent in the three cases where a comparison would be a lie: an account with
+ * no history behind it, a baseline of zero, which every number is infinitely
+ * better than — and a day with nothing on it yet.
+ *
+ * That third one is the whole day up to now held against whole days that
+ * finished. `typicalDay` averages complete days and skips today on purpose, so
+ * before somebody has done anything the arithmetic is `(0 - usual) / usual`
+ * and the card says **↓ 100% vs usual**, in red, every morning, to an account
+ * with a year of work behind it. It is not a shortfall; it is a day that has
+ * not happened yet, and −100% is only true of it at midnight.
+ *
+ * Nothing is hidden by dropping it. The zero it would be commenting on is an
+ * inch away in the same card, and the case where a bare day is worth acting on
+ * — a streak about to break — is already carried by the notification that says
+ * so, at the hour it starts to matter rather than at nine in the morning.
  */
 function Trend({ now, usual }: { now: number; usual: Typical & { value: number } }) {
   /* Rendered as a line of its own rather than beside the heading. Inline it
@@ -139,6 +151,8 @@ function Trend({ now, usual }: { now: number; usual: Typical & { value: number }
      — while the line below costs height the cards already had, being stretched
      to the tallest of them anyway. */
   if (usual.days === 0 || usual.value <= 0) return <span className="dash-trend is-none" />;
+  /* Nothing done yet today — see the third case in the note above. */
+  if (now <= 0) return <span className="dash-trend is-none" />;
 
   const change = Math.round(((now - usual.value) / usual.value) * 100);
   /* Within a tenth either way is not a change, it is the same day. Saying
