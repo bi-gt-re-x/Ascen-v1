@@ -56,32 +56,75 @@ def test_every_subject_on_the_timetable_is_a_real_subject():
 
 def test_the_timetable_is_the_one_that_was_asked_for():
     """The week, read back as (day, title, start, end). If the timetable
-    changes this is the line to change, and changing it should be deliberate."""
-    week = {(d, title, begin, end) for d, title, _s, begin, end, _x in seed_alpha.WEEK}
+    changes this is the line to change, and changing it should be deliberate.
+
+    Alpha is a computer-science undergraduate: the lectures and labs of the
+    degree, Math 55 and a Putnam seminar for the mathematics, a side project
+    for the web work, and the violin once a week."""
+    week = {(d, title, begin, end)
+            for d, title, _s, begin, end, _x, _study in seed_alpha.WEEK}
     for day in range(5):
-        assert (day, 'Ready Up', '06:45', '07:15') in week
-        assert (day, 'School', '07:30', '15:00') in week
-    assert (0, 'Swimming', '18:00', '19:00') in week
-    assert (2, 'Math Club', '15:00', '16:00') in week
-    assert (2, 'Violin lesson', '16:30', '17:00') in week
-    assert (2, 'Swimming', '18:00', '19:00') in week
-    assert (3, 'SciOly Club', '15:00', '16:00') in week
-    assert (4, 'Violin performance', '18:00', '19:00') in week
+        assert (day, 'Morning review', '08:15', '08:45') in week
+    for day in (0, 2, 4):
+        assert (day, 'Math 55 lecture', '09:00', '10:30') in week
+        assert (day, 'Gym', '07:00', '08:00') in week
+    for day in (1, 3):
+        assert (day, 'Algorithms lecture', '10:00', '11:30') in week
+    assert (0, 'Putnam seminar', '17:30', '19:00') in week
+    assert (3, 'Putnam problem session', '19:00', '20:30') in week
+    assert (3, 'ML lab', '15:00', '17:00') in week
+    assert (4, 'Systems lab', '14:00', '16:00') in week
+    assert (2, 'Violin lesson', '17:00', '18:00') in week
+    assert (4, 'Side project standup', '17:00', '17:30') in week
     # Nothing on a weekend, and nothing else on a weekday.
-    assert len(seed_alpha.WEEK) == 16
+    assert len(seed_alpha.WEEK) == 24
     assert not [row for row in seed_alpha.WEEK if row[0] > 4]
+
+
+def test_the_timetable_reaches_the_subjects_it_is_meant_to():
+    """The point of filing a lecture under what it is *about* is that the
+    account's record reaches the lattices that teach it. If these ids drift,
+    the skill tree page and the analytics tab stop seeing the degree."""
+    named = {row[2] for row in seed_alpha.WEEK}
+    named |= {row[1] for row in seed_alpha.EVENING}
+    named |= {row[1] for row in seed_alpha.WEEKEND}
+    for subject in ('programming', 'computer_science', 'web_design',
+                    'machine_learning', 'data_science', 'databases',
+                    'mathematics', 'music'):
+        assert subject in named, subject
+
+
+def test_a_lecture_is_not_a_focus_session():
+    """Attendance and work used to be told apart by the subject — a block filed
+    under `lectures` was a lesson. The lectures are filed under what they teach
+    now, so the flag carries that question instead, and this is what stops the
+    two readings drifting apart again."""
+    assert 'Math 55 lecture' in seed_alpha.ATTENDANCE
+    assert 'Machine Learning lecture' in seed_alpha.ATTENDANCE
+    assert 'Gym' in seed_alpha.ATTENDANCE
+    # The things somebody actually sits down and does are not in it.
+    assert 'Putnam seminar' not in seed_alpha.ATTENDANCE
+    assert 'ML lab' not in seed_alpha.ATTENDANCE
+    assert 'Violin lesson' not in seed_alpha.ATTENDANCE
+    # And every attendance title really is a block on the week.
+    titles = {row[1] for row in seed_alpha.WEEK}
+    assert seed_alpha.ATTENDANCE <= titles
 
 
 def test_xp_rises_with_what_a_block_costs():
     """The numbers are a currency, so they have to rank the way effort does."""
     by_title = {row[1]: (row[5], seed_alpha.minutes(row[4]) - seed_alpha.minutes(row[3]))
                 for row in seed_alpha.WEEK}
-    assert by_title['Ready Up'][0] < by_title['Violin lesson'][0]
-    assert by_title['Violin lesson'][0] < by_title['Swimming'][0]
-    assert by_title['Swimming'][0] < by_title['Violin performance'][0]
-    assert by_title['School'][0] == max(xp for xp, _m in by_title.values())
+    assert by_title['Morning review'][0] < by_title['Gym'][0]
+    assert by_title['Gym'][0] < by_title['Violin lesson'][0]
+    assert by_title['Violin lesson'][0] < by_title['Math 55 lecture'][0]
+    assert by_title['Math 55 lecture'][0] < by_title['Putnam seminar'][0]
+    assert by_title['Putnam seminar'][0] < by_title['ML lab'][0]
     for title, (xp, span) in by_title.items():
         assert xp > 0, title
+        # Nothing is worth more per minute than the Putnam seminar, which is
+        # the hardest ninety minutes on the week.
+        assert xp / span <= by_title['Putnam seminar'][0] / 90 + 0.35, title
 
 
 def test_every_day_of_the_week_has_a_focus_subject():

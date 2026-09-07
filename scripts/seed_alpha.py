@@ -79,45 +79,78 @@ def owned_args(user):
 # --------------------------------------------------------------------------
 # The week
 # --------------------------------------------------------------------------
-# (weekday, title, subject, start, end, xp)
+# (weekday, title, subject, start, end, xp, study)
 #
-# Monday is 0. XP is scaled to what the block costs to actually do: half an
-# hour of getting out of the door is not an hour of swimming, and neither is a
-# school day. The numbers are deliberately round — they are a currency, and a
-# reader who finishes school and sees 120 should not have to wonder why not 118.
+# `study` is whether the block is deliberate work or merely attendance, and
+# it is what `focus_sessions` counts on. It used to be read off the subject —
+# a block filed under `lectures` was a lesson and did not count — but the
+# lectures here are filed under what they are *about*, because that is what
+# joins them to a skill tree. Two questions were riding on one field, and
+# they have different answers: a machine-learning lecture is machine
+# learning, and sitting in it is still not an hour of focus.
+#
+# Monday is 0. Alpha is a computer-science undergraduate: the degree is the
+# software, the machine learning and the web work, the mathematics is Math 55
+# and Putnam training rather than coursework, and the violin is the thing that
+# is not any of that. XP is scaled to what the block costs to actually do — an
+# hour of lectures is not an hour of a problem set — and the numbers are
+# deliberately round, because they are a currency and a reader who finishes a
+# lecture and sees 40 should not have to wonder why not 38.
+#
+# Subjects are catalogue ids from backend/config/subjects.py, and they are the
+# join to the skill trees: `machine_learning`, `web_design`, `programming`,
+# `computer_science` and `mathematics` each open a different lattice, which is
+# what makes this timetable readable on the skill-tree page as well as on the
+# calendar.
 WEEK = (
-    # Every weekday, in the order they happen.
-    *[(d, 'Ready Up', 'planning', '06:45', '07:15', 10) for d in range(5)],
-    *[(d, 'School', 'lectures', '07:30', '15:00', 120) for d in range(5)],
+    # The lectures, in the order the week holds them.
+    (0, 'Math 55 lecture', 'mathematics', '09:00', '10:30', 45, False),
+    (2, 'Math 55 lecture', 'mathematics', '09:00', '10:30', 45, False),
+    (4, 'Math 55 lecture', 'mathematics', '09:00', '10:30', 45, False),
+    (0, 'Machine Learning lecture', 'machine_learning', '11:00', '12:30', 45, False),
+    (2, 'Machine Learning lecture', 'machine_learning', '11:00', '12:30', 45, False),
+    (1, 'Algorithms lecture', 'computer_science', '10:00', '11:30', 45, False),
+    (3, 'Algorithms lecture', 'computer_science', '10:00', '11:30', 45, False),
+    (1, 'Systems lecture', 'programming', '13:00', '14:30', 45, False),
+    (3, 'Databases lecture', 'databases', '13:00', '14:30', 40, False),
 
-    # Monday
-    (0, 'Swimming', 'swimming', '18:00', '19:00', 35),
+    # The sections and labs the lectures hang off.
+    (1, 'Math 55 section', 'mathematics', '16:00', '17:00', 35, True),
+    (3, 'ML lab', 'machine_learning', '15:00', '17:00', 60, True),
+    (4, 'Systems lab', 'programming', '14:00', '16:00', 60, True),
 
-    # Wednesday — the long day.
-    (2, 'Math Club', 'mathematics', '15:00', '16:00', 40),
-    (2, 'Violin lesson', 'music', '16:30', '17:00', 30),
-    (2, 'Swimming', 'swimming', '18:00', '19:00', 35),
+    # Monday and Thursday — the Putnam seminar and the problem session it
+    # feeds. The seminar is where the problems are handed out; Thursday is
+    # where the week's attempt gets taken apart.
+    (0, 'Putnam seminar', 'mathematics', '17:30', '19:00', 55, True),
+    (3, 'Putnam problem session', 'mathematics', '19:00', '20:30', 55, True),
 
-    # Thursday
-    (3, 'SciOly Club', 'science', '15:00', '16:00', 40),
+    # Wednesday — the violin, which is the one thing on here that is not the
+    # degree.
+    (2, 'Violin lesson', 'music', '17:00', '18:00', 40, True),
 
-    # Friday
-    (4, 'Violin performance', 'music', '18:00', '19:00', 50),
+    # Friday — the project the degree does not set.
+    (4, 'Side project standup', 'web_design', '17:00', '17:30', 20, True),
+
+    # Every weekday, either end of it.
+    *[(d, 'Morning review', 'planning', '08:15', '08:45', 10, False) for d in range(5)],
+    *[(d, 'Gym', 'gym', '07:00', '08:00', 25, False) for d in (0, 2, 4)],
 )
 
 #: The day's subject, written onto the calendar as its Focus note.
 #:
-#: Tied to what the day actually holds rather than rotated for variety:
-#: Wednesday is Math Club, Thursday is SciOly, Friday is the performance. The
-#: two that are not anchored to anything alternate, because a Tuesday that is
-#: always Chemistry is a timetable nobody keeps.
+#: Tied to what the day actually holds rather than rotated for variety: Monday
+#: and Thursday are the Putnam seminar and its problem session, Wednesday is
+#: the violin lesson, Friday is the project. The two that are not anchored to
+#: anything alternate, because a Tuesday that is always Algorithms is a
+#: timetable nobody keeps.
 FOCUS_DAYS = {
-    0: ('Mathematics',),
-    1: ('Chemistry', 'Literature'),
-    2: ('Mathematics',),
-    3: ('Physics',),
-    4: ('Music',),
-    5: ('Revision', 'Programming'),
+    0: ('Putnam',),
+    1: ('Algorithms', 'Systems'),
+    2: ('Machine learning',),
+    3: ('Putnam',),
+    4: ('Web development',),
+    5: ('Side project', 'Deep work'),
     6: ('Reading', 'Rest and reset'),
 }
 
@@ -125,29 +158,39 @@ FOCUS_DAYS = {
 # The study that fills the year behind
 # --------------------------------------------------------------------------
 # (title, subject, minutes, xp). Drawn from to top a finished day up to
-# something like a real one — the timetable alone is about 175 XP on an average
-# weekday, and a serious student's day is closer to 400.
+# something like a real one — the timetable alone is about 200 XP on an average
+# weekday, and an undergraduate taking this seriously is closer to 450.
+#
+# Weighted toward the three things Alpha actually spends its evenings on:
+# writing software, the mathematics, and the model that is training. The violin
+# is here once, which is what "some violin" means on a week like this one.
 EVENING = (
-    ('Maths problem set', 'mathematics', 60, 60),
-    ('Physics problem set', 'physics', 60, 60),
-    ('Chemistry problems', 'chemistry', 45, 50),
-    ('Homework', 'homework', 45, 45),
-    ('Revision', 'revision', 40, 40),
-    ('Flashcards', 'flashcards', 20, 20),
-    ('English reading', 'literature', 40, 35),
-    ('Essay draft', 'writing', 60, 55),
+    ('Math 55 problem set', 'mathematics', 120, 110),
+    ('Putnam problems', 'mathematics', 90, 90),
+    ('Algorithms problem set', 'computer_science', 90, 85),
+    ('LeetCode session', 'programming', 60, 55),
+    ('ML paper reading', 'machine_learning', 60, 60),
+    ('Training run + writeup', 'machine_learning', 75, 70),
+    ('Kaggle notebook', 'data_science', 90, 80),
+    ('Side project — frontend', 'web_design', 90, 80),
+    ('Side project — API', 'web_design', 75, 70),
+    ('Refactor and code review', 'programming', 60, 55),
+    ('Systems reading', 'programming', 45, 45),
+    ('Schema and query work', 'databases', 45, 45),
     ('Violin practice', 'music', 45, 40),
-    ('Programming practice', 'programming', 60, 60),
-    ('Contest maths', 'mathematics', 90, 80),
-    ('Lab write-up', 'science', 45, 45),
+    ('Lecture notes tidy-up', 'lectures', 30, 25),
+    ('Flashcards', 'flashcards', 20, 20),
 )
 
 WEEKEND = (
-    ('Contest practice', 'mathematics', 180, 120),
+    ('Putnam mock', 'mathematics', 240, 180),
+    ('Math 55 proof grinding', 'mathematics', 150, 130),
+    ('Side project — ship a feature', 'web_design', 180, 150),
+    ('ML project training', 'machine_learning', 150, 130),
+    ('Open source contribution', 'programming', 120, 110),
     ('Long violin practice', 'music', 90, 70),
-    ('Coursework', 'coursework', 120, 90),
     ('Reading', 'reading', 60, 40),
-    ('Swim training', 'swimming', 90, 60),
+    ('Gym', 'gym', 75, 45),
     ('Week review', 'planning', 30, 30),
     ('Chores', 'chores', 45, 25),
 )
@@ -175,7 +218,7 @@ def forward_rows(user: str, start: date, days: int, first_id: int):
     rows = []
     for offset in range(days):
         day = start + timedelta(days=offset)
-        for weekday, title, subject, begin, end, xp in WEEK:
+        for weekday, title, subject, begin, end, xp, _study in WEEK:
             if day.weekday() != weekday:
                 continue
             rows.append((
@@ -224,7 +267,7 @@ def behind_rows(user: str, start: date, days: int, first_id: int, rng: random.Ra
         if rng.random() < 0.13:
             continue
 
-        for weekday, title, subject, begin, end, xp in WEEK:
+        for weekday, title, subject, begin, end, xp, _study in WEEK:
             if day.weekday() == weekday:
                 finish(day, title, subject, begin,
                        minutes(end) - minutes(begin), xp, 1)
@@ -252,18 +295,31 @@ def focus_notes(user: str, start: date, days: int):
     return rows
 
 
+#: Timetabled blocks that are attendance rather than work, by title.
+#:
+#: Derived from `WEEK` rather than listed again, so a block whose flag is
+#: changed above cannot go on being counted down here.
+ATTENDANCE = frozenset(
+    title for _d, title, _s, _b, _e, _x, study in WEEK if not study)
+
+#: Subjects that are never deliberate study, whatever they are attached to.
+#: The evening and weekend pools have no flag of their own — everything in them
+#: is study except the two things that keep a person alive.
+NOT_STUDY = frozenset(('planning', 'chores', 'gym'))
+
+
 def focus_sessions(user: str, tasks, rng: random.Random):
     """Hours actually sat, per day, from the work that was done.
 
     Counted off the finished rows rather than invented beside them, so the
     focus figures and the task figures cannot disagree about a Tuesday. Only
-    the deliberate study counts — sitting in a lesson is not a focus session,
+    the deliberate study counts — sitting in a lecture is not a focus session,
     which is the same line the app draws.
     """
     by_day: dict[str, int] = {}
     for row in tasks:
-        subject, completed = row[7], row[11]
-        if subject in ('lectures', 'planning', 'chores'):
+        title, subject, completed = row[2], row[7], row[11]
+        if title in ATTENDANCE or subject in NOT_STUDY:
             continue
         day = completed[:10]
         by_day[day] = by_day.get(day, 0) + int(row[12] or 0)
