@@ -164,3 +164,128 @@ def test_no_workspace_at_all_names_both_ways_out(monkeypatch):
     message = str(caught.value)
     assert 'ANTHROPIC_WORKSPACE_ID' in message
     assert 'workspace API key' in message
+
+
+# ---------------------------------------------------------------------------
+# Groq
+# ---------------------------------------------------------------------------
+# Added when the Anthropic account ran out of credits and the free provider
+# stopped being a nice-to-have. The thing worth testing is not the HTTP call —
+# it is the same POST the Hugging Face path has always made — but the two
+# decisions around it: which provider gets picked, and what budget it is asked
+# for. The second one is not cosmetic. Groq's free tier counts the tokens you
+# *ask* for against a per-minute allowance, so a caller passing Anthropic's
+# 16,000 gets a 413 before the model runs.
+class TestChoosingGroq:
+    def test_a_groq_key_alone_is_enough(self, monkeypatch):
+        monkeypatch.delenv('MILESTONE_PROVIDER', raising=False)
+        monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+        monkeypatch.delenv('HF_TOKEN', raising=False)
+        monkeypatch.delenv('HUGGINGFACE_API_KEY', raising=False)
+        monkeypatch.setenv('GROQ_API_KEY', 'gsk_test')
+        assert planner.provider() == 'groq'
+
+    def test_free_wins_when_several_keys_are_set(self, monkeypatch):
+        # An account with both is not asking to be billed for a button it
+        # could have free.
+        monkeypatch.delenv('MILESTONE_PROVIDER', raising=False)
+        monkeypatch.setenv('GROQ_API_KEY', 'gsk_test')
+        monkeypatch.setenv('ANTHROPIC_API_KEY', 'sk-ant-test')
+        assert planner.provider() == 'groq'
+
+    def test_naming_anthropic_still_pins_to_it(self, monkeypatch):
+        monkeypatch.setenv('MILESTONE_PROVIDER', 'anthropic')
+        monkeypatch.setenv('GROQ_API_KEY', 'gsk_test')
+        monkeypatch.setenv('ANTHROPIC_API_KEY', 'sk-ant-test')
+        assert planner.provider() == 'anthropic'
+
+    def test_naming_groq_without_a_key_is_nothing_rather_than_a_fallback(
+            self, monkeypatch):
+        # Silently billing an Anthropic key because the free one is missing is
+        # the surprise this app should never spring.
+        monkeypatch.setenv('MILESTONE_PROVIDER', 'groq')
+        monkeypatch.delenv('GROQ_API_KEY', raising=False)
+        monkeypatch.setenv('ANTHROPIC_API_KEY', 'sk-ant-test')
+        assert planner.provider() == ''
+
+    def test_the_key_is_read_late_like_every_other(self, monkeypatch):
+        """The bug this whole file exists for, checked for the new name too."""
+        monkeypatch.delenv('MILESTONE_PROVIDER', raising=False)
+        monkeypatch.delenv('GROQ_API_KEY', raising=False)
+        monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+        monkeypatch.delenv('HF_TOKEN', raising=False)
+        monkeypatch.delenv('HUGGINGFACE_API_KEY', raising=False)
+        assert planner.provider() == ''
+        monkeypatch.setenv('GROQ_API_KEY', 'gsk_test')
+        assert planner.provider() == 'groq'
+
+
+class TestWhoCanHoldAShape:
+    """`able()`, which is the question the four schema-shaped panels ask.
+
+    `configured()` is the looser one the goals page asks: a list of five titles
+    survives being requested in prose, and a subject reading does not.
+    """
+
+    def test_groq_can(self, monkeypatch):
+        monkeypatch.delenv('MILESTONE_PROVIDER', raising=False)
+        monkeypatch.setenv('GROQ_API_KEY', 'gsk_test')
+        assert planner.able() is True
+
+    def test_the_hugging_face_router_cannot(self, monkeypatch):
+        monkeypatch.setenv('MILESTONE_PROVIDER', 'huggingface')
+        monkeypatch.setenv('HF_TOKEN', 'hf_test')
+        assert planner.configured() is True
+        assert planner.able() is False
+
+    def test_nothing_configured_can_do_neither(self, monkeypatch):
+        monkeypatch.delenv('MILESTONE_PROVIDER', raising=False)
+        monkeypatch.delenv('GROQ_API_KEY', raising=False)
+        monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+        monkeypatch.delenv('HF_TOKEN', raising=False)
+        monkeypatch.delenv('HUGGINGFACE_API_KEY', raising=False)
+        assert planner.able() is False
+
+
+class TestTheBudgetSentToGroq:
+    @pytest.fixture
+    def sent(self, monkeypatch):
+        """Capture the payload without letting it reach the network."""
+        seen = {}
+
+        def fake_chat(url, token, model_id, label, brief, system=None,
+                      instruction='', schema=None, max_tokens=0, *args, **kwargs):
+            seen.update(url=url, model=model_id, label=label,
+                        max_tokens=max_tokens, schema=schema)
+            return '{}'
+
+        monkeypatch.setattr(planner, '_from_openai_chat', fake_chat)
+        monkeypatch.setenv('GROQ_API_KEY', 'gsk_test')
+        return seen
+
+    def test_an_anthropic_sized_budget_is_capped(self, sent):
+        planner._from_groq('brief', max_tokens=16000)
+        assert sent['max_tokens'] == planner.GROQ_MAX_TOKENS
+
+    def test_a_smaller_request_is_left_alone(self, sent):
+        planner._from_groq('brief', max_tokens=500)
+        assert sent['max_tokens'] == 500
+
+    def test_no_request_gets_the_default(self, sent):
+        planner._from_groq('brief')
+        assert sent['max_tokens'] == planner.GROQ_MAX_TOKENS
+
+    def test_the_cap_fits_inside_the_free_tier(self):
+        # The tier allows 8,000 tokens a minute across prompt and completion
+        # together, and the subject reading's prompt is around 2,500 of them.
+        assert planner.GROQ_MAX_TOKENS <= 5000
+
+    def test_the_schema_is_actually_passed_on(self, sent):
+        # The whole reason this panel can use a free provider at all.
+        planner._from_groq('brief', schema={'type': 'object'})
+        assert sent['schema'] == {'type': 'object'}
+
+    def test_from_provider_routes_to_groq(self, sent):
+        planner.from_provider('brief', schema={'type': 'object'})
+        assert sent['label'] == 'Groq'
+        assert sent['url'] == planner.GROQ_URL

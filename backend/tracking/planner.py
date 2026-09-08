@@ -134,9 +134,69 @@ HF_TEMPERATURE = 0.3
 # button does not look hung. The page holds its own spinner meanwhile.
 HF_TIMEOUT = 60.0
 
-# Tried in this order when MILESTONE_PROVIDER is unset. Cheap first: an account
-# with both keys is not asking to be billed for a button it could have free.
-PROVIDERS = ('huggingface', 'anthropic')
+# ---------------------------------------------------------------------------
+# Groq
+# ---------------------------------------------------------------------------
+# The same OpenAI shape as the Hugging Face router, so it goes through the
+# same POST — see `_from_openai_chat`. It is a separate provider rather than
+# an HF_URL override because the two fail differently and a reader has to be
+# told which one is refusing them.
+GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+
+# A 120B mixture-of-experts, served free, that honours a strict JSON schema
+# rather than being asked for JSON and hoped at. That last part is what makes
+# it usable for the subject reading: `_from_openai_chat` sends the same schema
+# the Anthropic path sends, so the answer arrives in the shape the page draws
+# instead of in prose that has to be salvaged.
+#
+#   openai/gpt-oss-120b   the default: the strongest of the free options
+#   qwen/qwen3.8-27b      smaller and quicker, noticeably shallower readings
+#   openai/gpt-oss-20b    when the 120B is rate-limited
+#
+# `GET /openai/v1/models` on the key lists what is actually being served
+# today, which is the only list worth trusting.
+GROQ_MODEL = os.environ.get('GROQ_MODEL') or 'openai/gpt-oss-120b'
+
+# This is a reasoning model and its thinking is billed against the completion,
+# so the budget covers both. A subject reading that runs out mid-object comes
+# back as unparseable JSON rather than as a short answer.
+#
+# The ceiling is the free tier's, not the model's. Groq counts the whole
+# request — prompt plus the completion you *asked* for — against a limit of
+# 8000 tokens a minute, so a generous `max_tokens` is refused before the model
+# ever runs, with a 413 rather than a truncation. The subject reading's prompt
+# is around 2,500 tokens, which leaves this much and no more.
+#
+# It is a cap rather than a default: the four callers pass budgets written for
+# Anthropic, where 16,000 tokens is a rounding error, and passing one of those
+# through here is exactly how the 413 gets hit. See `_from_groq`.
+GROQ_MAX_TOKENS = 4500
+
+# How much of that budget it is allowed to spend thinking. 'medium', not
+# 'high': the job is reading a table rather than solving it, and at 'high' this
+# model sometimes spends the entire completion on reasoning and emits nothing —
+# which the server then fails against the schema as an empty string. There is a
+# retry for that in `_from_openai_chat`, but not provoking it is better than
+# recovering from it.
+GROQ_REASONING = os.environ.get('GROQ_REASONING') or 'medium'
+
+# The task wants the obvious reading of a table, not an inventive one.
+GROQ_TEMPERATURE = 0.3
+
+# It is fast — most calls land in a couple of seconds — but a queued request
+# on the free tier can sit for a while before it starts.
+GROQ_TIMEOUT = 90.0
+
+# Tried in this order when MILESTONE_PROVIDER is unset. Free first: an account
+# with several keys is not asking to be billed for a button it could have free.
+# Groq leads because it is the only free one that honours a JSON schema, which
+# is what the subject reading needs and the HF default cannot give it.
+PROVIDERS = ('groq', 'huggingface', 'anthropic')
+
+#: Providers that will hold a supplied JSON schema rather than being asked in
+#: prose for a shape. The subject reading, the write-up and the two goal
+#: prompts all need one; the goals page's checkpoint list does not.
+SCHEMA_PROVIDERS = ('groq', 'anthropic')
 
 SYSTEM = """\
 You break a long-term goal into its checkpoints for a study-planning app.
@@ -238,8 +298,15 @@ def _hf_token() -> str:
             or '')
 
 
+def _groq_token() -> str:
+    """The Groq key. One name, because Groq only ever calls it this."""
+    return os.environ.get('GROQ_API_KEY') or ''
+
+
 def _keyed(provider: str) -> bool:
     """Whether this provider has what it needs to be called."""
+    if provider == 'groq':
+        return bool(_groq_token())
     if provider == 'huggingface':
         return bool(_hf_token())
     if provider == 'anthropic':
@@ -255,6 +322,8 @@ def provider() -> str:
     has always checked the environment late.
     """
     named = (os.environ.get('MILESTONE_PROVIDER') or '').strip().lower()
+    if named == 'groq':
+        return 'groq' if _keyed('groq') else ''
     if named in ('huggingface', 'hf'):
         return 'huggingface' if _keyed('huggingface') else ''
     if named == 'anthropic':
@@ -268,10 +337,10 @@ def configured() -> bool:
 
 
 NO_KEY = (
-    'Milestone suggestions need a model key in the environment. Either put a '
-    'free Hugging Face token in HF_TOKEN (huggingface.co → Settings → Access '
-    'Tokens → New token, read access is enough), or an ANTHROPIC_API_KEY. '
-    'Add one to .env and restart the server.')
+    'Milestone suggestions need a model key in the environment. A free Groq '
+    'key in GROQ_API_KEY is the shortest way there (console.groq.com → API '
+    'Keys); a free Hugging Face token in HF_TOKEN works too, as does a paid '
+    'ANTHROPIC_API_KEY. Add one to .env and restart the server.')
 
 
 # ---------------------------------------------------------------------------
@@ -519,8 +588,27 @@ def from_anthropic(brief: str, system: str = None, schema: dict = None,
 _from_anthropic = from_anthropic
 
 
-def _from_huggingface(brief: str, system: str = None,
-                      instruction: str = '') -> str:
+def _from_openai_chat(url: str, token: str, model_id: str, label: str,
+                      brief: str, system: str = None, instruction: str = '',
+                      schema: dict = None, max_tokens: int = 0,
+                      temperature: float = HF_TEMPERATURE,
+                      timeout: float = HF_TIMEOUT,
+                      reasoning: str = '') -> str:
+    """One answer from any OpenAI-shaped chat endpoint, as raw text.
+
+    Two providers here speak this: the Hugging Face router and Groq. Both take
+    the same `messages` array and answer in `choices[0].message.content`, so
+    the only things that differ are the URL, the token, the model name and the
+    word in the error messages — which is what `label` is for. Writing this
+    twice would mean two copies of the six status codes below, and those are
+    the part a reader actually sees.
+
+    `schema` is honoured when the provider supports it. Groq holds a strict
+    JSON schema, which is why the subject reading can use it at all; the HF
+    router's default model cannot, so it is asked in prose instead and gets
+    `JSON_RULE` appended. A provider that refuses the schema outright is
+    retried once without it rather than failing the button — see below.
+    """
     try:
         import httpx
     except ImportError as exc:  # pragma: no cover - arrives with anthropic
@@ -529,57 +617,170 @@ def _from_huggingface(brief: str, system: str = None,
             '.venv-fastapi/bin/python -m pip install -r requirements.txt'
         ) from exc
 
-    payload = {
-        'model': HF_MODEL,
-        'max_tokens': HF_MAX_TOKENS,
-        'temperature': HF_TEMPERATURE,
-        'messages': [
-            {'role': 'system', 'content': (system or SYSTEM) + JSON_RULE},
-            {'role': 'user', 'content': _ask(brief, instruction)},
-        ],
-        # Honoured by some providers behind the router and ignored by the
-        # rest, which is why `_titles` does not depend on it. Asking costs
-        # nothing and makes the clean-JSON path the common one.
-        'response_format': {'type': 'json_object'},
-    }
+    def payload_for(with_schema: bool) -> dict:
+        # The rule is appended only when the shape is being asked for in prose.
+        # Sending both is a schema and a paragraph saying the same thing, and
+        # the paragraph is the one that costs tokens on every call.
+        body = {
+            'model': model_id,
+            'max_tokens': max_tokens or HF_MAX_TOKENS,
+            'temperature': temperature,
+            'messages': [
+                {'role': 'system',
+                 'content': (system or SYSTEM) + ('' if with_schema else JSON_RULE)},
+                {'role': 'user', 'content': _ask(brief, instruction)},
+            ],
+        }
+        if with_schema:
+            body['response_format'] = {
+                'type': 'json_schema',
+                'json_schema': {'name': 'answer', 'strict': True, 'schema': schema},
+            }
+        else:
+            # Honoured by some providers and ignored by the rest, which is why
+            # `_titles` does not depend on it. Asking costs nothing and makes
+            # the clean-JSON path the common one.
+            body['response_format'] = {'type': 'json_object'}
+        if reasoning:
+            body['reasoning_effort'] = reasoning
+        return body
 
-    try:
-        response = httpx.post(
-            HF_URL,
-            headers={'Authorization': 'Bearer {}'.format(_hf_token())},
-            json=payload,
-            timeout=HF_TIMEOUT,
-        )
-    except Exception as exc:  # noqa: BLE001 - one message for every transport failure
-        raise PlannerUnavailable(
-            'Could not reach Hugging Face: {}'.format(exc)) from exc
+    def post(body: dict):
+        try:
+            return httpx.post(
+                url,
+                headers={'Authorization': 'Bearer {}'.format(token)},
+                json=body,
+                timeout=timeout,
+            )
+        except Exception as exc:  # noqa: BLE001 - one message for every transport failure
+            raise PlannerUnavailable(
+                'Could not reach {}: {}'.format(label, exc)) from exc
+
+    response = post(payload_for(bool(schema)))
+
+    # Two different 400s arrive from a schema-constrained call, they want
+    # opposite responses, and telling them apart is worth the branch.
+    #
+    # `json_validate_failed` is transient. A reasoning model can spend its
+    # whole budget thinking and emit nothing, and the server then fails the
+    # empty string against the schema — the body comes back with
+    # `failed_generation` empty, which is the tell. That is worth one more
+    # attempt at the same thing, because the same request usually works.
+    #
+    # Anything else the provider says about `response_format` or `schema` is
+    # structural: it will not hold a shape, and asking again changes nothing.
+    # Falling back to prose is worse than a schema and much better than a
+    # button that does not work.
+    if schema and response.status_code == 400:
+        if 'json_validate_failed' in response.text:
+            response = post(payload_for(True))
+            if response.status_code == 400:
+                response = post(payload_for(False))
+        elif 'response_format' in response.text or 'schema' in response.text:
+            response = post(payload_for(False))
 
     if response.status_code == 401:
         raise PlannerUnavailable(
-            'Hugging Face rejected the token in HF_TOKEN. Check it is current '
-            'and has read access.')
+            '{} rejected the key. Check it is current and was copied whole.'.format(label))
     if response.status_code == 402:
         raise PlannerUnavailable(
-            'This Hugging Face account is out of inference credits for the '
-            'month. Wait for the reset, or set HF_MODEL to a smaller model.')
+            'This {} account is out of inference credits. Wait for the reset, '
+            'or point the model setting at a smaller model.'.format(label))
     if response.status_code == 404:
         raise PlannerUnavailable(
-            '“{}” is not being served by any Hugging Face provider. Set '
-            'HF_MODEL to one that is.'.format(HF_MODEL))
+            '“{}” is not being served by {}. Set a model that is.'.format(model_id, label))
     if response.status_code == 429:
         raise PlannerUnavailable(
-            'Hugging Face is rate-limiting this token. Try again in a minute.')
+            '{} is rate-limiting this key. Try again in a minute.'.format(label))
+    # Not "too large" in the sense the status code usually means. Free tiers
+    # count the tokens you *ask* for against a per-minute allowance, so this
+    # arrives when the allowance is nearly spent rather than when the prompt is
+    # long — and "wait a minute" is the fix for it, not "write less".
+    if response.status_code == 413:
+        raise PlannerUnavailable(
+            'This {} key has used its tokens for the minute. Wait a minute and '
+            'try again.'.format(label))
     if response.status_code >= 400:
         raise PlannerUnavailable(
-            'Hugging Face returned {}: {}'.format(
-                response.status_code, response.text[:200]))
+            '{} returned {}: {}'.format(label, response.status_code, response.text[:200]))
 
     try:
         choice = response.json()['choices'][0]['message']['content']
     except (ValueError, KeyError, IndexError, TypeError) as exc:
         raise PlannerUnavailable(
-            'Hugging Face’s answer could not be read. Try again.') from exc
+            '{}\u2019s answer could not be read. Try again.'.format(label)) from exc
     return choice or ''
+
+
+def _from_huggingface(brief: str, system: str = None,
+                      instruction: str = '', schema: dict = None,
+                      max_tokens: int = 0) -> str:
+    """The Hugging Face router, through the shared OpenAI-shaped POST.
+
+    No schema is passed on by default: the router's cheap default model does
+    not hold one, and asking for a shape it cannot honour spends the retry
+    above on every single call.
+    """
+    return _from_openai_chat(
+        HF_URL, _hf_token(), HF_MODEL, 'Hugging Face',
+        brief, system, instruction, schema, max_tokens or HF_MAX_TOKENS)
+
+
+def _from_groq(brief: str, system: str = None, instruction: str = '',
+               schema: dict = None, max_tokens: int = 0) -> str:
+    """Groq, through the same POST, with the schema actually sent.
+
+    The caller's budget is capped rather than taken. Every caller here was
+    written against Anthropic and asks for 16,000 tokens, which the free tier
+    refuses outright — see `GROQ_MAX_TOKENS`. Silently asking for less is the
+    right failure: the answer is a page of JSON, not an essay, and a caller
+    that wanted a bigger one still gets as much as the tier will give.
+    """
+    return _from_openai_chat(
+        GROQ_URL, _groq_token(), GROQ_MODEL, 'Groq',
+        brief, system, instruction, schema,
+        min(max_tokens or GROQ_MAX_TOKENS, GROQ_MAX_TOKENS),
+        GROQ_TEMPERATURE, GROQ_TIMEOUT, GROQ_REASONING)
+
+
+# ---------------------------------------------------------------------------
+# The one call the other four modules make
+# ---------------------------------------------------------------------------
+def able() -> bool:
+    """Whether a schema-shaped answer can be had from anything configured.
+
+    The subject reading, the write-up and the two goal prompts all need a
+    provider that will hold a shape. `configured()` is the looser question the
+    goals page asks, because a list of five titles survives being asked for in
+    prose.
+    """
+    return provider() in SCHEMA_PROVIDERS
+
+
+def from_provider(brief: str, system: str = None, schema: dict = None,
+                  instruction: str = '', model_id: str = '',
+                  max_tokens: int = 0) -> str:
+    """One schema-constrained answer from whichever provider is configured.
+
+    The four modules that ask a model to read a table used to name Anthropic
+    directly, which was right while Anthropic was the only provider that would
+    hold a schema. Groq holds one too, so the choice belongs here rather than
+    in four copies — and an account with a free key should not be told its
+    panel needs a paid one.
+
+    `model_id` is Anthropic's alone. Groq's model is `GROQ_MODEL`, because the
+    two providers do not share a naming scheme and a caller that knows one
+    cannot be asked to know the other.
+    """
+    using = provider()
+    if not using:
+        raise PlannerUnavailable(NO_KEY)
+    if using == 'groq':
+        return _from_groq(brief, system, instruction, schema, max_tokens)
+    if using == 'huggingface':
+        return _from_huggingface(brief, system, instruction, schema, max_tokens)
+    return from_anthropic(brief, system, schema, instruction, model_id, max_tokens)
 
 
 # ---------------------------------------------------------------------------
@@ -602,8 +803,12 @@ def suggest_milestones(title, why='', description='', category='',
         raise PlannerUnavailable(NO_KEY)
 
     brief = _brief(title, why, description, category, unit, target)
-    text = (_from_huggingface(brief) if using == 'huggingface'
-            else _from_anthropic(brief))
+    if using == 'groq':
+        text = _from_groq(brief, schema=SCHEMA)
+    elif using == 'huggingface':
+        text = _from_huggingface(brief)
+    else:
+        text = _from_anthropic(brief)
 
     cleaned = [str(entry).strip() for entry in _titles(text) if str(entry).strip()]
     if len(cleaned) < COUNT:
@@ -640,8 +845,12 @@ def suggest_steps(milestone, goal='', why='', description='', category='',
         brief = 'Checkpoint to break down: {}'.format(milestone.strip())
     instruction = 'Break this checkpoint into the five steps that reach it.'
 
-    text = (_from_huggingface(brief, SYSTEM_STEPS, instruction) if using == 'huggingface'
-            else _from_anthropic(brief, SYSTEM_STEPS, STEPS_SCHEMA, instruction))
+    if using == 'groq':
+        text = _from_groq(brief, SYSTEM_STEPS, instruction, STEPS_SCHEMA)
+    elif using == 'huggingface':
+        text = _from_huggingface(brief, SYSTEM_STEPS, instruction)
+    else:
+        text = _from_anthropic(brief, SYSTEM_STEPS, STEPS_SCHEMA, instruction)
 
     cleaned = [str(entry).strip() for entry in _titles(text) if str(entry).strip()]
     if len(cleaned) < STEP_COUNT:

@@ -190,7 +190,7 @@ NO_KEY = (
 
 def configured() -> bool:
     """Whether the button can do anything. Checked per call, as planner does."""
-    return bool(planner._keyed('anthropic'))
+    return planner.able()
 
 
 # ---------------------------------------------------------------------------
@@ -348,7 +348,7 @@ def plan(findings: Dict[str, Any], model_id: str = '') -> Dict[str, Any]:
         raise BriefUnavailable('There is no goal to plan a route to.')
 
     try:
-        text = planner.from_anthropic(
+        text = planner.from_provider(
             brief_from(findings),
             system=SYSTEM,
             schema=SCHEMA,

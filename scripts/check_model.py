@@ -50,6 +50,7 @@ def report() -> None:
     key = os.environ.get('ANTHROPIC_API_KEY') or ''
     workspace = planner.workspace_id()
     hf = bool(os.environ.get('HF_TOKEN') or os.environ.get('HUGGINGFACE_API_KEY'))
+    groq = os.environ.get('GROQ_API_KEY') or ''
 
     print('Environment')
     # Length and prefix only. The prefix is the one part worth seeing — it says
@@ -59,6 +60,10 @@ def report() -> None:
         '{}… ({} chars)'.format(key[:12], len(key)) if key else 'unset'))
     print('  ANTHROPIC_WORKSPACE_ID  {}  {}'.format(
         _mark(bool(workspace)), workspace or 'unset'))
+    print('  GROQ_API_KEY            {}  {}'.format(
+        _mark(bool(groq)),
+        '{}… ({} chars)'.format(groq[:8], len(groq)) if groq else 'unset'))
+    print('  GROQ_MODEL              {}'.format(planner.GROQ_MODEL))
     print('  HF_TOKEN                {}'.format(_mark(hf)))
     print('  MILESTONE_PROVIDER      {}'.format(
         os.environ.get('MILESTONE_PROVIDER') or 'unset (cheapest key wins)'))
@@ -67,9 +72,28 @@ def report() -> None:
     print('Features')
     print('  Goals: suggest checkpoints   {}  (provider: {})'.format(
         _mark(planner.configured()), planner.provider() or 'none'))
-    print('  Subject: read this back      {}  (Anthropic only, by design)'.format(
-        _mark(subject_brief.configured())))
+    # Not "Anthropic only" any more. It needs a provider that will hold a JSON
+    # schema, which Groq does and the Hugging Face router's default does not —
+    # so the line names the one being used rather than the one it used to be.
+    print('  Subject: read this back      {}  (provider: {})'.format(
+        _mark(subject_brief.configured()),
+        planner.provider() if planner.able() else 'none that holds a schema'))
     print()
+
+    # "yes" above means a key is set, which is all this half can honestly
+    # check: an identity-linked key and a workspace key have the same
+    # `sk-ant-api03-` prefix and the same length, so there is no way to tell
+    # them apart without calling. That leaves the one state this script was
+    # written for reading as fine — a key present, both features "yes", and
+    # every request refused. Naming it here costs a line and saves the reader
+    # concluding the config is right and the bug is elsewhere.
+    if key and not workspace:
+        print('Note: no workspace id is set. That is correct for an ordinary')
+        print('workspace key. If calls come back saying the key is')
+        print('identity-linked, it is this line — see ANTHROPIC_WORKSPACE_ID in')
+        print('.env.example. Nothing here can tell the two kinds of key apart;')
+        print('only --call can.')
+        print()
 
 
 def call() -> int:

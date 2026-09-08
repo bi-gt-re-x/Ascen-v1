@@ -131,7 +131,7 @@ SCHEMA = {
 
 
 def configured() -> bool:
-    return bool(planner._keyed('anthropic'))
+    return planner.able()
 
 
 def brief_from(findings: Dict[str, Any]) -> str:
@@ -210,7 +210,7 @@ def draft(findings: Dict[str, Any], model_id: str = '') -> Dict[str, Any]:
         raise BriefUnavailable('There is no subject to draft a goal for.')
 
     try:
-        text = planner.from_anthropic(
+        text = planner.from_provider(
             brief_from(findings),
             system=SYSTEM,
             schema=SCHEMA,

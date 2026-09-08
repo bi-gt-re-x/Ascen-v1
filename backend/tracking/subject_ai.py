@@ -65,7 +65,7 @@ list above.
 """
 from typing import Any, Dict, List
 
-from backend.tracking import planner
+from backend.tracking import figures, planner
 from backend.tracking.subject_brief import BriefUnavailable, _object
 
 #: Opus, for the reason subject_brief gives at length: this holds a
@@ -279,16 +279,24 @@ SCHEMA = {
 
 
 NO_KEY = (
-    'Reading your subject back needs an Anthropic key. Put one in '
-    'ANTHROPIC_API_KEY in .env and restart the server. A Hugging Face token '
-    'does not cover this one: it asks a model to reason over a table of your '
-    'figures without adding any, and a small model inventing a number about '
-    'you here would be worse than no panel at all.')
+    'Reading your subject back needs a model that will answer in a fixed '
+    'shape. A free Groq key in GROQ_API_KEY is the shortest way there '
+    '(console.groq.com → API Keys); an ANTHROPIC_API_KEY also works. Add one '
+    'to .env and restart the server. A Hugging Face token on its own does not '
+    'cover this one: the router\u2019s default model will not hold the shape '
+    'this panel is drawn from.')
 
 
 def configured() -> bool:
-    """Whether the button can do anything. Checked per call, as planner does."""
-    return bool(planner._keyed('anthropic'))
+    """Whether the button can do anything. Checked per call, as planner does.
+
+    Any provider that will hold a JSON schema, rather than Anthropic alone.
+    This panel was Anthropic-only for as long as Anthropic was the only one
+    that would — the risk was never the provider, it was a model inventing a
+    figure about the reader, and that is now checked in `_clean` rather than
+    hoped for. See backend/tracking/figures.
+    """
+    return planner.able()
 
 
 # ---------------------------------------------------------------------------
@@ -487,13 +495,41 @@ def _unit(value: Any) -> float:
     return round(max(0.0, min(1.0, number)), 2)
 
 
-def _clean(found: Dict[str, Any]) -> Dict[str, Any]:
+def _clean(found: Dict[str, Any], brief: str = '') -> Dict[str, Any]:
     """The answer, narrowed to the shape the page draws.
 
     Everything is bounded on the way out, and every list is cut to what the
     page has room for — the product rule that the UI is selective even though
     the analytics are not.
+
+    ## And every figure is checked against the brief
+
+    `brief` is the text the model was sent, and it holds every number the
+    model was allowed to use. Anything claiming to describe the reader is
+    dropped if it cites a figure that is not in there, because the panel's
+    whole value is that its numbers were counted and a reader cannot tell a
+    counted one from an invented one by looking.
+
+    Dropped, not corrected: there is no way to know what the model meant, and
+    a finding with its figure quietly removed still reads as a finding. Four
+    entries can each go on their own, and if every one of them goes the caller
+    raises rather than drawing an empty panel.
+
+    Next steps are held to this only through their `reason`, which cites the
+    record. Their titles and drills are prescriptions — "twenty past-paper
+    angle problems" is an instruction for Tuesday, not a statistic — and the
+    two numbers on them are already labelled on the page as the model's own.
+    See backend/tracking/figures for why that line is where it is.
+
+    The default of `''` leaves the check off for callers that have no brief to
+    check against, which keeps `_clean` usable in a test that is about shape.
     """
+    allowed = figures.allowed_from(brief) if brief else None
+
+    def counted(*texts: str) -> bool:
+        """Whether this entry may claim to be reading the record."""
+        return allowed is None or figures.all_clean(texts, allowed)
+
     diagnosis = []
     for entry in (found.get('diagnosis') or [])[:DIAGNOSES]:
         if not isinstance(entry, dict):
@@ -501,11 +537,14 @@ def _clean(found: Dict[str, Any]) -> Dict[str, Any]:
         finding = str(entry.get('finding') or '').strip()
         if not finding:
             continue
+        evidence = [str(item).strip() for item in (entry.get('evidence') or [])
+                    if str(item).strip()][:4]
+        if not counted(finding, *evidence):
+            continue
         diagnosis.append({
             'finding': finding,
             'confidence': _unit(entry.get('confidence')),
-            'evidence': [str(item).strip() for item in (entry.get('evidence') or [])
-                         if str(item).strip()][:4],
+            'evidence': evidence,
         })
 
     priorities = []
@@ -515,10 +554,13 @@ def _clean(found: Dict[str, Any]) -> Dict[str, Any]:
         focus = str(entry.get('focus') or '').strip()
         if not focus:
             continue
+        reason = str(entry.get('reason') or '').strip()
+        if not counted(focus, reason):
+            continue
         priorities.append({
             'focus': focus,
             'weight': _unit(entry.get('weight')),
-            'reason': str(entry.get('reason') or '').strip(),
+            'reason': reason,
         })
 
     steps = []
@@ -529,6 +571,12 @@ def _clean(found: Dict[str, Any]) -> Dict[str, Any]:
         if not title:
             continue
         kind = str(entry.get('type') or '').strip()
+        reason = str(entry.get('reason') or '').strip()
+        # The reason cites the record, so it is held to the record. The title
+        # and the drills are what to go and do, and a quantity in one of those
+        # is the model's job rather than a claim about the reader.
+        if not counted(reason):
+            reason = ''
         steps.append({
             'title': title,
             'focus': str(entry.get('focus') or '').strip(),
@@ -537,7 +585,7 @@ def _clean(found: Dict[str, Any]) -> Dict[str, Any]:
             'type': kind if kind in STEP_TYPES else 'targeted_practice',
             'difficulty': _clamp(entry.get('difficulty'), *DIFFICULTY, fallback=3),
             'minutes': _clamp(entry.get('duration_minutes'), *MINUTES, fallback=30),
-            'reason': str(entry.get('reason') or '').strip(),
+            'reason': reason,
             'drills': [str(item).strip() for item in (entry.get('drills') or [])
                        if str(item).strip()][:4],
         })
@@ -549,13 +597,21 @@ def _clean(found: Dict[str, Any]) -> Dict[str, Any]:
         observation = str(entry.get('observation') or '').strip()
         if not observation:
             continue
+        evidence = str(entry.get('evidence') or '').strip()
+        implication = str(entry.get('implication') or '').strip()
+        if not counted(observation, evidence, implication):
+            continue
         insights.append({
             'observation': observation,
-            'evidence': str(entry.get('evidence') or '').strip(),
-            'implication': str(entry.get('implication') or '').strip(),
+            'evidence': evidence,
+            'implication': implication,
         })
 
     if not (diagnosis or priorities or steps or insights):
+        # Either the model answered in the wrong shape, or every single thing
+        # it said cited a figure nobody counted. The second is the interesting
+        # one and it reads the same from here, so the sentence covers both
+        # without guessing which happened.
         raise BriefUnavailable('The model returned nothing usable. Try again.')
 
     return {
@@ -583,9 +639,10 @@ def read(state: Dict[str, Any], model_id: str = '') -> Dict[str, Any]:
     if not str(state.get('subject') or '').strip():
         raise BriefUnavailable('There is no subject to read.')
 
+    brief = brief_from(state)
     try:
-        text = planner.from_anthropic(
-            brief_from(state),
+        text = planner.from_provider(
+            brief,
             system=SYSTEM,
             schema=SCHEMA,
             instruction=(
@@ -600,4 +657,4 @@ def read(state: Dict[str, Any], model_id: str = '') -> Dict[str, Any]:
         # already written for a reader rather than for a log.
         raise BriefUnavailable(str(exc)) from exc
 
-    return _clean(_object(text))
+    return _clean(_object(text), brief)

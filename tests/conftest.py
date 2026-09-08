@@ -64,10 +64,58 @@ os.environ['ASCEN_INSECURE_COOKIES'] = '1'
 import pytest                                            # noqa: E402
 from fastapi.testclient import TestClient                # noqa: E402
 
+from backend.config import settings                      # noqa: E402
 from backend.database import connection as db            # noqa: E402
 from backend.main import create_app                      # noqa: E402
 from backend.middleware import limit                     # noqa: E402
 from backend.tracking import auth                        # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# No test calls a model provider
+# ---------------------------------------------------------------------------
+# This used to be true by accident. Every path to a model went through the
+# `anthropic` SDK, and the handful of tests that exercised one stubbed
+# `sys.modules['anthropic']` — so a test that forgot to stub it failed on the
+# import rather than on the network, loudly and locally.
+#
+# Adding Groq ended that. It is an HTTP call through httpx, which is installed
+# and needs no stubbing to work, so a provider key left in the environment is
+# all it takes for a test run to start making real requests. That is not
+# hypothetical: the run that prompted this note made five, and read back
+# "Groq is rate-limiting this key" as a test failure.
+#
+# So the keys come out for every test, and a test that wants one sets it
+# itself. Autouse, because the tests that would do damage are exactly the ones
+# nobody thought to guard.
+@pytest.fixture(autouse=True)
+def _no_model_keys(monkeypatch):
+    """Strip every provider credential, before each test.
+
+    `MILESTONE_PROVIDER` goes too: pinning a provider whose key has just been
+    removed is a different state again, and no test should inherit it from
+    whatever happens to be in the developer's .env.
+    """
+    for name in ('GROQ_API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_WORKSPACE_ID',
+                 'HF_TOKEN', 'HUGGINGFACE_API_KEY', 'MILESTONE_PROVIDER'):
+        monkeypatch.delenv(name, raising=False)
+
+    # And nothing may put them back. `settings.load_dotenv` reads the .env of
+    # whoever is running the tests and fills in any name that is *not already
+    # set* — so against a stripped environment it does not top the keys up, it
+    # restores them wholesale, in the middle of a test.
+    #
+    # scripts/plan_backfill.py calls it inside `main()`, which several tests
+    # here run directly. That was invisible while the only key in a .env was
+    # Anthropic's and every test stubbed the Anthropic SDK: the reload handed
+    # back a key whose transport was already faked. It stopped being invisible
+    # the moment a .env could carry a Groq key, because that transport is real.
+    #
+    # A test run has no business reading the developer's .env at all — every
+    # value it needs is set in this file or by the test itself — so the reload
+    # is a no-op here rather than a thing to remember about.
+    monkeypatch.setattr(settings, 'load_dotenv', lambda path=None: None)
+
 
 PASSWORD = 'not-a-real-password-1'
 

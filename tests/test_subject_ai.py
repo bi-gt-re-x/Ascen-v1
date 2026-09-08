@@ -5,11 +5,13 @@ call: the sections that go in, the bounds that come out, and the two states
 that are not "it worked" — no key, and an answer that cannot be read.
 
 The rule the feature exists to keep is that the model may reason over the
-page's figures and may not produce any others. That rule lives in the prompt
-and cannot be asserted from here, so what these hold instead is the structure
-that makes it enforceable — every counted figure reaches the brief, the two
-figures the model *is* asked for are clamped, and the vocabulary it is handed
-is labelled as a curriculum rather than as a measurement.
+page's figures and may not produce any others. That used to live only in the
+prompt; `_clean` now checks it against the brief the model was sent, so the
+last class here asserts it directly rather than asserting the conditions that
+make it likely. The rest still hold those conditions — every counted figure
+reaches the brief, the two figures the model *is* asked for are clamped, and
+the vocabulary it is handed is labelled as a curriculum rather than as a
+measurement.
 """
 import pytest
 
@@ -272,3 +274,119 @@ def test_outcomes_separate_never_tried_from_did_not_work():
                                     'change': 8}
     assert by_kind['review']['change'] is None
     assert by_kind['review']['taken'] == 0
+
+
+# ---------------------------------------------------------------------------
+# The rule, now that it is checkable
+# ---------------------------------------------------------------------------
+# This file's opening note used to say the "no invented figures" rule lives in
+# the prompt and cannot be asserted from here. That stopped being true when
+# `_clean` started taking the brief: the brief holds every number the model was
+# allowed to use, so the rule is arithmetic now rather than an instruction, and
+# these are the tests that hold it. See backend/tracking/figures.py.
+BRIEF = ('<measures>Quality: 48\nConsistency: 57\nRated: 143 tasks</measures>\n'
+         '<curve>Trivial: execution 90\nEasy: execution 61</curve>\n')
+
+
+def _one(**parts):
+    """A model answer with only the section under test filled in."""
+    return {'diagnosis': [], 'priorities': [], 'next_steps': [], 'insights': [],
+            **parts}
+
+
+class TestAFigureNobodyCountedIsDropped:
+    def test_a_diagnosis_citing_an_invented_number_does_not_survive(self):
+        # The exact failure the prompt warns about in capitals: a level in a
+        # sub-skill, which nothing in this app measures.
+        cleaned = subject_ai._clean(_one(diagnosis=[
+            {'finding': 'Recursion is at 68%', 'confidence': 0.9, 'evidence': []},
+            {'finding': 'Execution falls from 90 to 61', 'confidence': 0.8,
+             'evidence': ['Trivial 90, Easy 61']},
+        ]), BRIEF)
+        assert [entry['finding'] for entry in cleaned['diagnosis']] == [
+            'Execution falls from 90 to 61']
+
+    def test_evidence_is_held_to_the_same_rule_as_the_claim(self):
+        # The claim is clean and the evidence under it is not, which is worse
+        # than the other way round: it reads as a checkable finding. A second,
+        # sound finding rides along so the panel is not empty — an empty one
+        # raises, and that is a different test.
+        cleaned = subject_ai._clean(_one(diagnosis=[
+            {'finding': 'Quality is the weak measure', 'confidence': 0.9,
+             'evidence': ['Quality 48', 'and 22% of graph problems']},
+            {'finding': 'Consistency is 57', 'confidence': 0.8, 'evidence': []},
+        ]), BRIEF)
+        assert [entry['finding'] for entry in cleaned['diagnosis']] == [
+            'Consistency is 57']
+
+    def test_an_insight_citing_an_invention_goes_whole(self):
+        # The invented figure is in the implication, two fields away from the
+        # observation. All three are the same claim as far as a reader is
+        # concerned, so all three are checked.
+        cleaned = subject_ai._clean(_one(insights=[
+            {'observation': 'You rush the easy work', 'evidence': 'execution 61',
+             'implication': 'it costs you about 14 points'},
+            {'observation': 'Quality trails consistency', 'evidence': '48 against 57',
+             'implication': 'rate the work you finish'},
+        ]), BRIEF)
+        assert [entry['observation'] for entry in cleaned['insights']] == [
+            'Quality trails consistency']
+
+    def test_a_priority_reason_is_checked(self):
+        cleaned = subject_ai._clean(_one(priorities=[
+            {'focus': 'Algorithms', 'weight': 0.9, 'reason': 'sitting at 33%'},
+            {'focus': 'Review', 'weight': 0.5, 'reason': 'quality is 48'},
+        ]), BRIEF)
+        assert [entry['focus'] for entry in cleaned['priorities']] == ['Review']
+
+    def test_everything_invented_reads_as_nothing_usable(self):
+        with pytest.raises(subject_ai.BriefUnavailable):
+            subject_ai._clean(_one(diagnosis=[
+                {'finding': 'Recursion is at 68%', 'confidence': 0.9, 'evidence': []},
+            ]), BRIEF)
+
+
+class TestAPrescriptionMayCarryItsOwnNumbers:
+    """The other half of the line, and the one that is easy to get wrong.
+
+    "Twenty past-paper problems" is an instruction for Tuesday, not a claim
+    about the reader. Guarding those would delete exactly the specificity that
+    makes a next step worth reading.
+    """
+
+    def test_drills_keep_their_quantities(self):
+        cleaned = subject_ai._clean(_one(next_steps=[
+            {'title': 'Easy set, timed', 'focus': 'Algorithms',
+             'type': 'timed_set', 'difficulty': 2, 'duration_minutes': 45,
+             'reason': 'execution 61 at Easy',
+             'drills': ['20 past-paper problems', '3 timed sets of 15']},
+        ]), BRIEF)
+        assert cleaned['next_steps'][0]['drills'] == [
+            '20 past-paper problems', '3 timed sets of 15']
+
+    def test_a_title_with_a_number_in_it_survives(self):
+        cleaned = subject_ai._clean(_one(next_steps=[
+            {'title': '30 minutes on recursion', 'focus': 'Algorithms',
+             'type': 'concept', 'difficulty': 3, 'duration_minutes': 30,
+             'reason': '', 'drills': []},
+        ]), BRIEF)
+        assert cleaned['next_steps'][0]['title'] == '30 minutes on recursion'
+
+    def test_but_the_reason_is_dropped_when_it_invents(self):
+        # The step stays, because what to go and do is still worth showing.
+        # The sentence claiming the record justifies it does not.
+        cleaned = subject_ai._clean(_one(next_steps=[
+            {'title': 'Drill recursion', 'focus': 'Algorithms',
+             'type': 'targeted_practice', 'difficulty': 3, 'duration_minutes': 40,
+             'reason': 'you are at 68% on recursion', 'drills': ['ten problems']},
+        ]), BRIEF)
+        assert cleaned['next_steps'][0]['title'] == 'Drill recursion'
+        assert cleaned['next_steps'][0]['reason'] == ''
+
+
+def test_without_a_brief_the_check_is_off():
+    """`_clean` is still callable for tests that are about shape alone."""
+    cleaned = subject_ai._clean(_one(diagnosis=[
+        {'finding': 'Recursion is at 68%', 'confidence': 0.9, 'evidence': []},
+    ]))
+    assert len(cleaned['diagnosis']) == 1
