@@ -67,7 +67,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Ambient, ErrorState, Loading } from '@/components';
 import { AreaChart } from '@/components/Analytics';
 import { WINDOWS, type WindowKey } from '@/components/Analytics/data';
-import { subjectModel } from '@/components/Subject/model';
+import { subjectModel, type SubjectGoal } from '@/components/Subject/model';
 import { latticeFor } from '@/components/Subject/lattice';
 import { loadProgress } from '@/utils/skillProgress';
 import { treeStanding } from '@/skills/standing';
@@ -114,6 +114,73 @@ function Bar({ percent }: { percent: number }) {
       <span className="sb-bar-fill" style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} />
     </span>
   );
+}
+
+/** 0-100, for a width or an offset written straight into a style. */
+function clampPct(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
+/** A figure with more than a couple of significant digits is noise here. */
+function per(value: number): string {
+  return value >= 10 ? Math.round(value).toLocaleString() : value.toFixed(1);
+}
+
+/**
+ * The counted figures under one goal.
+ *
+ * Assembled rather than written out as JSX because every one of them is
+ * conditional on its own evidence — a goal with no date has no days left, a
+ * milestone goal has no quantity to be short of — and a grid of dashes is
+ * worse than a shorter grid. Nothing here is computed: the model works all of
+ * it out (components/Subject/model), and this decides which of it can honestly
+ * be printed and what to call it.
+ */
+function planFacts(goal: SubjectGoal): Array<{ label: string; value: string }> {
+  const facts: Array<{ label: string; value: string }> = [];
+
+  if (goal.numeric && goal.target > 0) {
+    facts.push({
+      label: 'Still to go',
+      value: `${per(goal.remaining ?? 0)} ${goal.unit}`,
+    });
+  }
+  if (goal.stagesTotal > 0) {
+    facts.push({
+      label: 'Checkpoints',
+      value: `${goal.stagesDone} of ${goal.stagesTotal}`,
+    });
+  }
+  if (goal.daysLeft !== null) {
+    facts.push({
+      label: goal.daysLeft < 0 ? 'Overdue by' : 'Days left',
+      value: `${Math.abs(goal.daysLeft)} ${Math.abs(goal.daysLeft) === 1 ? 'day' : 'days'}`,
+    });
+  }
+  if (goal.need !== null) {
+    facts.push({ label: 'Needs a week', value: `${per(goal.need * 7)} ${goal.unit}` });
+  }
+  if (goal.have !== null) {
+    facts.push({ label: 'Getting a week', value: `${per(goal.have * 7)} ${goal.unit}` });
+  }
+  if (goal.lands && goal.deadline) {
+    facts.push({ label: 'Lands', value: goal.lands });
+  }
+  /* The two that are this page's alone. Every other figure above is on the
+     goals page too; these say what *this subject* has put into it, which is
+     the thing a page about one subject can answer and a goal card cannot. */
+  facts.push({
+    label: 'Aimed at it',
+    value: goal.ofFinished
+      ? `${goal.aimed} of ${goal.ofFinished} tasks`
+      : 'nothing finished here',
+  });
+  /* The fortnight is named in the value rather than the label, because it is
+     the one figure here measured over something other than the page's window
+     and a reader who missed that would read it as a share of the year. */
+  facts.push({ label: 'Days worked', value: `${goal.recentDays} of last 14` });
+
+  return facts;
 }
 
 function Panel({
@@ -706,10 +773,22 @@ export default function SubjectAnalytics() {
 
 
             {/* ---- What this subject is for ------------------------- */}
+            {/* The goal, and the record read against it.
+                
+                This panel used to be a list of bars. A bar answers "how far
+                along", which is the one question about a goal that cannot be
+                acted on — 40% is fine with 60% of the time left and a disaster
+                with a week to go, and either way it does not say what to do on
+                Tuesday. So each goal now carries three things a bar cannot: the
+                calendar's own position on the same track, the figures this
+                subject has actually put into it, and the levers — what would
+                have to change, hardest constraint first, each with the count
+                behind it. The arithmetic is `goalsFor` and `leversFor` in
+                components/Subject/model. */}
             {model.goals.length > 0 && (
               <Panel
                 title="What this subject is for"
-                note="The goals that name this subject, read as a pace."
+                note="Each goal that names this subject, and what your record here says about reaching it."
               >
                 <ul className="sb-goals">
                   {model.goals.map((goal) => (
@@ -730,23 +809,68 @@ export default function SubjectAnalytics() {
                                 : 'on the day'}
                         </span>
                       </div>
-                      <Bar percent={goal.progress} />
+
+                      {/* The bar, with where the calendar has got to marked on
+                          it. One track rather than two bars: the whole reading
+                          is the distance between the fill and the mark, and
+                          that reading does not survive being split across two
+                          rows the eye has to measure between. */}
+                      <span
+                        className="sb-goal-track"
+                        role="img"
+                        aria-label={
+                          goal.expected === null
+                            ? `${Math.round(goal.progress)}% done`
+                            : `${Math.round(goal.progress)}% done, ${Math.round(goal.expected)}% `
+                              + 'of its time gone'
+                        }
+                      >
+                        <span
+                          className="sb-goal-track-fill"
+                          style={{ width: `${clampPct(goal.progress)}%` }}
+                        />
+                        {goal.expected !== null && (
+                          <span
+                            className="sb-goal-track-mark"
+                            style={{ left: `${clampPct(goal.expected)}%` }}
+                          />
+                        )}
+                      </span>
+
                       <p className="sb-goal-meta">
                         {Math.round(goal.progress)}% done
-                        {goal.deadline && <> · due {goal.deadline}</>}
-                        {goal.need !== null && goal.have !== null && (
-                          <>
-                            {' '}· needs {goal.need.toFixed(1)}/day, moving at{' '}
-                            {goal.have.toFixed(1)}
-                          </>
+                        {goal.expected !== null && (
+                          <> · the calendar is at {Math.round(goal.expected)}%</>
                         )}
+                        {goal.deadline && <> · due {goal.deadline}</>}
                       </p>
+
+                      {/* The counted figures, and only the ones that exist.
+                          A row of dashes is how a reader learns to stop
+                          reading a panel. */}
+                      <dl className="sb-plan">
+                        {planFacts(goal).map((fact) => (
+                          <div key={fact.label} className="sb-plan-fact">
+                            <dt>{fact.label}</dt>
+                            <dd>{fact.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+
+                      <ul className="sb-levers">
+                        {goal.levers.map((lever) => (
+                          <li key={lever.id} className={`sb-lever is-${lever.weight}`}>
+                            <strong>{lever.title}</strong>
+                            <p>{lever.fact}</p>
+                          </li>
+                        ))}
+                      </ul>
                     </li>
                   ))}
                 </ul>
                 <p className="ax-panel-note ax-panel-note-foot">
-                  A goal here orders the advice above.{' '}
-                  <Link className="ax-link" to="/goals">Set one</Link>
+                  Every figure here is counted from your own tasks in this subject.{' '}
+                  <Link className="ax-link" to="/goals">Your goals</Link>
                 </p>
               </Panel>
             )}

@@ -56,6 +56,7 @@ import {
 import { gradeFor } from '@/utils/analyticalScore';
 import type { Grade } from '@/types';
 import { windowOption, type WindowKey } from '@/components/Analytics/data';
+import { goalNumbers } from '@/components/Goals/numbers';
 import { goalPace } from '@/utils/goalHealth';
 import type { AnalyticsTask } from '@/services/analytics';
 import type { Goal } from '@/types';
@@ -472,10 +473,272 @@ export interface SubjectGoal {
   /** Days late (positive) or early (negative) it lands at the current rate. */
   drift: number | null;
   unit: string;
+
+  // ---- The plan, read off the record --------------------------------------
+  /** Where the figure stands and what it is aimed at, in the goal's own units. */
+  current: number;
+  target: number;
+  /** False for a milestone goal — ticks, not a quantity. See Goals/numbers. */
+  numeric: boolean;
+  /** target − current. Null when there is no target to be short of. */
+  remaining: number | null;
+  /** Days to the deadline. Negative once it has passed, null with no date. */
+  daysLeft: number | null;
+  /** Where the current rate lands it, as an ISO day. Null if it never does. */
+  lands: string | null;
+  /**
+   * Where the calendar says it should be, 0-100, against `progress`.
+   *
+   * The one figure that turns a percentage into a judgement. 40% done is fine
+   * with 60% of the time left and a disaster with a week to go, and the bar
+   * alone cannot say which — so the bar carries this as a mark on it.
+   */
+  expected: number | null;
+  /** `need` / `have`. Above 1 is the factor the rate has to rise by. */
+  factor: number | null;
+  /** Checkpoints ticked, of the ones the goal carries. */
+  stagesDone: number;
+  stagesTotal: number;
+
+  // ---- What this subject has actually put into it -------------------------
+  /** Finished tasks in this subject, in this window, pointed at this goal. */
+  aimed: number;
+  /** Finished tasks in this subject in this window, for the share above. */
+  ofFinished: number;
+  /**
+   * Days in the last fortnight with a finished task here pointed at it.
+   *
+   * A fortnight rather than the page's window, and that is not a detail. As a
+   * share of a window this figure is unreadable: fifty-five days a year on one
+   * goal in one subject is a lot of work and 15% of a year, so a cadence read
+   * against the window would fire its lever on almost every account that
+   * chose 1Y and on almost none that chose 7D — the reader's picker deciding
+   * whether they get told off. A fortnight is what "lately" means regardless
+   * of what the rest of the page is showing.
+   */
+  recentDays: number;
+  /** Days since the last one. Null when there has never been one. */
+  sinceWork: number | null;
+
+  /** What to change to make it land, hardest constraint first. */
+  levers: Lever[];
 }
 
-/** The goals that name this subject, nearest deadline first. */
-function goalsFor(goals: Goal[], subjectId: string, today: Date): SubjectGoal[] {
+/**
+ * One thing to change about how this goal is being pursued.
+ *
+ * Not the same object as `Advice`, and the difference is the point. Advice
+ * ranks the *subject's* findings — the weak band, the commonest reason a
+ * session goes badly — and the goal is one of the things it ranks. A lever is
+ * about the goal itself: whether the work is pointed at it, whether it is
+ * being touched, whether the rate it is getting can reach the number by the
+ * date. Both carry the figure that produced them, for the reason the note on
+ * `Advice` gives.
+ */
+export interface Lever {
+  id: string;
+  /** What to do, as an instruction. */
+  title: string;
+  /** The counted figure that says so. Never a claim without one. */
+  fact: string;
+  /**
+   * `blocking` — nothing else matters until this changes.
+   * `raise`     — it is moving, but not fast enough for the date.
+   * `hold`      — it is working; the lever is not to break it.
+   */
+  weight: 'blocking' | 'raise' | 'hold';
+}
+
+/**
+ * The stretch "lately" means, for the cadence figure.
+ *
+ * The same fortnight `goalHealth` measures recency and consistency over
+ * (utils/goalHealth), because two parts of the app disagreeing about how long
+ * ago counts as recently is how a goal reads as neglected on one page and
+ * active on the other.
+ */
+const RECENT_DAYS = 14;
+
+/** Days between two ISO days. Positive when `to` is later. */
+function daysBetween(from: string, to: string): number {
+  const a = new Date(`${from}T00:00:00Z`).getTime();
+  const b = new Date(`${to}T00:00:00Z`).getTime();
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
+  return Math.round((b - a) / 86_400_000);
+}
+
+/**
+ * How much of a goal's time has gone, 0-100.
+ *
+ * The same arithmetic as `expected` in utils/goalHealth, in the units this
+ * page prints. It is recomputed rather than imported because `goalHealth`
+ * wants the account's whole task list to answer the other three signals it
+ * blends, and this page has no reason to hand it one for a single ratio.
+ */
+function elapsedShare(goal: Goal, today: string): number | null {
+  const start = dayOf(goal.start_date) || dayOf(goal.created_at);
+  const end = dayOf(goal.deadline);
+  if (!start || !end) return null;
+  const total = daysBetween(start, end);
+  if (total <= 0) return null;
+  return Math.max(0, Math.min(100, (daysBetween(start, today) / total) * 100));
+}
+
+/**
+ * What has to change for this goal to land, hardest constraint first.
+ *
+ * ## The order is a filter, not a ranking
+ *
+ * These are not four suggestions of equal standing. A goal with no target and
+ * no date has no pace to raise; a goal nothing is pointed at cannot be made to
+ * move faster by working harder at the subject around it. Each case below
+ * makes the ones under it unanswerable, so the first that fires is the only
+ * one worth printing at full weight and the rest follow it as context.
+ *
+ * ## Why the first two are about pointing rather than working
+ *
+ * The commonest way a goal on this page reads as failing is not that the
+ * reader is doing too little. It is that the work is happening and nothing
+ * says so: tasks finished in this subject with no `goal_id` on them advance
+ * the subject's own figures and leave the goal at the number it was set at.
+ * That is a bookkeeping failure with the same shape as a discipline failure,
+ * and telling somebody to try harder when the fix is a dropdown is the worst
+ * thing this panel could do.
+ */
+function leversFor(goal: SubjectGoal, period: string): Lever[] {
+  const out: Lever[] = [];
+  const per = (value: number) => (value >= 10 ? Math.round(value).toString() : value.toFixed(1));
+
+  // ---- Is there a plan to read at all? ------------------------------------
+  if (goal.target <= 0 || !goal.deadline) {
+    const missing = goal.target <= 0 && !goal.deadline
+      ? 'a target and a date'
+      : goal.target <= 0
+        ? 'a target number'
+        : 'a date';
+    out.push({
+      id: 'terms',
+      title: `Give it ${missing}`,
+      fact: goal.target > 0
+        ? `It is at ${per(goal.current)} of ${per(goal.target)} ${goal.unit} with nothing to be `
+          + 'on time for, so no pace can be read off it.'
+        : 'Without a number there is nothing to be a share of, and the bar above is the '
+          + "app's own estimate rather than yours.",
+      weight: 'blocking',
+    });
+  }
+
+  // ---- Is the work pointed at it? -----------------------------------------
+  if (goal.ofFinished > 0 && goal.aimed === 0) {
+    out.push({
+      id: 'unaimed',
+      title: 'Point the work you are already doing at it',
+      fact: `None of the ${goal.ofFinished} ${goal.ofFinished === 1 ? 'task' : 'tasks'} you `
+        + `finished here in ${period} named this goal, so none of them moved it.`,
+      weight: 'blocking',
+    });
+  } else if (goal.ofFinished >= 4 && goal.aimed / goal.ofFinished < 0.25) {
+    out.push({
+      id: 'thin-aim',
+      title: 'Aim more of this subject at it',
+      fact: `${goal.aimed} of the ${goal.ofFinished} tasks you finished here in ${period} `
+        + `named this goal — ${Math.round((goal.aimed / goal.ofFinished) * 100)}% of the work `
+        + 'in the subject it belongs to.',
+      weight: 'raise',
+    });
+  }
+
+  // ---- Is it being touched? -----------------------------------------------
+  if (goal.sinceWork !== null && goal.sinceWork >= 7) {
+    out.push({
+      id: 'quiet',
+      title: 'Put it back in the week',
+      fact: `Nothing here has been finished against it in ${goal.sinceWork} days`
+        + (goal.daysLeft !== null && goal.daysLeft >= 0
+          ? `, and there are ${goal.daysLeft} left.`
+          : '.'),
+      weight: 'blocking',
+    });
+  } else if (goal.recentDays > 0 && goal.recentDays <= 2) {
+    out.push({
+      id: 'cadence',
+      title: 'Work it on more days, not longer ones',
+      fact: `${goal.recentDays} of the last ${RECENT_DAYS} days had something here pointed `
+        + 'at it.',
+      weight: 'raise',
+    });
+  }
+
+  // ---- Is the rate enough for the date? -----------------------------------
+  if (goal.need !== null && goal.have !== null && goal.factor !== null && goal.factor > 1.05) {
+    out.push({
+      id: 'rate',
+      title: `Roughly ${goal.factor >= 10 ? '10×' : `${goal.factor.toFixed(1)}×`} the rate from here`,
+      fact: `It needs ${per(goal.need * 7)} ${goal.unit} a week to arrive on time and has been `
+        + `getting ${per(goal.have * 7)}`
+        + (goal.lands ? `. At this rate it lands ${goal.lands}.` : '.'),
+      weight: 'raise',
+    });
+  }
+
+  // ---- Do the stages fit in the time left? --------------------------------
+  const stagesLeft = goal.stagesTotal - goal.stagesDone;
+  if (stagesLeft > 0 && goal.daysLeft !== null && goal.daysLeft > 0) {
+    const each = Math.floor(goal.daysLeft / stagesLeft);
+    out.push({
+      id: 'stages',
+      title: each >= 1
+        ? `One stage every ${each} ${each === 1 ? 'day' : 'days'} from here`
+        : 'More stages left than days left',
+      fact: `${stagesLeft} of its ${goal.stagesTotal} checkpoints are still open, `
+        + `with ${goal.daysLeft} days to the date.`,
+      weight: each >= 1 ? 'raise' : 'blocking',
+    });
+  }
+
+  /* Nothing to fix is a finding, and it gets said. A panel that goes blank
+     when the answer is good reads as a panel that failed to load, and the
+     reader learns nothing about what to keep doing. */
+  if (!out.length) {
+    out.push({
+      id: 'hold',
+      title: 'Hold this — it is what is working',
+      fact: goal.drift !== null && goal.drift < 0
+        ? `At the rate this subject has been going it lands ${Math.abs(goal.drift)} `
+          + `${Math.abs(goal.drift) === 1 ? 'day' : 'days'} early.`
+        : `${Math.round(goal.progress)}% done`
+          + (goal.aimed > 0
+            ? `, with ${goal.aimed} of the ${goal.ofFinished} tasks you finished here in `
+              + `${period} pointed at it.`
+            : '.'),
+      weight: 'hold',
+    });
+  }
+
+  return out;
+}
+
+/**
+ * The goals that name this subject, nearest deadline first.
+ *
+ * Read against the window's own finished tasks rather than against the goal
+ * alone. A goal card on the goals page can only say how full the bar is; this
+ * page knows which of the reader's work in *this subject* was pointed at it,
+ * on how many days, and how recently — which is the difference between "you
+ * are behind" and "here is the thing to change".
+ */
+function goalsFor(
+  goals: Goal[],
+  subjectId: string,
+  today: string,
+  /** Finished in this subject, in this window. */
+  done: AnalyticsTask[],
+  /** Finished in this subject, ever — for the recency the window cannot see. */
+  everDone: AnalyticsTask[],
+  span: Span,
+): SubjectGoal[] {
+  const at = new Date(`${today}T00:00:00`);
+  const period = span.days > 0 ? `the last ${span.days} days` : 'all time';
   return goals
     .filter((goal) => {
       if (goal.status !== 'active') return false;
@@ -487,8 +750,31 @@ function goalsFor(goals: Goal[], subjectId: string, today: Date): SubjectGoal[] 
         .includes(subjectId);
     })
     .map((goal) => {
-      const pace = goalPace(goal, today);
-      return {
+      const pace = goalPace(goal, at);
+      const numbers = goalNumbers(goal);
+      const linked = done.filter((task) => task.goal_id === goal.id);
+      /* Off every task in the subject rather than the window's, for the same
+         reason recency is: a seven-day window cannot see a fortnight. */
+      const since = shift(today, -(RECENT_DAYS - 1));
+      const days = new Set(
+        everDone
+          .filter((task) => task.goal_id === goal.id && dayOf(task.completed_at) >= since)
+          .map((task) => dayOf(task.completed_at))
+          .filter(Boolean),
+      );
+
+      /* Recency is counted over every task in this subject, not over the
+         window: a goal last touched four months ago is stale, and a
+         seven-day window that simply cannot see that far back would report
+         the same "never" as a goal nothing has ever been pointed at. */
+      const everLast = lastDayAgainst(goal.id);
+      const stages = goal.milestones ?? [];
+
+      const remaining = numbers.target > 0 ? Math.max(0, numbers.target - numbers.current) : null;
+      const factor =
+        pace.need !== null && pace.have !== null && pace.have > 0 ? pace.need / pace.have : null;
+
+      const read: SubjectGoal = {
         id: goal.id,
         title: goal.title,
         progress: goal.progress,
@@ -496,10 +782,40 @@ function goalsFor(goals: Goal[], subjectId: string, today: Date): SubjectGoal[] 
         need: pace.need,
         have: pace.have,
         drift: pace.drift,
-        unit: goal.unit || 'units',
+        /* `goalNumbers` knows what a counter goal counts — "XP", "Days" —
+           and `goal.unit` is only set on an outcome goal, so a counter read
+           through the old fallback said "units a week" about XP. */
+        unit: numbers.label || goal.unit || 'units',
+        current: numbers.current,
+        target: numbers.target,
+        numeric: numbers.numeric,
+        remaining,
+        daysLeft: goal.deadline ? daysBetween(today, dayOf(goal.deadline)) : null,
+        lands: pace.lands,
+        expected: elapsedShare(goal, today),
+        factor,
+        stagesDone: stages.filter((row) => row.status === 'done').length,
+        stagesTotal: stages.length,
+        aimed: linked.length,
+        ofFinished: done.length,
+        recentDays: days.size,
+        sinceWork: everLast ? daysBetween(everLast, today) : null,
+        levers: [],
       };
+      return { ...read, levers: leversFor(read, period) };
     })
     .sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'));
+
+  /** The most recent day anything in this subject was finished against a goal. */
+  function lastDayAgainst(goalId: string): string {
+    let last = '';
+    for (const task of everDone) {
+      if (task.goal_id !== goalId) continue;
+      const day = dayOf(task.completed_at);
+      if (day > last) last = day;
+    }
+    return last;
+  }
 }
 
 /**
@@ -893,7 +1209,11 @@ export function subjectModel(
     ? Math.round((done.filter((task) => task.goal_id).length / done.length) * 100)
     : null;
 
-  const subjectGoals = goalsFor(goals, subjectId, new Date(`${today}T00:00:00`));
+  /* Every finished task in this subject, not just the window's, because
+     "nothing has been pointed at this in 40 days" is exactly the reading a
+     seven-day window is blind to — and it is the one worth having. */
+  const everDone = mine.filter((task) => task.status === 'done' && task.completed_at);
+  const subjectGoals = goalsFor(goals, subjectId, today, done, everDone, span);
   const advice = adviceFrom(bands, struggles, rates, subjectGoals);
 
   /* The one sentence, in priority order: a goal that is going to miss, then

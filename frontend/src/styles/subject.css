@@ -603,6 +603,14 @@
 
 .sb-goal { display: grid; gap: 6px; }
 
+/* Two goals on one subject is common, and each of them is now a bar, a grid
+   of figures and a stack of levers. Without a rule between them the second
+   one's title reads as another lever belonging to the first. */
+.sb-goal + .sb-goal {
+    padding-top: var(--sb-gap);
+    border-top: 1px solid var(--ax-line-soft);
+}
+
 .sb-goal-head {
     display: flex;
     align-items: baseline;
@@ -637,6 +645,117 @@
     font-size: 12px;
     color: var(--ax-muted);
     font-variant-numeric: tabular-nums;
+}
+
+/* The bar, and the calendar's position on the same track.
+   Its own element rather than the page's shared `.sb-bar`, because that one
+   is `overflow: hidden` and unpositioned — a mark inside it would be clipped
+   at the fill's edge, which is precisely where the mark is interesting. */
+.sb-goal-track {
+    position: relative;
+    display: block;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+}
+
+.sb-goal-track-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--ax-violet);
+    /* Same floor as .sb-bar-fill, for the same reason: 2% rounded at 999px
+       collapses to nothing and reads as no bar rather than a small one. */
+    min-width: 3px;
+}
+
+/* Where the time has got to. A hairline rather than a coloured segment: it is
+   a reading of the clock, not a second quantity, and drawing it as a band
+   would invite the eye to compare two areas that are not comparable. */
+.sb-goal-track-mark {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 2px;
+    background: var(--ax-text);
+    opacity: .55;
+}
+
+/* --- What has gone into the goal ---------------------------------------- */
+/* A grid rather than a sentence. These are six or seven small figures with
+   different units, and prose forces the reader to parse the units to find the
+   one they came for. `auto-fit` so it is two columns on a phone and one row
+   on a desktop without a breakpoint deciding which. */
+.sb-plan {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    gap: 8px 14px;
+    margin: 2px 0 0;
+}
+
+.sb-plan-fact {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.sb-plan-fact dt {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+}
+
+.sb-plan-fact dd {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- The levers ---------------------------------------------------------
+   What would have to change, hardest constraint first. Bordered on the left
+   in the same three-colour vocabulary the recommendations use — a reader who
+   has learned it at the top of the page should not have to learn it twice —
+   but flatter, because these sit inside a goal rather than being the page's
+   own ranked list. */
+.sb-levers {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sb-lever {
+    padding: 8px 11px;
+    border-left: 3px solid var(--ax-line-soft);
+    border-radius: 0 8px 8px 0;
+    background: var(--ax-card-2);
+}
+
+.sb-lever.is-blocking { border-left-color: var(--ax-pink); }
+.sb-lever.is-raise { border-left-color: var(--ax-amber); }
+.sb-lever.is-hold { border-left-color: var(--ax-green); }
+
+.sb-lever strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--ax-text);
+}
+
+.sb-lever p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ax-muted);
 }
 
 /* --- The lattice --------------------------------------------------------- */

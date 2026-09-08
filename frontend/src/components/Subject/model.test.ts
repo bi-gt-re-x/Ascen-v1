@@ -11,8 +11,9 @@
  * is what makes all of that testable at all.
  */
 import { describe, expect, it } from 'vitest';
-import { subjectModel } from './model';
+import { subjectModel, type SubjectGoal } from './model';
 import type { AnalyticsTask } from '@/services/analytics';
+import type { WindowKey } from '@/components/Analytics/data';
 import type { Goal } from '@/types';
 
 /** A goal on this subject, with only the fields the model reads set. */
@@ -465,6 +466,161 @@ describe('what to do next', () => {
     const model = subjectModel(busy(), 'maths', '30d', TODAY, []);
     expect(model.advice[0]!.id).toBe('weakest-band');
     expect(model.advice[0]!.weight).toBe('first');
+  });
+});
+
+describe('the goal, read against what this subject has put into it', () => {
+  /** The goal as the page's own reading of it. */
+  const read = (tasks: AnalyticsTask[], over: Partial<Goal> = {}, key: WindowKey = '30d') =>
+    subjectModel(tasks, 'maths', key, TODAY, [goal(over)]).goals[0]!;
+
+  const lever = (entry: SubjectGoal, id: string) => entry.levers.find((row) => row.id === id);
+
+  it('marks where the calendar has got to, not just how full the bar is', () => {
+    // The figure that turns a percentage into a judgement. 40% done is fine
+    // with 60% of the time left and a disaster with a week to go, and the
+    // fill alone cannot tell the reader which of those they are looking at.
+    // 2026-08-01 to 2026-12-01 is 122 days; 2026-09-05 is 35 of them in.
+    const entry = read([done()]);
+    expect(entry.expected).toBeCloseTo((35 / 122) * 100, 1);
+  });
+
+  it('has no calendar position for a goal with no date', () => {
+    // Nothing has elapsed as a share of nothing. A zero here would draw the
+    // mark hard against the left edge and read as "no time has gone".
+    expect(read([done()], { deadline: '' }).expected).toBeNull();
+  });
+
+  it('counts what was pointed at the goal, not what was merely done here', () => {
+    // The distinction this whole panel exists for. Both tasks are in the
+    // subject and both are finished; only one of them moved the goal.
+    const entry = read([done({ goal_id: 'g1' }), done()]);
+    expect(entry.aimed).toBe(1);
+    expect(entry.ofFinished).toBe(2);
+  });
+
+  it('says so when the subject is busy and none of it names the goal', () => {
+    // The commonest way a goal on this page reads as failing, and the one
+    // where "try harder" is the wrong instruction: the work is happening and
+    // nothing is recording that it counted.
+    const entry = read(Array.from({ length: 6 }, () => done()));
+    const found = lever(entry, 'unaimed')!;
+    expect(found.weight).toBe('blocking');
+    expect(found.fact).toContain('6');
+  });
+
+  it('does not accuse an empty subject of failing to aim its work', () => {
+    // Nothing finished is not the same failure, and printing the aim lever
+    // over an empty window would be the page inventing a habit to correct.
+    const entry = read([done({ completed_at: ago(200) })], {}, '7d');
+    expect(lever(entry, 'unaimed')).toBeUndefined();
+  });
+
+  it('reads recency past the end of the window it is showing', () => {
+    // A seven-day window cannot see a goal last touched in June, and a model
+    // that only looked inside it would report the same "never" for a goal
+    // nothing has ever been aimed at. Both are quiet, and they are different.
+    const entry = read([done({ goal_id: 'g1', completed_at: ago(40) })], {}, '7d');
+    expect(entry.sinceWork).toBe(40);
+    expect(lever(entry, 'quiet')!.fact).toContain('40 days');
+  });
+
+  it('leaves recency null when nothing has ever been aimed at it', () => {
+    expect(read([done()]).sinceWork).toBeNull();
+  });
+
+  it('states the rate in the units the goal is actually counted in', () => {
+    // 60 problems left over 26 days is ~2.3 a day. The lever prints a week of
+    // that, because a week is the unit people plan in — and it prints the
+    // goal's own noun, not "units".
+    const entry = read([done({ goal_id: 'g1' })], { deadline: '2026-10-01' });
+    expect(entry.unit).toBe('problems');
+    expect(lever(entry, 'rate')!.fact).toMatch(/problems a week/);
+  });
+
+  it('reads a counter goal in its own currency rather than in "units"', () => {
+    // `goal.unit` is only ever set on an outcome goal. An XP goal read through
+    // that field alone said "units a week" about XP.
+    const entry = read([done({ goal_id: 'g1' })], {
+      measure: 'xp' as Goal['measure'],
+      target_xp: 5000,
+      current_xp: 1000,
+    });
+    expect(entry.unit).toBe('XP');
+  });
+
+  it('does not ask for a faster rate when the rate is already enough', () => {
+    // The lever is a claim about a shortfall. Printing it on a goal that is
+    // ahead would be the panel manufacturing work.
+    const entry = read([done({ goal_id: 'g1' })], { current_value: 95, progress: 95 });
+    expect(lever(entry, 'rate')).toBeUndefined();
+  });
+
+  it('asks for the terms before it asks for a pace it cannot compute', () => {
+    // A goal with no target has no shortfall to name, so the only honest
+    // instruction is the one that would give it one.
+    const entry = read([done({ goal_id: 'g1' })], {
+      measure: undefined as never,
+      target_number: 0,
+      deadline: '',
+    });
+    expect(entry.levers[0]!.id).toBe('terms');
+    expect(entry.levers[0]!.weight).toBe('blocking');
+    expect(lever(entry, 'rate')).toBeUndefined();
+  });
+
+  it('paces the checkpoints against the days that are left', () => {
+    const entry = read([done({ goal_id: 'g1' })], {
+      deadline: '2026-09-25',
+      milestones: [
+        { id: 'm1', status: 'done' },
+        { id: 'm2', status: 'pending' },
+        { id: 'm3', status: 'pending' },
+      ] as Goal['milestones'],
+    });
+    expect(entry.stagesDone).toBe(1);
+    expect(entry.daysLeft).toBe(20);
+    // Two open stages, twenty days: one every ten.
+    expect(lever(entry, 'stages')!.title).toContain('10 days');
+  });
+
+  it('calls out stages that will not fit in the time left', () => {
+    const entry = read([done({ goal_id: 'g1' })], {
+      deadline: '2026-09-07',
+      milestones: Array.from({ length: 5 }, (_, at) => ({
+        id: `m${at}`,
+        status: 'pending',
+      })) as Goal['milestones'],
+    });
+    expect(lever(entry, 'stages')!.weight).toBe('blocking');
+  });
+
+  it('says what is working rather than going blank when nothing is wrong', () => {
+    // A panel that empties itself on a good answer reads as a panel that
+    // failed to load, and teaches nothing about what to keep doing.
+    const entry = read(
+      Array.from({ length: 8 }, (_, at) => done({ goal_id: 'g1', completed_at: ago(at) })),
+      { current_value: 96, progress: 96, deadline: '2026-11-01' },
+    );
+    expect(entry.levers).toHaveLength(1);
+    expect(entry.levers[0]!.id).toBe('hold');
+    expect(entry.levers[0]!.weight).toBe('hold');
+  });
+
+  it('gives every lever a counted figure, never a bare instruction', () => {
+    // The rule the whole page is built on. A lever with no number behind it is
+    // the horoscope this app is written against.
+    const tasks = [
+      ...Array.from({ length: 5 }, () => done({ difficulty: 5, execution: 2 })),
+      ...Array.from({ length: 3 }, () => done({ goal_id: 'g1', completed_at: ago(9) })),
+    ];
+    for (const entry of subjectModel(tasks, 'maths', '30d', TODAY, [
+      goal({ deadline: '2026-09-20' }),
+    ]).goals) {
+      for (const row of entry.levers) {
+        expect(row.fact).toMatch(/\d/);
+      }
+    }
   });
 });
 
