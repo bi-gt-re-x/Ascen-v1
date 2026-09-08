@@ -155,6 +155,21 @@ html[data-theme="dark"] .cu-backdrop {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--cu-accent) 18%, transparent);
 }
 
+/* The "0" is the shape of the answer, not the answer. It says "a number goes
+   here" to somebody reading the row, and once they have clicked into the box
+   they have been told: what is left is a digit sitting under the caret in the
+   same weight as a typed one, which reads as a value already entered and has
+   to be mentally cleared before typing. So it goes on focus and comes back if
+   the box is left empty. `opacity` rather than `color` because Firefox sets
+   the placeholder's opacity itself and a colour alone does not beat it. */
+.cu-field input::placeholder {
+    color: var(--cu-ink-faint);
+    opacity: 1;
+    transition: opacity .1s ease;
+}
+
+.cu-field input:focus::placeholder { opacity: 0; }
+
 .cu-field input:disabled { opacity: .55; }
 
 .cu-field span {
