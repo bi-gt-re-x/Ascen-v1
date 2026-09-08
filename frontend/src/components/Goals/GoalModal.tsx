@@ -9,8 +9,24 @@
  * four label/input pairs with `style.display`, and the port renders only the
  * one that applies. Focus is entered in hours and stored in minutes, which is
  * the one conversion on this page and the reason the hint appears.
+ *
+ * ## Why the subject is here as well as in the wizard
+ *
+ * The wizard requires one, so every goal made from today has a subject. Goals
+ * made before it does not, and there is no other screen that can give them
+ * one: `subject_ids` is what the subject page reads to find the goals it is
+ * for, so a goal without it is invisible to exactly the page that would have
+ * explained it. This is the repair route, and it is why the field is here
+ * rather than only on the creation path.
+ *
+ * It is *not* a gate here, and that is deliberate. This dialog also edits a
+ * plain XP counter — "earn 25,000 XP" is not about a subject — and refusing to
+ * save a title change on a goal that never had one would be the rule punishing
+ * the reader for a decision the app made before they arrived.
  */
 import { useEffect, useState } from 'react';
+import { SubjectPicker } from '@/components/SubjectPicker';
+import type { Subject } from '@/services/subjects';
 import type { Goal, GoalType } from '@/types';
 import type { NewGoal } from '@/services/goals';
 
@@ -19,6 +35,8 @@ export interface GoalModalProps {
   /** The goal being edited, or undefined when adding. */
   goal?: Goal;
   busy?: boolean;
+  /** The account's catalogue, for the subject this goal is filed under. */
+  subjects: Subject[];
   onClose: () => void;
   onSave: (draft: NewGoal) => void;
 }
@@ -54,6 +72,7 @@ export function GoalModal({
   open,
   goal,
   busy = false,
+  subjects,
   onClose,
   onSave,
 }: GoalModalProps) {
@@ -63,6 +82,7 @@ export function GoalModal({
   const [target, setTarget] = useState('');
   const [priority, setPriority] = useState(5);
   const [deadline, setDeadline] = useState('');
+  const [subjectId, setSubjectId] = useState<string | null>(null);
   const [invalid, setInvalid] = useState<{ title?: boolean; target?: boolean }>(
     {},
   );
@@ -82,6 +102,11 @@ export function GoalModal({
         : 5,
     );
     setDeadline(goal?.deadline ?? '');
+    /* The column is a comma-separated list and this control picks one, so a
+       goal that somehow names several keeps the first and loses the rest on
+       save. Nothing in the app writes more than one today; the field's own
+       note in types/models says why the column is a list anyway. */
+    setSubjectId(String(goal?.subject_ids ?? '').split(',')[0]?.trim() || null);
     setInvalid({});
   }, [open, goal]);
 
@@ -117,6 +142,10 @@ export function GoalModal({
     else if (type === 'tasks') draft.target_tasks = Math.trunc(value);
     else draft.target_focus = Math.round(value * 60); // hours in, minutes stored
     if (goal) draft.id = goal.id;
+    /* Sent on every save, empty included, so clearing the subject is a change
+       this dialog can actually make. `UpdateGoal` writes the fields that were
+       sent rather than the ones that are truthy — see backend/api/goals.py. */
+    draft.subject_ids = subjectId ?? '';
 
     onSave(draft);
   }
@@ -209,6 +238,21 @@ export function GoalModal({
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
           />
+
+          <label>Subject</label>
+          <div className="gm-subject">
+            <SubjectPicker
+              id="gm-subject"
+              label="Subject:"
+              subjects={subjects}
+              value={subjectId}
+              onChange={setSubjectId}
+            />
+          </div>
+          <p className="gm-hint">
+            What links this goal to your record. Its subject's analytics page reads the goal
+            and says what your work there is doing about it.
+          </p>
 
           <button
             type="submit"

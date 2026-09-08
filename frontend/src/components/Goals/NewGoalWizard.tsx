@@ -15,9 +15,29 @@
  *
  * The old modal is still here and still works — see GoalModal. It is what
  * edits an existing goal, and what a reader who wants a plain XP counter gets.
+ *
+ * ## The one thing besides a title that is not optional
+ *
+ * The subject. Everything else here can be filled in later from the goal's own
+ * view, and saying so is what makes the wizard finishable — but a goal with no
+ * subject is not an under-specified goal, it is a goal that half the app
+ * cannot see. `subject_ids` is the only link between a goal and the record of
+ * the work being done toward it: the subject page reads it to find the goals
+ * it is for (components/Subject/model), the analytics Goals tab reads it to
+ * split goals by subject (components/Analytics/useAnalyticsModel), and
+ * utils/goalSuggest reads it to know which goal a new task belongs to. Without
+ * it the goal is a bar on this page and nothing anywhere else.
+ *
+ * It was optional, and it was not asked for at all, so every goal in the
+ * account had an empty one and every one of those readings came back empty.
+ * That is the failure this step exists to prevent — a feature that silently
+ * has no input is worse than one that is missing, because nothing on screen
+ * says why it is blank.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { CATEGORIES } from './Outcome';
+import { SubjectPicker } from '@/components/SubjectPicker';
+import type { Subject } from '@/services/subjects';
 import type { NewGoal } from '@/services/goals';
 import type { GoalCategory, GoalMeasure } from '@/types';
 
@@ -41,6 +61,9 @@ const STEPS = [
  */
 const TIPS: Record<number, string> = {
   0: 'Name the finish line, not the effort — "Reach USACO Gold", not "practise more".',
+  // Not a tip so much as the reason the field is not optional. Somebody who
+  // knows what the subject buys them picks the right one rather than the
+  // nearest one.
   1: 'The reason you would still want this in three months. You will read it back on a bad week.',
   2: 'A date you half-believe beats no date. With one, the app can say whether you are on pace.',
   3: 'Milestones when finishing is a state you arrive at, a number when it accumulates.',
@@ -71,15 +94,18 @@ function defaultDeadline(today = new Date()): string {
 export interface NewGoalWizardProps {
   open: boolean;
   busy: boolean;
+  /** The account's catalogue, for the subject this goal is filed under. */
+  subjects: Subject[];
   onClose: () => void;
   onSave: (goal: NewGoal) => void;
 }
 
-export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProps) {
+export function NewGoalWizard({ open, busy, subjects, onClose, onSave }: NewGoalWizardProps) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<GoalCategory>('other');
+  const [subjectId, setSubjectId] = useState<string | null>(null);
   const [why, setWhy] = useState('');
   const [deadline, setDeadline] = useState(defaultDeadline);
   const [priority, setPriority] = useState(5);
@@ -95,6 +121,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
     setTitle('');
     setDescription('');
     setCategory('other');
+    setSubjectId(null);
     setWhy('');
     setDeadline(defaultDeadline());
     setPriority(5);
@@ -113,13 +140,17 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
 
   /** What each step needs before it will let you past it. */
   const blocked = useMemo(() => {
-    if (step === 0) return !title.trim();
+    /* The subject is a gate rather than a nudge. See the note at the top:
+       it is the only field that decides whether the goal is visible to the
+       rest of the app at all, and an optional field asked once is a field
+       most goals arrive without. */
+    if (step === 0) return !title.trim() || !subjectId;
     // A number goal is the one place a later step can be wrong rather than
     // merely empty: measuring by a figure and not saying what the figure is
     // makes a goal that can never move.
     if (step === 3 && measure === 'number') return !Number(target);
     return false;
-  }, [measure, step, target, title]);
+  }, [measure, step, subjectId, target, title]);
 
   const save = useCallback(() => {
     onSave({
@@ -130,6 +161,10 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
       goal_type: 'xp',
       measure,
       category,
+      // One id today. The column is a comma-separated list because a note or
+      // a goal can legitimately name several — see the field's note in
+      // types/models — and writing one into it keeps that door open.
+      subject_ids: subjectId ?? '',
       why: why.trim(),
       deadline,
       priority,
@@ -141,7 +176,7 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
     reset();
   }, [
     category, current, deadline, description, measure, milestones, onSave,
-    priority, reset, target, title, unit, why,
+    priority, reset, subjectId, target, title, unit, why,
   ]);
 
   if (!open) return null;
@@ -217,6 +252,27 @@ export function NewGoalWizard({ open, busy, onClose, onSave }: NewGoalWizardProp
                   </button>
                 ))}
               </div>
+
+              {/* The category above is a colour and an icon. This is the link
+                  to the record — see the note at the top of this file — and
+                  the two sit together because to a reader they are the same
+                  question asked twice, and separating them across steps would
+                  make the second one look like a duplicate to skip. */}
+              <label>Which subject is the work for?</label>
+              <div className="gx-subject">
+                <SubjectPicker
+                  id="gx-subject"
+                  label="Subject:"
+                  optional={false}
+                  subjects={subjects}
+                  value={subjectId}
+                  onChange={setSubjectId}
+                />
+              </div>
+              <p className="gx-hint">
+                Required. It is what lets that subject's page read your record against this
+                goal — without it the goal is a bar on this page and nothing anywhere else.
+              </p>
             </>
           )}
 

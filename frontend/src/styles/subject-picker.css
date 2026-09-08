@@ -46,14 +46,23 @@ html[data-theme="dark"] .subject-picker {
     color: var(--sp-ink-soft);
     margin-bottom: 6px;
 }
-/* The field is optional and says so once, quietly, instead of the dialog
-   having to explain it in a hint underneath. */
+/* The field says which it is once, quietly, instead of the dialog having to
+   explain it in a hint underneath. Optional on a task, required on a goal —
+   the reasoning is at the top of components/SubjectPicker. */
 .sp-optional {
     font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.02em;
     color: var(--sp-ink-soft);
     opacity: 0.7;
+}
+
+/* Required is the unusual one and reads as a condition rather than an aside,
+   so it keeps its full weight instead of being faded like "optional". */
+.sp-optional.is-required {
+    color: var(--sp-accent);
+    font-weight: 700;
+    opacity: 1;
 }
 
 .sp-ico {

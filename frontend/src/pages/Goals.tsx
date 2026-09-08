@@ -70,7 +70,14 @@ import {
   msUntilNextDeadline,
 } from '@/components/Goals';
 import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
-import { useAuth, useDocumentTitle, usePageEntrance, useSubjectIndex, useUserData } from '@/hooks';
+import {
+  useAuth,
+  useDocumentTitle,
+  usePageEntrance,
+  useSubjectIndex,
+  useSubjects,
+  useUserData,
+} from '@/hooks';
 import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewGoal } from '@/services/goals';
 import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
@@ -193,6 +200,10 @@ export default function Goals() {
      Math" rather than `competitive_math`. Falls back to a tidied id when a task
      names a subject the catalogue no longer has. */
   const subjects = useSubjectIndex(username);
+  /* The same catalogue as a list, in the order the backend sent it — most-used
+     first — which is the order the picker's rail wants. `useSubjectIndex` is
+     built from `useSubjects` and both read one cache, so this is free. */
+  const catalogue = useSubjects(username);
   const subjectName = useCallback(
     (id: string) => subjects.get(id)?.name ?? id.replace(/_/g, ' '),
     [subjects],
@@ -817,6 +828,7 @@ export default function Goals() {
       <NewGoalWizard
         open={wizardOpen}
         busy={busy}
+        subjects={catalogue}
         onClose={() => setWizardOpen(false)}
         onSave={(draft) => void createGoal(draft)}
       />
@@ -825,6 +837,7 @@ export default function Goals() {
         open={modalOpen}
         goal={editing}
         busy={busy}
+        subjects={catalogue}
         onClose={() => {
           setModalOpen(false);
           setEditing(undefined);

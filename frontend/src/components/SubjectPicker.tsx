@@ -19,9 +19,16 @@
  * because there is nothing to confirm: the choice *is* the click, and the
  * button that replaces the row is the receipt.
  *
- * The whole thing is optional. `null` is a first-class value here — the button
- * offers to clear the choice once one has been made, and a task saved with no
- * subject is an ordinary task rather than an incomplete one.
+ * On a task the whole thing is optional. `null` is a first-class value here —
+ * the button offers to clear the choice once one has been made, and a task
+ * saved with no subject is an ordinary task rather than an incomplete one.
+ *
+ * On a *goal* it is not, and that is why the label's word is a prop rather
+ * than a constant. `subject_ids` is the only link between a goal and the
+ * record of the work being done toward it (see the note at the top of
+ * components/Goals/NewGoalWizard), so a goal without one is invisible to the
+ * page that would have explained it — a different thing from a task with no
+ * subject, which is merely unfiled.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { iconUrl, type Subject } from '@/services/subjects';
@@ -36,6 +43,13 @@ export interface SubjectPickerProps {
   label?: string;
   /** The dialog's id prefix, so two pickers on one page keep distinct ids. */
   id?: string;
+  /**
+   * Whether leaving it unset is a legitimate answer. True on a task, false on
+   * a goal — see the note above. Only changes the word beside the label; the
+   * caller is what enforces it, because the caller is what knows what an
+   * unanswered field costs.
+   */
+  optional?: boolean;
 }
 
 /**
@@ -72,6 +86,7 @@ export function SubjectPicker({
   onChange,
   label = 'Subject:',
   id = 'subject',
+  optional = true,
 }: SubjectPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -111,7 +126,10 @@ export function SubjectPicker({
   return (
     <div className="subject-picker">
       <label className="sp-label" htmlFor={`${id}Search`}>
-        {label} <span className="sp-optional">optional</span>
+        {label}{' '}
+        <span className={optional ? 'sp-optional' : 'sp-optional is-required'}>
+          {optional ? 'optional' : 'required'}
+        </span>
       </label>
 
       {!open ? (

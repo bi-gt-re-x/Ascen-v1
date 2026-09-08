@@ -1994,6 +1994,12 @@ html[data-theme="dark"] .gx-page {
     color: var(--gx-faint);
 }
 
+/* The subject field in the wizard and in the edit dialog. Both are a wrapper
+   and nothing else: SubjectPicker carries its own styles (styles/subject-picker.css)
+   and the only thing either dialog has to say is how much room it gets. */
+.gx-subject { margin: 4px 0 0; }
+.gm-subject { margin: 6px 0 0; }
+
 .gx-page .gx-cat  {
     display: inline-block;
     font-size: 10.5px;
