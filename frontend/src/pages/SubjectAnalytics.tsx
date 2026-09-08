@@ -70,6 +70,7 @@ import { WINDOWS, type WindowKey } from '@/components/Analytics/data';
 import { subjectModel } from '@/components/Subject/model';
 import { latticeFor } from '@/components/Subject/lattice';
 import { loadProgress } from '@/utils/skillProgress';
+import { treeStanding } from '@/skills/standing';
 import { useApi, useAuth, useDocumentTitle, useSettings, useSubjectIndex } from '@/hooks';
 import {
   analyticsTasks,
@@ -292,6 +293,36 @@ export default function SubjectAnalytics() {
   );
 
   /**
+   * How far into this subject's lattice the account's own work has got.
+   *
+   * The panel below says what the tree *contains*, which is authored and the
+   * same for everybody. This is the half that is about the reader: XP filed
+   * under every subject that opens this tree, against what the tree is worth.
+   * See skills/standing, which is also what the Subjects tab and the Mastery
+   * badges read, so the three cannot disagree about the same account.
+   *
+   * Counted over every finished task rather than over the window this page is
+   * scoped to. Everything else here is a statement about the window and this
+   * is not, deliberately: a lattice is a curriculum rather than a quarter.
+   *
+   * Sibling subjects count. Algebra and Geometry open the Mathematics tree, so
+   * a reader on the Algebra page is told where *the tree* stands, not where
+   * their algebra tasks alone stand — the tree is the thing being measured.
+   */
+  const standing = useMemo(() => {
+    const xp = new Map<string, number>();
+    for (const task of tasks.data?.tasks ?? []) {
+      const key = task.subject ?? '';
+      if (task.status !== 'done' || !key) continue;
+      xp.set(key, (xp.get(key) ?? 0) + (Number(task.xp_value) || 0));
+    }
+    const rows = treeStanding([...xp].map(([key, total]) => ({ key, xp: total })));
+    return rows.find((tree) => tree.subjects.includes(subjectId))
+      ?? rows.find((tree) => tree.title === lattice?.title)
+      ?? null;
+  }, [lattice?.title, subjectId, tasks.data]);
+
+  /**
    * The checkpoints set against this subject, and the goal drafted from them.
    *
    * Checkpoints first, goal second, which is the order people actually work
@@ -415,7 +446,7 @@ export default function SubjectAnalytics() {
             <h1>{subject ? subject.name : 'Subject'}</h1>
             <p className="ax-muted ax-head-purpose">
               {subject
-                ? 'This subject on its own — what you have done in it, what is holding it back, and what to do next.'
+                ? 'How this one is going, and what to do about it.'
                 : 'This page is about one subject at a time.'}
             </p>
           </div>
@@ -524,28 +555,19 @@ export default function SubjectAnalytics() {
                     </span>
                   ))}
                 </nav>
-                <p className="sb-path-facts">
-                  {/* The curriculum's size and the reader's own practice, kept
-                      apart in the wording as well as in the model. The node
-                      count is authored; the practised count is the only figure
-                      here that is about the person. */}
-                  <span>
-                    <strong>{lattice.nodes}</strong> skills
-                  </span>
-                  {lattice.core > 0 && (
-                    <span>
-                      <strong>{lattice.core}</strong> core
+                {/* One figure, and it is the reader's. The strip used to
+                    carry four — skills, core, branches, practised — three of
+                    which are the curriculum's size and belong in the tree
+                    panel at the foot of the page, where they now are. A strip
+                    read on the way past has room for the answer, not for the
+                    working. */}
+                {standing && (
+                  <p className="sb-path-facts">
+                    <span className="is-yours">
+                      <strong>{standing.percent}%</strong> of this tree
                     </span>
-                  )}
-                  {lattice.branches.length > 0 && (
-                    <span>
-                      <strong>{lattice.branches.length}</strong> branches
-                    </span>
-                  )}
-                  <span className={lattice.practised > 0 ? 'is-yours' : undefined}>
-                    <strong>{lattice.practised}</strong> practised by you
-                  </span>
-                </p>
+                  </p>
+                )}
                 <Link className="sb-path-open" to="/skill-trees">
                   Open the tree →
                 </Link>
@@ -556,7 +578,7 @@ export default function SubjectAnalytics() {
             {model.advice.length > 0 && (
               <Panel
                 title="Do this next"
-                note="Ranked by what it is worth. Each carries the figure it came from — an instruction without a number behind it is a horoscope."
+                note="Ranked by what it would be worth, each with the figure behind it."
               >
                 <ol className="sb-advice">
                   {model.advice.map((item, at) => (
@@ -587,65 +609,72 @@ export default function SubjectAnalytics() {
             {model.series.any && (
               <Panel
                 title="Over this window"
-                note="Tasks finished per period, and the quality you rated them at. Two charts because they are two scales — a count has no ceiling and a percentage has one."
+                note="Tasks finished, and the quality you rated them at."
               >
-                <AreaChart
-                  id={`sb-done-${subjectId}`}
-                  label={`Tasks finished in ${subject.name} over ${
-                    WINDOWS.find((option) => option.key === span)?.label ?? 'the window'
-                  }`}
-                  height={165}
-                  series={[{ values: model.series.done, tone: 'violet' }]}
-                  ticks={[String(seriesPeak), String(Math.round(seriesPeak / 2)), '0']}
-                  marks={model.series.marks}
-                  readout={{
-                    labels: model.series.labels,
-                    names: ['Finished'],
-                    format: (value) => `${Math.round(value)} tasks`,
-                  }}
-                />
-
-                {model.series.quality.some((value) => value !== null) && (
-                  <>
-                    <h3 className="sb-sub">Quality over the same periods</h3>
+                {/* Side by side rather than stacked. They are the same
+                    periods on the same dates, so the interesting reading is
+                    across them — did the month the volume climbed cost
+                    anything in quality — and that reading was two screens
+                    apart when one sat under the other. Stacking also spent
+                    three hundred vertical pixels on two charts that are mostly
+                    air. They wrap to one column under `sb-charts`. */}
+                <div className="sb-charts">
+                  <div>
+                    <h3 className="sb-sub">Tasks finished</h3>
                     <AreaChart
-                      id={`sb-quality-${subjectId}`}
-                      label={`Quality rated in ${subject.name} over the same periods`}
-                      height={135}
-                      /* Nulls are real and stay null: a period with nothing
-                         rated has no quality, and the chart breaks its line
-                         there rather than drawing a zero nobody recorded. */
-                      series={[{ values: model.series.quality, tone: 'blue' }]}
-                      /* The real ceiling, so a run that never passes 60% is not
-                         stretched to fill the box and read as excellent. */
-                      max={100}
-                      ticks={['100', '50', '0']}
+                      id={`sb-done-${subjectId}`}
+                      label={`Tasks finished in ${subject.name} over ${
+                        WINDOWS.find((option) => option.key === span)?.label ?? 'the window'
+                      }`}
+                      height={150}
+                      series={[{ values: model.series.done, tone: 'violet' }]}
+                      ticks={[String(seriesPeak), String(Math.round(seriesPeak / 2)), '0']}
                       marks={model.series.marks}
                       readout={{
                         labels: model.series.labels,
-                        names: ['Quality'],
-                        format: (value) => `${Math.round(value)}%`,
+                        names: ['Finished'],
+                        format: (value) => `${Math.round(value)} tasks`,
                       }}
                     />
-                  </>
-                )}
+                  </div>
+
+                  {model.series.quality.some((value) => value !== null) && (
+                    <div>
+                      <h3 className="sb-sub">Quality</h3>
+                      <AreaChart
+                        id={`sb-quality-${subjectId}`}
+                        label={`Quality rated in ${subject.name} over the same periods`}
+                        height={150}
+                        /* Nulls are real and stay null: a period with nothing
+                           rated has no quality, and the chart breaks its line
+                           there rather than drawing a zero nobody recorded. */
+                        series={[{ values: model.series.quality, tone: 'blue' }]}
+                        /* The real ceiling, so a run that never passes 60% is
+                           not stretched to fill the box and read as excellent. */
+                        max={100}
+                        ticks={['100', '50', '0']}
+                        marks={model.series.marks}
+                        readout={{
+                          labels: model.series.labels,
+                          names: ['Quality'],
+                          format: (value) => `${Math.round(value)}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </Panel>
             )}
 
             {/* ---- Everything else: the working -------------------- */}
             <h2 className="sb-detail-head">The detail</h2>
 
+            {/* The grade is not a tile. It was, and it was the third place on
+                one screen the same letter appeared — the verdict states it at
+                the top, and the panel below breaks it into the four rates the
+                tile was listing in prose. A tile that repeats what is already
+                on screen is a tile that costs a column and says nothing. */}
             <div className="sb-tiles">
-              <div className="sb-tile">
-                <span className="sb-tile-label">Subject score</span>
-                <strong className="sb-tile-value">
-                  {model.grade ?? '—'}
-                  {model.score !== null && <em> {model.score}/100</em>}
-                </strong>
-                <span className="sb-tile-note">
-                  {model.howScored || 'Nothing rated in this window yet.'}
-                </span>
-              </div>
               <div className="sb-tile">
                 <span className="sb-tile-label">Finished</span>
                 <strong className="sb-tile-value">{model.finished}</strong>
@@ -680,7 +709,7 @@ export default function SubjectAnalytics() {
             {model.goals.length > 0 && (
               <Panel
                 title="What this subject is for"
-                note="The goals that name this subject. Read as a pace rather than a percentage — where a goal is says less than whether it is going to arrive."
+                note="The goals that name this subject, read as a pace."
               >
                 <ul className="sb-goals">
                   {model.goals.map((goal) => (
@@ -716,9 +745,8 @@ export default function SubjectAnalytics() {
                   ))}
                 </ul>
                 <p className="ax-panel-note ax-panel-note-foot">
-                  A goal here is what orders the recommendations below. Set one on{' '}
-                  <Link className="ax-link" to="/goals">the goals page</Link> and this subject's advice is read
-                  against it rather than against whichever measure happens to be lowest.
+                  A goal here orders the advice above.{' '}
+                  <Link className="ax-link" to="/goals">Set one</Link>
                 </p>
               </Panel>
             )}
@@ -727,7 +755,7 @@ export default function SubjectAnalytics() {
               {/* ---- Progress ----------------------------------------- */}
               <Panel
                 title="Your progress"
-                note="Each figure is this window against the one immediately before it, which is the same length — a longer baseline would report the extra days as effort."
+                note="Against the window immediately before, same length."
               >
                 <ul className="sb-rows">
                   {model.growth.map((entry) => (
@@ -743,7 +771,7 @@ export default function SubjectAnalytics() {
               {/* ---- The four rates ----------------------------------- */}
               <Panel
                 title="What the score is made of"
-                note="Four rates, each already a share of something out of something. The letter above is their mean — nothing is scaled to get there."
+                note="Four rates. The letter above is their mean."
               >
                 <ul className="sb-rows">
                   {model.rates.map((entry) => (
@@ -769,7 +797,7 @@ export default function SubjectAnalytics() {
             {model.bands.some((band) => band.done > 0) && (
               <Panel
                 title="How you do at each difficulty"
-                note="This is the breakdown Ascen can actually evidence. It records a difficulty star on every rated task and nothing finer than the subject itself — so these are the bands rather than named sub-topics, and every row is counted off your own ratings."
+                note="Bands, not sub-topics: a difficulty star is the finest thing recorded."
               >
                 <div className="sb-table-wrap">
                   <table className="sb-table">
@@ -830,8 +858,6 @@ export default function SubjectAnalytics() {
                     <strong>Weakest:</strong> {model.weakest.label.toLowerCase()} at{' '}
                     {Math.round(model.weakest.holding!)}%. <strong>Strongest:</strong>{' '}
                     {model.strongest.label.toLowerCase()} at {Math.round(model.strongest.holding!)}%.
-                    Only bands with at least three finished tasks are ranked — below that, one bad
-                    afternoon is the whole sample.
                   </p>
                 )}
               </Panel>
@@ -842,7 +868,7 @@ export default function SubjectAnalytics() {
               {(model.struggles.length > 0 || model.wentWell.length > 0) && (
                 <Panel
                   title="What makes it go badly, and well"
-                  note="Counted off the reason you gave when you rated each task. It is a closed list of twelve words for exactly this reason — a text box would collect twelve spellings of one answer and count none of them."
+                  note="From the reason you gave when you rated each task."
                 >
                   {model.struggles.length > 0 && (
                     <>
@@ -885,7 +911,7 @@ export default function SubjectAnalytics() {
               {model.run.readings.length > 0 && (
                 <Panel
                   title="Your last few sessions"
-                  note="Quality on each of the tasks you rated, oldest first — difficulty times execution, as a percentage of the 25 it is scored out of."
+                  note="Difficulty × execution on each rated task, oldest first."
                 >
                   <ol className="sb-run">
                     {model.run.readings.map((reading) => (
@@ -922,7 +948,7 @@ export default function SubjectAnalytics() {
             {/* ---- Checkpoints, and the goal they become ----------- */}
             <Panel
               title="Checkpoints for this subject"
-              note="The stages, in the order you mean to reach them. They need no target and no date — that is what the goal below them is for, and you can have these long before you have that."
+              note="The stages, in the order you mean to reach them. No target or date needed."
             >
               <ul className="sb-miles">
                 {milestones.map((entry, at) => (
@@ -1113,7 +1139,7 @@ export default function SubjectAnalytics() {
             {model.recent.length > 0 && (
               <Panel
                 title="Recent work"
-                note="The last of this subject's tasks you finished, newest first."
+                note="Newest first."
               >
                 <ul className="sb-recent">
                   {model.recent.map((entry) => (
@@ -1144,17 +1170,39 @@ export default function SubjectAnalytics() {
             {/* ---- The lattice ------------------------------------- */}
             {lattice && (
               <Panel
-                title="What there is to learn"
-                note="The skill tree behind this subject. This one is authored rather than measured — it is the path through the subject, not a reading of how far along it you are, and nothing on this page scores you against it."
+                title="The skill tree"
+                note="Where you stand in it, and what it holds."
               >
+                {/* The reader's half, first and largest. Everything under it
+                    is the curriculum — authored, and the same on every
+                    account. Keeping the two apart is the whole design of this
+                    panel: "6 practised" printed beside "42 skills" reads as a
+                    claim about the reader that the authored states cannot
+                    support, which is what the old footnote was apologising
+                    for at length. A measured bar says it instead. */}
+                {standing && (
+                  <div className="sb-standing">
+                    <span className="sb-standing-pct">{standing.percent}%</span>
+                    <div className="sb-standing-main">
+                      <span className="sb-standing-bar" aria-hidden="true">
+                        <span style={{ width: `${standing.percent}%` }} />
+                      </span>
+                      <span className="sb-standing-sub">
+                        {standing.xp.toLocaleString()} of {standing.worth.toLocaleString()} XP
+                        {' '}across everything that opens {standing.title}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="sb-tree">
                   <div>
                     <strong>{lattice.title}</strong>
                     <p>{lattice.blurb}</p>
                     <p className="sb-tree-choice">
-                      {lattice.chosen
-                        ? 'You chose to go deeper into this branch when you set your subjects up.'
-                        : 'The whole subject. You can pick a branch of it to go deeper into from the setup questions.'}
+                      {lattice.nodes} skills, {lattice.core} core
+                      {lattice.practised > 0 && <> · {lattice.practised} marked practised</>}
+                      {lattice.chosen && <> · your chosen branch</>}
                     </p>
                   </div>
                   <div className="sb-tree-actions">
@@ -1172,29 +1220,15 @@ export default function SubjectAnalytics() {
                     turns into once its foundations are behind you, and one of
                     them is the answer to the setup question. */}
                 {lattice.branches.length > 0 && (
-                  <>
-                    <h3 className="sb-sub">It branches into</h3>
-                    <ul className="sb-branches">
-                      {lattice.branches.map((branch) => (
-                        <li key={branch.id}>
-                          <span>{branch.title}</span>
-                          <em>{branch.nodes} skills</em>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
+                  <ul className="sb-branches">
+                    {lattice.branches.map((branch) => (
+                      <li key={branch.id}>
+                        <span>{branch.title}</span>
+                        <em>{branch.nodes} skills</em>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-
-                <p className="ax-panel-note ax-panel-note-foot">
-                  {/* The line that keeps the two kinds of number apart. Without
-                      it, "6 practised" beside "42 skills" reads as 14% through
-                      a course, which is a claim about the reader that the seed
-                      states cannot support. */}
-                  <strong>{lattice.nodes}</strong> skills here, {lattice.core} of them core.
-                  You have practised <strong>{lattice.practised}</strong>. The tree is a
-                  route map somebody wrote, not a reading of how far along it you are — the
-                  only figure on this page that is yours is the count you have practised.
-                </p>
               </Panel>
             )}
           </>
