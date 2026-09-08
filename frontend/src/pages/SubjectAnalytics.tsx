@@ -78,8 +78,10 @@ import {
   subjectBriefAvailable,
   subjectMilestones,
   suggestSubjectGoal,
+  writeGoalPlan,
   writeSubjectBrief,
   type GoalDraft,
+  type GoalPlan,
   type SubjectBrief,
   type SubjectMilestone,
 } from '@/services/analytics';
@@ -486,6 +488,103 @@ export default function SubjectAnalytics() {
     setDraft(null);
   }, [draft, prefs.analytics_ambitions, putMilestones, subjectId, update]);
 
+  /**
+   * The route to one goal, written by a model, kept per goal.
+   *
+   * ## Why this is a second model call and not part of the write-up
+   *
+   * The write-up below is about the *subject*: how it is going, and what to
+   * practise. This is about one goal, and a reader with two goals on a subject
+   * gets two different plans — which is the whole point, and is not something
+   * one panel about the subject can do.
+   *
+   * What the model adds is the thing the arithmetic cannot. `leversFor` in
+   * components/Subject/model can work out that a goal needs 1.6 points a week
+   * and is getting 1.2. It cannot know what a point on the AMC 8 is made of,
+   * and so it cannot turn that into an order to do the work in. That requires
+   * knowing what the goal names, which is knowledge about the world rather
+   * than a claim about the reader — the argument backend/tracking/goal_plan.py
+   * makes at length, and the same one backend/tracking/subject_brief.py makes
+   * for the write-up.
+   *
+   * ## Pressed, per goal, and never on load
+   *
+   * It costs the account's owner money. A panel that spent that on every page
+   * load would be spending it on every reader who came to look at a number,
+   * and keyed by goal so that pressing it on the second goal does not throw
+   * away the first one's answer.
+   */
+  const [plans, setPlans] = useState<Record<string, GoalPlan>>({});
+  const [planning, setPlanning] = useState('');
+  const [planError, setPlanError] = useState<Record<string, string>>({});
+
+  /* Cleared with the window, for the reason the write-up is: a route argued
+     from ninety days of record, sitting under a page now showing seven, is
+     prose about figures that are no longer on screen. */
+  useEffect(() => {
+    setPlans({});
+    setPlanError({});
+  }, [span, subjectId]);
+
+  const planFor = useCallback(
+    async (goal: SubjectGoal) => {
+      if (!subject) return;
+      setPlanning(goal.id);
+      setPlanError((was) => ({ ...was, [goal.id]: '' }));
+      /* Exactly what the panel above it is showing. The server forbids the
+         model any figure that is not among these, so a number in the plan
+         that the page did not draw would be a number the reader cannot
+         check — the rule the whole subject page is built on. */
+      const result = await writeGoalPlan({
+        goal: goal.title,
+        subject: subject.name,
+        standing: goal.numeric && goal.target > 0
+          ? `${goal.current} of ${goal.target} ${goal.unit}`
+          : `${Math.round(goal.progress)}% done`,
+        deadline: goal.deadline,
+        days_left: goal.daysLeft,
+        need_weekly: goal.need === null ? '' : `${(goal.need * 7).toFixed(1)} ${goal.unit}`,
+        have_weekly: goal.have === null ? '' : `${(goal.have * 7).toFixed(1)} ${goal.unit}`,
+        lands: goal.lands ?? '',
+        expected: goal.expected === null ? null : Math.round(goal.expected),
+        stages: milestones.filter((entry) => !entry.done).map((entry) => entry.title),
+        // The app's own conclusions, in the words it wrote them in. Handing
+        // over the sentences rather than the raw counts is what stops the
+        // model re-deriving them and getting a different answer.
+        levers: goal.levers.map((lever) => `${lever.title} — ${lever.fact}`),
+        aim: ambition?.aim ?? '',
+        level: ambition?.level ?? '',
+        span: WINDOWS.find((option) => option.key === span)?.label ?? '',
+        score: model.score,
+        grade: model.grade,
+        finished: model.finished,
+        aimed: goal.aimed,
+        recent_days: goal.recentDays,
+        bands: model.bands
+          .filter((band) => band.done > 0)
+          .map((band) => ({
+            label: band.label,
+            done: band.done,
+            holding: band.holding === null ? null : Math.round(band.holding),
+          })),
+        struggles: model.struggles.map((driver) => ({
+          label: driver.label,
+          share: driver.share,
+          count: driver.count,
+        })),
+      });
+      setPlanning('');
+      if (result.success) setPlans((was) => ({ ...was, [goal.id]: result.plan }));
+      else {
+        setPlanError((was) => ({
+          ...was,
+          [goal.id]: result.message || 'Could not plan a route.',
+        }));
+      }
+    },
+    [ambition, milestones, model, span, subject],
+  );
+
   /* The volume chart's own ceiling. A floor of 1 keeps a window with a single
      quiet period from producing a "0" top tick over a line that is not flat. */
   const seriesPeak = Math.max(...model.series.done, 1);
@@ -865,11 +964,105 @@ export default function SubjectAnalytics() {
                           </li>
                         ))}
                       </ul>
+
+                      {/* ---- The route, written by a model --------------- */}
+                      {/* Everything above this line is counted. This is not,
+                          and the divider and the note say so before the
+                          button is pressed rather than after — a reader has
+                          to know which half of a panel is arithmetic and
+                          which half is prose before they decide what to act
+                          on. Same bargain as the write-up at the foot of the
+                          page. */}
+                      {canWrite && (
+                        <div className="sb-route">
+                          <div className="sb-route-head">
+                            <div>
+                              <strong>Plan the route to this</strong>
+                              <p>
+                                A model reads the figures above and lays out the stages between
+                                here and the date — what a goal like this is actually made of,
+                                which is the part your record cannot say. It is given these
+                                numbers and forbidden any others.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="ax-btn"
+                              onClick={() => void planFor(goal)}
+                              disabled={planning === goal.id}
+                            >
+                              {planning === goal.id
+                                ? 'Planning…'
+                                : plans[goal.id]
+                                  ? 'Plan it again'
+                                  : 'Plan the route'}
+                            </button>
+                          </div>
+
+                          {planError[goal.id] && (
+                            <p className="sb-brief-error" role="alert">
+                              {planError[goal.id]}
+                            </p>
+                          )}
+
+                          {plans[goal.id] && (
+                            <div className="sb-route-body">
+                              {plans[goal.id]!.route && (
+                                <p className="sb-route-read">{plans[goal.id]!.route}</p>
+                              )}
+
+                              {plans[goal.id]!.phases.length > 0 && (
+                                <ol className="sb-phases">
+                                  {plans[goal.id]!.phases.map((phase) => (
+                                    <li key={phase.title} className="sb-phase">
+                                      <div className="sb-phase-head">
+                                        <strong>{phase.title}</strong>
+                                        {/* Labelled as the model's, because it
+                                            is the one number here it supplied
+                                            rather than one the app counted. */}
+                                        <span className="sb-phase-weeks">
+                                          ~{phase.weeks} {phase.weeks === 1 ? 'week' : 'weeks'}
+                                        </span>
+                                      </div>
+                                      {phase.outcome && (
+                                        <p className="sb-phase-out">{phase.outcome}</p>
+                                      )}
+                                      {phase.focus.length > 0 && (
+                                        <ul className="sb-phase-focus">
+                                          {phase.focus.map((item) => (
+                                            <li key={item}>{item}</li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ol>
+                              )}
+
+                              {plans[goal.id]!.week.length > 0 && (
+                                <div className="sb-route-week">
+                                  <h4>This week</h4>
+                                  <ul>
+                                    {plans[goal.id]!.week.map((item) => (
+                                      <li key={item}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
                 <p className="ax-panel-note ax-panel-note-foot">
-                  Every figure here is counted from your own tasks in this subject.{' '}
+                  {/* The line said "every figure here is counted" before the
+                      route was added, and stopped being true the moment it
+                      was. The join is what the reader needs, and it is the
+                      whole reason the route sits behind a dashed rule. */}
+                  The figures are counted from your own tasks in this subject. Anything under a
+                  "Plan the route" heading was written by a model from those same figures.{' '}
                   <Link className="ax-link" to="/goals">Your goals</Link>
                 </p>
               </Panel>

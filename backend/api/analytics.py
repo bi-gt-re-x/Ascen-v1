@@ -47,6 +47,7 @@ from backend.database import connection as db
 from backend.tracking import analytics as analytics_tracking
 from backend.tracking import standing as standing_tracking
 from backend.tracking import subject_brief
+from backend.tracking import goal_plan
 from backend.tracking import subject_goal
 from backend.tracking.auth import load_user
 
@@ -606,6 +607,104 @@ def write_subject_brief(body: SubjectBrief, username: str = Depends(current_user
     except subject_brief.BriefUnavailable as exc:
         return fail(str(exc))
     return ok(brief=written)
+
+
+class GoalPlanBrief(BaseModel):
+    """One goal, and the subject record it is read against.
+
+    The figures are the ones the page already drew — `goalsFor` and
+    `leversFor` in frontend/src/components/Subject/model.ts — sent back so the
+    model can be told to use those and no others. Everything is optional
+    because a goal with no target has no rate and a subject with nothing rated
+    has no bands, and an absent line is better than a null the model has to
+    interpret.
+    """
+
+    goal: str = ''
+    subject: str = ''
+    why: str = ''
+    standing: str = ''
+    deadline: str = ''
+    days_left: Optional[int] = None
+    need_weekly: str = ''
+    have_weekly: str = ''
+    lands: str = ''
+    expected: Optional[int] = None
+    stages: List[str] = []
+    #: What `leversFor` concluded is in the way, as the sentences it wrote.
+    levers: List[str] = []
+
+    #: The subject's own record, the same rows `SubjectBrief` carries.
+    aim: str = ''
+    level: str = ''
+    span: str = ''
+    score: Optional[int] = None
+    grade: Optional[str] = None
+    finished: Optional[int] = None
+    aimed: Optional[int] = None
+    recent_days: Optional[int] = None
+    bands: List[BriefFinding] = []
+    struggles: List[BriefFinding] = []
+
+
+@router.post('/api/goal_plan')
+def write_goal_plan(body: GoalPlanBrief, username: str = Depends(current_username)):
+    """A model's route from here to one goal. Writes nothing.
+
+    The same contract as `/api/subject_brief` above, and the same reasoning
+    about where the figures come from: they are the account's own numbers,
+    computed by the page from the account's own tasks, sent here to be given
+    to a model and handed back to the page that sent them. Nothing is stored
+    and nothing is authorised off them.
+
+    Availability is not a second endpoint. Both this and the write-up need an
+    Anthropic key and nothing else, so the page asks `/api/subject_brief`
+    once and draws both buttons or neither — see `subject_brief.configured`,
+    which is what `goal_plan.configured` also calls.
+    """
+
+    _, user = load_user(username)
+    if not user:
+        return fail('User not found')
+
+    title = (body.goal or '').strip()[:BRIEF_TEXT]
+    if not title:
+        return fail('There is no goal to plan a route to.')
+
+    findings = {
+        'goal': title,
+        'subject': (body.subject or '').strip()[:BRIEF_TEXT],
+        'why': (body.why or '').strip()[:BRIEF_TEXT * 2],
+        'standing': (body.standing or '').strip()[:BRIEF_TEXT],
+        'deadline': (body.deadline or '').strip()[:BRIEF_TEXT],
+        'days_left': body.days_left,
+        'need_weekly': (body.need_weekly or '').strip()[:BRIEF_TEXT],
+        'have_weekly': (body.have_weekly or '').strip()[:BRIEF_TEXT],
+        'lands': (body.lands or '').strip()[:BRIEF_TEXT],
+        'expected': body.expected,
+        # Bounded here as well as in the module: these are unbounded lists
+        # from a client and the cost of the call scales with them.
+        'stages': [str(entry).strip()[:BRIEF_TEXT]
+                   for entry in (body.stages or [])[:12] if str(entry).strip()],
+        'levers': [str(entry).strip()[:BRIEF_TEXT * 3]
+                   for entry in (body.levers or [])[:6] if str(entry).strip()],
+        'aim': (body.aim or '').strip()[:BRIEF_TEXT * 2],
+        'level': (body.level or '').strip()[:BRIEF_TEXT * 2],
+        'span': (body.span or '').strip()[:BRIEF_TEXT],
+        'score': body.score,
+        'grade': body.grade,
+        'finished': body.finished,
+        'aimed': body.aimed,
+        'recent_days': body.recent_days,
+        'bands': _rows(body.bands, BRIEF_BANDS),
+        'struggles': _rows(body.struggles, BRIEF_REASONS),
+    }
+
+    try:
+        written = goal_plan.plan(findings)
+    except goal_plan.BriefUnavailable as exc:
+        return fail(str(exc))
+    return ok(plan=written)
 
 
 class SubjectGoalDraft(BaseModel):

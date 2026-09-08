@@ -758,6 +758,151 @@
     color: var(--ax-muted);
 }
 
+/* --- The route, written by a model --------------------------------------
+   Set apart from the levers above it by a rule and by its own ground, for the
+   same reason the lattice is set apart from the counted panels: everything
+   above this line is arithmetic over the reader's own tasks and this is not,
+   and a reader deciding what to act on has to be able to see the join. */
+.sb-route {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--ax-line);
+}
+
+.sb-route-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.sb-route-head strong { font-size: 13px; font-weight: 650; color: var(--ax-text); }
+
+.sb-route-head p {
+    margin: 3px 0 0;
+    max-width: 60ch;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ax-faint);
+}
+
+.sb-route-body { margin-top: 12px; display: grid; gap: 12px; }
+
+.sb-route-read {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--ax-text);
+}
+
+/* The stages. Numbered, because the order is the plan — a route whose steps
+   can be read in any sequence is a list of suggestions, which is what this
+   panel exists not to be. */
+.sb-phases {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: sb-phase;
+    display: grid;
+    gap: 8px;
+}
+
+.sb-phase {
+    counter-increment: sb-phase;
+    position: relative;
+    padding: 10px 12px 10px 34px;
+    border: 1px solid var(--ax-line-soft);
+    border-radius: 10px;
+    background: var(--ax-card-2);
+}
+
+.sb-phase::before {
+    content: counter(sb-phase);
+    position: absolute;
+    left: 11px;
+    top: 10px;
+    width: 16px;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: var(--ax-violet);
+    font-variant-numeric: tabular-nums;
+}
+
+.sb-phase-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sb-phase-head strong { font-size: 13px; font-weight: 650; color: var(--ax-text); }
+
+/* The tilde is doing work. This is the one figure in the panel the model
+   supplied rather than the app counted, and it is set apart from the tabular
+   figures above so it does not read as another measurement. */
+.sb-phase-weeks {
+    flex: none;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ax-faint);
+    white-space: nowrap;
+}
+
+.sb-phase-out {
+    margin: 3px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+}
+
+.sb-phase-focus {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.sb-phase-focus li {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    font-size: 11.5px;
+    color: var(--ax-muted);
+}
+
+/* The part somebody acts on tonight, given the weight that deserves. */
+.sb-route-week {
+    padding: 11px 13px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--ax-violet) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ax-violet) 22%, transparent);
+}
+
+.sb-route-week h4 {
+    margin: 0 0 6px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ax-violet);
+}
+
+.sb-route-week ul {
+    margin: 0;
+    padding-left: 17px;
+    display: grid;
+    gap: 4px;
+}
+
+.sb-route-week li {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ax-text);
+}
+
 /* --- The lattice --------------------------------------------------------- */
 /* Set apart from the counted panels on purpose: this one is authored, and the
    page says so in its note. A route map beside the record, not mixed into it. */

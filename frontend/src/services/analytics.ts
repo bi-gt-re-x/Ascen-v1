@@ -360,6 +360,72 @@ export function writeSubjectBrief(
 }
 
 // --------------------------------------------------------------------------
+// The route to one goal
+// --------------------------------------------------------------------------
+/** One stage of the plan, with what is true at the end of it. */
+export interface PlanPhase {
+  title: string;
+  /** The model's recommendation, not a measurement. Bounded server-side. */
+  weeks: number;
+  outcome: string;
+  focus: string[];
+}
+
+export interface GoalPlan {
+  /** Two or three sentences on what stands between them and the goal. */
+  route: string;
+  phases: PlanPhase[];
+  /** Three to five things to do in the next seven days. */
+  week: string[];
+}
+
+/**
+ * What the page has already worked out about one goal, on its way to a plan.
+ *
+ * Every figure here is one the page drew — see `goalsFor` and `leversFor` in
+ * components/Subject/model — and the server tells the model to use these and
+ * produce no others. Sending them rather than having the server recompute them
+ * is what keeps the plan quoting the same numbers the reader is looking at.
+ */
+export interface GoalPlanFindings {
+  goal: string;
+  subject: string;
+  why?: string;
+  standing?: string;
+  deadline?: string;
+  days_left?: number | null;
+  need_weekly?: string;
+  have_weekly?: string;
+  lands?: string;
+  expected?: number | null;
+  stages?: string[];
+  levers?: string[];
+  aim?: string;
+  level?: string;
+  span?: string;
+  score?: number | null;
+  grade?: string | null;
+  finished?: number | null;
+  aimed?: number | null;
+  recent_days?: number | null;
+  bands?: BriefFindings['bands'];
+  struggles?: BriefFindings['struggles'];
+}
+
+/**
+ * A model's route from here to one goal. Stores nothing; costs a call.
+ *
+ * Availability is not asked separately: this needs an Anthropic key and
+ * nothing else, which is exactly what `subjectBriefAvailable` answers, so the
+ * page draws both buttons or neither.
+ */
+export function writeGoalPlan(
+  findings: GoalPlanFindings,
+): Promise<ApiResult<{ plan: GoalPlan }>> {
+  return post<{ plan: GoalPlan }>('/api/goal_plan', findings);
+}
+
+// --------------------------------------------------------------------------
 // Checkpoints set against a subject, and the goal drafted from them
 // --------------------------------------------------------------------------
 /**
