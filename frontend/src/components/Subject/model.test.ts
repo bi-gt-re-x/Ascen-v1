@@ -435,7 +435,7 @@ describe('what to do next', () => {
     // It asks for what is missing rather than reporting a state, which is the
     // shorter and more useful of the two things it could say.
     expect(led.title).toMatch(/give .* a target and a date/i);
-    expect(led.detail).toMatch(/no arrival to pace against/i);
+    expect(led.detail).toMatch(/nothing to pace against/i);
   });
 
   it('does not lead with a goal that belongs to another subject', () => {

@@ -867,15 +867,15 @@ export default function SubjectAnalytics() {
         ) : !subject ? (
           <p className="ax-opening is-flat">
             No subject with that id is in your catalogue. It may have been deleted since you
-            picked it — you can choose the subjects you follow again from{' '}
-            <Link className="ax-link" to="/analytics?setup">the analytics setup questions</Link>.
+            picked it. You can pick the subjects you follow again in{' '}
+            <Link className="ax-link" to="/analytics?setup">the analytics setup</Link>.
           </p>
         ) : !tasks.data ? (
           <ErrorState message={tasks.error ?? 'Could not read your tasks.'} onRetry={tasks.reload} />
         ) : !model.any ? (
           <p className="ax-opening is-flat">
-            Nothing is filed under {subject.name} yet. This page fills in from your own tasks —
-            file a few here and it will have something to measure.
+            Nothing is filed under {subject.name} yet. File a few tasks here and this page
+            will have something to measure.
           </p>
         ) : (
           <>
@@ -1039,9 +1039,9 @@ export default function SubjectAnalytics() {
                 that can name what a task at this difficulty in this subject
                 should actually contain, which no table here knows.
 
-                The join between them is stated rather than left to be
-                inferred: a reader has to know which half is counted before
-                deciding what to act on. */}
+                Which half is which is stated rather than left to be inferred:
+                a reader has to know what is counted before deciding what to
+                act on. */}
             <section className="ax-panel sb-panel" aria-label="What to do next">
               <div className="ax-panel-head">
                 <div className="ax-panel-title">
@@ -1052,8 +1052,8 @@ export default function SubjectAnalytics() {
               {model.advice.length > 0 && (
                 <>
                   <p className="ax-panel-note">
-                    Ranked by what it would be worth, each with the figure behind it. All
-                    counted from your own tasks.
+                    Ranked by what it is worth, with the figure behind each one. All from
+                    your own tasks.
                   </p>
                   <ol className="sb-advice">
                     {model.advice.map((item, at) => (
@@ -1078,15 +1078,8 @@ export default function SubjectAnalytics() {
                 <div className="sb-draft">
                   <div className="sx-ask">
                     <div>
-                      <strong>Read the whole record and plan the sessions</strong>
-                      <p>
-                        A model is given every figure above — the seven measures and what
-                        each is counted from, the difficulty curve, your times, what goes
-                        wrong, and the goal — and asked for the three things arithmetic
-                        cannot supply: which finding explains which, what to work on in what
-                        order, and what a session should actually contain. It is forbidden
-                        from producing any number that is not already on this page.
-                      </p>
+                      <strong>Plan the next sessions</strong>
+                      <p>Written by a model from the figures above. It adds no numbers of its own.</p>
                     </div>
                     <button
                       type="button"
@@ -1127,7 +1120,7 @@ export default function SubjectAnalytics() {
                 reading.insights.length > 0) && (
                 <Panel
                   title="What the record says"
-                  note="Written by a model over the counted figures above. Each finding carries what it rests on."
+                  note="Written by a model from the figures above. Each finding shows what it rests on."
                 >
                   <Reading
                     diagnosis={reading.diagnosis}
@@ -1256,7 +1249,7 @@ export default function SubjectAnalytics() {
             {state.time.known && (
               <Panel
                 title="What the time bought"
-                note="Against your own usual pace at each difficulty — Ascen never asks you to estimate one."
+                note="Against your own usual pace at each difficulty. Ascen never asks you for an estimate."
               >
                 <ul className="sb-rows">
                   <li className="sb-row">
@@ -1282,14 +1275,14 @@ export default function SubjectAnalytics() {
                     <strong>{state.time.rushed}</strong>
                     <span className="sb-row-note">
                       {state.time.rushed === 0
-                        ? 'none — speed here is not costing quality'
-                        : 'the case a plain time ratio calls efficient'}
+                        ? 'none, so speed here is not costing quality'
+                        : 'quick, but rated badly for it'}
                     </span>
                   </li>
                   <li className="sb-row">
                     <span className="sb-row-name">Took longer, landed it</span>
                     <strong>{state.time.thorough}</strong>
-                    <span className="sb-row-note">time that did something</span>
+                    <span className="sb-row-note">the extra time paid off</span>
                   </li>
                 </ul>
               </Panel>
@@ -1304,7 +1297,7 @@ export default function SubjectAnalytics() {
                 worth more than a greyed-out box. */}
             <Panel
               title="Standings"
-              note="Counted from the same record as everything else, and recomputed every visit."
+              note="Counted from the same record as everything else, and worked out again every visit."
             >
               <ul className="sx-standings">
                 {state.standings.map((entry) => (
@@ -1437,9 +1430,7 @@ export default function SubjectAnalytics() {
                               <strong>Plan the route to this</strong>
                               <p>
                                 A model reads the figures above and lays out the stages between
-                                here and the date — what a goal like this is actually made of,
-                                which is the part your record cannot say. It is given these
-                                numbers and forbidden any others.
+                                now and the date. It works from those numbers and no others.
                               </p>
                             </div>
                             <button
@@ -1571,7 +1562,7 @@ export default function SubjectAnalytics() {
             {model.bands.some((band) => band.done > 0) && (
               <Panel
                 title="How you do at each difficulty"
-                note="Bands, not sub-topics: a difficulty star is the finest thing recorded."
+                note="Difficulty bands. A star is the finest thing your tasks record."
               >
                 <div className="sb-table-wrap">
                   <table className="sb-table">
@@ -1709,10 +1700,10 @@ export default function SubjectAnalytics() {
                     <p className="ax-panel-note ax-panel-note-foot">
                       <strong>Trend:</strong>{' '}
                       {model.run.trend > 0
-                        ? `improving — the later half of this run averages ${model.run.trend} points above the earlier half.`
+                        ? `improving. The later half of this run averages ${model.run.trend} points above the earlier half.`
                         : model.run.trend < 0
-                          ? `slipping — the later half averages ${Math.abs(model.run.trend)} points below the earlier half.`
-                          : 'flat — both halves of this run average the same.'}
+                          ? `slipping. The later half averages ${Math.abs(model.run.trend)} points below the earlier half.`
+                          : 'flat. Both halves of this run average the same.'}
                     </p>
                   )}
                 </Panel>
@@ -1784,9 +1775,9 @@ export default function SubjectAnalytics() {
                     <div>
                       <strong>Turn these into a goal</strong>
                       <p>
-                        A model reads your checkpoints and what you have been doing here, and
-                        drafts the goal over them — a title, a target and a horizon. Nothing is
-                        created until you say so.
+                        A model reads your checkpoints and your work here, and drafts a goal
+                        over them: a title, a target and a horizon. Nothing is saved until you
+                        say so.
                       </p>
                     </div>
                     <button
@@ -1807,8 +1798,8 @@ export default function SubjectAnalytics() {
 
                   {created && (
                     <p className="sb-draft-made" role="status">
-                      Kept. It is what this subject is aimed at now, and its stages are in the
-                      list above. It stays here — nothing was added to your goals page.
+                      Kept. This subject is aimed at it now, and its stages are in the list
+                      above. Nothing was added to your goals page.
                     </p>
                   )}
 
@@ -1865,10 +1856,10 @@ export default function SubjectAnalytics() {
                   {/* Said before the button is pressed, not after. A reader
                       has to know which half of this page is counted and which
                       half is written before they decide what to trust. */}
-                  Everything above is counted from your own tasks. This one panel is written by
-                  a model, from those same figures — it is given them and forbidden from
-                  producing any others, so it can tell you what they mean but cannot tell you
-                  anything they do not say. It costs an API call and is not saved.
+                  Everything above is counted from your own tasks. This panel is written by a
+                  model from those same figures, and it adds no numbers of its own, so it can
+                  say what they mean but nothing they do not. It costs an API call and is not
+                  saved.
                 </p>
 
                 {briefError && (

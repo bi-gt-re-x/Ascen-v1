@@ -471,20 +471,29 @@
 }
 
 /* --- Do this next, directly under the verdict --------------------------- */
+/* The section reads heading, then what the ranking is, then the cards, then
+   the half a model writes — four steps down in weight. The gaps say so: the
+   note sits close enough to the heading to be read as part of it, and the
+   cards stand clear of both. `.ax-panel`'s own 4px and 12px put all three at
+   nearly the same distance, which left the heading, its caption and the first
+   card reading as one block. */
+.sb-panel > .ax-panel-head { margin-bottom: 6px; }
+.sb-panel > .ax-panel-note { margin-bottom: 16px; }
+
 .sb-advice {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
 }
 
 .sb-advice-item {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 13px;
-    padding: 14px 16px;
+    padding: 15px 17px;
     border: 1px solid var(--ax-line);
     border-left-width: 3px;
     border-radius: 11px;
@@ -533,9 +542,9 @@
    the qualifier. The page is read top-down and these are the second thing
    on it. */
 .sb-advice-item strong { font-size: 15px; font-weight: 700; color: var(--ax-text); }
-.sb-advice-item p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ax-muted); }
+.sb-advice-item p { margin: 5px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ax-muted); }
 
-.sb-advice-why { color: var(--ax-faint) !important; }
+.sb-advice-item .sb-advice-why { margin-top: 8px; color: var(--ax-faint); }
 .sb-advice-why span { font-weight: 700; }
 
 /* --- Recent work -------------------------------------------------------- */
@@ -1222,7 +1231,7 @@
 /* Marked out like the write-up panel, and for the same reason: a model wrote
    it. The blue edge is the page's one signal for that. */
 .sb-draft {
-    margin-top: 18px;
+    margin-top: 20px;
     padding-top: 16px;
     border-top: 1px solid var(--ax-line-soft);
 }

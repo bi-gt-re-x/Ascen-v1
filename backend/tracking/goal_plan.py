@@ -140,6 +140,11 @@ TONE
 
 Direct and specific. No encouragement, no praise, no "you've got this". The \
 reader came for a route, not a pep talk.
+
+Write the way somebody who knows the subject would say it out loud. Short \
+sentences. Ordinary words. No em-dash asides, no "X, not Y" flourishes, and \
+no sentence that exists to land a point rather than say a thing. Never open \
+with "Your record shows" or close by summarising what you just said.
 """
 
 SCHEMA = {

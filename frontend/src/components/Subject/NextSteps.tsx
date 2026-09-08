@@ -101,7 +101,7 @@ export function NextSteps({
 
                 <div className="sx-step-actions">
                   {done ? (
-                    <span className="sx-step-done">Recorded — it counts toward what works</span>
+                    <span className="sx-step-done">Recorded. It counts toward what works</span>
                   ) : (
                     <>
                       <button
@@ -154,9 +154,9 @@ export function NextSteps({
             ))}
           </ul>
           <p className="sx-effect-note">
-            Counted from your own record, not claimed by the model: execution when each was
-            given, against execution now. It is a correlation over a small number of
-            sessions, not a proof — but it is yours.
+            Counted from your own record rather than claimed by the model: execution when each
+            was given, against execution now. Over this few sessions it is a correlation, not
+            a proof.
           </p>
         </div>
       )}

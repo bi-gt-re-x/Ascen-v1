@@ -108,6 +108,11 @@ works — these are theirs. If they gave you none, write the stages yourself.
 TONE
 
 Plain. No encouragement, no adjectives about the reader.
+
+Write the way somebody who knows the subject would say it out loud. Short \
+sentences. Ordinary words. No em-dash asides, no "X, not Y" flourishes, and \
+no sentence that exists to land a point rather than say a thing. Never open \
+with "Your record shows" or close by summarising what you just said.
 """
 
 SCHEMA = {

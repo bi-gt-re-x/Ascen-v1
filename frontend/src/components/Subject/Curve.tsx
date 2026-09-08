@@ -82,8 +82,8 @@ export function Curve({ curve }: { curve: DifficultyCurve }) {
           </>
         ) : (
           <>
-            One level with enough rated work behind it is not a curve. Rate a few more
-            tasks and this fills in.
+            One level with enough rated work behind it is not a curve yet. Rate a few
+            more tasks and this fills in.
           </>
         )}
       </p>

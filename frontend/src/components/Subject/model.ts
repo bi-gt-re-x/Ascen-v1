@@ -896,14 +896,14 @@ function adviceFrom(
       out.push({
         id: `goal-${goal.id}`,
         title: `Give "${goal.title}" a target and a date`,
-        detail: 'Without both there is no arrival to pace against.',
+        detail: 'Without both there is nothing to pace against.',
         why: `${due}, and no pace can be computed from it.`,
         weight: 'second',
       });
     } else if (goal.drift > 0) {
       out.push({
         id: `goal-${goal.id}`,
-        title: `Work "${goal.title}" — it is ${goal.drift} ${goal.drift === 1 ? 'day' : 'days'} late`,
+        title: `Work "${goal.title}": ${goal.drift} ${goal.drift === 1 ? 'day' : 'days'} late`,
         detail: rate,
         why: `${due}, projected ${goal.drift} days late.`,
         weight: 'first',
@@ -911,7 +911,7 @@ function adviceFrom(
     } else {
       out.push({
         id: `goal-${goal.id}`,
-        title: `"${goal.title}" is on course — hold this rate`,
+        title: `"${goal.title}" is on course. Hold this rate`,
         detail: rate,
         why: `${due}, projected to land on or before it.`,
         weight: 'upkeep',
@@ -926,7 +926,7 @@ function adviceFrom(
       title: `Drill ${weakest.label.toLowerCase()} work`,
       detail:
         `${Math.round(weakest.holding!)}% there against ${Math.round(strongest.holding!)}% on `
-        + `${strongest.label.toLowerCase()}. That gap is the whole difference.`,
+        + `${strongest.label.toLowerCase()}. Most of the grade is sitting in that gap.`,
       why:
         `${weakest.done} ${weakest.done === 1 ? 'task' : 'tasks'} at ${weakest.label.toLowerCase()}, `
         + `mean execution ${(weakest.holding! / 20).toFixed(1)} of 5.`,
@@ -939,8 +939,8 @@ function adviceFrom(
       id: `reason-${top.key}`,
       title: `Fix "${top.label.toLowerCase()}" before the next session`,
       detail:
-        `Behind ${top.share}% of your bad sessions here. A condition, not a skill — `
-        + 'the cheapest thing on this page to change.',
+        `Behind ${top.share}% of your bad sessions here, and usually the easiest thing on `
+        + 'this page to change.',
       why: `${top.count} of the rated tasks you struggled with ${top.phrase}.`,
       weight: 'second',
     });
@@ -1225,7 +1225,7 @@ export function subjectModel(
   const verdict = (() => {
     if (!done.length) return 'Nothing finished here in this window.';
     if (behind) {
-      return `On track for everything except "${behind.title}" — ${behind.drift} days late.`;
+      return `On track for everything except "${behind.title}", which is ${behind.drift} days late.`;
     }
     if (weakest && strongest && weakest.level !== strongest.level
         && strongest.holding! - weakest.holding! >= 15) {
@@ -1242,10 +1242,10 @@ export function subjectModel(
      line that teaches a reader to skip the box it lives in. */
   const insight =
     weakest && strongest && weakest.level !== strongest.level && strongest.holding! - weakest.holding! >= 15
-      ? `Your ${strongest.label.toLowerCase()} work is not the problem — it comes out at `
-        + `${Math.round(strongest.holding!)}%. What is pulling this subject down is the `
-        + `${weakest.label.toLowerCase()} end, at ${Math.round(weakest.holding!)}%. Closing that `
-        + 'gap moves the whole subject without asking you for more hours.'
+      ? `Your ${strongest.label.toLowerCase()} work comes out at `
+        + `${Math.round(strongest.holding!)}%. The ${weakest.label.toLowerCase()} end, at `
+        + `${Math.round(weakest.holding!)}%, is what pulls the subject down. Closing that gap `
+        + 'moves the whole subject without asking you for more hours.'
       : null;
 
   return {
