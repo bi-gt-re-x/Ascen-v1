@@ -1,0 +1,621 @@
+/* The subject page's intelligence layer — the hero, the dimensions, the
+ * difficulty curve, the reading, and Do This Next.
+ *
+ * Everything here is `sx-`. The page's older panels are `sb-` in subject.css,
+ * and the two are kept apart on purpose rather than by accident: these are the
+ * sections that answer "where am I / why / what next", they are the ones that
+ * carry the page's weight, and they are drawn with more colour and more motion
+ * than a table of figures should have. Mixing the prefixes would make that a
+ * matter of taste per rule instead of a decision made once.
+ *
+ * The visual language is the Timer's — radial washes behind a hero card, a
+ * stroked SVG ring, gradient bars, a primary control with a coloured shadow
+ * under it (styles/timer.css). That is deliberate borrowing: those two pages
+ * are the ones somebody sits in front of rather than passes through, and a
+ * reader who has learned the Timer's surfaces should recognise these.
+ *
+ * Colour is never the only carrier. Every state that has a colour also has a
+ * word or a shape — the cliff rung on the curve is labelled as well as tinted,
+ * a taken step says "Recorded" rather than merely going green.
+ */
+
+/* ---- The hero ----------------------------------------------------------
+   One card that answers "where am I" before anything is scrolled: the ring,
+   the verdict, the goal it is all for. The washes are two radial gradients
+   rather than a flat tint, so the card has a direction to it and does not
+   read as a coloured box. */
+.sx-hero {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: 168px minmax(0, 1fr);
+    gap: 26px;
+    align-items: center;
+    padding: 24px 26px;
+    margin-top: var(--ax-gap);
+    border: 1px solid var(--ax-line);
+    border-radius: 18px;
+    background-color: var(--ax-card);
+    background-image:
+        radial-gradient(90% 130% at 0% 0%,
+            color-mix(in srgb, var(--ax-violet) 20%, transparent) 0%, transparent 62%),
+        radial-gradient(80% 130% at 100% 100%,
+            color-mix(in srgb, var(--ax-blue) 18%, transparent) 0%, transparent 66%);
+    box-shadow: var(--ax-shadow);
+}
+
+/* The band the ring is painted in. Set from the score rather than from house
+   accent: a 42 that looks like an 88 is the page saying one thing in words and
+   another in colour. */
+.sx-hero[data-band="high"] { --sx-band: var(--ax-green); }
+.sx-hero[data-band="good"] { --sx-band: var(--ax-blue); }
+.sx-hero[data-band="fair"] { --sx-band: var(--ax-amber); }
+.sx-hero[data-band="low"]  { --sx-band: var(--ax-pink); }
+.sx-hero[data-band="none"] { --sx-band: var(--ax-faint); }
+
+@media (max-width: 700px) {
+    .sx-hero { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+}
+
+.sx-ring-wrap { position: relative; }
+.sx-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.sx-ring-track { fill: none; stroke: var(--ax-line); stroke-width: 11; }
+.sx-ring-run {
+    fill: none;
+    stroke: var(--sx-band, var(--ax-violet));
+    stroke-width: 11;
+    stroke-linecap: round;
+    transition: stroke-dashoffset .6s cubic-bezier(.2, .8, .2, 1);
+}
+.sx-ring-text {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1px;
+}
+.sx-ring-text strong {
+    font-size: 2.3rem; font-weight: 700;
+    letter-spacing: -.04em; line-height: 1;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.sx-ring-label {
+    font-size: .6rem; font-weight: 800;
+    letter-spacing: .16em; text-transform: uppercase;
+    color: var(--sx-band, var(--ax-violet));
+}
+.sx-ring-sub { font-size: .68rem; color: var(--ax-faint); }
+
+.sx-hero-say { min-width: 0; display: grid; gap: 8px; }
+.sx-hero-verdict {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 650;
+    line-height: 1.4;
+    letter-spacing: -.015em;
+    color: var(--ax-text);
+}
+.sx-hero-badges { display: flex; flex-wrap: wrap; gap: 7px; }
+.sx-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    background: var(--ax-card-2);
+    border: 1px solid var(--ax-line);
+    color: var(--ax-muted);
+    font-size: .72rem; font-weight: 600;
+}
+.sx-badge.is-climbing {
+    border-color: color-mix(in srgb, var(--ax-green) 40%, transparent);
+    background: color-mix(in srgb, var(--ax-green) 12%, transparent);
+    color: var(--ax-good);
+}
+.sx-badge.is-slipping {
+    border-color: color-mix(in srgb, var(--ax-pink) 40%, transparent);
+    background: color-mix(in srgb, var(--ax-pink) 12%, transparent);
+    color: var(--ax-bad);
+}
+.sx-badge.is-goal {
+    border-color: color-mix(in srgb, var(--ax-violet) 40%, transparent);
+    background: color-mix(in srgb, var(--ax-violet) 12%, transparent);
+    color: var(--ax-violet);
+}
+
+/* ---- The seven dimensions ----------------------------------------------
+   A card per measure rather than a table, because each one has a different
+   unit and a table invites reading down a column that means nothing. */
+.sx-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 10px;
+    margin-top: var(--ax-gap);
+}
+
+.sx-metric {
+    border: 1px solid var(--ax-line);
+    border-radius: 13px;
+    background: var(--ax-card);
+    overflow: hidden;
+    transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.sx-metric:hover:not(.is-unknown) {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--ax-violet) 45%, var(--ax-line));
+    box-shadow: 0 10px 24px -14px var(--ax-violet);
+}
+@media (prefers-reduced-motion: reduce) {
+    .sx-metric, .sx-ring-run { transition: none; }
+    .sx-metric:hover:not(.is-unknown) { transform: none; }
+}
+
+.sx-metric.is-unknown { opacity: .6; }
+
+.sx-metric-face {
+    display: grid;
+    gap: 5px;
+    width: 100%;
+    padding: 13px 14px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+}
+.sx-metric.is-unknown .sx-metric-face { cursor: default; }
+
+.sx-metric-label {
+    font-size: .63rem; font-weight: 800;
+    letter-spacing: .09em; text-transform: uppercase;
+    color: var(--ax-faint);
+}
+.sx-metric-value {
+    font-size: 1.6rem; font-weight: 700;
+    letter-spacing: -.03em; line-height: 1;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+.sx-metric-value i {
+    font-style: normal;
+    font-size: .68rem; font-weight: 600;
+    color: var(--ax-faint);
+    margin-left: 3px;
+}
+
+.sx-metric-bar {
+    display: block;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.sx-metric-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ax-violet), var(--ax-blue));
+    transition: width .5s cubic-bezier(.2, .8, .2, 1);
+}
+
+.sx-metric-delta { font-size: .7rem; font-weight: 700; }
+.sx-metric-delta.is-up { color: var(--ax-good); }
+.sx-metric-delta.is-down { color: var(--ax-bad); }
+.sx-metric-none { font-size: .68rem; color: var(--ax-faint); }
+
+/* The back of the card. Where the figure came from — see the note in
+   components/Subject/Dimensions on why every one of these can be turned. */
+.sx-metric-back {
+    padding: 0 14px 13px;
+    border-top: 1px solid var(--ax-line-soft);
+    margin-top: 2px;
+    padding-top: 10px;
+}
+.sx-metric-meaning {
+    margin: 0 0 7px;
+    font-size: .72rem; line-height: 1.5;
+    color: var(--ax-muted);
+}
+.sx-metric-back ul { margin: 0; padding-left: 15px; display: grid; gap: 3px; }
+.sx-metric-back li { font-size: .72rem; color: var(--ax-faint); }
+
+/* ---- The difficulty curve ---------------------------------------------- */
+.sx-curve { display: grid; gap: 14px; }
+
+.sx-curve-plot {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 10px;
+    align-items: end;
+    min-height: 190px;
+}
+
+.sx-rung {
+    display: grid;
+    grid-template-rows: auto 1fr auto auto;
+    gap: 5px;
+    justify-items: center;
+    align-content: end;
+    height: 190px;
+}
+
+.sx-rung-value {
+    font-size: .78rem; font-weight: 700;
+    color: var(--ax-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.sx-rung-bar {
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    max-width: 62px;
+    height: 100%;
+    border-radius: 9px 9px 4px 4px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.sx-rung-bar span {
+    display: block;
+    width: 100%;
+    border-radius: 9px 9px 4px 4px;
+    background: linear-gradient(180deg, var(--ax-violet), var(--ax-blue));
+    transition: height .6s cubic-bezier(.2, .8, .2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+    .sx-rung-bar span, .sx-metric-bar span { transition: none; }
+}
+
+/* The best-executed rung and the cliff. Both are named in the sentence under
+   the chart as well as tinted here — a reader who cannot see the difference
+   between violet and pink still gets the finding. */
+.sx-rung.is-best .sx-rung-bar span {
+    background: linear-gradient(180deg, var(--ax-green), var(--ax-blue));
+}
+.sx-rung.is-cliff .sx-rung-bar span {
+    background: linear-gradient(180deg, var(--ax-pink), var(--ax-amber));
+}
+.sx-rung.is-cliff .sx-rung-value { color: var(--ax-bad); }
+
+/* A rung under the floor is an outline, not a short bar: "three tasks is not
+   a finding" and "you scored low" are different statements. */
+.sx-rung.is-thin .sx-rung-bar {
+    border: 1px dashed var(--ax-line);
+    background: none;
+}
+.sx-rung.is-thin .sx-rung-bar span { background: var(--ax-line); opacity: .5; }
+.sx-rung.is-thin .sx-rung-value { color: var(--ax-faint); font-weight: 600; }
+
+.sx-rung-name {
+    font-size: .72rem; font-weight: 650;
+    color: var(--ax-text);
+}
+.sx-rung-count { font-size: .64rem; color: var(--ax-faint); }
+
+.sx-curve-read {
+    margin: 0;
+    padding: 11px 13px;
+    border-radius: 11px;
+    background: var(--ax-card-2);
+    font-size: .82rem;
+    line-height: 1.6;
+    color: var(--ax-muted);
+}
+.sx-curve-read b { color: var(--ax-text); font-weight: 700; }
+
+/* ---- The reading ------------------------------------------------------- */
+.sx-reading { display: grid; gap: var(--ax-gap); }
+
+.sx-findings, .sx-insights { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+
+.sx-finding {
+    padding: 12px 14px;
+    border: 1px solid var(--ax-line);
+    border-radius: 12px;
+    background: var(--ax-card-2);
+}
+.sx-finding-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+}
+.sx-finding-head strong { font-size: .92rem; font-weight: 650; color: var(--ax-text); }
+
+/* Confidence in words, and coloured by band. The model's own estimate, and
+   the page says so — see components/Subject/Reading. */
+.sx-sure {
+    flex: none;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: .66rem; font-weight: 700;
+    white-space: nowrap;
+    background: var(--ax-card);
+    border: 1px solid var(--ax-line);
+    color: var(--ax-faint);
+}
+.sx-sure[data-band="high"] {
+    border-color: color-mix(in srgb, var(--ax-green) 40%, transparent);
+    color: var(--ax-good);
+}
+.sx-sure[data-band="fair"] {
+    border-color: color-mix(in srgb, var(--ax-amber) 40%, transparent);
+    color: var(--ax-amber);
+}
+
+.sx-finding-evidence {
+    margin: 8px 0 0;
+    padding-left: 15px;
+    display: grid; gap: 3px;
+}
+.sx-finding-evidence li { font-size: .74rem; color: var(--ax-faint); }
+
+.sx-priorities h4, .sx-effect h4 {
+    margin: 0 0 8px;
+    font-size: .63rem; font-weight: 800;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ax-faint);
+}
+.sx-priorities ol { margin: 0; padding-left: 18px; display: grid; gap: 9px; }
+.sx-priority-head {
+    display: flex; align-items: center; gap: 10px;
+}
+.sx-priority-head strong { font-size: .85rem; font-weight: 650; color: var(--ax-text); }
+.sx-priority-bar {
+    flex: 1 1 auto;
+    max-width: 120px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.sx-priority-bar span {
+    display: block; height: 100%;
+    border-radius: 999px;
+    background: var(--ax-violet);
+}
+.sx-priorities p { margin: 2px 0 0; font-size: .76rem; line-height: 1.5; color: var(--ax-muted); }
+
+.sx-insight {
+    padding: 12px 14px;
+    border-left: 3px solid var(--ax-blue);
+    border-radius: 0 12px 12px 0;
+    background: var(--ax-card-2);
+}
+.sx-insight-obs { margin: 0; font-size: .88rem; font-weight: 600; line-height: 1.55; color: var(--ax-text); }
+.sx-insight-ev, .sx-insight-imp {
+    margin: 5px 0 0;
+    font-size: .76rem; line-height: 1.5;
+    color: var(--ax-muted);
+}
+.sx-insight-ev span, .sx-insight-imp span {
+    font-weight: 800;
+    font-size: .64rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ax-faint);
+    margin-right: 3px;
+}
+.sx-insight-imp { color: var(--ax-text); }
+
+/* ---- Do this next ------------------------------------------------------
+   The heaviest surface on the page, deliberately. Everything above it is
+   working; this is the answer. */
+.sx-steps { display: grid; gap: var(--ax-gap); }
+
+.sx-step-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 11px; }
+
+.sx-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 12px;
+    padding: 15px 16px;
+    border: 1px solid var(--ax-line);
+    border-radius: 15px;
+    background-color: var(--ax-card);
+    background-image: radial-gradient(120% 160% at 0% 0%,
+        color-mix(in srgb, var(--ax-violet) 10%, transparent) 0%, transparent 58%);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.sx-step:hover {
+    border-color: color-mix(in srgb, var(--ax-violet) 45%, var(--ax-line));
+    box-shadow: 0 12px 30px -20px var(--ax-violet);
+}
+.sx-step.is-taken {
+    background-image: radial-gradient(120% 160% at 0% 0%,
+        color-mix(in srgb, var(--ax-green) 12%, transparent) 0%, transparent 58%);
+    border-color: color-mix(in srgb, var(--ax-green) 35%, var(--ax-line));
+}
+
+.sx-step-rank {
+    display: grid; place-items: center;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ax-violet), var(--ax-blue));
+    color: #fff;
+    font-size: .85rem; font-weight: 800;
+    box-shadow: 0 6px 16px -8px var(--ax-violet);
+}
+.sx-step.is-taken .sx-step-rank {
+    background: linear-gradient(135deg, var(--ax-green), var(--ax-blue));
+    box-shadow: none;
+}
+
+.sx-step-body { min-width: 0; display: grid; gap: 8px; }
+.sx-step-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap;
+}
+.sx-step-head strong { font-size: 1rem; font-weight: 700; letter-spacing: -.01em; color: var(--ax-text); }
+.sx-step-kind {
+    flex: none;
+    font-size: .62rem; font-weight: 800;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ax-violet);
+}
+
+.sx-step-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sx-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card-2);
+    font-size: .71rem; font-weight: 600;
+    color: var(--ax-muted);
+}
+.sx-chip i { font-style: normal; font-size: .63rem; color: var(--ax-faint); }
+.sx-chip.is-focus { color: var(--ax-text); }
+
+/* The recommended level, coloured by where it sits on Ascen's five. A
+   suggestion, not a measurement — the note in components/Subject/NextSteps
+   says why these are chips and not figures. */
+.sx-chip.is-difficulty[data-level="1"],
+.sx-chip.is-difficulty[data-level="2"] {
+    border-color: color-mix(in srgb, var(--ax-green) 40%, transparent);
+    color: var(--ax-good);
+}
+.sx-chip.is-difficulty[data-level="3"] {
+    border-color: color-mix(in srgb, var(--ax-blue) 40%, transparent);
+    color: var(--ax-blue);
+}
+.sx-chip.is-difficulty[data-level="4"] {
+    border-color: color-mix(in srgb, var(--ax-amber) 45%, transparent);
+    color: var(--ax-amber);
+}
+.sx-chip.is-difficulty[data-level="5"] {
+    border-color: color-mix(in srgb, var(--ax-pink) 45%, transparent);
+    color: var(--ax-bad);
+}
+
+.sx-step-why { margin: 0; font-size: .82rem; line-height: 1.55; color: var(--ax-muted); }
+
+.sx-step-drills {
+    margin: 0; padding: 0; list-style: none;
+    display: flex; flex-wrap: wrap; gap: 5px;
+}
+.sx-step-drills li {
+    padding: 3px 9px;
+    border-radius: 7px;
+    background: var(--ax-line-soft);
+    font-size: .72rem;
+    color: var(--ax-muted);
+}
+
+.sx-step-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; }
+
+.sx-btn {
+    padding: 7px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--ax-line);
+    background: var(--ax-card);
+    color: var(--ax-text);
+    font-family: inherit;
+    font-size: .78rem; font-weight: 650;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.sx-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.sx-btn:disabled { opacity: .55; cursor: default; }
+.sx-btn.is-primary {
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--ax-violet), var(--ax-blue));
+    color: #fff;
+    box-shadow: 0 8px 20px -10px var(--ax-violet);
+}
+.sx-btn.is-quiet { background: none; color: var(--ax-muted); }
+@media (prefers-reduced-motion: reduce) {
+    .sx-btn:hover:not(:disabled) { transform: none; }
+}
+
+.sx-step-done {
+    font-size: .76rem; font-weight: 650;
+    color: var(--ax-good);
+}
+
+/* ---- What actually worked ---------------------------------------------- */
+.sx-effect {
+    padding: 13px 15px;
+    border: 1px dashed var(--ax-line);
+    border-radius: 13px;
+    background: var(--ax-card-2);
+}
+.sx-effect ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+/* A grid rather than a wrapping flex row: the three columns are a small table
+   and `margin-left: auto` on the last one dropped it to its own line the
+   moment the first two grew, which read as a fourth entry. */
+.sx-effect li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 10px;
+    align-items: baseline;
+}
+.sx-effect-name { font-size: .8rem; font-weight: 650; color: var(--ax-text); }
+.sx-effect-count { font-size: .73rem; color: var(--ax-faint); grid-column: 1; }
+.sx-effect-move {
+    font-size: .76rem; font-weight: 700; color: var(--ax-faint);
+    grid-column: 2; grid-row: 1 / span 2;
+    align-self: center;
+    text-align: right;
+}
+.sx-effect-move.is-up { color: var(--ax-good); }
+.sx-effect-move.is-down { color: var(--ax-bad); }
+.sx-effect-note {
+    margin: 9px 0 0;
+    font-size: .71rem; line-height: 1.55;
+    color: var(--ax-faint);
+}
+
+/* ---- Standings --------------------------------------------------------- */
+.sx-standings {
+    list-style: none; margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+}
+.sx-standing {
+    padding: 12px 14px;
+    border: 1px solid var(--ax-line);
+    border-radius: 12px;
+    background: var(--ax-card);
+    display: grid; gap: 6px;
+}
+.sx-standing.is-reached {
+    border-color: color-mix(in srgb, var(--ax-green) 40%, transparent);
+    background-image: radial-gradient(120% 150% at 100% 0%,
+        color-mix(in srgb, var(--ax-green) 12%, transparent) 0%, transparent 60%);
+}
+.sx-standing-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sx-standing-head strong { font-size: .85rem; font-weight: 650; color: var(--ax-text); }
+.sx-standing-at {
+    font-size: .68rem; font-weight: 700;
+    color: var(--ax-faint);
+    font-variant-numeric: tabular-nums;
+}
+.sx-standing.is-reached .sx-standing-at { color: var(--ax-good); }
+.sx-standing p { margin: 0; font-size: .72rem; line-height: 1.5; color: var(--ax-muted); }
+.sx-standing-bar {
+    display: block; height: 4px;
+    border-radius: 999px;
+    background: var(--ax-line-soft);
+    overflow: hidden;
+}
+.sx-standing-bar span {
+    display: block; height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ax-violet), var(--ax-blue));
+    transition: width .5s ease;
+}
+.sx-standing.is-reached .sx-standing-bar span {
+    background: linear-gradient(90deg, var(--ax-green), var(--ax-blue));
+}
+
+/* ---- The panel that asks for the reading -------------------------------- */
+.sx-ask {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+}
+.sx-ask p {
+    margin: 4px 0 0;
+    max-width: 62ch;
+    font-size: .78rem; line-height: 1.6;
+    color: var(--ax-faint);
+}
+.sx-ask-err { margin: 10px 0 0; font-size: .78rem; color: var(--ax-bad); }

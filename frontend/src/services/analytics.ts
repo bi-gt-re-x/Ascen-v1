@@ -360,6 +360,194 @@ export function writeSubjectBrief(
 }
 
 // --------------------------------------------------------------------------
+// The subject reading — diagnosis, priorities, and what to do next
+// --------------------------------------------------------------------------
+/** The kinds of session the model may recommend. Closed, so they can be counted. */
+export const STEP_TYPES = [
+  'targeted_practice',
+  'mixed_practice',
+  'timed_set',
+  'review',
+  'concept',
+  'project',
+] as const;
+
+export type StepType = (typeof STEP_TYPES)[number];
+
+/** What each kind is called on the page. Mirrors STEP_TYPES in backend/api/subject_ai.py. */
+export const STEP_WORDS: Record<StepType, string> = {
+  targeted_practice: 'Targeted practice',
+  mixed_practice: 'Mixed practice',
+  timed_set: 'Timed set',
+  review: 'Review',
+  concept: 'Concept',
+  project: 'Project',
+};
+
+/** One finding, with how sure the model is and what it rests on. */
+export interface Diagnosis {
+  finding: string;
+  /** 0-1. Bounded server-side; out-of-range confidence is not confidence. */
+  confidence: number;
+  evidence: string[];
+}
+
+export interface Priority {
+  focus: string;
+  /** 0-1. */
+  weight: number;
+  reason: string;
+}
+
+/**
+ * One recommended session.
+ *
+ * `difficulty` and `minutes` are the model's own recommendations rather than
+ * measurements — the only two figures it is allowed to supply — and both are
+ * clamped by the server. `id` is the row it was stored as, which is what the
+ * feedback loop is keyed on.
+ */
+export interface NextStep {
+  id: string;
+  title: string;
+  focus: string;
+  type: StepType;
+  /** 1-5, on Ascen's own scale. */
+  difficulty: number;
+  minutes: number;
+  reason: string;
+  drills: string[];
+}
+
+/** An observation is not an insight until it says what to do differently. */
+export interface Insight {
+  observation: string;
+  evidence: string;
+  implication: string;
+}
+
+export interface SubjectReading {
+  diagnosis: Diagnosis[];
+  priorities: Priority[];
+  next_steps: NextStep[];
+  insights: Insight[];
+}
+
+/**
+ * The deterministic state, on its way to being read.
+ *
+ * Everything here was counted in the browser from the account's own tasks —
+ * components/Subject/state — and the server tells the model to use these
+ * figures and produce no others. Sending them rather than having the server
+ * recompute them is what keeps the reading quoting the numbers on screen.
+ */
+export interface SubjectStatePayload {
+  subject: string;
+  span: string;
+  aim?: string;
+  level?: string;
+  overall?: number | null;
+  finished?: number;
+  finished_before?: number;
+  rated?: number;
+  active_days?: number;
+  dimensions: Array<{
+    label: string;
+    value: number | null;
+    meaning: string;
+    evidence: string[];
+  }>;
+  curve?: {
+    rungs: Array<{
+      level: number;
+      label: string;
+      done: number;
+      execution: number | null;
+      quality: number | null;
+      cleared: number | null;
+      minutes: number | null;
+    }>;
+    best?: unknown;
+    threshold?: unknown;
+    drop?: number | null;
+  };
+  time?: Record<string, unknown>;
+  momentum?: Record<string, unknown>;
+  mistakes?: Array<{ label: string; count: number; share: number }>;
+  goals?: Array<{
+    title: string;
+    progress: number;
+    deadline: string;
+    standing: string;
+    levers: string[];
+  }>;
+  /** The authored tree's area names. A curriculum, carrying no measurement. */
+  vocabulary?: string[];
+}
+
+/** Whether the reading is available at all on this install. */
+export function subjectReadingAvailable(): Promise<ApiResult<{ available: boolean }>> {
+  return get<{ available: boolean }>('/api/subject_reading');
+}
+
+/**
+ * A model's reading of one subject. Costs a call.
+ *
+ * The recommendations that come back are stored server-side so their
+ * effectiveness can be checked later — the only thing about this feature that
+ * is written down. See backend/api/subject_ai.py.
+ */
+export function readSubject(
+  state: SubjectStatePayload,
+): Promise<ApiResult<{ reading: SubjectReading }>> {
+  return post<{ reading: SubjectReading }>('/api/subject_reading', state);
+}
+
+/** How each kind of session has gone for this account, in this subject. */
+export interface StepOutcome {
+  type: StepType;
+  given: number;
+  taken: number;
+  /** Points of execution since, or null when none were acted on. */
+  change: number | null;
+}
+
+export interface PastRecommendation {
+  id: string;
+  title: string;
+  focus: string;
+  type: StepType;
+  difficulty: number;
+  minutes: number;
+  reason: string;
+  on: string;
+  taken: boolean;
+  task_id: string;
+}
+
+export function subjectRecommendations(
+  subject: string,
+): Promise<ApiResult<{ recommendations: PastRecommendation[]; outcomes: StepOutcome[] }>> {
+  return get<{ recommendations: PastRecommendation[]; outcomes: StepOutcome[] }>(
+    `/api/subject_recommendations?subject=${encodeURIComponent(subject)}`,
+  );
+}
+
+/**
+ * Record that the reader acted on one.
+ *
+ * The half of the loop that makes the other half worth anything: without it
+ * every recommendation reads as untaken, and "this did not work" cannot be
+ * told apart from "this was never tried".
+ */
+export function takeRecommendation(
+  id: string,
+  taskId = '',
+): Promise<ApiResult<{ id: string }>> {
+  return post<{ id: string }>('/api/subject_recommendation', { id, task_id: taskId });
+}
+
+// --------------------------------------------------------------------------
 // The route to one goal
 // --------------------------------------------------------------------------
 /** One stage of the plan, with what is true at the end of it. */

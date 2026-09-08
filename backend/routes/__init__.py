@@ -28,6 +28,7 @@ API_MODULES = (
     'goals',
     'growth',
     'analytics',
+    'subject_ai',
     'focus',
     'quote',
     'subjects',

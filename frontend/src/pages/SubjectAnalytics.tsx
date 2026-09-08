@@ -67,7 +67,13 @@ import { Link, useParams } from 'react-router-dom';
 import { Ambient, ErrorState, Loading } from '@/components';
 import { AreaChart } from '@/components/Analytics';
 import { WINDOWS, type WindowKey } from '@/components/Analytics/data';
+import { gradeFor } from '@/utils/analyticalScore';
 import { subjectModel, type SubjectGoal } from '@/components/Subject/model';
+import { subjectState } from '@/components/Subject/state';
+import { Curve } from '@/components/Subject/Curve';
+import { Dimensions, Ring } from '@/components/Subject/Dimensions';
+import { NextSteps } from '@/components/Subject/NextSteps';
+import { Reading } from '@/components/Subject/Reading';
 import { latticeFor } from '@/components/Subject/lattice';
 import { loadProgress } from '@/utils/skillProgress';
 import { treeStanding } from '@/skills/standing';
@@ -76,19 +82,28 @@ import {
   analyticsTasks,
   saveSubjectMilestones,
   subjectBriefAvailable,
+  readSubject,
   subjectMilestones,
+  subjectReadingAvailable,
+  subjectRecommendations,
   suggestSubjectGoal,
+  takeRecommendation,
   writeGoalPlan,
   writeSubjectBrief,
   type GoalDraft,
   type GoalPlan,
+  type NextStep,
+  type StepOutcome,
   type SubjectBrief,
   type SubjectMilestone,
+  type SubjectReading,
 } from '@/services/analytics';
 import { getGoals } from '@/services/goals';
+import { createTask } from '@/services/tasks';
 import { format } from '@/utils';
 import '@/styles/analytics.css';
 import '@/styles/subject.css';
+import '@/styles/subject-state.css';
 
 /** Today, as the ISO day every window here is measured back from. */
 function todayIso(): string {
@@ -243,6 +258,26 @@ export default function SubjectAnalytics() {
   const goals = useApi(goalCall, [username]);
 
   const today = todayIso();
+
+  /**
+   * The deterministic state — where the reader stands, and why.
+   *
+   * The whole architecture in one line: **this counts, and the model reads
+   * what this counted.** Every figure in the hero, the seven dimension cards,
+   * the difficulty curve and the time analysis is arithmetic over the
+   * account's own tasks (components/Subject/state), computed here in the
+   * browser from the same task list the panels below already use. Nothing is
+   * fetched for it and nothing is asked of a model to produce it.
+   *
+   * That is what makes the reading below it safe to show: the model is handed
+   * these numbers and forbidden any others, which is only a workable
+   * instruction because they all exist before it is called.
+   */
+  const state = useMemo(
+    () => subjectState(tasks.data?.tasks ?? [], subjectId, span, today),
+    [span, subjectId, tasks.data, today],
+  );
+
   const model = useMemo(
     () =>
       subjectModel(
@@ -585,6 +620,208 @@ export default function SubjectAnalytics() {
     [ambition, milestones, model, span, subject],
   );
 
+  /**
+   * WHAT SHOULD I DO NEXT — the reading, and the loop that checks it.
+   *
+   * ## Why this is one call and not a panel per question
+   *
+   * Diagnosis, priorities, next steps and insights come back together because
+   * they are one act of reasoning. A model asked separately for "what is wrong"
+   * and "what to do" produces an answer to the second that does not follow
+   * from its answer to the first, and the reader has no way to see the join.
+   * Asked once, the steps are argued from the findings and the page can show
+   * that argument.
+   *
+   * ## Pressed, not automatic
+   *
+   * It costs the account's owner money, so it never fires on load. The spec's
+   * own rule — use the model for expensive synthesis and the backend for
+   * everything frequent — is the rule here: the seven dimensions, the curve
+   * and the time analysis are recomputed on every keystroke of the window
+   * picker and cost nothing, and this is asked for once when the reader wants
+   * it.
+   *
+   * ## The loop
+   *
+   * Every step that comes back is stored server-side (backend/api/subject_ai.py)
+   * so that "did this kind of session actually move anything" is a question
+   * with an answer later. `taken` is the set already acted on, which is what
+   * keeps a step from offering itself twice inside one visit.
+   */
+  const [reading, setReading] = useState<SubjectReading | null>(null);
+  const [thinking, setThinking] = useState(false);
+  const [readError, setReadError] = useState('');
+  const [canRead, setCanRead] = useState(false);
+  const [outcomes, setOutcomes] = useState<StepOutcome[]>([]);
+  const [taken, setTaken] = useState<Set<string>>(new Set());
+  const [stepBusy, setStepBusy] = useState('');
+
+  /* Asked once, so an install with no key draws no button at all — the same
+     bargain the write-up keeps, for the same reason. */
+  useEffect(() => {
+    if (!username) return;
+    let live = true;
+    void subjectReadingAvailable().then((result) => {
+      if (live) setCanRead(result.success && result.available);
+    });
+    return () => {
+      live = false;
+    };
+  }, [username]);
+
+  /* What has been recommended here before, and how each kind has gone. Read
+     on arrival rather than with the reading: it is cheap, it is the half of
+     the loop that is about the past, and it should be on screen before
+     anybody presses anything. */
+  /* Keyed on the subject's *name* rather than on the subject object. The
+     catalogue is a Map rebuilt whenever its source list changes, so depending
+     on the object here would re-run this effect on any render that produced a
+     new Map — which sets state, which renders again. The name is what the
+     request is actually keyed on, and it is a string. */
+  const subjectName = subject?.name ?? '';
+  useEffect(() => {
+    if (!username || !subjectName) return;
+    let live = true;
+    void subjectRecommendations(subjectName).then((result) => {
+      if (!live || !result.success) return;
+      setOutcomes(result.outcomes);
+      setTaken(new Set(result.recommendations.filter((row) => row.taken).map((row) => row.id)));
+    });
+    return () => {
+      live = false;
+    };
+  }, [subjectName, username]);
+
+  /* Cleared with the window and the subject. A diagnosis argued from ninety
+     days, sitting over a page now showing seven, is a reading of figures that
+     are no longer on screen. */
+  useEffect(() => {
+    setReading(null);
+    setReadError('');
+  }, [span, subjectId]);
+
+  const askForReading = useCallback(async () => {
+    if (!subject) return;
+    setThinking(true);
+    setReadError('');
+
+    const result = await readSubject({
+      subject: subject.name,
+      span: WINDOWS.find((option) => option.key === span)?.label ?? '',
+      aim: ambition?.aim ?? '',
+      level: ambition?.level ?? '',
+      overall: state.overall,
+      finished: state.finished,
+      finished_before: state.finishedBefore,
+      rated: state.ratedCount,
+      active_days: state.activeDays,
+      dimensions: state.dimensions.map((entry) => ({
+        label: entry.label,
+        value: entry.value,
+        meaning: entry.meaning,
+        evidence: entry.evidence,
+      })),
+      curve: {
+        rungs: state.curve.rungs.map((rung) => ({
+          level: rung.level,
+          label: rung.label,
+          done: rung.done,
+          execution: rung.execution,
+          quality: rung.quality,
+          cleared: rung.cleared,
+          minutes: rung.minutes,
+        })),
+        best: state.curve.best,
+        threshold: state.curve.threshold,
+        drop: state.curve.drop,
+      },
+      time: { ...state.time },
+      momentum: { ...state.momentum },
+      mistakes: state.mistakes.map((entry) => ({
+        label: entry.label,
+        count: entry.count,
+        share: entry.share,
+      })),
+      goals: model.goals.map((goal) => ({
+        title: goal.title,
+        progress: Math.round(goal.progress),
+        deadline: goal.deadline,
+        standing:
+          goal.drift === null
+            ? 'no projection'
+            : goal.drift > 0
+              ? `projected ${goal.drift} days late`
+              : 'projected on time or early',
+        levers: goal.levers.map((lever) => `${lever.title} — ${lever.fact}`),
+      })),
+      /* The curriculum's own words, and nothing more. These are the authored
+         tree's area names — identical on every account, carrying no
+         measurement of this reader — so the model has a vocabulary to
+         recommend in without having to invent one. The prompt is explicit
+         that naming an area is allowed and claiming a level in it is not. */
+      vocabulary: lattice
+        ? [lattice.title, ...lattice.branches.map((branch) => branch.title)]
+        : [],
+    });
+
+    setThinking(false);
+    if (result.success) setReading(result.reading);
+    else setReadError(result.message || 'Could not read this subject.');
+  }, [ambition, lattice, model.goals, span, state, subject]);
+
+  /** Record a step as acted on, however it was acted on. */
+  const record = useCallback(async (step: NextStep, taskId = '') => {
+    setStepBusy(step.id);
+    const result = await takeRecommendation(step.id, taskId);
+    setStepBusy('');
+    if (!result.success) return;
+    setTaken((was) => new Set(was).add(step.id));
+    /* Kept in step locally rather than refetched: the outcome figure cannot
+       have moved — no execution has been recorded between the click and now —
+       and a request that can only return what is already on screen is a
+       request not worth making. */
+    setOutcomes((was) =>
+      was.some((entry) => entry.type === step.type)
+        ? was.map((entry) =>
+            entry.type === step.type ? { ...entry, taken: entry.taken + 1 } : entry,
+          )
+        : [...was, { type: step.type, given: 1, taken: 1, change: null }],
+    );
+  }, []);
+
+  /**
+   * Turn a step into a real task.
+   *
+   * A real one, in the ordinary system, filed under this subject — not a note
+   * to self. That is what closes the loop: finishing an ordinary task raises
+   * the rating prompt, the rating is what the dimensions above are made of,
+   * and the next reading is therefore argued from evidence this one produced.
+   * A recommendation that lives only on this page generates no data and can
+   * never be checked.
+   */
+  const makeTask = useCallback(
+    async (step: NextStep) => {
+      setStepBusy(step.id);
+      const made = await createTask({
+        name: step.title,
+        subject: subjectId,
+        priority: step.difficulty >= 4 ? 'high' : 'medium',
+      });
+      setStepBusy('');
+      if (!made.success) {
+        setReadError('Could not add that task. Try again.');
+        return;
+      }
+      await record(step, made.task_id);
+      // The record the page is drawn from has changed, so it is re-read
+      // rather than patched: the new task is open rather than finished, and
+      // guessing at how it lands in a dozen figures is how a page starts
+      // disagreeing with its own database.
+      tasks.reload();
+    },
+    [record, subjectId, tasks],
+  );
+
   /* The volume chart's own ceiling. A floor of 1 keeps a window with a single
      quiet period from producing a "0" top tick over a line that is not flat. */
   const seriesPeak = Math.max(...model.series.done, 1);
@@ -658,51 +895,88 @@ export default function SubjectAnalytics() {
               </div>
             </div>
 
-            {/* ---- Overview ------------------------------------------- */}
-            {/* ---- The verdict, then what to do about it ----------- */}
-            {/* The page used to open with four tiles and leave the reader to
-                assemble the verdict from them. This states it, then says what
-                to do, and only then shows the working. The order is the whole
-                point: somebody who reads two blocks and leaves has read the
-                two that were worth reading. */}
+            {/* ---- WHERE AM I ----------------------------------------- */}
+            {/* The page answers three questions in order — where am I, why am
+                I there, what should I do next — and this is the first, in one
+                card, before anything is scrolled. The ring is the mean of
+                every measured dimension; the sentence under it is the model's
+                own verdict from ./model. Everything below is the working.
+
+                It borrows the Timer's surfaces on purpose: two radial washes,
+                a stroked ring, badges. Those are the two pages somebody sits
+                in front of rather than passes through. See styles/subject-state.css. */}
             <section
-              className="sb-topline"
-              aria-label="How this subject is going"
-              /* The band, for the stylesheet. The letter is coloured by what it
-                 means rather than by house accent — a C that looks like an A is
-                 a page telling the reader one thing in words and another in
-                 colour. Attribute rather than a class so the CSS reads as the
-                 table of bands it is. */
+              className="sx-hero"
+              aria-label="Where this subject stands"
               data-band={
-                model.headline.grade === null
+                state.overall === null
                   ? 'none'
-                  : ['S', 'A+', 'A'].includes(model.headline.grade)
+                  : state.overall >= 80
                     ? 'high'
-                    : model.headline.grade === 'B'
+                    : state.overall >= 65
                       ? 'good'
-                      : model.headline.grade === 'C'
+                      : state.overall >= 50
                         ? 'fair'
                         : 'low'
               }
             >
-              <p className="sb-topline-grade">
-                <strong>{model.headline.grade ?? '—'}</strong>
-                {model.headline.score !== null && (
-                  <span className="sb-topline-score">{model.headline.score}/100</span>
+              {/* The letter is derived from the figure the ring draws, not
+                  from ./model's own score. Two composites on one card — a 59
+                  with an F beside it — is the page disagreeing with itself in
+                  the one place a reader looks first. */}
+              <Ring
+                value={state.overall}
+                size={168}
+                label={state.overall === null ? 'unrated' : gradeFor(state.overall)}
+                sub={`${state.finished} finished`}
+              />
+
+              <div className="sx-hero-say">
+                <p className="sx-hero-verdict">{model.headline.verdict}</p>
+
+                <div className="sx-hero-badges">
+                  {state.momentum.known && (
+                    <span className={`sx-badge is-${state.momentum.direction}`}>
+                      {state.momentum.direction === 'climbing'
+                        ? '↑'
+                        : state.momentum.direction === 'slipping'
+                          ? '↓'
+                          : '→'}{' '}
+                      {(state.momentum.change ?? 0) > 0 ? '+' : ''}
+                      {state.momentum.change} pts across this window
+                    </span>
+                  )}
+                  {state.curve.threshold && (
+                    <span className="sx-badge">
+                      Falls off at {state.curve.threshold.label}
+                    </span>
+                  )}
+                  {model.goals[0] && (
+                    <span className="sx-badge is-goal">
+                      Chasing {model.goals[0].title}
+                    </span>
+                  )}
+                  {state.time.hours > 0 && (
+                    <span className="sx-badge">{state.time.hours}h logged</span>
+                  )}
+                </div>
+
+                {/* What the reader said this is all for. Quieter than the
+                    verdict, because it is their sentence rather than a
+                    reading of their record. */}
+                {ambition?.aim && (
+                  <p className="sb-topline-aim">
+                    <span>Chasing</span> {ambition.aim}
+                    {ambition.level && <em> · at {ambition.level} now</em>}
+                  </p>
                 )}
-              </p>
-              <p className="sb-topline-line">{model.headline.verdict}</p>
-              {/* What the reader said this is all for. Under the verdict
-                  because it is the thing the verdict is a verdict *against* —
-                  and quieter than it, because it is their sentence rather than
-                  a reading of their record. */}
-              {ambition?.aim && (
-                <p className="sb-topline-aim">
-                  <span>Chasing</span> {ambition.aim}
-                  {ambition.level && <em> · at {ambition.level} now</em>}
-                </p>
-              )}
+              </div>
             </section>
+
+            {/* The seven, kept separate on purpose. A single blended score
+                cannot tell "reaching past what you can land" from "coasting
+                below what you could" — see the note in Subject/Dimensions. */}
+            <Dimensions dimensions={state.dimensions} />
 
             {/* ---- The path, under the verdict --------------------- */}
             {/* On top, because "how am I doing" and "at what" are one question
@@ -740,30 +1014,128 @@ export default function SubjectAnalytics() {
               </div>
             )}
 
-            {/* ---- What to do ------------------------------------- */}
-            {model.advice.length > 0 && (
+            {/* ---- WHY AM I THERE: the curve --------------------------- */}
+            {/* Before the recommendations, because it is what most of them
+                are argued from. An average over five difficulty levels is the
+                same number for somebody uniformly middling and somebody who
+                is excellent until they are not — and those two want opposite
+                instructions. See components/Subject/Curve. */}
+            {state.curve.rungs.some((rung) => rung.done > 0) && (
               <Panel
-                title="Do this next"
-                note="Ranked by what it would be worth, each with the figure behind it."
+                title="Where it starts to go"
+                note="Execution at each difficulty, and the level it falls off at."
               >
-                <ol className="sb-advice">
-                  {model.advice.map((item, at) => (
-                    <li key={item.id} className={`sb-advice-item is-${item.weight}`}>
-                      <span className="sb-advice-rank" aria-hidden="true">
-                        {at + 1}
-                      </span>
-                      <div>
-                        <strong>{item.title}</strong>
-                        <p>{item.detail}</p>
-                        <p className="sb-advice-why">
-                          <span>Why:</span> {item.why}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
+                <Curve curve={state.curve} />
               </Panel>
             )}
+
+            {/* ---- WHAT SHOULD I DO NEXT ------------------------------- */}
+            {/* The section the rest of the page exists to produce.
+
+                Two halves, and the order is the argument. The app's own ranked
+                advice is first and is pure arithmetic — it is always there,
+                costs nothing, and is what the page says when nobody presses
+                anything. The model's steps are second, and they are the ones
+                that can name what a task at this difficulty in this subject
+                should actually contain, which no table here knows.
+
+                The join between them is stated rather than left to be
+                inferred: a reader has to know which half is counted before
+                deciding what to act on. */}
+            <section className="ax-panel sb-panel" aria-label="What to do next">
+              <div className="ax-panel-head">
+                <div className="ax-panel-title">
+                  <h2>Do this next</h2>
+                </div>
+              </div>
+
+              {model.advice.length > 0 && (
+                <>
+                  <p className="ax-panel-note">
+                    Ranked by what it would be worth, each with the figure behind it. All
+                    counted from your own tasks.
+                  </p>
+                  <ol className="sb-advice">
+                    {model.advice.map((item, at) => (
+                      <li key={item.id} className={`sb-advice-item is-${item.weight}`}>
+                        <span className="sb-advice-rank" aria-hidden="true">
+                          {at + 1}
+                        </span>
+                        <div>
+                          <strong>{item.title}</strong>
+                          <p>{item.detail}</p>
+                          <p className="sb-advice-why">
+                            <span>Why:</span> {item.why}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              )}
+
+              {canRead && (
+                <div className="sb-draft">
+                  <div className="sx-ask">
+                    <div>
+                      <strong>Read the whole record and plan the sessions</strong>
+                      <p>
+                        A model is given every figure above — the seven measures and what
+                        each is counted from, the difficulty curve, your times, what goes
+                        wrong, and the goal — and asked for the three things arithmetic
+                        cannot supply: which finding explains which, what to work on in what
+                        order, and what a session should actually contain. It is forbidden
+                        from producing any number that is not already on this page.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="ax-btn"
+                      onClick={() => void askForReading()}
+                      disabled={thinking}
+                    >
+                      {thinking ? 'Reading…' : reading ? 'Read it again' : 'Plan my next sessions'}
+                    </button>
+                  </div>
+
+                  {readError && (
+                    <p className="sx-ask-err" role="alert">
+                      {readError}
+                    </p>
+                  )}
+
+                  {reading && (
+                    <div className="sb-draft-body">
+                      <NextSteps
+                        steps={reading.next_steps}
+                        outcomes={outcomes}
+                        taken={taken}
+                        busy={stepBusy}
+                        onMakeTask={(step) => void makeTask(step)}
+                        onDidIt={(step) => void record(step)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* ---- The reading behind those steps ---------------------- */}
+            {reading &&
+              (reading.diagnosis.length > 0 ||
+                reading.priorities.length > 0 ||
+                reading.insights.length > 0) && (
+                <Panel
+                  title="What the record says"
+                  note="Written by a model over the counted figures above. Each finding carries what it rests on."
+                >
+                  <Reading
+                    diagnosis={reading.diagnosis}
+                    priorities={reading.priorities}
+                    insights={reading.insights}
+                  />
+                </Panel>
+              )}
 
             {/* ---- The shape of it ---------------------------------- */}
             {/* Two charts, not two lines on one axis. Tasks finished runs 0 to
@@ -869,6 +1241,91 @@ export default function SubjectAnalytics() {
             </div>
 
             {model.insight && <p className="ax-opening is-down sb-insight">{model.insight}</p>}
+
+            {/* ---- Time, and whether it bought anything ---------------- */}
+            {/* The rule this panel exists for: fast is not good. Thirty
+                minutes of work finished in eighteen and rated poorly is a task
+                that was abandoned, not an efficient one — so the figure is a
+                composite of speed and how it was rated, and the two cases it
+                exists to separate are counted out beneath it.
+
+                "Usual" is the account's own median at that difficulty, because
+                Ascen never asks for an estimate. See `timeAnalysis` in
+                components/Subject/state for why that is the better baseline
+                anyway. */}
+            {state.time.known && (
+              <Panel
+                title="What the time bought"
+                note="Against your own usual pace at each difficulty — Ascen never asks you to estimate one."
+              >
+                <ul className="sb-rows">
+                  <li className="sb-row">
+                    <span className="sb-row-name">Usual task</span>
+                    <strong>{state.time.typical} min</strong>
+                    <span className="sb-row-note">median across this window</span>
+                  </li>
+                  <li className="sb-row">
+                    <span className="sb-row-name">Against that</span>
+                    <strong>
+                      {state.time.drift === null
+                        ? '—'
+                        : state.time.drift < 0
+                          ? `${Math.abs(state.time.drift)} min under`
+                          : `${state.time.drift} min over`}
+                    </strong>
+                    <span className="sb-row-note">
+                      {state.time.quicker}% of tasks came in quicker than usual
+                    </span>
+                  </li>
+                  <li className="sb-row">
+                    <span className="sb-row-name">Finished fast, rated poorly</span>
+                    <strong>{state.time.rushed}</strong>
+                    <span className="sb-row-note">
+                      {state.time.rushed === 0
+                        ? 'none — speed here is not costing quality'
+                        : 'the case a plain time ratio calls efficient'}
+                    </span>
+                  </li>
+                  <li className="sb-row">
+                    <span className="sb-row-name">Took longer, landed it</span>
+                    <strong>{state.time.thorough}</strong>
+                    <span className="sb-row-note">time that did something</span>
+                  </li>
+                </ul>
+              </Panel>
+            )}
+
+            {/* ---- Standings ------------------------------------------- */}
+            {/* Not awards. Every one is a threshold over the same counted
+                evidence the figures above are made of, recomputed each time
+                rather than stored — which is what stops a badge from
+                disagreeing with the record it claims to describe. An unreached
+                one shows its distance, because a target with a number on it is
+                worth more than a greyed-out box. */}
+            <Panel
+              title="Standings"
+              note="Counted from the same record as everything else, and recomputed every visit."
+            >
+              <ul className="sx-standings">
+                {state.standings.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className={`sx-standing${entry.reached ? ' is-reached' : ''}`}
+                  >
+                    <div className="sx-standing-head">
+                      <strong>{entry.title}</strong>
+                      <span className="sx-standing-at">
+                        {entry.reached ? 'reached' : entry.at}
+                      </span>
+                    </div>
+                    <p>{entry.detail}</p>
+                    <span className="sx-standing-bar" aria-hidden="true">
+                      <span style={{ width: `${entry.progress}%` }} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
 
 
             {/* ---- What this subject is for ------------------------- */}

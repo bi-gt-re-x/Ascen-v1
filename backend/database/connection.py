@@ -256,6 +256,41 @@ ADDED_TABLES = ('''
 ''', '''
     CREATE INDEX IF NOT EXISTS notifications_live_idx
         ON notifications (user_id, deleted_at)
+''', '''
+    -- What the analytics recommended, and what came of it.
+    --
+    -- The one thing the subject page's model layer writes down. Everything
+    -- else it produces is prose over figures that are on screen already, and
+    -- is deliberately not stored (see backend/tracking/subject_ai.py). A
+    -- recommendation is different: whether a kind of session actually moves
+    -- this account is a question about the *past*, and a recommendation
+    -- nobody kept is one whose effectiveness can never be checked.
+    --
+    -- `execution_at` is the subject's execution figure on the day the advice
+    -- was given, held so the change afterwards can be measured against it
+    -- rather than recomputed from a window that has since moved. `taken_at`
+    -- and `task_id` are null until the reader acts on it, and a row that
+    -- stays null is itself a finding — a plan nobody follows is the wrong
+    -- plan. Nothing here is ever rewritten; the outcome is a later column
+    -- filled in once, not a replacement row.
+    CREATE TABLE IF NOT EXISTS subject_recommendations (
+        id           TEXT PRIMARY KEY,
+        user_id      TEXT NOT NULL REFERENCES users (username) ON DELETE CASCADE,
+        subject      TEXT NOT NULL DEFAULT '',
+        given_at     TEXT NOT NULL DEFAULT '',
+        title        TEXT NOT NULL DEFAULT '',
+        focus        TEXT NOT NULL DEFAULT '',
+        kind         TEXT NOT NULL DEFAULT '',
+        difficulty   INTEGER,
+        minutes      INTEGER,
+        reason       TEXT NOT NULL DEFAULT '',
+        execution_at INTEGER,
+        taken_at     TEXT,
+        task_id      TEXT
+    )
+''', '''
+    CREATE INDEX IF NOT EXISTS subject_recs_user_idx
+        ON subject_recommendations (user_id, subject, given_at DESC)
 ''')
 
 
