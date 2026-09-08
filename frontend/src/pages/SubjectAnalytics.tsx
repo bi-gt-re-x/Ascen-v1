@@ -479,11 +479,32 @@ export default function SubjectAnalytics() {
       ).size,
       hours: Math.round((model.invested / 3600) * 10) / 10,
       milestones: milestones.map((entry) => entry.title),
+      /* The same evidence the write-up and the route are given. Without it
+         this panel drafted from volume alone, which sizes a target and cannot
+         pitch it: "forty tasks" is met just as well at the difficulty
+         somebody has already cleared as at the one they keep falling off. */
+      aim: ambition?.aim ?? '',
+      level: ambition?.level ?? '',
+      rates: model.rates
+        .filter((rate) => rate.known)
+        .map((rate) => ({ label: rate.label, now: Math.round(rate.now) })),
+      bands: model.bands
+        .filter((band) => band.done > 0)
+        .map((band) => ({
+          label: band.label,
+          done: band.done,
+          holding: band.holding === null ? null : Math.round(band.holding),
+        })),
+      struggles: model.struggles.map((driver) => ({
+        label: driver.label,
+        share: driver.share,
+        count: driver.count,
+      })),
     });
     setDrafting(false);
     if (result.success) setDraft(result.draft);
     else setDraftError(result.message || 'Could not draft a goal.');
-  }, [milestones, model, subject]);
+  }, [ambition, milestones, model, subject]);
 
   /**
    * Keeping a draft writes it here, not to the goals page.

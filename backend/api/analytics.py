@@ -36,7 +36,7 @@ never accumulated. The measuring itself lives on the client in
 utils/followup.ts, next to the rules whose promises it is checking.
 """
 from datetime import date
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -708,7 +708,15 @@ def write_goal_plan(body: GoalPlanBrief, username: str = Depends(current_usernam
 
 
 class SubjectGoalDraft(BaseModel):
-    """What the subject page knows, on its way to a drafted goal."""
+    """What the subject page knows, on its way to a drafted goal.
+
+    The four counts at the top size the target and the four below it pitch it.
+    That second half was missing while this panel drafted from volume alone,
+    which is how it produced goals a reader could meet without getting any
+    better at the subject — see `brief_from` in tracking/subject_goal. The
+    write-up and the route were already given these; this is the same evidence
+    in the same shape.
+    """
 
     subject: str = ''
     finished: Optional[int] = None
@@ -716,6 +724,11 @@ class SubjectGoalDraft(BaseModel):
     active_days: Optional[int] = None
     hours: Optional[float] = None
     milestones: List[str] = []
+    aim: str = ''
+    level: str = ''
+    rates: List[Dict[str, Any]] = []
+    bands: List[Dict[str, Any]] = []
+    struggles: List[Dict[str, Any]] = []
 
 
 @router.post('/api/suggest_subject_goal')
@@ -750,6 +763,15 @@ def suggest_subject_goal(body: SubjectGoalDraft, username: str = Depends(current
             # from a client and the cost of the call scales with it.
             'milestones': [str(entry).strip()[:BRIEF_TEXT]
                            for entry in (body.milestones or [])[:12] if str(entry).strip()],
+            'aim': (body.aim or '').strip()[:BRIEF_TEXT],
+            'level': (body.level or '').strip()[:BRIEF_TEXT],
+            # Same bound and same reason as the checkpoints above. Five rates,
+            # five difficulty bands and twelve reasons are the whole of what
+            # the page can hold, so anything past that is a client saying
+            # something the app never asks it to say.
+            'rates': (body.rates or [])[:8],
+            'bands': (body.bands or [])[:8],
+            'struggles': (body.struggles or [])[:12],
         })
     except subject_goal.BriefUnavailable as exc:
         return fail(str(exc))

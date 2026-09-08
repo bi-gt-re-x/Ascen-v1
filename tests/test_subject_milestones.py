@@ -90,6 +90,63 @@ def test_the_brief_carries_the_checkpoints_in_the_readers_order():
     assert '90' in brief
 
 
+class TestTheBriefCarriesDifficultyAndExecution:
+    """The half this brief used to leave out.
+
+    Volume sizes a target and cannot pitch it. "Forty tasks" is met just as
+    easily at a difficulty somebody has already cleared as at the one they keep
+    falling off, so a goal drafted from counts alone can be reached without the
+    reader getting any better at the subject — which is the one way a goal on
+    this page can actively mislead. The write-up and the route were always
+    given the bands; this is the same evidence in the same words.
+    """
+
+    FINDINGS = {
+        'subject': 'Computer Science',
+        'finished': 214,
+        'days': 365,
+        'aim': 'USACO Gold',
+        'level': 'Silver',
+        'rates': [{'label': 'Quality', 'now': 48}, {'label': 'Consistency', 'now': 57}],
+        'bands': [{'label': 'Trivial', 'done': 30, 'holding': 90},
+                  {'label': 'Hard', 'done': 18, 'holding': 39}],
+        'struggles': [{'label': 'Ran out of time', 'share': 31, 'count': 18}],
+        'milestones': ['Silver DP unassisted'],
+    }
+
+    def test_each_band_arrives_with_its_execution(self):
+        brief = subject_goal.brief_from(self.FINDINGS)
+        assert 'Trivial: 30 finished, execution 90' in brief
+        assert 'Hard: 18 finished, execution 39' in brief
+
+    def test_the_rates_arrive(self):
+        brief = subject_goal.brief_from(self.FINDINGS)
+        assert 'Quality: 48' in brief
+
+    def test_what_goes_wrong_arrives(self):
+        brief = subject_goal.brief_from(self.FINDINGS)
+        assert 'Ran out of time' in brief
+        assert '31%' in brief
+
+    def test_the_aim_arrives_with_the_level_beside_it(self):
+        brief = subject_goal.brief_from(self.FINDINGS)
+        assert 'USACO Gold' in brief
+        assert 'Silver' in brief
+
+    def test_a_subject_with_nothing_rated_leaves_the_sections_out(self):
+        """An empty section is a line the model has to interpret, and it
+        guesses. The same rule the rest of this brief follows."""
+        brief = subject_goal.brief_from({'subject': 'Music', 'finished': 4})
+        assert 'execution' not in brief
+        assert 'went badly' not in brief
+        assert 'out of 100' not in brief
+
+    def test_the_prompt_says_to_pitch_on_the_bands(self):
+        # The evidence is only worth sending if the prompt asks for it to be
+        # used, and "size it on volume" was all it said before.
+        assert 'DIFFICULTY AND EXECUTION' in subject_goal.SYSTEM
+
+
 def test_the_brief_says_plainly_when_there_are_no_checkpoints():
     """An empty list has to read as an absence, not as a missing line.
 

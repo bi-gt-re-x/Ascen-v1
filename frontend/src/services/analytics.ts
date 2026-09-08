@@ -669,6 +669,17 @@ export interface DraftFindings {
   active_days: number;
   hours: number;
   milestones: string[];
+  /* What the subject is for, and how hard the work has actually been.
+     The four above say how much was done; these say what it was worth, which
+     is what stops a drafted target being a number the reader can already hit.
+     Optional because the panel draws before the wizard has been answered and
+     on a subject with nothing rated yet — an absent section is left out of the
+     brief rather than sent empty. */
+  aim?: string;
+  level?: string;
+  rates?: Array<{ label: string; now: number }>;
+  bands?: Array<{ label: string; done: number; holding: number | null }>;
+  struggles?: Array<{ label: string; share: number; count: number }>;
 }
 
 export function suggestSubjectGoal(

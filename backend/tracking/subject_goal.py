@@ -82,6 +82,24 @@ rate is a wish. Use the figures to choose the number. Do not write sentences \
 about how they are doing; the page this came from already says that, and \
 better, because it counted it.
 
+SIZE IT ON DIFFICULTY AND EXECUTION, NOT ONLY ON VOLUME
+
+The brief gives you how much work they finished, and it also gives you how \
+hard that work was and how well it went: the four rates, the difficulty bands \
+with an execution figure for each, and what they said when a session went \
+badly. Use all of it.
+
+Volume alone sets how *many*. The bands set how *hard*, and that is usually \
+the more useful half. Somebody clearing trivial work at 90 and hard work at \
+39 does not need more tasks — a goal counting tasks at a level they are \
+already comfortable with can be met without them getting any better, which is \
+the one way a goal here can be actively misleading. Pitch the target at the \
+band where execution starts to fall, or one above it.
+
+Say which in `why`, in the reader's terms rather than by quoting the number: \
+"the harder problems are where this stalls" rather than "execution is 39 at \
+Hard". The figures are on the page already.
+
 Do not invent figures. If the brief does not give you a rate, pick a target \
 from the subject and the checkpoints rather than from an imagined one.
 
@@ -152,6 +170,44 @@ def brief_from(findings: Dict[str, Any]) -> str:
         value = findings.get(key)
         if value not in (None, '', 0):
             lines.append('{}: {}'.format(label, value))
+
+    aim = str(findings.get('aim') or '').strip()
+    if aim:
+        level = str(findings.get('level') or '').strip()
+        lines.append('What they say this subject is for: {}{}'.format(
+            aim, ' (at {} now)'.format(level) if level else ''))
+
+    # How hard the work was and how it went, which is the half this brief used
+    # to leave out. Volume alone sizes a target — twenty tasks a month says
+    # forty is reachable and four hundred is not — and says nothing about what
+    # they should be *worth*. Somebody clearing trivial work at 90 and hard
+    # work at 39 does not need more tasks; they need harder ones, and a goal
+    # counting tasks at the level they are already comfortable with is a goal
+    # that can be met without getting any better. The same two sections the
+    # write-up and the route are given, in the same words, so a reader who
+    # opens both does not meet the same figures phrased two ways.
+    rates = findings.get('rates') or []
+    if rates:
+        lines.append('')
+        lines.append('Where the four rates stand (out of 100):')
+        for entry in rates:
+            lines.append('  - {}: {}'.format(entry.get('label'), entry.get('now')))
+
+    bands = findings.get('bands') or []
+    if bands:
+        lines.append('')
+        lines.append('How each difficulty band went (execution, out of 100):')
+        for entry in bands:
+            lines.append('  - {}: {} finished, execution {}'.format(
+                entry.get('label'), entry.get('done'), entry.get('holding')))
+
+    reasons = findings.get('struggles') or []
+    if reasons:
+        lines.append('')
+        lines.append('What they said when a session here went badly:')
+        for entry in reasons:
+            lines.append('  - {} ({}% of those sessions, {} tasks)'.format(
+                entry.get('label'), entry.get('share'), entry.get('count')))
 
     checkpoints = [str(entry).strip() for entry in (findings.get('milestones') or [])
                    if str(entry).strip()]
