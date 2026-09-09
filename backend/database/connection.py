@@ -128,6 +128,14 @@ ADDED_COLUMNS = (
     # and fills with placeholders on first write, so a goal written before this
     # existed is not a goal with a broken one. See data/sql/goals.sql.
     ('goal_milestones', 'steps', 'TEXT'),
+    # `subject_readings` gained this between one commit and the next, so an
+    # install that ran the version in between has the table without it. The
+    # table is created with the column now, and CREATE TABLE IF NOT EXISTS does
+    # nothing to a table that is already there — which is the whole reason this
+    # list exists. Existing rows read as a reading with no window recorded, and
+    # the page shows one of those rather than hiding it: a reading that cannot
+    # say which window it came from is still the reading somebody paid for.
+    ('subject_readings', 'span', 'TEXT'),
 )
 
 # Tables added to the app after the database was first created.
@@ -291,6 +299,38 @@ ADDED_TABLES = ('''
 ''', '''
     CREATE INDEX IF NOT EXISTS subject_recs_user_idx
         ON subject_recommendations (user_id, subject, given_at DESC)
+''', '''
+    -- The last reading written for a subject, whole, so the panel survives a
+    -- refresh.
+    --
+    -- `subject_recommendations` above is a ledger and stays one: every step
+    -- ever suggested, never rewritten, because the outcome loop is built on
+    -- comparing what was advised against what happened afterwards. It cannot
+    -- also be the restore point. It holds no diagnosis, no priorities, no
+    -- insights and no drills, so a page rebuilt from it would come back
+    -- missing three of its four sections and the detail on the fourth.
+    --
+    -- So this is the other half: one row per subject, replaced each time a
+    -- reading is asked for, holding the answer as JSON. Replaced rather than
+    -- appended because it is a cache of the current reading rather than a
+    -- record of what was said — the record is next door, and it is the one
+    -- nothing overwrites.
+    -- `span` is stored because the page will not show a reading over figures
+    -- it no longer displays. A diagnosis argued from a year, restored onto a
+    -- seven-day view, is prose about numbers that are not on screen — the
+    -- page already clears a live reading when the window changes, and a
+    -- restored one has to obey the same rule.
+    CREATE TABLE IF NOT EXISTS subject_readings (
+        id         TEXT PRIMARY KEY,
+        user_id    TEXT NOT NULL REFERENCES users (username) ON DELETE CASCADE,
+        subject    TEXT NOT NULL DEFAULT '',
+        span       TEXT NOT NULL DEFAULT '',
+        written_at TEXT NOT NULL DEFAULT '',
+        body       TEXT NOT NULL DEFAULT ''
+    )
+''', '''
+    CREATE UNIQUE INDEX IF NOT EXISTS subject_readings_one_per_subject
+        ON subject_readings (user_id, subject)
 ''')
 
 

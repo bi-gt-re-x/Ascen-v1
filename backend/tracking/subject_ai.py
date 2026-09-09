@@ -140,6 +140,54 @@ the single worst thing you could produce here. If you want to say an area is \
 likely weak, say it is a likely place to look and say what in the brief \
 suggests it.
 
+START FROM THE RELATIONSHIPS, NOT FROM THE TABLE
+
+The <relationships> section is the most important thing you are given. It is \
+not more figures — it is the arithmetic already done on them: which measure is \
+carrying the shortfall, what kind of problem the struggles actually are, where \
+the difficulty they filed and the result they got disagree, and whether their \
+capability is running ahead of their score.
+
+Those are computed, checked and on the page. Do not recompute them, do not \
+disagree with them, and do not restate them back as findings. Use them to \
+decide what to say.
+
+The failure to avoid is the one that reads like this:
+
+  "Execution is 62 and consistency is 57. Quality is dragging the grade. \
+Focus on improving quality."
+
+Every clause is true, every clause is already on the page above the panel you \
+are writing, and it tells the reader nothing they did not know. What is wanted \
+instead is the reading *between* the figures:
+
+  "You are working well above the level your score reflects. Execution has \
+moved twelve points while quality has moved one, and 87% of what goes wrong is \
+about the sitting rather than about the material — so the ceiling is not what \
+you know, it is turning what you know into finished work. Harder problems will \
+not move this."
+
+The difference is that the second one names a bottleneck, says what the \
+evidence for it is, and rules something out.
+
+WHAT A DIAGNOSIS HAS TO DO
+
+Name one thing, say which figures make it true, and say what it means is *not* \
+the problem. A finding that could be written about any account is not a \
+finding. Rank by what would move most if it changed, not by which number is \
+lowest.
+
+If "not about knowing the material" is high, say plainly that adding \
+difficulty is the wrong next step and why. If it is low, say the opposite. \
+That single call is the most useful sentence on the page, and it has a number \
+behind it — use it.
+
+BE HONEST ABOUT HOW MUCH IS BEHIND IT
+
+The relationships section says what each proportion is out of. Thirty answers \
+support a claim; five do not. Set `confidence` from that, and say "the record \
+is too thin to say" when it is.
+
 WHAT YOU DO KNOW THAT THE APP DOES NOT
 
 **The subject.** What work at a given difficulty in it usually involves, what \
@@ -319,6 +367,101 @@ def _kv(label: str, value: Any) -> str:
     return '' if value in (None, '', []) else '{}: {}'.format(label, value)
 
 
+def _relationship_lines(read: Dict[str, Any]) -> List[str]:
+    """The worked-out readings, as statements rather than as a table.
+
+    Empty when the page sent none, which `_section` turns into no section at
+    all — an account with nothing rated has no relationships to report, and a
+    heading over four "unknown" lines is worse than silence.
+
+    Every figure here came from the client already computed. None of it is
+    re-derived: this function formats and nothing else, which is the only way
+    the numbers in the brief and the numbers on the page can be guaranteed to
+    agree.
+    """
+    lines: List[str] = []
+
+    gap = read.get('gap') or {}
+    if gap.get('known'):
+        lines.append(
+            'WHERE THE SHORTFALL SITS. They are at {} out of 100, so {} points '
+            'are missing. Those points divide across the measures like this, '
+            'and the parts sum to the whole:'.format(
+                gap.get('standing'), gap.get('total')))
+        for part in (gap.get('parts') or []):
+            lines.append('  {}: {} points — {}'.format(
+                part.get('label'), part.get('points'), part.get('from')))
+        largest = gap.get('largest')
+        lines.append('  Largest single part: {}'.format(
+            largest.get('label') if largest
+            else 'none — no measure is clearly ahead of the others'))
+        lines.append('')
+
+    families = read.get('families') or {}
+    if families.get('known'):
+        lines.append(
+            'WHAT KIND OF PROBLEM IT IS. The six reasons regrouped by what they '
+            'indicate, over {} answers:'.format(families.get('answered')))
+        for entry in (families.get('shares') or []):
+            lines.append('  {}: {}% ({} tasks)'.format(
+                entry.get('label'), entry.get('share'), entry.get('count')))
+        leading = families.get('leading')
+        if leading:
+            lines.append('  Clearly ahead: {}'.format(leading.get('label')))
+        else:
+            lines.append('  No kind is clearly ahead of the rest.')
+        lines.append(
+            '  Not about knowing the material: {}%. This is the figure that '
+            'decides whether harder work is the right next step. High means '
+            'they can already do it and keep not doing it, and more difficulty '
+            'would add a second problem on top of the one they have.'.format(
+                families.get('notConceptual')))
+        lines.append('')
+
+    cal = read.get('calibration') or {}
+    if cal.get('known'):
+        said = []
+        for rung in (cal.get('outgrown') or []):
+            said.append('  Filed hard and going well: {} at execution {} over {} '
+                        'tasks. They have room above where they are working.'.format(
+                            rung.get('label'), rung.get('execution'), rung.get('done')))
+        for rung in (cal.get('overestimated') or []):
+            said.append('  Filed easy and going badly: {} at execution {} over {} '
+                        'tasks. These are losses that should not be happening.'.format(
+                            rung.get('label'), rung.get('execution'), rung.get('done')))
+        if cal.get('rushed'):
+            said.append('  Finished quicker than their own median and rated badly: '
+                        '{} tasks. Rushing has a different fix from not knowing.'.format(
+                            cal.get('rushed')))
+        if said:
+            lines.append('WHERE THE DIFFICULTY FILED AND THE RESULT DISAGREE.')
+            lines.extend(said)
+            lines.append('')
+
+    div = read.get('divergence') or {}
+    if div.get('known'):
+        reading = {
+            'capability-ahead':
+                'Capability is running ahead of the score. They are getting '
+                'better at the work faster than the result is following, which '
+                'points at converting ability into outcome rather than at '
+                'adding more ability.',
+            'outcome-ahead':
+                'The score is running ahead of capability. The result is '
+                'improving faster than execution is, which usually means the '
+                'work has got easier rather than they have got better.',
+            'together': 'Capability and outcome are moving together.',
+        }.get(str(div.get('reading')), '')
+        lines.append('CAPABILITY AGAINST OUTCOME.')
+        points = lambda n: '{} point{}'.format(n, '' if abs(n or 0) == 1 else 's')
+        lines.append('  Execution moved {}; quality moved {}.'.format(
+            points(div.get('capability')), points(div.get('outcome'))))
+        if reading:
+            lines.append('  {}'.format(reading))
+
+    return [line for line in lines if line != ''] or []
+
+
 def brief_from(state: Dict[str, Any]) -> str:
     """The subject state, as the sections the model reads.
 
@@ -425,6 +568,23 @@ def brief_from(state: Dict[str, Any]) -> str:
             lines.append('  {}: {} tasks, {}% of the badly-rated ones'.format(
                 entry.get('label'), entry.get('count'), entry.get('share')))
         parts.append(_section('mistake_patterns', lines))
+
+    # ---- The relationships, already worked out ---------------------------
+    # The section this whole feature turns on, and the newest one.
+    #
+    # Everything above it is a snapshot: execution is 62, the curve falls off
+    # at Fair, eighteen sessions ran out of time. A model given only those
+    # writes about those — it restates the table with adjectives, because a
+    # list of numbers is an invitation to describe it. Which is exactly the
+    # complaint this section was added to answer.
+    #
+    # So the client works out the relationships first, in
+    # frontend/src/components/Subject/performance, where they are arithmetic
+    # with tests around them, and they arrive here as conclusions the model has
+    # to *use* rather than figures it can merely repeat. It is told below that
+    # these are already computed and are not to be recomputed.
+    parts.append(_section('relationships', _relationship_lines(
+        state.get('performance') or {})))
 
     # ---- The curriculum's own words, and nothing more --------------------
     vocabulary = [str(entry).strip() for entry in (state.get('vocabulary') or [])

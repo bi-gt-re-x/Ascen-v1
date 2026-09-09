@@ -390,3 +390,183 @@ def test_without_a_brief_the_check_is_off():
         {'finding': 'Recursion is at 68%', 'confidence': 0.9, 'evidence': []},
     ]))
     assert len(cleaned['diagnosis']) == 1
+
+
+# ---------------------------------------------------------------------------
+# The relationships, which are what stop the reading being generic
+# ---------------------------------------------------------------------------
+# The section added when the panel's output was still a restatement of the
+# table above it. Everything in it is worked out by the client
+# (frontend/src/components/Subject/performance) and only formatted here, so
+# these tests are about what reaches the prompt rather than about arithmetic —
+# the arithmetic has its own tests, on the side that does it.
+PERFORMANCE = {
+    'gap': {
+        'known': True, 'standing': 61, 'total': 39.0,
+        'parts': [
+            {'key': 'knowledge', 'label': 'Knowing it', 'points': 4.3, 'from': 'how hard'},
+            {'key': 'execution', 'label': 'Doing it', 'points': 18.6, 'from': 'how it goes'},
+        ],
+        'largest': {'key': 'execution', 'label': 'Doing it', 'points': 18.6},
+    },
+    'families': {
+        'known': True, 'answered': 31,
+        'shares': [{'key': 'execution', 'label': 'The sitting itself',
+                    'count': 16, 'share': 52}],
+        'leading': {'key': 'execution', 'label': 'The sitting itself', 'share': 52},
+        'notConceptual': 87,
+    },
+    'calibration': {
+        'known': True,
+        'outgrown': [{'label': 'Hard', 'execution': 82, 'done': 8}],
+        'overestimated': [{'label': 'Trivial', 'execution': 55, 'done': 12}],
+        'rushed': 9,
+    },
+    'divergence': {'known': True, 'capability': 12, 'outcome': 1,
+                   'reading': 'capability-ahead'},
+}
+
+
+class TestTheRelationshipsReachTheModel:
+    def test_the_shortfall_split_arrives_with_its_largest_part_named(self):
+        brief = subject_ai.brief_from({**STATE, 'performance': PERFORMANCE})
+        assert 'Doing it: 18.6 points' in brief
+        assert 'Largest single part: Doing it' in brief
+
+    def test_the_figure_that_decides_the_next_step_arrives(self):
+        # The single most useful number the panel has: whether adding
+        # difficulty is the right move at all.
+        brief = subject_ai.brief_from({**STATE, 'performance': PERFORMANCE})
+        assert 'Not about knowing the material: 87%' in brief
+
+    def test_the_base_a_proportion_is_out_of_arrives_with_it(self):
+        # Without it the model cannot set confidence honestly, which is the
+        # difference between a finding and a guess with a percentage on it.
+        brief = subject_ai.brief_from({**STATE, 'performance': PERFORMANCE})
+        assert 'over 31 answers' in brief
+
+    def test_divergence_arrives_as_a_reading_rather_than_two_numbers(self):
+        brief = subject_ai.brief_from({**STATE, 'performance': PERFORMANCE})
+        assert 'Capability is running ahead of the score' in brief
+
+    def test_a_single_point_move_is_not_pluralised(self):
+        brief = subject_ai.brief_from({**STATE, 'performance': PERFORMANCE})
+        assert 'quality moved 1 point.' in brief
+
+    def test_nothing_worked_out_means_no_section_at_all(self):
+        """A heading over four "unknown" lines is worse than silence.
+
+        This is the state an account is in with `rating_depth` set to
+        'ratings' or 'none' — a real setting, not a broken install.
+        """
+        brief = subject_ai.brief_from(STATE)
+        assert '<relationships>' not in brief
+
+    def test_an_unmeasured_half_leaves_only_its_own_lines_out(self):
+        # Reasons off, everything else on. The gap still arrives.
+        thin = {**PERFORMANCE, 'families': {'known': False}}
+        brief = subject_ai.brief_from({**STATE, 'performance': thin})
+        assert 'Largest single part' in brief
+        assert 'Not about knowing the material' not in brief
+
+    def test_the_prompt_tells_the_model_to_start_there(self):
+        # The section is only worth sending if the prompt says what it is for.
+        assert 'START FROM THE RELATIONSHIPS' in subject_ai.SYSTEM
+        assert 'Do not recompute them' in subject_ai.SYSTEM
+
+
+# ---------------------------------------------------------------------------
+# Surviving a refresh
+# ---------------------------------------------------------------------------
+# A reading costs an API call, and it used to live in component state and
+# nowhere else — so reloading the page threw it away and the panel came back
+# empty with the button offering to spend the call again. The steps were
+# already on record in `subject_recommendations`, but that table is a ledger of
+# what was advised rather than a copy of what was written: no diagnosis, no
+# priorities, no insights, no drills. Restoring from it would put back one
+# section out of four.
+READING = {
+    'diagnosis': [{'finding': 'Execution is the bottleneck', 'confidence': 0.8,
+                   'evidence': ['Doing it: 18.6 points']}],
+    'priorities': [{'focus': 'Timed sets', 'weight': 0.9, 'reason': 'rushing, not gaps'}],
+    'next_steps': [{'title': 'Timed set', 'focus': 'Algebra', 'type': 'timed_set',
+                    'difficulty': 3, 'minutes': 45, 'reason': 'nine rushed tasks',
+                    'drills': ['ten problems under median time']}],
+    'insights': [{'observation': 'Capability is ahead of the score',
+                  'evidence': 'execution +12, quality +1',
+                  'implication': 'convert rather than add'}],
+}
+
+
+def _save(client, monkeypatch, subject='Algebra', span='the last 30 days'):
+    """Ask for a reading with the model stubbed, so one gets stored."""
+    monkeypatch.setattr(subject_ai, 'configured', lambda: True)
+    monkeypatch.setattr(subject_ai, 'read', lambda *a, **k: dict(READING))
+    return client.post('/api/subject_reading',
+                       json={'subject': subject, 'span': span}).json()
+
+
+class TestAReadingSurvivesARefresh:
+    def test_nothing_saved_reads_as_nothing_rather_than_as_a_failure(self, client):
+        # The page has to tell "not asked for yet" from "the request broke",
+        # and those look identical if the key just goes missing.
+        body = client.get('/api/subject_reading_saved?subject=Algebra').json()
+        assert body['success'] is True
+        assert body['reading'] is None
+
+    def test_a_reading_comes_back_whole(self, client, monkeypatch):
+        assert _save(client, monkeypatch)['success'] is True
+
+        body = client.get('/api/subject_reading_saved?subject=Algebra').json()
+        assert body['success'] is True
+        # All four sections, not just the steps the ledger holds.
+        assert body['reading']['diagnosis'][0]['finding'] == 'Execution is the bottleneck'
+        assert body['reading']['priorities'][0]['focus'] == 'Timed sets'
+        assert body['reading']['insights'][0]['implication'] == 'convert rather than add'
+        assert body['reading']['next_steps'][0]['drills'] == ['ten problems under median time']
+
+    def test_the_stored_steps_keep_the_ids_the_loop_needs(self, client, monkeypatch):
+        # A restored step has to be actionable: "I did this" writes against the
+        # id, so a restore that dropped it would put back a dead button.
+        _save(client, monkeypatch)
+        body = client.get('/api/subject_reading_saved?subject=Algebra').json()
+        assert body['reading']['next_steps'][0].get('id')
+
+    def test_the_window_it_was_argued_from_comes_back_with_it(self, client, monkeypatch):
+        # The page will not show a reading over figures it is no longer
+        # displaying, so it needs to know which window this one was written
+        # against. Same rule that clears a live reading when the window moves.
+        _save(client, monkeypatch, span='the last 90 days')
+        body = client.get('/api/subject_reading_saved?subject=Algebra').json()
+        assert body['span'] == 'the last 90 days'
+
+    def test_asking_again_replaces_rather_than_piles_up(self, client, monkeypatch):
+        # This is a restore point for a panel, not a history. The history is
+        # `subject_recommendations`, and it is the one nothing overwrites.
+        _save(client, monkeypatch)
+        monkeypatch.setattr(subject_ai, 'read', lambda *a, **k: {
+            **READING,
+            'diagnosis': [{'finding': 'Something else entirely', 'confidence': 0.5,
+                           'evidence': []}],
+        })
+        client.post('/api/subject_reading', json={'subject': 'Algebra', 'span': 'x'})
+
+        body = client.get('/api/subject_reading_saved?subject=Algebra').json()
+        assert body['reading']['diagnosis'][0]['finding'] == 'Something else entirely'
+
+    def test_the_ledger_is_still_appended_to(self, client, monkeypatch):
+        """The outcome loop depends on every recommendation staying on record."""
+        _save(client, monkeypatch)
+        _save(client, monkeypatch)
+        listed = client.get('/api/subject_recommendations?subject=Algebra').json()
+        assert len(listed['recommendations']) == 2
+
+    def test_one_subject_does_not_answer_for_another(self, client, monkeypatch):
+        _save(client, monkeypatch, subject='Algebra')
+        body = client.get('/api/subject_reading_saved?subject=Geometry').json()
+        assert body['reading'] is None
+
+    def test_a_stranger_cannot_read_it(self, client, monkeypatch, stranger):
+        _save(client, monkeypatch)
+        body = stranger.get('/api/subject_reading_saved?subject=Algebra').json()
+        assert body['reading'] is None

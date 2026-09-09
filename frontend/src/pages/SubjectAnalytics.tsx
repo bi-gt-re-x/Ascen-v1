@@ -74,6 +74,7 @@ import { Curve } from '@/components/Subject/Curve';
 import { Dimensions, Ring } from '@/components/Subject/Dimensions';
 import { NextSteps } from '@/components/Subject/NextSteps';
 import { Reading } from '@/components/Subject/Reading';
+import { performance } from '@/components/Subject/performance';
 import { latticeFor } from '@/components/Subject/lattice';
 import { loadProgress } from '@/utils/skillProgress';
 import { treeStanding } from '@/skills/standing';
@@ -85,6 +86,7 @@ import {
   readSubject,
   subjectMilestones,
   subjectReadingAvailable,
+  savedSubjectReading,
   subjectRecommendations,
   suggestSubjectGoal,
   takeRecommendation,
@@ -713,13 +715,32 @@ export default function SubjectAnalytics() {
     };
   }, [subjectName, username]);
 
-  /* Cleared with the window and the subject. A diagnosis argued from ninety
+  /* Cleared with the window and the subject, then restored from the server if
+     one was written for this exact pair.
+
+     Both halves of that are the same rule. A diagnosis argued from ninety
      days, sitting over a page now showing seven, is a reading of figures that
-     are no longer on screen. */
+     are no longer on screen — so it is cleared when the window moves, and a
+     saved one is only put back when the window it was argued from is the one
+     being shown. The span is stored beside the reading for that comparison.
+
+     The restore is what stops a refresh throwing away a reading the reader
+     paid a call for. It used to live here and nowhere else. */
+  const spanLabel = WINDOWS.find((option) => option.key === span)?.label ?? '';
   useEffect(() => {
     setReading(null);
     setReadError('');
-  }, [span, subjectId]);
+    if (!username || !subjectName || !spanLabel) return;
+    let live = true;
+    void savedSubjectReading(subjectName).then((result) => {
+      if (!live || !result.success || !result.reading) return;
+      if (result.span && result.span !== spanLabel) return;
+      setReading(result.reading);
+    });
+    return () => {
+      live = false;
+    };
+  }, [span, spanLabel, subjectId, subjectName, username]);
 
   const askForReading = useCallback(async () => {
     if (!subject) return;
@@ -763,6 +784,18 @@ export default function SubjectAnalytics() {
         count: entry.count,
         share: entry.share,
       })),
+      /* Worked out here rather than by the model, because it is arithmetic and
+         arithmetic is the half of this page that is checkable. What goes over
+         the wire is conclusions rather than more figures — which measure is
+         carrying the shortfall, whether what goes wrong is about knowing the
+         work or about the sitting, where the difficulty filed and the result
+         disagree, and whether capability is running ahead of the score. A
+         model handed only the raw table restates it; handed these it has to
+         reason from them. See components/Subject/performance. */
+      performance: performance(
+        state,
+        model.rates.find((rate) => rate.key === 'quality')?.delta ?? null,
+      ) as unknown as Record<string, unknown>,
       goals: model.goals.map((goal) => ({
         title: goal.title,
         progress: Math.round(goal.progress),

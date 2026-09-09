@@ -474,6 +474,16 @@ export interface SubjectStatePayload {
   time?: Record<string, unknown>;
   momentum?: Record<string, unknown>;
   mistakes?: Array<{ label: string; count: number; share: number }>;
+  /**
+   * The relationships between the figures above, worked out before the call.
+   *
+   * Not more figures — conclusions. Which measure is carrying the shortfall,
+   * whether what goes wrong is about knowing the work or about the sitting,
+   * where the difficulty filed and the result disagree, and whether capability
+   * is running ahead of the score. A model handed only the raw table restates
+   * it; handed these it has to reason from them. See components/Subject/performance.
+   */
+  performance?: Record<string, unknown>;
   goals?: Array<{
     title: string;
     progress: number;
@@ -523,6 +533,24 @@ export interface PastRecommendation {
   on: string;
   taken: boolean;
   task_id: string;
+}
+
+/**
+ * The last reading written for this subject, if there is one.
+ *
+ * Costs nothing — it is a read of what a previous call already paid for. The
+ * panel asks on load so a refresh does not throw away a reading, which is what
+ * it used to do: the answer lived in component state and nowhere else.
+ *
+ * `reading` is null when none has been asked for yet, which is a real state
+ * and not a failure.
+ */
+export function savedSubjectReading(
+  subject: string,
+): Promise<ApiResult<{ reading: SubjectReading | null; written_at: string; span: string }>> {
+  return get<{ reading: SubjectReading | null; written_at: string; span: string }>(
+    `/api/subject_reading_saved?subject=${encodeURIComponent(subject)}`,
+  );
 }
 
 export function subjectRecommendations(

@@ -32,8 +32,10 @@ at moves, and a change measured against a moving baseline is not a change.
 Everything else the model produced is prose over figures already on screen,
 and storing prose would mean a page that quotes yesterday's numbers.
 """
+import json
 from datetime import datetime
-from typing import List, Optional
+from hashlib import sha1
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -141,6 +143,14 @@ class SubjectStateBody(BaseModel):
     time: Optional[TimeRead] = None
     momentum: Optional[MomentumRead] = None
     mistakes: List[Mistake] = []
+    #: The relationships between everything above, worked out by the page.
+    #:
+    #: Passed through rather than parsed into a model of its own. Every field
+    #: is arithmetic the client already did and the brief only prints — adding
+    #: a schema here would mean a second copy of a shape that lives in
+    #: frontend/src/components/Subject/performance, kept in step by hand. What
+    #: matters is bounded before it reaches the prompt, in `brief_from`.
+    performance: Dict[str, Any] = {}
     goals: List[GoalRead] = []
     #: The authored skill tree's area names. A curriculum, not a measurement —
     #: the prompt says so at length.
@@ -270,6 +280,7 @@ def write_reading(body: SubjectStateBody, username: str = Depends(current_userna
         'time': body.time.model_dump() if body.time else {},
         'momentum': body.momentum.model_dump() if body.momentum else {},
         'mistakes': [entry.model_dump() for entry in body.mistakes[:REASONS]],
+        'performance': body.performance or {},
         'goals': [
             {'title': _text(goal.title), 'progress': goal.progress,
              'deadline': _text(goal.deadline), 'standing': _text(goal.standing),
@@ -312,7 +323,81 @@ def write_reading(body: SubjectStateBody, username: str = Depends(current_userna
         kept.append({**step, 'id': row['id']})
 
     read['next_steps'] = kept
+    _keep_reading(username, subject, read, now, _text(body.span, 64))
     return ok(reading=read)
+
+
+# --------------------------------------------------------------------------
+# Surviving a refresh
+# --------------------------------------------------------------------------
+# A reading costs a call, and until now it lived in a `useState` — so reloading
+# the page threw away work the reader had paid for, and the panel came back
+# empty with the button still offering to do it again. The steps were on record
+# the whole time, in `subject_recommendations`, but that table is a ledger of
+# what was advised rather than a copy of what was written: no diagnosis, no
+# priorities, no insights, no drills. A page rebuilt from it would come back
+# missing three sections out of four.
+#
+# So the whole answer is kept, one row per subject, and the page asks for it on
+# load. The ledger next door is untouched and still never rewritten.
+def _keep_reading(username: str, subject: str, read: dict, when: str,
+                  span: str = '') -> None:
+    """Hold this reading as the current one for this subject.
+
+    Replaces rather than appends. This is a restore point for a panel, not a
+    history — the history is `subject_recommendations`, which is what the
+    outcome loop reads and the one nothing overwrites.
+
+    A failure here is deliberately silent. The reading has already been made
+    and is already on its way back to the page; losing the ability to restore
+    it after a refresh is not worth turning a call that worked into an error.
+    """
+    try:
+        body = json.dumps(read)
+    except (TypeError, ValueError):
+        return
+
+    row_id = 'sr{}'.format(sha1(
+        '{}|{}'.format(username, subject).encode('utf-8')).hexdigest()[:24])
+    fields = {'user_id': username, 'subject': subject, 'span': span,
+              'written_at': when, 'body': body}
+    if db.find_row('subject_readings', row_id, user_id=username):
+        db.update_row('subject_readings', row_id, fields, user_id=username)
+    else:
+        db.insert_row('subject_readings', {'id': row_id, **fields})
+
+
+@router.get('/api/subject_reading_saved')
+def saved_reading(subject: str = '', username: str = Depends(current_username)):
+    """The last reading written for this subject, if there is one.
+
+    `reading` comes back null rather than absent when there is none: the page
+    has to tell "nothing has been asked for yet" from "the request failed",
+    and those two read the same if the key simply goes missing.
+    """
+    _, user = load_user(username)
+    if not user:
+        return fail('User not found')
+
+    name = _text(subject)
+    if not name:
+        return ok(reading=None, written_at='', span='')
+
+    row = next((row for row in db.rows_for('subject_readings', username)
+                if (row.get('subject') or '') == name), None)
+    if not row:
+        return ok(reading=None, written_at='', span='')
+
+    try:
+        read = json.loads(row.get('body') or '')
+    except (TypeError, ValueError):
+        # A row that cannot be read is a row that is not there. It is not
+        # deleted: the next reading replaces it anyway, and a corrupt cache is
+        # worth leaving in place long enough to be noticed.
+        return ok(reading=None, written_at='', span='')
+
+    return ok(reading=read, written_at=row.get('written_at') or '',
+              span=row.get('span') or '')
 
 
 # --------------------------------------------------------------------------
