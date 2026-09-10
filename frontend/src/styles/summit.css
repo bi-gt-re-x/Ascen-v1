@@ -203,34 +203,20 @@ html[data-theme="dark"] .peak-hero {
 }
 
 /* ---------- Inside the card ------------------------------------------------
-   A hero holds whatever header the page already had, so almost nothing here
-   sizes its contents. These three are the parts that turned out to be the
-   same on every page.
+   A hero holds whatever header the page already had, so nothing here sizes its
+   contents — the rows and the wrapping are each page's own, in each page's own
+   sheet, scoped under `.peak-hero`.
 
-   `.peak-hero-row` is the title-and-actions line: the shape every page's
-   header was already making by hand, named once so a page that has not been
-   converted yet can be, and so the wrap behaviour is the same on all of them. */
-.peak-hero-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
-    flex-wrap: wrap;
-}
+   A `.peak-hero-row` and a `.peak-hero-foot` stood here for a while, meaning
+   "the title-and-actions line" and "the strip along the bottom". Both were
+   speculative: every page already had a class making that row, and naming the
+   shape a second time only offered a second way to build it that could
+   disagree with the first. They are gone, for the reason the components barrel
+   gives for deleting a UI kit nothing imported.
 
-/* The strip along the bottom of a hero — a tab bar, a set of window chips, a
-   row of figures. Separated by air rather than a rule: a border across a card
-   with a landscape in it cuts the mountains in half. */
-.peak-hero-foot {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    min-width: 0;
-}
-
-/* The eyebrow over a hero's title. Small, uppercase, and tinted with the
-   page's own tone, which is what ties the word to the mountains under it. */
+   The eyebrow below stayed, because it is a thing rather than a shape: small,
+   uppercase, and tinted with the page's own tone, which is what ties the word
+   to the mountains under it. */
 .peak-eyebrow {
     display: inline-flex;
     align-items: center;

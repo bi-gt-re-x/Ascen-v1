@@ -19,11 +19,18 @@
  * a taken step says "Recorded" rather than merely going green.
  */
 
-/* ---- The hero ----------------------------------------------------------
+/* ---- The standing card --------------------------------------------------
    One card that answers "where am I" before anything is scrolled: the ring,
    the verdict, the goal it is all for. The washes are two radial gradients
    rather than a flat tint, so the card has a direction to it and does not
-   read as a coloured box. */
+   read as a coloured box.
+
+   They are the *band's* colour rather than the house violet, and that is a
+   correction rather than a preference. The page now opens on a mountain hero
+   whose sky is also the band (pages/SubjectAnalytics, components/Hero.tsx), so
+   a fixed violet-and-blue card directly under a green one was two decorated
+   cards disagreeing about what colour this subject is. One tint, from the same
+   figure the ring draws, all the way down. */
 .sx-hero {
     position: relative;
     isolation: isolate;
@@ -38,15 +45,21 @@
     background-color: var(--ax-card);
     background-image:
         radial-gradient(90% 130% at 0% 0%,
-            color-mix(in srgb, var(--ax-violet) 20%, transparent) 0%, transparent 62%),
+            color-mix(in srgb, var(--sx-band) 17%, transparent) 0%, transparent 62%),
         radial-gradient(80% 130% at 100% 100%,
-            color-mix(in srgb, var(--ax-blue) 18%, transparent) 0%, transparent 66%);
+            color-mix(in srgb, var(--sx-band) 12%, transparent) 0%, transparent 66%);
     box-shadow: var(--ax-shadow);
 }
 
 /* The band the ring is painted in. Set from the score rather than from house
    accent: a 42 that looks like an 88 is the page saying one thing in words and
-   another in colour. */
+   another in colour.
+
+   It has to be declared before the rule above can spend it, and it is: a
+   custom property is resolved at use, not at parse, so the two blocks may sit
+   in either order. `--sx-band` is set on this same element by the attribute
+   selectors below, which out-specify nothing above — there is nothing above
+   setting it. */
 .sx-hero[data-band="high"] { --sx-band: var(--ax-green); }
 .sx-hero[data-band="good"] { --sx-band: var(--ax-blue); }
 .sx-hero[data-band="fair"] { --sx-band: var(--ax-amber); }

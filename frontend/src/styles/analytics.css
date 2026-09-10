@@ -1404,7 +1404,39 @@ body:has(.ax-page) .app-main {
    distinction is the difference between a fix and a collision. */
 .ax-hero { gap: 18px; }
 
+/* The hero takes this page's surfaces rather than summit.css's defaults.
+ *
+ * Those defaults are for a page that has not said, and on white the two are
+ * the same colour anyway. In the dark they are not: the hero ships #161d2c and
+ * `--ax-card` is #151b24, and a card at the top of the page that is a few
+ * points bluer than every card under it reads as a mistake rather than as a
+ * choice.
+ *
+ * The selector is doubled because the plain one would lose. summit.css sets
+ * the dark surface at `html[data-theme="dark"] .peak-hero`, which is one
+ * element and one attribute and one class — more specific than two classes —
+ * so `.ax-page .peak-hero` alone would be overruled in exactly the theme this
+ * exists to fix. One declaration covers both themes because `--ax-card` is
+ * already the token that flips. */
+html[data-theme="dark"] .ax-page .peak-hero,
+.ax-page .peak-hero {
+    --peak-surface: var(--ax-card);
+    --peak-line: var(--ax-line);
+}
+
 .peak-hero .ax-head { width: 100%; }
+.peak-hero .ax-controls { width: 100%; }
+
+/* The compare label is the quietest thing in the card and was competing with
+   the sky for it. Given the surface back, it reads as a caption on the picker
+   beside it rather than as a fourth control. */
+.peak-hero .ax-compare {
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--peak-surface) 52%, transparent);
+    -webkit-backdrop-filter: blur(7px);
+    backdrop-filter: blur(7px);
+}
 
 /* The tab's colour reaches the title's icon, so the one glyph that is always
    on screen agrees with the sky behind it. */
@@ -1416,17 +1448,25 @@ body:has(.ax-page) .app-main {
    is a box in a box, and it would sit on the mountains like a sticker; at just
    over half opacity the range is visible through it and the strip reads as
    something lying on the landscape. The blur is what keeps the labels legible
-   where a ridge passes behind them. */
-.peak-hero .ax-tabs {
+   where a ridge passes behind them.
+
+   The window chips and the subject select get the same treatment for the same
+   reason — three separate opaque strips down one card would be three stickers
+   instead of one. */
+.peak-hero .ax-tabs,
+.peak-hero .ax-chips,
+.peak-hero .ax-select {
     background: color-mix(in srgb, var(--peak-surface) 58%, transparent);
     border-color: color-mix(in srgb, var(--peak-a) 20%, transparent);
     -webkit-backdrop-filter: blur(7px);
     backdrop-filter: blur(7px);
 }
 
-/* The open tab is filled with the tone rather than the page's violet, for the
-   same reason the icon is: one accent per tab, everywhere it shows. */
+/* The open tab and the chosen window are filled with the tone rather than the
+   page's violet, for the same reason the icon is: one accent per tab,
+   everywhere it shows. */
 .peak-hero .ax-tabs-major .ax-tab.is-on { background: var(--peak-a); }
+.peak-hero .ax-chip.is-on { background: var(--peak-a); }
 .peak-hero .ax-tab:hover:not(.is-on) {
     background: color-mix(in srgb, var(--peak-a) 12%, transparent);
     color: var(--ax-text);
@@ -1496,6 +1536,12 @@ body:has(.ax-page) .app-main {
     font-family: inherit;
     font-size: 13px;
     font-weight: 500;
+    /* Two of these are `<Link>`s — Overall analytics on the subject page, Open
+       the tree — and nothing in this sheet resets an anchor, so they wore the
+       browser's underline through the middle of a button. Invisible while the
+       header was grey text on the page's own ground; not once the header
+       became a card with a landscape behind it. */
+    text-decoration: none;
 }
 
 .ax-btn { cursor: pointer; font-weight: 600; }

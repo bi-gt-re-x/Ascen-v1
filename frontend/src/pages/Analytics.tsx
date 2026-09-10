@@ -511,13 +511,15 @@ export default function Analytics() {
           the shared 18px the plan, the diagnosis and the cards ran together as
           one wall. */}
       <div className={`ax-shell page-shell ax-view-${view.key}`}>
-        {/* Title row and tab bar in one card, over that tab's own range.
-            They were two bands with a gap between them, which put the page's
-            two most important controls — where am I, and where else can I go —
-            on either side of a seam. In one card they read as one piece of
-            chrome, and the sky behind them changes with the tab, so pressing
-            one is something the reader *sees* rather than something they
-            confirm by re-reading the title. See components/Hero.tsx. */}
+        {/* Every control on this page, in one card, over that tab's own range.
+            The title row, the seven tabs and the window picker were three bare
+            bands stacked with gaps between them, so the page opened with three
+            seams before it said anything — and the two questions a reader
+            actually arrives with, *where am I* and *what am I looking at*, sat
+            on opposite sides of one of them. In one card they read as one
+            piece of chrome, and the sky changes with the tab, so pressing one
+            is something the reader *sees* rather than something they confirm
+            by re-reading the title. See components/Hero.tsx. */}
         <PageHero variant={`analytics-${view.key}`} tone={view.tone} className="ax-hero">
           <Header
             view={view}
@@ -528,12 +530,25 @@ export default function Analytics() {
             dataName={seriesFilename(username ?? 'account', new Date())}
           />
           <ViewTabs active={view.key} onView={openView} />
+          {/* Not during setup, for the same reason the tab body is not: a
+              window picker over a page with nothing in it to scope is a
+              control that does nothing. The tabs stay, because they are the
+              way out. */}
+          {!showSetup && (
+            <Controls
+              chosen={span}
+              onWindow={chooseSpan}
+              subject={subject}
+              onSubject={setSubject}
+              subjects={subjectOptions}
+              compareLabel={option.compare}
+            />
+          )}
         </PageHero>
 
-        {/* The setup screen replaces the controls as well as the tab, because
-            a window picker over a page with nothing in it to scope is a control
-            that does nothing — and the one thing this screen is for is being
-            the only thing on it. */}
+        {/* The setup screen is the only thing under the hero when it is open —
+            that is the whole point of it. The controls it used to replace are
+            in the hero now and hidden from there. */}
         {showSetup ? (
           <AnalyticsSetup
             subjects={subjectOptions}
@@ -545,15 +560,6 @@ export default function Analytics() {
           />
         ) : (
           <>
-        <Controls
-          chosen={span}
-          onWindow={chooseSpan}
-          subject={subject}
-          onSubject={setSubject}
-          subjects={subjectOptions}
-          compareLabel={option.compare}
-        />
-
         {/* One sentence, same place, every tab. See `TabOpening`. */}
         {opening}
 
