@@ -11,7 +11,7 @@
  * `view-pane active` on the pane is kept for the same reason: a pane without
  * it is `display: none`, and only one pane is ever mounted now.
  */
-import { NavLink } from 'react-router-dom';
+import { NavLink, useSearchParams } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { usePageEntrance } from '@/hooks';
 
@@ -21,13 +21,30 @@ const VIEWS = [
   { to: '/calendar/month', label: 'Month' },
 ];
 
+/**
+ * The three links, each carrying the day the reader is on.
+ *
+ * This is the whole of what makes the switcher a magnification control rather
+ * than three separate calendars: `?date=` is the cursor all three views read
+ * (hooks/useCalendarCursor), so a link that dropped it would step out to the
+ * week and land on this one. Nothing is appended when the parameter is absent,
+ * because absent means today and a URL that says so is a URL that goes stale.
+ *
+ * `?task=` is deliberately *not* carried. It is the Day view's — the top bar's
+ * search uses it to mark one block — and it means nothing to a week or a
+ * month; taking it along would leave it in the URL to fire again on the way
+ * back.
+ */
 export function ViewSwitcher() {
+  const [params] = useSearchParams();
+  const date = params.get('date');
+
   return (
     <div className="view-toggle" role="tablist" aria-label="Calendar view">
       {VIEWS.map((view) => (
         <NavLink
           key={view.to}
-          to={view.to}
+          to={date ? `${view.to}?date=${date}` : view.to}
           role="tab"
           className={({ isActive }) => `view-toggle-btn${isActive ? ' active' : ''}`}
         >

@@ -54,6 +54,26 @@ export interface DayPanelProps {
   onStart?: () => void;
   /** Whether that session is already running, which makes Start a no-op. */
   focusRunning?: boolean;
+  /**
+   * A card has been picked up, and put down again.
+   *
+   * The month grid beside this list is the drop target — the coarse gesture a
+   * month view is for is "this goes on the 14th", and until now the only way
+   * to say it was to open the day, delete the thing and make it again on the
+   * other one. Absent when nothing can be dropped anywhere, and the cards are
+   * then not draggable at all rather than draggable onto nothing.
+   */
+  onDragEntry?: (entry: DayEntry) => void;
+  onDragEnd?: () => void;
+  /**
+   * The same move, asked for rather than performed.
+   *
+   * A drag is a pointer gesture and nothing else, so a card that can only be
+   * moved by dragging cannot be moved at all by a reader using a keyboard.
+   * This puts the same thing in the menu that is already on the card: it arms
+   * the grid, and the next day picked there is where the card goes.
+   */
+  onMoveEntry?: (entry: DayEntry) => void;
 }
 
 /**
@@ -147,6 +167,9 @@ export function DayPanel({
   completingId,
   onStart,
   focusRunning = false,
+  onDragEntry,
+  onDragEnd,
+  onMoveEntry,
 }: DayPanelProps) {
   let taskNumber = 0;
   let nextClaimed = false;
@@ -248,7 +271,26 @@ export function DayPanel({
                 // the left accent come from styles/calendar/palette.css. The
                 // `priority-*` class no longer paints anything — difficulty is
                 // the word in the pill above the title and nowhere a colour.
-                <li className={classes} data-family={entry.family} key={entry.key}>
+                <li
+                  className={classes}
+                  data-family={entry.family}
+                  key={entry.key}
+                  /* A finished thing does not move. Rescheduling something you
+                     have already done is not a plan, it is a lie about when it
+                     happened — and the XP is already banked on the day it was
+                     banked on. */
+                  draggable={Boolean(onDragEntry) && !entry.completed}
+                  onDragStart={(event) => {
+                    if (!onDragEntry) return;
+                    /* Firefox will not start a drag without a payload, and
+                       the text is what a drop outside the app would paste —
+                       so it says what the thing is rather than an id. */
+                    event.dataTransfer.setData('text/plain', entry.name);
+                    event.dataTransfer.effectAllowed = 'move';
+                    onDragEntry(entry);
+                  }}
+                  onDragEnd={() => onDragEnd?.()}
+                >
                   {!isTask && <EventIcon />}
 
                   <div className="card-body">
@@ -400,6 +442,17 @@ export function DayPanel({
                           onClick={() => onEditEvent(entry)}
                         >
                           Edit
+                        </button>
+                      )}
+                      {/* Same rule as the drag: a finished thing does not
+                          move, so the item is not offered on one. */}
+                      {onMoveEntry && !entry.completed && (
+                        <button
+                          type="button"
+                          className="card-menu-item"
+                          onClick={() => onMoveEntry(entry)}
+                        >
+                          Move to a day…
                         </button>
                       )}
                       <button

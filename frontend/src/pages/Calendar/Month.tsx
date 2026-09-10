@@ -38,6 +38,8 @@ import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
 import { RatePrompt } from '@/components/Tasks';
 import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
+  useCalendarCursor,
+  useCalendarKeys,
   useCalendarStore,
   useCalendarTasks,
   useDayFocus,
@@ -91,9 +93,21 @@ export default function Month() {
   const navigate = useNavigate();
   const { prefs, dailyGoal } = useSettings();
 
-  const [cursor, setCursor] = useState(() => new Date());
-  // The day the panel is showing. Today, until another is picked.
-  const [selectedKey, setSelectedKey] = useState(() => keyOf(new Date()));
+  /**
+   * The day the panel is showing, and — as the month containing it — the grid.
+   *
+   * These were two pieces of state: a `cursor` for the grid's month and a
+   * `selectedKey` for the panel, moved independently, so stepping the month
+   * left the right-hand column describing a day that was no longer on screen.
+   * That contradicted this file's own first principle, which is that
+   * everything on the page is scoped to the month in front of the reader.
+   *
+   * One cursor now, and it is the calendar's rather than this view's
+   * (hooks/useCalendarCursor) — so picking the 14th here and pressing Day
+   * opens the 14th, which is the whole reason the switcher exists.
+   */
+  const { date: cursor, iso: selectedIso, goTo } = useCalendarCursor();
+  const selectedKey = keyOf(cursor);
   const [history, setHistory] = useState<FocusHistory>({});
   /* The account's goals, for the Goals Progress card under the grid. Read once
      per account rather than per month: a goal is not a fact about September,
@@ -230,8 +244,6 @@ export default function Month() {
     [selectedKey, store.data, tasks],
   );
 
-  const selectedIso = isoOf(selectedKey);
-
   /**
    * What is coming, forwards from today.
    *
@@ -302,17 +314,124 @@ export default function Month() {
     [actions, selectedIso, tasks],
   );
 
-  /** A day in the corner of the grid: step to its month, then select it. */
-  const selectOther = useCallback((date: Date) => {
-    setCursor(new Date(date.getFullYear(), date.getMonth(), 1));
-    setSelectedKey(keyOf(date));
+  /**
+   * Stepping the grid a month, and taking the panel with it.
+   *
+   * The day it lands on is the first of the target month, or today when that
+   * month is this one — a reader stepping back to September wants September,
+   * and a reader pressing it twice more and coming back wants the day they
+   * started on to be the obvious one. Carrying the day-of-month across instead
+   * would drift: the 31st of January steps to the 28th of February and back to
+   * the 28th of January.
+   */
+  const stepMonth = useCallback(
+    (delta: number) => {
+      const at = new Date(year, month + delta, 1);
+      const now = new Date();
+      const isThisMonth =
+        at.getFullYear() === now.getFullYear() && at.getMonth() === now.getMonth();
+      goTo(isThisMonth ? now : at);
+    },
+    [goTo, month, year],
+  );
+
+  const goToday = useCallback(() => goTo(new Date()), [goTo]);
+
+  // --- dragging a day's things onto another day ---------------------------
+  /**
+   * The card currently in the reader's hand, if any.
+   *
+   * The Week and Day views drag on a *time* grid — pixels to minutes, with
+   * overlap refused before the fact (hooks/useGridDrag) — and none of that
+   * applies here, because a month cell is a day and has no time axis to land
+   * on. So this is the browser's own drag and drop, and what it means is
+   * narrower and more useful: keep the clock times, change the date.
+   *
+   * That is the gesture a month view exists for. Rescheduling to the hour is a
+   * decision you make once, on a grid that shows hours; moving something to
+   * next Tuesday is the one you make constantly, and until now it took
+   * deleting the thing and making it again on the other day.
+   */
+  const [dragging, setDragging] = useState<DayEntry | null>(null);
+  /**
+   * The same thing, waiting for a day rather than following a pointer.
+   *
+   * A drag is a pointer gesture and cannot be performed any other way, so a
+   * card that could only be moved by dragging could not be moved at all
+   * without a mouse. `Move to a day…` in the card's own menu arms this, the
+   * grid becomes a day picker (`pending` on MonthGrid), and the next day
+   * picked — clicked, or arrowed to and entered — is where the card goes.
+   *
+   * The two are one gesture with two ways in: both end at `moveTo` below.
+   */
+  const [pending, setPending] = useState<DayEntry | null>(null);
+
+  /** "09:30" on a given day, as a real moment. */
+  const at = useCallback((day: Date, time: string): Date => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const when = new Date(day);
+    when.setHours(hours ?? 0, minutes ?? 0, 0, 0);
+    return when;
   }, []);
 
-  const goToday = useCallback(() => {
-    const now = new Date();
-    setCursor(new Date(now.getFullYear(), now.getMonth(), 1));
-    setSelectedKey(keyOf(now));
-  }, []);
+  /**
+   * Put an entry on a day, keeping the clock times it already had.
+   *
+   * The one thing a month view can say about time that a week view cannot say
+   * better, and the whole of what a drop here means. `retime` is the same call
+   * the Week and Day views commit their drags with (hooks/useBlockActions), so
+   * an event goes to the store and a task is rewritten through the API,
+   * exactly as they are when a block is dragged across an hour.
+   */
+  const moveTo = useCallback(
+    (entry: DayEntry | null, day: Date) => {
+      setDragging(null);
+      setPending(null);
+      if (!entry) return;
+
+      const toIso = dates.isoDate(day);
+      // Dropping a card back on the day it came from is not a move.
+      if (toIso === selectedIso) return;
+
+      if (entry.kind === 'event') {
+        if (!entry.section) return;
+        actions.retime({
+          fromIso: selectedIso,
+          toIso,
+          section: entry.section,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
+        });
+        return;
+      }
+
+      const task = tasks.find((candidate) => String(candidate.id) === entry.taskId);
+      if (!task || !entry.startTime || !entry.endTime) return;
+
+      const startAt = at(day, entry.startTime);
+      const endAt = at(day, entry.endTime);
+      // A task that ran past midnight keeps its length rather than collapsing
+      // to a negative one — the end is on the day after the start, as it was.
+      if (endAt <= startAt) endAt.setDate(endAt.getDate() + 1);
+
+      actions.retime({ fromIso: selectedIso, toIso, task, startAt, endAt });
+    },
+    [actions, at, selectedIso, tasks],
+  );
+
+  /* Picking a day means two different things depending on whether the grid is
+     holding something, and this is the only place that can know: MonthGrid is
+     told it is a picker, not what it is picking for. */
+  const pickDay = useCallback(
+    (day: Date) => {
+      if (pending) moveTo(pending, day);
+      else goTo(day);
+    },
+    [goTo, moveTo, pending],
+  );
+
+  /* J / K / T, on the same three controls the grid's header carries. */
+  useCalendarKeys({ onStep: stepMonth, onToday: goToday, enabled: !actions.dialog });
 
   if (loading) return <Loading label="Loading your month" />;
   if (!hasData) return <ErrorState message={error ?? 'No data came back.'} onRetry={refresh} />;
@@ -331,10 +450,19 @@ export default function Month() {
           selectedKey={selectedKey}
           weekStart={weekStartDay(prefs)}
           days={figures.days}
-          onStep={(delta) => setCursor(new Date(year, month + delta, 1))}
+          onStep={stepMonth}
           onToday={goToday}
-          onSelect={setSelectedKey}
-          onSelectOther={selectOther}
+          /* A day in the corner of the grid belongs to a neighbouring month,
+             and picking it steps there — the grid follows the cursor's month,
+             so there is nothing extra to do and both props are the same call.
+             They stay two props because MonthGrid still has to know which
+             cells are the month's own, and only it can. */
+          onSelect={(key) => pickDay(dates.fromIsoDate(isoOf(key)))}
+          onSelectOther={pickDay}
+          onDropDay={(day) => moveTo(dragging, day)}
+          dropping={Boolean(dragging)}
+          pending={pending?.name ?? null}
+          onCancelPending={() => setPending(null)}
           tools={
             <>
               <ViewSwitcher />
@@ -417,6 +545,9 @@ export default function Month() {
                  task begins it; it does not claim to be timing that task. */
               onStart={session.start}
               focusRunning={session.running}
+              onDragEntry={setDragging}
+              onDragEnd={() => setDragging(null)}
+              onMoveEntry={setPending}
             />
           </section>
 

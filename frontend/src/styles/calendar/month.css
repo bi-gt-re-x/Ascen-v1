@@ -3752,6 +3752,97 @@ html[data-theme="dark"] .mv-side::-webkit-scrollbar-thumb { background: #39414d;
    the grid's edges — which is what happened to the four corner cells. */
 .mv-cell.is-selected { box-shadow: inset 0 0 0 2px var(--mv-accent); z-index: 1; }
 
+/* ---- Reaching the grid with the keyboard --------------------------------
+   The grid is one tab stop and the arrows move inside it — the roving
+   tabindex in components/Calendar/MonthGrid.tsx. Every cell used to be its own
+   stop, which made tabbing past the calendar forty-two presses and moving
+   within it impossible.
+
+   `:focus-visible` rather than `:focus` because a click on a cell focuses it,
+   and a ring appearing under the pointer on every press is the browser
+   answering a question nobody asked. The ring is drawn inside the cell like
+   the selection is, so the two read as the same object rather than as a box
+   around a box; it is the accent's own colour at two widths, so a cell that is
+   both focused and selected still says so. */
+.mv-cell:focus { outline: none; }
+.mv-cell:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--mv-surface), inset 0 0 0 4px var(--mv-accent);
+    z-index: 2;
+}
+
+/* ---- The day something is about to be dropped on ------------------------
+   Cards in the panel beside the grid can be dragged onto a day, which moves
+   them there and keeps their clock times — see the note in
+   pages/Calendar/Month.tsx.
+
+   The whole grid dims very slightly while a drag is in flight, so the forty-two
+   days read as one field of targets rather than as the page they were a moment
+   ago; the cell under the pointer comes back up out of it. That is the
+   difference between "you may drop this somewhere" and "you will drop it
+   here", and a drag with only the second is a drag the reader has to guess
+   the rules of. */
+.mv-grid.is-dropping .mv-cell { cursor: copy; }
+.mv-grid.is-dropping .mv-cell:not(.is-over) { opacity: .72; }
+.mv-cell.is-over {
+    background: color-mix(in srgb, var(--mv-accent) 14%, transparent);
+    box-shadow: inset 0 0 0 2px var(--mv-accent);
+    z-index: 3;
+}
+/* An outside day takes a drop like any other — the 1st of next month is a
+   date — so it has to light up like one, over a cell that is otherwise drawn
+   as context rather than content. */
+.mv-cell.is-outside.is-over .mv-daynum { opacity: 1; }
+
+/* ---- The grid as a day picker -------------------------------------------
+   `Move to a day…` in a card's menu arms the same move the drag performs, for
+   anyone not using a pointer. The strip is what makes that a mode rather than
+   a trap: it says what is being held and carries the way out of holding it,
+   and Escape does the same from anywhere in the grid.
+
+   It sits inside the card and above the day names, so the grid it is talking
+   about is directly under it — a banner over the header would be describing
+   the month. */
+.mv-pending {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--mv-line-soft);
+    background: color-mix(in srgb, var(--mv-accent) 10%, transparent);
+    color: var(--mv-accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.mv-pending-what strong {
+    font-weight: 800;
+    /* A long title must not push the Cancel off the end of the strip. */
+    overflow-wrap: anywhere;
+}
+.mv-pending-stop {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    border: 1px solid color-mix(in srgb, var(--mv-accent) 40%, transparent);
+    border-radius: 999px;
+    background: var(--mv-surface);
+    color: var(--mv-accent);
+    font: inherit;
+    font-size: 0.74rem;
+    cursor: pointer;
+}
+.mv-pending-stop:hover { background: color-mix(in srgb, var(--mv-accent) 14%, var(--mv-surface)); }
+
+/* A card that can be picked up says so before it is. Only the ones that can:
+   a finished thing is not draggable (DayPanel), and a grab cursor on it would
+   be an offer the card refuses. */
+.mv-side .task-section[draggable='true'] { cursor: grab; }
+.mv-side .task-section[draggable='true']:active { cursor: grabbing; }
+
+@media (prefers-reduced-motion: reduce) {
+    .mv-grid.is-dropping .mv-cell:not(.is-over) { opacity: 1; }
+}
+
 /* Dark. Every colour above is a token and swaps itself; the two things that
    are not are the card's shadow — which is cast in near-black and disappears
    on a near-black page — and the weekend tint, which `color-mix` makes too

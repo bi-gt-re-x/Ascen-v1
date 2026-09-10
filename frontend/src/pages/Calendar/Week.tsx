@@ -35,6 +35,8 @@ import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
 import { RatePrompt } from '@/components/Tasks';
 import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
+  useCalendarCursor,
+  useCalendarKeys,
   useCalendarStore,
   useCalendarTasks,
   useDayFocus,
@@ -141,13 +143,18 @@ export default function Week() {
   const { prefs } = useSettings();
 
   /* The day the week starts on, from the account's preferences. It arrives a
-     moment after the page does, so the week on screen is re-anchored below
-     rather than only being right on the second visit. */
+     moment after the page does — which is why the week is *derived* from the
+     cursor on every render rather than stored: a stored week would have to be
+     re-anchored by an effect when the preference lands, and would be showing
+     the wrong seven days until it did.
+
+     The cursor is a day, not a week (hooks/useCalendarCursor). This view shows
+     the week containing it and keeps the day itself untouched, so stepping out
+     to a week from Wednesday and back into a day lands on Wednesday rather
+     than on whichever day the week happens to open with. */
   const startsOn = weekStartDay(prefs);
-  const [opens, setOpens] = useState(() => weekOf(new Date(), startsOn));
-  useEffect(() => {
-    setOpens((current) => weekOf(current, startsOn));
-  }, [startsOn]);
+  const { date: anchor, goTo } = useCalendarCursor();
+  const opens = useMemo(() => weekOf(anchor, startsOn), [anchor, startsOn]);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem('wkSidebarCollapsed') === '1';
@@ -164,10 +171,17 @@ export default function Week() {
    * always the month the banded week is in unless the reader has gone
    * wandering.
    */
-  const [mini, setMini] = useState(() => {
-    const start = weekOf(new Date(), startsOn);
-    return { year: start.getFullYear(), month: start.getMonth() };
-  });
+  const [mini, setMini] = useState(() => ({
+    year: opens.getFullYear(),
+    month: opens.getMonth(),
+  }));
+  /* Re-synced as an effect rather than inside the step, because the week can
+     now move without this view asking it to: the switcher arrives from a day
+     or a month carrying `?date=`, and Back steps the week too. Both have to
+     bring the mini-month with them, and only an effect sees all three. */
+  useEffect(() => {
+    setMini({ year: opens.getFullYear(), month: opens.getMonth() });
+  }, [opens]);
   /** True while the overview column is showing the subject library instead. */
   const [library, setLibrary] = useState(false);
   const [history, setHistory] = useState<FocusHistory>({});
@@ -548,24 +562,20 @@ export default function Week() {
     [actions, slot],
   );
 
-  /** Moving the week re-syncs the mini-month to the month that week starts in. */
-  const goToWeek = useCallback(
-    (date: Date) => {
-      const start = weekOf(date, startsOn);
-      setOpens(start);
-      setMini({ year: start.getFullYear(), month: start.getMonth() });
-    },
-    [startsOn],
+  /* Seven days on the *anchor*, not on the week's opening day, so the
+     day-of-week the reader came in on is carried along: Wednesday to
+     Wednesday, whatever the week starts on. Either lands in the same seven
+     days; only one of them survives a trip through the Day view. */
+  const stepWeek = useCallback(
+    (weeks: number) => goTo(dates.addDays(anchor, weeks * 7)),
+    [anchor, goTo],
   );
 
-  /* Not a functional update: it has to set the mini-month too, and queueing
-     that from inside an updater makes the updater a side effect — which React
-     is free to run twice. `opens` in the closure is the state this render was
-     drawn from, which is the week the arrow the reader pressed belongs to. */
-  const stepWeek = useCallback(
-    (weeks: number) => goToWeek(dates.addDays(opens, weeks * 7)),
-    [goToWeek, opens],
-  );
+  /** Back to the current week, and to the hour it is on the grid. */
+  const goToday = useCallback(() => {
+    goTo(new Date());
+    centerOnNow();
+  }, [centerOnNow, goTo]);
 
   const stepMini = useCallback(
     (delta: number) =>
@@ -586,6 +596,14 @@ export default function Week() {
       return !was;
     });
   }, []);
+
+  /* J / K / T, on the same three controls the header carries. Off while a
+     dialog, the drag chooser or the conflict prompt is up. */
+  useCalendarKeys({
+    onStep: stepWeek,
+    onToday: goToday,
+    enabled: !actions.dialog && !slot && !clash?.conflict,
+  });
 
   if (loading) return <Loading label="Loading your week" />;
   // Only when there is no week to show. A refresh that fails keeps the one
@@ -626,14 +644,7 @@ export default function Week() {
               it would step to a month you are already on and do nothing, but
               here it also puts the now line back in the middle of the grid,
               which is worth a press however far the reader has scrolled. */}
-          <button
-            type="button"
-            className="wk-today"
-            onClick={() => {
-              goToWeek(new Date());
-              centerOnNow();
-            }}
-          >
+          <button type="button" className="wk-today" onClick={goToday}>
             Today
           </button>
         </div>
@@ -819,7 +830,7 @@ export default function Week() {
             to: closesIso,
             weekStart: startsOn,
             onStep: stepMini,
-            onPick: (iso) => goToWeek(dates.fromIsoDate(iso)),
+            onPick: (iso) => goTo(dates.fromIsoDate(iso)),
           }}
           onOpenLibrary={() => setLibrary(true)}
           stats={overview}

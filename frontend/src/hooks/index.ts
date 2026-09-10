@@ -1,6 +1,10 @@
 export { useApi } from './useApi';
 export type { UseApiResult } from './useApi';
 export { useAuth } from './useAuth';
+export { useCalendarCursor } from './useCalendarCursor';
+export type { CalendarCursor } from './useCalendarCursor';
+export { useCalendarKeys } from './useCalendarKeys';
+export type { CalendarKeys } from './useCalendarKeys';
 export { useCalendarStore } from './useCalendarStore';
 export type { EventDraft, Scope, UseCalendarStore } from './useCalendarStore';
 export { useCalendarTasks } from './useCalendarTasks';

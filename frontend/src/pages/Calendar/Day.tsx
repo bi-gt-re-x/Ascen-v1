@@ -27,6 +27,8 @@ import { BlockDialogs } from '@/components/Calendar/BlockDialogs';
 import { RatePrompt } from '@/components/Tasks';
 import { ErrorState, Loading, RefreshButton } from '@/components';
 import {
+  useCalendarCursor,
+  useCalendarKeys,
   useCalendarStore,
   useCalendarTasks,
   useDayFocus,
@@ -119,19 +121,17 @@ export default function Day() {
    * that is not today, and has to be able to find one block in a grid
    * twenty-four hours tall.
    *
-   * `date` is read on every change rather than only at mount, because stepping
-   * between two task matches in the search is two dates on one mounted page.
+   * The day used to be `useState`, seeded from `?date=` at mount and re-synced
+   * from it by an effect. It is read straight off the URL now — the parameter
+   * is the state, not a hint about it — which is what lets the Week and Month
+   * views share it (hooks/useCalendarCursor) and what makes stepping between
+   * two search matches on one mounted page an ordinary re-render rather than
+   * an effect chasing a prop.
    */
   const [params, setParams] = useSearchParams();
-  const asked = params.get('date');
   const wanted = params.get('task');
+  const { date: cursor, iso, goTo } = useCalendarCursor();
 
-  const [cursor, setCursor] = useState(() => {
-    const start = asked ? new Date(`${asked}T00:00:00`) : new Date();
-    const day = Number.isNaN(start.getTime()) ? new Date() : start;
-    day.setHours(0, 0, 0, 0);
-    return day;
-  });
   /** The mini-month's own cursor: paging it does not move the day. */
   const [mini, setMini] = useState(() => ({
     year: cursor.getFullYear(),
@@ -142,7 +142,6 @@ export default function Day() {
   const actions = useBlockActions(username, store, tasks, account);
   const scroller = useRef<HTMLDivElement>(null);
 
-  const iso = dates.isoDate(cursor);
   const todayIso = dates.isoDate(now);
   const isToday = iso === todayIso;
 
@@ -208,23 +207,15 @@ export default function Day() {
     [dayFocus, focuses, iso],
   );
 
-  /** Moving the day re-syncs the mini-month to that day's month. */
-  const goTo = useCallback((date: Date) => {
-    const next = new Date(date);
-    next.setHours(0, 0, 0, 0);
-    setCursor(next);
-    setMini({ year: next.getFullYear(), month: next.getMonth() });
-  }, []);
-
-  /* A `?date=` that arrives, or changes, after this page is already mounted —
-     which is what stepping between two task matches in the top bar's search
-     looks like from here. */
+  /* Moving the day re-syncs the mini-month to that day's month.
+     The cursor itself is the URL's, so this is the only thing left to do when
+     it changes — and it is done as an effect rather than inside `goTo` because
+     the day can now move without this view asking it to: the switcher arrives
+     from a week or a month carrying `?date=`, and the mini-month has to follow
+     that as well as a press of the arrows. */
   useEffect(() => {
-    if (!asked) return;
-    const day = new Date(`${asked}T00:00:00`);
-    if (Number.isNaN(day.getTime()) || dates.isoDate(day) === iso) return;
-    goTo(day);
-  }, [asked, goTo, iso]);
+    setMini({ year: cursor.getFullYear(), month: cursor.getMonth() });
+  }, [cursor]);
 
   /**
    * `?task=` — scroll the grid to the block and mark it for a moment.
@@ -489,6 +480,26 @@ export default function Day() {
     });
   }, [actions, isToday, iso, now]);
 
+  const stepDay = useCallback(
+    (days: number) => goTo(dates.addDays(cursor, days)),
+    [cursor, goTo],
+  );
+
+  /** Back to today *and* to the hour it is — the landing the view opens on. */
+  const goToday = useCallback(() => {
+    goTo(new Date());
+    centerOnNow();
+  }, [centerOnNow, goTo]);
+
+  /* J / K / T, on the same three controls the header carries. Off while a
+     dialog or the drag chooser is up, for the reason hooks/useCalendarKeys
+     gives. */
+  useCalendarKeys({
+    onStep: stepDay,
+    onToday: goToday,
+    enabled: !actions.dialog && !slot,
+  });
+
   if (loading) return <Loading label="Loading your day" />;
   if (!hasData) return <ErrorState message={error ?? 'No data came back.'} onRetry={refresh} />;
 
@@ -502,7 +513,7 @@ export default function Day() {
               type="button"
               className="wk-arrow"
               aria-label="Previous day"
-              onClick={() => goTo(dates.addDays(cursor, -1))}
+              onClick={() => stepDay(-1)}
             >
               ❮
             </button>
@@ -510,21 +521,14 @@ export default function Day() {
               type="button"
               className="wk-arrow"
               aria-label="Next day"
-              onClick={() => goTo(dates.addDays(cursor, 1))}
+              onClick={() => stepDay(1)}
             >
               ❯
             </button>
           </div>
           {/* Back to today *and* to the hour it is — the same landing the view
               makes when it is opened. */}
-          <button
-            type="button"
-            className="wk-today"
-            onClick={() => {
-              goTo(new Date());
-              centerOnNow();
-            }}
-          >
+          <button type="button" className="wk-today" onClick={goToday}>
             Today
           </button>
         </div>

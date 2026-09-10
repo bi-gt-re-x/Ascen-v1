@@ -37,7 +37,7 @@
  * such — dimmed, and carrying no counts, because they are context rather than
  * content. Clicking one still goes there.
  */
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { XP_BANDS, xpBand, type MonthDay } from '@/utils/monthSummary';
 import { dates } from '@/utils';
 
@@ -67,6 +67,23 @@ export interface MonthGridProps {
    * select it, which is why this is not `onSelect`.
    */
   onSelectOther: (date: Date) => void;
+  /**
+   * Something has been dropped on a day. Absent when the view offers no drag,
+   * and the cells are then not drop targets at all rather than targets that
+   * accept and discard.
+   */
+  onDropDay?: (date: Date) => void;
+  /** True while something is being dragged, so the grid can show it is a target. */
+  dropping?: boolean;
+  /**
+   * The name of the thing waiting to be given a day, when one is — the
+   * keyboard's half of the drag. While it is set the grid is a day picker: it
+   * says what it is holding, every cell is a target, and picking one moves the
+   * card rather than selecting the day.
+   */
+  pending?: string | null;
+  /** Give up on the move. Bound to Escape as well as to the strip's button. */
+  onCancelPending?: () => void;
   /** The view switcher, rendered on the header's right-hand end. */
   tools?: React.ReactNode;
   /** Rendered under the dates, in the same column — the summary strip. */
@@ -92,6 +109,10 @@ export function MonthGrid({
   onToday,
   onSelect,
   onSelectOther,
+  onDropDay,
+  dropping = false,
+  pending = null,
+  onCancelPending,
   tools,
   children,
 }: MonthGridProps) {
@@ -123,6 +144,150 @@ export function MonthGrid({
     () => new Map(days.map((day) => [day.key, day])),
     [days],
   );
+
+  // --- moving about it with the keyboard ----------------------------------
+  /**
+   * Which cell is the grid's single tab stop.
+   *
+   * Every one of the forty-two used to be `tabIndex={0}`, so tabbing past the
+   * calendar meant forty-two presses and there was no way to move *within* it
+   * except more of them. A grid is one stop with arrows inside it — the
+   * roving-tabindex pattern every date picker uses — and the stop is the day
+   * the panel is already describing, so returning to the grid returns to where
+   * the reader was.
+   *
+   * The fallbacks matter on a month nobody has picked a day in: today when it
+   * is on screen, and the 1st otherwise, which are the two cells a reader
+   * would look at first anyway.
+   */
+  const stopKey = useMemo(() => {
+    const inGrid = (key: string | null) =>
+      key !== null && cells.some((cell) => cell.inMonth && cell.key === key);
+    if (inGrid(selectedKey)) return selectedKey;
+    if (inGrid(todayKey)) return todayKey;
+    return cells.find((cell) => cell.inMonth)?.key ?? null;
+  }, [cells, selectedKey, todayKey]);
+
+  const grid = useRef<HTMLDivElement>(null);
+  /* Set by a keystroke and read by the effect under it. Focus is only moved
+     when the reader moved it — a selection that came from a click, or from the
+     Day view arriving with a `?date=`, must not steal it. */
+  const viaKeys = useRef(false);
+
+  useEffect(() => {
+    if (!viaKeys.current) return;
+    viaKeys.current = false;
+    grid.current
+      ?.querySelector<HTMLElement>(`[data-date="${CSS.escape(selectedKey ?? '')}"]`)
+      ?.focus();
+  }, [selectedKey]);
+
+  /**
+   * Arrows move the day, and the day moves the panel with it.
+   *
+   * Strictly, the ARIA grid pattern moves *focus* on an arrow and waits for
+   * Enter to activate. A calendar is the case where that is wrong: the whole
+   * point of moving across the month is to read what is on each day, and a
+   * reader arrowing through a week with the right-hand column frozen on the
+   * day they started from is being shown the wrong thing on purpose. So the
+   * two travel together, and Enter is left working for anyone who expects it.
+   *
+   * A move that leaves the month goes through `onSelectOther`, which steps the
+   * grid — so the last cell of January and the first of February are next to
+   * each other, as they are in the year.
+   */
+  const moveBy = useCallback(
+    (days_: number, from: Date) => {
+      viaKeys.current = true;
+      const to = dates.addDays(from, days_);
+      const inMonth = to.getMonth() === month && to.getFullYear() === year;
+      if (inMonth) {
+        onSelect(`${to.getFullYear()}-${to.getMonth() + 1}-${to.getDate()}`);
+      } else {
+        onSelectOther(to);
+      }
+    },
+    [month, onSelect, onSelectOther, year],
+  );
+
+  const onGridKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-date]');
+      const key = cell?.dataset.date;
+      if (!key) return;
+      const [y, m, d] = key.split('-').map(Number);
+      if (y === undefined || m === undefined || d === undefined) return;
+      const at = new Date(y, m - 1, d);
+
+      switch (event.key) {
+        case 'ArrowLeft': moveBy(-1, at); break;
+        case 'ArrowRight': moveBy(1, at); break;
+        case 'ArrowUp': moveBy(-7, at); break;
+        case 'ArrowDown': moveBy(7, at); break;
+        // The week's ends, counted from the day the grid opens on rather than
+        // from Sunday — Home on a Monday-first grid is Monday.
+        case 'Home': moveBy(-((at.getDay() - weekStart + 7) % 7), at); break;
+        case 'End': moveBy(6 - ((at.getDay() - weekStart + 7) % 7), at); break;
+        // Safe here in a way they are not on the Week and Day views, where
+        // they page a twenty-four hour scroller: this grid has nothing to
+        // scroll, and they are what the date-picker pattern uses.
+        case 'PageUp': viaKeys.current = true; onStep(-1); break;
+        case 'PageDown': viaKeys.current = true; onStep(1); break;
+        // Only meaningful while a card is waiting for a day, and only then is
+        // it taken — Escape on an ordinary grid belongs to whatever is above it.
+        case 'Escape':
+          if (!pending) return;
+          onCancelPending?.();
+          break;
+        default: return;
+      }
+      event.preventDefault();
+    },
+    [moveBy, onCancelPending, onStep, pending, weekStart],
+  );
+
+  // --- and dropping something on it ---------------------------------------
+  /** The cell the pointer is over mid-drag, so it can say it will take it. */
+  const [over, setOver] = useState<string | null>(null);
+
+  /* One set of handlers, spread onto both kinds of cell — a day in the corner
+     of the grid belongs to a neighbouring month, and dropping something on it
+     is exactly as meaningful as dropping it on any other day. Absent when the
+     view passes no `onDropDay`, so a grid with no drag behind it does not
+     advertise itself as a target. */
+  const dropProps = useCallback(
+    (cell: { key: string; date: Date }) =>
+      onDropDay
+        ? {
+            onDragOver: (event: React.DragEvent) => {
+              // Without this the browser refuses the drop, and the cursor says
+              // so before the reader has let go.
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+            },
+            onDragEnter: () => setOver(cell.key),
+            onDragLeave: (event: React.DragEvent) => {
+              // Only when the pointer has actually left this cell: moving over
+              // a child fires a leave for the parent.
+              if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                setOver((current) => (current === cell.key ? null : current));
+              }
+            },
+            onDrop: (event: React.DragEvent) => {
+              event.preventDefault();
+              setOver(null);
+              onDropDay(cell.date);
+            },
+          }
+        : {},
+    [onDropDay],
+  );
+
+  /* A drag that ends anywhere else leaves the last cell lit, because no cell
+     ever gets the drop that would clear it. */
+  useEffect(() => {
+    if (!dropping) setOver(null);
+  }, [dropping]);
 
   return (
     <div className="mv-left">
@@ -165,6 +330,19 @@ export function MonthGrid({
           somebody had dropped a row of labels above rather than as the
           calendar it is. */}
       <div className="mv-card">
+        {/* What the grid is holding, and the way out of holding it. A mode
+            with no sign that it is on and no way to leave it is a trap, and
+            this one can be entered from a menu three columns away. */}
+        {pending && (
+          <div className="mv-pending" role="status">
+            <span className="mv-pending-what">
+              Pick a day for <strong>{pending}</strong>
+            </span>
+            <button type="button" className="mv-pending-stop" onClick={onCancelPending}>
+              Cancel
+            </button>
+          </div>
+        )}
         <div className="mv-daynames" aria-hidden="true">
           {names.map((name, index) => (
             <div
@@ -180,16 +358,23 @@ export function MonthGrid({
           ))}
         </div>
 
-        <div className="mv-grid" role="grid">
+        <div
+          className={`mv-grid${dropping || pending ? ' is-dropping' : ''}`}
+          role="grid"
+          ref={grid}
+          onKeyDown={onGridKeyDown}
+        >
         {cells.map((cell) => {
           if (!cell.inMonth) {
             return (
               <div
-                className="mv-cell is-outside"
+                className={`mv-cell is-outside${over === cell.key ? ' is-over' : ''}`}
                 key={cell.key}
+                data-date={cell.key}
                 role="button"
                 tabIndex={-1}
                 onClick={() => onSelectOther(cell.date)}
+                {...dropProps(cell)}
               >
                 <span className="mv-daynum">{cell.date.getDate()}</span>
               </div>
@@ -213,6 +398,7 @@ export function MonthGrid({
             count === 0 ? 'is-empty' : '',
             settled ? 'is-settled' : '',
             weekend ? 'is-weekend' : '',
+            over === cell.key ? 'is-over' : '',
           ]
             .filter(Boolean)
             .join(' ');
@@ -230,8 +416,11 @@ export function MonthGrid({
               className={classes}
               key={cell.key}
               data-date={cell.key}
-              role="button"
-              tabIndex={0}
+              role="gridcell"
+              aria-selected={cell.key === selectedKey}
+              /* The one tab stop. Everything else in the grid is reached with
+                 the arrows — see `stopKey` above. */
+              tabIndex={cell.key === stopKey ? 0 : -1}
               aria-label={`${dates.formatDate(cell.date, {
                 weekday: 'long',
                 month: 'long',
@@ -243,6 +432,7 @@ export function MonthGrid({
                 event.preventDefault();
                 onSelect(cell.key);
               }}
+              {...dropProps(cell)}
             >
               <span className="mv-cell-top">
                 <span className={`mv-daynum band-${band}`}>{cell.date.getDate()}</span>
