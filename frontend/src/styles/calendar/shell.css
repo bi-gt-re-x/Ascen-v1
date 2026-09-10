@@ -135,7 +135,7 @@
    button, the gap) is real and the calendar needs it, so this one is kept and
    confined rather than deleted. */
 body:has(.calendar-container) {
-    background: #0e0f12; /* dark theme page background (default) */
+    /* The page colour is not set here — see the two rules under this one. */
     /* The margin this page keeps around the card, on the three sides the
        chrome does not already own. A variable because .calendar-container has
        to subtract it to size itself, and a card that subtracts a different
@@ -189,6 +189,28 @@ body:has(.calendar-container) {
     padding-left: calc(var(--rail-w) + var(--cal-gutter));
     box-sizing: border-box;
 }
+/* ---- The page colour: light, unless the theme says dark -----------------
+   It was near-black, set as the default on the rule above, and the only rule
+   that turned it white lived in month.css, which only the Month view loads. A
+   route's stylesheet stays in the document once loaded, so the calendar was
+   white if the Month view had been opened since the last reload and black if
+   it had not. The Week and Day views came up on a black ground with the light
+   theme's colours drawn on it, which is what read as the page inverting
+   itself for no reason.
+
+   So both halves are here, in the one sheet all three views import, and each
+   is keyed on the theme rather than one being a default the other corrects.
+   `html:not([data-theme="dark"])` rather than a bare `body:has(...)`: the
+   pair out-rank every `html[data-theme] body` and `body.classic` rule any
+   other page's sheet might add, so what has been visited before cannot win
+   here either. styles/calendar/background.test.ts keeps it that way.
+
+   White rather than the app's grey: the card is transparent (FULL BLEED,
+   below), so this is what shows behind the whole view, and the grey read as
+   a tint over a view that is otherwise white cards and hairlines. Dark is the
+   dashboard's dark ground. */
+html:not([data-theme="dark"]) body:has(.calendar-container) { background: #ffffff; }
+html[data-theme="dark"] body:has(.calendar-container) { background: #0d1117; }
 
 /* The week view spends its width on the grid. 46px of card padding either side
    is most of a day column, and this view has seven of them to place; the Day
@@ -228,7 +250,10 @@ body:has(.calendar-container) {
     background: #141518;
     border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 32px;
-    color: #f4f4f6;
+    /* Dark ink by default and light only under the dark theme, for the same
+       reason as the page colour above: a default that is only right in one
+       theme is a default waiting for the rule that corrects it to not load. */
+    color: #17181c;
     box-shadow: 0 24px 60px rgba(16, 24, 40, 0.18);
     /* `clip`, not `hidden`, and the difference is the whole point.
      *
@@ -326,6 +351,7 @@ html[data-theme="light"] .calendar-card {
 }
 
 html[data-theme="dark"] .calendar-card {
+    color: #f4f4f6;
     /* Futuristic panel: a cool bluish glow bleeding down from the top edge into
        a deep near-black gradient, with a faint light rim. */
     background:

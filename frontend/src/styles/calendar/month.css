@@ -1469,9 +1469,11 @@ html[data-theme="light"] .calendar-day.selected::after { background: #33343a; }
    themes, so they're shared.
    ============================================================ */
 
-html[data-theme="light"] body {
-    background: #eef0f4;
-}
+/* An `html[data-theme="light"] body { background: #eef0f4 }` stood here. It
+   painted every page in the app, not the calendar, and only once this sheet
+   had been loaded — so the rest of the app changed colour after a visit to
+   the Month view. The calendar's own page colour is in
+   styles/calendar/shell.css; other pages decide theirs. */
 /* No selected/today fill or ring — dates stay plain; only the selected dot (below).
    High enough specificity to beat the legacy body.classic selected/today rules. */
 html[data-theme="light"] .calendar-day.today,
@@ -1519,26 +1521,18 @@ html[data-theme="light"] .dpr-sub { color: #6b6c76; }
    unscoped dark defaults above.
    ============================================================ */
 
-/* Match the dashboard's dark page + card surfaces */
-html[data-theme="dark"] body { background: #0d1117; }
+/* The page colour, light and dark, is decided in styles/calendar/shell.css —
+   the one sheet all three views load. It was decided here, which only the
+   Month view loads, so the Week and Day views stayed black until a visit to
+   the Month view pulled this file in. The dark half was also unscoped
+   (`html[data-theme="dark"] body`), so loading the calendar repainted every
+   other page in the app too. */
 html[data-theme="light"] .calendar-card,
 html[data-theme="dark"] .calendar-card,
 body.classic .calendar-card {
     background: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
-}
-
-/* The calendar's ground is white, not the app's grey.
- *
- * The card is transparent (see the full-bleed block above), so the body is what
- * shows through the whole view — behind the grid, behind the overview column,
- * behind everything. #eef0f4 is the app's page colour and it read as a tint
- * over a view that is otherwise white cards and hairlines. Scoped with :has()
- * so only the calendar changes; every other page keeps the grey. */
-html[data-theme="light"] body:has(.calendar-container),
-body.classic:has(.calendar-container) {
-    background: #ffffff;
 }
 
 /* The date rows now share their line with the selector, so they reserve room
