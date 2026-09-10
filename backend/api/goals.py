@@ -187,6 +187,8 @@ class SuggestMilestones(BaseModel):
     why: str = ''
     description: str = ''
     category: str = ''
+    # For a goal not yet written. An existing goal's is read from its row.
+    deadline: str = ''
 
 
 class SuggestSteps(BaseModel):
@@ -1032,6 +1034,7 @@ def suggest_milestones(body: SuggestMilestones, username: str = Depends(current_
 
     title = (body.title or '').strip()
     why, description, category = body.why, body.description, body.category
+    deadline = body.deadline
     unit = target = ''
 
     if body.goal_id:
@@ -1044,6 +1047,7 @@ def suggest_milestones(body: SuggestMilestones, username: str = Depends(current_
         why = why or (goal.get('why') or '')
         description = description or (goal.get('description') or '')
         category = category or (goal.get('category') or '')
+        deadline = deadline or (goal.get('deadline') or '')
         unit = goal.get('unit') or ''
         if _measure_of(goal) == 'number' and goal.get('target_number'):
             target = str(goal.get('target_number'))
@@ -1054,7 +1058,7 @@ def suggest_milestones(body: SuggestMilestones, username: str = Depends(current_
     try:
         titles = planner.suggest_milestones(
             title, why=why, description=description, category=category,
-            unit=unit, target=target)
+            unit=unit, target=target, deadline=deadline)
     except planner.PlannerUnavailable as exc:
         return fail(str(exc))
     return ok(milestones=titles)
@@ -1071,6 +1075,7 @@ def suggest_steps(body: SuggestSteps, username: str = Depends(current_username))
     """
     title = (body.title or '').strip()
     goal_id = body.goal_id
+    row = None
 
     if body.milestone_id:
         row = db.find_row('goal_milestones', body.milestone_id, user_id=username)
@@ -1085,6 +1090,7 @@ def suggest_steps(body: SuggestSteps, username: str = Depends(current_username))
     # What the goal says about itself, so the checkpoint is broken down for
     # the thing it belongs to rather than in the abstract.
     goal_title = why = description = category = unit = target = ''
+    deadline = before = after = ''
     if goal_id:
         goal = db.find_row('goals', goal_id, user_id=username)
         if goal:
@@ -1095,11 +1101,27 @@ def suggest_steps(body: SuggestSteps, username: str = Depends(current_username))
             unit = goal.get('unit') or ''
             if _measure_of(goal) == 'number' and goal.get('target_number'):
                 target = str(goal.get('target_number'))
+            # The checkpoint's own date where it has one: its steps have to
+            # land before it, not before the end of the whole goal.
+            deadline = ((row or {}).get('target_date') or goal.get('deadline')
+                        or '')
+            # And the rungs either side, so its steps stay between them. See
+            # `before` and `after` on planner.suggest_steps.
+            if row:
+                ladder = _milestones_of(db.rows_for('goal_milestones', username),
+                                        goal_id)
+                ids = [str(stone.get('id')) for stone in ladder]
+                if str(row.get('id')) in ids:
+                    at = ids.index(str(row.get('id')))
+                    before = ladder[at - 1].get('title') or '' if at > 0 else ''
+                    after = (ladder[at + 1].get('title') or ''
+                             if at + 1 < len(ladder) else '')
 
     try:
         titles = planner.suggest_steps(
             title, goal=goal_title, why=why, description=description,
-            category=category, unit=unit, target=target)
+            category=category, unit=unit, target=target, deadline=deadline,
+            before=before, after=after)
     except planner.PlannerUnavailable as exc:
         return fail(str(exc))
     return ok(steps=titles)
@@ -1119,6 +1141,12 @@ def set_milestones(body: SetMilestones, username: str = Depends(current_username
     renaming the third checkpoint does not reopen it or cut the tasks pointed
     at it loose. Rows past the end of the list are deleted, and their tasks are
     unlinked exactly as `delete_milestone` does it.
+
+    A row this creates is created the way `add_goal` creates one: dated along
+    the run-up to the goal's deadline and seeded with its three checklist
+    rows. It used to be written with neither — so the model's ladder, which is
+    the one that arrives through here, was the only ladder in the app with no
+    dates on its timeline and a NULL checklist under every rung.
     """
     if not username or not body.goal_id:
         return fail('Username and goal ID required')
@@ -1129,12 +1157,17 @@ def set_milestones(body: SetMilestones, username: str = Depends(current_username
     if len(titles) > planner.COUNT:
         return fail('A goal takes at most {} checkpoints'.format(planner.COUNT))
 
-    if not db.find_row('goals', body.goal_id, user_id=username):
+    goal = db.find_row('goals', body.goal_id, user_id=username)
+    if not goal:
         return fail('Goal not found')
 
     rows = db.rows_for('goal_milestones', username)
     mine = _milestones_of(rows, body.goal_id)
     now = datetime.now().isoformat()
+    # For the whole list, so a new third rung lands where a third rung of this
+    # many belongs. Only the rows created below take theirs: a kept row keeps
+    # the date it had, which the reader may have moved.
+    dates = _spread_dates(len(titles), goal.get('deadline'))
 
     for position, title in enumerate(titles):
         if position < len(mine):
@@ -1149,7 +1182,8 @@ def set_milestones(body: SetMilestones, username: str = Depends(current_username
             "note": '',
             "position": position,
             "status": 'pending',
-            "target_date": '',
+            "target_date": dates[position],
+            "steps": _seed_steps(),
             "created_at": now,
         }))
 

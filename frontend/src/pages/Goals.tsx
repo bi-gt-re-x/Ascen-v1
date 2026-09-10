@@ -62,13 +62,17 @@ import {
   NextMilestones,
   OverviewStrip,
   RecentlyCompleted,
+  SystemGoalWizard,
   SystemGoals,
   VisionLine,
+  fillSteps,
   goalNumbers,
   isOverdue,
   measureOf,
   msUntilNextDeadline,
+  planGoal,
 } from '@/components/Goals';
+import type { MilestoneDraftRequest } from '@/components/Goals';
 import { Ambient, ErrorState, Loading, PageHero, RefreshButton } from '@/components';
 import {
   useAuth,
@@ -125,6 +129,9 @@ export default function Goals() {
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  /* The counters' own setup. See components/Goals/SystemGoalWizard for why it
+     is not the wizard above. */
+  const [systemOpen, setSystemOpen] = useState(false);
   const [editing, setEditing] = useState<Goal | undefined>(undefined);
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Goal | null>(null);
@@ -267,12 +274,15 @@ export default function Goals() {
    * The two halves are deliberately not one `write`. The goal is saved and the
    * wizard closes on the first, because a new goal appearing should not wait
    * several seconds on a model call — and if the call fails, or there is no
-   * key configured, what is left behind is a perfectly ordinary goal with an
-   * empty ladder, which is what creating a goal did before this existed.
+   * key configured, what is left behind is a perfectly ordinary goal, and the
+   * page says why its plan is missing rather than leaving it to be guessed.
    *
-   * The plan it writes is a draft like any other: the ladder's fields are
-   * editable and `saveMilestones` overwrites the lot. The model proposes; the
-   * account owns it — the rule the planner module has always stated.
+   * The plan is components/Goals/plan: the checkpoints the reader wrote in
+   * the wizard are kept — this used to rename every one of them to the
+   * model's — the model drafts checkpoints only for a goal that arrived with
+   * none, and every checkpoint then gets its steps drafted, which used to
+   * happen only to one added by hand in the drawer. The model proposes; the
+   * account owns it — every row is editable afterwards.
    */
   const createGoal = useCallback(
     async (draft: NewGoal) => {
@@ -289,15 +299,38 @@ export default function Goals() {
       if (!goalId) return;
       setPlanning(goalId);
       try {
-        const drafted = await goalService.suggestMilestones({ goalId });
-        if (!drafted.success || !drafted.milestones?.length) return;
-        await goalService.setMilestones(goalId, drafted.milestones);
+        const plan = await planGoal(goalId);
+        // Only when nothing at all was drafted. A plan with one checklist
+        // missing is a plan; the checkpoint shows its empty rows and the
+        // drawer can draft it again.
+        if (plan.problem && !plan.milestones && !plan.checklists) setError(plan.problem);
         await load(true);
       } finally {
         setPlanning(null);
       }
     },
     [username, load],
+  );
+
+  /** The wizard's "Suggest with AI", for a goal that is not written yet. */
+  const suggestDraft = useCallback(async (draft: MilestoneDraftRequest) => {
+    const result = await goalService.suggestMilestones(draft);
+    return result.success
+      ? { milestones: result.milestones ?? [] }
+      : { problem: result.message ?? 'No checkpoints came back.' };
+  }, []);
+
+  /**
+   * A counter from SystemGoalWizard. An ordinary `write`, and no model: a
+   * counter has nothing to plan — see components/Goals/SystemGoals.
+   */
+  const createSystemGoal = useCallback(
+    async (draft: NewGoal) => {
+      if (!username) return;
+      const ok = await write(() => goalService.addGoal(draft));
+      if (ok) setSystemOpen(false);
+    },
+    [username, write],
   );
 
   const saveGoal = useCallback(
@@ -483,13 +516,44 @@ export default function Goals() {
     [username],
   );
 
-  /** Write a goal's whole checkpoint list. One call, then the usual re-read. */
-  const saveMilestones = useCallback(
-    (goal: Goal, titles: string[]) => {
-      if (!username) return Promise.resolve(false);
-      return write(() => goalService.setMilestones(goal.id, titles));
+  /**
+   * Draft steps for every checkpoint on a goal that has none written.
+   *
+   * Behind the save rather than inside it, and on the `planning` flag rather
+   * than `busy`, for the reasons `createGoal` gives: the ladder is saved and
+   * drawn at once, and its checklists arrive a few seconds later.
+   */
+  const draftChecklists = useCallback(
+    async (goalId: string) => {
+      setPlanning(goalId);
+      try {
+        const filled = await fillSteps(goalId);
+        if (filled.problem && !filled.checklists) setError(filled.problem);
+        if (filled.checklists) await load(true);
+      } finally {
+        setPlanning(null);
+      }
     },
-    [username, write],
+    [load],
+  );
+
+  /**
+   * Write a goal's whole checkpoint list, then break down any rung that is new.
+   *
+   * This is where the card's drafted ladder is accepted, and it used to stop
+   * at the titles — five checkpoints, each with three empty prompts. A rung
+   * the reader has already written steps into is left alone (see
+   * components/Goals/plan), so re-saving a ladder after renaming one costs
+   * nothing and overwrites nothing.
+   */
+  const saveMilestones = useCallback(
+    async (goal: Goal, titles: string[]) => {
+      if (!username) return false;
+      const ok = await write(() => goalService.setMilestones(goal.id, titles));
+      if (ok) void draftChecklists(goal.id);
+      return ok;
+    },
+    [draftChecklists, username, write],
   );
 
   // ---- What goes where ----------------------------------------------------
@@ -533,6 +597,11 @@ export default function Goals() {
   const [tab, setTab] = useState<TabId>('active');
   const on = (...ids: TabId[]) => ids.includes(tab);
 
+  /* "New goal" makes the kind of goal the tab is about. On the System tab
+     that is a counter, and the outcome wizard there would ask for a subject
+     and a reason and then draft checkpoints under "earn 50,000 XP". */
+  const startGoal = () => (tab === 'system' ? setSystemOpen(true) : setWizardOpen(true));
+
   const open = list.find((goal) => goal.id === openId) ?? null;
 
   if (loading) return <Loading label="Reading your goals" />;
@@ -574,8 +643,8 @@ export default function Goals() {
               >
                 {showCompleted ? 'Hide completed' : 'View completed'}
               </button>
-              <button type="button" className="gx-btn is-primary" onClick={() => setWizardOpen(true)}>
-                + New Goal
+              <button type="button" className="gx-btn is-primary" onClick={startGoal}>
+                {tab === 'system' ? '+ New System Goal' : '+ New Goal'}
               </button>
             </div>
           </header>
@@ -729,7 +798,7 @@ export default function Goals() {
                 setModalOpen(true);
               }}
               onDelete={setPendingDelete}
-              onNew={() => setWizardOpen(true)}
+              onNew={() => setSystemOpen(true)}
             />
           </Band>
         )}
@@ -804,7 +873,7 @@ export default function Goals() {
           </Band>
         )}
 
-        <GoalsCta onNew={() => setWizardOpen(true)} />
+        <GoalsCta onNew={startGoal} />
         </div>
       </div>
 
@@ -837,6 +906,15 @@ export default function Goals() {
         subjects={catalogue}
         onClose={() => setWizardOpen(false)}
         onSave={(draft) => void createGoal(draft)}
+        onSuggest={suggestDraft}
+      />
+
+      <SystemGoalWizard
+        open={systemOpen}
+        busy={busy}
+        counters={counters}
+        onClose={() => setSystemOpen(false)}
+        onSave={(draft) => void createSystemGoal(draft)}
       />
 
       <GoalModal

@@ -33,8 +33,22 @@
  * That is the failure this step exists to prevent — a feature that silently
  * has no input is worse than one that is missing, because nothing on screen
  * says why it is blank.
+ *
+ * ## The model, on the last step
+ *
+ * `suggestMilestones` has always taken a title for a goal that does not exist
+ * yet — "which is what the creation wizard has", its note says — and the
+ * wizard never called it. The checkpoints step now can: one button drafts five
+ * from what the first three steps collected, into the same editable list a
+ * typed checkpoint goes into. What is in that list when the goal is made is
+ * what the goal gets; the page drafts checkpoints only for a goal that arrives
+ * with none, and drafts steps under every checkpoint either way (see
+ * components/Goals/plan).
+ *
+ * A counter — XP, streak, tasks, focus — is not made here at all. It has no
+ * outcome, no subject and no checkpoints; see SystemGoalWizard.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { CATEGORIES } from './Outcome';
 import { SubjectPicker } from '@/components/SubjectPicker';
 import type { Subject } from '@/services/subjects';
@@ -91,6 +105,21 @@ function defaultDeadline(today = new Date()): string {
   return at.toISOString().slice(0, 10);
 }
 
+/** What the wizard knows about the goal by its last step, for the model. */
+export interface MilestoneDraftRequest {
+  title: string;
+  why: string;
+  description: string;
+  category: GoalCategory;
+  deadline: string;
+}
+
+/** The model's checkpoints, or the reason there are none — worded to show. */
+export interface MilestoneDraft {
+  milestones?: string[];
+  problem?: string;
+}
+
 export interface NewGoalWizardProps {
   open: boolean;
   busy: boolean;
@@ -98,9 +127,18 @@ export interface NewGoalWizardProps {
   subjects: Subject[];
   onClose: () => void;
   onSave: (goal: NewGoal) => void;
+  /** Draft the checkpoints. Absent, and the last step offers no button. */
+  onSuggest?: (goal: MilestoneDraftRequest) => Promise<MilestoneDraft>;
 }
 
-export function NewGoalWizard({ open, busy, subjects, onClose, onSave }: NewGoalWizardProps) {
+export function NewGoalWizard({
+  open,
+  busy,
+  subjects,
+  onClose,
+  onSave,
+  onSuggest,
+}: NewGoalWizardProps) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -115,8 +153,17 @@ export function NewGoalWizard({ open, busy, subjects, onClose, onSave }: NewGoal
   const [target, setTarget] = useState('');
   const [milestones, setMilestones] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestProblem, setSuggestProblem] = useState<string | null>(null);
+  /* Which request is current. A model call takes seconds, and closing the
+     wizard in the middle of one must not let its answer land in the next
+     goal's list — the component stays mounted while closed. */
+  const asking = useRef(0);
 
   const reset = useCallback(() => {
+    asking.current += 1;
+    setSuggesting(false);
+    setSuggestProblem(null);
     setStep(0);
     setTitle('');
     setDescription('');
@@ -151,6 +198,28 @@ export function NewGoalWizard({ open, busy, subjects, onClose, onSave }: NewGoal
     if (step === 3 && measure === 'number') return !Number(target);
     return false;
   }, [measure, step, subjectId, target, title]);
+
+  /** Five checkpoints from the model, into the editable list. Replaces it. */
+  const suggest = useCallback(async () => {
+    if (!onSuggest || !title.trim()) return;
+    const mine = ++asking.current;
+    setSuggesting(true);
+    setSuggestProblem(null);
+    try {
+      const result = await onSuggest({
+        title: title.trim(),
+        why: why.trim(),
+        description: description.trim(),
+        category,
+        deadline,
+      });
+      if (mine !== asking.current) return;
+      if (result.milestones?.length) setMilestones(result.milestones);
+      else setSuggestProblem(result.problem ?? 'No checkpoints came back. Try again.');
+    } finally {
+      if (mine === asking.current) setSuggesting(false);
+    }
+  }, [category, deadline, description, onSuggest, title, why]);
 
   const save = useCallback(() => {
     onSave({
@@ -389,6 +458,33 @@ export function NewGoalWizard({ open, busy, subjects, onClose, onSave }: NewGoal
           {step === 4 && (
             <>
               <label>The checkpoints, in the order you will hit them</label>
+              {onSuggest && (
+                <div className="gx-ms-suggest">
+                  <button
+                    type="button"
+                    className="gx-btn"
+                    disabled={suggesting || !title.trim()}
+                    onClick={() => void suggest()}
+                  >
+                    {suggesting
+                      ? 'Drafting…'
+                      : milestones.length
+                        ? 'Redraft with AI'
+                        : 'Suggest with AI'}
+                  </button>
+                  <span className="gx-quiet">
+                    {milestones.length
+                      ? 'Replaces the list below.'
+                      : 'Five, from your title, your reason and your date.'}{' '}
+                    Edit or remove any of them after.
+                  </span>
+                </div>
+              )}
+              {suggestProblem && (
+                <p className="gx-ms-problem" role="alert">
+                  {suggestProblem}
+                </p>
+              )}
               {milestones.length > 0 && (
                 <p className="gx-hint">
                   {deadline
@@ -431,7 +527,9 @@ export function NewGoalWizard({ open, busy, subjects, onClose, onSave }: NewGoal
                 </button>
               </form>
               <p className="gx-hint">
-                A state the goal reaches, not a thing you do on a Tuesday. Skip if you do not know them yet.
+                A state the goal reaches, not a thing you do on a Tuesday. Leave it empty and the
+                model drafts them once the goal is made. Either way, each checkpoint then gets its
+                steps drafted.
               </p>
             </>
           )}

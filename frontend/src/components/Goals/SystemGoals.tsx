@@ -7,22 +7,25 @@
  * once and the figure is never touched again, because touching it would be the
  * account editing its own record of what it did.
  *
- * That is why a system card has no progress control and no checkpoints, and why
+ * That is why a system goal has no progress control and no checkpoints, and why
  * its only two actions are the ones that genuinely belong to the reader —
  * changing the target and dropping the goal.
  *
- * These cards were the rail's second tab, and the rail's second tab was the
- * bottom of the page before that. They are a tab of their own now: an XP target
- * and a streak target are not commentary on the outcome goals, they are a
- * different kind of goal, and a page whose navigation says so does not need a
- * rail repeating it.
+ * A list rather than a grid of cards. Every row carries the same five things —
+ * what, how far, of what, the bar, the percentage — and a list lines them up in
+ * columns, so four targets read down the page as a comparison. Cards scattered
+ * them across a wrapping grid where the second row's bar was nowhere near the
+ * first's.
+ *
+ * New ones are made by SystemGoalWizard, not by the outcome wizard — see the
+ * note there for what went wrong when they were.
  */
 import { fmtGoalNumber, goalNumbers } from './numbers';
 import type { Goal, GoalType } from '@/types';
 import type { ReactNode } from 'react';
 
 /** One glyph per counter, so the four are told apart before they are read. */
-const ICON: Record<GoalType, ReactNode> = {
+export const COUNTER_ICON: Record<GoalType, ReactNode> = {
   xp: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
       <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
@@ -49,7 +52,7 @@ const ICON: Record<GoalType, ReactNode> = {
 
 const pct = (value: number): number => Math.max(0, Math.min(100, Math.round(value)));
 
-function SystemCard({
+function SystemRow({
   goal,
   onEdit,
   onDelete,
@@ -63,36 +66,41 @@ function SystemCard({
   const reached = done >= 100;
 
   return (
-    <article className={`gx-sys${reached ? ' is-done' : ''}`}>
-      <header className="gx-sys-head">
-        <span className={`gx-sys-ico is-${n.goalType}`} aria-hidden="true">
-          {ICON[n.goalType]}
-        </span>
-        <div className="gx-sys-name">
-          <strong>{goal.title}</strong>
-          <span className="gx-quiet">{n.label}</span>
-        </div>
-        <span className={`gx-sys-pct${reached ? ' is-done' : ''}`}>{done}%</span>
-      </header>
+    <li className={`gx-sys${reached ? ' is-done' : ''}`}>
+      <span className={`gx-sys-ico is-${n.goalType}`} aria-hidden="true">
+        {COUNTER_ICON[n.goalType]}
+      </span>
+      <div className="gx-sys-name">
+        <strong>{goal.title}</strong>
+        <span className="gx-quiet">{n.label}</span>
+      </div>
 
       <div className="gx-sys-figures">
         <b>{fmtGoalNumber(n.current, n)}</b>
         <span className="gx-quiet">of {fmtGoalNumber(n.target, n)}</span>
       </div>
 
-      <div className="gx-sys-track" role="presentation">
+      <div
+        className="gx-sys-track"
+        role="progressbar"
+        aria-label={`${goal.title}: ${done}%`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={done}
+      >
         <i className={`gx-sys-fill is-${n.goalType}`} style={{ width: `${done}%` }} />
       </div>
+      <span className={`gx-sys-pct${reached ? ' is-done' : ''}`}>{done}%</span>
 
-      <footer className="gx-sys-foot">
+      <div className="gx-sys-foot">
         <button type="button" onClick={() => onEdit(goal)}>
           Change target
         </button>
         <button type="button" className="is-bad" onClick={() => onDelete(goal)}>
           Remove
         </button>
-      </footer>
-    </article>
+      </div>
+    </li>
   );
 }
 
@@ -100,6 +108,7 @@ export interface SystemGoalsProps {
   counters: Goal[];
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
+  /** Opens SystemGoalWizard. */
   onNew: () => void;
 }
 
@@ -117,10 +126,15 @@ export function SystemGoals({ counters, onEdit, onDelete, onNew }: SystemGoalsPr
   }
 
   return (
-    <div className="gx-sysgrid">
-      {counters.map((goal) => (
-        <SystemCard key={goal.id} goal={goal} onEdit={onEdit} onDelete={onDelete} />
-      ))}
-    </div>
+    <>
+      <ul className="gx-syslist" aria-label="System goals">
+        {counters.map((goal) => (
+          <SystemRow key={goal.id} goal={goal} onEdit={onEdit} onDelete={onDelete} />
+        ))}
+      </ul>
+      <button type="button" className="gx-sys-add" onClick={onNew}>
+        <span aria-hidden="true">+</span> Add a system goal
+      </button>
+    </>
   );
 }

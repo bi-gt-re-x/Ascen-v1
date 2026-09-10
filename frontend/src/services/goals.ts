@@ -181,7 +181,15 @@ export function deleteMilestone(
  * rather than treating it as the page breaking.
  */
 export function suggestMilestones(
-  goal: { goalId?: string; title?: string; why?: string; description?: string; category?: string },
+  goal: {
+    goalId?: string;
+    title?: string;
+    why?: string;
+    description?: string;
+    category?: string;
+    /** For a goal not yet written; an existing one's is read from its row. */
+    deadline?: string;
+  },
 ): Promise<ApiResult<{ milestones: string[] }>> {
   return post<{ milestones: string[] }>('/api/suggest_milestones', {
     goal_id: goal.goalId,
@@ -189,6 +197,7 @@ export function suggestMilestones(
     why: goal.why,
     description: goal.description,
     category: goal.category,
+    deadline: goal.deadline,
   });
 }
 

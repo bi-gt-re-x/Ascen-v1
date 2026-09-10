@@ -37,7 +37,7 @@ export type { GoalDetailProps } from './GoalDetail';
 export { MilestoneChecklist } from './MilestoneChecklist';
 export type { MilestoneChecklistProps } from './MilestoneChecklist';
 export { NewGoalWizard } from './NewGoalWizard';
-export type { NewGoalWizardProps } from './NewGoalWizard';
+export type { MilestoneDraft, MilestoneDraftRequest, NewGoalWizardProps } from './NewGoalWizard';
 export {
   DEFAULT_GOAL_WEIGHT,
   MAX_TIMEOUT,
@@ -54,8 +54,12 @@ export {
 export type { GoalNumbers } from './numbers';
 export { ActiveGoalCard } from './ActiveGoalCard';
 export type { ActiveGoalCardProps } from './ActiveGoalCard';
-export { SystemGoals } from './SystemGoals';
+export { COUNTER_ICON, SystemGoals } from './SystemGoals';
 export type { SystemGoalsProps } from './SystemGoals';
+export { SystemGoalWizard } from './SystemGoalWizard';
+export type { SystemGoalWizardProps } from './SystemGoalWizard';
+export { fillSteps, planGoal } from './plan';
+export type { PlanResult } from './plan';
 export { GoalVisual } from './GoalVisual';
 export type { GoalVisualProps } from './GoalVisual';
 export {

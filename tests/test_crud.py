@@ -477,7 +477,10 @@ def test_a_checkpoint_is_broken_down_against_the_goal_it_sits_under(client, monk
 
     seen = {}
 
-    def fake(milestone, goal='', why='', description='', category='', unit='', target=''):
+    # `**_` for the date and the neighbouring checkpoints, which the endpoint
+    # passes too — tests/test_goal_ai.py is where those are checked.
+    def fake(milestone, goal='', why='', description='', category='', unit='', target='',
+             **_):
         seen.update(milestone=milestone, goal=goal, why=why, category=category)
         return ['Read the chapter', 'Do ten problems', 'Redo the failures',
                 'Time a contest', 'Review the editorial']

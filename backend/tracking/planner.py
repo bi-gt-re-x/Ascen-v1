@@ -218,6 +218,9 @@ Rules for the set you return:
 - Specific to this goal and its subject. "Make good progress" says nothing.
 - Six words or fewer each, written as a state: no leading verb like \
 "Complete", "Finish" or "Start".
+- If you are given a deadline, pitch them at what can be reached by it: the \
+five are spread evenly up to that date, so the first is a few weeks out, not \
+a term.
 """
 
 # Said only to the open models. The Anthropic path constrains the shape with a
@@ -264,6 +267,10 @@ Rules for the set you return:
 - Concrete to this checkpoint and its subject. "Practise more" says nothing.
 - Ten words or fewer each, starting with a verb.
 - Together they are enough that finishing all five reaches the checkpoint.
+- If you are told the checkpoints either side of this one, stay between \
+them: nothing the one before already covers, nothing that belongs to the one \
+after.
+- If you are given a date, the five have to fit before it.
 """
 
 STEPS_SCHEMA = {
@@ -358,11 +365,18 @@ def _ask(goal: str, instruction: str = '') -> str:
 
 
 def _brief(title: str, why: str = '', description: str = '',
-           category: str = '', unit: str = '', target: str = '') -> str:
+           category: str = '', unit: str = '', target: str = '',
+           deadline: str = '') -> str:
     """What the account has told us about the goal, as lines the model reads.
 
     Only the fields that were filled in. An empty "Why: " line is a line the
     model has to decide means nothing, and it sometimes decides wrong.
+
+    The deadline goes in because it is what the checkpoints are laid out
+    against — `_spread_dates` in backend/api/goals.py divides the run-up to it
+    evenly — and a ladder drafted without it is pitched at no particular pace:
+    five checkpoints for a goal due in six weeks and one due in two years came
+    back the same.
     """
     lines = ['Goal: {}'.format(title.strip())]
     if category and category != 'other':
@@ -373,6 +387,8 @@ def _brief(title: str, why: str = '', description: str = '',
         lines.append('Notes: {}'.format(description.strip()))
     if target:
         lines.append('Target: {}{}'.format(target, ' {}'.format(unit) if unit else ''))
+    if str(deadline or '').strip():
+        lines.append('Deadline: {}'.format(str(deadline).strip()[:10]))
     return '\n'.join(lines)
 
 
@@ -787,7 +803,7 @@ def from_provider(brief: str, system: str = None, schema: dict = None,
 # The one thing this module does
 # ---------------------------------------------------------------------------
 def suggest_milestones(title, why='', description='', category='',
-                       unit='', target='') -> List[str]:
+                       unit='', target='', deadline='') -> List[str]:
     """Five checkpoint titles for this goal, in order.
 
     Raises `PlannerUnavailable` for anything the page should say out loud: no
@@ -802,7 +818,7 @@ def suggest_milestones(title, why='', description='', category='',
     if not using:
         raise PlannerUnavailable(NO_KEY)
 
-    brief = _brief(title, why, description, category, unit, target)
+    brief = _brief(title, why, description, category, unit, target, deadline)
     if using == 'groq':
         text = _from_groq(brief, schema=SCHEMA)
     elif using == 'huggingface':
@@ -819,13 +835,20 @@ def suggest_milestones(title, why='', description='', category='',
 
 
 def suggest_steps(milestone, goal='', why='', description='', category='',
-                  unit='', target='') -> List[str]:
+                  unit='', target='', deadline='', before='', after='') -> List[str]:
     """Five steps for one checkpoint, in the order they would be done.
 
     The goal is passed as well as the checkpoint because a checkpoint title is
     six words and frequently meaningless alone: "Silver DP unassisted" is a
     different checklist under "Reach USACO Gold" than it would be under a
     goal about teaching. The model gets both and is asked about the one.
+
+    `before` and `after` are the checkpoints either side of it on the ladder.
+    Every checkpoint of a new goal is broken down at once now, each by its own
+    call, and a call that sees only its own checkpoint writes steps that
+    belong to its neighbours — the second rung's checklist re-covering the
+    first's, the fourth's starting on the fifth's. `deadline` is the
+    checkpoint's own date where it has one and the goal's otherwise.
 
     Raises `PlannerUnavailable` on everything the page should say out loud,
     exactly as `suggest_milestones` does — a checklist that cannot be drafted
@@ -838,9 +861,16 @@ def suggest_steps(milestone, goal='', why='', description='', category='',
     if not using:
         raise PlannerUnavailable(NO_KEY)
 
-    brief = _brief(goal or milestone, why, description, category, unit, target)
+    brief = _brief(goal or milestone, why, description, category, unit, target,
+                   deadline)
     if goal.strip():
         brief += '\n\nCheckpoint to break down: {}'.format(milestone.strip())
+        if str(before or '').strip():
+            brief += ('\nThe checkpoint before it, whose work is already '
+                      'covered: {}'.format(before.strip()))
+        if str(after or '').strip():
+            brief += ('\nThe checkpoint after it, whose work comes later: '
+                      '{}'.format(after.strip()))
     else:
         brief = 'Checkpoint to break down: {}'.format(milestone.strip())
     instruction = 'Break this checkpoint into the five steps that reach it.'
