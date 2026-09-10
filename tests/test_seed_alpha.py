@@ -58,27 +58,86 @@ def test_the_timetable_is_the_one_that_was_asked_for():
     """The week, read back as (day, title, start, end). If the timetable
     changes this is the line to change, and changing it should be deliberate.
 
-    Alpha is a computer-science undergraduate: the lectures and labs of the
-    degree, Math 55 and a Putnam seminar for the mathematics, a side project
-    for the web work, and the violin once a week."""
+    Alpha is a machine-learning and mathematics double major on a PhD track:
+    the lectures and sections of two majors, the research the doctorate is made
+    of, and — timetabled just as firmly — the violin, the training, the meals
+    with other people and the mornings that start in cold water."""
     week = {(d, title, begin, end)
             for d, title, _s, begin, end, _x, _study in seed_alpha.WEEK}
     for day in range(5):
-        assert (day, 'Morning review', '08:15', '08:45') in week
+        assert (day, 'Morning meditation', '06:45', '07:10') in week
+        assert (day, 'Evening review', '22:00', '22:20') in week
     for day in (0, 2, 4):
         assert (day, 'Math 55 lecture', '09:00', '10:30') in week
-        assert (day, 'Gym', '07:00', '08:00') in week
+        assert (day, 'Lift', '07:30', '08:30') in week
     for day in (1, 3):
-        assert (day, 'Algorithms lecture', '10:00', '11:30') in week
+        assert (day, 'Algorithms lecture', '10:30', '12:00') in week
+        assert (day, 'Morning run', '07:30', '08:15') in week
+    # Mathematics, the first major.
+    assert (1, 'Real analysis lecture', '09:00', '10:15') in week
+    assert (3, 'Abstract algebra lecture', '09:00', '10:15') in week
     assert (0, 'Putnam seminar', '17:30', '19:00') in week
     assert (3, 'Putnam problem session', '19:00', '20:30') in week
+    # Machine learning, the second.
     assert (3, 'ML lab', '15:00', '17:00') in week
-    assert (4, 'Systems lab', '14:00', '16:00') in week
-    assert (2, 'Violin lesson', '17:00', '18:00') in week
-    assert (4, 'Side project standup', '17:00', '17:30') in week
-    # Nothing on a weekend, and nothing else on a weekday.
-    assert len(seed_alpha.WEEK) == 24
-    assert not [row for row in seed_alpha.WEEK if row[0] > 4]
+    assert (4, 'Statistical learning lecture', '11:00', '12:15') in week
+    # The doctorate the two are pointed at.
+    assert (1, 'Lab meeting', '14:00', '15:00') in week
+    assert (2, 'Paper reading group', '15:00', '16:00') in week
+    assert (4, 'Advisor meeting', '13:00', '13:45') in week
+    assert (4, 'Thesis writing block', '14:00', '16:00') in week
+    # And the half of the week that is not the degree.
+    assert (2, 'Violin lesson', '18:00', '19:00') in week
+    assert (0, 'Orchestra rehearsal', '19:30', '21:00') in week
+    assert (1, 'Lunch with the lab', '12:15', '13:00') in week
+    assert (4, 'Dinner out with friends', '19:30', '21:30') in week
+    assert (5, 'Long run with friends', '08:30', '10:00') in week
+    assert (5, 'Ice bath', '10:30', '10:50') in week
+    assert (6, 'Ice bath', '09:30', '09:50') in week
+    assert (6, 'Long meditation sit', '08:30', '09:15') in week
+    assert (6, 'Sunday reset', '18:00', '18:45') in week
+
+
+def test_the_weekend_is_on_the_timetable():
+    """It used to be empty — `assert not [row for row in WEEK if row[0] > 4]` —
+    which said Saturday and Sunday were whatever was left over. They are the
+    recovery the rest of the week is affordable because of, so they are
+    timetabled like everything else, and none of what is on them is work."""
+    weekend = [row for row in seed_alpha.WEEK if row[0] > 4]
+    assert len(weekend) >= 5
+    for _d, title, subject, _b, _e, _x, study in weekend:
+        assert not study, title
+        assert subject in seed_alpha.NOT_STUDY, title
+
+
+def test_nothing_on_the_week_overlaps_anything_else_on_its_day():
+    """A timetable that double-books itself is not a timetable. This is worth a
+    test rather than a careful read because the blocks are grouped by what they
+    are for — the mathematics together, the research together — so two that
+    collide sit twenty lines apart in the file."""
+    by_day: dict[int, list[tuple[int, int, str]]] = {}
+    for day, title, _s, begin, end, _x, _study in seed_alpha.WEEK:
+        by_day.setdefault(day, []).append(
+            (seed_alpha.minutes(begin), seed_alpha.minutes(end), title))
+
+    for day, blocks in by_day.items():
+        blocks.sort()
+        for (_s1, end1, first), (start2, _e2, second) in zip(blocks, blocks[1:]):
+            assert end1 <= start2, (day, first, second)
+
+
+def test_the_week_has_a_life_in_it_as_well_as_a_degree():
+    """The half that was missing, and the reason it matters: the Habits and
+    Insights tabs look for recurring behaviour and for what conditions the
+    better work shows up under. A record with only work in it gives them
+    nothing to find that is not another problem set."""
+    subjects = {row[2] for row in seed_alpha.WEEK}
+    subjects |= {row[1] for row in seed_alpha.EVENING}
+    subjects |= {row[1] for row in seed_alpha.WEEKEND}
+    # Music, other people, training, and the two ways of putting the head down.
+    for subject in ('music', 'friends', 'gym', 'running',
+                    'meditation', 'health', 'cooking'):
+        assert subject in subjects, subject
 
 
 def test_the_timetable_reaches_the_subjects_it_is_meant_to():
@@ -88,9 +147,9 @@ def test_the_timetable_reaches_the_subjects_it_is_meant_to():
     named = {row[2] for row in seed_alpha.WEEK}
     named |= {row[1] for row in seed_alpha.EVENING}
     named |= {row[1] for row in seed_alpha.WEEKEND}
-    for subject in ('programming', 'computer_science', 'web_design',
-                    'machine_learning', 'data_science', 'databases',
-                    'mathematics', 'music'):
+    for subject in ('programming', 'computer_science', 'machine_learning',
+                    'data_science', 'statistics', 'mathematics', 'algebra',
+                    'research', 'thesis', 'music'):
         assert subject in named, subject
 
 
@@ -101,11 +160,13 @@ def test_a_lecture_is_not_a_focus_session():
     two readings drifting apart again."""
     assert 'Math 55 lecture' in seed_alpha.ATTENDANCE
     assert 'Machine Learning lecture' in seed_alpha.ATTENDANCE
-    assert 'Gym' in seed_alpha.ATTENDANCE
+    assert 'Lab meeting' in seed_alpha.ATTENDANCE
+    assert 'Lift' in seed_alpha.ATTENDANCE
     # The things somebody actually sits down and does are not in it.
     assert 'Putnam seminar' not in seed_alpha.ATTENDANCE
     assert 'ML lab' not in seed_alpha.ATTENDANCE
     assert 'Violin lesson' not in seed_alpha.ATTENDANCE
+    assert 'Thesis writing block' not in seed_alpha.ATTENDANCE
     # And every attendance title really is a block on the week.
     titles = {row[1] for row in seed_alpha.WEEK}
     assert seed_alpha.ATTENDANCE <= titles
@@ -115,11 +176,13 @@ def test_xp_rises_with_what_a_block_costs():
     """The numbers are a currency, so they have to rank the way effort does."""
     by_title = {row[1]: (row[5], seed_alpha.minutes(row[4]) - seed_alpha.minutes(row[3]))
                 for row in seed_alpha.WEEK}
-    assert by_title['Morning review'][0] < by_title['Gym'][0]
-    assert by_title['Gym'][0] < by_title['Violin lesson'][0]
+    assert by_title['Evening review'][0] < by_title['Ice bath'][0]
+    assert by_title['Ice bath'][0] < by_title['Lift'][0]
+    assert by_title['Lift'][0] < by_title['Violin lesson'][0]
     assert by_title['Violin lesson'][0] < by_title['Math 55 lecture'][0]
     assert by_title['Math 55 lecture'][0] < by_title['Putnam seminar'][0]
     assert by_title['Putnam seminar'][0] < by_title['ML lab'][0]
+    assert by_title['ML lab'][0] < by_title['Thesis writing block'][0]
     for title, (xp, span) in by_title.items():
         assert xp > 0, title
         # Nothing is worth more per minute than the Putnam seminar, which is

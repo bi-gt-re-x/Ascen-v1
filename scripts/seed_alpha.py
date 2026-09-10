@@ -18,10 +18,12 @@ the app writes. `--clear` here removes only what this wrote.
 
 ## The three things it writes
 
-**The year ahead** (`WEEK`) is the timetable as calendar blocks: Ready Up and
-school every weekday, the clubs and lessons on their own days. They are `todo`
-and they earn nothing yet, which is the point of a calendar — they are what is
-going to happen, and the XP on them is what finishing one will be worth.
+**The year ahead** (`WEEK`) is the timetable as calendar blocks: the lectures
+and sections of the two majors, the research the doctorate is made of, and —
+just as timetabled — the violin, the training, the meals with other people and
+the two mornings that start in cold water. They are `todo` and they earn
+nothing yet, which is the point of a calendar: they are what is going to
+happen, and the XP on them is what finishing one will be worth.
 
 **The year behind** is the same week already lived: every block finished, plus
 the study that fills an evening, each carrying a subject, a difficulty and an
@@ -31,11 +33,33 @@ by day, so the Growth tab has two comparable years rather than one year and a
 blank.
 
 **The level.** Alpha is meant to read as an account five years deep, and its
-ledger said 92 XP a day against its own 300-a-day goal — the arithmetic of an
+ledger said 92 XP a day against its own daily goal — the arithmetic of an
 account that was seeded thinly, not of a person. The shortfall to level 100 is
-spread back across the days it already worked, which brings that average to
-about 327 and leaves every individual day plausible. The ledger stays the
-authority: `users.xp` is recomputed from it at the end, never set beside it.
+spread back across the days it already worked, which leaves every individual
+day plausible. The ledger stays the authority: `users.xp` is recomputed from it
+at the end, never set beside it.
+
+## Who Alpha is
+
+A machine-learning and mathematics double major on a PhD track at a college
+that is hard to get into, in the year the thesis starts. That is a specific
+person and it has to be, because a seed is an argument about what this app is
+for: every panel in it is drawn from somebody's record, and a record with only
+work in it produces a set of pages that can say nothing except that its owner
+worked.
+
+So the week is rigorous *and* it is coloured. Math 55, analysis and algebra on
+one side; machine learning, algorithms and statistical learning on the other;
+a lab meeting, an advisor, a reading group and a thesis block for the part
+that is not coursework. And then the violin on Wednesday and the orchestra on
+Monday, lifting three mornings and running two, lunch with the lab, dinner out
+on Friday, a long run with friends on Saturday, and the ice baths and the
+sitting still that are what make the rest of it survivable.
+
+The second half is not decoration. The Habits tab looks for recurring
+behaviour, the Insights tab looks for what conditions the better work shows up
+under, and both of them need something to find that is not another problem
+set — `NOT_STUDY` below is where that distinction is actually drawn.
 """
 from __future__ import annotations
 
@@ -102,97 +126,173 @@ def owned_args(user):
 # `computer_science` and `mathematics` each open a different lattice, which is
 # what makes this timetable readable on the skill-tree page as well as on the
 # calendar.
+#: Roughly what a day on this week is worth, and therefore the account's goal.
+#:
+#: One name for a number that was written twice — once as the target stored on
+#: the account and once as the divisor the report card scores productivity
+#: against — which is two places for the same fact and one of them free to
+#: drift.
+#:
+#: It is 450 rather than the 300 it was, and that is a fix rather than a
+#: preference. The timetable plus an evening comes to something like 470 XP on
+#: a working day, so against 300 the productivity score was `min(100, 157)` on
+#: every single week of the year: a metric that cannot move is a flat line on a
+#: chart and a grade that means nothing. At 450 a good week and a thin one are
+#: different numbers, which is the whole reason the chart is drawn.
+DAILY_GOAL = 450
+
+#: The week, as (weekday, title, subject, start, end, xp, is_deliberate_study).
+#:
+#: Monday is 0. The last field is what tells attendance from work — see
+#: `ATTENDANCE` below — and it is a flag rather than an inference from the
+#: subject, because a machine-learning lecture *is* machine learning and
+#: sitting in one is still not an hour of focus.
+#:
+#: Read down a day and it should look like a day somebody actually has: a sit
+#: and a session before it is light, lectures through the middle, the research
+#: and the seminars in the afternoon, and the evening spoken for by a person
+#: rather than by the degree. That last part is the half that was missing. A
+#: week of nothing but lectures and problem sets is not what a rigorous year
+#: looks like, it is what one looks like from the outside — and an account
+#: seeded that way has nothing to say on the Habits tab except that its owner
+#: works, which is the one thing the tab could already see.
 WEEK = (
-    # The lectures, in the order the week holds them.
+    # ---- Mathematics, the first of the two majors -------------------------
+    # Math 55 three mornings a week is the spine of the degree; analysis and
+    # algebra are the other two lectures the major actually costs.
     (0, 'Math 55 lecture', 'mathematics', '09:00', '10:30', 45, False),
     (2, 'Math 55 lecture', 'mathematics', '09:00', '10:30', 45, False),
     (4, 'Math 55 lecture', 'mathematics', '09:00', '10:30', 45, False),
-    (0, 'Machine Learning lecture', 'machine_learning', '11:00', '12:30', 45, False),
-    (2, 'Machine Learning lecture', 'machine_learning', '11:00', '12:30', 45, False),
-    (1, 'Algorithms lecture', 'computer_science', '10:00', '11:30', 45, False),
-    (3, 'Algorithms lecture', 'computer_science', '10:00', '11:30', 45, False),
-    (1, 'Systems lecture', 'programming', '13:00', '14:30', 45, False),
-    (3, 'Databases lecture', 'databases', '13:00', '14:30', 40, False),
-
-    # The sections and labs the lectures hang off.
+    (1, 'Real analysis lecture', 'mathematics', '09:00', '10:15', 45, False),
+    (3, 'Abstract algebra lecture', 'algebra', '09:00', '10:15', 45, False),
     (1, 'Math 55 section', 'mathematics', '16:00', '17:00', 35, True),
-    (3, 'ML lab', 'machine_learning', '15:00', '17:00', 60, True),
-    (4, 'Systems lab', 'programming', '14:00', '16:00', 60, True),
 
-    # Monday and Thursday — the Putnam seminar and the problem session it
-    # feeds. The seminar is where the problems are handed out; Thursday is
-    # where the week's attempt gets taken apart.
+    # Monday hands the Putnam problems out and Thursday takes the week's
+    # attempt apart. Two halves of one thing, three days apart on purpose.
     (0, 'Putnam seminar', 'mathematics', '17:30', '19:00', 55, True),
     (3, 'Putnam problem session', 'mathematics', '19:00', '20:30', 55, True),
 
-    # Wednesday — the violin, which is the one thing on here that is not the
-    # degree.
-    (2, 'Violin lesson', 'music', '17:00', '18:00', 40, True),
+    # ---- Machine learning, the second ------------------------------------
+    (0, 'Machine Learning lecture', 'machine_learning', '11:00', '12:30', 45, False),
+    (2, 'Machine Learning lecture', 'machine_learning', '11:00', '12:30', 45, False),
+    (1, 'Algorithms lecture', 'computer_science', '10:30', '12:00', 45, False),
+    (3, 'Algorithms lecture', 'computer_science', '10:30', '12:00', 45, False),
+    (4, 'Statistical learning lecture', 'statistics', '11:00', '12:15', 45, False),
+    (3, 'ML lab', 'machine_learning', '15:00', '17:00', 60, True),
 
-    # Friday — the project the degree does not set.
-    (4, 'Side project standup', 'web_design', '17:00', '17:30', 20, True),
+    # ---- The doctorate this is all pointed at -----------------------------
+    # The part that is not coursework, and the part an undergraduate on a PhD
+    # track spends their credibility on: a group to sit in, an advisor to
+    # answer to, a literature to keep up with, and a thesis that is written in
+    # blocks or not at all.
+    (1, 'Lab meeting', 'research', '14:00', '15:00', 30, False),
+    (2, 'Paper reading group', 'research', '15:00', '16:00', 45, True),
+    (4, 'Advisor meeting', 'research', '13:00', '13:45', 30, False),
+    (4, 'Thesis writing block', 'thesis', '14:00', '16:00', 65, True),
 
-    # Every weekday, either end of it.
-    *[(d, 'Morning review', 'planning', '08:15', '08:45', 10, False) for d in range(5)],
-    *[(d, 'Gym', 'gym', '07:00', '08:00', 25, False) for d in (0, 2, 4)],
+    # ---- The violin, which is not the degree and not negotiable -----------
+    (2, 'Violin lesson', 'music', '18:00', '19:00', 40, True),
+    (0, 'Orchestra rehearsal', 'music', '19:30', '21:00', 40, True),
+
+    # ---- Training ---------------------------------------------------------
+    *[(d, 'Lift', 'gym', '07:30', '08:30', 25, False) for d in (0, 2, 4)],
+    *[(d, 'Morning run', 'running', '07:30', '08:15', 20, False) for d in (1, 3)],
+
+    # ---- The head, either end of the day ----------------------------------
+    *[(d, 'Morning meditation', 'meditation', '06:45', '07:10', 12, False)
+      for d in range(5)],
+    *[(d, 'Evening review', 'planning', '22:00', '22:20', 10, False)
+      for d in range(5)],
+
+    # ---- People ------------------------------------------------------------
+    # Two standing appointments with other human beings, on the calendar for
+    # the same reason the lectures are: what is not timetabled does not happen
+    # in a week this full.
+    (1, 'Lunch with the lab', 'friends', '12:15', '13:00', 12, False),
+    (4, 'Dinner out with friends', 'friends', '19:30', '21:30', 20, False),
+
+    # ---- The weekend -------------------------------------------------------
+    # It used to be empty, which said that Saturday and Sunday were whatever
+    # was left over. They are the recovery this week is affordable *because*
+    # of, so they are timetabled like everything else.
+    (5, 'Long run with friends', 'running', '08:30', '10:00', 30, False),
+    (5, 'Ice bath', 'health', '10:30', '10:50', 15, False),
+    (5, 'Brunch out', 'friends', '11:30', '13:00', 15, False),
+    (6, 'Long meditation sit', 'meditation', '08:30', '09:15', 20, False),
+    (6, 'Ice bath', 'health', '09:30', '09:50', 15, False),
+    (6, 'Sunday reset', 'planning', '18:00', '18:45', 20, False),
 )
 
 #: The day's subject, written onto the calendar as its Focus note.
 #:
 #: Tied to what the day actually holds rather than rotated for variety: Monday
 #: and Thursday are the Putnam seminar and its problem session, Wednesday is
-#: the violin lesson, Friday is the project. The two that are not anchored to
-#: anything alternate, because a Tuesday that is always Algorithms is a
-#: timetable nobody keeps.
+#: the reading group and the violin, Friday is the thesis. The weekend names
+#: what the weekend is for, which on this timetable is people and recovery
+#: rather than a sixth and seventh working day.
 FOCUS_DAYS = {
     0: ('Putnam',),
-    1: ('Algorithms', 'Systems'),
+    1: ('Algorithms', 'Analysis'),
     2: ('Machine learning',),
-    3: ('Putnam',),
-    4: ('Web development',),
-    5: ('Side project', 'Deep work'),
-    6: ('Reading', 'Rest and reset'),
+    3: ('Putnam', 'ML lab'),
+    4: ('Thesis',),
+    5: ('Friends and training', 'Deep work'),
+    6: ('Rest and reset', 'Reading'),
 }
 
 # --------------------------------------------------------------------------
 # The study that fills the year behind
 # --------------------------------------------------------------------------
 # (title, subject, minutes, xp). Drawn from to top a finished day up to
-# something like a real one — the timetable alone is about 200 XP on an average
-# weekday, and an undergraduate taking this seriously is closer to 450.
+# something like a real one — the timetable alone is a little over 200 XP on an
+# average weekday, and somebody taking this year seriously is closer to 470.
 #
-# Weighted toward the three things Alpha actually spends its evenings on:
-# writing software, the mathematics, and the model that is training. The violin
-# is here once, which is what "some violin" means on a week like this one.
+# Weighted toward the four things the evenings actually go on — the problem
+# sets, the research, the model that is training, and the violin — and then
+# deliberately not only those. Three of the eighteen are other people and two
+# are recovery, which is roughly the true ratio for somebody who is doing this
+# well rather than doing it until they stop.
 EVENING = (
     ('Math 55 problem set', 'mathematics', 120, 110),
+    ('Analysis problem set', 'mathematics', 90, 90),
     ('Putnam problems', 'mathematics', 90, 90),
     ('Algorithms problem set', 'computer_science', 90, 85),
-    ('LeetCode session', 'programming', 60, 55),
+    ('Thesis experiments', 'thesis', 90, 90),
+    ('Paper replication', 'research', 75, 75),
     ('ML paper reading', 'machine_learning', 60, 60),
     ('Training run + writeup', 'machine_learning', 75, 70),
+    ('Model debugging', 'machine_learning', 60, 55),
+    ('LeetCode session', 'programming', 60, 55),
     ('Kaggle notebook', 'data_science', 90, 80),
-    ('Side project — frontend', 'web_design', 90, 80),
-    ('Side project — API', 'web_design', 75, 70),
-    ('Refactor and code review', 'programming', 60, 55),
-    ('Systems reading', 'programming', 45, 45),
-    ('Schema and query work', 'databases', 45, 45),
     ('Violin practice', 'music', 45, 40),
-    ('Lecture notes tidy-up', 'lectures', 30, 25),
+    ('Climbing with friends', 'friends', 90, 30),
+    ('Board game night', 'friends', 90, 25),
+    ('Cooking with housemates', 'cooking', 60, 20),
+    ('Evening walk', 'health', 30, 15),
+    ('Journalling', 'journaling', 20, 15),
     ('Flashcards', 'flashcards', 20, 20),
 )
 
+# The weekend pool. Longer sessions, because two unbroken days is what a Putnam
+# mock and a training run need — and a larger share of it is not work at all,
+# which is the difference between a weekend and a Wednesday.
 WEEKEND = (
     ('Putnam mock', 'mathematics', 240, 180),
-    ('Math 55 proof grinding', 'mathematics', 150, 130),
-    ('Side project — ship a feature', 'web_design', 180, 150),
+    ('Analysis proof grinding', 'mathematics', 150, 130),
+    ('Thesis writing', 'thesis', 180, 150),
+    ('Research reading', 'research', 120, 100),
     ('ML project training', 'machine_learning', 150, 130),
     ('Open source contribution', 'programming', 120, 110),
     ('Long violin practice', 'music', 90, 70),
     ('Reading', 'reading', 60, 40),
-    ('Gym', 'gym', 75, 45),
-    ('Week review', 'planning', 30, 30),
+    ('Long lift session', 'gym', 75, 45),
+    ('Ice bath and sauna', 'health', 40, 20),
+    ('Long meditation', 'meditation', 60, 30),
+    ('Hike with friends', 'friends', 180, 45),
+    ('Brunch with friends', 'friends', 90, 25),
+    ('Cooking a proper meal', 'cooking', 75, 25),
     ('Chores', 'chores', 45, 25),
+    ('Laundry and reset', 'laundry', 45, 20),
 )
 
 
@@ -261,16 +361,43 @@ def behind_rows(user: str, start: date, days: int, first_id: int, rng: random.Ra
 
     for offset in range(days):
         day = start + timedelta(days=offset)
-        # Four days off a month, taken as whole days rather than sprinkled —
-        # that is what a break looks like in a record, and it is what gives the
-        # habits and consistency pages a shape to find.
-        if rng.random() < 0.13:
+
+        # Two kinds of day that are not a working day, and they are not the
+        # same thing.
+        #
+        # This used to be one: a 13% chance of the day being skipped outright,
+        # no rows at all. That was right when the week was nothing but
+        # lectures and problem sets — a day off from a week like that really is
+        # an empty day. It is wrong now. Somebody who lifts three mornings,
+        # sits for twenty minutes before it is light and gets in cold water on
+        # a Saturday does not stop doing those because they are not working;
+        # those *are* the rest day. Modelling one as a hole in the record made
+        # the app say the account had not turned up at all, and the streak on
+        # the front page came out at 1 against a year of daily effort.
+        #
+        # So: a rest day keeps everything on the timetable that was never work
+        # — see `NOT_STUDY`, which is the line this reads — and drops the
+        # lectures, the seminars and the evening. Roughly one day in eight.
+        #
+        # A day *away* is the rarer thing and stays a genuine hole: travel,
+        # illness, the weekend somebody actually leaves. One day in
+        # twenty-five, which is what leaves the streak worth looking at and the
+        # consistency score something other than a flat hundred.
+        roll = rng.random()
+        if roll < 0.04:
             continue
+        resting = roll < 0.16
 
         for weekday, title, subject, begin, end, xp, _study in WEEK:
-            if day.weekday() == weekday:
-                finish(day, title, subject, begin,
-                       minutes(end) - minutes(begin), xp, 1)
+            if day.weekday() != weekday:
+                continue
+            if resting and subject not in NOT_STUDY:
+                continue
+            finish(day, title, subject, begin,
+                   minutes(end) - minutes(begin), xp, 1)
+
+        if resting:
+            continue
 
         pool = WEEKEND if day.weekday() >= 5 else EVENING
         clock = 9 * 60 if day.weekday() >= 5 else 19 * 60 + 30
@@ -303,9 +430,22 @@ ATTENDANCE = frozenset(
     title for _d, title, _s, _b, _e, _x, study in WEEK if not study)
 
 #: Subjects that are never deliberate study, whatever they are attached to.
-#: The evening and weekend pools have no flag of their own — everything in them
-#: is study except the two things that keep a person alive.
-NOT_STUDY = frozenset(('planning', 'chores', 'gym'))
+#:
+#: The evening and weekend pools carry no flag of their own, so this is the
+#: only thing standing between them and the focus figures. It used to be three
+#: names because the week held almost nothing but work; now that it holds a
+#: life, the list is the whole of that life. An hour in an ice bath, an hour
+#: with friends and an hour of sitting still are all worth XP and all belong on
+#: the record — and not one of them is an hour of focus, which is the figure
+#: the app reports as time spent studying.
+#:
+#: `reading` is deliberately *not* here. Reading a book is study in the sense
+#: this app means; lying in cold water is not.
+NOT_STUDY = frozenset((
+    'planning', 'chores', 'laundry', 'cooking',
+    'gym', 'running', 'health', 'meditation',
+    'friends', 'journaling',
+))
 
 
 def focus_sessions(user: str, tasks, rng: random.Random):
@@ -338,7 +478,7 @@ def snapshots(user: str, tasks, focus, start: date, days: int):
     account's goal, consistency is the days it worked, quality is what it rated
     its own work, and so on. The same five, and the mean of them.
     """
-    goal = 300.0
+    goal = float(DAILY_GOAL)
     xp_by_day: dict[str, int] = {}
     rated: dict[str, list[tuple[int, int]]] = {}
     ontime: dict[str, list[int]] = {}
@@ -620,9 +760,9 @@ def main():
             run, best = streaks(behind, behind_to)
             con.execute(
                 'UPDATE users SET xp = ?, level = ?, tasks_completed = ?,'
-                ' daily_goal = 300, current_streak = ?, best_streak = ?,'
+                ' daily_goal = ?, current_streak = ?, best_streak = ?,'
                 ' last_task_date = ?, day_state = ? WHERE username = ?',
-                (ledger[0], levels['level'], ledger[1], run, best,
+                (ledger[0], levels['level'], ledger[1], DAILY_GOAL, run, best,
                  behind_to.isoformat(), 'newday', args.user))
 
         print('{}: cleared {}, wrote {} ahead + {} behind'.format(
