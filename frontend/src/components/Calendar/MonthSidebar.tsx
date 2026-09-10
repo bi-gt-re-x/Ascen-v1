@@ -16,6 +16,7 @@
  * in it is a real answer and the panels say so, because a column that vanishes
  * when the month is empty is a column the reader learns not to trust.
  */
+import { Overview } from './Overview';
 import { fmtHM } from '@/hooks/useFocusSession';
 import { dates } from '@/utils';
 import type { MonthDay, MonthInsight } from '@/utils/monthSummary';
@@ -43,30 +44,6 @@ function dayLabel(iso: string): string {
   return `${short} (${weekday})`;
 }
 
-function Tile({
-  tone,
-  icon,
-  label,
-  value,
-  sub,
-}: {
-  tone: string;
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub: string;
-}) {
-  return (
-    <div className={`mv-tile tone-${tone}`}>
-      <span className="mv-tile-ico" aria-hidden="true">
-        {icon}
-      </span>
-      <span className="mv-tile-label">{label}</span>
-      <span className="mv-tile-value">{value}</span>
-      <span className="mv-tile-sub">{sub}</span>
-    </div>
-  );
-}
 
 export function MonthSidebar({
   tasks,
@@ -85,60 +62,31 @@ export function MonthSidebar({
 
   return (
     <>
-      <section className="mv-card">
-        <h3 className="mv-card-title">Monthly Overview</h3>
-        <div className="mv-tiles">
-          <Tile
-            tone="tasks"
-            icon={
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M9 11.5 11 13.5 15.5 9" />
-                <rect x="4" y="4" width="16" height="16" rx="4" />
-              </svg>
-            }
-            label="Tasks"
-            value={`${done} / ${tasks}`}
-            sub="Completed"
-          />
-          <Tile
-            tone="focus"
-            icon={
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="8.5" />
-                <path d="M12 7.5V12l3 1.8" />
-              </svg>
-            }
-            label="Focus Time"
-            /* Focused against planned. The tile said "Planned" alone for a
-               while, which is the one figure that cannot be wrong and also
-               cannot be interesting: it is what the reader typed in. */
-            value={fmtHM(focused)}
-            sub={`of ${fmtHM(planned)} planned`}
-          />
-          <Tile
-            tone="xp"
-            icon={
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m12 4 2.4 5 5.6.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.6-.8z" />
-              </svg>
-            }
-            label="XP Earned"
-            value={xpEarned.toLocaleString()}
-            sub="Total"
-          />
-          <Tile
-            tone="best"
-            icon={
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m12 4 2.4 5 5.6.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.6-.8z" />
-              </svg>
-            }
-            label="Best Day"
-            value={best ? dates.formatDate(dates.fromIsoDate(best.iso), { month: 'short', day: 'numeric' }) : '—'}
-            sub={best ? `${best.earned.toLocaleString()} XP` : 'Nothing yet'}
-          />
-        </div>
-      </section>
+      {/* The panel all three views share — components/Calendar/Overview.tsx.
+          It was written here, as the Month view's own four tiles, and the Week
+          and Day views each had a differently-shaped answer to the same three
+          questions. The fourth tile is still this view's: a best day is a
+          thing only a month can have. */}
+      <Overview
+        scale="month"
+        tasks={tasks}
+        done={done}
+        focused={fmtHM(focused)}
+        planned={fmtHM(planned)}
+        xp={xpEarned}
+        extra={{
+          icon: (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m12 4 2.4 5 5.6.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.6-.8z" />
+            </svg>
+          ),
+          label: 'Best day',
+          value: best
+            ? dates.formatDate(dates.fromIsoDate(best.iso), { month: 'short', day: 'numeric' })
+            : '—',
+          sub: best ? `${best.earned.toLocaleString()} XP` : 'nothing yet',
+        }}
+      />
 
       <section className="mv-card">
         <div className="mv-card-head">

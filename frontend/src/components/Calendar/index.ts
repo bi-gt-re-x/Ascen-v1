@@ -28,6 +28,8 @@ export { MonthSummaryBar } from './MonthSummaryBar';
 export { MonthTools } from './MonthTools';
 export type { MonthToolsProps, Upcoming } from './MonthTools';
 export type { MonthSummaryBarProps } from './MonthSummaryBar';
+export { Overview } from './Overview';
+export type { OverviewProps, OverviewScale, OverviewTile } from './Overview';
 export { ConflictDialog, CreateChooser, DeleteConfirm } from './Prompts';
 export type {
   ConflictDialogProps,

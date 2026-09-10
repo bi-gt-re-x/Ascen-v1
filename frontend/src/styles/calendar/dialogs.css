@@ -1,0 +1,813 @@
+/* ==========================================================================
+   dialogs.css — everything the calendar puts *over* itself.
+
+   The task and event modals, the recurrence and time pickers, the "event or
+   task?" chooser, the delete confirmation, the overlap warning, and the
+   three-dots menu on a card. All of them are rendered by all three views —
+   components/Calendar/TaskModal, EventModal, RecurrencePicker, TimePicker,
+   Prompts and CardMenu — and until now half of them were dressed by month.css
+   and half by week.css.
+
+   That is why every view imported every sheet. The Month view has no time grid
+   and draws nothing with a `wk-` class, but it opens the same delete
+   confirmation the Week view does, so it was pulling in the whole of week.css
+   for eight rules; the Week view had the mirror of the same problem with
+   month.css and the modals.
+
+   Nothing here is new and nothing changed. Every rule was moved verbatim, and
+   every selector in this file is written in exactly one calendar stylesheet, so
+   moving them cannot have changed which rule wins — only which file a reader
+   has to open to find it.
+   ========================================================================== */
+
+/* Professional Theme */
+
+/* Vintage Paper Theme */
+
+/* Cyber Grid Theme */
+
+/* Desert Solitude Theme */
+
+/* Retro City Theme */
+
+/* Galactic Skies Theme */
+
+/* Modal Styles */
+
+.calendar-container .modal {
+
+    display: none;
+
+    position: fixed;
+
+    z-index: 1000;
+
+    left: 0;
+
+    top: 0;
+
+    width: 100%;
+
+    height: 100%;
+
+    background-color: rgba(0, 0, 0, 0.5);
+
+    backdrop-filter: blur(5px);
+
+}
+
+/* The dialog itself: a column of head, body and foot that takes the height it
+   needs up to what the viewport has.
+
+   It used to be a plain block whose body was capped at a flat 500px, and the
+   Day and Month views — which open the narrow dialog — paid for it twice. The
+   Add Task form is a name, two time pickers, a subject, an XP slider and a
+   recurrence block; at 500px that is a scrollbar over a form that would have
+   fitted the screen twice over, and at `min(600px, 90%)` the seven weekday
+   checkboxes had 540px to share four across. So: wider, and a height that is a
+   fraction of the window rather than a number. The body still scrolls, but only
+   once the window genuinely cannot hold the form.
+
+   The top and bottom margins are the same fraction, so the cap and the gap
+   agree and the dialog sits with even air around it instead of the old
+   `calc(8% - 42px)`, which was a number tuned for one form's height. */
+.calendar-container .modal-content {
+
+    margin: min(5vh, 44px) auto;
+
+    padding: 0;
+
+    border-radius: 20px;
+
+    width: min(680px, 94%);
+
+    box-sizing: border-box;
+
+    display: flex;
+
+    flex-direction: column;
+
+    max-height: calc(100vh - min(10vh, 88px));
+
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+    animation: fadeIn 0.3s ease-out;
+
+}
+
+/* Week view opens the shared "Add New Event" modal 2x wider, with no horizontal scroll. */
+.calendar-container .modal.from-week .modal-content {
+
+    width: min(1200px, 96%);
+
+    max-width: 96vw;
+
+    box-sizing: border-box;
+
+}
+
+.calendar-container .modal.from-week .modal-body {
+
+    overflow-x: hidden;
+
+}
+
+.calendar-container .modal-header {
+
+    flex: none;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 21px 30px;
+
+    border-bottom: 1px solid #e0e0e0;
+
+    border-radius: 20px 20px 0 0;
+
+}
+
+.calendar-container .modal-header h3 {
+
+    margin: 0;
+
+    color: #1a237e;
+
+    font-family: 'Century Gothic', sans-serif;
+
+    font-size: 22px;
+
+}
+
+.calendar-container .close-btn {
+
+    font-size: 32px;
+
+    font-weight: bold;
+
+    color: #666;
+
+    cursor: pointer;
+
+    transition: color 0.3s ease;
+
+    line-height: 1;
+
+}
+
+.calendar-container .close-btn:hover {
+
+    color: #1a237e;
+
+}
+
+/* Whatever is left between the head and the foot. `min-height: 0` is the half
+   that matters: a flex item's automatic minimum is its content, so without it
+   the body would refuse to shrink, push the footer off the bottom of the
+   dialog, and scroll nothing. */
+.calendar-container .modal-body {
+
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    padding: 28px 30px;
+
+    overflow-y: auto;
+
+}
+
+/* Six of these stack up in the Add Task dialog — name, two times, subject, XP,
+   recurrence — so the gutter between them is six times whatever it is. At 28px
+   the form was a hundred and fifty pixels of air taller than the window it
+   opens in, which is what put a scrollbar on a form that has no business
+   needing one. */
+.form-group {
+
+    margin-bottom: 22px;
+
+}
+
+.form-group label {
+
+    display: block;
+
+    margin-bottom: 9px;
+
+    color: #333;
+
+    font-family: 'Century Gothic', sans-serif;
+
+    font-weight: 600;
+
+    font-size: 15px;
+
+}
+
+.form-group input[type="text"],
+
+.form-group input[type="time"] {
+
+    width: 100%;
+
+    padding: 14px 18px;
+
+    border: 2px solid #1a237e;
+
+    border-radius: 10px;
+
+    font-family: 'Century Gothic', sans-serif;
+
+    font-size: 15px;
+
+    color: #333;
+
+    box-sizing: border-box;
+
+    background: white;
+
+    cursor: pointer;
+
+}
+
+.time-selector {
+
+    display: flex;
+
+    gap: 10px;
+
+}
+
+.time-select {
+
+    flex: 1;
+
+    padding: 14px 12px;
+
+    border: 2px solid #1a237e;
+
+    border-radius: 10px;
+
+    font-family: 'Century Gothic', sans-serif;
+
+    font-size: 15px;
+
+    color: #333;
+
+    background: white;
+
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+}
+
+.time-select:focus {
+
+    outline: none;
+
+    border-color: #1a237e;
+
+    box-shadow: 0 0 8px rgba(26, 35, 126, 0.3);
+
+}
+
+.form-group input:focus {
+
+    outline: none;
+
+    border-color: #1a237e;
+
+    box-shadow: 0 0 8px rgba(26, 35, 126, 0.3);
+
+}
+
+.radio-group {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 14px;
+
+}
+
+.recurrence-note {
+
+    font-size: 13px;
+
+    color: #666;
+
+    font-style: italic;
+
+    margin: 0 0 10px 0;
+
+    font-family: 'Century Gothic', sans-serif;
+
+}
+
+.invalid-input {
+
+    border: 2px solid red !important;
+
+    background-color: #fff5f5 !important;
+
+}
+
+.radio-group label {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    cursor: pointer;
+
+    font-size: 15px;
+
+    padding: 8px 0;
+
+}
+
+.radio-group input[type="radio"] {
+
+    cursor: pointer;
+
+    width: 18px;
+
+    height: 18px;
+
+    accent-color: #1a237e;
+
+}
+
+/* The days a repeat lands on — seven weekday names, or thirty-one numbers.
+
+   A fixed four columns is the wrong shape for both. In the narrow dialog it
+   gave "Wednesday" about a hundred and twenty pixels to fit a checkbox, a gap
+   and a nine-letter word into, so the labels wrapped and the row of days came
+   out as a ragged block; in the week view's 1200px dialog it left half the
+   width empty. `auto-fit` down to a name's own width fits as many as the
+   dialog can hold and no fewer, at either. */
+.checkbox-group {
+
+    display: grid;
+
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+
+    gap: 12px;
+
+    margin-top: 10px;
+
+}
+
+/* Days of the month: thirty-one two-character labels, which need nothing like
+   a weekday's width. */
+.checkbox-group.is-numeric {
+
+    grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+
+    gap: 8px;
+
+}
+
+.checkbox-group label {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    cursor: pointer;
+
+    font-size: 14px;
+
+    padding: 8px 10px;
+
+    background: #f8f9fa;
+
+    border-radius: 8px;
+
+    transition: background 0.2s ease;
+
+}
+
+.checkbox-group label:hover {
+
+    background: #e9ecef;
+
+}
+
+.checkbox-group input[type="checkbox"] {
+
+    cursor: pointer;
+
+    width: 16px;
+
+    height: 16px;
+
+    accent-color: #1a237e;
+
+}
+
+.calendar-container .modal-footer {
+
+    flex: none;
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 15px;
+
+    padding: 21px 30px;
+
+    border-top: 1px solid #e0e0e0;
+
+    border-radius: 0 0 20px 20px;
+
+}
+
+.btn-cancel,
+
+.btn-confirm {
+
+    padding: 12px 28px;
+
+    border-radius: 10px;
+
+    font-family: 'Century Gothic', sans-serif;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: opacity 0.3s ease, transform 0.3s ease;
+
+    font-size: 15px;
+
+}
+
+.btn-cancel {
+
+    background: #f5f5f5;
+
+    border: 2px solid #e0e0e0;
+
+    color: #666;
+
+}
+
+.btn-cancel:hover {
+
+    background: #e0e0e0;
+
+    border-color: #d0d0d0;
+
+}
+
+.btn-confirm {
+
+    background: #1a237e;
+
+    border: 2px solid #1a237e;
+
+    color: white;
+
+}
+
+.btn-confirm:hover {
+
+    background: #2c3e50;
+
+    border-color: #2c3e50;
+
+    transform: translateY(-2px);
+
+    box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
+
+}
+
+/* ── Add/Edit/Delete Section modal in light theme: cream surface, tan-bordered
+   inputs, black "Add Section" button, beige "Cancel" — matches the mockup.
+   Base modal rules use navy (#1a237e); these override them in light theme. */
+html[data-theme="light"] .calendar-container .modal-content{
+    background: #fdfbf6;
+    border: 1px solid #d8c7a4;
+}
+html[data-theme="light"] .calendar-container .modal-header{ border-bottom: 1px solid #e7dcc4; }
+html[data-theme="light"] .calendar-container .modal-header h3{ color: #1c140b; }
+html[data-theme="light"] .calendar-container .close-btn{ color: #2c2013; }
+html[data-theme="light"] .calendar-container .close-btn:hover{ color: #6b5030; }
+html[data-theme="light"] .form-group label { color: #2c2013; }
+html[data-theme="light"] .recurrence-note { color: #7a6650; }
+html[data-theme="light"] .form-group input[type="text"],
+html[data-theme="light"] .form-group input[type="time"],
+html[data-theme="light"] .time-select {
+    border: 2px solid #c4a875;
+    color: #2c2013;
+    background: #ffffff;
+}
+html[data-theme="light"] .form-group input:focus,
+html[data-theme="light"] .time-select:focus {
+    border-color: #6b5030;
+    box-shadow: 0 0 8px rgba(107, 80, 48, 0.3);
+}
+html[data-theme="light"] .radio-group input[type="radio"],
+html[data-theme="light"] .checkbox-group input[type="checkbox"] { accent-color: #1c140b; }
+html[data-theme="light"] .radio-group label,
+html[data-theme="light"] .checkbox-group label { color: #2c2013; }
+html[data-theme="light"] .checkbox-group label { background: #f3ece0; }
+html[data-theme="light"] .checkbox-group label:hover { background: #e9ddc8; }
+html[data-theme="light"] .calendar-container .modal-footer{ border-top: 1px solid #e7dcc4; }
+html[data-theme="light"] .btn-cancel {
+    background: #dbc9a8;
+    border: 2px solid #dbc9a8;
+    color: #2c2013;
+}
+html[data-theme="light"] .btn-cancel:hover {
+    background: #cdb890;
+    border-color: #cdb890;
+}
+html[data-theme="light"] .btn-confirm {
+    background: #1a1206;
+    border: 2px solid #1a1206;
+    color: #ffffff;
+}
+html[data-theme="light"] .btn-confirm:hover {
+    background: #33261a;
+    border-color: #33261a;
+}
+/* Brown scrollbar inside the scrolling modal body (matches the mockup) */
+html[data-theme="light"] .calendar-container .modal-body::-webkit-scrollbar{ width: 10px; }
+html[data-theme="light"] .calendar-container .modal-body::-webkit-scrollbar-thumb{
+    background: #b79a6a;
+    border-radius: 8px;
+}
+
+/* ── Add/Edit/Delete Section modal — futuristic space look for dark theme.
+   Reuses the calendar card's bluish-glow panel gradient and the cyan #2dd4bf
+   accent from the completion ring, so the popup matches the rest of the dark
+   UI (the base modal is navy/white). */
+html[data-theme="dark"] .calendar-container .modal{ background-color: rgba(6, 8, 12, 0.62); }
+html[data-theme="dark"] .calendar-container .modal-content{
+    background:
+        radial-gradient(135% 120% at 50% -12%, rgba(64, 84, 134, 0.40) 0%, rgba(18, 20, 28, 0) 58%),
+        linear-gradient(168deg, #181b24 0%, #0e0f15 100%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.65),
+        0 0 40px rgba(45, 212, 191, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html[data-theme="dark"] .calendar-container .modal-header{ border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .calendar-container .modal-header h3{
+    color: #f4f4f6;
+    text-shadow: 0 0 18px rgba(45, 212, 191, 0.25);
+}
+html[data-theme="dark"] .calendar-container .close-btn{ color: #9a9ba4; }
+html[data-theme="dark"] .calendar-container .close-btn:hover{ color: #2dd4bf; }
+html[data-theme="dark"] .form-group label { color: #e7e7ec; }
+html[data-theme="dark"] .recurrence-note { color: #8b8d97; }
+html[data-theme="dark"] .form-group input[type="text"],
+html[data-theme="dark"] .form-group input[type="time"],
+html[data-theme="dark"] .time-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f4f4f6;
+}
+html[data-theme="dark"] .form-group input::placeholder { color: #8b8d97; }
+html[data-theme="dark"] .form-group input:focus,
+html[data-theme="dark"] .time-select:focus {
+    border-color: rgba(45, 212, 191, 0.7);
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.35);
+}
+html[data-theme="dark"] .time-select option { background: #14171f; color: #f4f4f6; }
+html[data-theme="dark"] .radio-group input[type="radio"],
+html[data-theme="dark"] .checkbox-group input[type="checkbox"] { accent-color: #2dd4bf; }
+html[data-theme="dark"] .radio-group label,
+html[data-theme="dark"] .checkbox-group label { color: #e7e7ec; }
+html[data-theme="dark"] .checkbox-group label { background: rgba(255, 255, 255, 0.05); }
+html[data-theme="dark"] .checkbox-group label:hover { background: rgba(255, 255, 255, 0.10); }
+html[data-theme="dark"] .calendar-container .modal-footer{ border-top: 1px solid rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .btn-cancel {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #e7e7ec;
+}
+html[data-theme="dark"] .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+/* Confirm button: the theme's signature cyan glow */
+html[data-theme="dark"] .btn-confirm {
+    background: linear-gradient(160deg, #2dd4bf 0%, #14b8a6 100%);
+    border: 1px solid rgba(45, 212, 191, 0.6);
+    color: #05201c;
+    box-shadow: 0 0 18px rgba(45, 212, 191, 0.35);
+}
+html[data-theme="dark"] .btn-confirm:hover {
+    background: linear-gradient(160deg, #3ee0cb 0%, #17c6b2 100%);
+    border-color: rgba(45, 212, 191, 0.85);
+    box-shadow: 0 0 26px rgba(45, 212, 191, 0.5);
+}
+html[data-theme="dark"] .calendar-container .modal-body::-webkit-scrollbar{ width: 10px; }
+html[data-theme="dark"] .calendar-container .modal-body::-webkit-scrollbar-thumb{
+    background: rgba(45, 212, 191, 0.35);
+    border-radius: 8px;
+}
+
+/* Three-dots overflow menu on grid blocks (events + tasks). */
+.wk-card-menu {
+    position: absolute; top: 2px; right: 2px; z-index: 4;
+    width: 18px; height: 16px; padding: 0; margin: 0;
+    border: none; background: transparent; cursor: pointer;
+    color: inherit; opacity: 0; line-height: 1; font-size: 14px;
+    border-radius: 5px; display: flex; align-items: center; justify-content: center;
+    transition: opacity .12s ease;
+}
+.wk-card-menu:hover { opacity: 1; background: rgba(16, 24, 40, .12); }
+/* Its own focus ring, here rather than beside the hover rule in week.css: a
+   bare `.wk-card-menu:focus-visible` claims the class, and two sheets claiming
+   one class is the collision scripts/check_css.mjs exists to catch. */
+.wk-card-menu:focus-visible { opacity: .6; }
+
+/* Body-level popover so the block's overflow:hidden can't clip it. */
+.wk-card-pop {
+    position: fixed; z-index: 1200; min-width: 118px;
+    display: flex; flex-direction: column; padding: 4px 0;
+    background: #fff; border: 1px solid #e3e6ee; border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(16, 24, 40, .22); overflow: hidden;
+}
+.wk-card-pop .wk-dd-item {
+    border: none; background: transparent; text-align: left;
+    padding: 8px 14px; font: inherit; font-size: 13px; cursor: pointer;
+    color: #2c3550; white-space: nowrap;
+}
+.wk-card-pop .wk-dd-item:hover { background: #f2f5fb; }
+.wk-card-pop .wk-dd-del { color: #b0413e; }
+
+html[data-theme="dark"] .wk-card-pop { background: #1b1f2a; border-color: #2b3242; }
+html[data-theme="dark"] .wk-card-pop .wk-dd-item { color: #e7e9f2; }
+html[data-theme="dark"] .wk-card-pop .wk-dd-item:hover { background: #262c3a; }
+html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
+
+/* Conflict modal: two blocks overlap >75%. A blocking backdrop centers the
+   prompt so the calendar can't be used until one side is deleted (no keep-both). */
+.wk-overlap-backdrop {
+    position: fixed; inset: 0; z-index: 1000; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(16, 24, 40, .45);
+    transition: background .18s ease;
+}
+.wk-overlap-popup {
+    display: flex; flex-direction: column; gap: 12px;
+    width: min(92vw, 460px); text-align: left;
+    background: #b0413e; color: #fff; padding: 20px 22px;
+    border-radius: 14px; font-size: 15px; font-weight: 600;
+    box-shadow: 0 16px 44px rgba(16,24,40,.4);
+    transition: transform .22s ease, width .22s ease;
+}
+.wk-overlap-msg { line-height: 1.45; font-weight: 600; }
+.wk-overlap-msg strong { font-weight: 800; }
+
+/* One row per side: what it is and when it runs, its name, and the way out.
+   The dialog used to offer two bare names, which on a seven-column week is a
+   question about two rectangles the reader may never have looked at. */
+.wk-overlap-list {
+    display: flex; flex-direction: column; gap: 10px;
+    list-style: none; margin: 0; padding: 0;
+}
+.wk-overlap-item {
+    display: flex; flex-direction: column; gap: 6px;
+    background: rgba(255,255,255,.13); border-radius: 10px; padding: 11px 13px;
+}
+.wk-overlap-where { display: flex; align-items: center; gap: 8px; }
+.wk-overlap-kind {
+    flex: none; border-radius: 999px; padding: 2px 8px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
+    text-transform: uppercase; background: rgba(255,255,255,.24);
+}
+.wk-overlap-when { font-size: 12.5px; font-weight: 700; opacity: .9; }
+.wk-overlap-name {
+    font-size: 15.5px; font-weight: 700; line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+.wk-overlap-close {
+    background: rgba(255,255,255,.22); color: #fff; border: none;
+    border-radius: 8px; padding: 8px 14px; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 700; width: 100%;
+    margin-top: 2px;
+}
+.wk-overlap-close:hover { background: rgba(255,255,255,.34); }
+
+.wk-overlap-reveal {
+    background: #fff; color: #8f302e; border: none;
+    border-radius: 9px; padding: 10px 16px; cursor: pointer;
+    font: inherit; font-size: 13.5px; font-weight: 800; width: 100%;
+}
+.wk-overlap-reveal:hover { background: #ffeceb; }
+
+/* Peeking: the reader has asked to see the two blocks, so the dialog gets out
+   of their way — the backdrop stops dimming and stops catching clicks, and the
+   card tucks into the bottom-left corner, still holding both answers. A modal
+   over the very thing it is asking about is a question nobody can answer. */
+.wk-overlap-backdrop.is-peeking {
+    background: transparent; pointer-events: none;
+    align-items: flex-end; justify-content: flex-start;
+}
+.wk-overlap-backdrop.is-peeking .wk-overlap-popup {
+    pointer-events: auto; width: min(88vw, 340px);
+    font-size: 13.5px;
+}
+.wk-overlap-backdrop.is-peeking .wk-overlap-name { font-size: 14px; }
+
+/* Drag-to-create chooser: after a drag, ask whether to make an event or a task.
+   Neutral (not an error), centered on a light dismissable backdrop. */
+.wk-choose-backdrop {
+    position: fixed; inset: 0; z-index: 1100; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(16, 24, 40, .45);
+}
+.wk-choose-popup {
+    display: flex; flex-direction: column; gap: 20px;
+    width: min(94vw, 520px); text-align: center;
+    background: #fff; color: #1f2733; padding: 34px 36px;
+    border-radius: 18px; box-shadow: 0 20px 56px rgba(16,24,40,.42);
+}
+.wk-choose-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+.wk-choose-row { display: flex; gap: 16px; }
+.wk-choose-btn {
+    flex: 1; border: none; border-radius: 12px; padding: 20px 18px;
+    cursor: pointer; font: inherit; font-size: 17px; font-weight: 700; color: #fff;
+    background: #3b4658;
+}
+.wk-choose-btn.is-task { background: #8b5cf6; }
+.wk-choose-btn:hover { filter: brightness(1.08); }
+.wk-choose-cancel {
+    background: none; border: none; color: #6c757d; cursor: pointer;
+    font: inherit; font-weight: 600; padding: 4px;
+}
+.wk-choose-cancel:hover { color: #1f2733; }
+html[data-theme="dark"] .wk-choose-popup { background: #1b212a; color: #e6e8f0; }
+html[data-theme="dark"] .wk-choose-cancel { color: #9aa4b2; }
+html[data-theme="dark"] .wk-choose-cancel:hover { color: #e6e8f0; }
+
+/* Add-Task modal XP slider — brought over from the dashboard's XP slider. The
+   page's global `.modal-content input { width:100% }` (mainpage.css) would blow
+   these up, so the widths are scoped under #addTaskModal to win on specificity:
+   the slider fills the row and the number box stays a fixed 56px pill. */
+.xp-slider-row { display: flex; gap: 12px; align-items: center; margin-top: 6px; }
+.xp-value { color: #A38A70; font-weight: 700; }
+#addTaskModal .xp-slider-row input[type="range"] {
+    flex: 1 1 auto; width: auto; min-width: 0; accent-color: #A38A70;
+}
+#addTaskModal .xp-input-field {
+    flex: 0 0 56px; width: 56px; padding: 6px 8px; border: 1.5px solid #D9D9D9;
+    border-radius: 8px; background: #F8F9FA; color: #2C302E; font-size: 14px;
+    font-weight: 600; text-align: center; outline: none; -moz-appearance: textfield;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#addTaskModal .xp-input-field:focus { border-color: #A38A70; box-shadow: 0 0 0 3px rgba(163, 138, 112, 0.18); }
+/* Scoped like the rules above it. Bare, this reached the dashboard's Add Task
+   popup too, which writes the same class name from a different stylesheet. */
+#addTaskModal .xp-input-field::-webkit-outer-spin-button,
+#addTaskModal .xp-input-field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+html[data-theme="dark"] #addTaskModal .xp-input-field { background: #232a33; border-color: #2b323c; color: #e6e8f0; }
+
+/* Delete confirmation: a styled, blocking popup. The backdrop covers the whole
+   viewport so nothing behind it can be clicked until the user answers. */
+.wk-confirm-backdrop {
+    position: fixed; inset: 0; z-index: 1300; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(16, 24, 40, .5); backdrop-filter: blur(3px);
+}
+.wk-confirm-popup {
+    width: min(92vw, 400px); text-align: left;
+    background: #fff; border: 1px solid #e5e8ee; border-radius: 16px;
+    padding: 22px 24px; box-shadow: 0 20px 60px rgba(16, 24, 40, .4);
+}
+.wk-confirm-title { margin: 0 0 8px; font-size: 18px; font-weight: 800; color: #1a2230; }
+.wk-confirm-msg { margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: #55607a; }
+.wk-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.wk-confirm-cancel, .wk-confirm-delete {
+    border-radius: 999px; padding: 9px 20px; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 700; border: 1px solid transparent;
+}
+.wk-confirm-cancel { background: #f1f3f7; border-color: #e5e8ee; color: #2c3550; }
+.wk-confirm-cancel:hover { background: #e7eaf1; }
+.wk-confirm-delete { background: #d84a47; color: #fff; }
+.wk-confirm-delete:hover { background: #c33f3c; }
+
+html[data-theme="dark"] .wk-confirm-popup { background: #171b23; border-color: #2b323c; }
+html[data-theme="dark"] .wk-confirm-title { color: #f0f2f7; }
+html[data-theme="dark"] .wk-confirm-msg { color: #aab2c5; }
+html[data-theme="dark"] .wk-confirm-cancel { background: #232a35; border-color: #333c48; color: #e6e8f0; }
+html[data-theme="dark"] .wk-confirm-cancel:hover { background: #2c3440; }
+
+.wk-empty { margin: 0; font-size: 13px; color: #9aa0ad; }

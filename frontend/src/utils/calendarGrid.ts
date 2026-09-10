@@ -57,8 +57,32 @@ export const HOUR_H = 86;
  * is not worth drawing to scale.
  */
 const COMPACT_MIN_H = 22;
-/** At or under this many minutes a block drops to its one-row layout. */
-const COMPACT_MINUTES = 20;
+/**
+ * Under this many minutes a block is one strip: the name and the whole range
+ * on a single row, and nothing else.
+ *
+ * Thirty is where the two-line layout starts to have room rather than to
+ * merely clear a minimum. Those two lines are an 11px line at 1.25 each
+ * (13.75px) between 5px of padding top and bottom, so they need 37.5px; a
+ * block of `m` minutes is `(m / 60) * HOUR_H - 4` pixels tall. That is 31.8 at
+ * twenty-five minutes — nearly six pixels short — 37.57 at twenty-nine, which
+ * clears it by seven hundredths of a pixel and is not room by any useful
+ * meaning of the word, and 39 at thirty, which is.
+ *
+ * It was 20, and the ten minutes between the two numbers were the bug: a
+ * twenty-five minute block is 31.8px, so it was drawn with a name *and* a
+ * floor for its time and had six pixels less than the pair needed. Nothing
+ * overflowed visibly, because `.wk-event` is `overflow: hidden` — the time
+ * simply had its lower half cut off, on every short block on the grid, which
+ * is the failure that looks like a rendering glitch rather than a layout that
+ * was asked for too much.
+ *
+ * One strip is the honest answer at that height. The name truncates, which is
+ * the trade `.wk-event-head` already documents for narrow columns, and a
+ * truncated name beats a bisected time: the reader can tell a truncated word
+ * is truncated, and cannot tell that half a clipped one is missing.
+ */
+const COMPACT_UNDER = 30;
 /**
  * Under this many minutes a block is too short for its full layout.
  *
@@ -70,9 +94,9 @@ const COMPACT_MINUTES = 20;
  * four lines and is still drawn with three. Left where it is deliberately: the
  * taller row was asked for to give the grid air, and spending all of it on
  * putting XP back onto shorter blocks would hand it straight back.
- * Under the threshold a block gives up the XP and puts the start
- * time back beside the name, which is two lines and fits from about 36 minutes
- * up; under COMPACT_MINUTES it gives up the end time too. The XP is always
+ * Under the threshold a block gives up the XP and puts its range on the floor,
+ * which is two lines and fits from thirty minutes up; under `COMPACT_UNDER` it
+ * gives up the second line too and says everything on one. The XP is always
  * what goes first: the time is what a calendar is for, and a block that cannot
  * say when it runs is not worth drawing.
  */
@@ -583,9 +607,9 @@ export function layOut(blocks: Block[]): { blocks: Block[]; conflict: [Block, Bl
     return {
       ...block,
       top: (block.start - START_HOUR) * HOUR_H,
-      height: minutes <= COMPACT_MINUTES ? Math.max(height, COMPACT_MIN_H) : height,
-      compact: minutes <= COMPACT_MINUTES,
-      snug: minutes > COMPACT_MINUTES && minutes < SNUG_MINUTES,
+      height: minutes < COMPACT_UNDER ? Math.max(height, COMPACT_MIN_H) : height,
+      compact: minutes < COMPACT_UNDER,
+      snug: minutes >= COMPACT_UNDER && minutes < SNUG_MINUTES,
     };
   });
 

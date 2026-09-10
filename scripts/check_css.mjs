@@ -77,8 +77,20 @@ const VOCABULARY = [/^is-/, /^has-/, /^tone-/, /^grade-/, /^tier-/];
 const FAMILIES = [
   {
     name: 'calendar',
-    why: 'Four views of one calendar, sharing wk- and day- and the chrome around them.',
-    files: ['calendar/day.css', 'calendar/week.css', 'calendar/month.css', 'calendar/palette.css'],
+    why:
+      'One calendar in seven files. Three are the views; the other four are what ' +
+      'all three views wear — the card and the switcher (shell), everything they ' +
+      'open over themselves (dialogs), the panel that says what the period came ' +
+      'to (overview), and the colour system (palette).',
+    files: [
+      'calendar/shell.css',
+      'calendar/dialogs.css',
+      'calendar/overview.css',
+      'calendar/day.css',
+      'calendar/week.css',
+      'calendar/month.css',
+      'calendar/palette.css',
+    ],
   },
   {
     name: 'landing',

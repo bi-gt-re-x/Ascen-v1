@@ -16,13 +16,16 @@
  */
 import { useState } from 'react';
 import { MiniMonth } from './MiniMonth';
+import { Overview } from './Overview';
 import { iconUrlFor } from '@/utils/calendarIcons';
 import { bandStyle, hourLabel, spanLabel, type DayShape } from '@/utils/dayShape';
 import type { TaskBlock } from '@/utils/calendarGrid';
 
 export interface DayStats {
-  /** "2 / 5" — of the day's tasks. */
-  tasks: string;
+  /** The day's tasks, and how many are done — not a rendered "2 / 5".
+      The shared overview writes the fraction, so every view writes it alike. */
+  tasks: number;
+  done: number;
   /** Already formatted: "1h 30m". */
   focusTime: string;
   /** Null while the ledger is still being asked. */
@@ -214,20 +217,37 @@ export function DaySidebar({
         </section>
       )}
 
-      <section className="wk-panel">
-        <div className="day-panel-head">
-          <h3 className="wk-panel-title">Daily Overview</h3>
-        </div>
-        <div className="wk-stats day-stats">
-          <div className="wk-stat">
-            <div className="wk-stat-label">Tasks</div>
-            <div className="wk-stat-num">{stats.tasks}</div>
-            <div className="wk-stat-sub">Completed</div>
-          </div>
-          <div className="wk-stat">
-            <div className="wk-stat-label">Focus Time</div>
-            <div
-              className={`wk-stat-num day-stat-green${goalEditable ? ' is-editable' : ''}`}
+      {/* The panel all three views share — components/Calendar/Overview.tsx.
+          This one was six `.wk-stat` blocks under the heading "Daily Overview",
+          answering the same three questions as the Week and Month columns in
+          different words and a different shape. Three of the six were those
+          questions and have gone into the shared panel; the streak is the
+          view's own fourth, and the two below it are the two things only a
+          single day can be asked — what is still on the table, and how much of
+          the day is already spoken for. */}
+      <Overview
+        scale="day"
+        tasks={stats.tasks}
+        done={stats.done}
+        /* On today this is the goal the reader set rather than what the grid
+           holds; `Booked` below is the grid. The Day view has always drawn the
+           distinction and the tile keeps it. */
+        focused={
+          editingGoal ? (
+            <input
+              type="text"
+              value={goalText}
+              autoFocus
+              onChange={(event) => setGoalText(event.target.value)}
+              onBlur={commitGoal}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') commitGoal();
+                if (event.key === 'Escape') setEditingGoal(false);
+              }}
+            />
+          ) : (
+            <span
+              className={goalEditable ? 'is-editable' : undefined}
               title={goalEditable ? 'Click to set your focus time' : ''}
               onClick={() => {
                 if (!goalEditable || editingGoal) return;
@@ -235,35 +255,25 @@ export function DaySidebar({
                 setEditingGoal(true);
               }}
             >
-              {editingGoal ? (
-                <input
-                  type="text"
-                  value={goalText}
-                  autoFocus
-                  onChange={(event) => setGoalText(event.target.value)}
-                  onBlur={commitGoal}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') commitGoal();
-                    if (event.key === 'Escape') setEditingGoal(false);
-                  }}
-                />
-              ) : (
-                stats.focusTime
-              )}
-            </div>
-            <div className="wk-stat-sub">Planned</div>
-          </div>
-          <div className="wk-stat">
-            <div className="wk-stat-label">XP Earned</div>
-            <div className="wk-stat-num day-stat-purple">{stats.xp ?? '–'}</div>
-            <div className="wk-stat-sub">today</div>
-          </div>
-          <div className="wk-stat">
-            <div className="wk-stat-label">Streak</div>
-            <div className="wk-stat-num">{stats.streak}</div>
-            <div className="wk-stat-sub">days</div>
-          </div>
-          {/* The other half of XP Earned, and the one that is about the rest of
+              {stats.focusTime}
+            </span>
+          )
+        }
+        planned={focus.goal}
+        xp={stats.xp ?? 0}
+        extra={{
+          icon: (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z" />
+            </svg>
+          ),
+          label: 'Streak',
+          value: String(stats.streak),
+          sub: stats.streak === 1 ? 'day running' : 'days running',
+        }}
+      >
+        <div className="wk-stats day-stats cal-overview-extra">
+          {/* The other half of XP earned, and the one that is about the rest of
               the day rather than the part already behind you. */}
           <div className="wk-stat">
             <div className="wk-stat-label">Still to earn</div>
@@ -274,16 +284,13 @@ export function DaySidebar({
               {shape.left === 1 ? 'in 1 task' : `across ${shape.left} tasks`}
             </div>
           </div>
-          {/* How much of the day is spoken for. Distinct from Focus Time above,
-              which on today is the goal you set rather than what is on the
-              grid — this is what the grid actually holds. */}
           <div className="wk-stat">
             <div className="wk-stat-label">Booked</div>
             <div className="wk-stat-num">{shape.booked > 0 ? spanLabel(shape.booked) : '—'}</div>
             <div className="wk-stat-sub">of the day</div>
           </div>
         </div>
-      </section>
+      </Overview>
 
       <section className="wk-panel">
         <div className="day-panel-head">

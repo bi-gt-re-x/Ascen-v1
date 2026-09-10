@@ -76,11 +76,15 @@ import {
 } from '@/utils/calendarStore';
 import { subjectXp } from '@/utils/subjectXp';
 import type { FocusHistory } from '@/types';
-import '@/styles/calendar/month.css';
+/* The frame, then the dialogs every view opens, then this view's own — and
+   the colour system last, so it has the final word on every block.
+   day.css is here for the mini-month in the overview column, which the Day
+   view owns and this view borrows. */
+import '@/styles/calendar/shell.css';
+import '@/styles/calendar/dialogs.css';
+import '@/styles/calendar/overview.css';
 import '@/styles/calendar/week.css';
 import '@/styles/calendar/day.css';
-// Last, so the colour system has the final word on every block. See the
-// note at the top of it.
 import '@/styles/calendar/palette.css';
 
 /**

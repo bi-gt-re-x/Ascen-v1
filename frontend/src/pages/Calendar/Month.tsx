@@ -56,11 +56,17 @@ import { isoOf } from '@/utils/calendarStore';
 import { monthFigures, monthInsight } from '@/utils/monthSummary';
 import type { DayEntry, Upcoming } from '@/components/Calendar';
 import type { FocusHistory, Goal } from '@/types';
-import '@/styles/calendar/month.css';
-import '@/styles/calendar/week.css';
+/* The frame, the dialogs, then this view's own. week.css is gone from this
+   list: the Month view draws no time grid and carried four and a half thousand
+   lines of it for eight rules of chooser and confirmation, which live in
+   dialogs.css now. day.css stays for one rule — `.day-panel-head`, the heading
+   on the day panel, which this view's DayPanel and the Day view's DaySidebar
+   both wear. Colour last, so it has the final word on every block. */
+import '@/styles/calendar/shell.css';
+import '@/styles/calendar/dialogs.css';
+import '@/styles/calendar/overview.css';
 import '@/styles/calendar/day.css';
-// Last, so the colour system has the final word on every block. See the
-// note at the top of it.
+import '@/styles/calendar/month.css';
 import '@/styles/calendar/palette.css';
 
 /** The store's key for a date: unpadded, as it has always been. */

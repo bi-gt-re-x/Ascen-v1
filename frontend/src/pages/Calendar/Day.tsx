@@ -68,11 +68,14 @@ import {
   type TaskBlock,
 } from '@/utils/calendarGrid';
 import { monthKey } from '@/utils/calendarStore';
-import '@/styles/calendar/month.css';
+/* The frame, the dialogs, then the two sheets this view is made of: the time
+   grid is week.css, because a day is one column of the week's, and everything
+   around it is day.css. Colour last, as everywhere. */
+import '@/styles/calendar/shell.css';
+import '@/styles/calendar/dialogs.css';
+import '@/styles/calendar/overview.css';
 import '@/styles/calendar/week.css';
 import '@/styles/calendar/day.css';
-// Last, so the colour system has the final word on every block. See the
-// note at the top of it.
 import '@/styles/calendar/palette.css';
 
 /** "Friday, August 1, 2026". */
@@ -647,7 +650,8 @@ export default function Day() {
           goalEditable={isToday}
           onSetGoalHours={session.setGoalHours}
           stats={{
-            tasks: `${tally.done} / ${tally.total}`,
+            tasks: tally.total,
+            done: tally.done,
             focusTime,
             xp: xpEarned,
             streak: Number(stats.current_streak) || 0,

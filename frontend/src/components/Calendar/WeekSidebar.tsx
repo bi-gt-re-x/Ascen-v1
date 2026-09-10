@@ -33,6 +33,7 @@
  */
 import { useMemo } from 'react';
 import { MiniMonth } from './MiniMonth';
+import { Overview } from './Overview';
 import { fmtHM } from '@/hooks/useFocusSession';
 import { useCountUp } from '@/hooks/useCountUp';
 import { OTHER_KEY, type SubjectXp } from '@/utils/subjectXp';
@@ -466,12 +467,24 @@ export function WeekSidebar({
         onPick={mini.onPick}
       />
 
-      {/* --- This Week Progress ------------------------------------------- */}
-      <section className="wk-panel">
-        <h3 className="wk-panel-title">This Week Progress</h3>
-
-        <div className="wk-weekly">
-          <div className="wk-ring">
+      {/* --- What the week came to ---------------------------------------- */}
+      {/* The panel all three views share — components/Calendar/Overview.tsx.
+          This one was a `<dl>` of three bare counts under the heading "This
+          Week Progress": Tasks, Completed and XP Earned, with no focus figure
+          at all even though the card below it has one, and with Tasks and
+          Completed spending two entries on a fraction the reader still had to
+          work out. The ring is the Week's own and stays — it is the one thing
+          this magnification says that a day and a month do not. */}
+      <Overview
+        scale="week"
+        tasks={stats.total}
+        done={stats.done}
+        focused={fmtHM(focus.focused)}
+        planned={fmtHM(focus.planned)}
+        xp={stats.xp}
+        lead={
+          <div className="wk-weekly">
+            <div className="wk-ring">
             {/* The label reads the settled figure, not the tweened one: a
                 screen reader should be told what the week is, not watch it
                 arrive. */}
@@ -486,27 +499,22 @@ export function WeekSidebar({
                 transform="rotate(-90 32 32)"
               />
             </svg>
-            <div className="wk-ring-centre">
-              <span className="wk-ring-pct">{rate}%</span>
-              <span className="wk-ring-label">On Track</span>
+              <div className="wk-ring-centre">
+                <span className="wk-ring-pct">{rate}%</span>
+                <span className="wk-ring-label">On Track</span>
+              </div>
             </div>
+            {/* The three figures that used to sit beside the ring are the
+                shared panel's tiles now. What is left here is the sentence the
+                ring cannot say on its own. */}
+            <p className="wk-weekly-said">
+              {total === 0
+                ? 'Nothing scheduled this week yet.'
+                : `${done} of ${total} finished, ${xp.toLocaleString()} XP banked.`}
+            </p>
           </div>
-
-          <dl className="wk-weekly-figures">
-            <div>
-              <dd>{total}</dd>
-              <dt>Tasks</dt>
-            </div>
-            <div>
-              <dd>{done}</dd>
-              <dt>Completed</dt>
-            </div>
-            <div>
-              <dd>{xp.toLocaleString()}</dd>
-              <dt>XP Earned</dt>
-            </div>
-          </dl>
-        </div>
+        }
+      >
 
         {/* XP per day across the week. The reader is being shown a shape, not
             asked to read values off it, so there are no axes and no labels
@@ -535,7 +543,7 @@ export function WeekSidebar({
             ))}
           </div>
         </div>
-      </section>
+      </Overview>
 
       {/* --- XP by Subject ------------------------------------------------- */}
       <SubjectBreakdown breakdown={breakdown} />

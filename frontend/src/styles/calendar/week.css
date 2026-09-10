@@ -1,17 +1,4 @@
-/* calendar-week.css — Week view (self-contained). Loaded after calendar.css.
-   The Month view keeps its own styles; these only touch .wk-* and the panes. */
 
-/* View panes: the toggle shows exactly one. The active pane is a flex column
-   that fills the card's remaining height, so its children (e.g. the Month view's
-   .calendar-body, whose daily list is flex:1 + overflow:auto) stay bounded and
-   scroll internally instead of growing the whole card. */
-.view-pane { display: none; }
-.view-pane.active {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-}
 
 /* ---- Week header (title + nav + Today, Filters on the right) ---- */
 /* Header aligns to the grid below: the Overview toggle sits over the sidebar
@@ -146,16 +133,6 @@ html[data-theme="dark"] body:has(.calendar-container) .wk-sidebar::-webkit-scrol
    borrows the streak card's type scale. */
 .wk-focustime { font-size: 22px; font-weight: 700; color: #111827; margin: 0; }
 .wk-focustime-sub { font-size: 12.5px; color: #9ca3af; margin-top: 6px; }
-
-
-/* ---- Grid ---- */
-/* `position: relative` is what the floating compose bar is placed against. */
-/* The hour rail's width, shared by every row that has to line up over the day
-   columns — the day names, the Focus chips, the grid itself, and the Day view's
-   own two. 82px is the design's, which gives "12 PM" room to sit clear of the
-   first column. It is set on the container rather than on the grid wrapper so
-   the Day view, which has no wrapper, inherits it too. */
-.calendar-container { --wk-gutter: 82px; }
 .wk-gridwrap { min-width: 0; position: relative; }
 .wk-grid-head { display: grid; grid-template-columns: var(--wk-gutter) minmax(0, 1fr); }
 .wk-corner { }
@@ -508,40 +485,14 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
    a task's start time) truncate with an ellipsis instead of running under it. */
 .wk-event-cal > .wk-event-title { padding-right: 16px; }
 .wk-event-head { padding-right: 16px; }
-
-/* Three-dots overflow menu on grid blocks (events + tasks). */
-.wk-card-menu {
-    position: absolute; top: 2px; right: 2px; z-index: 4;
-    width: 18px; height: 16px; padding: 0; margin: 0;
-    border: none; background: transparent; cursor: pointer;
-    color: inherit; opacity: 0; line-height: 1; font-size: 14px;
-    border-radius: 5px; display: flex; align-items: center; justify-content: center;
-    transition: opacity .12s ease;
-}
 /* Hidden until the block is under the pointer. Seven columns of blocks each
    showing a ⋮ is a lot of furniture for a control nobody is reaching for yet. */
-.wk-event:hover .wk-card-menu, .wk-card-menu:focus-visible { opacity: .6; }
-.wk-card-menu:hover { opacity: 1; background: rgba(16, 24, 40, .12); }
-
-/* Body-level popover so the block's overflow:hidden can't clip it. */
-.wk-card-pop {
-    position: fixed; z-index: 1200; min-width: 118px;
-    display: flex; flex-direction: column; padding: 4px 0;
-    background: #fff; border: 1px solid #e3e6ee; border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(16, 24, 40, .22); overflow: hidden;
-}
-.wk-card-pop .wk-dd-item {
-    border: none; background: transparent; text-align: left;
-    padding: 8px 14px; font: inherit; font-size: 13px; cursor: pointer;
-    color: #2c3550; white-space: nowrap;
-}
-.wk-card-pop .wk-dd-item:hover { background: #f2f5fb; }
-.wk-card-pop .wk-dd-del { color: #b0413e; }
-
-html[data-theme="dark"] .wk-card-pop { background: #1b1f2a; border-color: #2b3242; }
-html[data-theme="dark"] .wk-card-pop .wk-dd-item { color: #e7e9f2; }
-html[data-theme="dark"] .wk-card-pop .wk-dd-item:hover { background: #262c3a; }
-html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
+/* The menu shows itself on hover *of the block*, so this half is the grid's
+   and the button itself is dialogs.css's. Split so the two halves of a
+   sentence sit in the two files they belong to: `.wk-event:hover ...` is
+   scoped and cannot leak, and the bare `:focus-visible` moved across with the
+   button — see the note there. */
+.wk-event:hover .wk-card-menu { opacity: .6; }
 .wk-event-xp {
     font-size: 10.5px; font-weight: 500; opacity: .95; flex: none;
     display: flex; align-items: center; gap: 4px;
@@ -552,77 +503,6 @@ html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
 /* Too short for the full layout: the XP goes, both times stay. See
    SNUG_MINUTES in utils/calendarGrid.ts. */
 .wk-event.is-snug .wk-event-xp { display: none; }
-
-
-/* Conflict modal: two blocks overlap >75%. A blocking backdrop centers the
-   prompt so the calendar can't be used until one side is deleted (no keep-both). */
-.wk-overlap-backdrop {
-    position: fixed; inset: 0; z-index: 1000; padding: 20px;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(16, 24, 40, .45);
-    transition: background .18s ease;
-}
-.wk-overlap-popup {
-    display: flex; flex-direction: column; gap: 12px;
-    width: min(92vw, 460px); text-align: left;
-    background: #b0413e; color: #fff; padding: 20px 22px;
-    border-radius: 14px; font-size: 15px; font-weight: 600;
-    box-shadow: 0 16px 44px rgba(16,24,40,.4);
-    transition: transform .22s ease, width .22s ease;
-}
-.wk-overlap-msg { line-height: 1.45; font-weight: 600; }
-.wk-overlap-msg strong { font-weight: 800; }
-
-/* One row per side: what it is and when it runs, its name, and the way out.
-   The dialog used to offer two bare names, which on a seven-column week is a
-   question about two rectangles the reader may never have looked at. */
-.wk-overlap-list {
-    display: flex; flex-direction: column; gap: 10px;
-    list-style: none; margin: 0; padding: 0;
-}
-.wk-overlap-item {
-    display: flex; flex-direction: column; gap: 6px;
-    background: rgba(255,255,255,.13); border-radius: 10px; padding: 11px 13px;
-}
-.wk-overlap-where { display: flex; align-items: center; gap: 8px; }
-.wk-overlap-kind {
-    flex: none; border-radius: 999px; padding: 2px 8px;
-    font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
-    text-transform: uppercase; background: rgba(255,255,255,.24);
-}
-.wk-overlap-when { font-size: 12.5px; font-weight: 700; opacity: .9; }
-.wk-overlap-name {
-    font-size: 15.5px; font-weight: 700; line-height: 1.3;
-    overflow-wrap: anywhere;
-}
-.wk-overlap-close {
-    background: rgba(255,255,255,.22); color: #fff; border: none;
-    border-radius: 8px; padding: 8px 14px; cursor: pointer;
-    font: inherit; font-size: 13px; font-weight: 700; width: 100%;
-    margin-top: 2px;
-}
-.wk-overlap-close:hover { background: rgba(255,255,255,.34); }
-
-.wk-overlap-reveal {
-    background: #fff; color: #8f302e; border: none;
-    border-radius: 9px; padding: 10px 16px; cursor: pointer;
-    font: inherit; font-size: 13.5px; font-weight: 800; width: 100%;
-}
-.wk-overlap-reveal:hover { background: #ffeceb; }
-
-/* Peeking: the reader has asked to see the two blocks, so the dialog gets out
-   of their way — the backdrop stops dimming and stops catching clicks, and the
-   card tucks into the bottom-left corner, still holding both answers. A modal
-   over the very thing it is asking about is a question nobody can answer. */
-.wk-overlap-backdrop.is-peeking {
-    background: transparent; pointer-events: none;
-    align-items: flex-end; justify-content: flex-start;
-}
-.wk-overlap-backdrop.is-peeking .wk-overlap-popup {
-    pointer-events: auto; width: min(88vw, 340px);
-    font-size: 13.5px;
-}
-.wk-overlap-backdrop.is-peeking .wk-overlap-name { font-size: 14px; }
 
 /* The two blocks the dialog is asking about, ringed so the scroll it performs
    lands on something the eye can find. */
@@ -654,89 +534,6 @@ html[data-theme="dark"] .wk-card-pop .wk-dd-del { color: #ff8a86; }
     box-shadow: 0 0 0 6px rgba(108, 92, 231, .2);
     z-index: 6;
 }
-
-/* Drag-to-create chooser: after a drag, ask whether to make an event or a task.
-   Neutral (not an error), centered on a light dismissable backdrop. */
-.wk-choose-backdrop {
-    position: fixed; inset: 0; z-index: 1100; padding: 20px;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(16, 24, 40, .45);
-}
-.wk-choose-popup {
-    display: flex; flex-direction: column; gap: 20px;
-    width: min(94vw, 520px); text-align: center;
-    background: #fff; color: #1f2733; padding: 34px 36px;
-    border-radius: 18px; box-shadow: 0 20px 56px rgba(16,24,40,.42);
-}
-.wk-choose-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
-.wk-choose-row { display: flex; gap: 16px; }
-.wk-choose-btn {
-    flex: 1; border: none; border-radius: 12px; padding: 20px 18px;
-    cursor: pointer; font: inherit; font-size: 17px; font-weight: 700; color: #fff;
-    background: #3b4658;
-}
-.wk-choose-btn.is-task { background: #8b5cf6; }
-.wk-choose-btn:hover { filter: brightness(1.08); }
-.wk-choose-cancel {
-    background: none; border: none; color: #6c757d; cursor: pointer;
-    font: inherit; font-weight: 600; padding: 4px;
-}
-.wk-choose-cancel:hover { color: #1f2733; }
-html[data-theme="dark"] .wk-choose-popup { background: #1b212a; color: #e6e8f0; }
-html[data-theme="dark"] .wk-choose-cancel { color: #9aa4b2; }
-html[data-theme="dark"] .wk-choose-cancel:hover { color: #e6e8f0; }
-
-/* Add-Task modal XP slider — brought over from the dashboard's XP slider. The
-   page's global `.modal-content input { width:100% }` (mainpage.css) would blow
-   these up, so the widths are scoped under #addTaskModal to win on specificity:
-   the slider fills the row and the number box stays a fixed 56px pill. */
-.xp-slider-row { display: flex; gap: 12px; align-items: center; margin-top: 6px; }
-.xp-value { color: #A38A70; font-weight: 700; }
-#addTaskModal .xp-slider-row input[type="range"] {
-    flex: 1 1 auto; width: auto; min-width: 0; accent-color: #A38A70;
-}
-#addTaskModal .xp-input-field {
-    flex: 0 0 56px; width: 56px; padding: 6px 8px; border: 1.5px solid #D9D9D9;
-    border-radius: 8px; background: #F8F9FA; color: #2C302E; font-size: 14px;
-    font-weight: 600; text-align: center; outline: none; -moz-appearance: textfield;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-#addTaskModal .xp-input-field:focus { border-color: #A38A70; box-shadow: 0 0 0 3px rgba(163, 138, 112, 0.18); }
-/* Scoped like the rules above it. Bare, this reached the dashboard's Add Task
-   popup too, which writes the same class name from a different stylesheet. */
-#addTaskModal .xp-input-field::-webkit-outer-spin-button,
-#addTaskModal .xp-input-field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-html[data-theme="dark"] #addTaskModal .xp-input-field { background: #232a33; border-color: #2b323c; color: #e6e8f0; }
-
-/* Delete confirmation: a styled, blocking popup. The backdrop covers the whole
-   viewport so nothing behind it can be clicked until the user answers. */
-.wk-confirm-backdrop {
-    position: fixed; inset: 0; z-index: 1300; padding: 20px;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(16, 24, 40, .5); backdrop-filter: blur(3px);
-}
-.wk-confirm-popup {
-    width: min(92vw, 400px); text-align: left;
-    background: #fff; border: 1px solid #e5e8ee; border-radius: 16px;
-    padding: 22px 24px; box-shadow: 0 20px 60px rgba(16, 24, 40, .4);
-}
-.wk-confirm-title { margin: 0 0 8px; font-size: 18px; font-weight: 800; color: #1a2230; }
-.wk-confirm-msg { margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: #55607a; }
-.wk-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.wk-confirm-cancel, .wk-confirm-delete {
-    border-radius: 999px; padding: 9px 20px; cursor: pointer;
-    font: inherit; font-size: 14px; font-weight: 700; border: 1px solid transparent;
-}
-.wk-confirm-cancel { background: #f1f3f7; border-color: #e5e8ee; color: #2c3550; }
-.wk-confirm-cancel:hover { background: #e7eaf1; }
-.wk-confirm-delete { background: #d84a47; color: #fff; }
-.wk-confirm-delete:hover { background: #c33f3c; }
-
-html[data-theme="dark"] .wk-confirm-popup { background: #171b23; border-color: #2b323c; }
-html[data-theme="dark"] .wk-confirm-title { color: #f0f2f7; }
-html[data-theme="dark"] .wk-confirm-msg { color: #aab2c5; }
-html[data-theme="dark"] .wk-confirm-cancel { background: #232a35; border-color: #333c48; color: #e6e8f0; }
-html[data-theme="dark"] .wk-confirm-cancel:hover { background: #2c3440; }
 
 /* Recurring-event delete: stacked full-width choices + a date checklist. */
 .wk-recur-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
@@ -1017,10 +814,10 @@ html[data-theme="dark"] .wk-priorities-count { color: #6b7280; }
 .wk-ring-pct { font-size: 20px; font-weight: 700; color: #111827; }
 .wk-ring-label { font-size: 10px; font-weight: 500; color: #9ca3af; }
 
-.wk-weekly-figures { display: flex; flex-direction: column; gap: 9px; margin: 0; min-width: 0; }
-.wk-weekly-figures > div { display: flex; align-items: baseline; gap: 8px; }
-.wk-weekly-figures dd { margin: 0; font-size: 18px; font-weight: 700; color: #111827; min-width: 34px; }
-.wk-weekly-figures dt { font-size: 12.5px; color: #6b7280; }
+/* The three figures that stood beside the ring are the shared overview's tiles
+   now — components/Calendar/Overview.tsx — so `.wk-weekly-figures` and its
+   `<dl>` are gone with them. What is left beside the ring is one sentence,
+   dressed in styles/calendar/overview.css with the panel it belongs to. */
 
 /* ---- The per-day XP sparkline ---- */
 .wk-spark { margin-top: 14px; }
@@ -1261,16 +1058,12 @@ html[data-theme="dark"] .wk-fullcal:hover { background: #161b22; color: #f4f4f6;
 }
 .wk-panel-link:hover { text-decoration: underline; }
 
-.wk-empty { margin: 0; font-size: 13px; color: #9aa0ad; }
-
 /* ---- Dark ---- */
 html[data-theme="dark"] .wk-ring-pct,
-html[data-theme="dark"] .wk-weekly-figures dd,
 html[data-theme="dark"] .wk-break-total strong,
 html[data-theme="dark"] .wk-upcoming-name { color: #f4f4f6; }
 html[data-theme="dark"] .wk-ring-track { stroke: #262c36; }
 html[data-theme="dark"] .wk-ring-label,
-html[data-theme="dark"] .wk-weekly-figures dt,
 html[data-theme="dark"] .wk-break-total,
 html[data-theme="dark"] .wk-break-label,
 html[data-theme="dark"] .wk-upcoming-when,
@@ -1370,3 +1163,23 @@ html[data-theme="dark"] .wk-focus-chip.is-empty { color: #6b7280; }
  * not and clipped the descenders off both the name and the time. */
 .wk-event.is-compact { padding-top: 2px; padding-bottom: 2px; }
 .wk-event.is-compact .wk-event-head { line-height: 1.2; }
+
+/* ---- The header row, inside the card ------------------------------------
+   These three lived in month.css, id-scoped to the two views that are not the
+   Month — which is why the Week and the Day views had to import the Month
+   view's stylesheet to lay out their own title bars. Moved verbatim; the ids
+   keep them exactly as specific as they were. */
+#weekView .wk-header,
+#dayView .wk-header.day-header {
+    min-height: 52px;
+}
+
+/* Room for the corner switcher, and only that: 205px of control plus a gap.
+   It was 320px, sized for the wide pill the switcher used to be, and the extra
+   hundred was coming straight out of the Day view's date row. */
+#dayView .wk-header.day-header {
+    padding-right: 232px;
+}
+/* The week's date sits in the column beside the sidebar toggle; with the
+   selector opposite it, the extra left indent is no longer what centres it. */
+#weekView .wk-headmain { padding-left: 0; }
