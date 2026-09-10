@@ -59,6 +59,7 @@ import {
   weekSummary,
 } from '@/components/Dashboard/summary';
 import {
+  timerTitle,
   useCatchUp,
   useDocumentTitle,
   useNow,
@@ -79,10 +80,18 @@ import '@/styles/dashboard.css';
 import '@/styles/dashboard-home.css';
 
 export default function Dashboard() {
-  useDocumentTitle('Dashboard');
-
   const { data, error, loading, refreshing, reload, mutate, username } = useUserData();
   const session = useFocusSession(username);
+
+  /* The tab carries the session while it runs.
+   *
+   * The focus page counts a phase down; this counts the day up, which is the
+   * same figure the Focus panel prints and the same one the goal is measured
+   * against — a tab that disagreed with the panel under it would be worse than
+   * a tab that said nothing. Below `session` rather than at the top of the
+   * component because it reads from it; every hook here is unconditional, so
+   * the order is stable. See hooks/useDocumentTitle. */
+  useDocumentTitle(session.running ? timerTitle(session.focused, 'Focus') : 'Dashboard');
   const subjects = useSubjectIndex(username);
   const { prefs, dailyGoal, displayName } = useSettings();
   /* The days this page was not told about — see hooks/useCatchUp. Usually

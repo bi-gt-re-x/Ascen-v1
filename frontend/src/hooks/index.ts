@@ -10,7 +10,7 @@ export type { UseCatchUp } from './useCatchUp';
 export { useCountUp } from './useCountUp';
 export { useDayFocus } from './useDayFocus';
 export type { UseDayFocus } from './useDayFocus';
-export { useDocumentTitle } from './useDocumentTitle';
+export { timerTitle, useDocumentTitle } from './useDocumentTitle';
 export { useNotifications } from './useNotifications';
 export { useNow } from './useNow';
 export { useNowScroll } from './useNowScroll';

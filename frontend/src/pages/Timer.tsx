@@ -29,7 +29,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Range } from '@/components';
 import {
-  useApi, useAuth, useDocumentTitle, usePageEntrance, useSettings, useStats, useUserData,
+  timerTitle, useApi, useAuth, useDocumentTitle, usePageEntrance, useSettings, useStats,
+  useUserData,
 } from '@/hooks';
 import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
 import { usePomodoro } from '@/hooks/usePomodoro';
@@ -349,8 +350,6 @@ const CHEVRON: ReactElement = (
 
 // --------------------------------------------------------------------------
 export default function Timer() {
-  useDocumentTitle('Timer');
-
   const { username } = useAuth();
   const user = username || 'Default';
   const account = useUserData();
@@ -358,6 +357,22 @@ export default function Timer() {
   const { displayName } = useSettings();
   const session = useFocusSession(username);
   const pomodoro = usePomodoro(username, session);
+
+  /* The tab counts down with the ring.
+   *
+   * Below the pomodoro rather than at the top of the component, because it now
+   * reads from it — the hooks are all unconditional, so the order is stable
+   * across renders, which is the only thing React asks.
+   *
+   * Only while it is *running*. A paused timer that goes on announcing a
+   * number in the tab is telling every other tab you are working when you are
+   * not, and the phase is in there because a break and an interval are not the
+   * same news at a glance. See hooks/useDocumentTitle. */
+  useDocumentTitle(
+    pomodoro.running
+      ? timerTitle(pomodoro.remaining, PHASE_LABEL[pomodoro.phase])
+      : 'Timer',
+  );
 
   const [setup, setSetup] = useState(() => !setupDone(user));
   useEffect(() => setSetup(!setupDone(user)), [user]);
