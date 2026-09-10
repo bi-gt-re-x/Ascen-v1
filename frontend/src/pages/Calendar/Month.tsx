@@ -456,6 +456,9 @@ export default function Month() {
           selectedKey={selectedKey}
           weekStart={weekStartDay(prefs)}
           days={figures.days}
+          /* Each day's primary focus, under its date — the same note the
+             panel's field on the right edits for the selected day. */
+          focusOn={dayFocus.primary}
           onStep={stepMonth}
           onToday={goToday}
           /* A day in the corner of the grid belongs to a neighbouring month,

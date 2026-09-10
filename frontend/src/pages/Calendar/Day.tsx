@@ -628,11 +628,15 @@ export default function Day() {
 
           <div className="wk-scroll day-scroll" ref={scroller}>
             <TimeLabels now={isToday ? nowOffset(now) : null} at={now} />
+            {/* No `today`: the wash it paints exists to pick one column out of
+                the Week view's seven. Here there is only the one, the title
+                above already says which day it is, and the now line is what
+                marks today — a tinted ground behind every block was the page
+                saying "this is today" in a way nothing on it could contradict. */}
             <DayColumn
               hostRef={daycol}
               iso={iso}
               blocks={blocks}
-              today={isToday}
               now={isToday ? nowOffset(now) : null}
               className="day-col"
               onEdit={(block) => openFor(block, 'edit')}

@@ -1590,13 +1590,32 @@ body.classic:has(.calendar-container) {
 
     /* The five XP bands. Fixed thresholds — see XP_BANDS in
        utils/monthSummary — so a colour means the same thing in every month
-       and the legend under the grid can name it. */
-    --mv-band-exceptional: #17a34a;
-    --mv-band-great: #1e2b52;
-    --mv-band-good: #7c6ce0;
-    --mv-band-low: #e05a4f;
+       and the legend under the grid can name it.
+
+       One hue, pale to deep, because the bands are an order: a heavier day is
+       a deeper cell, which the eye reads without the legend. They used to be
+       green, navy, violet and red — four unrelated colours for one scale, and
+       the *lowest* band the loudest of them, so a month of quiet weekends was
+       a column of alarms.
+
+       Two tokens a band. `--mv-band-*` is the band's tone, for the marks along
+       a cell's foot and the legend's ring; `--mv-badge-*` and its ink are the
+       filled circle behind the day's number, where the paler two bands take a
+       dark ink so every date reads at 4.5:1 or better. */
+    --mv-band-exceptional: #0d5c48;
+    --mv-band-great: #1f7f62;
+    --mv-band-good: #4fb592;
+    --mv-band-low: #8fd0b8;
     --mv-band-none: #eceef3;
     --mv-band-none-ink: #98a0ad;
+    --mv-badge-exceptional: #0d5c48;
+    --mv-badge-exceptional-ink: #ffffff;
+    --mv-badge-great: #1f7f62;
+    --mv-badge-great-ink: #ffffff;
+    --mv-badge-good: #a3dbc5;
+    --mv-badge-good-ink: #0e4a3a;
+    --mv-badge-low: #e3f3ec;
+    --mv-badge-low-ink: #2a6f58;
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     color: var(--mv-ink);
 }
@@ -1618,12 +1637,23 @@ html[data-theme="dark"] #monthView {
     --mv-warm-line: #3a3327;
     --mv-warm-ink: #d3b077;
 
-    --mv-band-exceptional: #2ea043;
-    --mv-band-great: #5878d6;
-    --mv-band-good: #8b7bf0;
-    --mv-band-low: #e0605a;
+    /* The same ramp turned over: on a dark page more is *brighter*, so the
+       heaviest day is the lightest cell and the quiet ones sink into the
+       surface. */
+    --mv-band-exceptional: #8ff0cb;
+    --mv-band-great: #5cc9a2;
+    --mv-band-good: #3fa582;
+    --mv-band-low: #3b7f68;
     --mv-band-none: #232a35;
     --mv-band-none-ink: #6b7480;
+    --mv-badge-exceptional: #74e0b9;
+    --mv-badge-exceptional-ink: #04160f;
+    --mv-badge-great: #2f9b79;
+    --mv-badge-great-ink: #04160f;
+    --mv-badge-good: #1f5c4a;
+    --mv-badge-good-ink: #c9f2e2;
+    --mv-badge-low: #173a30;
+    --mv-badge-low-ink: #8fd6bb;
 }
 
 /* The two columns. The grid takes the width it needs to stay a grid; the
@@ -1790,11 +1820,18 @@ html[data-theme="dark"] .mv-side::-webkit-scrollbar-thumb { background: #39414d;
 
    The rows are a definite height rather than six shares of what is left, now
    that the column scrolls: a `1fr` row inside a scroller has nothing to be a
-   fraction *of*. `clamp` is what keeps it from being a magic number — a cell
-   of three short lines reads badly under about 76px and gains nothing past
-   about 108, and between those it tracks the window. */
+   fraction *of*.
+
+   They used to be `clamp(76px, 9.5vh, 108px)` — sized to the window, so on
+   an ordinary laptop every row sat at its 76px floor and the date, the count
+   and the marks were pressed into each other. A cell carries four lines now
+   that the day's focus is under its date, and a row squeezed to fit the
+   viewport is a row that clips one of them. So the floor is what four lines
+   actually need, and a row grows past it rather than cutting its contents
+   off: the column scrolls, and a month a little taller than the window is
+   better than one that is unreadable inside it. */
 .mv-grid {
-    grid-template-rows: repeat(6, clamp(76px, 9.5vh, 108px));
+    grid-template-rows: repeat(6, minmax(122px, auto));
     flex: 0 0 auto;
 }
 .mv-cell {
@@ -1867,6 +1904,33 @@ html[data-theme="dark"] .mv-side::-webkit-scrollbar-thumb { background: #39414d;
     min-width: 0;
 }
 
+/* The day's main focus, under its date: the icon its words suggest, then the
+   words. One line, ellipsised, with the whole of it in the hover title. In
+   the ink rather than a soft grey, because it is the one thing on the cell the
+   reader wrote — the figures under it are the app's. */
+.mv-cell-focus {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--mv-ink);
+}
+.mv-cell-focus .cal-ico {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    color: var(--mv-band-great);
+}
+.mv-cell-focus-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* The day's things, one segment each, along the cell's foot. A row of marks
    rather than a figure: forty-two of anything has to be readable without being
    read, and this way the same strip says how many, how big and how many are
@@ -1911,10 +1975,13 @@ html[data-theme="dark"] .mv-side::-webkit-scrollbar-thumb { background: #39414d;
 }
 .mv-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .mv-legend-dot { width: 8px; height: 8px; border-radius: 999px; background: currentColor; }
-.mv-legend-dot.band-exceptional { background: var(--mv-band-exceptional); }
-.mv-legend-dot.band-great       { background: var(--mv-band-great); }
-.mv-legend-dot.band-good        { background: var(--mv-band-good); }
-.mv-legend-dot.band-low         { background: var(--mv-band-low); }
+/* Each key is drawn as the badge it explains — its fill, ringed in the band's
+   tone so the two pale ones do not vanish into the strip's own background. */
+.mv-legend-dot { width: 10px; height: 10px; }
+.mv-legend-dot.band-exceptional { background: var(--mv-badge-exceptional); box-shadow: inset 0 0 0 1px var(--mv-band-exceptional); }
+.mv-legend-dot.band-great       { background: var(--mv-badge-great); box-shadow: inset 0 0 0 1px var(--mv-band-great); }
+.mv-legend-dot.band-good        { background: var(--mv-badge-good); box-shadow: inset 0 0 0 1px var(--mv-band-good); }
+.mv-legend-dot.band-low         { background: var(--mv-badge-low); box-shadow: inset 0 0 0 1px var(--mv-band-low); }
 .mv-legend-dot.band-none        { background: var(--mv-band-none); border: 1px solid var(--mv-line); }
 .mv-legend-note { color: var(--mv-ink-faint); }
 
@@ -1933,14 +2000,14 @@ html[data-theme="dark"] .mv-side::-webkit-scrollbar-thumb { background: #39414d;
     font-size: 14.5px;
     font-weight: 700;
     line-height: 1;
-    color: #ffffff;
-    background: var(--mv-band-great);
+    color: var(--mv-badge-great-ink);
+    background: var(--mv-badge-great);
     font-variant-numeric: tabular-nums;
 }
-.mv-daynum.band-exceptional { background: var(--mv-band-exceptional); }
-.mv-daynum.band-great       { background: var(--mv-band-great); }
-.mv-daynum.band-good        { background: var(--mv-band-good); }
-.mv-daynum.band-low         { background: var(--mv-band-low); }
+.mv-daynum.band-exceptional { background: var(--mv-badge-exceptional); color: var(--mv-badge-exceptional-ink); }
+.mv-daynum.band-great       { background: var(--mv-badge-great); color: var(--mv-badge-great-ink); }
+.mv-daynum.band-good        { background: var(--mv-badge-good); color: var(--mv-badge-good-ink); }
+.mv-daynum.band-low         { background: var(--mv-badge-low); color: var(--mv-badge-low-ink); }
 /* A day with nothing on it wears no colour at all. It is the commonest cell in
    most months and it should be the quietest thing on the grid. */
 .mv-daynum.band-none {

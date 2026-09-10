@@ -310,6 +310,41 @@ describe('the month grid as a day picker', () => {
   });
 });
 
+describe('the focus under each date', () => {
+  const focusOn = (iso: string) => (iso === '2026-08-06' ? 'Putnam practice' : '');
+
+  it('draws the day’s main focus with an icon guessed from it', () => {
+    grid({ focusOn });
+    const focus = cell('2026-8-6').querySelector('.mv-cell-focus');
+    expect(focus).not.toBeNull();
+    expect(focus).toHaveTextContent('Putnam practice');
+    // The whole of it on hover, since the line itself ellipsises.
+    expect(focus).toHaveAttribute('title', 'Putnam practice');
+    const icon = focus!.querySelector<HTMLElement>('.cal-ico');
+    expect(icon?.style.getPropertyValue('--ico')).toMatch(/^url\(\/static\/icons\/.+\.svg\)$/);
+  });
+
+  it('sits under the date, before the day’s figures', () => {
+    grid({ focusOn });
+    const parts = [...cell('2026-8-6').children].map((el) => el.className);
+    expect(parts.indexOf('mv-cell-focus')).toBe(parts.indexOf('mv-cell-top') + 1);
+    expect(parts.indexOf('mv-cell-focus')).toBeLessThan(parts.indexOf('mv-cell-meta'));
+  });
+
+  it('draws nothing on a day without one', () => {
+    grid({ focusOn });
+    expect(cell('2026-8-7').querySelector('.mv-cell-focus')).toBeNull();
+  });
+
+  it('says it to a screen reader too', () => {
+    grid({ focusOn });
+    expect(cell('2026-8-6')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('focus Putnam practice; 2 things'),
+    );
+  });
+});
+
 describe('the grid it draws', () => {
   it('names each day for a screen reader, counts and all', () => {
     grid();

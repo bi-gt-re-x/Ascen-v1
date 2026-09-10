@@ -26,7 +26,17 @@
  * month with a heavier day in it and no colour meant anything you could write
  * down. The bands are fixed now (`XP_BANDS` in utils/monthSummary) and the
  * legend under the grid says what each one is — which is the difference
- * between a heat map and a key.
+ * between a heat map and a key. The bands are one hue, getting deeper as the
+ * day gets heavier, rather than four unrelated colours: they are an order, and
+ * an order drawn as green, navy, violet and red has to be looked up every time,
+ * where pale-to-deep can be read straight off the cell. It also stops the
+ * lightest band being the loudest thing on the grid — a month of weekends in
+ * alarm red was the page scolding the reader for resting.
+ *
+ * Under the number is the day's main focus, with the icon its words suggest —
+ * the primary of the note the Day view writes (hooks/useDayFocus). It is the
+ * one thing on the cell the reader wrote rather than the app counted, so it
+ * sits nearest the date and the figures come after it.
  *
  * Today is the one cell with a tinted background and carries a star; the day
  * the panel is showing carries a ring.
@@ -39,6 +49,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { XP_BANDS, xpBand, type MonthDay } from '@/utils/monthSummary';
+import { iconUrlFor } from '@/utils/calendarIcons';
 import { dates } from '@/utils';
 
 /** Six rows of seven — the grid never changes height between months. */
@@ -57,6 +68,12 @@ export interface MonthGridProps {
   weekStart?: 0 | 1;
   /** Every day of the month, counted — see utils/monthSummary. */
   days: MonthDay[];
+  /**
+   * A day's main focus, by ISO date — '' for a day without one. The primary
+   * of the day's note (hooks/useDayFocus), which is what the Week row shows
+   * too. Absent, and no cell draws one.
+   */
+  focusOn?: (iso: string) => string;
   onStep: (delta: number) => void;
   /** Back to the current month, with today selected. */
   onToday: () => void;
@@ -105,6 +122,7 @@ export function MonthGrid({
   selectedKey,
   weekStart = 1,
   days,
+  focusOn,
   onStep,
   onToday,
   onSelect,
@@ -405,6 +423,7 @@ export function MonthGrid({
           const weekend = cell.date.getDay() === 0 || cell.date.getDay() === 6;
           const band = xpBand(xp);
           const isToday = cell.key === todayKey;
+          const focus = focusOn ? focusOn(dates.isoDate(cell.date)) : '';
 
           const classes = [
             'mv-cell',
@@ -440,7 +459,7 @@ export function MonthGrid({
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric',
-              })}: ${spoken}`}
+              })}: ${focus ? `focus ${focus}; ` : ''}${spoken}`}
               onClick={() => onSelect(cell.key)}
               onKeyDown={(event) => {
                 if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -473,6 +492,22 @@ export function MonthGrid({
                   </span>
                 ) : null}
               </span>
+
+              {/* The day's main focus, under its date. One line, ellipsised —
+                  the full text is the hover title — because a cell is a
+                  seventh of the grid and a focus is a phrase, not a
+                  paragraph. The icon is guessed from the words, exactly as
+                  the Day view's field guesses it as they are typed. */}
+              {focus && (
+                <span className="mv-cell-focus" title={focus}>
+                  <i
+                    className="cal-ico"
+                    style={{ ['--ico' as string]: `url(${iconUrlFor(focus)})` }}
+                    aria-hidden="true"
+                  />
+                  <span className="mv-cell-focus-text">{focus}</span>
+                </span>
+              )}
 
               {count > 0 && (
                 <span className="mv-cell-meta">
