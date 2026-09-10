@@ -46,10 +46,16 @@ body {
 }
 
 /* ---------- Account row ---------- */
+/* The width and the side padding are `.home-main`'s, and they have to be: this
+   row is the only chrome above the hero, and at 1500px against the page's
+   1180px the Log In and Sign Up buttons sat 160px outside the card they were
+   standing over. Every reader saw that and nobody could have named it — the
+   page simply looked as though its top right corner belonged to something
+   else. */
 .account-row {
-    max-width: 1500px;
+    max-width: 1180px;
     margin: 0 auto;
-    padding: 18px 32px 0;
+    padding: 20px 24px 0;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -401,9 +407,30 @@ html[data-theme="dark"] #authMessage {
     --lp-shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
     --lp-hero-bg: linear-gradient(135deg, #eef1f8 0%, #f6f7fb 60%);
 
+    /* ---- The page's rhythm, as four numbers ----------------------------
+       Every gap on this page used to be written where it was needed: 60px
+       between sections, 40px above the feature strip, 28px under a heading,
+       18px between cards, 22px inside one. Ten fixed numbers, none of them
+       related to any other, and none of them moving when the window did — so
+       the page was airy at 1400px and cramped at 900, and every fix made one
+       section disagree with the rest.
+
+       Four steps instead, each a clamp, and each used everywhere it applies.
+       That is what turns a set of margins into a rhythm: the eye cannot see a
+       60 and a 64 as different, but it can see that the space between two
+       sections is *always* larger than the space inside one, and that is the
+       whole of what makes a long page feel arranged rather than assembled.
+
+       `vw` and not `rem` on the middle term, because what is being scaled is
+       the room the layout has, not the size of the type in it. */
+    --lp-step-1: clamp(10px, 1vw, 14px);   /* inside a row */
+    --lp-step-2: clamp(16px, 1.6vw, 22px); /* between cards */
+    --lp-step-3: clamp(26px, 3vw, 40px);   /* a heading and what it heads */
+    --lp-step-4: clamp(64px, 7vw, 104px);  /* between sections */
+
     max-width: 1180px;
     margin: 0 auto;
-    padding: 8px 24px 48px;
+    padding: 8px 24px clamp(56px, 6vw, 88px);
     gap: 0;
 }
 html[data-theme="dark"] .home-main {
@@ -426,7 +453,7 @@ html[data-theme="dark"] .home-main {
     border: 1px solid var(--lp-border);
     border-radius: 18px;
     box-shadow: var(--lp-shadow);
-    padding: 22px 24px;
+    padding: clamp(20px, 1.9vw, 26px) clamp(20px, 2vw, 28px);
 }
 
 .lp-btn {
@@ -445,25 +472,47 @@ html[data-theme="dark"] .home-main {
 .lp-chevd { font-size: .8em; }
 
 /* Hero */
+/* `position: relative` and `isolation: isolate` are what let the range stand
+   behind the hero's contents without a stacking context of its own to fall out
+   of — the same pair styles/summit.css puts on `.peak-hero`, and for the same
+   reason. Deliberately not `overflow: hidden`: the scenery clips itself. */
 .lp-hero {
-    display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 36px; align-items: center;
+    position: relative;
+    isolation: isolate;
+    display: grid; grid-template-columns: 1.05fr 0.95fr;
+    gap: clamp(28px, 4vw, 52px); align-items: center;
     background: var(--lp-hero-bg);
     border: 1px solid var(--lp-border);
-    border-radius: 26px; padding: 44px; margin-top: 10px;
+    border-radius: 26px;
+    padding: clamp(30px, 4.2vw, 56px);
+    margin-top: var(--lp-step-2);
 }
 .lp-eyebrow { color: var(--lp-muted); font-weight: 600; font-size: .85rem; }
-.lp-hero-title { color: var(--lp-heading); font-size: 2.5rem; line-height: 1.1; font-weight: 800; margin: 12px 0 14px; letter-spacing: -.02em; }
+/* The headline's own measure, so it breaks where it was written to break
+   rather than wherever the column happens to end. */
+.lp-hero-title {
+    color: var(--lp-heading);
+    font-size: clamp(2.05rem, 3.5vw, 3rem);
+    line-height: 1.08; font-weight: 800;
+    margin: 14px 0 16px; max-width: 15ch;
+    letter-spacing: -.025em;
+}
 .lp-hero-title em { color: var(--lp-accent); font-style: italic; }
-.lp-hero-sub { color: var(--lp-muted); font-size: 1.05rem; line-height: 1.6; margin: 0 0 24px; max-width: 30em; }
-.lp-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.lp-hero-sub { color: var(--lp-muted); font-size: 1.05rem; line-height: 1.65; margin: 0 0 var(--lp-step-3); max-width: 38ch; }
+.lp-hero-actions { display: flex; gap: var(--lp-step-1); flex-wrap: wrap; }
 
-.lp-hero-art { position: relative; min-height: 300px; }
+.lp-hero-art { position: relative; min-height: 320px; }
 .lp-preview {
     position: absolute; background: var(--lp-surface); border: 1px solid var(--lp-border);
     border-radius: 16px; box-shadow: var(--lp-shadow); padding: 16px; color: var(--lp-accent);
 }
-.lp-preview-dash { left: 0; top: 16px; width: 62%; }
-.lp-preview-rating { right: 0; top: 96px; width: 46%; text-align: center; }
+/* The dashboard card is wider than it was: it holds a chart with an axis
+   beside it now rather than two thumbnails, and a range squeezed into 62% of
+   the column is a smear. The rating card drops further to keep the overlap —
+   two cards that merely touch read as a broken grid, two that overlap read as
+   a stack. */
+.lp-preview-dash { left: 0; top: 8px; width: 74%; }
+.lp-preview-rating { right: 0; bottom: 4px; width: 44%; text-align: center; }
 .lp-prev-head { display: flex; justify-content: space-between; align-items: center; color: var(--lp-heading); font-weight: 700; font-size: .9rem; }
 .lp-prev-sub { color: var(--lp-muted); font-size: .72rem; margin-top: 2px; }
 .lp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lp-accent-2); }
@@ -479,15 +528,29 @@ html[data-theme="dark"] .home-main {
 .lp-hero-glyph { position: absolute; right: 8%; top: 0; font-size: 2rem; opacity: .45; }
 
 /* Sections */
-.lp-section { margin-top: 60px; }
-.lp-head { text-align: center; max-width: 640px; margin: 0 auto 28px; }
-.lp-head h2 { color: var(--lp-heading); font-size: 1.9rem; font-weight: 800; margin: 0 0 8px; letter-spacing: -.02em; }
-.lp-head p { color: var(--lp-muted); font-size: 1rem; line-height: 1.6; margin: 0; }
+/* The scroll margin is for the hero's "See it working", which is a link to
+   `#see-it` further down: without it the browser puts the section's first
+   pixel against the top of the window, and a heading touching the edge of the
+   screen reads as a page that has been cut off rather than one that has
+   arrived. */
+.lp-section { margin-top: var(--lp-step-4); scroll-margin-top: 28px; }
+.lp-head { text-align: center; max-width: 46rem; margin: 0 auto var(--lp-step-3); }
+.lp-head h2 { color: var(--lp-heading); font-size: clamp(1.6rem, 2.5vw, 2.15rem); font-weight: 800; margin: 0 0 10px; letter-spacing: -.02em; line-height: 1.2; }
+.lp-head p { color: var(--lp-muted); font-size: 1.02rem; line-height: 1.65; margin: 0; }
 
 /* Feature strip */
-.lp-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 40px; }
-.lp-feature h3 { color: var(--lp-heading); font-size: 1.1rem; margin: 12px 0 8px; }
+.lp-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--lp-step-2); margin-top: var(--lp-step-4); }
+/* A column, so the link can be pushed to the floor of the card.
+   The four cards hold three, four and five lines of body copy, and with the
+   link sitting wherever the paragraph above it happened to end, the row of
+   four calls to action came out on four different lines — which reads as four
+   cards that were laid out separately. The paragraphs still start together at
+   the top; only the links are pinned to the bottom. */
+.lp-feature { display: flex; flex-direction: column; }
+.lp-feature h3 { color: var(--lp-heading); font-size: 1.1rem; margin: 14px 0 8px; line-height: 1.25; }
 .lp-feature p { color: var(--lp-muted); font-size: .9rem; line-height: 1.55; margin: 0 0 12px; }
+.lp-feature .lp-feat-bits { margin-bottom: var(--lp-step-2); }
+.lp-feature .lp-link { margin-top: auto; }
 .lp-feat-ico { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; font-size: 22px; }
 .lp-ico-teal { background: rgba(20, 184, 166, .15); }
 .lp-ico-green { background: rgba(34, 197, 94, .15); }
@@ -495,12 +558,12 @@ html[data-theme="dark"] .home-main {
 .lp-ico-purple { background: rgba(139, 92, 246, .15); }
 .lp-link { color: var(--lp-accent); font-weight: 700; font-size: .9rem; text-decoration: none; }
 .lp-link:hover { text-decoration: underline; }
-.lp-quote { display: flex; flex-direction: column; justify-content: center; background: var(--lp-surface-2); }
+.lp-quote { display: flex; flex-direction: column; justify-content: center; gap: 2px; background: var(--lp-surface-2); }
 .lp-quote p { color: var(--lp-heading); font-size: .95rem; font-style: italic; line-height: 1.5; margin: 0 0 10px; }
 .lp-quote-by { color: var(--lp-muted); font-size: .82rem; font-weight: 600; }
 
 /* Split */
-.lp-split { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+.lp-split { display: grid; grid-template-columns: 1fr 1fr; gap: var(--lp-step-2); align-items: start; }
 .lp-stats-head { color: var(--lp-heading); font-weight: 800; font-size: 1.05rem; margin-bottom: 14px; }
 .lp-stat { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--lp-border); color: var(--lp-muted); font-size: .9rem; }
 .lp-stat:last-child { border-bottom: none; }
@@ -533,7 +596,7 @@ html[data-theme="dark"] .home-main {
 .lp-ev-c { background: var(--lp-gold); opacity: .85; }
 
 /* Streak grid */
-.lp-streak-grid { display: grid; grid-template-columns: 0.8fr 1.2fr 1fr; gap: 20px; align-items: start; }
+.lp-streak-grid { display: grid; grid-template-columns: 0.8fr 1.2fr 1fr; gap: var(--lp-step-2); align-items: start; }
 .lp-streak { text-align: center; }
 .lp-streak-num { display: block; color: var(--lp-heading); font-size: 1.9rem; font-weight: 800; margin: 8px 0; }
 .lp-level { margin-top: 14px; }
@@ -541,7 +604,7 @@ html[data-theme="dark"] .home-main {
 .lp-track .lp-spark, .lp-track .lp-bars-sm { color: var(--lp-accent); fill: var(--lp-accent); margin-top: 12px; }
 
 /* Philosophy */
-.lp-philo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.lp-philo { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--lp-step-2); }
 .lp-phi h4 { color: var(--lp-heading); margin: 12px 0 6px; font-size: 1rem; }
 .lp-phi p { color: var(--lp-muted); margin: 0; font-size: .88rem; line-height: 1.5; }
 
@@ -557,31 +620,70 @@ html[data-theme="dark"] .home-main {
 .lp-price-list { list-style: none; margin: 14px 0 18px; padding: 0; display: flex; flex-direction: column; gap: 10px; color: var(--lp-text); font-size: .92rem; }
 
 /* Tech */
-.lp-tech { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.lp-tech { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--lp-step-2); }
 .lp-techitem { display: flex; align-items: center; gap: 14px; }
 .lp-techitem h4 { color: var(--lp-heading); margin: 0 0 2px; font-size: 1rem; }
 .lp-techitem p { color: var(--lp-muted); margin: 0; font-size: .85rem; }
 
 /* Final CTA */
-.lp-final { text-align: center; margin: 64px 0 20px; padding: 48px 24px; background: var(--lp-hero-bg); border: 1px solid var(--lp-border); border-radius: 24px; }
-.lp-final h2 { color: var(--lp-heading); font-size: 1.8rem; font-weight: 800; margin: 0 0 8px; }
-.lp-final p { color: var(--lp-muted); margin: 0 0 22px; }
+/* Tall enough to hold a horizon.
+   The range is drawn `xMaxYMax meet` (components/Range.tsx), so its width is
+   its height times the drawing's own 420:180 — which means a range that spans
+   the block needs a block about 2.3 times as tall as the mountains are. At the
+   340px this used to be, the only way to fill the width was to blow the
+   mountains up until two peaks filled the card, and the only way to keep them
+   small was to leave two thirds of the block empty. So the block grew instead.
+   It is the last thing on the page and the one moment it is allowed to be a
+   picture. */
+.lp-final {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: clamp(300px, 33vw, 470px);
+    text-align: center;
+    margin: var(--lp-step-4) 0 0;
+    /* Lopsided on purpose: `justify-content: center` centres the copy in
+       whatever room the padding leaves, so a deep floor is what lifts the
+       three closing lines clear of the ridge behind them. */
+    padding: clamp(40px, 5vw, 68px) 24px clamp(96px, 10vw, 150px);
+    background: var(--lp-hero-bg);
+    border: 1px solid var(--lp-border);
+    border-radius: 24px;
+}
+.lp-final h2 { color: var(--lp-heading); font-size: clamp(1.6rem, 2.6vw, 2.1rem); font-weight: 800; margin: 0 0 10px; letter-spacing: -.02em; }
+.lp-final p { color: var(--lp-muted); font-size: 1.02rem; margin: 0 auto var(--lp-step-3); max-width: 42ch; }
 
 /* Footer links */
 .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; margin-bottom: 12px; }
 .footer-links a { color: var(--lp-muted, #5a6472); text-decoration: none; font-size: .9rem; font-weight: 500; }
 .footer-links a:hover { color: var(--lp-accent, #6366f1); }
 
-/* Responsive */
+/* Responsive
+   The type and the padding scale themselves — every size on this page is a
+   clamp now — so what is left here is the part a clamp cannot do: deciding how
+   many columns a grid has. */
 @media (max-width: 900px) {
     .lp-hero { grid-template-columns: 1fr; }
-    .lp-hero-art { min-height: 260px; margin-top: 8px; }
+    .lp-hero-art { min-height: 300px; margin-top: 8px; }
+    .lp-hero-title { max-width: 20ch; }
     .lp-strip, .lp-philo, .lp-tech { grid-template-columns: 1fr 1fr; }
     .lp-split, .lp-streak-grid { grid-template-columns: 1fr; }
+    /* The range gives up height rather than being dropped: on a narrow screen
+       the hero is the only part of the page with any air in it, and a hero
+       with the scenery taken out of it is the flat gradient this replaced. */
+    .lp-hero .peak-range { height: 52%; }
 }
 @media (max-width: 560px) {
     .lp-strip, .lp-philo, .lp-tech { grid-template-columns: 1fr; }
-    .lp-hero-title { font-size: 2rem; }
+    /* Two overlapping cards need a column each on a phone, and there is not
+       one — so they stop overlapping and stack. */
+    .lp-hero-art { min-height: 0; display: flex; flex-direction: column; gap: var(--lp-step-2); }
+    .lp-preview { position: static; width: 100%; }
+    .lp-preview-rating { text-align: left; }
+    .lp-preview-rating .lp-radar { margin-left: 0; }
 }
 
 /* ============================================================
@@ -636,9 +738,9 @@ html[data-theme="dark"] .lp-trend.up { color: #4ade80; }
 .lp-tab.is-active { background: var(--lp-accent); color: #fff; }
 
 /* ---- Performance: featured chart + side stats ---- */
-.lp-perf { display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px; align-items: stretch; }
+.lp-perf { display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--lp-step-2); align-items: stretch; }
 .lp-perf-main { display: flex; flex-direction: column; color: var(--lp-accent); }
-.lp-perf-side { display: flex; flex-direction: column; gap: 18px; }
+.lp-perf-side { display: flex; flex-direction: column; gap: var(--lp-step-2); }
 .lp-perf-side .lp-metric { min-height: 0; flex: 1; }
 .lp-metric-num small { font-size: .55em; font-weight: 600; color: var(--lp-muted); }
 
@@ -739,7 +841,7 @@ html[data-theme="dark"] .lp-trend.up { color: #4ade80; }
     letter-spacing: .14em; text-transform: uppercase;
     color: var(--lp-muted);
 }
-.lp-quote-foot { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.lp-quote-foot { display: flex; align-items: center; gap: 10px; margin-top: var(--lp-step-2); padding-top: 14px; border-top: 1px solid var(--lp-border); }
 .lp-quote-by small {
     display: block;
     margin-top: 1px;
@@ -777,7 +879,7 @@ html[data-theme="dark"] .lp-trend.up { color: #4ade80; }
    that decision: one figure, drawn rather than typed, with the parts it is the
    mean of alongside it and the six weeks behind it underneath. */
 .lp-ax-wrap { display: flex; flex-direction: column; gap: 16px; }
-.lp-ax { display: grid; grid-template-columns: 1fr 1.35fr; gap: 18px; align-items: stretch; }
+.lp-ax { display: grid; grid-template-columns: 1fr 1.35fr; gap: var(--lp-step-2); align-items: stretch; }
 
 .lp-ax-score { display: flex; flex-direction: column; align-items: center; text-align: center; }
 .lp-ax-score .lp-card-top { width: 100%; }
@@ -1028,6 +1130,212 @@ html { overflow-x: hidden; }
 }
 .hfx-toast.is-shown { opacity: 1; transform: translate(-50%, 0); }
 html[data-theme="dark"] .hfx-toast { background: #e6e8f0; color: #161B22; }
+
+/* ==========================================================================
+   THE MOUNTAINS
+   The landing page was the one page in the app with no scenery on it. Every
+   other route opens on a range — components/Range.tsx inside the card that
+   styles/summit.css dresses — and this page, whose entire job is to make
+   somebody want to go and look at those, opened on a flat gradient.
+
+   Two ranges now: one along the foot of the hero and one behind the closing
+   block. Nothing here redraws them. The component paints from five custom
+   properties and the two rules below are what set them, which is the same
+   contract `.peak-hero` has in styles/summit.css — a page picks its weather by
+   naming colours and changes nothing else.
+
+   Every rule that reaches a `peak-` class is written under one of this page's
+   own, so it cannot leak into the heroes on the other twelve pages. See the
+   note on scoping in scripts/check_css.mjs.
+   ========================================================================== */
+.lp-hero,
+.lp-final {
+    /* The page's own accents, not the app's violet default. A landing page
+       whose mountains are a different colour from its buttons is two brands on
+       one screen. */
+    --peak-a: var(--lp-accent);
+    --peak-b: var(--lp-accent-2);
+    --peak-c: color-mix(in srgb, var(--lp-accent) 78%, #131a3a);
+    --peak-surface: var(--lp-surface);
+    --peak-snow: var(--lp-surface);
+}
+html[data-theme="dark"] .lp-hero,
+html[data-theme="dark"] .lp-final {
+    /* On near-black the rock is a tint *lighter* than the card, so snow in the
+       card's colour comes out as a hole cut into the summit — the correction
+       components/Range.tsx describes on `cap`. */
+    --peak-c: color-mix(in srgb, var(--lp-accent) 72%, #ffffff);
+    --peak-snow: #dbe4f8;
+}
+
+/* Both ranges are given a box and nothing else. Height is the only control
+   worth having here: the drawing is `xMaxYMax meet`, so its height decides its
+   width, and it anchors to the bottom right of whatever box it is handed.
+
+   **Not opacity.** `.peak-range` carries `peak-raise`, an animation with
+   `fill: both` that ends on `opacity: 1` — and a filled animation beats a
+   normal declaration in the cascade, so an `opacity` written here would look
+   like a knob and turn nothing. Fading a range means fading `.peak-scene`,
+   which is not animated; neither of these two wants it. */
+.lp-hero .peak-range {
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 62%;
+}
+
+/* The closing block's is taller and more opaque, because there is nothing in
+   front of it but one line and a button, and because this is the last thing on
+   the page — the picture the page has been walking towards. */
+.lp-final .peak-range {
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* A range needs sky, and a card with a hard bottom edge under one is a
+   photograph of a mountain rather than a place. Both blocks fade their own
+   floor out, so the rock meets the page instead of stopping at a border. */
+.lp-hero .peak-scene::after,
+.lp-final .peak-scene::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 34%;
+    background: linear-gradient(to top, var(--lp-surface), transparent);
+    opacity: .35;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   THE MOUNTAIN CHART  (components/Home/RidgeChart.tsx)
+   A series drawn as a range. The apexes are the readings; everything else is
+   the drawing. The axis is a real axis and sits outside the picture, so the
+   numbers are never over the rock.
+   ========================================================================== */
+.lp-ridge {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: stretch;
+    gap: 8px;
+    margin: 12px 0 0;
+}
+.lp-ridge-y {
+    display: flex; flex-direction: column; justify-content: space-between;
+    color: var(--lp-muted);
+    font-size: .62rem;
+    font-variant-numeric: tabular-nums;
+    /* Each mark is a line of text centred on its gridline, so it has to come up
+       by half its own leading or every number sits below the rule it labels. */
+    margin: -.4em 0;
+}
+.lp-ridge-art {
+    display: block;
+    width: 100%;
+    /* Stretched to the card rather than scaled: a chart's x is its column and
+       its y is its scale, and preserving the ratio between two axes that mean
+       different things is a coincidence, not a correctness. */
+    height: 100%;
+    min-height: 96px;
+    overflow: visible;
+}
+.lp-ridge-grid {
+    stroke: var(--lp-border);
+    stroke-width: 1;
+    stroke-dasharray: 2 4;
+}
+
+/* The best reading of the front period, marked where the snow is. Drawn as a
+   ring rather than a filled dot so the summit under it is still visible — the
+   point is to say *which* peak, not to cover it. */
+.lp-ridge-mark {
+    position: absolute;
+    width: 9px; height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    border-radius: 50%;
+    border: 2px solid var(--lp-accent);
+    background: var(--lp-surface);
+    pointer-events: none;
+}
+
+.lp-ridge-key {
+    grid-column: 2;
+    display: flex; flex-wrap: wrap; gap: 4px 14px;
+    margin-top: 8px;
+    color: var(--lp-muted);
+    font-size: .66rem; font-weight: 600;
+}
+.lp-ridge-key span { display: inline-flex; align-items: center; gap: 6px; }
+.lp-ridge-key i {
+    width: 9px; height: 9px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--lp-accent-2) 55%, transparent);
+}
+.lp-ridge-key .is-near { color: var(--lp-heading); }
+.lp-ridge-key .is-near i { background: var(--lp-accent); }
+
+/* In the hero's preview card, where the space is a card and not a section. */
+.lp-prev-ridge { margin-top: 10px; }
+.lp-prev-ridge .lp-ridge-art { min-height: 86px; }
+/* The legend is the last line of the chart, and the level bar is the first
+   line of what comes after it. They were touching. */
+.lp-preview-dash .lp-prev-row { margin-top: 12px; }
+
+/* ==========================================================================
+   THE HERO'S TWO OPENINGS
+   A signed-in reader gets the greeting and the date. A stranger gets the line
+   that has to earn the next one — see the note in components/Home/sections.tsx.
+   ========================================================================== */
+/* `.lp-greet.lp-kicker`, not `.lp-kicker` alone: the element wears both, and
+   `.lp-greet` in styles/home-motion.css — a later sheet, same specificity —
+   makes that slot a `display: block`. Written as the compound it actually is,
+   this reads as what it is: one variant of the greeting line, not a second
+   rule hoping to win a tie. */
+.lp-greet.lp-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    padding: 5px 13px 5px 9px;
+    border-radius: 999px;
+    background: var(--lp-surface);
+    border: 1px solid var(--lp-border);
+    box-shadow: var(--lp-shadow);
+    color: var(--lp-heading);
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+/* The mark, at the size of a word — utils/images/logo.svg, the same file the
+   rail and the favicon point at. Putting it at the head of the first line is
+   how a reader learns what "Summit" is a picture of before they reach the
+   name, and it is the one place on this page the logo appears at all: there is
+   no header up there any anymore for it to sit in. */
+.lp-kicker-peak { display: block; width: 18px; height: 18px; flex-shrink: 0; }
+
+/* The eyebrow under it carries the three facts a stranger is actually deciding
+   on. `display: block` because the kicker above is now an inline-flex pill
+   rather than the block `.lp-greet` used to be, and an inline eyebrow behind it
+   sets on the same line and wraps around it — one label and three facts run
+   together into a single ragged paragraph. */
+.lp-hero-text .lp-eyebrow {
+    display: block;
+    margin-top: 12px;
+    letter-spacing: .01em;
+}
+
+/* The arrow in a button. It was in the markup on four buttons and styled on
+   none of them, so it sat flush against the last word and did not move. */
+.lp-arrow { transition: transform 260ms cubic-bezier(.22, .84, .34, 1); }
+.lp-btn:hover .lp-arrow { transform: translateX(3px); }
+.lp-arrow-down { display: inline-block; }
+.lp-btn:hover .lp-arrow-down { transform: translateY(2px); }
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-arrow { transition: none; }
+}
 
 /* ==========================================================================
    PENTAGON EASTER EGG (armed by pentagon-egg.js after the mysterious quote)

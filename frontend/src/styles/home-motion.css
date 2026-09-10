@@ -896,7 +896,17 @@ html.theme-shift .footer {
 html[data-theme="dark"] .lp-final::before {
     background: radial-gradient(closest-side, rgba(124, 131, 255, 0.26), transparent 72%);
 }
-.lp-final > * { position: relative; z-index: 1; }
+/* Everything in the block stands in front of that glow — everything, that is,
+   except the scenery, which stands behind it.
+
+   `.peak-scene` is `position: absolute; z-index: -1` in styles/summit.css, and
+   this rule is a `.lp-final > *` in a sheet that loads after that one: same
+   specificity, later file, so it quietly turned the mountains into a
+   zero-height block in normal flow and the closing block rendered with no
+   range at all. The `:not()` is the fix and has to be here rather than a
+   counter-rule in homepage.css — a rule that says "every child" when it means
+   "every child that is content" is the thing that was wrong. */
+.lp-final > *:not(.peak-scene) { position: relative; z-index: 1; }
 
 /* A slow breath every four seconds, so the button reads as waiting rather than
    as decoration. It stops the moment the pointer is on it. */

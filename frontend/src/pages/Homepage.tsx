@@ -223,10 +223,14 @@ export default function Homepage() {
           <FeatureStrip />
 
           {/* Not a screenshot: a working mock the reader watches fill in. */}
-          <section className="lp-section">
+          {/* `see-it` is where the hero's second button lands. A signed-out
+              reader has nothing they are allowed to open, so the honest offer
+              to "see it working" is this — the first of six demonstrations,
+              and the one that says outright it is not a screenshot. */}
+          <section className="lp-section" id="see-it">
             <SectionHead
-              title="Your dashboard, as you would use it"
-              blurb="Finish work, and the numbers move. Nothing here is a picture — this is the real thing, running."
+              title="This is the app, not a screenshot"
+              blurb="Tick something off and watch the numbers move. It is the same dashboard component the signed-in page renders, running here in front of you."
             />
             <DashboardDemo />
           </section>
@@ -234,7 +238,7 @@ export default function Homepage() {
           <section className="lp-section">
             <SectionHead
               title="One list, worked through"
-              blurb="Priorities, subjects and due dates on a single list. Check something off and the XP it earned lands on the bar."
+              blurb="Priorities, subjects and due dates on a single list. Check something off and the XP it earned lands on the bar — no second app to tell about it."
             />
             {/* The workflow, played out: a task gets checked off, the list
                 closes over it, and the XP it earned lands on the bar. */}
@@ -245,15 +249,15 @@ export default function Homepage() {
           <section className="lp-section">
             <SectionHead
               title="What the hours add up to"
-              blurb="Hours logged, completion rate and efficiency, by day or by week — counted from the days you worked, not the days that passed."
+              blurb="Hours logged, completion rate and efficiency, by day or by week — counted over the days you actually worked, not the days that went past."
             />
             <Performance />
           </section>
 
           <section className="lp-section">
             <SectionHead
-              title="A calendar that works with you"
-              blurb="Drag a task onto a day and it is scheduled there. It is the same task either way — the calendar is a second view of your list, not a second copy of it."
+              title="The calendar is the same list"
+              blurb="Drag a task onto a day and it is scheduled there. Move it back and the list has already changed — one task, two views of it, never two copies to keep in step."
             />
             <CalendarDemo />
           </section>
@@ -261,7 +265,7 @@ export default function Homepage() {
           <section className="lp-section">
             <SectionHead
               title="Showing up, counted"
-              blurb="Every finished task earns XP toward the next level. The streak counts consecutive days with at least one task done — miss a day and it goes back to zero."
+              blurb="Every finished task earns XP toward the next level, and the streak counts consecutive days with at least one thing done. Miss a day and it goes back to zero — that is the whole point of it."
             />
             <StreakLevel />
           </section>
@@ -274,16 +278,21 @@ export default function Homepage() {
               the streak and the calendar those are measured from. */}
           <section className="lp-section">
             <SectionHead
-              title="Analytics that do the thinking"
-              blurb="Five measures become one Growth Score, and the score becomes a ranked list of what to change next. Every figure shows the arithmetic it came from."
+              title="Analytics that end in a suggestion"
+              blurb="Five measures become one Growth Score, and the score becomes a ranked list of what to change next week. Every figure opens up to show the arithmetic behind it."
             />
             <Analytics />
           </section>
 
           <Philosophy />
-          <Pricing signedIn={signedIn} onTheme={setTheme} onToast={say} />
+          <Pricing
+            signedIn={signedIn}
+            onGetStarted={() => setStep('choose')}
+            onTheme={setTheme}
+            onToast={say}
+          />
           <TechStack />
-          <FinalCta signedIn={signedIn} />
+          <FinalCta signedIn={signedIn} onGetStarted={() => setStep('choose')} />
         </div>
       </div>
 

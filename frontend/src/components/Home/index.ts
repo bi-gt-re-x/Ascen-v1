@@ -13,6 +13,8 @@ export type { AuthStep } from './AuthModal';
 export { CalendarDemo } from './CalendarDemo';
 export { DashboardDemo } from './DashboardDemo';
 export { Performance } from './Performance';
+export { RidgeChart } from './RidgeChart';
+export type { RidgeSeries } from './RidgeChart';
 export { StreakLevel } from './StreakLevel';
 export { TaskDemo } from './TaskDemo';
 export { Trend } from './Trend';
