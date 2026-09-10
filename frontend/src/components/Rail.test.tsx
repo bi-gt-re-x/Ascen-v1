@@ -183,14 +183,22 @@ describe('the Analytics entry, which is the one that unfolds', () => {
     expect(screen.queryByRole('link', { name: /latin/i })).not.toBeInTheDocument();
   });
 
-  it('prints the short form and keeps the full name for the hover', async () => {
+  it('prints the full name, not the catalogue\'s abbreviation', async () => {
     await withFollowed(['enviro']);
     fireEvent.click(screen.getByRole('button', { name: /show your subjects/i }));
 
-    // "Environmental Science" does not fit a rail this narrow; the name it
-    // does not fit is still what a screen reader and a tooltip get.
-    const row = screen.getByRole('link', { name: 'Enviro Sci' });
+    /* This asserted the opposite until the rail was widened for it. `label` is
+       `name` shortened past eight characters, which is right for a chip on a
+       task and wrong for a row in a navigation column — it turned this menu
+       into "CompSci" and "Math", and there is no width being saved: the rail
+       went from 240px to 312px *because* subject names were being squeezed
+       into an ellipsis two levels in.
+
+       The title stays. Nothing in the hundred-row catalogue outruns the row,
+       but an account can name a subject itself, at any length it likes. */
+    const row = screen.getByRole('link', { name: 'Environmental Science' });
     expect(row).toHaveAttribute('title', 'Environmental Science');
+    expect(screen.queryByText('Enviro Sci')).not.toBeInTheDocument();
   });
 
   it('is already open when the reader lands on a subject page', async () => {

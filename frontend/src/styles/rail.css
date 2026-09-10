@@ -56,7 +56,13 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 4px 8px 22px;
+    /* 14px, not 8px, so the mark starts on the same vertical line as the icons
+       under it. `.rail-link` has 14px of its own padding and the rail has 14px
+       of its own, which put every icon at 28px from the rail's edge and the
+       mark at 22px — six pixels of misalignment between the two things at the
+       top of the column, which is exactly the distance the eye notices without
+       being able to say why. The rank block at the foot had the same six. */
+    padding: 4px 14px 22px;
     color: #2C302E;
 }
 
@@ -249,16 +255,22 @@
 .rail-sub {
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    margin: 3px 0 6px 24px;
-    padding-left: 12px;
+    /* 1px, and the rows read as one block of text with lines in it rather than
+       as four places you can go. They are the same kind of thing as the twelve
+       destinations above and want the same kind of air; a nav row that has to
+       be aimed at is a nav row that is too close to its neighbour. The group
+       also gets a clear gap under it, so an open Analytics reads as one thing
+       ending rather than as Tasks starting too soon. */
+    gap: 5px;
+    margin: 7px 0 12px 24px;
+    padding-left: 14px;
     border-left: 1.5px solid #E6E9EF;
 }
 
 .rail-sub-link {
     position: relative;
     display: block;
-    padding: 6px 10px;
+    padding: 9px 12px;
     border-radius: 8px;
     color: #7A828A;
     font-size: 13px;
@@ -284,10 +296,15 @@
     background: #F6F4F1;
 }
 
+/* Sits on the rule itself, so its offset is the sub's `padding-left` plus its
+   border — change either above and this has to move with it or the tick floats
+   in the gap beside the line it is meant to be marking. 15.5 is 14 of padding
+   and 1.5 of border, measured rather than guessed: a round 16 puts it half a
+   pixel to the left of the rule and the browser draws that as a soft edge. */
 .rail-sub-link.active::before {
     content: '';
     position: absolute;
-    left: -13.5px;
+    left: -15.5px;
     top: 50%;
     transform: translateY(-50%);
     width: 2.5px;
@@ -324,7 +341,7 @@
 
 /* --- Rank --------------------------------------------------------------- */
 /* `relative` so the title menu can hang off it. */
-.rail-rank { position: relative; padding: 0 8px; }
+.rail-rank { position: relative; padding: 0 14px; }
 
 /* The title and its three dots share a row. The title takes what is left
    after the dots, and `min-width: 0` is what lets it — without it the flex
@@ -517,8 +534,11 @@ html.nav-collapsed .rail-rank { padding-inline: 4px; }
 html.nav-collapsed .rail-rank-num { display: block; }
 
 /* The toggle has nowhere to sit beside a hidden wordmark, so it goes under the
-   mark rather than out of reach. */
-html.nav-collapsed .rail-brand { flex-direction: column; gap: 10px; }
+   mark rather than out of reach. The 14px that lines the mark up with the rows
+   goes back to 8px: folded, the rail is 74px wide and the rows have dropped
+   their own padding to centre their icons, so there is nothing left to line up
+   with and 28px of it would be most of the strip. */
+html.nav-collapsed .rail-brand { flex-direction: column; gap: 10px; padding-inline: 8px; }
 
 /* --- What the rail costs the page --------------------------------------- */
 /* border-box matters here: the calendar pins its body to height 100vh with
@@ -619,7 +639,12 @@ html[data-theme="dark"] .rail-xp-bar { background: #21262D; }
 @media (max-width: 1100px) {
     :root { --rail-w: 74px; }
     .rail { padding-left: 10px; padding-right: 10px; }
-    .rail-brand { flex-direction: column; justify-content: center; gap: 10px; padding-bottom: 18px; }
+    .rail-brand {
+        flex-direction: column; justify-content: center; gap: 10px;
+        /* Folded by the window rather than by the toggle, and for the same
+           reason as the rule above. */
+        padding-inline: 8px; padding-bottom: 18px;
+    }
     .rail-brand-name,
     .rail-link span,
     .rail-rank-head,

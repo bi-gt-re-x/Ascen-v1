@@ -571,12 +571,27 @@ export function Rail() {
                       key={subject.id}
                       to={`/analytics/subject/${encodeURIComponent(subject.id)}`}
                       className={({ isActive }) => `rail-sub-link${isActive ? ' active' : ''}`}
-                      /* The full name on hover; the row prints the short form
-                         when the subject has one, because the rail is narrow
-                         and "Environmental Science" is not. */
+                      /* Still here for the one case that can outrun the row: a
+                         subject the account named itself, at whatever length it
+                         liked. The catalogue's own hundred all fit. */
                       title={subject.name}
                     >
-                      {subject.label}
+                      {/* The full name, not the catalogue's abbreviation.
+                          `label` is `name` shortened past eight characters
+                          (backend/config/subjects.py), which is right for a
+                          chip on a task and wrong here: it turned a column of
+                          places into "CompSci" and "Math", and abbreviating a
+                          navigation label saves nothing a reader wants saved.
+
+                          The room for it already existed. `--rail-w` was
+                          widened from 240px to 312px *for this menu* — see the
+                          note on it in styles/rail.css, which says in as many
+                          words that the old width squeezed subject names into
+                          an ellipsis two levels in. The rail got wider and the
+                          rows went on printing the short form anyway. The
+                          longest name in the catalogue is sixteen characters
+                          and the row has room for roughly twice that. */}
+                      {subject.name}
                     </NavLink>
                   ))}
                 </div>
