@@ -1,0 +1,299 @@
+/* ==========================================================================
+   summit.css — the mountain hero every page opens with.
+
+   The focus page was the only one that looked like anywhere. Its hero carries
+   two radial washes and a drawn range (styles/timer.css, "Hero"), and every
+   other page opened with a bare `<h1>` on the page's own ground — so moving
+   between them read as moving between two applications rather than two rooms.
+   This is that card, taken out of timer.css and made something a page can wear
+   by wrapping the header it already had. See components/Hero.tsx for the
+   wrapper and components/Range.tsx for the mountains.
+
+   Every class here is `peak-` and nothing else in styles/ claims one, which is
+   what keeps a sheet loaded on every page from dressing something it did not
+   mean to — see scripts/check_css.mjs. The rules that reach *into* a hero to
+   restyle a page's own header live in that page's sheet, scoped under
+   `.peak-hero`, because a descendant selector cannot leak.
+
+   ## Three colours and a surface
+
+   A hero paints from `--peak-a`, `--peak-b`, `--peak-c`, `--peak-surface` and
+   `--peak-snow`. The washes and the three ridgelines all read from those, so a
+   page picks its weather by naming a tone and changes nothing else. The tones
+   are below; a page with a colour of its own — the timer, whose hero follows
+   the phase — sets the colour tokens directly instead.
+   ========================================================================== */
+
+.peak-hero {
+    /* The default weather. `.peak-tone-*` below overrides it, and must stay
+       after this block: both selectors match the same element with the same
+       specificity, so source order is what settles them. */
+    --peak-a: #7c5cf0;
+    --peak-b: #4bc4e6;
+    --peak-c: #8257e5;
+
+    --peak-surface: #ffffff;
+    /* What lies on a summit. The card's own colour on white; a pale blue in
+       the dark, where the card is darker than the rock in front of it — see
+       the note on `cap` in components/Range.tsx. */
+    --peak-snow: #ffffff;
+    --peak-line: #e7eaf2;
+    --peak-shadow: 0 1px 2px rgba(20, 28, 46, .04), 0 10px 30px rgba(20, 28, 46, .06);
+
+    position: relative;
+    isolation: isolate;
+    /* Deliberately *not* `overflow: hidden`. The scenery needs clipping and
+       clips itself — see `.peak-scene` below — because two of the headers a
+       hero wraps hang a dropdown menu out of the bottom of themselves, and a
+       card that clips its own mountains clips those too. */
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    min-height: 156px;
+    padding: 26px 28px;
+
+    border: 1px solid var(--peak-line);
+    border-radius: 20px;
+    background-color: var(--peak-surface);
+    background-image:
+        radial-gradient(88% 130% at 0% 0%,
+            color-mix(in srgb, var(--peak-a) 20%, transparent) 0%, transparent 64%),
+        radial-gradient(76% 128% at 100% 100%,
+            color-mix(in srgb, var(--peak-b) 22%, transparent) 0%, transparent 68%);
+    box-shadow: var(--peak-shadow);
+    /* A hero whose tone follows something the reader is changing — the open
+       analytics tab — would otherwise snap between two skies. Two gradients of
+       the same shape interpolate, so this is a wash crossfading rather than a
+       repaint. */
+    transition: background-image .55s ease;
+}
+.peak-hero * { box-sizing: border-box; }
+
+html[data-theme="dark"] .peak-hero {
+    --peak-surface: #161d2c;
+    --peak-snow: #ccd8ef;
+    --peak-line: #28324a;
+    --peak-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .26);
+}
+
+/* ---------- The scenery ----------------------------------------------------
+   Everything that is a picture rather than a control, on one inert layer
+   behind the content.
+
+   It exists so the *card* does not have to clip. Both things it holds run past
+   the card's edges on purpose — the sky is half again the card's height, and
+   the range's paths overshoot both sides so a drifting layer can never pull
+   its own end into view — and the card cannot be the thing that cuts them off,
+   because the Tasks and Goals headers hang dropdown menus out of themselves
+   and an `overflow: hidden` there takes the menus with the mountains.
+
+   `border-radius: inherit` rather than a repeated `20px`: the hero rounds off
+   at 16px on a phone, and a backdrop with square corners inside a rounded card
+   is visible at every one of them. Rendered by components/Range.tsx. */
+.peak-scene {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+/* The light on the card, which is the only part of it that moves on its own.
+ *
+ * A still gradient is a picture of weather; this one drifts across a minute
+ * and a half, far too slowly to watch and just fast enough that the page is
+ * not the same page it was when you looked away. First in the scene, so the
+ * range paints over it — which is the right way round: the sky is behind the
+ * mountains.
+ *
+ * The whole layer is still in front of the card's own background, because
+ * `isolation: isolate` above makes the hero a stacking context. */
+.peak-scene::before {
+    content: '';
+    position: absolute;
+    left: -18%; right: -12%; top: -55%;
+    height: 130%;
+    background: radial-gradient(46% 50% at 34% 46%,
+        color-mix(in srgb, var(--peak-b) 30%, transparent) 0%, transparent 72%);
+    opacity: .6;
+    animation: peak-sky 92s ease-in-out infinite alternate;
+}
+@keyframes peak-sky {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(9%, -5%, 0) scale(1.16); }
+}
+
+/* ---------- The range ------------------------------------------------------
+   In the corner of the scene. Wider and shallower than the timer's original,
+   because most heroes here are a title row rather than a timer and the spare
+   height above the ridgeline is what reads as sky. */
+.peak-range {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: min(64%, 700px);
+    height: 88%;
+    /* A range cannot crossfade into another range the way the wash above can —
+       the paths are different shapes — so it rises into place instead. The
+       component is keyed on its variant (components/Hero.tsx), so this replays
+       only when the mountains actually change, and never on a re-render. */
+    animation: peak-raise .6s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes peak-raise {
+    from { opacity: 0; transform: translateY(9px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Each ridge breathes, and the three do it at three speeds.
+ *
+ * This is the difference between scenery and wallpaper, and the amounts are
+ * chosen to be felt rather than seen: three or four user units over half a
+ * minute, which at the size a hero draws is under two pixels. The far layer
+ * moves most and the near one least — the opposite of real parallax, and
+ * right here, because what is being suggested is air moving over a distance
+ * rather than a camera moving past a mountain.
+ *
+ * Translation only, so nothing here costs a layout or a repaint, and the
+ * paths run past both edges of the box so a layer can never drift its own
+ * end into view. */
+@keyframes peak-breathe {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(var(--peak-sway), var(--peak-lift), 0); }
+}
+.peak-layer {
+    animation: peak-breathe var(--peak-beat) ease-in-out infinite alternate;
+}
+.peak-layer-far  { --peak-sway: -3.4px; --peak-lift: 1.5px;  --peak-beat: 37s; }
+.peak-layer-mid  { --peak-sway: 2.4px;  --peak-lift: -1.1px; --peak-beat: 29s; animation-delay: -6s; }
+.peak-layer-near { --peak-sway: -1.4px; --peak-lift: .6px;   --peak-beat: 23s; animation-delay: -11s; }
+
+/* Mist, crossing in front of the distance and behind the foreground.
+ *
+ * Two banks on one path, half a cycle apart, so there is usually one in the
+ * picture and never a moment when one is seen to appear: each fades up after
+ * it has entered and back down before it leaves, and the jump back to the
+ * left happens while it is at zero. */
+@keyframes peak-drift {
+    from { transform: translateX(-110px); }
+    to   { transform: translateX(540px); }
+}
+@keyframes peak-veil {
+    0%, 100% { opacity: 0; }
+    22%, 76% { opacity: .5; }
+}
+.peak-cloud {
+    opacity: 0;
+    animation:
+        peak-drift 78s linear infinite,
+        peak-veil 78s ease-in-out infinite;
+}
+.peak-cloud-b { animation-delay: -39s, -39s; }
+
+/* Scenery is the first thing to go. The mountains stay — they are a picture,
+   not an animation — and everything that moves stops. */
+@media (prefers-reduced-motion: reduce) {
+    .peak-hero { transition: none; }
+    .peak-scene::before { animation: none; }
+    .peak-range { animation: none; }
+    .peak-layer { animation: none; }
+    .peak-weather { display: none; }
+}
+
+/* ---------- Inside the card ------------------------------------------------
+   A hero holds whatever header the page already had, so almost nothing here
+   sizes its contents. These three are the parts that turned out to be the
+   same on every page.
+
+   `.peak-hero-row` is the title-and-actions line: the shape every page's
+   header was already making by hand, named once so a page that has not been
+   converted yet can be, and so the wrap behaviour is the same on all of them. */
+.peak-hero-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+/* The strip along the bottom of a hero — a tab bar, a set of window chips, a
+   row of figures. Separated by air rather than a rule: a border across a card
+   with a landscape in it cuts the mountains in half. */
+.peak-hero-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+/* The eyebrow over a hero's title. Small, uppercase, and tinted with the
+   page's own tone, which is what ties the word to the mountains under it. */
+.peak-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-start;
+    padding: 4px 11px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--peak-a) 15%, transparent);
+    color: var(--peak-a);
+    font-size: .64rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    /* It sits over a title rather than beside one, and a heading's own
+       margin-top is zero on every page here, so the air between the two has to
+       come from this side. */
+    margin-bottom: 10px;
+}
+html[data-theme="dark"] .peak-eyebrow {
+    background: color-mix(in srgb, var(--peak-a) 22%, transparent);
+}
+
+/* ---------- Tones ----------------------------------------------------------
+   One per section of the app, so the colour of the sky says where you are
+   before the title does. `a` is the middle ridge and the near wash, `b` is the
+   far ridge and the far wash, and `c` is the foreground — a deeper shade of
+   `a` rather than a fourth hue, which is the correction that made these read
+   as eight tones instead of eight washes over one purple mountain. The
+   foreground is the most opaque layer on the card, so whatever colour it is
+   *is* the colour of the range.
+
+   Dark lifts all three. A mid-tone that reads as colour on white reads as mud
+   on near-black, which is the same reason every page's own dark block lifts
+   its accent — see styles/preferences.css. */
+.peak-tone-violet { --peak-a: #7c5cf0; --peak-b: #4bc4e6; --peak-c: #5b3fd0; }
+.peak-tone-indigo { --peak-a: #5b63d3; --peak-b: #8ea6f5; --peak-c: #3f47b0; }
+.peak-tone-blue   { --peak-a: #2f74d0; --peak-b: #6fb0f5; --peak-c: #1f55a8; }
+.peak-tone-teal   { --peak-a: #16a3a3; --peak-b: #6fd3c8; --peak-c: #0d7c80; }
+.peak-tone-green  { --peak-a: #1f9d61; --peak-b: #63d99b; --peak-c: #14764a; }
+.peak-tone-amber  { --peak-a: #d98324; --peak-b: #f0b45e; --peak-c: #b25f18; }
+.peak-tone-rose   { --peak-a: #e0567a; --peak-b: #f2a08a; --peak-c: #b93c62; }
+.peak-tone-slate  { --peak-a: #64748b; --peak-b: #9fb0c4; --peak-c: #47566b; }
+
+html[data-theme="dark"] .peak-tone-violet { --peak-a: #9b7cf8; --peak-b: #63d3ee; --peak-c: #7d5cf0; }
+html[data-theme="dark"] .peak-tone-indigo { --peak-a: #8b92ea; --peak-b: #a9bcff; --peak-c: #6a72d8; }
+html[data-theme="dark"] .peak-tone-blue   { --peak-a: #4b8ef0; --peak-b: #93c5fd; --peak-c: #2f6fd0; }
+html[data-theme="dark"] .peak-tone-teal   { --peak-a: #3fc9c9; --peak-b: #8fe3da; --peak-c: #1e9d9d; }
+html[data-theme="dark"] .peak-tone-green  { --peak-a: #35b478; --peak-b: #6ee7b7; --peak-c: #1f8f5c; }
+html[data-theme="dark"] .peak-tone-amber  { --peak-a: #e6a94e; --peak-b: #f5cd8a; --peak-c: #c07f2c; }
+html[data-theme="dark"] .peak-tone-rose   { --peak-a: #f4849f; --peak-b: #f7bcaa; --peak-c: #d0567c; }
+html[data-theme="dark"] .peak-tone-slate  { --peak-a: #94a3b8; --peak-b: #c2cede; --peak-c: #6f7f95; }
+
+/* ---------- Narrow ---------------------------------------------------------
+   The range keeps its corner and gives up width rather than being dropped: on
+   a phone the hero is the only part of the page with any air in it, and a
+   header with the scenery taken out of it is the plain `<h1>` this file
+   exists to replace. */
+@media (max-width: 900px) {
+    .peak-hero { min-height: 138px; padding: 22px 20px; gap: 16px; }
+    .peak-range { width: min(72%, 460px); height: 76%; }
+}
+@media (max-width: 560px) {
+    .peak-hero { min-height: 126px; padding: 18px 16px; border-radius: 16px; }
+    .peak-range { width: 88%; height: 66%; opacity: .9; }
+}

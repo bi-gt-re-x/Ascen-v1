@@ -107,7 +107,17 @@ html[data-theme="dark"] .rc-page { color-scheme: dark; }
     justify-content: space-between;
     gap: 24px;
     margin-bottom: 26px;
+    width: 100%;
 }
+
+/* The 26px below it belonged to the header while the header was the top of the
+   page. It is inside the mountain hero now, so that margin would be 26px of
+   sky under the trophy rather than air under the card — it moves out to the
+   card, which is the thing the tiles below now sit under. This page stacks its
+   bands on their own margins rather than on a shell gap, which is why it needs
+   the second rule and the other pages do not. See components/Hero.tsx. */
+.peak-hero .rc-hero { margin-bottom: 0; }
+.rc-top { margin-bottom: 26px; }
 .rc-title {
     margin: 0 0 8px;
     font-size: clamp(1.8rem, 3vw, 2.6rem);
@@ -121,6 +131,23 @@ html[data-theme="dark"] .rc-page { color-scheme: dark; }
 /* Big enough to read as the page's own trophy rather than as an emoji that
    wandered in. Hidden on narrow screens, where it is only taking the width. */
 .rc-hero-art { flex: none; font-size: 92px; line-height: 1; filter: saturate(1.15); }
+
+/* On the summit rather than beside the title.
+ *
+ * At 92px next to a mountain range this was two things asking to be looked at
+ * in one card, and the trophy won by sheer size. Smaller, and lifted so it
+ * sits over the ridgeline rather than level with the heading, it reads as what
+ * this page is about — the thing at the top — instead of as a sticker. The
+ * shadow is what lands it on the peaks; without one it floats. */
+.peak-hero .rc-hero-art {
+    font-size: 56px;
+    align-self: center;
+    margin-right: 6px;
+    filter: saturate(1.15) drop-shadow(0 8px 14px rgba(20, 28, 46, .22));
+}
+html[data-theme="dark"] .peak-hero .rc-hero-art {
+    filter: saturate(1.15) drop-shadow(0 8px 16px rgba(0, 0, 0, .5));
+}
 
 .rc-btn {
     display: inline-flex;

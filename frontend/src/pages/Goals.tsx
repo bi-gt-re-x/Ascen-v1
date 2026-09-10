@@ -69,7 +69,7 @@ import {
   measureOf,
   msUntilNextDeadline,
 } from '@/components/Goals';
-import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
+import { Ambient, ErrorState, Loading, PageHero, RefreshButton } from '@/components';
 import {
   useAuth,
   useDocumentTitle,
@@ -542,38 +542,44 @@ export default function Goals() {
     <div className="gx-page">
       <Ambient />
       <div className={`gx-shell page-shell${entering ? ' pg-enter' : ''}`}>
-        <header className="gx-head">
-          <div>
-            <h1>
-              <span className="gx-head-ico" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="9" />
-                  <circle cx="12" cy="12" r="4.5" />
-                  <circle cx="12" cy="12" r="1" />
-                </svg>
-              </span>
-              Goals
-            </h1>
-            <p className="gx-quiet">What you are working toward.</p>
-            <VisionLine goals={list} />
-            {/* What you are carrying, before anything is described. The counts
-                come from the same `goalsOverview` the tiles below read. */}
-            <GoalsGreeting goals={list} tasks={tasks} />
-          </div>
-          <div className="gx-head-tools">
-            <RefreshButton busy={busy} onRefresh={() => void load(true)} />
-            <button
-              type="button"
-              className="gx-btn"
-              onClick={() => setShowCompleted((shown) => !shown)}
-            >
-              {showCompleted ? 'Hide completed' : 'View completed'}
-            </button>
-            <button type="button" className="gx-btn is-primary" onClick={() => setWizardOpen(true)}>
-              + New Goal
-            </button>
-          </div>
-        </header>
+        {/* This header was already a card of its own — a tinted strip with a
+            border and a shadow. It keeps its layout and gives up its surface to
+            the hero, because a card inside a card is a box in a box; see the
+            `.peak-hero .gx-head` rule in styles/goals.css. */}
+        <PageHero variant="goals" tone="amber">
+          <header className="gx-head">
+            <div>
+              <h1>
+                <span className="gx-head-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <circle cx="12" cy="12" r="4.5" />
+                    <circle cx="12" cy="12" r="1" />
+                  </svg>
+                </span>
+                Goals
+              </h1>
+              <p className="gx-quiet">What you are working toward.</p>
+              <VisionLine goals={list} />
+              {/* What you are carrying, before anything is described. The counts
+                  come from the same `goalsOverview` the tiles below read. */}
+              <GoalsGreeting goals={list} tasks={tasks} />
+            </div>
+            <div className="gx-head-tools">
+              <RefreshButton busy={busy} onRefresh={() => void load(true)} />
+              <button
+                type="button"
+                className="gx-btn"
+                onClick={() => setShowCompleted((shown) => !shown)}
+              >
+                {showCompleted ? 'Hide completed' : 'View completed'}
+              </button>
+              <button type="button" className="gx-btn is-primary" onClick={() => setWizardOpen(true)}>
+                + New Goal
+              </button>
+            </div>
+          </header>
+        </PageHero>
 
         <GoalTabs tab={tab} onTab={setTab} />
 

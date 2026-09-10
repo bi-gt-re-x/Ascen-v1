@@ -106,7 +106,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Ambient, ErrorState, Loading } from '@/components';
+import { Ambient, ErrorState, Loading, PageHero } from '@/components';
 import { stageShows } from '@/utils/dataMaturity';
 import {
   AnalyticsSetup,
@@ -511,15 +511,24 @@ export default function Analytics() {
           the shared 18px the plan, the diagnosis and the cards ran together as
           one wall. */}
       <div className={`ax-shell page-shell ax-view-${view.key}`}>
-        <Header
-          view={view}
-          span={spanText}
-          onExport={report}
-          exportName={reportFilename(username ?? 'account', new Date())}
-          onExportData={model.slice.current.length > 0 ? exportData : undefined}
-          dataName={seriesFilename(username ?? 'account', new Date())}
-        />
-        <ViewTabs active={view.key} onView={openView} />
+        {/* Title row and tab bar in one card, over that tab's own range.
+            They were two bands with a gap between them, which put the page's
+            two most important controls — where am I, and where else can I go —
+            on either side of a seam. In one card they read as one piece of
+            chrome, and the sky behind them changes with the tab, so pressing
+            one is something the reader *sees* rather than something they
+            confirm by re-reading the title. See components/Hero.tsx. */}
+        <PageHero variant={`analytics-${view.key}`} tone={view.tone} className="ax-hero">
+          <Header
+            view={view}
+            span={spanText}
+            onExport={report}
+            exportName={reportFilename(username ?? 'account', new Date())}
+            onExportData={model.slice.current.length > 0 ? exportData : undefined}
+            dataName={seriesFilename(username ?? 'account', new Date())}
+          />
+          <ViewTabs active={view.key} onView={openView} />
+        </PageHero>
 
         {/* The setup screen replaces the controls as well as the tab, because
             a window picker over a page with nothing in it to scope is a control

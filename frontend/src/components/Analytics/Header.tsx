@@ -12,6 +12,7 @@
  * scrolls like one.
  */
 import type { ReactNode } from 'react';
+import type { HeroTone } from '@/components';
 import { WINDOWS, type WindowKey } from './data';
 
 // --------------------------------------------------------------------------
@@ -43,6 +44,23 @@ export interface View {
    */
   purpose: string;
   title: string;
+  /**
+   * The sky over this tab, and the range drawn under it.
+   *
+   * Seven tabs share one page, one title row and one set of controls, so the
+   * only thing that tells a reader the page changed when they pressed a tab is
+   * what is written in it — and on the three that all show cards of numbers,
+   * that is not much. A tab's colour changes the whole hero the moment it
+   * opens, which makes the switch something you see rather than something you
+   * verify by reading. See components/Hero.tsx for the eight, and
+   * styles/summit.css for what each one is made of.
+   *
+   * The pairings are not arbitrary: Recommendations is amber because it is the
+   * only tab that asks for something, Subjects is green because that is what
+   * growth is coloured everywhere else in the app, and Overview keeps the
+   * violet the page has always been.
+   */
+  tone: HeroTone;
 }
 
 /**
@@ -86,6 +104,7 @@ export const VIEWS: View[] = [
     path: '/recommendations',
     purpose: 'What to change, ranked by what it would actually be worth.',
     title: 'Recommendations',
+    tone: 'amber',
   },
   {
     key: 'overview',
@@ -93,6 +112,7 @@ export const VIEWS: View[] = [
     path: '/analytics',
     purpose: 'The long view — totals, trajectory and where the account stands.',
     title: 'Overview',
+    tone: 'violet',
   },
   {
     key: 'goals',
@@ -103,6 +123,7 @@ export const VIEWS: View[] = [
     path: '/analytics/goals',
     purpose: 'Whether what you aimed at is going to happen, and what you have not aimed at.',
     title: 'Goals',
+    tone: 'blue',
   },
   {
     key: 'habits',
@@ -110,6 +131,7 @@ export const VIEWS: View[] = [
     path: '/habits',
     purpose: 'What you do — the routines, streaks and rhythms in your own record.',
     title: 'Habits',
+    tone: 'teal',
   },
   {
     key: 'insights',
@@ -117,6 +139,7 @@ export const VIEWS: View[] = [
     path: '/insights',
     purpose: 'Why and how you work — what conditions your better work shows up under.',
     title: 'Insights',
+    tone: 'indigo',
   },
   {
     key: 'subjects',
@@ -124,6 +147,7 @@ export const VIEWS: View[] = [
     path: '/subjects',
     purpose: 'What you are getting good at — every subject as a level, counted off your own tasks.',
     title: 'Subjects',
+    tone: 'green',
   },
   {
     key: 'growth',
@@ -148,6 +172,7 @@ export const VIEWS: View[] = [
     path: '/analytics/growth',
     purpose: 'How far you have actually come — every year side by side, and what changed.',
     title: 'Growth',
+    tone: 'rose',
   },
 ];
 

@@ -27,6 +27,7 @@
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Range } from '@/components';
 import {
   useApi, useAuth, useDocumentTitle, usePageEntrance, useSettings, useStats, useUserData,
 } from '@/hooks';
@@ -34,7 +35,7 @@ import { fmtHM, useFocusSession } from '@/hooks/useFocusSession';
 import { usePomodoro } from '@/hooks/usePomodoro';
 import { focus as focusService, goals as goalService, growth as growthService } from '@/services';
 import { StyleGrid } from '@/components/Timer/Styles';
-import { HeroRange, QuoteScene } from '@/components/Timer/art';
+import { QuoteScene } from '@/components/Timer/art';
 import {
   LEVELS, NEARBY, RECOMMENDED, SITTINGS, STYLES, clock, styleFor,
   type Phase, type Sitting,
@@ -476,7 +477,11 @@ export default function Timer() {
         <>
           {/* ---- Hero -------------------------------------------------- */}
           <section className={`pom-hero is-${phase}`}>
-            <HeroRange />
+            {/* The one hero in the app that does not take a tone: its three
+                colours follow the phase, set on `.pom-hero.is-*` in
+                styles/timer.css, so the range turns green on a break with the
+                ring and the button. See components/Range.tsx. */}
+            <Range variant="focus" />
             <div className="pom-hero-left">
               <span className="pom-badge"><span aria-hidden="true">◎</span> Focus mode</span>
               <h2>Pick your focus</h2>

@@ -86,11 +86,25 @@ html[data-theme="dark"] .pom-page {
     color-scheme: dark;
 }
 
-/* Phase colour, set once on the hero so the ring, the badge and the primary
-   button all read from one place. */
+/* Phase colour, set once on the hero so the ring, the badge, the primary
+   button and the mountains all read from one place. */
 .pom-hero.is-focus { --pom-now: var(--pom-focus); --pom-now-2: var(--pom-focus-2); }
 .pom-hero.is-break { --pom-now: var(--pom-break); --pom-now-2: var(--pom-break-2); }
 .pom-hero.is-long  { --pom-now: var(--pom-long);  --pom-now-2: var(--pom-long-2); }
+
+/* This is the one hero in the app that does not wear a tone from
+   styles/summit.css, because its colour is the phase and the phase changes
+   while you are looking at it. The shared range (components/Range.tsx) paints
+   from these four names wherever it is drawn, so pointing them at the phase is
+   the whole of what a bespoke sky costs here. `--peak-c` is the near ridge and
+   stays purple through all three phases: it is the rock closest to the reader
+   and it should not turn green when the break starts. */
+.pom-hero {
+    --peak-a: var(--pom-now);
+    --peak-b: var(--pom-now-2);
+    --peak-c: var(--pom-purple);
+    --peak-surface: var(--pom-card);
+}
 
 /* ---- Header -------------------------------------------------------------- */
 .pom-head {
@@ -234,15 +248,13 @@ html[data-theme="dark"] .pom-page {
     box-shadow: var(--pom-shadow);
     transition: background-image .5s ease;
 }
-/* The mountains sit behind everything in the card and take no clicks. */
-.pom-art-range {
-    position: absolute;
-    right: 0; bottom: 0;
-    width: min(62%, 560px);
-    height: 74%;
-    z-index: -1;
-    pointer-events: none;
-}
+/* The mountains sit behind everything in the card and take no clicks, and
+   styles/summit.css already says so — `.peak-scene` is the layer and
+   `.peak-range` is the drawing in the corner of it. This hero is taller than
+   the rest, because it holds a timer rather than a title, so the range is
+   given back some of the height the shared rule spends on sky it does not
+   have. */
+.pom-hero .peak-range { width: min(62%, 560px); height: 74%; }
 
 .pom-badge {
     display: inline-flex; align-items: center; gap: 6px;

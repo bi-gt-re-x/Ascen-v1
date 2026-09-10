@@ -55,7 +55,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Ambient, ErrorState, Loading, STATS_CHANGED } from '@/components';
+import { Ambient, ErrorState, Loading, PageHero, STATS_CHANGED } from '@/components';
 import { GROUPS, SORTS } from '@/components/Tasks';
 import { useApi, useAuth, useDocumentTitle, usePageEntrance, useSettings, useTheme } from '@/hooks';
 import { settings as service } from '@/services';
@@ -1561,15 +1561,19 @@ export default function Settings() {
     <div className="st-page">
       <Ambient />
       <div className={`st-shell page-shell${entering ? ' pg-enter' : ''}`}>
-        <header className="st-head">
-          <div>
-            <h1>Settings</h1>
-            <p className="st-quiet">What this account has chosen.</p>
-          </div>
-          <span className={`st-status${saved || failure ? ' is-on' : ''}`} role="status">
-            {failure ? <em className="st-bad">{failure}</em> : (saved ?? '')}
-          </span>
-        </header>
+        {/* Slate, like Notes: the two pages that change things rather than
+            report them. */}
+        <PageHero variant="settings" tone="slate">
+          <header className="st-head">
+            <div>
+              <h1>Settings</h1>
+              <p className="st-quiet">What this account has chosen.</p>
+            </div>
+            <span className={`st-status${saved || failure ? ' is-on' : ''}`} role="status">
+              {failure ? <em className="st-bad">{failure}</em> : (saved ?? '')}
+            </span>
+          </header>
+        </PageHero>
 
         <div className="st-body">
           <nav className="st-nav" aria-label="Settings sections">

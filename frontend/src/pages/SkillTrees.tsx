@@ -37,7 +37,7 @@
  * data because it is a reading of the tally rather than a fact about a subject.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Ambient } from '@/components';
+import { Ambient, PageHero } from '@/components';
 import {
   FocusSetup,
   FocusTopics,
@@ -445,29 +445,35 @@ export default function SkillTrees() {
 
         <SubjectRail subjects={subjects} openTrail={trail} onOpen={openTree} />
 
-        <header className="stx-lead">
-          {chain.length > 1 && (
-            <nav className="stx-crumbs" aria-label="Where this tree sits">
-              {chain.map((crumb, index) => {
-                const here = crumb.id === tree.id;
-                return (
-                  <span key={crumb.id} className="stx-crumb">
-                    {here ? (
-                      <span aria-current="page">{crumb.title}</span>
-                    ) : (
-                      <button type="button" onClick={() => goTo(crumb.id)}>
-                        {crumb.title}
-                      </button>
-                    )}
-                    {index < chain.length - 1 && <i aria-hidden="true">›</i>}
-                  </span>
-                );
-              })}
-            </nav>
-          )}
-          <h1>{tree.title}</h1>
-          <p className="stx-lead-sub">{tree.blurb}</p>
-        </header>
+        {/* Green, which is what growth is coloured everywhere else here. The
+            breadcrumb and the title stay centred inside it — this is the one
+            header in the app that is not a left-aligned row, because what it
+            titles is a canvas rather than a list. */}
+        <PageHero variant="skill-trees" tone="green">
+          <header className="stx-lead">
+            {chain.length > 1 && (
+              <nav className="stx-crumbs" aria-label="Where this tree sits">
+                {chain.map((crumb, index) => {
+                  const here = crumb.id === tree.id;
+                  return (
+                    <span key={crumb.id} className="stx-crumb">
+                      {here ? (
+                        <span aria-current="page">{crumb.title}</span>
+                      ) : (
+                        <button type="button" onClick={() => goTo(crumb.id)}>
+                          {crumb.title}
+                        </button>
+                      )}
+                      {index < chain.length - 1 && <i aria-hidden="true">›</i>}
+                    </span>
+                  );
+                })}
+              </nav>
+            )}
+            <h1>{tree.title}</h1>
+            <p className="stx-lead-sub">{tree.blurb}</p>
+          </header>
+        </PageHero>
 
         {/* ---- moving between trees ----
             The diamonds on the canvas walk downward and the breadcrumb walks

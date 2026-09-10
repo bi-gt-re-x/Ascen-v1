@@ -26,7 +26,7 @@
  * moving when the + on the panel is pressed.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
+import { Ambient, ErrorState, Loading, PageHero, RefreshButton, STATS_CHANGED } from '@/components';
 import {
   CatchUp,
   DailyQuote,
@@ -473,40 +473,44 @@ export default function Dashboard() {
       <Ambient />
 
       {/* The greeting slides away with the stat row while a focus session
-          runs — see html.focus-mode in styles/dashboard-home.css. */}
-      <header className="dash-greeting">
-        <div>
-          <h1 className="dash-hello">
-            {/* The display name if the account has set one, the username if
-                not — the rule public_user applies in backend/tracking/auth.py.
-                This greeted people by their username whatever they had typed
-                into Settings, which made "Display name" a field that stored a
-                value and changed nothing. */}
-            {dates.greeting(now)}, {displayName || username}!{' '}
-            <span aria-hidden="true">👋</span>
-          </h1>
-          {/* "Here is your day." stood here and said nothing — a sentence
-              under a greeting, on a page that does not fit one screen. The
-              greeting keeps its line; the filler under it does not. */}
-        </div>
-        <div className="dash-datebar">
-          <p className="dash-date">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="16" rx="2" />
-              <path d="M3 10h18M8 3v4M16 3v4" />
-            </svg>
-            {dates.formatDate(now, {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            })}
-          </p>
-          {/* The only thing on this page that asks the server again. Adding a
-              task and finishing one both render what their own call answered. */}
-          <RefreshButton busy={refreshing} onRefresh={reload} />
-        </div>
-      </header>
+          runs — see html.focus-mode in styles/dashboard-home.css, which folds
+          this card rather than the header inside it. Indigo, and first in the
+          rail: the sky you land on when you sign in. */}
+      <PageHero variant="dashboard" tone="indigo" className="dash-hero">
+        <header className="dash-greeting">
+          <div>
+            <h1 className="dash-hello">
+              {/* The display name if the account has set one, the username if
+                  not — the rule public_user applies in backend/tracking/auth.py.
+                  This greeted people by their username whatever they had typed
+                  into Settings, which made "Display name" a field that stored a
+                  value and changed nothing. */}
+              {dates.greeting(now)}, {displayName || username}!{' '}
+              <span aria-hidden="true">👋</span>
+            </h1>
+            {/* "Here is your day." stood here and said nothing — a sentence
+                under a greeting, on a page that does not fit one screen. The
+                greeting keeps its line; the filler under it does not. */}
+          </div>
+          <div className="dash-datebar">
+            <p className="dash-date">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M3 10h18M8 3v4M16 3v4" />
+              </svg>
+              {dates.formatDate(now, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </p>
+            {/* The only thing on this page that asks the server again. Adding a
+                task and finishing one both render what their own call answered. */}
+            <RefreshButton busy={refreshing} onRefresh={reload} />
+          </div>
+        </header>
+      </PageHero>
 
       {/* Both rows are preferences. A reader who does not want the figures
           gets the task list at the top of the page rather than a gap where

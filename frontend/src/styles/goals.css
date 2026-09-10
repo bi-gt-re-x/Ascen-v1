@@ -2063,6 +2063,22 @@ html[data-theme="dark"] .gx-page {
         var(--gx-card);
     box-shadow: var(--gx-shadow);
 }
+
+/* Inside the mountain hero it is a layout and nothing else.
+ *
+ * This header was a card before every page had one — a tinted strip with its
+ * own border, radius and shadow. Wrapped in the hero it became a box in a box,
+ * and worse, an opaque one: its own background painted over the range the card
+ * behind it was drawing. It keeps the row it makes and hands the surface up.
+ * See components/Hero.tsx and styles/summit.css. */
+.peak-hero .gx-head {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    width: 100%;
+}
 .gx-head h1 {
     display: flex;
     align-items: center;

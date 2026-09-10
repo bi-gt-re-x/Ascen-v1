@@ -1,186 +1,21 @@
 /**
- * The page's two pictures, drawn rather than fetched.
+ * The sunset behind the quote.
  *
- * The design puts a mountain range along the hero and a photograph of a summit
- * behind the quote. Both are here as inline SVG, and that is a deliberate
- * choice rather than a shortcut: a photograph would be a binary in the repo, a
- * request on every load, a licence to keep track of, and a fixed set of colours
- * that cannot follow the theme. These take their palette from the page's own
- * tokens, so they turn dark with everything else and cost nothing to send.
+ * The other half of this file — the mountain range along the hero — moved to
+ * components/Range.tsx, because a range turned out not to be about pomodoros:
+ * every page here opens on one now, and two implementations of the same
+ * ridgeline would be two places for it to drift. This one stayed, because a
+ * dusk sky with a sun in it belongs to the page that has a quote on it.
  *
- * Both are `aria-hidden`: they carry no information, and a screen reader
- * announcing "mountains" between the timer and the quote would be reading out
- * the wallpaper.
+ * Drawn rather than fetched, for the reason the shared file gives at length: a
+ * photograph would be a binary in the repo, a request on every load, a licence
+ * to keep track of, and a fixed palette. This one keeps its own palette
+ * anyway — see below — but it costs nothing to send and it cannot 404.
+ *
+ * `aria-hidden`: it carries no information, and a screen reader announcing
+ * "mountains" between the timer and the quote would be reading out the
+ * wallpaper.
  */
-
-// ---------------------------------------------------------------------------
-// Drawing a range
-// ---------------------------------------------------------------------------
-/** A point on a ridgeline. */
-type Point = readonly [number, number];
-
-/**
- * A ridgeline as a closed shape, from the summits and saddles it passes through.
- *
- * The first and last points sit on the card's edges and stay square; every
- * point between them is rounded, and by how much depends on which kind it is.
- * A summit — lower `y` than both its neighbours — gets a small radius, because
- * a peak is very nearly a corner and rounding it off is what turned the old
- * paths into hills. A saddle gets a large one: the floor of a valley is where
- * scree collects, and it is the one part of a mountain that really is a curve.
- *
- * That asymmetry is the whole trick. The previous version of this was a
- * polyline, which draws the same corner at the top and the bottom and reads as
- * a sawtooth from across the room. Same points, two radii, and it reads as
- * rock.
- */
-function ridge(points: readonly Point[], floor: number): string {
-  const at = (n: number) => points[n]!;
-  const [firstX, firstY] = at(0);
-  const [lastX] = at(points.length - 1);
-
-  // How far back from a corner the curve starts, never more than it has room
-  // for — a short segment between two close peaks must not round past its own
-  // midpoint, or the two curves cross and the ridge folds over itself.
-  const toward = ([x, y]: Point, [tx, ty]: Point, want: number): Point => {
-    const span = Math.hypot(tx - x, ty - y);
-    const step = Math.min(want, span / 2) / (span || 1);
-    return [x + (tx - x) * step, y + (ty - y) * step];
-  };
-
-  let d = `M${firstX} ${firstY}`;
-  for (let n = 1; n < points.length - 1; n += 1) {
-    const here = at(n);
-    const summit = here[1] < at(n - 1)[1] && here[1] < at(n + 1)[1];
-    const want = summit ? 3.5 : 13;
-    const [ix, iy] = toward(here, at(n - 1), want);
-    const [ox, oy] = toward(here, at(n + 1), want);
-    d += ` L${ix.toFixed(1)} ${iy.toFixed(1)} Q${here[0]} ${here[1]} ${ox.toFixed(1)} ${oy.toFixed(1)}`;
-  }
-  const [endX, endY] = at(points.length - 1);
-  return `${d} L${endX} ${endY} L${lastX} ${floor} L${firstX} ${floor} Z`;
-}
-
-/**
- * The snow lying on a summit, hanging down its lee side.
- *
- * Ragged rather than triangular, and asymmetric — snow sits where the wind
- * does not reach, so a cap that is the same on both flanks looks drawn and one
- * that spills down one side looks seen. `size` is the drop in user units.
- */
-function cap([x, y]: Point, size: number): string {
-  const s = size / 20;
-  return `M${x} ${y} l${20 * s} ${15 * s} l${-8 * s} ${2 * s}`
-    + ` l${-6 * s} ${-4 * s} l${-7 * s} ${5 * s} l${-8 * s} ${-2 * s} Z`;
-}
-
-// The three ridgelines, far to near. They share no x positions on purpose: a
-// near summit sitting directly under a far one reads as one mountain with a
-// stripe, and the point of three layers is that they are three places.
-const FAR: Point[] = [
-  [-8, 128], [34, 100], [72, 120], [118, 88], [166, 116], [216, 92],
-  [268, 118], [316, 90], [366, 114], [428, 104],
-];
-const MID: Point[] = [
-  [-8, 152], [40, 116], [88, 142], [148, 102], [206, 140], [268, 110],
-  [326, 144], [382, 116], [428, 138],
-];
-const NEAR: Point[] = [
-  [-8, 168], [52, 124], [110, 160], [186, 102], [258, 156], [330, 120],
-  [428, 152],
-];
-
-// Built once at module load: the shapes never change, and each is drawn twice
-// — once for the rock and once for the mist over it.
-const FAR_D = ridge(FAR, 180);
-const MID_D = ridge(MID, 180);
-const NEAR_D = ridge(NEAR, 180);
-
-/**
- * The range along the bottom-right of the hero.
- *
- * Three ridgelines at falling opacity, with a wash of the card's own colour
- * laid over each one's base. The wash is what does the work: a distant ridge
- * is not merely paler, it is *eaten into* from the bottom by the air in front
- * of it, and drawing that is the difference between three silhouettes stacked
- * up and three mountains standing at three distances.
- *
- * `meet` rather than `slice`, and that is the difference between a range and a
- * fragment of one. `slice` scales a picture to *cover* its box and discards
- * whatever hangs over the edge — so on a tall hero, where the box is much
- * squarer than the drawing, the range was scaled to twice its size and its
- * left third thrown away. What that threw away was the fade below: the mask
- * lives in the drawing's own coordinates, so cropping the drawing cropped the
- * fade, and the range ended in exactly the hard vertical line the mask exists
- * to prevent. `meet` scales to *fit*, so the whole range is always in the box,
- * whatever shape the card is; anchoring to the bottom-right keeps it sitting
- * in the corner and leaves the spare room above it, which is empty sky.
- */
-export function HeroRange() {
-  return (
-    <svg
-      className="pom-art-range"
-      viewBox="0 0 420 180"
-      preserveAspectRatio="xMaxYMax meet"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="pom-range-far" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--pom-now-2)" stopOpacity=".40" />
-          <stop offset="100%" stopColor="var(--pom-now-2)" stopOpacity=".06" />
-        </linearGradient>
-        <linearGradient id="pom-range-mid" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--pom-now)" stopOpacity=".46" />
-          <stop offset="100%" stopColor="var(--pom-now)" stopOpacity=".10" />
-        </linearGradient>
-        <linearGradient id="pom-range-near" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--pom-purple)" stopOpacity=".62" />
-          <stop offset="100%" stopColor="var(--pom-purple)" stopOpacity=".16" />
-        </linearGradient>
-        {/* The air in front of a ridge, mapped to that ridge's own box rather
-            than to the card — so a low far one is veiled over the same
-            fraction of itself as a tall near one, which is what distance
-            actually does. */}
-        <linearGradient id="pom-range-haze" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--pom-card)" stopOpacity="0" />
-          <stop offset="42%" stopColor="var(--pom-card)" stopOpacity=".14" />
-          <stop offset="100%" stopColor="var(--pom-card)" stopOpacity=".72" />
-        </linearGradient>
-
-        {/* The art stops where its box does, and a tinted shape cut off by a
-            straight vertical line reads as a bug in the card rather than as a
-            range in the distance. So the whole thing is masked on its left and
-            dissolves into the page instead of ending. */}
-        <linearGradient id="pom-range-edge" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0" />
-          <stop offset="30%" stopColor="#fff" stopOpacity="1" />
-        </linearGradient>
-        <mask id="pom-range-fade">
-          <rect x="0" y="0" width="420" height="180" fill="url(#pom-range-edge)" />
-        </mask>
-      </defs>
-
-      {/* Each ridge three times: the rock, the mist standing in front of its
-          lower half, then the snow, which is above the mist and stays crisp. */}
-      <g mask="url(#pom-range-fade)">
-        <path fill="url(#pom-range-far)" d={FAR_D} />
-        <path fill="url(#pom-range-haze)" d={FAR_D} />
-        <path fill="var(--pom-card)" fillOpacity=".40" d={cap([118, 88], 12)} />
-        <path fill="var(--pom-card)" fillOpacity=".40" d={cap([316, 90], 11)} />
-
-        <path fill="url(#pom-range-mid)" d={MID_D} />
-        <path fill="url(#pom-range-haze)" d={MID_D} />
-        <path fill="var(--pom-card)" fillOpacity=".50" d={cap([148, 102], 15)} />
-        <path fill="var(--pom-card)" fillOpacity=".50" d={cap([268, 110], 14)} />
-
-        <path fill="url(#pom-range-near)" d={NEAR_D} />
-        <path fill="url(#pom-range-haze)" d={NEAR_D} />
-        <path fill="var(--pom-card)" fillOpacity=".62" d={cap([186, 102], 19)} />
-        <path fill="var(--pom-card)" fillOpacity=".48" d={cap([330, 120], 16)} />
-      </g>
-    </svg>
-  );
-}
 
 /**
  * The summit behind the quote.
@@ -198,10 +33,10 @@ export function HeroRange() {
  * had been cropped off and nobody could see what was missing. Framing the
  * viewBox on the strip the card actually is keeps the horizon in the picture.
  *
- * `slice` stays, unlike the range above, and the difference is what each one
- * is. The range is a motif in a corner and has to be whole; this is a backdrop
- * and has to reach every edge, because a gap between a picture and the card it
- * fills is worse than a crop.
+ * `slice` stays, unlike the shared range in components/Range.tsx, and the
+ * difference is what each one is. That range is a motif in a corner and has to
+ * be whole, so it uses `meet`; this is a backdrop and has to reach every edge,
+ * because a gap between a picture and the card it fills is worse than a crop.
  */
 export function QuoteScene() {
   return (

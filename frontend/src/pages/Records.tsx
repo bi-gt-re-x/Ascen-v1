@@ -58,7 +58,7 @@
  * different things of it.
  */
 import { useCallback, useMemo, useState } from 'react';
-import { ErrorState, Loading } from '@/components';
+import { ErrorState, Loading, PageHero } from '@/components';
 import { Glyph } from '@/components/Growth/GrowthPanels';
 import { RecordModal } from '@/components/Records/RecordModal';
 import { useApi, useCountUp, useDocumentTitle, usePageEntrance, useUserData } from '@/hooks';
@@ -491,27 +491,32 @@ export default function Records() {
   return (
     <div className={`rc-page${entering ? ' pg-enter' : ''}`}>
       {/* ---- 1. Hero ------------------------------------------------------ */}
-      <header className="rc-hero">
-        <div className="rc-hero-text">
-          <h1 className="rc-title">Your Records</h1>
-          <p className="rc-sub">Your best, and the day you hit it.</p>
-          <div className="rc-hero-tools">
-            <button type="button" className="rc-btn is-primary" onClick={() => open('record')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-              </svg>
-              Add record
-            </button>
-            <button type="button" className="rc-btn" onClick={() => open('milestone')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-              </svg>
-              Add milestone
-            </button>
+      {/* ---- 1. Hero ------------------------------------------------------ */}
+      {/* The trophy stays: it is this page's own mark and it sits in the
+          corner the range leaves empty. */}
+      <PageHero variant="records" tone="violet" className="rc-top">
+        <header className="rc-hero">
+          <div className="rc-hero-text">
+            <h1 className="rc-title">Your Records</h1>
+            <p className="rc-sub">Your best, and the day you hit it.</p>
+            <div className="rc-hero-tools">
+              <button type="button" className="rc-btn is-primary" onClick={() => open('record')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+                Add record
+              </button>
+              <button type="button" className="rc-btn" onClick={() => open('milestone')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+                Add milestone
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="rc-hero-art" aria-hidden="true">🏆</div>
-      </header>
+          <div className="rc-hero-art" aria-hidden="true">🏆</div>
+        </header>
+      </PageHero>
 
       {error && <p className="rc-error">{error}</p>}
 

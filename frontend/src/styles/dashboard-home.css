@@ -755,7 +755,11 @@ body:has(.dash) .app-main {
    It is raised rather than removed because the fold needs two numbers to
    travel between; `none` does not animate to `0`. See the breakpoints below,
    where stacking begins. */
-.dash-greeting,
+/* The greeting is inside the mountain hero now (components/Hero.tsx), so it
+   is the *card* that folds. A hero left at its own height with a collapsed
+   header in it is an empty landscape sitting exactly where the greeting was,
+   which is the opposite of getting out of the way. */
+.dash-hero,
 .dash-stats,
 .dash-insights,
 .quote-container {
@@ -764,7 +768,7 @@ body:has(.dash) .app-main {
                 margin 0.6s ease, max-height 0.6s ease;
     max-height: var(--dash-fold);
 }
-html.focus-mode .dash-greeting,
+html.focus-mode .dash-hero,
 html.focus-mode .dash-stats,
 html.focus-mode .dash-insights,
 html.focus-mode .quote-container {
@@ -777,7 +781,17 @@ html.focus-mode .quote-container {
     visibility: hidden;
     transition: opacity 0.45s ease, transform 0.6s ease,
                 margin 0.6s ease, max-height 0.6s ease,
-                visibility 0s linear 0.6s;
+                padding 0.6s ease, visibility 0s linear 0.6s;
+}
+
+/* Three properties the other three folded rows do not need, and the hero
+   cannot fold without: a `max-height` of zero loses outright to the card's own
+   `min-height`, and a card folded to no height still draws its padding and its
+   border — 54px of empty landscape that does not go away. */
+html.focus-mode .dash-hero {
+    min-height: 0;
+    padding-block: 0;
+    border-width: 0;
 }
 
 /* Focus on top, Tasks underneath, in the ratio dashboard.css's focus-mode

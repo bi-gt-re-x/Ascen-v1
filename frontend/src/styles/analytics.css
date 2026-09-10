@@ -1386,6 +1386,67 @@ body:has(.ax-page) .app-main {
     color: var(--ax-muted);
 }
 
+/* ---------- The hero -------------------------------------------------------
+   The title row and the tab bar, in one card, over a range.
+
+   The page used to open with two bare bands — an `<h1>` on the page ground and
+   a pill strip under it — and seven tabs that all changed the same two lines
+   of text. A reader who pressed Habits and got Insights had no way of knowing
+   except by re-reading the heading. The hero fixes both at once: it is one
+   piece of chrome instead of two, and its sky and its mountains are the open
+   tab's own, so the switch is visible from across the room. `tone` is declared
+   beside each tab in components/Analytics/Header.tsx; the card itself is
+   styles/summit.css.
+
+   Everything below is scoped under `.peak-hero`, which means this sheet is
+   dressing its own header inside somebody else's card rather than claiming a
+   class summit.css owns — see the top of scripts/check_css.mjs for why that
+   distinction is the difference between a fix and a collision. */
+.ax-hero { gap: 18px; }
+
+.peak-hero .ax-head { width: 100%; }
+
+/* The tab's colour reaches the title's icon, so the one glyph that is always
+   on screen agrees with the sky behind it. */
+.peak-hero .ax-head-icon { background: var(--peak-a); }
+
+.peak-hero .ax-views { width: 100%; }
+
+/* Glass rather than card. A bordered white strip inside a bordered white card
+   is a box in a box, and it would sit on the mountains like a sticker; at just
+   over half opacity the range is visible through it and the strip reads as
+   something lying on the landscape. The blur is what keeps the labels legible
+   where a ridge passes behind them. */
+.peak-hero .ax-tabs {
+    background: color-mix(in srgb, var(--peak-surface) 58%, transparent);
+    border-color: color-mix(in srgb, var(--peak-a) 20%, transparent);
+    -webkit-backdrop-filter: blur(7px);
+    backdrop-filter: blur(7px);
+}
+
+/* The open tab is filled with the tone rather than the page's violet, for the
+   same reason the icon is: one accent per tab, everywhere it shows. */
+.peak-hero .ax-tabs-major .ax-tab.is-on { background: var(--peak-a); }
+.peak-hero .ax-tab:hover:not(.is-on) {
+    background: color-mix(in srgb, var(--peak-a) 12%, transparent);
+    color: var(--ax-text);
+}
+
+/* The two exports and the window pill, given the same glass so the top-right
+   corner does not read as three opaque chips punched into the sky. */
+.peak-hero .ax-pill,
+.peak-hero .ax-btn {
+    background: color-mix(in srgb, var(--peak-surface) 62%, transparent);
+    border-color: color-mix(in srgb, var(--peak-a) 22%, transparent);
+    -webkit-backdrop-filter: blur(7px);
+    backdrop-filter: blur(7px);
+}
+.peak-hero .ax-btn-quiet { background: color-mix(in srgb, var(--peak-surface) 30%, transparent); }
+.peak-hero .ax-btn:hover:not(:disabled) {
+    background: var(--peak-surface);
+    border-color: var(--peak-a);
+}
+
 /* ---------- Header -------------------------------------------------------- */
 .ax-head {
     display: flex;

@@ -15,6 +15,13 @@
 export { AppBoundary, ErrorBoundary, RootBoundary } from './ErrorBoundary';
 export { Ambient } from './Ambient';
 export type { AmbientProps } from './Ambient';
+/* The card every page opens with, and the mountains behind it. Here rather
+   than under a page's folder because the point of it is that it is the same
+   card on all of them — see components/Hero.tsx. */
+export { PageHero } from './Hero';
+export type { HeroTone, PageHeroProps } from './Hero';
+export { Range } from './Range';
+export type { RangeProps } from './Range';
 export { Rail, STATS_CHANGED } from './Rail';
 /* The bell's two faces. In this list rather than behind their own path
    because neither belongs to a page: the panel is drawn inside the top bar and

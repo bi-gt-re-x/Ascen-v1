@@ -67,7 +67,7 @@
  * and you have not found them.
  */
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Ambient, ErrorState, Loading, RefreshButton } from '@/components';
+import { Ambient, ErrorState, Loading, PageHero, RefreshButton } from '@/components';
 import { useApi, useAuth, useDocumentTitle, usePageEntrance } from '@/hooks';
 import { achievements as service } from '@/services';
 import type { Badge, Category, Metric } from '@/services/achievements';
@@ -801,24 +801,27 @@ export default function Achievements() {
     <div className="ac-page">
       <Ambient />
       <div className={`ac-shell page-shell${entering ? ' pg-enter' : ''}`}>
-        <header className="ac-head">
-          <div>
-            <h1>Achievements</h1>
-            <p className="ac-quiet">Celebrate your progress. Every step forward counts.</p>
-          </div>
-          <div className="ac-head-tools">
-            <label className="ac-select">
-              <select value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
-                {FILTERS.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <RefreshButton busy={refreshing} onRefresh={reload} />
-          </div>
-        </header>
+        {/* Rose, which is this page and nothing else in the rail. */}
+        <PageHero variant="achievements" tone="rose">
+          <header className="ac-head">
+            <div>
+              <h1>Achievements</h1>
+              <p className="ac-quiet">Celebrate your progress. Every step forward counts.</p>
+            </div>
+            <div className="ac-head-tools">
+              <label className="ac-select">
+                <select value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
+                  {FILTERS.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <RefreshButton busy={refreshing} onRefresh={reload} />
+            </div>
+          </header>
+        </PageHero>
 
         {error && <ErrorState message={error} onRetry={reload} />}
 

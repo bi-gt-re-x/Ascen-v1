@@ -5,7 +5,8 @@
  * `grades.css` is the letter-grade palette every page that shows one reads,
  * `layout.css` is the shared responsive foundation (`.page-shell`, the
  * 1024/768/480 breakpoints), `page-enter.css` is the arrival cascade every
- * page shares (hooks/usePageEntrance), and `navbar.css` dresses the top bar,
+ * page shares (hooks/usePageEntrance), `summit.css` is the mountain hero every
+ * page opens with (components/Hero.tsx), and `rail.css` dresses the side rail,
  * which is rendered outside the router and so belongs to no page. Everything
  * else is imported by the page that needs it, so a route nobody visits costs
  * nothing.
@@ -33,6 +34,7 @@ import '@/styles/layout.css';
 import '@/styles/page-enter.css';
 import '@/styles/preferences.css';
 import '@/styles/rail.css';
+import '@/styles/summit.css';
 
 const container = document.getElementById('root');
 if (!container) {

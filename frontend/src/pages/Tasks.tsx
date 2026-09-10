@@ -72,7 +72,7 @@ import {
   type GroupKey,
   type TaskQuery,
 } from '@/components/Tasks';
-import { Ambient, ErrorState, Loading, RefreshButton, STATS_CHANGED } from '@/components';
+import { Ambient, ErrorState, Loading, PageHero, RefreshButton, STATS_CHANGED } from '@/components';
 import { measureOf } from '@/components/Goals';
 import { useDocumentTitle, usePageEntrance, useSettings, useSubjects, useUserData } from '@/hooks';
 import { goals as goalService, tasks as taskService } from '@/services';
@@ -864,88 +864,93 @@ export default function Tasks() {
     <div className="tk-page">
       <Ambient />
       <div className={`tk-shell page-shell${entering ? ' pg-enter' : ''}`}>
-        <header className="tk-head">
-          <div className="tk-head-title">
-            <h1>
-              <span className="tk-head-ico" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 11l3 3 8-8" />
-                  <path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" />
-                </svg>
-              </span>
-              Tasks
-            </h1>
-            <p className="tk-quiet">What is on your plate.</p>
-          </div>
-          <div className="tk-head-tools">
-            <button
-              type="button"
-              className="tk-new"
-              aria-expanded={composing}
-              onClick={() => setComposing(!composing)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              New Task
-              <i className={`tk-new-caret${composing ? ' is-open' : ''}`} aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </i>
-            </button>
-            {/* The overflow: the things that act on the page rather than on a
-                task, which is why they are not in the toolbar with the filters. */}
-            <div className="tk-row-menu" ref={pageMenuRef}>
+        {/* Teal: the rail puts Analytics above Tasks and Goals below it, and the
+            tone is the one thing that says which of the three is open before
+            the title has been read. See components/Hero.tsx. */}
+        <PageHero variant="tasks" tone="teal">
+          <header className="tk-head">
+            <div className="tk-head-title">
+              <h1>
+                <span className="tk-head-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 11l3 3 8-8" />
+                    <path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" />
+                  </svg>
+                </span>
+                Tasks
+              </h1>
+              <p className="tk-quiet">What is on your plate.</p>
+            </div>
+            <div className="tk-head-tools">
               <button
                 type="button"
-                className="tk-more is-page"
-                aria-label="More for this page"
-                aria-expanded={pageMenu}
-                onClick={() => setPageMenu(!pageMenu)}
+                className="tk-new"
+                aria-expanded={composing}
+                onClick={() => setComposing(!composing)}
               >
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.7" />
-                  <circle cx="12" cy="12" r="1.7" />
-                  <circle cx="19" cy="12" r="1.7" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
                 </svg>
+                New Task
+                <i className={`tk-new-caret${composing ? ' is-open' : ''}`} aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </i>
               </button>
-              {pageMenu && (
-                <div className="tk-menu-panel is-row">
-                  <button
-                    type="button"
-                    className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); changeQuery({ ...query, status: query.status === 'all' ? 'open' : 'all' }); }}
-                  >
-                    {query.status === 'all' ? 'Hide completed' : 'Show completed'}
-                  </button>
-                  <button
-                    type="button"
-                    className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); setShut(shut.size > 0 ? new Set() : new Set(groups.map((group) => group.key))); }}
-                  >
-                    {shut.size > 0 ? 'Expand all' : 'Collapse all'}
-                  </button>
-                  <button
-                    type="button"
-                    className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); resetView(); }}
-                  >
-                    Reset the view
-                  </button>
-                  <button
-                    type="button"
-                    className="tk-menu-item"
-                    onClick={() => { setPageMenu(false); reload(); }}
-                  >
-                    Refresh
-                  </button>
-                </div>
-              )}
+              {/* The overflow: the things that act on the page rather than on a
+                  task, which is why they are not in the toolbar with the filters. */}
+              <div className="tk-row-menu" ref={pageMenuRef}>
+                <button
+                  type="button"
+                  className="tk-more is-page"
+                  aria-label="More for this page"
+                  aria-expanded={pageMenu}
+                  onClick={() => setPageMenu(!pageMenu)}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="12" r="1.7" />
+                    <circle cx="12" cy="12" r="1.7" />
+                    <circle cx="19" cy="12" r="1.7" />
+                  </svg>
+                </button>
+                {pageMenu && (
+                  <div className="tk-menu-panel is-row">
+                    <button
+                      type="button"
+                      className="tk-menu-item"
+                      onClick={() => { setPageMenu(false); changeQuery({ ...query, status: query.status === 'all' ? 'open' : 'all' }); }}
+                    >
+                      {query.status === 'all' ? 'Hide completed' : 'Show completed'}
+                    </button>
+                    <button
+                      type="button"
+                      className="tk-menu-item"
+                      onClick={() => { setPageMenu(false); setShut(shut.size > 0 ? new Set() : new Set(groups.map((group) => group.key))); }}
+                    >
+                      {shut.size > 0 ? 'Expand all' : 'Collapse all'}
+                    </button>
+                    <button
+                      type="button"
+                      className="tk-menu-item"
+                      onClick={() => { setPageMenu(false); resetView(); }}
+                    >
+                      Reset the view
+                    </button>
+                    <button
+                      type="button"
+                      className="tk-menu-item"
+                      onClick={() => { setPageMenu(false); reload(); }}
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                )}
+              </div>
+              <RefreshButton busy={refreshing} onRefresh={reload} />
             </div>
-            <RefreshButton busy={refreshing} onRefresh={reload} />
-          </div>
-        </header>
+          </header>
+        </PageHero>
 
         {(failure || error) && (
           <p className="tk-failure" role="alert">

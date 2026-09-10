@@ -64,7 +64,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Ambient, ErrorState, Loading } from '@/components';
+import { Ambient, ErrorState, Loading, PageHero, type HeroTone } from '@/components';
 import { AreaChart } from '@/components/Analytics';
 import { WINDOWS, type WindowKey } from '@/components/Analytics/data';
 import { gradeFor } from '@/utils/analyticalScore';
@@ -889,6 +889,37 @@ export default function SubjectAnalytics() {
      for it or it would flash on a perfectly good link. */
   const naming = catalogue.size === 0;
 
+  /* Which band this subject is standing in, named once.
+   *
+   * It was written inline on the standing card and is now read twice, because
+   * the sky over the page is the same verdict as the ring under it. That is
+   * the point of putting it there: a reader arriving from the rail knows how
+   * this subject is going before they have read a word, and two pages for two
+   * subjects do not look like the same page with the noun changed.
+   *
+   * The thresholds are the standing card's own and stay here rather than in
+   * components/Subject/state, because they are a statement about colour rather
+   * than about the account — nothing below reads them. */
+  const band =
+    state.overall === null
+      ? 'none'
+      : state.overall >= 80
+        ? 'high'
+        : state.overall >= 65
+          ? 'good'
+          : state.overall >= 50
+            ? 'fair'
+            : 'low';
+
+  /** The four gradings as skies, and the plain one for a subject with no verdict yet. */
+  const BAND_TONE: Record<typeof band, HeroTone> = {
+    high: 'green',
+    good: 'blue',
+    fair: 'amber',
+    low: 'rose',
+    none: 'violet',
+  };
+
   return (
     /* `sb-page` alongside `ax-page`: this page is a guest in the analytics
        palette and reads its tokens, but its own spacing scale has to hang off
@@ -898,23 +929,30 @@ export default function SubjectAnalytics() {
     <div className="ax-page sb-page">
       <Ambient />
       <div className="ax-shell page-shell">
-        <header className="ax-head">
-          <div>
-            <h1>{subject ? subject.name : 'Subject'}</h1>
-            <p className="ax-muted ax-head-purpose">
-              {subject
-                ? 'How this one is going, and what to do about it.'
-                : 'This page is about one subject at a time.'}
-            </p>
-          </div>
-          <div className="ax-head-actions">
-            {/* On every state including the error. A reader who followed a dead
-                link should land somewhere useful in one click. */}
-            <Link className="ax-btn" to="/analytics">
-              Overall analytics
-            </Link>
-          </div>
-        </header>
+        {/* The range is seeded on the subject's own id, so every subject page
+            is a different place — which is the one thing a page whose whole
+            layout is identical across a dozen subjects could not otherwise
+            say. The sky is the standing band; see `band` above. */}
+        <PageHero variant={`subject-${subjectId}`} tone={BAND_TONE[band]}>
+          <header className="ax-head">
+            <div>
+              <span className="peak-eyebrow">Subject</span>
+              <h1>{subject ? subject.name : 'Subject'}</h1>
+              <p className="ax-muted ax-head-purpose">
+                {subject
+                  ? 'How this one is going, and what to do about it.'
+                  : 'This page is about one subject at a time.'}
+              </p>
+            </div>
+            <div className="ax-head-actions">
+              {/* On every state including the error. A reader who followed a dead
+                  link should land somewhere useful in one click. */}
+              <Link className="ax-btn" to="/analytics">
+                Overall analytics
+              </Link>
+            </div>
+          </header>
+        </PageHero>
 
         {naming || tasks.loading ? (
           <Loading label="Reading your record" />
@@ -962,17 +1000,7 @@ export default function SubjectAnalytics() {
             <section
               className="sx-hero"
               aria-label="Where this subject stands"
-              data-band={
-                state.overall === null
-                  ? 'none'
-                  : state.overall >= 80
-                    ? 'high'
-                    : state.overall >= 65
-                      ? 'good'
-                      : state.overall >= 50
-                        ? 'fair'
-                        : 'low'
-              }
+              data-band={band}
             >
               {/* The letter is derived from the figure the ring draws, not
                   from ./model's own score. Two composites on one card — a 59

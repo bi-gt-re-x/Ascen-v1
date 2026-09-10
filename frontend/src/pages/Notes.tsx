@@ -60,7 +60,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { Ambient, ErrorState, Loading } from '@/components';
+import { Ambient, ErrorState, Loading, PageHero } from '@/components';
 import { useAuth, useDocumentTitle, usePageEntrance, useSubjects } from '@/hooks';
 import { notes as noteService } from '@/services';
 import {
@@ -831,67 +831,71 @@ export default function Notes() {
       <Ambient />
       <div className={`nt-shell page-shell${entering ? ' pg-enter' : ''}`}>
         {/* ---- The page's own header ---- */}
-        <header className="nt-head">
-          <div className="nt-head-titles">
-            <h1>Notes</h1>
-            <p>Somewhere to think.</p>
-          </div>
-
-          <div className="nt-head-tools">
-            <div className="nt-search-wrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-              </svg>
-              <input
-                ref={searchRef}
-                type="search"
-                className="nt-search"
-                placeholder="Search notes..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              <kbd className="nt-kbd">⌘K</kbd>
+        {/* Slate. Notes is the one page here that is not measuring anything, and
+            a quiet sky is the honest one over it. */}
+        <PageHero variant="notes" tone="slate">
+          <header className="nt-head">
+            <div className="nt-head-titles">
+              <h1>Notes</h1>
+              <p>Somewhere to think.</p>
             </div>
 
-            <div className="nt-new-group">
-              <button type="button" className="nt-new" onClick={blank}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            <div className="nt-head-tools">
+              <div className="nt-search-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" strokeLinecap="round" />
                 </svg>
-                New Note
-              </button>
-              <div className="nt-menu-wrap">
-                <button
-                  type="button"
-                  className="nt-new-more"
-                  aria-label="Start from a template"
-                  aria-expanded={tplOpen}
-                  title="Start from a template"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setTplOpen((on) => !on);
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                    <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
+                <input
+                  ref={searchRef}
+                  type="search"
+                  className="nt-search"
+                  placeholder="Search notes..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <kbd className="nt-kbd">⌘K</kbd>
+              </div>
 
-                {tplOpen && (
-                  <div className="nt-menu is-wide" onClick={(event) => event.stopPropagation()}>
-                    {TEMPLATES.map((template) => (
-                      <button key={template.id} type="button" onClick={() => fromTemplate(template)}>
-                        <span>{template.label}</span>
-                        <em>{template.hint}</em>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div className="nt-new-group">
+                <button type="button" className="nt-new" onClick={blank}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                  </svg>
+                  New Note
+                </button>
+                <div className="nt-menu-wrap">
+                  <button
+                    type="button"
+                    className="nt-new-more"
+                    aria-label="Start from a template"
+                    aria-expanded={tplOpen}
+                    title="Start from a template"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setTplOpen((on) => !on);
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+
+                  {tplOpen && (
+                    <div className="nt-menu is-wide" onClick={(event) => event.stopPropagation()}>
+                      {TEMPLATES.map((template) => (
+                        <button key={template.id} type="button" onClick={() => fromTemplate(template)}>
+                          <span>{template.label}</span>
+                          <em>{template.hint}</em>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
+        </PageHero>
 
         <div className={`nt-body${indexShut ? ' is-shut' : ''}`}>
           {/* ---- The index ---- */}
