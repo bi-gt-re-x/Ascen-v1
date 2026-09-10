@@ -48,6 +48,7 @@ import {
   useSubjects,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
+import { busyDays } from '@/utils/calendarBusy';
 import { planFamilies } from '@/utils/calendarFamilies';
 import { useFocusSession } from '@/hooks/useFocusSession';
 import {
@@ -590,6 +591,13 @@ export default function Week() {
     [],
   );
 
+  /* Which days the mini-month should mark. Every day the account has anything
+     on, not only the month on show — the panel is paged without re-rendering
+     this view, so scoping it to one month would leave March blank until
+     something else happened to move. It is a map of a few hundred entries at
+     the very most. */
+  const miniLoad = useMemo(() => busyDays(tasks, store.data), [store.data, tasks]);
+
   const toggleSidebar = useCallback(() => {
     setCollapsed((was) => {
       try {
@@ -629,6 +637,8 @@ export default function Week() {
               type="button"
               className="wk-arrow"
               aria-label="Previous week"
+              title="Previous week (K)"
+              aria-keyshortcuts="K"
               onClick={() => stepWeek(-1)}
             >
               ‹
@@ -639,6 +649,8 @@ export default function Week() {
               type="button"
               className="wk-arrow"
               aria-label="Next week"
+              title="Next week (J)"
+              aria-keyshortcuts="J"
               onClick={() => stepWeek(1)}
             >
               ›
@@ -648,7 +660,13 @@ export default function Week() {
               it would step to a month you are already on and do nothing, but
               here it also puts the now line back in the middle of the grid,
               which is worth a press however far the reader has scrolled. */}
-          <button type="button" className="wk-today" onClick={goToday}>
+          <button
+            type="button"
+            className="wk-today"
+            title="This week, and back to the hour it is (T)"
+            aria-keyshortcuts="T"
+            onClick={goToday}
+          >
             Today
           </button>
         </div>
@@ -759,7 +777,16 @@ export default function Week() {
                             ? `Focus for ${day.name} ${day.label}: ${all.join(', ')}`
                             : `Focus for ${day.name} ${day.label}`
                         }
-                        title={more ? all.join('\n') : undefined}
+                        /* Always something, and something that says the chip
+                           is a control: it looks like a label, and a reader
+                           who does not know it can be clicked has no way to
+                           find out. The extras were the only case that said
+                           anything at all before. */
+                        title={
+                          all.length
+                            ? `${all.join('\n')}\n\nClick to edit`
+                            : 'Click to set a focus for this day'
+                        }
                         onClick={() => setFocusEditing(day.iso)}
                       >
                         {text ? (
@@ -833,6 +860,7 @@ export default function Week() {
             from: opensIso,
             to: closesIso,
             weekStart: startsOn,
+            load: miniLoad,
             onStep: stepMini,
             onPick: (iso) => goTo(dates.fromIsoDate(iso)),
           }}

@@ -140,6 +140,49 @@ function ResizeHandles() {
   );
 }
 
+/**
+ * Everything the block knows, in one line — for its tooltip and for a screen
+ * reader's ear.
+ *
+ * A block on a week is a seventh of the grid wide, so its name is very often
+ * an ellipsis: `Machine Learni…`, `Abstract algebr…`, and on a strip narrow
+ * enough to drop its time, `Morning meditation` with nothing after it. The
+ * grid *has* all of these facts and was showing whichever fitted.
+ *
+ * So this is the whole of it, said once, and hung on the element twice: as
+ * `title`, which is what a pointer gets after a second of hovering, and as
+ * `aria-label`, which is what a screen reader is told instead of trying to
+ * assemble the block out of its parts. They are the same string on purpose —
+ * a tooltip that says more than the accessible name is a tooltip somebody will
+ * have to notice is missing.
+ *
+ * Order is name, then when, then what it is worth, then its state. State comes
+ * last because most blocks have none, and a label that opens with "Done," on
+ * the ones that do would put the useful part after the noise.
+ */
+function blockSummary(block: Block): string {
+  const parts: string[] = [];
+
+  if (block.kind === 'event') {
+    parts.push(block.name);
+    parts.push(rangeLabel(hmToDate(block.startHM), hmToDate(block.endHM)));
+    return parts.join(' · ');
+  }
+
+  parts.push(block.title);
+  parts.push(rangeLabel(block.startDT, block.dueDT ?? block.startDT));
+  if (block.subjectLabel) parts.push(block.subjectLabel);
+  parts.push(`${block.xp} XP`);
+  if (block.done) parts.push('done');
+  else if (block.overdue) parts.push('overdue');
+  if (block.contDT) {
+    parts.push(
+      `continues on ${dates.formatDate(block.contDT, { month: 'short', day: 'numeric' })}`,
+    );
+  }
+  return parts.join(' · ');
+}
+
 export function GridBlock({
   block,
   iso,
@@ -151,6 +194,7 @@ export function GridBlock({
   marked,
 }: GridBlockProps) {
   const clash = flagged ? ' is-clashing' : '';
+  const summary = blockSummary(block);
   const position = {
     top: block.top,
     height: block.height,
@@ -174,6 +218,8 @@ export function GridBlock({
         // styles/calendar/palette.css. Nothing is painted inline any more.
         data-family={block.family}
         style={position}
+        title={summary}
+        aria-label={summary}
       >
         <ResizeHandles />
         <CardMenu
@@ -274,6 +320,10 @@ export function GridBlock({
       // included. See styles/calendar/palette.css.
       data-family={block.family}
       style={position}
+      title={summary}
+      /* The name inside is a button that finishes the task and has its own
+         label; this one describes the block. */
+      aria-label={summary}
     >
       {!block.done && <ResizeHandles />}
       <CardMenu

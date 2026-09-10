@@ -39,6 +39,7 @@ import {
   useSubjectIndex,
 } from '@/hooks';
 import { useBlockActions } from '@/hooks/useBlockActions';
+import { busyDays } from '@/utils/calendarBusy';
 import { planFamilies, weekOf } from '@/utils/calendarFamilies';
 import { dayShape } from '@/utils/dayShape';
 import {
@@ -483,6 +484,10 @@ export default function Day() {
     });
   }, [actions, isToday, iso, now]);
 
+  /* Which days the mini-month should mark — see the note on the Week view's
+     copy of this. */
+  const miniLoad = useMemo(() => busyDays(tasks, store.data), [store.data, tasks]);
+
   const stepDay = useCallback(
     (days: number) => goTo(dates.addDays(cursor, days)),
     [cursor, goTo],
@@ -516,6 +521,8 @@ export default function Day() {
               type="button"
               className="wk-arrow"
               aria-label="Previous day"
+              title="Previous day (K)"
+              aria-keyshortcuts="K"
               onClick={() => stepDay(-1)}
             >
               ❮
@@ -524,6 +531,8 @@ export default function Day() {
               type="button"
               className="wk-arrow"
               aria-label="Next day"
+              title="Next day (J)"
+              aria-keyshortcuts="J"
               onClick={() => stepDay(1)}
             >
               ❯
@@ -531,7 +540,13 @@ export default function Day() {
           </div>
           {/* Back to today *and* to the hour it is — the same landing the view
               makes when it is opened. */}
-          <button type="button" className="wk-today" onClick={goToday}>
+          <button
+            type="button"
+            className="wk-today"
+            title="Today, and back to the hour it is (T)"
+            aria-keyshortcuts="T"
+            onClick={goToday}
+          >
             Today
           </button>
         </div>
@@ -631,6 +646,7 @@ export default function Day() {
         </div>
 
         <DaySidebar
+          miniLoad={miniLoad}
           miniYear={mini.year}
           miniMonth={mini.month}
           selectedIso={iso}

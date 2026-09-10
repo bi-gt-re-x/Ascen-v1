@@ -300,6 +300,8 @@ export function MonthGrid({
             type="button"
             className="mv-arrow"
             aria-label="Previous month"
+            title="Previous month (K, or Page Up in the grid)"
+            aria-keyshortcuts="K PageUp"
             onClick={() => onStep(-1)}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -310,6 +312,8 @@ export function MonthGrid({
             type="button"
             className="mv-arrow"
             aria-label="Next month"
+            title="Next month (J, or Page Down in the grid)"
+            aria-keyshortcuts="J PageDown"
             onClick={() => onStep(1)}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -319,7 +323,14 @@ export function MonthGrid({
         </div>
         {/* Disabled on the month it would take you to, which is the only
             honest state for a button that would do nothing. */}
-        <button type="button" className="mv-today" disabled={thisMonth} onClick={onToday}>
+        <button
+          type="button"
+          className="mv-today"
+          disabled={thisMonth}
+          title="This month (T)"
+          aria-keyshortcuts="T"
+          onClick={onToday}
+        >
           Today
         </button>
         {tools && <div className="mv-headtools">{tools}</div>}
@@ -361,6 +372,10 @@ export function MonthGrid({
         <div
           className={`mv-grid${dropping || pending ? ' is-dropping' : ''}`}
           role="grid"
+          /* Said on the grid rather than on each of the forty-two cells: it is
+             one control with one set of keys, and repeating the sentence
+             forty-two times is what a screen reader would then read out. */
+          aria-label="Days of the month. Arrow keys move a day, Page Up and Page Down a month."
           ref={grid}
           onKeyDown={onGridKeyDown}
         >

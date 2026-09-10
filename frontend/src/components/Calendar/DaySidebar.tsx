@@ -17,6 +17,7 @@
 import { useState } from 'react';
 import { MiniMonth } from './MiniMonth';
 import { Overview } from './Overview';
+import type { DayLoad } from '@/utils/calendarBusy';
 import { iconUrlFor } from '@/utils/calendarIcons';
 import { bandStyle, hourLabel, spanLabel, type DayShape } from '@/utils/dayShape';
 import type { TaskBlock } from '@/utils/calendarGrid';
@@ -39,6 +40,8 @@ export interface DaySidebarProps {
   selectedIso: string;
   /** The day the account's weeks open on — see MiniMonth. */
   weekStart: 0 | 1;
+  /** Which days of the month on show have anything on them. See MiniMonth. */
+  miniLoad?: DayLoad;
   onMiniStep: (delta: number) => void;
   onPickDate: (iso: string) => void;
 
@@ -84,6 +87,7 @@ export function DaySidebar({
   miniMonth,
   selectedIso,
   weekStart,
+  miniLoad,
   onMiniStep,
   onPickDate,
   focus,
@@ -113,6 +117,7 @@ export function DaySidebar({
         month={miniMonth}
         selectedIso={selectedIso}
         weekStart={weekStart}
+        load={miniLoad}
         onStep={onMiniStep}
         onPick={onPickDate}
       />

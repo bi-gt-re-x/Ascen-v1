@@ -210,7 +210,32 @@ html[data-theme="dark"] body:has(.calendar-container) .wk-sidebar::-webkit-scrol
 /* Dashed hour rules, solid day separators — the design's distinction, and a
  * useful one: the seven verticals are the structure of the week and the hundred
  * and sixty horizontals are only a ruler behind it. */
-.wk-daycol { position: relative; border-left: 1px solid #f1f2f4; }
+.wk-daycol {
+    position: relative;
+    border-left: 1px solid #f1f2f4;
+    /* A column is a container, so a block in it can be asked how much room it
+       actually has rather than how wide the window is. Seven columns of a week
+       and the Day view's single one are the same element at wildly different
+       widths, which is exactly what a media query cannot answer: a 1400px
+       window can hold a 168px column, and the block does not care about the
+       window. Read by `@container daycol` below. */
+    container-type: inline-size;
+    container-name: daycol;
+}
+/* ---- Today, down the whole height of the grid ---------------------------
+   `DayColumn` has always put a `today` class on this element and nothing has
+   ever painted it. The only mark for today was the dark pill on its date, in
+   the header row — which is fine while you are looking at the header, and no
+   help at all once your eye is down at four in the afternoon trying to work
+   out which of seven identical columns is the one you are living in.
+
+   A wash, not a border: seven columns already have a rule between each pair,
+   and an eighth line would read as a division rather than as a highlight. It
+   is deliberately weaker than any block that will sit on top of it — this is
+   the ground being tinted, not a thing being selected. */
+.wk-daycol.today { background: rgba(59, 130, 246, .045); }
+html[data-theme="dark"] .wk-daycol.today { background: rgba(127, 156, 255, .06); }
+
 .wk-hourline { position: absolute; left: 0; right: 0; border-top: 1px dashed #eceef1; }
 /* The floor of the window, under the last hour.
  *
@@ -316,10 +341,35 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
        border do the separating. */
     box-shadow: none;
 }
-/* A ≤15-min event or task renders its name + start time on a single centered
-   row (no end time / footer), sized to fit the thin block. */
+/* Under thirty minutes a block is one centred row: the name, and the range
+   beside it when there is room for both. No floor, no XP.
+
+   Thirty is where the two-line layout starts to fit — the arithmetic is on
+   `COMPACT_UNDER` in utils/calendarGrid.ts — and everything below it used to
+   be drawn with two lines and the room for one and a half, so the time was
+   sliced through the middle by this element's own `overflow: hidden`. */
 .wk-event.is-compact { justify-content: center; padding-top: 3px; padding-bottom: 3px; }
 .wk-event.is-compact .wk-event-head { align-items: center; }
+
+/* ---- and in a narrow column, the name wins ------------------------------
+   A week is seven columns of about 168px. A strip in one of those spends 13px
+   on its icon, 7 on its category dot, 12 on gaps and 78 on "6:45 – 7:10 AM",
+   which leaves fifty-odd pixels for the name — so five consecutive mornings of
+   "Morning meditation" all read `M…`, and the block says nothing about what it
+   is. That is five blocks of grid drawn to tell the reader nothing.
+
+   It is the wrong thing to give up. A block's *position* already says when it
+   runs: it is drawn against an hour ruler, on the row its start puts it on, at
+   the height its length asks for. Its name is the one fact nothing else on the
+   grid carries. So under 200px of column the time steps aside and the name
+   takes the width; the whole range is still on the block's tooltip and in what
+   a screen reader is told — see components/Calendar/GridBlock.tsx.
+
+   Only on `is-compact`: a taller block has a floor to put its time on and
+   gives up nothing. */
+@container daycol (max-width: 200px) {
+    .wk-event.is-compact .wk-event-start { display: none; }
+}
 /* Header row: title (left, truncates) + start time (right), kept at the top. */
 .wk-event-head {
     display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
@@ -350,7 +400,7 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
  * a seventh of the grid, and both lost — "8:10 – 9:00 AM" and "50 XP" each
  * ellipsised to about one character. A block is tall and narrow; its content
  * should be too. `is-compact` blocks are the exception, since a block under
- * about 40 minutes has one line of room in total.
+ * half an hour has one line of room in total.
  *
  * Tasks no longer use this: they split the range across the block's two edges.
  * See `.wk-event-end` below. */
@@ -392,8 +442,8 @@ body.wk-resizing, body.wk-resizing * { cursor: ns-resize !important; }
  * is pushed about by it.
  *
  * Only on blocks with the room: `is-snug` is under SNUG_MINUTES, where the
- * lines already have to give something up, and `is-compact` is a single row
- * with nothing to space. */
+ * lines already have to give something up, and `is-compact` is under
+ * COMPACT_UNDER, a single row with nothing to space. */
 .wk-event.wk-task:not(.is-compact):not(.is-snug) { row-gap: 6px; }
 /* Task and event block colours are NOT here.
  *
@@ -746,6 +796,19 @@ html[data-theme="dark"] .wk-stat-label,
 html[data-theme="dark"] .wk-streak-sub,
 html[data-theme="dark"] .wk-focustime-sub,
 html[data-theme="dark"] .wk-daydate { color: #9aa4b2; }
+/* ---- The chrome around the grid, in the dark ----------------------------
+   Three of the greys in this sheet were never revisited for the dark theme, so
+   they stayed at the value chosen to be quiet on white — and a grey chosen to
+   recede from white does not recede from near-black, it disappears into it.
+   The hour rail down the left of the grid and the Focus row's label are the
+   two the reader looks at most: one is how they read the time off a block's
+   position, and the other names the row above the whole week.
+
+   #9aa4b2 is the value the dates beside them already use, so the three read as
+   one register instead of two. */
+html[data-theme="dark"] .wk-timelabel span,
+html[data-theme="dark"] .wk-allday-label { color: #9aa4b2; }
+html[data-theme="dark"] .wk-focustime-of { color: #8b95a3; }
 /* Per-day "Focus…" boxes in the top row — dark fill instead of the light default. */
 html[data-theme="dark"] .wk-day-focus {
     background: #0f141b; border-color: #262c36; color: #c9d1d9;

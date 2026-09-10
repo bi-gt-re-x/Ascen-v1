@@ -34,6 +34,7 @@
 import { useMemo } from 'react';
 import { MiniMonth } from './MiniMonth';
 import { Overview } from './Overview';
+import type { DayLoad } from '@/utils/calendarBusy';
 import { fmtHM } from '@/hooks/useFocusSession';
 import { useCountUp } from '@/hooks/useCountUp';
 import { OTHER_KEY, type SubjectXp } from '@/utils/subjectXp';
@@ -108,6 +109,8 @@ export interface WeekMini {
   to: string;
   /** The day the week opens on, so the band lands on one row. See MiniMonth. */
   weekStart: 0 | 1;
+  /** Which days of the month on show have anything on them. See MiniMonth. */
+  load?: DayLoad;
   onStep: (delta: number) => void;
   /** Moves the week to the one the picked day falls in. */
   onPick: (iso: string) => void;
@@ -392,6 +395,32 @@ function sparkPoints(days: WeekDay[]): { x: number; y: number }[] {
   }));
 }
 
+/**
+ * What the ring in the middle of the week's panel is allowed to say.
+ *
+ * It said "On Track" — always, unconditionally, at every percentage. A week
+ * with two of twenty tasks finished was told it was on track, which is not a
+ * soft encouragement, it is the panel being wrong about the one thing it is
+ * there to report. This is the same rule the landing page's fake testimonial
+ * was deleted under: a figure a reader can check, sitting under a label that
+ * does not follow from it, costs the whole column its credibility.
+ *
+ * The bands are deliberately coarse. A ring is read at a glance and the
+ * percentage under it is already exact, so the word's job is to say which of
+ * four situations this is — not to name a fifth decimal place.
+ *
+ * Nothing here scolds. "Behind" is a fact about a fraction; the app's whole
+ * argument is that the numbers are checkable, and a checkable number that only
+ * ever says nice things is neither.
+ */
+function rateLabel(rate: number, total: number): string {
+  if (total === 0) return 'Nothing on';
+  if (rate >= 100) return 'All done';
+  if (rate >= 60) return 'On track';
+  if (rate >= 25) return 'Under way';
+  return 'Just started';
+}
+
 export function WeekSidebar({
   mini,
   onOpenLibrary,
@@ -463,6 +492,7 @@ export function WeekSidebar({
         fromIso={mini.from}
         toIso={mini.to}
         weekStart={mini.weekStart}
+        load={mini.load}
         onStep={mini.onStep}
         onPick={mini.onPick}
       />
@@ -501,7 +531,7 @@ export function WeekSidebar({
             </svg>
               <div className="wk-ring-centre">
                 <span className="wk-ring-pct">{rate}%</span>
-                <span className="wk-ring-label">On Track</span>
+                <span className="wk-ring-label">{rateLabel(stats.rate, stats.total)}</span>
               </div>
             </div>
             {/* The three figures that used to sit beside the ring are the

@@ -168,6 +168,40 @@
 .day-mini-cell:hover { background: #f2f3f6; }
 .day-mini-cell.is-muted { color: #c2c6d0; }
 
+/* ---- The mark under a day that has something on it ----------------------
+   The cell was a flex row with the number centred in it; the dot goes below
+   the number rather than beside it, so it never pushes the number off centre
+   and every date in the grid still sits on the same vertical line. That is why
+   the cell becomes a column and the dot is absolutely placed: at 2px across it
+   is far too small to be allowed to affect a layout.
+
+   Solid while something on the day is still open, hollow once it is all done.
+   Both are the same size and the same colour — the difference is fill, which
+   is the quietest distinction available and enough at a glance down a column.
+   See utils/calendarBusy for what fills them. */
+.day-mini-cell { position: relative; }
+.day-mini-mark {
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 4px;
+    height: 4px;
+    margin-left: -2px;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+.day-mini-cell.has-open .day-mini-mark { background: #6b7280; }
+.day-mini-cell.has-done .day-mini-mark { border: 1px solid #b6bcc6; }
+/* On the banded week and on today the cell already carries a colour, so the
+   mark takes the cell's own ink instead of competing with it. */
+.day-mini-cell.is-inweek .day-mini-mark,
+.day-mini-cell.is-today .day-mini-mark,
+.day-mini-cell.is-selected .day-mini-mark { background: currentColor; border-color: currentColor; }
+.day-mini-cell.is-muted .day-mini-mark { opacity: .45; }
+
+html[data-theme="dark"] .day-mini-cell.has-open .day-mini-mark { background: #8b95a3; }
+html[data-theme="dark"] .day-mini-cell.has-done .day-mini-mark { border-color: #4a525e; }
+
 /* The week on screen, banded across its row. Square between the ends and
    rounded at them, so seven cells with a 2px gap read as one bar rather than
    as seven chips — the gap is small enough that the tint closes over it. */
@@ -460,3 +494,7 @@ html[data-theme="dark"] .day-next-when { color: #c9a87c; }
 html[data-theme="dark"] .day-band { background: #1c222c; }
 html[data-theme="dark"] .day-band-note { color: #9aa3b1; }
 html[data-theme="dark"] .day-band-note strong { color: #e6e9f0; }
+
+/* The planned figure beside the focus reading, which was left at the grey it
+   was given for white — see the note on the same omission in week.css. */
+html[data-theme="dark"] .day-focus-time { color: #8b95a3; }
