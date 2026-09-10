@@ -39,7 +39,7 @@ const KIND_TONE: Record<Advice['kind'], string> = {
 
 /*
  * Which recommendations the reader has adopted used to live in localStorage,
- * under `ascen:advice-trying`, as a set of ids and nothing else.
+ * under `summit:advice-trying`, as a set of ids and nothing else.
  *
  * It is on the account now (backend/api/analytics.py). Two reasons, and the
  * second is the one that mattered: a decision recorded in one browser was
@@ -58,7 +58,7 @@ const KIND_TONE: Record<Advice['kind'], string> = {
  * One recommendation, with everything needed to decide on it and nothing else.
  *
  * The card answers five questions in the order a reader asks them: what, how
- * much is it worth, what do I actually do, why does Ascen think so, and what is
+ * much is it worth, what do I actually do, why does Summit think so, and what is
  * the evidence. The last of those is the one most pages like this omit, and it
  * is the reason this one can be argued with — a card that claims a habit is
  * worth twelve thousand XP a year and will not show its arithmetic is asking to

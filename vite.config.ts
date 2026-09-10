@@ -77,9 +77,9 @@ export default defineConfig({
      * bundle's name with `.map` on the end — which anybody reading the page
      * source already has. It hides the maps from devtools, not from people.
      *
-     * So they are not generated. Set ASCEN_SOURCEMAPS=1 for a build you intend
+     * So they are not generated. Set SUMMIT_SOURCEMAPS=1 for a build you intend
      * to debug, and do not deploy that one.
      */
-    sourcemap: process.env.ASCEN_SOURCEMAPS === '1',
+    sourcemap: process.env.SUMMIT_SOURCEMAPS === '1',
   },
 });

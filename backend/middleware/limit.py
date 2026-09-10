@@ -277,7 +277,7 @@ def client_ip(request):
     caller can also simply write. Trusting it unconditionally turns the limiter
     off: a script sends a different one each request and never shares a bucket.
     So it is read only when the deployment says there is a proxy in front —
-    `ASCEN_TRUST_PROXY=1` — which is a claim about the network that only
+    `SUMMIT_TRUST_PROXY=1` — which is a claim about the network that only
     whoever runs it can make.
     """
     if settings.trust_proxy():

@@ -7,7 +7,7 @@
  */
 import { useEffect } from 'react';
 
-const SUFFIX = 'Ascen';
+const SUFFIX = 'Summit';
 
 export function useDocumentTitle(title?: string): void {
   useEffect(() => {

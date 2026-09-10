@@ -17,7 +17,7 @@ four things arithmetic cannot supply:
   2. **What the subject actually is.** "Drill the level below your ceiling" is
      the app's instruction. "Thirty minutes of angle-chasing before you go back
      to olympiad geometry" needs to know what geometry is made of, and there is
-     no table in Ascen that knows.
+     no table in Summit that knows.
   3. **What to do next, in order.** Ranked against the reader's stated goal
      rather than against whichever internal measure happens to be lowest.
   4. **Whether the last advice worked.** Given the outcomes of previous
@@ -39,7 +39,7 @@ not have to.
 
 ## What the record cannot support, and is therefore forbidden
 
-Ascen records a subject and a difficulty on a task. It does **not** record a
+Summit records a subject and a difficulty on a task. It does **not** record a
 sub-skill. So the model is handed the subject's authored skill tree as a
 *vocabulary* — the names of the areas this subject is made of — and is told
 plainly that these carry no measurement, and that it may recommend one but may
@@ -92,7 +92,7 @@ INSIGHTS = 4
 #: should print however confidently it arrives.
 MINUTES = (10, 120)
 
-#: Ascen's difficulty scale. Five levels, and the model is told the words.
+#: Summit's difficulty scale. Five levels, and the model is told the words.
 DIFFICULTY = (1, 5)
 
 #: The kinds of session the model may recommend. A closed list, because the
@@ -127,7 +127,7 @@ That is the whole reason this rule exists.
 
 WHAT THE RECORD DOES NOT CONTAIN
 
-Ascen records a subject and a difficulty on each task. It does **not** record \
+Summit records a subject and a difficulty on each task. It does **not** record \
 a sub-skill. The <skill_vocabulary> section names the areas this subject is \
 made of — that list is a curriculum, authored, identical for every account, \
 and carries no measurement whatsoever.
@@ -224,7 +224,7 @@ done. Each has:
   - `focus`: the area from the vocabulary it is about, or the subject itself.
   - `type`: one of targeted_practice, mixed_practice, timed_set, review, \
 concept, project.
-  - `difficulty`: 1 to 5 on Ascen's own scale — 1 Trivial, 2 Easy, 3 Fair, \
+  - `difficulty`: 1 to 5 on Summit's own scale — 1 Trivial, 2 Easy, 3 Fair, \
 4 Hard, 5 Brutal. Choose it against the difficulty curve you were given: the \
 level to work is normally the one at or just below where execution starts to \
 fall, not the one above it.
@@ -503,7 +503,7 @@ def brief_from(state: Dict[str, Any]) -> str:
     curve = state.get('curve') or {}
     rungs = curve.get('rungs') or []
     if rungs:
-        lines = ['Ascen rates difficulty 1-5: 1 Trivial, 2 Easy, 3 Fair, '
+        lines = ['Summit rates difficulty 1-5: 1 Trivial, 2 Easy, 3 Fair, '
                  '4 Hard, 5 Brutal. Execution and quality are 0-100.']
         for rung in rungs:
             if not rung.get('done'):
@@ -533,7 +533,7 @@ def brief_from(state: Dict[str, Any]) -> str:
     time = state.get('time') or {}
     if time.get('known'):
         parts.append(_section('time_analysis', [
-            'Ascen does not ask how long a task should take. "Usual" below '
+            'Summit does not ask how long a task should take. "Usual" below '
             'means this account\'s own median time at that difficulty in this '
             'subject, so the comparison is against themselves.',
             _kv('Median minutes a task', time.get('typical')),
@@ -591,7 +591,7 @@ def brief_from(state: Dict[str, Any]) -> str:
                   if str(entry).strip()]
     if vocabulary:
         parts.append(_section('skill_vocabulary', [
-            'The named areas of this subject, from Ascen\'s authored skill '
+            'The named areas of this subject, from Summit\'s authored skill '
             'tree. This is a curriculum: it is identical for every account and '
             'carries NO measurement of this reader. Name one if it helps; do '
             'not state their level in it.',

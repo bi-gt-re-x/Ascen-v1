@@ -33,7 +33,7 @@ analytics *page* doesn't exist, though the grading behind it does.
 ## Next
 
 **A PostgreSQL server.** The data is in a real database now — SQLite, at
-`data/ascen.db`, behind one module (`backend/database/connection.py`) whose
+`data/summit.db`, behind one module (`backend/database/connection.py`) whose
 only two SQL-running functions are `read_table` and `write_table`. What is left
 is putting the server-only types back in `data/sql/` and pointing those two
 functions at a connection pool; the steps are in [database.md](database.md).

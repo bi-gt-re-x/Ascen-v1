@@ -597,7 +597,7 @@ export default function Goals() {
             {shown.length === 0 ? (
               <p className="gx-empty">
                 No outcome goals yet. Something you either reached or did not — reach USACO
-                Gold, ship Ascen v2, read 24 books.
+                Gold, ship Summit v2, read 24 books.
                 <button type="button" className="gx-link" onClick={() => setWizardOpen(true)}>
                   Set your first
                 </button>
@@ -720,7 +720,7 @@ export default function Goals() {
         {on('system') && (
           <Band
             title="System Goals"
-            hint="You set the target, Ascen keeps the count"
+            hint="You set the target, Summit keeps the count"
           >
             <SystemGoals
               counters={counters}

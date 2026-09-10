@@ -133,7 +133,7 @@ GOALS = [
          ('AIME problem set fluent', 'pending', 200),
          ('AIME qualified', 'pending', 520),
      ]),
-    ('Build Ascen v2', 'projects', 'Ship the rewrite with analytics and goals.',
+    ('Build Summit v2', 'projects', 'Ship the rewrite with analytics and goals.',
      'milestones', 0, 0, 460, 10, [
          ('Calendar rewritten', 'done', -150),
          ('Tasks page rebuilt', 'done', -90),
@@ -151,7 +151,7 @@ GOALS = [
          ('Gold graph theory solid', 'pending', 150),
          ('Gold division reached', 'pending', 290),
      ]),
-    ('Reach 5,000 Ascen users', 'projects', 'Enough users to learn from.',
+    ('Reach 5,000 Summit users', 'projects', 'Enough users to learn from.',
      'users', 2100, 5000, 600, 7, [
          ('First 100 users', 'done', -180),
          ('First 1,000 users', 'done', -60),

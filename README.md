@@ -1,8 +1,8 @@
-# Ascen
+# Summit
 
 ## Overview
 
-Ascen is a gamified productivity and self-improvement platform designed to help students and lifelong learners build consistent habits, track meaningful progress, and stay motivated over long periods of time. Instead of acting as a simple to-do list, Ascen combines productivity, analytics, and progression systems into a unified dashboard that encourages continuous growth.
+Summit is a gamified productivity and self-improvement platform designed to help students and lifelong learners build consistent habits, track meaningful progress, and stay motivated over long periods of time. Instead of acting as a simple to-do list, Summit combines productivity, analytics, and progression systems into a unified dashboard that encourages continuous growth.
 
 The project was built with the goal of making productivity feel rewarding while still providing detailed insights into performance, consistency, and long-term improvement.
 
@@ -28,7 +28,7 @@ Features include:
 
 ## Task Management
 
-Ascen includes a full task management system that allows users to organize their work efficiently.
+Summit includes a full task management system that allows users to organize their work efficiently.
 
 Features include:
 
@@ -82,7 +82,7 @@ The leveling system is designed to encourage consistency instead of short bursts
 
 ## Analytics
 
-One of Ascen's primary focuses is long-term progress tracking.
+One of Summit's primary focuses is long-term progress tracking.
 
 Analytics include:
 
@@ -103,7 +103,7 @@ Interactive charts allow users to visualize improvements over time rather than r
 
 ## Growth Ratings
 
-Ascen evaluates multiple aspects of productivity through an overall Growth Rating.
+Summit evaluates multiple aspects of productivity through an overall Growth Rating.
 
 Current categories include:
 
@@ -165,7 +165,7 @@ you to it, and a finished task is not somewhere to be taken.
 
 ## Notifications
 
-The bell in the top bar is the one part of Ascen that speaks first. Nothing is
+The bell in the top bar is the one part of Summit that speaks first. Nothing is
 sent on a schedule — the app reads your own record when you open it and says
 what is true, so a quiet week is a quiet bell.
 
@@ -206,7 +206,7 @@ Features include:
 
 ## Data Tracking
 
-Ascen stores and tracks a wide variety of productivity metrics.
+Summit stores and tracks a wide variety of productivity metrics.
 
 Tracked data includes:
 
@@ -300,7 +300,7 @@ Backend
 
 Storage
 
-* SQLite (`data/ascen.db`, built from `data/sql/`)
+* SQLite (`data/summit.db`, built from `data/sql/`)
 
 Visualization
 
@@ -313,7 +313,7 @@ Interactive API documentation is generated from the code and served at
 
 # Design Philosophy
 
-Ascen is built around four core ideas:
+Summit is built around four core ideas:
 
 ### Consistency over intensity
 
@@ -335,7 +335,7 @@ The interface prioritizes clarity and usability without sacrificing functionalit
 
 # Current Status
 
-Ascen is currently under active development.
+Summit is currently under active development.
 
 Completed areas include:
 
@@ -384,8 +384,8 @@ Planned features include:
 
 # Project Vision
 
-Ascen aims to become more than a productivity app.
+Summit aims to become more than a productivity app.
 
 The long-term vision is to create a platform that helps users understand how they spend their time, identify patterns in their work, and continuously improve through meaningful data and consistent habits.
 
-Rather than simply checking off tasks, Ascen is designed to help users build discipline, maintain motivation, and visualize personal growth over months and years.
+Rather than simply checking off tasks, Summit is designed to help users build discipline, maintain motivation, and visualize personal growth over months and years.

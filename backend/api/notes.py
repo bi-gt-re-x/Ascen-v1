@@ -1,6 +1,6 @@
 """Notes — free-form writing, optionally attached to a day, a task or a goal.
 
-The one place in Ascen where the user types something the app will not score.
+The one place in Summit where the user types something the app will not score.
 Everything else on the account is a number or becomes one: a task has an XP
 value, a goal has a percentage, a rating has two stars. A note has none of
 that, on purpose — the app can already tell somebody they worked eleven days

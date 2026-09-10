@@ -9,7 +9,7 @@
  *
  * There was a second kind, task-derived, in utils/skillTree — "how far into
  * this subject have you actually gone". The two were meant to live side by
- * side, the way the Records page keeps what you logged apart from what Ascen
+ * side, the way the Records page keeps what you logged apart from what Summit
  * counted. Nothing ever rendered the task-derived one, so it has been deleted
  * and this is the only kind. The distinction is still worth knowing: what is
  * here is authored, and none of it is evidence about the reader.

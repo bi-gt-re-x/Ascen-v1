@@ -1,6 +1,6 @@
 {
-  "name": "Ascen",
-  "short_name": "Ascen",
+  "name": "Summit",
+  "short_name": "Summit",
   "description": "A gamified productivity tracker: tasks, XP, streaks, a calendar, goals and growth analytics.",
   "start_url": "/",
   "scope": "/",

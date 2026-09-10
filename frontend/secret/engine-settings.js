@@ -1,6 +1,6 @@
 /* engine-settings.js — the room behind THE ENGINE's metal door.
  *
- * Opening ENGINE SETTINGS boots a fake developer console for the Ascen Engine:
+ * Opening ENGINE SETTINGS boots a fake developer console for the Summit Engine:
  * a black/green/gray terminal OS with core-module switches, a locked
  * experimental module, a theme "compiler", live performance + diagnostics,
  * audio meters, a hold-to-fire danger zone, and a tiny command line.
@@ -56,7 +56,7 @@
     // char-by-char, so it stays crisp and quick even when the browser throttles
     // background timers.
     function runBoot(pre, done) {
-        var lines = ['> Accessing Ascen Engine...', 'Loading subsystems...',
+        var lines = ['> Accessing Summit Engine...', 'Loading subsystems...',
                      'Verifying integrity...', 'ENGINE READY.'];
         pre.classList.add('es-cursor');
         var i = 0, out = '';
@@ -77,7 +77,7 @@
     function buildDash(dash) {
         dash.innerHTML =
             '<div class="es-topbar">' +
-                '<span class="es-brand">ASCEN ENGINE <em>// settings</em></span>' +
+                '<span class="es-brand">SUMMIT ENGINE <em>// settings</em></span>' +
                 '<button class="es-close" type="button">◂ RETURN TO ENGINE</button>' +
             '</div>' +
             '<div class="es-bg"></div>' +
@@ -379,7 +379,7 @@
     function terminalCard() {
         var body =
             '<div class="es-term-log"></div>' +
-            '<div class="es-term-input-row"><span class="es-term-prompt">ascen ›</span>' +
+            '<div class="es-term-input-row"><span class="es-term-prompt">summit ›</span>' +
                 '<input class="es-term-input" type="text" spellcheck="false" autocomplete="off" ' +
                 'aria-label="command"></div>';
         return card('Terminal', body, 'es-term');
@@ -396,7 +396,7 @@
         input.addEventListener('keydown', function (e) {
             if (e.key !== 'Enter') return;
             var raw = input.value; var cmd = raw.trim(); input.value = '';
-            out('ascen › ' + raw, 'es-term-cmd');
+            out('summit › ' + raw, 'es-term-cmd');
             run(cmd, out, log, dash);
         });
         dash.querySelector('.es-term').addEventListener('click', function () { input.focus(); });
@@ -430,7 +430,7 @@
                 out('Access: USER');
                 break;
             case 'version':
-                out('Ascen Engine v0.8.2-alpha  (build 240724)');
+                out('Summit Engine v0.8.2-alpha  (build 240724)');
                 break;
             case 'diagnostics':
                 printSeq(out, [
@@ -484,14 +484,14 @@
         ], function () {
             if (panel) panel.classList.add('es-unlocking');   // shake + dim
             setTimeout(function () {
-                if (window.AscenHiddenEngine) window.AscenHiddenEngine.reveal(close);
-                else if (window.AscenEngine) window.AscenEngine.react();
+                if (window.SummitHiddenEngine) window.SummitHiddenEngine.reveal(close);
+                else if (window.SummitEngine) window.SummitEngine.react();
             }, 900);
         }, 460);
     }
 
     function reactEngine() {
-        try { if (window.AscenEngine && window.AscenEngine.react) window.AscenEngine.react(); } catch (e) {}
+        try { if (window.SummitEngine && window.SummitEngine.react) window.SummitEngine.react(); } catch (e) {}
     }
 
     function matrixRain() {
@@ -522,5 +522,5 @@
         }, 55);
     }
 
-    window.AscenEngineSettings = { open: open, close: close };
+    window.SummitEngineSettings = { open: open, close: close };
 })();

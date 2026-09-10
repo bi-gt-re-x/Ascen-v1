@@ -53,7 +53,7 @@ def main():
     would have handed the insecure default to every deployment that imported
     the app — the opposite of what it is for.
 
-    That flag and ASCEN_DEV are both set by `dev_defaults` above, which the
+    That flag and SUMMIT_DEV are both set by `dev_defaults` above, which the
     entry points call *before* the app is built — they have to, because
     `create_app` reads all of it at construction, and the deployment check
     inside it refuses to start without SECRET_KEY. Setting them here would be

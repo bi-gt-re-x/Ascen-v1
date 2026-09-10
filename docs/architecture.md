@@ -1,6 +1,6 @@
 # Architecture
 
-Ascen is a FastAPI app over a SQLite datastore. The backend owns every rule and
+Summit is a FastAPI app over a SQLite datastore. The backend owns every rule and
 answers JSON; the frontend is mid-move from server-rendered Jinja pages driven
 by vanilla scripts to a React + TypeScript app under `frontend/src/`.
 
@@ -36,7 +36,7 @@ utils/
   fonts/               (empty)               -> /static/fonts/...
   assets/              (empty)               -> /static/assets/...
 data/
-  ascen.db             the live database (SQLite, git-ignored)
+  summit.db             the live database (SQLite, git-ignored)
   sql/                 its schema and seed, one .sql per part of the app
   backups/             the JSON stores it replaced, kept as a backup
 docs/                  this folder

@@ -32,7 +32,7 @@
  *
  * ## What it deliberately does not do
  *
- * It does not estimate a sub-skill. Ascen records a subject and a difficulty
+ * It does not estimate a sub-skill. Summit records a subject and a difficulty
  * and nothing finer, so "geometry 71" is a number about a person that nobody
  * counted — the rule the whole page is built on, stated at the top of
  * pages/SubjectAnalytics. Every figure here is derived from the rating, the
@@ -40,7 +40,7 @@
  *
  * It also does not invent a second difficulty signal. A calibration reading in
  * the full sense wants *objective* difficulty against *perceived* difficulty,
- * and Ascen asks for one number, not two. What `calibration` below reads is
+ * and Summit asks for one number, not two. What `calibration` below reads is
  * the honest version of that: the difficulty the reader filed the work under
  * against how the work then went, which catches the same mistake from one
  * side.
@@ -269,7 +269,7 @@ export function goalGap(dimensions: Dimension[], overall: number | null): GoalGa
 /**
  * Where the difficulty a task was filed under and the way it went disagree.
  *
- * Ascen asks for one difficulty, set before or while doing the work, and one
+ * Summit asks for one difficulty, set before or while doing the work, and one
  * execution rating after it. Read together across a rung they say something
  * neither says alone: a level filed as hard that consistently goes well is a
  * level the reader has outgrown, and a level filed as easy that consistently
@@ -277,7 +277,7 @@ export function goalGap(dimensions: Dimension[], overall: number | null): GoalGa
  *
  * This is the honest half of a difficulty-calibration reading. The full
  * version wants an independent estimate of how hard the work really was, to
- * set against the reader's own — and Ascen has no such estimate and should not
+ * set against the reader's own — and Summit has no such estimate and should not
  * pretend to one. What it has is what the reader said and what then happened,
  * which catches the same mistake from one side.
  */

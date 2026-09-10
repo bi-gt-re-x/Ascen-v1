@@ -167,7 +167,7 @@ export interface AdviceInput {
    * What the reader said about their finished work, over the same window.
    *
    * Optional in the sense that every rule reading it checks `rated` first:
-   * rating is the one thing in Ascen that is asked rather than measured, an
+   * rating is the one thing in Summit that is asked rather than measured, an
    * account may never do it, and a page that turned silence into a low score
    * would be inventing the opinion the prompt exists to collect. See
    * utils/ratings.

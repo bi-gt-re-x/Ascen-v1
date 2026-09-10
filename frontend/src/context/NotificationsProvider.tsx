@@ -10,7 +10,7 @@
  * not "check for messages somebody sent", it is "look at the record again".
  *
  * It also asks whenever a completion moves the numbers, on the same
- * `ascen:stats-changed` event the rail and the top bar listen to
+ * `summit:stats-changed` event the rail and the top bar listen to
  * (components/Rail.tsx). Finishing a task is exactly what clears a "due today"
  * or a streak warning, and waiting a minute to notice is what makes an app
  * feel like it is not paying attention.

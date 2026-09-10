@@ -638,7 +638,7 @@ export default function Timer() {
                 <blockquote>
                   “Discipline is the bridge between your goals and your reality.”
                 </blockquote>
-                <figcaption>— Ascen</figcaption>
+                <figcaption>— Summit</figcaption>
               </figure>
             </div>
           </section>

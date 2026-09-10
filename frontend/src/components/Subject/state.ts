@@ -21,7 +21,7 @@
  * This is the constraint that shapes the file, and it is worth stating plainly
  * because the temptation is to paper over it.
  *
- * A task in Ascen carries a subject, a difficulty (1-5), an execution rating
+ * A task in Summit carries a subject, a difficulty (1-5), an execution rating
  * (1-5), a completion time, a deadline result, a reason from a closed
  * vocabulary, and a goal link. That is all. There is no sub-skill column, no
  * recorded estimate of how long a task *should* take, no count of mistakes, no
@@ -334,7 +334,7 @@ export function difficultyCurve(done: AnalyticsTask[]): DifficultyCurve {
  *
  * ## "Expected" is the account's own median, and that is deliberate
  *
- * Ascen never asks how long a task should take, so there is no stored estimate
+ * Summit never asks how long a task should take, so there is no stored estimate
  * to compare against. The baseline used here is the reader's own median time
  * at that difficulty in this subject — which is the better baseline anyway:
  * a personal estimate is a guess about the future, and this is a measurement

@@ -7,7 +7,7 @@
 --
 -- The Records page was entirely derived: best XP day, heaviest task, longest
 -- streak, all read back out of the growth history. That is honest and it is
--- also only ever about the things Ascen itself counts. It cannot know that you
+-- also only ever about the things Summit itself counts. It cannot know that you
 -- got 25/25 on AMC 8, or reached RCM 9, or wrote a ten-thousand-line project,
 -- because none of those happened inside the app. This is where the account
 -- says so. The derived records stay exactly as they were and are drawn beside

@@ -14,7 +14,7 @@
  *   which means finishing it produces a rating, which is the new data.
  *
  *   **I did this** — records the step as taken without creating anything, for
- *   the reader who did the work outside Ascen.
+ *   the reader who did the work outside Summit.
  *
  * Either one stamps `taken_at` on the stored recommendation. Without that
  * stamp the whole feedback loop is blind in the one way that matters: "this

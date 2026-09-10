@@ -41,12 +41,12 @@
 /**
  * Announced when the tenth click lands, for a dashboard that is already open.
  *
- * The same device as `ascen:stats-changed` in components/Rail.tsx, for the
+ * The same device as `summit:stats-changed` in components/Rail.tsx, for the
  * same reason: one fact, one direction, no reply. The door (the rail's title)
  * and the room (the dashboard's quote) are in two components that never share
  * a parent below the router.
  */
-export const EGG_UNLOCKED = 'ascen:egg-unlocked';
+export const EGG_UNLOCKED = 'summit:egg-unlocked';
 
 /** Nobody signed in — the landing page's own door still works signed out. */
 export const ANON = 'Default';
@@ -128,8 +128,34 @@ export function markUnlockedToday(account: string): void {
  * that one and explains it.
  */
 export function earnedTitle(account: string): string | null {
+  return carriedOver(`summitTitle:${account}`, `ascenTitle:${account}`);
+}
+
+/**
+ * A stored value read under its current name, or moved there from its old one.
+ *
+ * The two keys the secret chain writes were `ascenTitle:` and
+ * `ascenRankTitle:` before the app was called Summit. Renaming a localStorage
+ * key is not like renaming a variable: the old value does not come with it, it
+ * is simply orphaned — and what is orphaned here is the thing somebody clicked
+ * ten times and followed a chain of clues to earn. So the read falls back to
+ * the old name, and moving it across is what makes the fallback finite rather
+ * than a branch this code carries for ever.
+ *
+ * Exported because utils/rankTitle.ts owns the second of the two keys and has
+ * exactly the same problem; two copies of this would be two chances to get the
+ * order of the arguments wrong.
+ */
+export function carriedOver(now: string, before: string): string | null {
   try {
-    return localStorage.getItem(`ascenTitle:${account}`);
+    const held = localStorage.getItem(now);
+    if (held !== null) return held;
+
+    const old = localStorage.getItem(before);
+    if (old === null) return null;
+    localStorage.setItem(now, old);
+    localStorage.removeItem(before);
+    return old;
   } catch {
     return null;
   }

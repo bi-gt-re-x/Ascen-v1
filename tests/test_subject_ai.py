@@ -94,7 +94,7 @@ def test_the_brief_is_sectioned_so_the_instruction_can_name_a_section():
 
 def test_the_skill_vocabulary_is_labelled_as_a_curriculum():
     """The single worst thing this feature could produce is "your circle
-    geometry is at 68%" — a number about a person that nobody counted. Ascen
+    geometry is at 68%" — a number about a person that nobody counted. Summit
     records a subject and a difficulty and nothing finer, so the area names
     have to arrive labelled as what they are."""
     brief = subject_ai.brief_from(STATE)

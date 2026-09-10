@@ -131,7 +131,7 @@ describe('the way into the hidden chain', () => {
 
   it('is retired once the chain has handed out a title', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('ascenTitle:myles', 'Admin');
+    localStorage.setItem('summitTitle:myles', 'Admin');
     draw();
 
     await click(user, 12);
@@ -145,8 +145,8 @@ describe('the way into the hidden chain', () => {
     // everybody who signed in on that browser afterwards, and the only symptom
     // was a rank that did nothing and a pentagon that did nothing either.
     const user = userEvent.setup();
-    localStorage.setItem('ascenTitle:ada', 'Admin');
-    localStorage.setItem('ascenTitle:Default', 'Admin');
+    localStorage.setItem('summitTitle:ada', 'Admin');
+    localStorage.setItem('summitTitle:Default', 'Admin');
     draw();
 
     await click(user, 10);
@@ -210,13 +210,13 @@ describe('choosing a title', () => {
     await user.click(screen.getByRole('menuitemradio', { name: 'Novice' }));
 
     expect(title()).toHaveTextContent('Novice');
-    expect(localStorage.getItem('ascenRankTitle:myles')).toBe('Novice');
+    expect(localStorage.getItem('summitRankTitle:myles')).toBe('Novice');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('goes back to following the level, and stops storing a choice', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('ascenRankTitle:myles', 'Beginner');
+    localStorage.setItem('summitRankTitle:myles', 'Beginner');
     draw();
     expect(title()).toHaveTextContent('Beginner');
 
@@ -224,12 +224,12 @@ describe('choosing a title', () => {
     await user.click(screen.getByRole('menuitemradio', { name: /Automatic/ }));
 
     expect(title()).toHaveTextContent('Apprentice');
-    expect(localStorage.getItem('ascenRankTitle:myles')).toBeNull();
+    expect(localStorage.getItem('summitRankTitle:myles')).toBeNull();
   });
 
   it('offers the title the hidden chain hands out, ahead of the bands', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('ascenTitle:myles', 'Admin');
+    localStorage.setItem('summitTitle:myles', 'Admin');
     draw();
 
     await user.click(screen.getByRole('button', { name: 'Choose your title' }));
@@ -245,8 +245,8 @@ describe('choosing a title', () => {
     // button is pressed, spelled the way that script spells it. Both keys, and
     // the second is the point: the room says TITLE EQUIPPED, so the rail has to
     // have changed by the time the reader is looking at it again.
-    localStorage.setItem('ascenTitle:myles', 'Admin');
-    localStorage.setItem('ascenRankTitle:myles', 'Admin');
+    localStorage.setItem('summitTitle:myles', 'Admin');
+    localStorage.setItem('summitRankTitle:myles', 'Admin');
     draw();
 
     expect(title()).toHaveTextContent('Admin');
@@ -255,21 +255,21 @@ describe('choosing a title', () => {
   it('lets a worn secret title be traded back for a band', async () => {
     // Equipped on arrival is a default, not a sentence.
     const user = userEvent.setup();
-    localStorage.setItem('ascenTitle:myles', 'Admin');
-    localStorage.setItem('ascenRankTitle:myles', 'Admin');
+    localStorage.setItem('summitTitle:myles', 'Admin');
+    localStorage.setItem('summitRankTitle:myles', 'Admin');
     draw();
 
     await user.click(screen.getByRole('button', { name: 'Choose your title' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'Novice' }));
 
     expect(title()).toHaveTextContent('Novice');
-    expect(localStorage.getItem('ascenRankTitle:myles')).toBe('Novice');
+    expect(localStorage.getItem('summitRankTitle:myles')).toBe('Novice');
   });
 
   it('falls back to the band when a chosen title is no longer held', () => {
     // The secret title was picked and then cleared out of storage — by the
     // engine, or by a browser wipe. The rail says what is true now.
-    localStorage.setItem('ascenRankTitle:myles', 'Admin');
+    localStorage.setItem('summitRankTitle:myles', 'Admin');
     draw();
     expect(title()).toHaveTextContent('Apprentice');
   });

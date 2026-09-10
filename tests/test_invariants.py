@@ -1,6 +1,6 @@
 """The numbers this app is about, checked against each other.
 
-Ascen computes the same quantity in more than one place on purpose — the ring
+Summit computes the same quantity in more than one place on purpose — the ring
 at the top of the badge wall and the wall beneath it, `users.xp` and the XP
 ledger, a category bar and the badges filed under it. That is a reasonable
 design and it has one failure mode, which is the two copies disagreeing. These

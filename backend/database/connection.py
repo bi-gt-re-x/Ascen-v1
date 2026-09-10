@@ -1,4 +1,4 @@
-"""The datastore: a SQLite database at data/ascen.db.
+"""The datastore: a SQLite database at data/summit.db.
 
 Every read and write in the app goes through here. The database is built on
 first use by running data/sql/*.sql in order — each of those files holds one

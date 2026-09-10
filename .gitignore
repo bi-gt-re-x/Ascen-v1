@@ -23,13 +23,13 @@ coverage/
 .claude/settings.local.json
 
 # The live database, rebuilt from data/sql/ when absent
-data/ascen.db
+data/summit.db
 
 # Snapshots taken before a bulk write (scripts/seed_year.py). Local
 # safety copies of the live database, not history worth carrying.
 data/backups/*.db*
-data/ascen.db-wal
-data/ascen.db-shm
+data/summit.db-wal
+data/summit.db-shm
 
 # Database snapshots taken before a seeding or migration run. Local safety
 # copies of an already-ignored file; the .json exports beside them are the

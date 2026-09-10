@@ -2,7 +2,7 @@
  *
  * Reached only through the hidden chain (dashboard quote → pentagon → void
  * riddle → shatter). Builds the industrial machine hall — gears, belts, pipes,
- * pistons, floating code and the living ASCEN ENGINE core — plus the metal
+ * pistons, floating code and the living SUMMIT ENGINE core — plus the metal
  * ENGINE SETTINGS door and a small ◂ button back to the dashboard.
  */
 (function () {
@@ -21,7 +21,7 @@
         catch (e) { return false; }
     }
     function isAdmin() {
-        try { return !!localStorage.getItem('ascenTitle:' + user()); }
+        try { return !!localStorage.getItem('summitTitle:' + user()); }
         catch (e) { return false; }
     }
 
@@ -39,7 +39,7 @@
 
     function buildEngine() {
         var eng = document.createElement('div');
-        eng.id = 'ascenEngine';
+        eng.id = 'summitEngine';
 
         var gearSpecs = [
             { x: '7%',  y: '22%', s: 190, t: 14, dur: 36, dir: 1 },
@@ -119,21 +119,21 @@
             var s = eng.querySelector('.eng-settings-text');
             if (s) s.textContent = 'ENTER HIDDEN ENGINE';
             setTimeout(function () {
-                if (window.AscenHiddenEngine) window.AscenHiddenEngine.reveal();
+                if (window.SummitHiddenEngine) window.SummitHiddenEngine.reveal();
             }, 1200);
         }
 
         // Any interaction with the system makes the engine spin up, light up
         // and vent steam for a beat.
-        window.AscenEngine = {
+        window.SummitEngine = {
             react: function () {
                 eng.classList.remove('eng-reacting'); void eng.offsetWidth;
                 eng.classList.add('eng-reacting');
                 eng.querySelectorAll('.eng-vent').forEach(function (v) {
                     v.classList.remove('puff'); void v.offsetWidth; v.classList.add('puff');
                 });
-                clearTimeout(window.AscenEngine._t);
-                window.AscenEngine._t = setTimeout(function () {
+                clearTimeout(window.SummitEngine._t);
+                window.SummitEngine._t = setTimeout(function () {
                     eng.classList.remove('eng-reacting');
                 }, 1400);
             }
@@ -148,7 +148,7 @@
             '<div class="eng-core-ring eng-core-ring3"></div>' +
             '<div class="eng-core-hub">' +
                 '<div class="eng-core-pulse"></div>' +
-                '<div class="eng-core-name"><span>ASCEN</span><strong>ENGINE</strong></div>' +
+                '<div class="eng-core-name"><span>SUMMIT</span><strong>ENGINE</strong></div>' +
             '</div>' +
         '</div>';
     }
@@ -209,14 +209,14 @@
         btn.addEventListener('click', function () {
             btn.classList.add('pressed');
             eng.classList.add('powering');
-            if (window.AscenEngine) window.AscenEngine.react();   // steam + spin-up
+            if (window.SummitEngine) window.SummitEngine.react();   // steam + spin-up
             setTimeout(function () {
                 btn.classList.remove('pressed');
                 eng.classList.remove('powering');
-                if (isAdmin() && window.AscenHiddenEngine) {
-                    window.AscenHiddenEngine.reveal();            // admins jump to the gears
-                } else if (window.AscenEngineSettings) {
-                    window.AscenEngineSettings.open();
+                if (isAdmin() && window.SummitHiddenEngine) {
+                    window.SummitHiddenEngine.reveal();            // admins jump to the gears
+                } else if (window.SummitEngineSettings) {
+                    window.SummitEngineSettings.open();
                 }
             }, 260);
         });

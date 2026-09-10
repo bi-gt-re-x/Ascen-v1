@@ -79,5 +79,5 @@ export function buildSeriesCsv(days: GrowthDay[]): string | null {
 
 /** What the downloaded file is called. Matches `reportFilename`'s shape. */
 export function seriesFilename(username: string, at: Date): string {
-  return `ascen-data-${username}-${at.toISOString().slice(0, 10)}.csv`;
+  return `summit-data-${username}-${at.toISOString().slice(0, 10)}.csv`;
 }

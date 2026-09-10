@@ -385,7 +385,7 @@ export function buildReport(input: ReportInput): string {
 
   const header = [
     RULE,
-    'ASCEN — ANALYTICS REPORT',
+    'SUMMIT — ANALYTICS REPORT',
     RULE,
     '',
     `  For       ${input.username}`,
@@ -423,5 +423,5 @@ export function buildReport(input: ReportInput): string {
 
 /** The filename the download lands under. */
 export function reportFilename(username: string, at: Date): string {
-  return `ascen-report-${username}-${at.toISOString().slice(0, 10)}.txt`;
+  return `summit-report-${username}-${at.toISOString().slice(0, 10)}.txt`;
 }

@@ -22,7 +22,7 @@
  *
  * ## The percentile is a model, and says so
  *
- * Nothing on the backend aggregates across accounts, so "top 8% of Ascen users"
+ * Nothing on the backend aggregates across accounts, so "top 8% of Summit users"
  * cannot be measured — it is *placed*, against a stated distribution of what
  * growth scores look like, and `percentileFor` is that placement. The
  * distribution is normal, centred on 5/10, with a spread chosen so that the two
@@ -199,7 +199,7 @@ export function rankLabel(percentile: number): string {
   return `Bottom ${formatPercentile(100 - percentile)}%`;
 }
 
-/** "Top 8% of Ascen users" — the badge's whole line, in one place. */
+/** "Top 8% of Summit users" — the badge's whole line, in one place. */
 export function percentileLabel(score: number | null): string | null {
   if (score === null) return null;
   return `Top ${formatPercentile(percentileFor(score))}%`;

@@ -13,11 +13,11 @@
  * ## Two kinds of record, and both are real
  *
  * **Logged** — what the account writes down. AMC 8 25/25, RCM 9, a
- * ten-thousand-line project. Ascen cannot know any of it; none of it happened
+ * ten-thousand-line project. Summit cannot know any of it; none of it happened
  * inside the app. These live in the `records` table and are what the two Log
  * buttons write.
  *
- * **Derived** — what Ascen counted itself: best XP day, heaviest task, longest
+ * **Derived** — what Summit counted itself: best XP day, heaviest task, longest
  * streak, and how close today is to beating each. This was the entire page
  * before, and it is kept exactly as it was, below the logged ones. Neither
  * replaces the other and they are visibly separated, because a record you set
@@ -783,12 +783,12 @@ export default function Records() {
         </section>
       )}
 
-      {/* ---- What Ascen counted itself ------------------------------------
+      {/* ---- What Summit counted itself ------------------------------------
           The page as it was, kept whole and kept separate. See the header. */}
       <section className="rc-section rc-derived">
         <h2 className="rc-section-title">⚙️ Tracked automatically</h2>
         <p className="rc-note">
-          Ascen's own count. Nothing here is logged by hand.
+          Summit's own count. Nothing here is logged by hand.
         </p>
 
         {all.length < NEED_DAYS ? (

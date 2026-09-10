@@ -137,7 +137,7 @@ describe('the hidden quote', () => {
 
   it('is retired once the chain has handed out a title', async () => {
     localStorage.setItem(KEY, '1');
-    localStorage.setItem('ascenTitle:myles', 'Admin');
+    localStorage.setItem('summitTitle:myles', 'Admin');
     armReveal();
     renderWithProviders(<DailyQuote />);
 

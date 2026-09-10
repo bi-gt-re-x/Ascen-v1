@@ -4,7 +4,7 @@
 
 ## The database
 
-`ASCEN_DB` decides where the datastore lives (backend/config/settings.py), and
+`SUMMIT_DB` decides where the datastore lives (backend/config/settings.py), and
 `connection.py` builds one from data/sql/*.sql the first time anything asks for
 it. So a test suite needs nothing but a temporary path: point the variable at
 one, and the app builds the real schema there and runs against it. No fixtures
@@ -38,14 +38,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 # Before backend is imported anywhere: settings.DB_PATH is read at import time.
-_TMP = tempfile.mkdtemp(prefix='ascen-tests-')
-os.environ['ASCEN_DB'] = os.path.join(_TMP, 'test.db')
+_TMP = tempfile.mkdtemp(prefix='summit-tests-')
+os.environ['SUMMIT_DB'] = os.path.join(_TMP, 'test.db')
 os.environ['SECRET_KEY'] = 'tests-do-not-need-a-real-one'
 
-# `create_app` refuses to start without these two unless ASCEN_DEV says the
+# `create_app` refuses to start without these two unless SUMMIT_DEV says the
 # install is a laptop (see `deployment_problems` in backend/config/settings.py).
-# They are set here rather than by setting ASCEN_DEV, deliberately: several
-# tests in test_ratelimit.py build an app with ASCEN_DEV *unset*, because that
+# They are set here rather than by setting SUMMIT_DEV, deliberately: several
+# tests in test_ratelimit.py build an app with SUMMIT_DEV *unset*, because that
 # is how they check that a deployed install does not hand the verification link
 # back to whoever asked. Those tests need the deployed answer to that question
 # and a startable app at the same time, which is what these two give them.
@@ -59,7 +59,7 @@ os.environ['APP_BASE_URL'] = 'http://testserver'
 # `main` in backend/run.py), not a weakening of the check: the secure default
 # itself is asserted in tests/test_ratelimit.py, which builds an app without
 # this and reads the Set-Cookie header.
-os.environ['ASCEN_INSECURE_COOKIES'] = '1'
+os.environ['SUMMIT_INSECURE_COOKIES'] = '1'
 
 import pytest                                            # noqa: E402
 from fastapi.testclient import TestClient                # noqa: E402
@@ -143,7 +143,7 @@ def fresh_db(tmp_path, monkeypatch):
     totals, and a suite where test order changes the answer is a suite that
     passes until somebody adds a test in the middle.
     """
-    path = str(tmp_path / 'ascen.db')
+    path = str(tmp_path / 'summit.db')
     monkeypatch.setattr(db, 'DB_PATH', path, raising=False)
     monkeypatch.setattr('backend.config.settings.DB_PATH', path, raising=False)
     monkeypatch.setattr(db, '_built', False)

@@ -45,7 +45,7 @@
  *
  * **The sections are the ones that were asked for. The figures are the ones
  * that are true.** A page about Mathematics wants to say "Geometry 68%,
- * Algebra 94%", and Ascen has no evidence for either: tasks carry a subject
+ * Algebra 94%", and Summit has no evidence for either: tasks carry a subject
  * and nothing finer, and the skill trees that do name sub-skills are authored
  * hierarchies whose states are illustrative. So the sub-skill breakdown is the
  * *difficulty bands*, which are recorded on every rated task, and the mistake
@@ -1325,13 +1325,13 @@ export default function SubjectAnalytics() {
                 exists to separate are counted out beneath it.
 
                 "Usual" is the account's own median at that difficulty, because
-                Ascen never asks for an estimate. See `timeAnalysis` in
+                Summit never asks for an estimate. See `timeAnalysis` in
                 components/Subject/state for why that is the better baseline
                 anyway. */}
             {state.time.known && (
               <Panel
                 title="What the time bought"
-                note="Against your own usual pace at each difficulty. Ascen never asks you for an estimate."
+                note="Against your own usual pace at each difficulty. Summit never asks you for an estimate."
               >
                 <ul className="sb-rows">
                   <li className="sb-row">

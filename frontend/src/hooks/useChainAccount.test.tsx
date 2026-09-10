@@ -104,7 +104,7 @@ describe('two accounts on one browser', () => {
   it('do not share an earned title, which is what retires the chain', () => {
     // The exact shape of the old bug: Ada finishes the chain, Grace signs in
     // on the same browser and finds it already over.
-    localStorage.setItem('ascenTitle:ada', 'Admin');
+    localStorage.setItem('summitTitle:ada', 'Admin');
 
     expect(earnedTitle('ada')).toBe('Admin');
     expect(earnedTitle('grace')).toBeNull();

@@ -58,7 +58,7 @@ export function WhenPanel({ parts, days }: WhenPanelProps) {
     <Panel title="When you worked" aside={<EarlyMark of={`${days} days`} />}>
       {total === 0 ? (
         <p className="ax-empty ax-empty-sm">
-          No finished task carries a time of day yet. Tasks completed inside Ascen record one;
+          No finished task carries a time of day yet. Tasks completed inside Summit record one;
           older ones do not.
         </p>
       ) : (

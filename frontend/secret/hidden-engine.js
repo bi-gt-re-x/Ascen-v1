@@ -1,8 +1,8 @@
-/* hidden-engine.js — the Hidden Engine: the heart of Ascen, never meant to be
+/* hidden-engine.js — the Hidden Engine: the heart of Summit, never meant to be
  * found. Revealed when the console's secret `unlock hidden` releases the blast
  * doors. A vast mechanical vault around a gigantic rotating Core Engine, with
  * an archive wall, energy-conduit wall, suspended ceiling gears, a circuit
- * floor that lights beneath your cursor, and one old ASCEN CORE console where
+ * floor that lights beneath your cursor, and one old SUMMIT CORE console where
  * the final puzzle waits.
  */
 (function () {
@@ -12,17 +12,17 @@
         return (window.localStorage && localStorage.getItem('currentUser')) || 'Default';
     }
     function isAdmin() {
-        try { return !!localStorage.getItem('ascenTitle:' + user()); }
+        try { return !!localStorage.getItem('summitTitle:' + user()); }
         catch (e) { return false; }
     }
 
     /**
      * Bind a title to this account, and put it on.
      *
-     * Two keys, because the rail asks two separate questions. `ascenTitle:<user>`
+     * Two keys, because the rail asks two separate questions. `summitTitle:<user>`
      * is "has this account earned the secret title" — it is what puts the title
      * in the rail's three-dot list at all, and what retires the chain (see
-     * frontend/src/utils/easterEgg.ts). `ascenRankTitle:<user>` is "which of my
+     * frontend/src/utils/easterEgg.ts). `summitRankTitle:<user>` is "which of my
      * titles am I wearing", the ordinary chooser's key (utils/rankTitle.ts).
      *
      * Writing only the first is what this room used to do, and it made the
@@ -37,8 +37,8 @@
     function wearTitle(name) {
         var v = String(name == null ? '' : name).trim().slice(0, 24) || 'Admin';
         try {
-            localStorage.setItem('ascenTitle:' + user(), v);
-            localStorage.setItem('ascenRankTitle:' + user(), v);
+            localStorage.setItem('summitTitle:' + user(), v);
+            localStorage.setItem('summitRankTitle:' + user(), v);
         } catch (e) {}
         return v;
     }
@@ -215,7 +215,7 @@
             '<div class="he-ring he-ring3"></div>' +
             '<div class="he-hub"><div class="he-hub-pulse"></div>' +
                 '<div class="he-hub-core"></div>' +
-                '<div class="he-hub-label"><span>ASCEN</span><strong>CORE</strong></div></div>' +
+                '<div class="he-hub-label"><span>SUMMIT</span><strong>CORE</strong></div></div>' +
             '<div class="he-pistons">' + pistons + '</div>' +
             '<div class="he-vents">' + steam + '</div>' +
         '</div>';
@@ -225,10 +225,10 @@
         var admin = isAdmin();
         return '<div class="he-console' + (admin ? ' he-admin' : '') + '" id="heConsole">' +
             '<div class="he-console-scan"></div>' +
-            '<div class="he-console-title">ASCEN CORE</div>' +
+            '<div class="he-console-title">SUMMIT CORE</div>' +
             '<div class="he-console-line" id="heConsoleLine">' +
                 (admin ? 'Administrator recognized.' : 'Awaiting Administrator...') + '</div>' +
-            (admin ? '<button class="he-core-btn" id="heCoreBtn" type="button">ASCEN CORE &rarr;</button>' : '') +
+            (admin ? '<button class="he-core-btn" id="heCoreBtn" type="button">SUMMIT CORE &rarr;</button>' : '') +
         '</div>';
     }
 
@@ -270,12 +270,12 @@
             coreBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 reactCore(he, true);
-                enterAscenCore(he);
+                enterSummitCore(he);
             });
         }
         con.addEventListener('click', function () {
             reactCore(he, true);
-            if (isAdmin()) { enterAscenCore(he); return; }
+            if (isAdmin()) { enterSummitCore(he); return; }
             line.textContent = 'Administrator credentials required.';
             con.classList.remove('he-console-deny'); void con.offsetWidth;
             con.classList.add('he-console-deny');
@@ -355,7 +355,7 @@
             '<div class="ar-scan"></div>' +
             '<div class="ar-rain"></div>' +
             '<div class="ar-inner">' +
-                '<div class="ar-tag">root@ascen:~# access granted</div>' +
+                '<div class="ar-tag">root@summit:~# access granted</div>' +
                 '<h1 class="ar-title" data-t="ADMIN ROOM">ADMIN ROOM</h1>' +
                 '<p class="ar-sub">You were never supposed to reach this room.</p>' +
                 '<button class="ar-equip" id="arEquip" type="button">▸ EQUIP TITLE :: Admin</button>' +
@@ -389,7 +389,7 @@
         });
     }
 
-    // A little green code-rain behind the ADMIN ROOM / ASCEN CORE.
+    // A little green code-rain behind the ADMIN ROOM / SUMMIT CORE.
     function adminRain(ar) {
         var host = ar.querySelector('.ar-rain') || ar.querySelector('.ac-rain');
         if (!host) return;
@@ -411,11 +411,11 @@
         }, 70);
     }
 
-    // --- THE ASCEN CORE: the administrator's seat. Do anything. -------------
-    function enterAscenCore(he) {
-        if (document.getElementById('ascenCore')) return;
+    // --- THE SUMMIT CORE: the administrator's seat. Do anything. -------------
+    function enterSummitCore(he) {
+        if (document.getElementById('summitCore')) return;
         var ac = document.createElement('div');
-        ac.id = 'ascenCore';
+        ac.id = 'summitCore';
 
         var toggles = [
             ['OVERCLOCK ENGINE', 'engine overclocked. gears redlined.'],
@@ -435,13 +435,13 @@
             '<div class="ac-rain"></div>' +
             '<div class="ac-inner">' +
                 '<div class="ac-tag">administrator :: privileges UNLIMITED</div>' +
-                '<h1 class="ac-title" data-t="ASCEN CORE">ASCEN CORE</h1>' +
+                '<h1 class="ac-title" data-t="SUMMIT CORE">SUMMIT CORE</h1>' +
                 '<p class="ac-sub">The core is yours. You can do anything here.</p>' +
                 '<div class="ac-field">' +
                     '<label>DISPLAYED TITLE</label>' +
                     '<div class="ac-row">' +
                         '<input id="acTitle" spellcheck="false" autocomplete="off" maxlength="24" value="' +
-                            (localStorage.getItem('ascenTitle:' + user()) || 'Admin') + '">' +
+                            (localStorage.getItem('summitTitle:' + user()) || 'Admin') + '">' +
                         '<button id="acSetTitle" type="button">SET</button>' +
                     '</div>' +
                     '<div class="ac-hint" id="acTitleHint">shows before your name on the dashboard</div>' +
@@ -449,7 +449,7 @@
                 '<div class="ac-powers">' + togHtml + '</div>' +
                 '<div class="ac-term">' +
                     '<div class="ac-term-log" id="acLog"></div>' +
-                    '<div class="ac-term-row"><span class="ac-prompt">core@ascen:~#</span>' +
+                    '<div class="ac-term-row"><span class="ac-prompt">core@summit:~#</span>' +
                         '<input class="ac-cmd" id="acCmd" spellcheck="false" autocomplete="off"></div>' +
                 '</div>' +
                 '<button class="ac-return" id="acReturn" type="button">▸ RETURN TO DASHBOARD</button>' +
@@ -457,10 +457,10 @@
         document.body.appendChild(ac);
         requestAnimationFrame(function () { ac.classList.add('in'); });
         adminRain(ac);
-        wireAscenCore(ac, he);
+        wireSummitCore(ac, he);
     }
 
-    function wireAscenCore(ac, he) {
+    function wireSummitCore(ac, he) {
         var titleInput = ac.querySelector('#acTitle');
         var setBtn = ac.querySelector('#acSetTitle');
         var hint = ac.querySelector('#acTitleHint');
@@ -486,11 +486,11 @@
         });
 
         var cmd = ac.querySelector('#acCmd');
-        acLog(ac, 'ASCEN CORE shell — administrator session. type anything.');
+        acLog(ac, 'SUMMIT CORE shell — administrator session. type anything.');
         cmd.addEventListener('keydown', function (e) {
             if (e.key !== 'Enter') return;
             var raw = cmd.value; var c = raw.trim(); cmd.value = '';
-            acLog(ac, 'core@ascen:~# ' + raw, 'cmd');
+            acLog(ac, 'core@summit:~# ' + raw, 'cmd');
             runCore(ac, he, c);
         });
         ac.querySelector('#acReturn').addEventListener('click', function () {
@@ -525,5 +525,5 @@
         }
     }
 
-    window.AscenHiddenEngine = { reveal: reveal, ascenCore: enterAscenCore };
+    window.SummitHiddenEngine = { reveal: reveal, summitCore: enterSummitCore };
 })();

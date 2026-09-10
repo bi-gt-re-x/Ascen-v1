@@ -167,7 +167,7 @@ def standing(username):
 
     return {
         # The reader plus everyone they were measured against, which is what
-        # "compared to N Ascen users" means on the panel.
+        # "compared to N Summit users" means on the panel.
         'cohort': len(others) + 1,
         'enough': enough,
         'floor': COHORT_FLOOR,

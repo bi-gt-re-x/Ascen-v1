@@ -113,7 +113,7 @@ export interface SignupResult {
   /**
    * The verification link, to click here rather than in an inbox.
    *
-   * Only ever set in development — the server gates it on ASCEN_DEV rather
+   * Only ever set in development — the server gates it on SUMMIT_DEV rather
    * than on the send having failed, because a token confirming an address is
    * not something to hand whoever asked for it. See `dev_mode` in
    * backend/config/settings.py.

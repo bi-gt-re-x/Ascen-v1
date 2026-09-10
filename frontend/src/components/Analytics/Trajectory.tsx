@@ -207,7 +207,7 @@ export interface ScorePanelProps {
  *
  * The distinction is not cosmetic and the badge does not hide it: the tooltip
  * says which of the two the reader is looking at. Two figures on one page both
- * labelled "of Ascen users", one counted and one modelled, is exactly the sort
+ * labelled "of Summit users", one counted and one modelled, is exactly the sort
  * of quiet disagreement this file is arranged to prevent — the panel and
  * `StandingPanel` now state one number.
  */
@@ -249,13 +249,13 @@ export function ScorePanel({
             className="ax-percentile"
             title={
               measured === null
-                ? 'Where this score sits in the modelled distribution of Ascen growth scores — 5.0 is the middle, and the scale runs from top 99.9% to top 0.1%.'
+                ? 'Where this score sits in the modelled distribution of Summit growth scores — 5.0 is the middle, and the scale runs from top 99.9% to top 0.1%.'
                 : 'Counted, not modelled: this score ranked against every other account with a comparable record. The same figure the "Where You Stand" panel prints.'
             }
           >
             <span className="ax-percentile-icon" aria-hidden="true" />
             <strong>{band}</strong>
-            <span>of Ascen users</span>
+            <span>of Summit users</span>
           </div>
         )}
       </div>

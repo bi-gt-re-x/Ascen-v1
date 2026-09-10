@@ -707,7 +707,7 @@ export default function Settings() {
           {
             id: 'accent',
             label: 'Accent colour',
-            hint: 'The colour Ascen uses for progress, links and highlights.',
+            hint: 'The colour Summit uses for progress, links and highlights.',
             control: (
               <div className="st-swatches" role="group" aria-label="Accent colour">
                 {ACCENTS.map((accent) => (
@@ -1431,7 +1431,7 @@ export default function Settings() {
             ),
           },
           {
-            // This said "On the machine running Ascen. Nothing is uploaded
+            // This said "On the machine running Summit. Nothing is uploaded
             // anywhere." / "This device", which was true of a laptop and is a
             // false statement on a hosted install — everything here is in the
             // server's database, which is a different promise and a weaker
@@ -1440,7 +1440,7 @@ export default function Settings() {
             id: 'storage',
             label: 'Where your data lives',
             hint:
-              'In the database on the server running Ascen — not in this browser. ' +
+              'In the database on the server running Summit — not in this browser. ' +
               'It is not sold, and it is not shared with anyone; the Privacy Policy ' +
               'says what is kept and what leaves.',
             control: <span className="st-fixed">This server</span>,
@@ -1456,7 +1456,7 @@ export default function Settings() {
             id: 'version',
             label: 'Version',
             hint: 'The build you are running.',
-            control: <span className="st-fixed">Ascen 1.2.0</span>,
+            control: <span className="st-fixed">Summit 1.2.0</span>,
           },
           {
             id: 'level',

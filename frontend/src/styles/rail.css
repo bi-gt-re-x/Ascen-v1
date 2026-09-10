@@ -66,18 +66,19 @@
     flex: none;
 }
 
-/* The mark is inline SVG now, so the colours are declarations rather than the
-   `mix-blend-mode: multiply` / `filter: invert(1)` pair that used to make a
-   near-black PNG-shaped SVG survive both themes. Two tones: the A carries the
-   violet, the detached foot sits a few steps lighter so it reads as its own
-   piece at 30px instead of a nick in the outline. */
-.rail-brand-mark svg {
+/* The mark carries its own colour now — a blue mountain that reads on the
+   white rail and the near-black one alike — so this is a size and nothing
+   else. What stood here was `.rail-mark-body` and `.rail-mark-foot`, two fills
+   for the two paths of the old inline `A`, which in turn replaced a
+   `mix-blend-mode: multiply` / `filter: invert(1)` pair that made a
+   fixed-colour glyph survive both themes. Three generations of working around
+   a mark that had no colour, and none of them needed any more.
+   See utils/images/logo.svg. */
+.rail-brand-mark img {
     width: 30px;
     height: 30px;
     display: block;
 }
-.rail-mark-body { fill: #5A5FD8; }
-.rail-mark-foot { fill: #8D93F0; }
 
 /* Set as a wordmark rather than as a word: caps and open tracking, which is
    what carries a five-letter name beside a mark. The size drops because spaced
@@ -575,12 +576,6 @@ html[data-theme="dark"] .rail {
 
 html[data-theme="dark"] .rail-brand,
 html[data-theme="dark"] .rail-brand-name { color: #F0F2F5; }
-
-/* The same violet a few steps up. The light theme's #5A5FD8 is legible on
-   white and muddy on #161B22, which is what a mid-tone brand colour does on
-   both — so it lifts here rather than being asked to work in two places. */
-html[data-theme="dark"] .rail-mark-body { fill: #8085EE; }
-html[data-theme="dark"] .rail-mark-foot { fill: #B0B4F8; }
 
 html[data-theme="dark"] .rail-disclose { color: #6E7681; }
 html[data-theme="dark"] .rail-disclose:hover { background: #21262D; color: #F0F2F5; }

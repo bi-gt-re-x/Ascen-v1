@@ -311,12 +311,12 @@ def send_verification(user, request=None):
     link = '{}/verify/{}'.format(base_url(request), user['verify_token'])
     body = (
         "Hi {},\n\n"
-        "Confirm your e-mail to finish setting up your Ascen account:\n\n"
+        "Confirm your e-mail to finish setting up your Summit account:\n\n"
         "{}\n\n"
         "If you didn't create this account you can ignore this message.\n"
     ).format(user.get('name') or user.get('username'), link)
     try:
-        sent = _send_mail(user['email'], 'Verify your Ascen account', body)
+        sent = _send_mail(user['email'], 'Verify your Summit account', body)
     except Exception as exc:                  # noqa: BLE001 - report, don't crash signup
         print('[auth] verification e-mail failed: {}'.format(exc))
         sent = False

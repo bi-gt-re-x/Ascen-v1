@@ -53,7 +53,7 @@ ZEN_URL = 'https://zenquotes.io/api/today'
 # urllib introduces itself as "Python-urllib/3.x", which a fair number of
 # public APIs refuse or tarpit. Saying who is actually calling is both politer
 # and more reliable.
-USER_AGENT = 'Ascen/1.0 (+https://github.com/ascen; daily quote)'
+USER_AGENT = 'Summit/1.0 (+https://github.com/summit; daily quote)'
 
 # Used when every upstream is unreachable. Kept short deliberately: this is a
 # fallback, not a quote library.

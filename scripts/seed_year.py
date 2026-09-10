@@ -1,7 +1,7 @@
 """Seed a year of an account's calendar and task list.
 
 Written for demos and for looking at the app with a real amount of work in it.
-Every page in Ascen is shaped by what is on the list — the horizon, the
+Every page in Summit is shaped by what is on the list — the horizon, the
 groupings, the sparklines, the week grid, the XP figures — and all of them read
 differently against ten rows than against a life. An account with a year in
 front of it is the only way to see what those views actually do.
@@ -76,7 +76,7 @@ import sqlite3
 import sys
 from datetime import date, datetime, timedelta
 
-DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'ascen.db')
+DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'summit.db')
 
 # How a re-run finds its own work, and nothing else.
 #

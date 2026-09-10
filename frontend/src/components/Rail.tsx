@@ -32,7 +32,7 @@
  * outside the router, so that is one call for the session rather than one per
  * page — and because it never unmounts, it would otherwise still be showing
  * the level you had when you opened the app. The dashboard
- * announces `ascen:stats-changed` when a completion moves the total, and this
+ * announces `summit:stats-changed` when a completion moves the total, and this
  * listens. A custom event rather than shared state because that is the whole of
  * the dependency: one number, one direction, no reply.
  *
@@ -59,7 +59,7 @@ import '@/styles/rail.css';
 const COLLAPSE_KEY = 'topnavCollapsed';
 
 /** Fired by the dashboard when a completion moves the XP total. */
-export const STATS_CHANGED = 'ascen:stats-changed';
+export const STATS_CHANGED = 'summit:stats-changed';
 
 interface Tab {
   to: string;
@@ -462,34 +462,22 @@ export function Rail() {
           cancel, so the mark is a link again and behaves like one in both
           themes.
 
-          The mark is drawn inline rather than loaded from /static/images: the
-          file is a one-colour near-black glyph, which needed `mix-blend-mode:
-          multiply` to sit on white and an `invert(1)` to survive the dark rail
-          — two hacks to fake a colour it did not have. Inline, the A and its
-          detached foot are two paths that take the brand's violet directly and
-          lighten in dark like everything else. Same geometry as the file, so
-          the two marks are still the same mark. */}
+          The mark is the file again, and that is the rebrand undoing a
+          workaround rather than adding one. It was inlined because the old
+          mark was a single near-black glyph: it needed `mix-blend-mode:
+          multiply` to sit on white and an `invert(1)` to survive the dark
+          rail, and inlining it was how those two hacks were replaced by a
+          `fill` the theme could change. The Summit mark is a blue mountain
+          that reads on both grounds and wants no help from either theme, so
+          there is no longer anything for an inline copy to do — and one
+          `<img>` is one mark instead of two paths in two files that have to go
+          on agreeing about the same geometry. See utils/images/logo.svg. */}
       <div className="rail-brand">
-        <NavLink className="rail-brand-mark" to="/home" aria-label="Ascen home">
-          <svg viewBox="0 0 100 100" aria-hidden="true">
-            <path
-              className="rail-mark-body"
-              fillRule="evenodd"
-              d="M49 19 L81 80 L17 80 Z M49 49 L63 75 L37 75 Z"
-            />
-            <rect
-              className="rail-mark-foot"
-              x="57"
-              y="57"
-              width="31"
-              height="15"
-              rx="7.5"
-              transform="rotate(30 72.5 64.5)"
-            />
-          </svg>
+        <NavLink className="rail-brand-mark" to="/home" aria-label="Summit home">
+          <img src="/static/images/logo.svg" alt="" width={30} height={30} />
         </NavLink>
         <NavLink className="rail-brand-name" to="/home">
-          Ascen
+          Summit
         </NavLink>
 
         {/* Three lines rather than the chevron it was. The chevron pointed at

@@ -1,12 +1,99 @@
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="A logo">
-  <g fill="#1c1c1c" stroke="#1c1c1c" stroke-width="4" stroke-linejoin="round">
-    <!-- A body: outer triangle with a hook-shaped counter cut out (evenodd) -->
-    <path fill-rule="evenodd" d="
-      M49 19 L81 80 L17 80 Z
-      M49 49 L63 75 L37 75 Z
-    "/>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Summit">
+  <!--
+    The Summit mark: one peak, a shoulder beside it, and a base that sweeps.
+
+    Square viewBox because this is an app icon before it is anything else — the
+    rail draws it at 30px, a home screen takes it at whatever size that
+    platform wants, and a favicon is 16. It is drawn once, here, and every
+    place that shows it points at this file; the rail used to inline its own
+    copy of the old mark's geometry because that mark was a single near-black
+    glyph that needed a blend mode to sit on white and an invert to survive the
+    dark rail. This one carries its own colour and needs neither, so there is
+    one mark again instead of two that have to agree.
+
+    Four layers, and the order is the light: the rock in a gradient running
+    from deep blue on the shaded flank to open sky on the sunlit one, a wedge
+    of shadow down the face nearest the viewer, then the two snowfields, which
+    are above the shadow and stay clean.
+
+    ## Everything is clipped to the silhouette
+
+    The shadow and both snowfields are drawn generously and cut to the body,
+    rather than being shaped to stop exactly on its ridges. Fitting them by
+    hand means four paths that have to agree about the same two lines for ever,
+    and the day one of them is nudged the snow hangs off the side of the
+    mountain — which is precisely what the first draft of this did.
+  -->
+  <defs>
+    <linearGradient id="summit-rock" x1="0.06" y1="0.2" x2="0.94" y2="0.8">
+      <stop offset="0%" stop-color="#2350DC" />
+      <stop offset="46%" stop-color="#3183F2" />
+      <stop offset="100%" stop-color="#4FBBFF" />
+    </linearGradient>
+    <!-- The snow is not flat white. It takes a little of the sky at its lower
+         edge, which is what stops a white shape on a blue one reading as a
+         hole punched through the mountain. -->
+    <linearGradient id="summit-snow" x1="0.1" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="58%" stop-color="#F1F8FF" />
+      <stop offset="100%" stop-color="#CBE2FF" />
+    </linearGradient>
+
+    <!-- Up the left ridge to the summit, down to the saddle and over the
+         shoulder, then the base sweeps back rather than closing on a straight
+         line — which is the whole difference between this and a triangle. -->
+    <path
+      id="summit-body"
+      d="M5 82 L26 50 L31 45 L46 18
+         L60 38 L66 46 L73.5 34 L79.5 44 L95 82
+         C66 68.5, 33 70, 5 82 Z"
+    />
+    <clipPath id="summit-clip"><use href="#summit-body" /></clipPath>
+  </defs>
+
+  <use href="#summit-body" fill="url(#summit-rock)" />
+
+  <g clip-path="url(#summit-clip)">
+    <!-- The face turned toward the viewer. The sun is off to the right, so the
+         left flank shades itself, and the edge between the two falls away from
+         the summit rather than following the outline. -->
+    <path
+      fill="#17337F"
+      fill-opacity=".24"
+      d="M46 18 C 41 42, 35 62, 26 100 L-6 100 L-6 54 Z"
+    />
+
+    <!-- The summit snowfield. It hangs from the point and reaches both ridges,
+         because a cap that floats below the top of a mountain is not a cap.
+
+         Ragged, and deliberately not evenly ragged: the teeth get longer and
+         further apart toward the right, and the field itself reaches lower on
+         that side. Snow lies where the wind does not, so a field that is the
+         same on both flanks looks drawn and one that spills down one side
+         looks seen — and an even sawtooth is the first thing that gives a
+         drawn one away.
+
+         Five teeth, not ten. At sixteen pixels a tenth of a tooth is one grey
+         pixel and the whole edge turns to mud.
+
+         The field starts just inside the summit rather than on it, which
+         leaves a rim of rock along the shaded ridge all the way to the point.
+         That rim is what gives the peak an edge: white snow reaching the
+         outline of a mark that is usually shown on a white page has nothing to
+         end against, and the top of the mountain quietly dissolves. -->
+    <path
+      fill="url(#summit-snow)"
+      d="M46.9 19.7 L65 45.5
+         L61.5 48.5 L58.5 41.5 L55 47.5 L51.5 40.5 L47.5 45.5
+         L44 38.5 L40.5 43 L37 37.5 L33.5 41 L30.6 44.6 Z"
+    />
+
+    <!-- The shoulder keeps a smaller field, which is what tells the eye it is
+         a second mountain standing behind rather than a step cut into this
+         one. -->
+    <path
+      fill="url(#summit-snow)"
+      d="M73.5 34 L80 45 L76.5 40.5 L75 44 L72.8 38.5 L70.5 42 L67.5 42.8 Z"
+    />
   </g>
-  <!-- Detached rounded foot along the lower-right leg -->
-  <rect x="57" y="57" width="31" height="15" rx="7.5" fill="#1c1c1c"
-        transform="rotate(30 72.5 64.5)"/>
 </svg>

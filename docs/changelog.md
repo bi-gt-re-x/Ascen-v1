@@ -259,7 +259,7 @@ each, so there is nothing licensed or downloaded in the tree.
 
 ## 2026-07-28 — The .sql files become an actual database
 
-The data lives in SQLite at `data/ascen.db` now. `data/sql/` keeps the schema
+The data lives in SQLite at `data/summit.db` now. `data/sql/` keeps the schema
 and the rows to start from, and is read once — when the database does not exist
 yet — so a fresh clone still comes up working with nothing to install or start.
 `data/postgresql/` is gone; its contents moved to `data/sql/` with the DDL
@@ -287,7 +287,7 @@ rewritten for SQLite.
 - Three goals belonging to `user_id = 'Default'`, an account that never
   existed, were dropped. They had been unreachable since the account gate
   landed.
-- `data/ascen.db` is git-ignored. The seed files no longer change as the app
+- `data/summit.db` is git-ignored. The seed files no longer change as the app
   runs, so the datastore stops showing up as modified in every diff.
 
 Verified by running the old and new code side by side: 371 KB of API responses

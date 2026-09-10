@@ -35,7 +35,7 @@ const inFlight = new Map<string, Promise<Subject[]>>();
  * shared state for the same reason the rail listens for one: it is a single
  * fact travelling one way, with no reply.
  */
-export const SUBJECTS_CHANGED = 'ascen:subjects-changed';
+export const SUBJECTS_CHANGED = 'summit:subjects-changed';
 
 /**
  * Publish the account's colour choices where the drawing code can reach them.

@@ -1,6 +1,6 @@
 ---
-name: ascen-v1-file-tree
-description: "At-a-glance file tree of the Ascen project after the 2026-07-26 backend rewrite and the 2026-07-27 utils/docs/data move"
+name: summit-v1-file-tree
+description: "At-a-glance file tree of the Summit project after the 2026-07-26 backend rewrite and the 2026-07-27 utils/docs/data move"
 metadata: 
   node_type: memory
   type: reference
@@ -8,19 +8,19 @@ metadata:
   modified: 2026-07-28T15:14:03.134Z
 ---
 
-**Backend rewritten 2026-07-26; folders moved 2026-07-27; datastore became a real SQLite db 2026-07-28** (branch `calendar-focus-and-recurrence`): `paths.py` (2200 lines), `auth.py`, `services/`, `models/`, root `task_backend.py`, `utilities/`, `images/` and `data/postgresql/` are all gone. Verify paths before relying on them. See [[ascen-v1-overview]], [[ascen-v1-data-schema]], [[ascen-v1-run-setup]].
+**Backend rewritten 2026-07-26; folders moved 2026-07-27; datastore became a real SQLite db 2026-07-28** (branch `calendar-focus-and-recurrence`): `paths.py` (2200 lines), `auth.py`, `services/`, `models/`, root `task_backend.py`, `utilities/`, `images/` and `data/postgresql/` are all gone. Verify paths before relying on them. See [[summit-v1-overview]], [[summit-v1-data-schema]], [[summit-v1-run-setup]].
 
 ```
 run.py                     # shim: from backend.run import app, main (run_mac.py imports app)
 run_mac.py                 # macOS runner, port 5050
 # (the root database.db is gone — a dead Flask-era SQLite file nothing opened. `git show 2ce0fca:database.db` has it if it is ever wanted.)
 data/
-  ascen.db                 # THE live datastore (SQLite, git-ignored). Built on first use.
+  summit.db                 # THE live datastore (SQLite, git-ignored). Built on first use.
   sql/                     # its schema + seed rows, one file per area. users tasks goals
                            #   growth(xp_events) focus(focus_days,day_focus_notes)
                            #   events(calendar_entries,calendar_events,event_colors)
                            #   analytics(metric_snapshots). 5 more are schema-only stubs.
-                           #   Read ONLY when ascen.db is absent; delete the db to reset.
+                           #   Read ONLY when summit.db is absent; delete the db to reset.
   backups/                 # the old JSON store, kept as a backup; not read or written
 backend/
   app.py                   # create_app(): Flask + jinja ChoiceLoader(frontend/secret)

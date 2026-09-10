@@ -338,7 +338,7 @@ export function AuthModal({
           ×
         </button>
 
-        <div className="auth-brandline">Ascen</div>
+        <div className="auth-brandline">Summit</div>
         <h2 id="authHeading" className="auth-heading">
           {heading}
         </h2>
@@ -445,7 +445,7 @@ export function AuthModal({
                 open an account here on the stated terms. Two boxes to tick is
                 two boxes to tick without reading.
 
-                The age half is not decoration. Ascen is built for students and
+                The age half is not decoration. Summit is built for students and
                 much of its audience is at school, and an account here is an
                 e-mail address plus a term's worth of what somebody works on
                 and when — which is a different kind of record to hold about a

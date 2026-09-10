@@ -42,22 +42,26 @@
  * lives where the thing being chosen lives.
  */
 import { TIERS } from '@/utils/mastery';
-import { earnedTitle } from '@/utils/easterEgg';
+import { carriedOver, earnedTitle } from '@/utils/easterEgg';
 
 /** The rail follows the level, which is what it does when nothing is chosen. */
 export const AUTOMATIC = '';
 
 function key(username: string): string {
+  return `summitRankTitle:${username || 'Default'}`;
+}
+
+/** What this key was called while the app was called something else. */
+function formerKey(username: string): string {
   return `ascenRankTitle:${username || 'Default'}`;
 }
 
 /** The title this account has picked, or AUTOMATIC for "follow my level". */
 export function chosenTitle(username: string): string {
-  try {
-    return localStorage.getItem(key(username)) ?? AUTOMATIC;
-  } catch {
-    return AUTOMATIC;
-  }
+  /* Through `carriedOver` rather than straight off the key, so a pick made
+     before the rename is moved to the new name instead of being silently
+     forgotten — see the note on it in utils/easterEgg. */
+  return carriedOver(key(username), formerKey(username)) ?? AUTOMATIC;
 }
 
 /** Remember the pick. AUTOMATIC clears it rather than storing an empty string. */

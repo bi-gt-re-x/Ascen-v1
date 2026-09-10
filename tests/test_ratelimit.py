@@ -329,7 +329,7 @@ def test_signup_is_limited(app, anon):
 # These live here rather than in a file of their own because they are the same
 # question as the rate limit: what does the front door give away?
 #
-# The suite runs with ASCEN_INSECURE_COOKIES set — TestClient speaks http, and
+# The suite runs with SUMMIT_INSECURE_COOKIES set — TestClient speaks http, and
 # a Secure cookie is never sent over it, so every signed-in test would break
 # (see the note in conftest). That makes the *default* the thing worth pinning,
 # because it is the one posture the rest of the suite cannot exercise: these
@@ -338,9 +338,9 @@ def _login_headers(monkeypatch, insecure):
     from backend.main import create_app
 
     if insecure is None:
-        monkeypatch.delenv('ASCEN_INSECURE_COOKIES', raising=False)
+        monkeypatch.delenv('SUMMIT_INSECURE_COOKIES', raising=False)
     else:
-        monkeypatch.setenv('ASCEN_INSECURE_COOKIES', insecure)
+        monkeypatch.setenv('SUMMIT_INSECURE_COOKIES', insecure)
 
     make_account('tester')
     client = TestClient(create_app())
@@ -383,7 +383,7 @@ def test_the_dev_flag_is_the_only_way_to_turn_that_off(fresh_db, monkeypatch):
 # The verification link, and who is allowed to see it
 # --------------------------------------------------------------------------
 def _signup(monkeypatch, dev, email='newcomer@example.test'):
-    """Sign up with no mail server configured, under a given ASCEN_DEV."""
+    """Sign up with no mail server configured, under a given SUMMIT_DEV."""
     from backend.main import create_app
 
     # No mail server: this is the state that used to hand the link back, and
@@ -391,9 +391,9 @@ def _signup(monkeypatch, dev, email='newcomer@example.test'):
     monkeypatch.delenv('MAIL_USERNAME', raising=False)
     monkeypatch.delenv('MAIL_PASSWORD', raising=False)
     if dev is None:
-        monkeypatch.delenv('ASCEN_DEV', raising=False)
+        monkeypatch.delenv('SUMMIT_DEV', raising=False)
     else:
-        monkeypatch.setenv('ASCEN_DEV', dev)
+        monkeypatch.setenv('SUMMIT_DEV', dev)
 
     client = TestClient(create_app())
     return client.post('/api/auth/signup', json={
@@ -433,7 +433,7 @@ def test_a_resend_does_not_leak_it_either(fresh_db, monkeypatch):
 
     monkeypatch.delenv('MAIL_USERNAME', raising=False)
     monkeypatch.delenv('MAIL_PASSWORD', raising=False)
-    monkeypatch.delenv('ASCEN_DEV', raising=False)
+    monkeypatch.delenv('SUMMIT_DEV', raising=False)
 
     client = TestClient(create_app())
     client.post('/api/auth/signup', json={
@@ -450,7 +450,7 @@ def test_a_resend_does_not_leak_it_either(fresh_db, monkeypatch):
 def _problems(monkeypatch, **env):
     from backend.config import settings
 
-    for name in ('ASCEN_DEV', 'SECRET_KEY', 'APP_BASE_URL'):
+    for name in ('SUMMIT_DEV', 'SECRET_KEY', 'APP_BASE_URL'):
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
         monkeypatch.setenv(name, value)
@@ -472,7 +472,7 @@ def test_a_deployment_must_name_its_key_and_its_origin(monkeypatch):
 
 def test_the_dev_flag_is_what_says_this_is_a_laptop(monkeypatch):
     """And it has to work, or a fresh clone cannot be run at all."""
-    assert _problems(monkeypatch, ASCEN_DEV='1') == []
+    assert _problems(monkeypatch, SUMMIT_DEV='1') == []
 
 
 def test_each_one_is_reported_on_its_own(monkeypatch):
@@ -487,7 +487,7 @@ def test_the_app_refuses_to_start_on_a_problem(monkeypatch, fresh_db):
     from backend.config import settings
     from backend.main import create_app
 
-    monkeypatch.delenv('ASCEN_DEV', raising=False)
+    monkeypatch.delenv('SUMMIT_DEV', raising=False)
     monkeypatch.delenv('SECRET_KEY', raising=False)
     with pytest.raises(settings.Misconfigured):
         create_app()
@@ -526,7 +526,7 @@ def test_hsts_is_sent_behind_a_proxy_that_says_it_is_https(client, monkeypatch):
     """The forwarded scheme is believed only when the deployment says there is
     a proxy in front — the same claim the rate limiter needs for the client
     address, and the same flag answering it."""
-    monkeypatch.setenv('ASCEN_TRUST_PROXY', '1')
+    monkeypatch.setenv('SUMMIT_TRUST_PROXY', '1')
     response = client.get('/dashboard', headers={'X-Forwarded-Proto': 'https'})
     assert response.headers.get('Strict-Transport-Security', '').startswith('max-age=')
 

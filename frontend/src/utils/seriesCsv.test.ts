@@ -75,7 +75,7 @@ describe('buildSeriesCsv', () => {
 
   it('names the file by account and day', () => {
     expect(seriesFilename('myles', new Date('2026-09-05T10:00:00Z'))).toBe(
-      'ascen-data-myles-2026-09-05.csv',
+      'summit-data-myles-2026-09-05.csv',
     );
   });
 });

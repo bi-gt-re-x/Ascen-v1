@@ -11,7 +11,7 @@
  * reader that the product is mostly unavailable to them.
  *
  * So this states the position and then gets out of the way: one line on what
- * Ascen is doing, a meter showing the account moving toward the next thing
+ * Summit is doing, a meter showing the account moving toward the next thing
  * that opens, and then the figures that are *already* true — which on day two
  * is most of what anybody wants anyway. The tab under it is the same tab it
  * always was, minus the panels that would be drawing a slope through two
@@ -62,7 +62,7 @@ export interface CollectingProps {
  * The same thing said in one line, for the stages that no longer need a block.
  *
  * From day seven the tab is the real tab — trends, comparisons, the lot — and
- * a card explaining that Ascen is still learning would be sitting on top of a
+ * a card explaining that Summit is still learning would be sitting on top of a
  * page that plainly is not waiting for anything. What is still true is that
  * the readings are thinner than they will be, and that something specific
  * opens next. That is a line, not a card.
@@ -98,7 +98,7 @@ export interface LearningItem {
 }
 
 /**
- * What Ascen has not worked out yet, and how close it is.
+ * What Summit has not worked out yet, and how close it is.
  *
  * The brief for this whole feature says not to make analytics feel locked, and
  * the instinct that follows from that is to say nothing at all about the parts
@@ -160,8 +160,8 @@ export function Collecting({ maturity, stats, nextBrings }: CollectingProps) {
         <p className="ax-collect-eyebrow">{STAGE_LABEL[maturity.stage]}</p>
         <h2>
           {activeDays === 0
-            ? 'Ascen has nothing to go on yet.'
-            : 'Ascen is still learning your habits.'}
+            ? 'Summit has nothing to go on yet.'
+            : 'Summit is still learning your habits.'}
         </h2>
         <p className="ax-collect-lead">
           {activeDays === 0 ? (

@@ -477,7 +477,7 @@
 .sx-chip i { font-style: normal; font-size: .63rem; color: var(--ax-faint); }
 .sx-chip.is-focus { color: var(--ax-text); }
 
-/* The recommended level, coloured by where it sits on Ascen's five. A
+/* The recommended level, coloured by where it sits on Summit's five. A
    suggestion, not a measurement — the note in components/Subject/NextSteps
    says why these are chips and not figures. */
 .sx-chip.is-difficulty[data-level="1"],

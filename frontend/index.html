@@ -3,10 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="/favicon.ico" />
+    <!-- Two icons, and the order is not the preference — a browser takes the
+         first format it understands. The SVG is the mark itself
+         (utils/images/logo.svg, served by the backend at /static), so it is
+         sharp at any size a tab, a bookmark bar or a pinned shortcut asks for;
+         the .ico beside it is the same mountain rasterised at six sizes, for
+         the browsers that will not take an SVG here. Both are the mark, so
+         which one wins does not matter. -->
+    <link rel="icon" href="/static/images/logo.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="description" content="Ascen — a gamified productivity tracker: tasks, XP, streaks, a calendar, goals and growth analytics." />
-    <title>Ascen</title>
+    <meta name="description" content="Summit — a gamified productivity tracker: tasks, XP, streaks, a calendar, goals and growth analytics." />
+    <title>Summit</title>
 
     <!-- The typefaces, actually fetched.
          Twelve stylesheets have asked for `'Inter'` since the app was written

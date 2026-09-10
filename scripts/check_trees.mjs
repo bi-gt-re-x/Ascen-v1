@@ -78,7 +78,7 @@ const warn = (where, message) => warnings.push(`${where}: ${message}`);
 // ---------------------------------------------------------------------------
 // Load
 // ---------------------------------------------------------------------------
-const dir = await mkdtemp(join(tmpdir(), 'ascen-trees-'));
+const dir = await mkdtemp(join(tmpdir(), 'summit-trees-'));
 const outfile = join(dir, 'trees.mjs');
 const mapfile = join(dir, 'map.mjs');
 const improvefile = join(dir, 'improve.mjs');

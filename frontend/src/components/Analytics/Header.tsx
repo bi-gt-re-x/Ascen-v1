@@ -303,7 +303,7 @@ export function Header({
         <button
           type="button"
           className="ax-btn"
-          onClick={() => save(onExport, exportName ?? 'ascen-report.txt', 'text/plain')}
+          onClick={() => save(onExport, exportName ?? 'summit-report.txt', 'text/plain')}
           disabled={!onExport}
           title="Download a written report — your score, what the window holds, and what to change"
         >
@@ -316,7 +316,7 @@ export function Header({
         <button
           type="button"
           className="ax-btn ax-btn-quiet"
-          onClick={() => save(onExportData, dataName ?? 'ascen-data.csv', 'text/csv')}
+          onClick={() => save(onExportData, dataName ?? 'summit-data.csv', 'text/csv')}
           disabled={!onExportData}
           title="Download the day-by-day rows this window's figures were calculated from, as a CSV"
         >

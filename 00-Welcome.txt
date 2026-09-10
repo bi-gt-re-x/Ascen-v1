@@ -1,4 +1,4 @@
-If you are seeing this, Welcome to Ascen, I have spent about 6 months building this project,
+If you are seeing this, Welcome to Summit, I have spent about 6 months building this project,
 but it actually only translates to 3 months because the first 3 months I was using an agent
 that made very careless decisions, which ultamitely resulted in me scrapping the project and
 restarting, and by the way, I have hid my files in the gitignore, I'm not telling you which

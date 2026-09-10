@@ -3,7 +3,7 @@
  *
  * Everything else the analytics page draws is computed on the client from the
  * growth series — see `@/components/Analytics/data`. This is the exception, and
- * necessarily so: "where you stand against other Ascen users" cannot be derived
+ * necessarily so: "where you stand against other Summit users" cannot be derived
  * from the reader's own record, and the other accounts' records are not
  * something the client should ever hold.
  *
@@ -412,7 +412,7 @@ export interface NextStep {
   title: string;
   focus: string;
   type: StepType;
-  /** 1-5, on Ascen's own scale. */
+  /** 1-5, on Summit's own scale. */
   difficulty: number;
   minutes: number;
   reason: string;

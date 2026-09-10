@@ -10,7 +10,7 @@
  * your browser's local storage and in data files on the machine running the
  * app" and that it "never leaves your device unless you copy it yourself".
  *
- * That was true when the only machine running Ascen was the author's laptop.
+ * That was true when the only machine running Summit was the author's laptop.
  * On a hosted install every word of it is false — the data is in a database on
  * a server, reached over the network, and the account holder is not the person
  * who administers it. A privacy policy that is wrong in the reader's favour is
@@ -51,10 +51,10 @@ export default function PrivacyPolicy() {
       <p className="effective-date">Effective date: September 6, 2026</p>
 
       <p>
-        Ascen (&quot;we&quot;, &quot;us&quot;, or &quot;the app&quot;) is a study and
+        Summit (&quot;we&quot;, &quot;us&quot;, or &quot;the app&quot;) is a study and
         productivity tracker. This policy explains what the app collects, where it is
         kept, who else can see it, and what you can do about it. The short version: it is
-        held on the server that runs Ascen, it is not sold or shared for advertising, and
+        held on the server that runs Summit, it is not sold or shared for advertising, and
         you can export or delete all of it from Settings at any time.
       </p>
 
@@ -102,12 +102,12 @@ export default function PrivacyPolicy() {
       </ul>
       <p>
         We do not collect payment information, precise location, contacts, or advertising
-        identifiers. Ascen has no ads, no third-party analytics and no tracking pixels.
+        identifiers. Summit has no ads, no third-party analytics and no tracking pixels.
       </p>
 
       <h2>2. Where Your Data Is Kept</h2>
       <p>
-        On the server running Ascen, in a single database, sent to and from your browser
+        On the server running Summit, in a single database, sent to and from your browser
         over the network. It is <strong>not</strong> stored only on your device, and it is
         readable by whoever administers that server — which is the ordinary situation for
         a hosted application, and worth stating plainly rather than leaving you to assume
@@ -187,7 +187,7 @@ export default function PrivacyPolicy() {
 
       <h2>8. Children&apos;s Privacy</h2>
       <p>
-        Ascen is built for students, and much of its audience is at school. It is not
+        Summit is built for students, and much of its audience is at school. It is not
         directed at children under 13, and accounts should not be created for them. If you
         are under 13, please do not sign up; if you believe a child under 13 has created an
         account, contact us using the details in section 10 and we will delete it and its
@@ -207,7 +207,7 @@ export default function PrivacyPolicy() {
       <h2>10. Contact</h2>
       <p>
         Questions about this policy, or a request to see or delete what is held about you,
-        go to whoever operates this installation of Ascen — their contact details belong
+        go to whoever operates this installation of Summit — their contact details belong
         here, and are the ones given where you signed up. For the software itself, reach
         out through the project&apos;s repository.
       </p>

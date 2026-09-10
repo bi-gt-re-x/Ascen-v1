@@ -7,7 +7,7 @@
  * inside a fortnight, and then a tag filter that finds a quarter of what it
  * should. The app already has the answer: a hundred subjects in
  * backend/config/subjects.py that tasks, the calendar and the skill trees all
- * key off. A note tagged from that same list is a note the rest of Ascen can
+ * key off. A note tagged from that same list is a note the rest of Summit can
  * see — the same id, the same colour, the same name everywhere.
  *
  * The cost is that the list is fixed, which is the right trade here and is not

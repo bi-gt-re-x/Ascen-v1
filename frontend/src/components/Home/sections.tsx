@@ -65,7 +65,7 @@ export function Hero({
           </span>
         </span>
         <h1 className="lp-hero-title">
-          Ascen turns finished work into <em>numbers you can check</em>
+          Summit turns finished work into <em>numbers you can check</em>
         </h1>
         <p className="lp-hero-sub hm-rise">
           Plan the work, finish it, and see where it went: tasks and a calendar,
@@ -230,7 +230,7 @@ export function FeatureStrip() {
           so everything inside it is a child and the clicks still bubble. That
           is the only reason the card has to stay; what is *in* it changed.
 
-          It used to be a testimonial: five stars, a quote about how Ascen
+          It used to be a testimonial: five stars, a quote about how Summit
           changed somebody's studying, and "Sarah J. · Student · six month
           streak" under an initial in a circle. Sarah does not exist. That was
           harmless while this ran on one laptop and nobody but its author ever
@@ -251,7 +251,7 @@ export function FeatureStrip() {
         </p>
         <div className="lp-quote-foot">
           <span className="lp-quote-by">
-            The reason Ascen counts what it counts
+            The reason Summit counts what it counts
             <small>No reviews yet — this is the first version to be public</small>
           </span>
         </div>
@@ -648,7 +648,7 @@ export function Footer() {
             authors, so this agrees with it. The year is computed, because a
             hardcoded one is only ever correct for twelve months. */}
         <div className="copyright">
-          © {new Date().getFullYear()} Ascen. All rights reserved.
+          © {new Date().getFullYear()} Summit. All rights reserved.
         </div>
       </div>
     </footer>

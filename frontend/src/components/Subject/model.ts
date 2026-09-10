@@ -10,13 +10,13 @@
  * discount the real ones when they arrived.
  *
  * That rule is what shaped the sections below, because the obvious design for
- * a subject page asks for things Ascen has never recorded. A page about
+ * a subject page asks for things Summit has never recorded. A page about
  * Mathematics wants to say "Geometry 68%, Algebra 94%" — and there is no
  * evidence anywhere in this app for either number. Tasks carry a *subject* and
  * nothing finer. The skill trees do name sub-skills, but they are authored
  * hierarchies whose node states are illustrative (see skills/subjectTrees), so
  * reading mastery off them would be reporting a designer's guess as the
- * reader's record. Likewise "47 problems attempted, 32 correct": Ascen counts
+ * reader's record. Likewise "47 problems attempted, 32 correct": Summit counts
  * tasks, not questions, and has no notion of a right answer.
  *
  * So each of those questions is answered with the nearest thing the record can

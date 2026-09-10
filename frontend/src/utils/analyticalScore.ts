@@ -63,7 +63,7 @@ export const GRADE_BANDS: ReadonlyArray<readonly [number, Grade]> = [
  * is a correction rather than a style note. F used to read "not enough is
  * happening yet to score" — which the page printed over an account with 4,120
  * finished tasks, a 152-day streak and, eight inches to the right, the words
- * "top 1.0% of Ascen users". A low score can mean an empty record or a full
+ * "top 1.0% of Summit users". A low score can mean an empty record or a full
  * one that is missing its deadlines, and the phrase has to be true of both. An
  * account with no record at all scores `null` and draws a dash; that is where
  * "not enough yet" belongs and it is already said there.

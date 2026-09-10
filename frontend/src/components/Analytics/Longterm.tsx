@@ -142,7 +142,7 @@ export function StandingPanel({ standing }: StandingPanelProps) {
     return (
       <Panel
         title="Where You Stand"
-        note={`Compared to ${standing.cohort.toLocaleString()} Ascen ${standing.cohort === 1 ? 'user' : 'users'}`}
+        note={`Compared to ${standing.cohort.toLocaleString()} Summit ${standing.cohort === 1 ? 'user' : 'users'}`}
         footer={STANDING_NOTE}
       >
         <p className="ax-empty">
@@ -164,7 +164,7 @@ export function StandingPanel({ standing }: StandingPanelProps) {
   return (
     <Panel
       title="Where You Stand"
-      note={`Compared to ${standing.cohort.toLocaleString()} Ascen ${standing.cohort === 1 ? 'user' : 'users'} with a comparable record`}
+      note={`Compared to ${standing.cohort.toLocaleString()} Summit ${standing.cohort === 1 ? 'user' : 'users'} with a comparable record`}
       claim={
         best ? (
           <>

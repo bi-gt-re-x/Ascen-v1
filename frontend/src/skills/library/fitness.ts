@@ -1,7 +1,7 @@
 /**
  * Fitness — strength, conditioning and the things that keep either possible.
  *
- * Included partly because it is a real Ascen category and partly as the proof
+ * Included partly because it is a real Summit category and partly as the proof
  * that the model is not secretly a programming curriculum. Nothing here has a
  * lesson: a node is a movement you can perform correctly or a habit you keep,
  * the prerequisites are physical rather than academic, and it all indexes,

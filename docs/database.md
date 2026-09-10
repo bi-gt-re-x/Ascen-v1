@@ -1,11 +1,11 @@
 # Database
 
-Ascen stores its data in a SQLite database at `data/ascen.db`. It is git-
+Summit stores its data in a SQLite database at `data/summit.db`. It is git-
 ignored, because it changes every time the app runs.
 
 The database is built from `data/sql/` — one `.sql` file per part of the app,
 each holding its tables' definitions followed by the rows to start from. Those
-files are read once, when `data/ascen.db` does not exist yet: a fresh clone
+files are read once, when `data/summit.db` does not exist yet: a fresh clone
 comes up with a working database and no setup step. After that the database is
 the only copy of the data, and the seed files stop changing.
 
@@ -99,10 +99,10 @@ sign-in — is gone, because it made the column trusted to say what it held, and
 
 ## Starting over
 
-Delete `data/ascen.db` and run the app. It is rebuilt from `data/sql/` on the
+Delete `data/summit.db` and run the app. It is rebuilt from `data/sql/` on the
 next read, back to the state those files describe.
 
-To point at a database somewhere else, set `ASCEN_DB` to its path.
+To point at a database somewhere else, set `SUMMIT_DB` to its path.
 
 ## Moving to a PostgreSQL server
 

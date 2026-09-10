@@ -3,7 +3,7 @@
  *
  * Every other page turns what you did into a number: a task has an XP value, a
  * goal has a percentage, a finished task gets two stars. That is the app's
- * whole argument, and it has a hole in it — Ascen can tell you that you worked
+ * whole argument, and it has a hole in it — Summit can tell you that you worked
  * eleven days running and cannot tell you why the eleventh was the one where
  * it clicked. This is where that sentence goes.
  *
@@ -1392,7 +1392,7 @@ export default function Notes() {
                 {/* Both are real columns now — see data/sql/notes.sql. Tags are
                     ids from the subject catalogue rather than free text, which
                     is what lets a note carry the same colour and the same name
-                    the rest of Ascen gives that subject. The reasoning is in
+                    the rest of Summit gives that subject. The reasoning is in
                     components/Notes/SubjectTags. */}
                 <section className="nt-meta-sec">
                   <h3>Tags</h3>

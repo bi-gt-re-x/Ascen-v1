@@ -101,7 +101,7 @@ describe('on a desktop', () => {
 
   it('sends the wordmark home rather than to a page in the app', () => {
     renderWithProviders(<Rail />);
-    expect(screen.getByRole('link', { name: 'Ascen' })).toHaveAttribute('href', '/home');
+    expect(screen.getByRole('link', { name: 'Summit' })).toHaveAttribute('href', '/home');
   });
 
   /* The mark spent a while as a bare span so the easter egg could count clicks
@@ -110,7 +110,7 @@ describe('on a desktop', () => {
      link if anything ever wants to borrow it again. */
   it('sends the mark home too, and not only the wordmark', () => {
     renderWithProviders(<Rail />);
-    expect(screen.getByRole('link', { name: 'Ascen home' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Summit home' })).toHaveAttribute(
       'href',
       '/home',
     );

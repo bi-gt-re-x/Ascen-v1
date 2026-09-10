@@ -44,11 +44,11 @@ def create_app():
     if problems:
         raise settings.Misconfigured(
             'Refusing to start.\n\n' + '\n\n'.join('  * ' + p for p in problems)
-            + '\n\nIf this is a development machine, set ASCEN_DEV=1 — '
+            + '\n\nIf this is a development machine, set SUMMIT_DEV=1 — '
               '`python run.py` does it for you.')
 
     app = FastAPI(
-        title='Ascen',
+        title='Summit',
         description='A gamified productivity tracker: tasks, XP, streaks, '
                     'a calendar, goals and growth analytics.',
         version='1.0.1',
@@ -87,7 +87,7 @@ def create_app():
     #
     # Development is the exception the flag exists for: a Secure cookie is
     # simply never sent over the http:// dev server, so signing in locally
-    # would stop working. run.py sets ASCEN_INSECURE_COOKIES for a local run.
+    # would stop working. run.py sets SUMMIT_INSECURE_COOKIES for a local run.
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key(),

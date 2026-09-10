@@ -53,7 +53,7 @@ STATIC_ROOTS = {
 }
 
 # --- Datastore -----------------------------------------------------------
-#   data/ascen.db      the live database. Everything the app reads and writes
+#   data/summit.db      the live database. Everything the app reads and writes
 #                      is in here; it is git-ignored, because it changes every
 #                      time the app runs.
 #   data/sql/          the schema and the seed: one .sql per part of the app,
@@ -65,7 +65,7 @@ STATIC_ROOTS = {
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
 SQL_DIR = os.path.join(DATA_DIR, 'sql')
 BACKUP_DIR = os.path.join(DATA_DIR, 'backups')
-DB_PATH = os.environ.get('ASCEN_DB') or os.path.join(DATA_DIR, 'ascen.db')
+DB_PATH = os.environ.get('SUMMIT_DB') or os.path.join(DATA_DIR, 'summit.db')
 
 # The order data/sql/*.sql is executed in when building the database. It is
 # spelled out rather than sorted because a table has to exist before another
@@ -113,7 +113,7 @@ SESSION_KEY_PATH = os.path.join(DATA_DIR, '.session_key')
 def trust_proxy():
     """Whether `X-Forwarded-For` may be believed.
 
-    Off unless `ASCEN_TRUST_PROXY` says otherwise, and the default is the
+    Off unless `SUMMIT_TRUST_PROXY` says otherwise, and the default is the
     important half. The header is what a reverse proxy uses to pass on who it
     heard from, and it is also a header any caller can write — so believing it
     on an app that is reachable directly means the rate limiter can be bypassed
@@ -123,14 +123,14 @@ def trust_proxy():
     header, which is a fact about the deployment that nobody but its operator
     knows. See `client_ip` in backend/middleware/limit.py.
     """
-    return os.environ.get('ASCEN_TRUST_PROXY', '').strip().lower() in (
+    return os.environ.get('SUMMIT_TRUST_PROXY', '').strip().lower() in (
         '1', 'true', 'yes', 'on')
 
 
 def secure_cookies():
     """Whether the session cookie is marked Secure and sent over HTTPS only.
 
-    On unless `ASCEN_INSECURE_COOKIES` says otherwise, and that default is the
+    On unless `SUMMIT_INSECURE_COOKIES` says otherwise, and that default is the
     one that matters: a session cookie without `Secure` is a session cookie a
     browser will send over plain HTTP, where anything on the path can read it
     and become the account.
@@ -140,14 +140,14 @@ def secure_cookies():
     there, which would make signing in locally impossible. `run.py` sets it for
     a local run; nothing deployed should.
     """
-    return os.environ.get('ASCEN_INSECURE_COOKIES', '').strip().lower() not in (
+    return os.environ.get('SUMMIT_INSECURE_COOKIES', '').strip().lower() not in (
         '1', 'true', 'yes', 'on')
 
 
 def dev_mode():
     """Whether this process may hand secrets to its own client.
 
-    Off unless `ASCEN_DEV` says otherwise, and like `secure_cookies` the
+    Off unless `SUMMIT_DEV` says otherwise, and like `secure_cookies` the
     default is the half that matters.
 
     ## What it gates
@@ -171,7 +171,7 @@ def dev_mode():
     deployed should, and a deployment that loses its mail server now fails to
     send a link rather than giving it away.
     """
-    return os.environ.get('ASCEN_DEV', '').strip().lower() in (
+    return os.environ.get('SUMMIT_DEV', '').strip().lower() in (
         '1', 'true', 'yes', 'on')
 
 
@@ -271,8 +271,8 @@ def dev_defaults():
 
     An explicit value in the environment still wins, so this only fills in.
     """
-    os.environ.setdefault('ASCEN_INSECURE_COOKIES', '1')
-    os.environ.setdefault('ASCEN_DEV', '1')
+    os.environ.setdefault('SUMMIT_INSECURE_COOKIES', '1')
+    os.environ.setdefault('SUMMIT_DEV', '1')
 
 
 class Misconfigured(RuntimeError):
@@ -302,7 +302,7 @@ def deployment_problems():
     confirmation link pointing at their server. The token in it is the account.
 
     Neither is a decision this code can make on a deployment's behalf, and both
-    are one line of environment. So `ASCEN_DEV` is taken as the statement that
+    are one line of environment. So `SUMMIT_DEV` is taken as the statement that
     this is a laptop, and its absence as the statement that it is not.
     """
     if dev_mode():
@@ -318,7 +318,7 @@ def deployment_problems():
         problems.append(
             'APP_BASE_URL is unset. Verification links would be built from the '
             'Host header the caller sent. Set it to the origin this app is '
-            'reachable at, e.g. https://ascen.example.')
+            'reachable at, e.g. https://summit.example.')
     return problems
 
 

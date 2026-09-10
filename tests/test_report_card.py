@@ -2,7 +2,7 @@
 
 The page used to tell this repository's own demo account — 4,120 finished
 tasks, level 60, a 152-day best streak — **"F: not enough is happening yet to
-score"**, while printing "top 1.0% of Ascen users" beside it. Four things were
+score"**, while printing "top 1.0% of Summit users" beside it. Four things were
 wrong at once and each of these tests holds one of them shut.
 """
 from datetime import date, timedelta

@@ -605,7 +605,7 @@ def export_data(username: str = Depends(current_username), table: str = 'all', f
             '\n'.join(lines) + '\n',
             media_type='text/csv',
             headers={'Content-Disposition':
-                     'attachment; filename="ascen-{}.csv"'.format(wanted)},
+                     'attachment; filename="summit-{}.csv"'.format(wanted)},
         )
 
     names = EXPORTS.keys() if table == 'all' else (table,)
@@ -622,7 +622,7 @@ def export_data(username: str = Depends(current_username), table: str = 'all', f
     # but without this it saves it as "export", with no extension.
     return JSONResponse(body, headers={
         'Content-Disposition':
-            'attachment; filename="ascen-{}.json"'.format(table)})
+            'attachment; filename="summit-{}.json"'.format(table)})
 
 
 # --------------------------------------------------------------------------

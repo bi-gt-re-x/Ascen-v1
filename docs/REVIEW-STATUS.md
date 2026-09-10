@@ -252,7 +252,7 @@ command line tools. Every pin in `requirements.txt` installed unchanged and all
   accepted trade, with reasoning. That call looks right: no fixed release
   exists and downgrading reintroduces 14 worse advisories. Revisit when >8.2.0
   ships; the note says to delete itself then.
-- **`ASCEN_TRUST_PROXY`** must be set if this ever runs behind a proxy, or every
+- **`SUMMIT_TRUST_PROXY`** must be set if this ever runs behind a proxy, or every
   caller shares one rate-limit bucket. `backend/middleware/limit.py:client_ip`
   explains why it is off by default.
 - **The limiter is per-process.** Two workers = two budgets. Fine for one

@@ -1,5 +1,5 @@
 /**
- * Productivity — the habits Ascen itself is built around.
+ * Productivity — the habits Summit itself is built around.
  *
  * Small on purpose. These are the nodes most likely to appear as a supporting
  * branch in somebody else's tree — `productivity.deliberate-practice` belongs in

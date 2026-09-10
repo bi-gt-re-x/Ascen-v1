@@ -25,14 +25,14 @@ export default function TermsOfService() {
       <p className="effective-date">Effective date: July 22, 2026</p>
 
       <p>
-        Welcome to Ascen, a study and productivity tracker (&quot;the app&quot;, &quot;the
-        service&quot;). By using Ascen, you agree to these terms. If you do not agree,
+        Welcome to Summit, a study and productivity tracker (&quot;the app&quot;, &quot;the
+        service&quot;). By using Summit, you agree to these terms. If you do not agree,
         please do not use the app.
       </p>
 
       <h2>1. The Service</h2>
       <p>
-        Ascen provides tools for managing tasks, setting goals, scheduling work on a
+        Summit provides tools for managing tasks, setting goals, scheduling work on a
         calendar, running focus sessions, and tracking your progress through streaks, XP,
         levels, and growth analytics. The service is provided free of charge — there are no
         paid tiers, subscriptions, or in-app purchases.
@@ -55,7 +55,7 @@ export default function TermsOfService() {
       </ul>
 
       <h2>3. Acceptable Use</h2>
-      <p>You agree to use Ascen only for lawful purposes. You may not:</p>
+      <p>You agree to use Summit only for lawful purposes. You may not:</p>
       <ul>
         <li>Attempt to disrupt, overload, or interfere with the operation of the service.</li>
         <li>
@@ -67,13 +67,13 @@ export default function TermsOfService() {
 
       <h2>4. Intellectual Property</h2>
       <p>
-        The Ascen name, design, and software are the property of the project&apos;s authors.
+        The Summit name, design, and software are the property of the project&apos;s authors.
         The content you create in the app — your tasks, goals, and notes — remains yours.
       </p>
 
       <h2>5. Availability and Changes</h2>
       <p>
-        Ascen is under active development. Features may be added, changed, or removed at any
+        Summit is under active development. Features may be added, changed, or removed at any
         time without notice. We do not guarantee that the service will be uninterrupted or
         error-free, or that your progress data (including XP, streaks, and levels) will
         always be preserved across updates.
@@ -89,7 +89,7 @@ export default function TermsOfService() {
 
       <h2>7. Limitation of Liability</h2>
       <p>
-        To the maximum extent permitted by law, the authors of Ascen shall not be liable for
+        To the maximum extent permitted by law, the authors of Summit shall not be liable for
         any indirect, incidental, or consequential damages arising from your use of the app,
         including loss of data or loss of progress.
       </p>

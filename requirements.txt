@@ -1,4 +1,4 @@
-# Ascen — backend dependencies.
+# Summit — backend dependencies.
 #
 #   python3 -m venv .venv-fastapi
 #   .venv-fastapi/bin/python -m pip install -r requirements.txt
