@@ -1,0 +1,132 @@
+/* The confirm-your-e-mail strip — see components/VerifyBanner.tsx.
+ *
+ * Amber rather than red, and a strip rather than a card. Nothing is wrong: the
+ * account works, and this is a request the reader is free to put off. Red
+ * would be telling them something has broken, and a card would be claiming a
+ * share of the page the request has not earned.
+ *
+ * It sits between the top bar and the page and takes its width from the same
+ * `--rail-w` offset the bar does, so the two read as one piece of chrome
+ * rather than as a thing that landed on top of the app.
+ */
+.vb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid #f0d9a8;
+    background: #fdf6e7;
+    color: #6b4e16;
+    font-size: 13.5px;
+    line-height: 1.45;
+}
+
+.vb-mark {
+    flex: none;
+    font-size: 15px;
+    opacity: .8;
+}
+
+/* The words take the slack, so the controls stay together on the right. */
+.vb-text {
+    flex: 1 1 auto;
+    margin: 0;
+    min-width: 0;
+}
+
+/* The reassurance is the quieter half of the sentence: the reader needs the
+   ask to be legible and this to be available, not competing with it. */
+.vb-quiet {
+    opacity: .68;
+}
+
+.vb-btn,
+.vb-link {
+    flex: none;
+    padding: 5px 12px;
+    border: 1px solid #e3c886;
+    border-radius: 8px;
+    background: #fff;
+    color: #6b4e16;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.vb-btn:hover:not(:disabled),
+.vb-link:hover {
+    background: #fbf0d9;
+}
+
+.vb-btn:disabled {
+    cursor: default;
+    opacity: .6;
+}
+
+.vb-close {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: inherit;
+    font-size: 17px;
+    line-height: 1;
+    opacity: .55;
+    cursor: pointer;
+}
+
+.vb-close:hover {
+    background: #f5e6c6;
+    opacity: 1;
+}
+
+/* Narrow: the sentence goes above its controls rather than squeezing them off
+   the edge, and the close button stays on the first row where a thumb expects
+   the dismiss to be. */
+@media (max-width: 640px) {
+    .vb {
+        flex-wrap: wrap;
+        row-gap: 8px;
+    }
+
+    .vb-text {
+        flex: 1 1 100%;
+        order: 2;
+    }
+
+    .vb-btn,
+    .vb-link {
+        order: 3;
+    }
+
+    .vb-close {
+        order: 1;
+        margin-left: auto;
+    }
+}
+
+html[data-theme="dark"] .vb {
+    border-bottom-color: #4a3c1c;
+    background: #2b2415;
+    color: #e6cf9c;
+}
+
+html[data-theme="dark"] .vb-btn,
+html[data-theme="dark"] .vb-link {
+    border-color: #5b4a24;
+    background: #362d1b;
+    color: #e6cf9c;
+}
+
+html[data-theme="dark"] .vb-btn:hover:not(:disabled),
+html[data-theme="dark"] .vb-link:hover {
+    background: #433723;
+}
+
+html[data-theme="dark"] .vb-close:hover {
+    background: #433723;
+}

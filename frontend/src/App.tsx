@@ -12,7 +12,7 @@
  */
 import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { AppBoundary, Loading, Rail, Toasts, Topbar } from '@/components';
+import { AppBoundary, Loading, Rail, Toasts, Topbar, VerifyBanner } from '@/components';
 import { RequireAccount } from './RequireAccount';
 import { useAuth, usePinnedViewport, useSettings } from '@/hooks';
 import { useChainAccount } from '@/hooks/useChainAccount';
@@ -177,6 +177,11 @@ export default function App() {
           read they both show is not theirs any more — it belongs to
           UserDataProvider above them, and happens once for the session. */}
       {!landing && <Topbar />}
+      {/* Under the bar and over the page, and only when there is something to
+          ask: an account whose address is confirmed never sees it. It is drawn
+          here rather than by each page for the same reason the bar is — one
+          strip for the app, not one per screen. See components/VerifyBanner. */}
+      {!landing && <VerifyBanner />}
       <main className="app-main">
         {/* Inside the shell, so a page that throws loses the page and not the
             rail, the top bar and the way back. Keyed on the path: navigating

@@ -51,15 +51,19 @@ export interface LoginResult {
   message: string;
   user: { username: string; id?: string; theme: Theme };
   profile_complete: boolean;
+  /** The account is in, but its address has still not been confirmed. */
+  unverified?: boolean;
+  email?: string | null;
 }
 
 /**
  * What `/api/login` answers.
  *
- * One failure is not like the others: an account that exists, with the right
- * password, that has not confirmed its e-mail yet. The popup sends that one
- * back to "check your inbox" rather than showing it as a rejection, which is
- * why these two fields ride along on the envelope.
+ * `unverified` used to ride on the *failure* envelope: an unconfirmed address
+ * was a refused sign-in, and the popup turned it into "check your inbox". It
+ * rides on the success envelope now, because an unconfirmed address no longer
+ * refuses anything — it signs in and wears a banner. See the note on `login`
+ * in backend/routes/auth.py.
  */
 export type LoginAnswer = ApiResult<LoginResult> & {
   unverified?: boolean;
@@ -122,6 +126,13 @@ export interface SignupResult {
   /** The mail did not go out, and there is no link to show instead. */
   mail_failed?: boolean;
   message: string;
+  /**
+   * Signing up now signs the account in, so these two are what the popup
+   * needs to carry straight on to Complete Profile rather than parking the
+   * reader on "check your inbox". See `signup` in backend/routes/auth.py.
+   */
+  username?: string;
+  profile_complete?: boolean;
 }
 
 export function signup(
@@ -139,9 +150,16 @@ export function resendVerification(
 }
 
 export interface VerifyStatus {
+  /**
+   * The *address* is confirmed. Not the same question as `signed_in`, and no
+   * longer what decides whether the app opens — it decides whether the app
+   * wears the "confirm your e-mail" banner.
+   */
   verified: boolean;
+  /** The *session* is live. This is the app's answer to "am I signed in?". */
+  signed_in: boolean;
   profile_complete: boolean;
-  /** Who the session belongs to — the app's answer to "am I signed in?". */
+  /** Who the session belongs to. */
   username: string;
   /** Their profile picture, as a path under /static. */
   avatar: string;

@@ -220,20 +220,30 @@ export default function Homepage() {
             onGetStarted={() => setStep('choose')}
           />
 
-          <FeatureStrip />
+          {/* Not a screenshot: a working mock the reader watches fill in.
 
-          {/* Not a screenshot: a working mock the reader watches fill in. */}
-          {/* `see-it` is where the hero's second button lands. A signed-out
-              reader has nothing they are allowed to open, so the honest offer
-              to "see it working" is this — the first of six demonstrations,
-              and the one that says outright it is not a screenshot. */}
-          <section className="lp-section" id="see-it">
+              **This sits directly under the hero, and that is the point.** It
+              used to come third, below the feature strip — roughly a thousand
+              pixels down on a phone, which is a scroll a stranger has to
+              choose to make before the page has given them a reason to. The
+              one thing on this page that sells the app is ticking a box and
+              watching a number move, so it goes where the reader already is.
+              The strip that was here explains the same three ideas in prose;
+              prose is what you read after you are interested, so it follows.
+
+              `see-it` is also where the hero's second button lands. A
+              signed-out reader has nothing they are allowed to open, so the
+              honest offer to "see it working" is this — and it costs them
+              nothing to reach. */}
+          <section className="lp-section lp-section-demo" id="see-it">
             <SectionHead
               title="This is the app, not a screenshot"
               blurb="Tick something off and watch the numbers move. It is the same dashboard component the signed-in page renders, running here in front of you."
             />
             <DashboardDemo />
           </section>
+
+          <FeatureStrip />
 
           <section className="lp-section">
             <SectionHead

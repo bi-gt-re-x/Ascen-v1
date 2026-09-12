@@ -223,13 +223,14 @@ export function AuthModal({
     try {
       const result = await authService.login(id, pw);
       if (!result.success) {
-        if (result.unverified) {
-          setPendingEmail(result.email ?? '');
-          go('inbox');
-        }
         say(result.message || 'That did not work.');
         return;
       }
+      /* An unconfirmed address is no longer a refused sign-in, so there is
+         nothing here to divert to the inbox screen. The account carries on to
+         wherever it was going and the banner over the app does the asking —
+         see components/VerifyBanner.tsx. */
+      setPendingEmail(result.email ?? '');
       setTheme(result.user.theme || 'light');
       if (!result.profile_complete) {
         go('profile');
@@ -262,7 +263,14 @@ export function AuthModal({
       setPendingEmail(result.email || email);
       setDevLink(result.dev_link);
       setMailFailed(Boolean(result.mail_failed));
-      go('inbox');
+      /* Signing up signs the account in, so the next thing a new reader sees
+         is the last step of setting up — not a screen telling them to go and
+         look in their mail. The confirmation has been sent and the app will
+         keep asking for it; it is simply not standing in the doorway. The
+         inbox panel is still here and still reachable, from the banner's
+         "check your inbox" and from a reader who signed out before
+         confirming. */
+      go('profile');
     } catch {
       say('Could not reach the server.');
     }

@@ -3,8 +3,16 @@
  *
  * The session is a cookie this code cannot read, so "who is signed in" is
  * answered by asking the server. `verify_status` reports the username, whether
- * the account is confirmed, and whether its profile is finished — the three
- * things the gate needs.
+ * the session is live, whether the address is confirmed, and whether the
+ * profile is finished.
+ *
+ * **The gate reads `signed_in`, not `verified`.** It used to read `verified`,
+ * which was correct only while an unconfirmed address meant a refused sign-in.
+ * It does not any more: an account works with its address unconfirmed, and the
+ * confirmation is asked for by a banner over the app rather than by a locked
+ * door in front of it. Gating on `verified` today would sign such an account
+ * out on its next page load — the server would keep letting it in and this
+ * provider would keep calling it a stranger.
  *
  * The username in localStorage is a cache and never an identity. The server
  * reads who you are off the session cookie and nothing else — see
@@ -30,14 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [username, setUsername] = useState<string | null>(auth.storedUsername);
   const [profileComplete, setProfileComplete] = useState(true);
+  /* Assumed true until the server says otherwise, so the banner does not
+     flash over the app for the one render before the first answer lands. */
+  const [emailVerified, setEmailVerified] = useState(true);
   const [avatar, setAvatar] = useState(() => avatarPath(FALLBACK_AVATAR));
 
   const refresh = useCallback(async () => {
     try {
       const result = await auth.verifyStatus();
-      if (result.success && result.verified) {
+      if (result.success && result.signed_in) {
         setStatus('signed-in');
         setProfileComplete(result.profile_complete);
+        setEmailVerified(result.verified);
         // The server's answer wins over the cached one, and is the only answer
         // at all when this browser has no cache — storage cleared, or another
         // browser holding the same session cookie.
@@ -53,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setStatus('signed-out');
     setUsername(null);
+    setEmailVerified(true);
     auth.forgetUsername();
   }, []);
 
@@ -89,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUsername(result.user.username);
       setProfileComplete(result.profile_complete);
+      setEmailVerified(!result.unverified);
       setStatus('signed-in');
       return null;
     },
@@ -99,13 +113,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await auth.logout();
     setUsername(null);
     setProfileComplete(true);
+    setEmailVerified(true);
     setAvatar(avatarPath(FALLBACK_AVATAR));
     setStatus('signed-out');
   }, []);
 
   const value = useMemo(
-    () => ({ status, username, profileComplete, avatar, signIn, signOut, refresh }),
-    [status, username, profileComplete, avatar, signIn, signOut, refresh],
+    () => ({ status, username, profileComplete, emailVerified, avatar, signIn, signOut, refresh }),
+    [status, username, profileComplete, emailVerified, avatar, signIn, signOut, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

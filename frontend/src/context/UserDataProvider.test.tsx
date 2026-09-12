@@ -48,6 +48,7 @@ function auth(username: string | null): AuthValue {
     status: username ? 'signed-in' : 'signed-out',
     username,
     profileComplete: true,
+    emailVerified: true,
     avatar: '/static/images/avatars/star.svg',
     signIn: async () => null,
     signOut: async () => {},

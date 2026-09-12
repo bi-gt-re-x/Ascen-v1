@@ -38,6 +38,14 @@ export interface AuthValue {
   username: string | null;
   /** False while an account exists but has not finished Complete Profile. */
   profileComplete: boolean;
+  /**
+   * Whether the account's e-mail address has been confirmed.
+   *
+   * Separate from `status`, and deliberately: an unconfirmed account is signed
+   * in and working. This is only what the banner reads — see
+   * components/VerifyBanner.tsx.
+   */
+  emailVerified: boolean;
   /** The account's profile picture, as a path under /static. */
   avatar: string;
   /** Resolves to null on success, or the message to show. */

@@ -32,6 +32,10 @@ export { NotificationPanel, Toasts } from './Notifications';
 export { SearchPanel } from './Search';
 export type { Hit, SearchPanelProps } from './Search';
 export { Topbar } from './Topbar';
+/* The confirm-your-e-mail strip. Beside the top bar in this list because it is
+   chrome for the same reason the bar is: it belongs to the shell, not to any
+   page, and App.tsx draws it in the same breath. See components/VerifyBanner. */
+export { VerifyBanner } from './VerifyBanner';
 export { ErrorState, Loading, NotBuilt } from './PageState';
 export { RefreshButton } from './RefreshButton';
 export type { RefreshButtonProps } from './RefreshButton';

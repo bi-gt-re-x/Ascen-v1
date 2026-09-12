@@ -52,6 +52,7 @@ export function authValue(overrides: Partial<AuthValue> = {}): AuthValue {
     status: 'signed-in',
     username: 'myles',
     profileComplete: true,
+    emailVerified: true,
     avatar: '/static/images/avatars/star.svg',
     signIn: vi.fn(async () => null),
     signOut: vi.fn(async () => {}),

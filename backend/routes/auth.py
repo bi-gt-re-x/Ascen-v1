@@ -96,16 +96,25 @@ def login(request: Request, body: Login):
     if not user or not auth.check_password(user, password):
         return fail("Account doesn't exist or invalid credentials.")
 
-    if not auth.is_verified(user):
-        return fail('Confirm your e-mail first — check your inbox.',
-                    unverified=True, email=user.get('email'))
-
+    # An unconfirmed address used to end the sign-in here. It does not any
+    # more: the account opens, and `unverified` rides along on the *success*
+    # envelope so the app can carry the banner that asks for the confirmation.
+    #
+    # Confirming an e-mail proves the address belongs to whoever typed it.
+    # That matters for the things the address is *for* — sending to it, and
+    # one day recovering an account through it — and it has never been what
+    # says whether the tasks behind the login are this person's. The password
+    # says that. Holding the whole app behind the inbox charged every new
+    # reader a round trip out to their mail and back before they had seen
+    # anything worth the trip; see the note on `signup` below.
     payload = auth.sign_in(request, user)
     return _with_theme(ok(
         message='Login successful!',
         user={"username": user['username'], "id": user.get('id'),
               "theme": payload['theme']},
         profile_complete=auth.profile_complete(user),
+        unverified=not auth.is_verified(user),
+        email=user.get('email'),
     ), payload['theme'])
 
 
@@ -188,14 +197,35 @@ def signup(request: Request, body: Signup):
                     field='email')
 
     user = auth.create_account(name, email, password)
-    # Remember who is mid-signup so the verify + profile steps know the account
-    # without trusting anything the client sends.
+    # **Signed in here, before the address is confirmed.** The account used to
+    # be parked in `pending_user` and go no further until a link in an inbox
+    # was clicked, which put a trip out to another application — on a phone,
+    # often another device — between a stranger and the first thing this app
+    # had to show them. The cost landed entirely on the people who had not yet
+    # decided they wanted it.
+    #
+    # The mail still goes out on this request, and the account still knows it
+    # is unconfirmed: `email_verified` stays False, every answer about the
+    # session carries it, and the app wears a banner until the link is
+    # followed. What changed is only *when* the asking happens — alongside the
+    # work instead of in front of it.
+    #
+    # `pending_user` is set and then cleared by `sign_in` on the next line,
+    # which is correct and not an oversight: it is the marker for an account
+    # that exists but has nobody signed in as it, and that is no longer this
+    # account. `resend` and the inbox poll find a signed-in account by session
+    # instead — see the note on `resend`.
     request.session['pending_user'] = user['username']
+    auth.sign_in(request, user)
 
     sent, link = auth.send_verification(user, request)
     reply = _verification_reply(sent, link, email=email)
-    return ok(**reply, message=(
-        'Check your inbox to confirm {}.'.format(email) if reply['sent'] or reply['dev_link']
+    return ok(**reply,
+              username=user['username'],
+              profile_complete=auth.profile_complete(user),
+              message=(
+        'Account created — confirm {} when you get a moment.'.format(email)
+        if reply['sent'] or reply['dev_link']
         else 'Your account is made, but the confirmation e-mail could not be '
              'sent. Try "Send it again" in a moment.'))
 
@@ -218,8 +248,19 @@ def _verification_reply(sent, link, **extra):
 
 @router.post('/api/auth/resend')
 def resend(request: Request, body: Resend):
+    """Send the confirmation again.
+
+    Three ways to be the account asking, in order of how much they prove.
+    Signed in is the usual one now that signing up signs you in — it is the
+    banner over the app that asks for this. `pending_user` covers the account
+    that has not signed in at all, which is what is left of the old flow: an
+    unconfirmed account that signed out, and the inbox panel behind it. The
+    address in the body is the last resort and proves nothing, which is why it
+    is last and why the reply says no more than that something was sent.
+    """
     users = db.users()
-    user = auth.find_user(users, username=request.session.get('pending_user'))
+    user = auth.find_user(users, username=request.session.get('username')
+                          or request.session.get('pending_user'))
     if not user:
         user = auth.find_user(users, email=str(body.email or '').strip())
     if not user:
@@ -266,18 +307,36 @@ def verify_status(request: Request):
     opaque to the client — so without the username here, an account whose
     localStorage was cleared would be signed in and unable to say as whom.
     `username` is additive: the older popup reads only the two flags.
+
+    ## Why `signed_in` is its own field
+
+    The two jobs used to share one answer: `verified` meant both "the address
+    is confirmed" and, to the app, "you are signed in". That worked only while
+    the two were the same thing. They are not any more — an account can sign
+    in and work with its address still unconfirmed — so the flags separate.
+    `signed_in` is the session and is what the app gates on; `verified` is the
+    address and is what the banner reads. `AuthProvider` in
+    frontend/src/context/AuthContext.tsx is the caller that cares.
     """
+    signed_in = request.session.get('username')
     user = auth.find_user(db.users(),
-                          username=request.session.get('pending_user')
-                          or request.session.get('username'))
+                          username=signed_in or request.session.get('pending_user'))
     if not user:
-        return {"success": False, "verified": False}
+        return {"success": False, "verified": False, "signed_in": False}
     verified = auth.is_verified(user)
-    if verified:
+    # The inbox poll's one job: the link was opened in another tab, so the
+    # session here has a pending account rather than a signed-in one. Nothing
+    # to do when the session is already signed in, which is now the usual case.
+    if verified and not signed_in:
         auth.sign_in(request, user)
+        signed_in = user.get('username')
     return ok(verified=verified,
+              signed_in=bool(signed_in),
               profile_complete=auth.profile_complete(user),
               username=user.get('username'),
+              # The banner names the address it is asking about, so that a
+              # reader who typed it wrong can see that they did.
+              email=user.get('email'),
               avatar='/static/' + avatar.avatar_path(avatar.avatar_for(user)))
 
 
@@ -290,8 +349,10 @@ def complete_profile(request: Request, body: CompleteProfile):
                           or request.session.get('pending_user'))
     if not user:
         return fail('Sign in again to finish setting up.')
-    if not auth.is_verified(user):
-        return fail('Confirm your e-mail first.')
+    # No verification check. Picking a username, a theme and a daily goal is
+    # the account describing itself to itself; none of it is sent anywhere,
+    # and none of it is worth a trip to an inbox to be allowed to do. See the
+    # note on `signup`.
 
     wanted = str(body.username or '').strip()
     if wanted and wanted.lower() != str(user.get('username', '')).lower():
