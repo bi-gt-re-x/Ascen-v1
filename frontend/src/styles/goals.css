@@ -1626,6 +1626,82 @@ button.gx-state-attn.is-on {
 .gx-bottleneck strong { display: block; color: var(--gx-text); font-weight: 700; margin-bottom: 2px; }
 
 .gx-pattern { margin: 0; font-size: 12.5px; line-height: 1.55; }
+/* ---------- Summit's read, in the goal drawer -----------------------------
+   Last panel, below everything counted, and marked as a model's writing
+   throughout. A paragraph written by a model and a percentage counted from the
+   reader's own tasks look identical on a screen, and the whole value of these
+   pages is that somebody can tell which is which — so the panel says so twice:
+   a chip in its header while the read is on screen, and a caveat under it. */
+.gx-read-mark {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gx-violet) 13%, transparent);
+    color: var(--gx-violet);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+.gx-read-gate,
+.gx-read-lead {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--gx-muted);
+}
+.gx-read-gate strong { color: var(--gx-text); font-weight: 700; }
+.gx-read-say {
+    margin: 0 0 14px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--gx-text);
+}
+.gx-read-block { margin-bottom: 14px; }
+.gx-read-block h4 {
+    margin: 0 0 6px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--gx-muted);
+}
+.gx-read-week { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.gx-read-week > li {
+    position: relative;
+    padding: 7px 11px 7px 24px;
+    border-radius: 9px;
+    background: var(--gx-card-2);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+.gx-read-week > li::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 1.05em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--gx-violet);
+}
+.gx-read-phases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.gx-read-phases > li { display: flex; flex-direction: column; gap: 1px; }
+.gx-read-phase-head { display: flex; align-items: baseline; gap: 8px; }
+.gx-read-phase-head strong { font-size: 12.5px; font-weight: 700; }
+.gx-read-phase-head em {
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gx-violet);
+    font-variant-numeric: tabular-nums;
+}
+.gx-read-phases .gx-quiet { font-size: 11.5px; line-height: 1.5; }
+.gx-read-failed {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: var(--gx-bad);
+}
+
 .gx-caveat { margin: 0; font-size: 11px; line-height: 1.55; color: var(--gx-faint); }
 
 /* ---------- Recommendations ----------------------------------------------- */
@@ -2644,7 +2720,10 @@ button.gx-state-attn.is-on {
 .gx-area > button {
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(88px, 1.1fr) auto minmax(90px, 2fr) 44px;
+    /* Name, bar, share, count. The bar sits between the name and its figure
+       rather than after both, so the eye travels along one row from what it is
+       to how much of the outstanding work it is. */
+    grid-template-columns: minmax(88px, 1.1fr) minmax(90px, 2fr) 44px auto;
     align-items: center;
     gap: 14px;
     padding: 9px 10px;
@@ -2673,6 +2752,44 @@ button.gx-state-attn.is-on {
     font-weight: 700;
     text-align: right;
     font-variant-numeric: tabular-nums;
+}
+
+/* The goals behind one area, revealed by pressing it. This is the connection
+   the panel existed without: a reader could see that a third of what they had
+   left was geometry and had no way to reach the goals that made it so, which
+   left growth areas as an isolated reading on a page whose whole argument is
+   that its figures come from the reader's own work. */
+.gx-area-goals {
+    list-style: none;
+    margin: 2px 0 8px;
+    padding: 0 0 0 10px;
+    border-left: 2px solid color-mix(in srgb, var(--tone) 35%, transparent);
+}
+.gx-area-goals > li > button {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gx-muted);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+}
+.gx-area-goals > li > button:not(:disabled) { cursor: pointer; }
+.gx-area-goals > li > button:not(:disabled):hover {
+    background: var(--gx-card-2);
+    color: var(--gx-text);
+}
+.gx-area-goals em {
+    font-style: normal;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--gx-faint);
 }
 
 @media (max-width: 1080px) {

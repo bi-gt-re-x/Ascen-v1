@@ -34,6 +34,8 @@ export {
   categoryOf,
 } from './Outcome';
 export { GoalDetail } from './GoalDetail';
+export { EVIDENCE, GoalRead } from './GoalRead';
+export type { GoalReadProps } from './GoalRead';
 export type { GoalDetailProps } from './GoalDetail';
 export { MilestoneChecklist } from './MilestoneChecklist';
 export type { MilestoneChecklistProps } from './MilestoneChecklist';

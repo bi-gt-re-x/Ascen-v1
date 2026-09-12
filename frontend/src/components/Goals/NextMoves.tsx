@@ -23,7 +23,7 @@
  * nothing linked shows as exactly that, because "you have not connected any
  * work to this" is the useful thing to say to somebody who has not.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { categoryOf } from './Outcome';
 import { goalNumbers } from './numbers';
 import type { Goal, Task } from '@/types';
@@ -173,63 +173,157 @@ export function Momentum({
 // Growth areas
 // ---------------------------------------------------------------------------
 export interface Area {
+  /** The subject id, or the empty string for goals filed under none. */
   id: string;
   label: string;
   tone: string;
-  goals: number;
-  progress: number;
+  /** 0-100, this area's share of everything still outstanding. */
+  share: number;
+  /** The goals it is made of, most outstanding first. */
+  goals: Goal[];
 }
 
-/** Active goals grouped by their category, with progress weighted by priority. */
-export function growthAreas(goals: Goal[]): Area[] {
-  const rows = new Map<string, { label: string; tone: string; n: number; sum: number; weight: number }>();
+/**
+ * Where the unfinished work is concentrated, by subject.
+ *
+ * ## Why the figure is a share of what is left, not progress
+ *
+ * It used to be the weighted mean progress of each *category* — Math 62%,
+ * Coding 40% — which is two problems in one line. A mean tells you how the
+ * goals in a group are doing on average, and an average is exactly the wrong
+ * shape for "what should I work on": a category holding one finished goal and
+ * one abandoned one reads 50% and looks unremarkable. And grouping by category
+ * made the rows almost tautological, because the category *is* the grouping —
+ * clicking "Math" to be shown your maths goals is not a finding.
+ *
+ * So it is the subject, which is the dimension the rest of the app already
+ * analyses against, and the figure is each subject's share of the total
+ * outstanding work: how much of everything you have left to do sits here.
+ * Those shares sum to 100, which is what makes them comparable — "32% of what
+ * is left is geometry" is a sentence somebody can act on in a way that
+ * "geometry is 62% done" is not.
+ *
+ * ## How one goal's shortfall is counted
+ *
+ * What is left of it — 100 minus its progress — weighted by the priority the
+ * reader gave it, because a neglected goal they marked 9 is more of a problem
+ * than one they marked 2. A goal filed under several subjects splits its
+ * shortfall evenly between them rather than counting whole in each: counting
+ * it twice would push the shares past 100 and quietly make multi-subject goals
+ * look like the biggest problem in every area they touch.
+ *
+ * A goal with no subject at all is kept, under its own row. It is not
+ * invisible work — and it is also the only row a reader can fix by filing it,
+ * which is worth saying rather than hiding.
+ */
+export function growthAreas(goals: Goal[], nameOf: (id: string) => string): Area[] {
+  const rows = new Map<string, { weight: number; goals: Array<{ goal: Goal; shortfall: number }> }>();
+  let total = 0;
 
   for (const goal of goals) {
     if (goal.status === 'completed') continue;
-    const category = categoryOf(goal);
-    const row = rows.get(category.id) ??
-      { label: category.label, tone: category.tone, n: 0, sum: 0, weight: 0 };
-    const weight = Math.max(1, Math.min(10, Math.trunc(Number(goal.priority)) || 5));
-    row.n += 1;
-    row.sum += goalNumbers(goal).progress * weight;
-    row.weight += weight;
-    rows.set(category.id, row);
+
+    const priority = Math.max(1, Math.min(10, Math.trunc(Number(goal.priority)) || 5));
+    const left = Math.max(0, 100 - goalNumbers(goal).progress) * priority;
+    if (left <= 0) continue;
+
+    const subjects = String(goal.subject_ids ?? '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+    const across = subjects.length > 0 ? subjects : [''];
+    const each = left / across.length;
+
+    for (const id of across) {
+      const row = rows.get(id) ?? { weight: 0, goals: [] };
+      row.weight += each;
+      row.goals.push({ goal, shortfall: each });
+      rows.set(id, row);
+    }
+    total += left;
   }
+
+  if (total <= 0) return [];
 
   return [...rows.entries()]
     .map(([id, row]) => ({
       id,
-      label: row.label,
-      tone: row.tone,
-      goals: row.n,
-      progress: row.weight ? row.sum / row.weight : 0,
+      label: id ? nameOf(id) : 'No subject',
+      /* The colour of whichever goal is most of this row, so a subject made
+         mostly of one kind of work is drawn in that kind's colour rather than
+         in whichever happened to be added first. */
+      tone: categoryOf(
+        [...row.goals].sort((a, b) => b.shortfall - a.shortfall)[0]!.goal,
+      ).tone,
+      share: (row.weight / total) * 100,
+      goals: [...row.goals]
+        .sort((a, b) => b.shortfall - a.shortfall)
+        .map((entry) => entry.goal),
     }))
-    .sort((a, b) => b.goals - a.goals || b.progress - a.progress);
+    .sort((a, b) => b.share - a.share);
 }
 
-export function GrowthAreas({ goals, onPick }: { goals: Goal[]; onPick?: (id: string) => void }) {
-  const areas = useMemo(() => growthAreas(goals), [goals]);
+/**
+ * The areas, each opening onto the goals it is made of.
+ *
+ * The connection is the point. Growth areas were a bar chart of categories
+ * with nothing behind them — a reader could see that one area was further
+ * along than another and had no way to reach the goals that made it so, which
+ * left the panel as an isolated reading on a page whose whole argument is that
+ * its figures come from the reader's own work.
+ */
+export function GrowthAreas({
+  goals,
+  nameOf,
+  onOpen,
+}: {
+  goals: Goal[];
+  nameOf: (id: string) => string;
+  onOpen?: (goal: Goal) => void;
+}) {
+  const areas = useMemo(() => growthAreas(goals, nameOf), [goals, nameOf]);
+  const [open, setOpen] = useState<string | null>(null);
 
   if (areas.length === 0) {
-    return <p className="gx-empty">No active goals to group yet.</p>;
+    return <p className="gx-empty">Nothing outstanding to group. Every active goal is finished.</p>;
   }
 
   return (
     <ul className="gx-areas">
-      {areas.map((area) => (
-        <li key={area.id} className={`gx-area tone-${area.tone}`}>
-          <button type="button" disabled={!onPick} onClick={() => onPick?.(area.id)}>
-            <span className="gx-area-name">{area.label}</span>
-            <span className="gx-area-n">
-              {area.goals} {area.goals === 1 ? 'goal' : 'goals'}
-            </span>
-            <span className="gx-area-bar" aria-hidden="true">
-              <i style={{ width: `${Math.max(2, Math.min(100, area.progress))}%` }} />
-            </span>
-            <span className="gx-area-pct">{Math.round(area.progress)}%</span>
-          </button>
-        </li>
-      ))}
+      {areas.map((area) => {
+        const showing = open === area.id;
+        return (
+          <li key={area.id || 'none'} className={`gx-area tone-${area.tone}`}>
+            <button
+              type="button"
+              aria-expanded={showing}
+              onClick={() => setOpen(showing ? null : area.id)}
+            >
+              <span className="gx-area-name">{area.label}</span>
+              <span className="gx-area-bar" aria-hidden="true">
+                <i style={{ width: `${Math.max(2, Math.min(100, area.share))}%` }} />
+              </span>
+              <span className="gx-area-pct">{Math.round(area.share)}%</span>
+              <span className="gx-area-n">
+                {area.goals.length} {area.goals.length === 1 ? 'goal' : 'goals'}
+              </span>
+            </button>
+
+            {showing && (
+              <ul className="gx-area-goals">
+                {area.goals.map((goal) => (
+                  <li key={goal.id}>
+                    <button type="button" disabled={!onOpen} onClick={() => onOpen?.(goal)}>
+                      <span>{goal.title}</span>
+                      <em>{Math.round(goalNumbers(goal).progress)}%</em>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

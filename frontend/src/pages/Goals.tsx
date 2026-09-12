@@ -949,9 +949,13 @@ export default function Goals() {
 
             <Band
               title="Growth areas"
-              hint="Grouped by field, weighted by priority"
+              hint="Where the work you have left is, by subject"
             >
-              <GrowthAreas goals={list} />
+              <GrowthAreas
+                goals={outcomes}
+                nameOf={subjectName}
+                onOpen={(goal) => setOpenId(goal.id)}
+              />
             </Band>
 
             <Band
@@ -1004,6 +1008,7 @@ export default function Goals() {
           onDeleteMilestone={removeMilestone}
           onReorder={reorder}
           onValue={setValue}
+          nameOf={subjectName}
         />
       )}
 

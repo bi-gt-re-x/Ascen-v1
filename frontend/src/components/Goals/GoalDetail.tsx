@@ -17,6 +17,7 @@ import { fmtGoalNumber, formatGoalDate, goalNumbers } from './numbers';
 import { goalHealth, goalPace } from '@/utils/goalHealth';
 import { bottleneckOf, goalActions, goalReading } from '@/utils/goalAnalytics';
 import { MilestoneChecklist } from './MilestoneChecklist';
+import { GoalRead } from './GoalRead';
 import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
 
 export interface GoalDetailProps {
@@ -38,6 +39,14 @@ export interface GoalDetailProps {
   onReorder: (goal: Goal, order: string[]) => void;
   /** Raise the figure on a number goal. */
   onValue: (goal: Goal, value: number) => void;
+  /**
+   * Turns a subject id into its name, for the brief `GoalRead` sends up.
+   *
+   * Optional, and the read panel is absent without it rather than sending the
+   * model raw ids: "algebra_2" is not a subject a model can reason about, and
+   * a read argued from one would be argued from nothing.
+   */
+  nameOf?: (id: string) => string;
 }
 
 export function GoalDetail(props: GoalDetailProps) {
@@ -399,6 +408,13 @@ export function GoalDetail(props: GoalDetailProps) {
             </p>
           </section>
         )}
+
+        {/* ---- Summit's read ----------------------------------------------
+            Last, and after everything counted. The panels above are arithmetic
+            over the account's own tasks; this is a model reading them, and it
+            goes below them so that what was counted is what the reader meets
+            first. See components/Goals/GoalRead. */}
+        {props.nameOf && <GoalRead goal={goal} tasks={tasks} nameOf={props.nameOf} />}
 
         <footer className="gx-drawer-foot">
           <button type="button" className="gx-btn" onClick={() => props.onEdit(goal)}>
