@@ -31,13 +31,16 @@
  * here is followed by a re-read rather than a patch, which is the rule the old
  * page already followed and the reason its numbers could not drift.
  *
- * ## The old page is still in here
+ * ## The counters
  *
- * `GoalCard`, `GoalModal` and `MilestonesPanel` are the counter goals — earn N
- * XP, reach an N-day streak — and they still work exactly as they did. They
- * are under "Tracked counters" at the bottom, because an account that has been
+ * Earn N XP, reach an N-day streak, finish N tasks, log N hours. They predate
+ * everything above and they are still kept, because an account that has been
  * using them has them and deleting somebody's data to tidy up a page is not a
- * refactor. New goals are outcomes; the counters are kept, not extended.
+ * refactor. What has gone is the page they used to be drawn on: they are the
+ * System Goals tab now, rebuilt in this page's own tokens, and `GoalCard`,
+ * `MilestonesPanel` and the 1,819 lines of dark-glass CSS behind them went
+ * when the last thing rendering them did. New goals are outcomes; the counters
+ * are kept, not extended.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
