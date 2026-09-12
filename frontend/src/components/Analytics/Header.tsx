@@ -274,7 +274,26 @@ export function Header({
   /* One download path for both buttons. Two copies of the object-URL dance is
      two places to forget the `revokeObjectURL`, which is a leak that never
      shows up in testing because the page is usually navigated away from soon
-     after. */
+     after.
+     
+     ## Why the revoke is deferred and the link is in the document
+
+     It used to revoke on the line after `click()`. A click on a download link
+     does not read the blob synchronously — it hands the browser a URL and the
+     fetch of it happens after the handler returns — so revoking immediately is
+     a race against the download it just started. It is a race the browser
+     usually wins on a small file and loses on a big one, which is the worst
+     shape a bug can have: the report downloads every time in testing and the
+     CSV of a five-year account fails on the machine that needed it.
+
+     A timeout, not a microtask. `queueMicrotask` and `Promise.resolve()` both
+     run before the browser gets back to its own work, so neither is any later
+     than the line that was there before. The blob is still freed — a minute is
+     long past any download starting, and nothing holds it open.
+
+     Appended to the document for the same class of reason: a detached anchor's
+     `click()` is ignored outright by Firefox, and has been the difference
+     between a button that works and a button that silently does nothing. */
   const save = (build: (() => string | null) | undefined, name: string, mime: string) => {
     const text = build?.();
     if (!text) return;
@@ -282,8 +301,12 @@ export function Header({
     const link = document.createElement('a');
     link.href = url;
     link.download = name;
+    link.rel = 'noopener';
+    link.style.display = 'none';
+    document.body.append(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   return (

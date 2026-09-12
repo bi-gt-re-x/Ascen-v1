@@ -70,6 +70,7 @@ export function OverviewTab({
     card,
     compareLabel,
     figures,
+    subjectLabel,
     fromIso,
     historyDays,
     maturity,
@@ -297,6 +298,7 @@ export function OverviewTab({
           scoreSeries={scoreLine}
           compareLabel={compareLabel}
           logStyle={logStyle}
+          scopedOut={subjectLabel}
         />
       </section>
 

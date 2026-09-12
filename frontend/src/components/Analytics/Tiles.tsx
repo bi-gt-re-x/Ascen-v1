@@ -42,6 +42,23 @@ export interface TilesProps {
    * of zero as the fourth figure on the page. See utils/analyticsPrefs.
    */
   logStyle?: LogStyle;
+  /**
+   * The chosen subject's name, when one is chosen — and the reason this row
+   * has to mention it.
+   *
+   * Every figure here is read off the day series, where XP and focus minutes
+   * are stored per day and not per subject. So the subject filter cannot reach
+   * any of them, and choosing one used to leave all six sitting unchanged
+   * beside panels that *had* narrowed — the quality tile reading 13.8 with the
+   * quality panel below it reading 14.2 for the same account on the same
+   * screen. Two answers to one question, with nothing on the page admitting
+   * it.
+   *
+   * Saying so is the honest fix rather than the small one. The alternative is
+   * to stop offering a filter these figures cannot honour, and that would cost
+   * the reader the panels it genuinely does narrow.
+   */
+  scopedOut?: string | null;
 }
 
 export function Tiles({
@@ -51,6 +68,7 @@ export function Tiles({
   scoreSeries,
   compareLabel,
   logStyle,
+  scopedOut = null,
 }: TilesProps) {
   const stats: Stat[] = [
     {
@@ -138,5 +156,19 @@ export function Tiles({
     },
   ];
 
-  return <StatRow stats={stats} compare={compareLabel} />;
+  return (
+    <>
+      <StatRow stats={stats} compare={compareLabel} />
+      {scopedOut && (
+        /* Under the row rather than on each tile: it is one fact about all six,
+           and six copies of it would be louder than the figures. */
+        <p className="ax-tiles-scope">
+          These six count <strong>every subject</strong> — XP and focus minutes are
+          recorded per day, not per subject, so the filter on{' '}
+          <strong>{scopedOut}</strong> cannot narrow them. The quality, subject and
+          goal panels below it can, and do.
+        </p>
+      )}
+    </>
+  );
 }

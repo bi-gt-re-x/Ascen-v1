@@ -148,6 +148,14 @@ ANALYTICS_TASK_FIELDS = (
 )
 
 
+#: The order `tasks (user_id, completed_at DESC)` already holds.
+#:
+#: A literal, and it has to stay one: `order` is interpolated into the SQL by
+#: `columns_for`, so it is the one argument there that must never be built from
+#: anything a caller sent.
+TASK_ORDER = 'completed_at DESC'
+
+
 @router.get('/api/analytics/tasks')
 def get_analytics_tasks(username: str = Depends(current_username)):
     """Every task the account owns, in the sixteen columns this page reads.
@@ -161,8 +169,24 @@ def get_analytics_tasks(username: str = Depends(current_username)):
 
     What was worth moving was the *width* of each row, not the number of them.
     See ANALYTICS_TASK_FIELDS.
+
+    ## The order is not decoration
+
+    `columns_for` defaults to `ORDER BY rowid`, and on this table that costs a
+    sort of every row the account owns: the index it reads is
+    `tasks (user_id, completed_at DESC)`, so rowid order is an order the index
+    cannot supply and SQLite builds a temp B-tree to produce it — about a
+    quarter of the query's time on a five-year account, and a sort buffer the
+    width of the result while it does.
+
+    Asking for the order the index already holds removes the sort outright
+    (`EXPLAIN QUERY PLAN` drops "USE TEMP B-TREE FOR ORDER BY"). Newest first is
+    also the more useful order for a reader who stops reading early, and nothing
+    on the page depends on which order it arrives in — every panel filters by
+    date before it counts.
     """
-    return ok(tasks=db.columns_for('tasks', username, ANALYTICS_TASK_FIELDS))
+    return ok(tasks=db.columns_for('tasks', username, ANALYTICS_TASK_FIELDS,
+                                   order=TASK_ORDER))
 
 
 @router.get('/api/standing')

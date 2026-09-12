@@ -207,6 +207,17 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     [subjects],
   );
 
+  /** The chosen subject's own name, or null when the filter is off.
+   *
+   *  The id is what the panels filter on; this is what the page is allowed to
+   *  say out loud. A panel that cannot honour the filter has to name the
+   *  subject it is *not* narrowed to, and printing the raw id there —
+   *  `computer_science` — would be the page talking to itself. */
+  const subjectLabel = useMemo(
+    () => (subject ? subjects.get(subject)?.name ?? subject : null),
+    [subject, subjects],
+  );
+
   /** The subject filter narrows the tasks a panel counts, nothing else — XP and
    *  focus minutes are recorded per day, not per subject, so the tiles and the
    *  day-series charts cannot honour it and do not pretend to. */
@@ -780,6 +791,7 @@ export function useAnalyticsModel(data: AnalyticsData, subjects: SubjectIndex) {
     subject,
     setSubject,
     subjectOptions,
+    subjectLabel,
     category,
     setCategory,
 

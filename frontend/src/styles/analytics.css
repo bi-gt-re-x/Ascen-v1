@@ -1402,7 +1402,14 @@ body:has(.ax-page) .app-main {
    dressing its own header inside somebody else's card rather than claiming a
    class summit.css owns — see the top of scripts/check_css.mjs for why that
    distinction is the difference between a fix and a collision. */
-.ax-hero { gap: 18px; }
+/* The header card holds three bands: who you are and what you can take away,
+   the seven tabs, and the filters. One gap for all three spaced them evenly,
+   which made them read as three unrelated strips — and they are not three
+   things. The tabs and the filters are one question, *what am I looking at and
+   how is it scoped*, so they sit as a pair under the title rather than beside
+   it at the same distance. See pages/Analytics.tsx for why they share a card. */
+.ax-hero { gap: 20px; }
+.ax-hero > .ax-controls { margin-top: -8px; }
 
 /* The hero takes this page's surfaces rather than summit.css's defaults.
  *
@@ -1614,23 +1621,37 @@ html[data-theme="dark"] .ax-page .peak-hero,
 }
 
 /* ---------- Controls ------------------------------------------------------ */
+/* Everything on this row is 36px tall.
+   It was three heights — the chip strip 37, the select 36, the compare readout
+   41 — because each sized itself from its own padding and nothing said they
+   were a row. Three controls side by side at three heights is the kind of
+   wrongness a reader sees without being able to name, so the height is stated
+   once here and the parts inherit it. */
 .ax-controls {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     flex-wrap: wrap;
+    --ax-control-h: 36px;
 }
 
 .ax-chips {
     display: inline-flex;
+    align-items: center;
+    height: var(--ax-control-h, auto);
     gap: 3px;
-    padding: 4px;
+    padding: 0 4px;
     border-radius: 10px;
     background: var(--ax-card);
     border: 1px solid var(--ax-line);
+    box-sizing: border-box;
 }
 
+/* Not the header row: a wrapped strip inside a panel, which sizes to its own
+   content and may run to two lines. It opts out of the row height above. */
 .ax-chips-inline {
+    height: auto;
+    align-items: flex-start;
     background: transparent;
     border: 0;
     padding: 0;
@@ -1665,7 +1686,15 @@ html[data-theme="dark"] .ax-page .peak-hero,
 .ax-select {
     -webkit-appearance: none;
     appearance: none;
-    height: 36px;
+    height: var(--ax-control-h, 36px);
+    box-sizing: border-box;
+    /* A bare <select> takes the width of its widest option, so an account with
+       "Computer Science" in the list got a box that size whatever was chosen —
+       a wide, mostly empty control next to a tight strip of chips. Bounded
+       here, and the name is clipped rather than allowed to set the width. */
+    min-width: 132px;
+    max-width: 190px;
+    text-overflow: ellipsis;
     padding: 0 32px 0 13px;
     border-radius: 10px;
     border: 1px solid var(--ax-line);
@@ -1682,19 +1711,34 @@ html[data-theme="dark"] .ax-page .peak-hero,
 .ax-select:focus { outline: 2px solid var(--ax-violet); outline-offset: 1px; }
 .ax-select option { background: var(--ax-card); color: var(--ax-text); }
 
+/* Right-aligned, which is not an accident: the Export buttons in the band
+   above are right-aligned too, so the card has one right-hand column and this
+   readout lands under those rather than floating mid-row. */
 .ax-compare {
     margin-left: auto;
     display: flex;
     align-items: center;
+    height: var(--ax-control-h, auto);
     gap: 8px;
     font-size: 12.5px;
 }
 .ax-compare-value {
-    padding: 7px 13px;
+    display: inline-flex;
+    align-items: center;
+    height: var(--ax-control-h, auto);
+    padding: 0 13px;
     border-radius: 9px;
     border: 1px solid var(--ax-line);
     background: var(--ax-card);
     font-weight: 600;
+    box-sizing: border-box;
+}
+
+/* Narrow: the readout stops being a right-hand column, because there is no
+   column to be — it wraps under the chips and reads as the end of the row
+   rather than as something pushed to an edge. */
+@media (max-width: 720px) {
+    .ax-compare { margin-left: 0; }
 }
 
 /* ---------- Sections and the grid ---------------------------------------- */
@@ -1969,6 +2013,21 @@ html[data-theme="dark"] .ax-page .peak-hero,
    `.ax-tiles-five` — which is a column count expressed as a class name, and so
    a row that gained a figure needed a new class. The count comes from the row
    itself now: `StatRow` sets `--ax-stat-n` from how many stats it was given. */
+/* The note under the tile row when a subject filter is on — see `scopedOut`
+   in components/Analytics/Tiles.tsx. Quiet, because it is a caveat rather than
+   a finding, and full width because it is about the whole row. */
+.ax-tiles-scope {
+    margin: 10px 2px 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ax-muted);
+}
+
+.ax-tiles-scope strong {
+    color: var(--ax-text);
+    font-weight: 600;
+}
+
 .ax-tiles {
     display: grid;
     grid-template-columns: repeat(var(--ax-stat-n, 4), minmax(0, 1fr));

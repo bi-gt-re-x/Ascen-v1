@@ -179,3 +179,51 @@ def test_a_root_file_does_not_shadow_the_app(anon):
     mount there answers before every route in the app."""
     assert anon.get('/', follow_redirects=False).status_code == 200
     assert anon.get('/home', follow_redirects=False).status_code == 200
+
+
+# --------------------------------------------------------------------------
+# The analytics read
+# --------------------------------------------------------------------------
+def test_the_task_read_does_not_sort_every_row(client):
+    """`columns_for` defaults to ORDER BY rowid, and on `tasks` that is an
+    order the index cannot supply — SQLite builds a temp B-tree over every row
+    the account owns to produce it. Asking for the order the index already
+    holds removes the sort outright.
+
+    Asserted through EXPLAIN rather than by timing it, because a timing test
+    on a seeded account is a coin flip that fails in CI.
+    """
+    from backend.api.analytics import ANALYTICS_TASK_FIELDS, TASK_ORDER
+    from backend.database import connection as db
+
+    con = db.connect()
+    try:
+        columns = ', '.join('"{}"'.format(name) for name in ANALYTICS_TASK_FIELDS)
+        plan = con.execute(
+            'EXPLAIN QUERY PLAN SELECT {} FROM "tasks" WHERE user_id = ? '
+            'ORDER BY {}'.format(columns, TASK_ORDER), ('tester',)).fetchall()
+    finally:
+        con.close()
+
+    steps = ' '.join(str(row['detail']) for row in plan)
+    assert 'TEMP B-TREE' not in steps.upper(), steps
+    assert 'INDEX' in steps.upper(), steps
+
+
+def test_the_order_is_a_literal(client):
+    """It is interpolated into the SQL, so it must never be caller-shaped."""
+    from backend.api import analytics
+    assert isinstance(analytics.TASK_ORDER, str)
+    assert ';' not in analytics.TASK_ORDER
+
+
+def test_the_task_read_still_returns_the_account_s_own_rows(client, task):
+    reply = client.get('/api/analytics/tasks').json()
+    assert reply['success'] is True
+    assert reply['tasks'], 'the fixture task should be here'
+
+
+def test_the_task_read_is_scoped_to_the_caller(client, stranger, task):
+    """The order changed; the WHERE did not."""
+    assert client.get('/api/analytics/tasks').json()['tasks']
+    assert stranger.get('/api/analytics/tasks').json()['tasks'] == []
