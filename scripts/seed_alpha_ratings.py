@@ -34,12 +34,19 @@ panel look broken. So the numbers carry the structure a real account's would:
 Deterministic: the seed is fixed, so re-running produces the same record rather
 than a different one each time.
 
-    python utils/seed_alpha_ratings.py [username] [--dry-run]
+    python3 scripts/seed_alpha_ratings.py [username] [--dry-run]
 """
+import os
 import random
 import sys
 
-sys.path.insert(0, '.')
+# The repo root, from this file rather than from the working directory — the
+# same bootstrap the three seed scripts beside this one use. It read
+# `sys.path.insert(0, '.')` while this lived in utils/, which only resolved
+# when the script happened to be run from the root.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 from backend.database import connection as db  # noqa: E402
 
