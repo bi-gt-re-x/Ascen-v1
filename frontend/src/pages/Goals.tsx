@@ -56,7 +56,7 @@ import {
   GoalTable,
   GoalTabs,
   HealthBreakdown,
-  GoalTimeline,
+  GoalChain,
   GoalsCta,
   HealthRing,
   MilestoneCalendar,
@@ -843,8 +843,8 @@ export default function Goals() {
 
             {shown.length > 0 && (
               <Band
-                title="Goal Timelines"
-                hint="Reached, and queued"
+                title="The plan, goal by goal"
+                hint="Checkpoints in order. Their dates are on the calendar below."
               >
                 <div className="gx-rails">
                   {shown.map((goal) => (
@@ -857,10 +857,9 @@ export default function Goals() {
                         <span className="gx-rail-title">{goal.title}</span>
                         <span className="gx-quiet">{Math.round(goalNumbers(goal).progress)}%</span>
                       </button>
-                      <GoalTimeline
-                        goals={[goal]}
+                      <GoalChain
+                        goal={goal}
                         onOpen={(entry) => setOpenId(entry.id)}
-                        onDate={setMilestoneDate}
                         limit={TIMELINE_ROWS}
                       />
                     </section>
@@ -881,12 +880,14 @@ export default function Goals() {
         {/* ---- System Goals -----------------------------------------------
             The counters the app keeps: XP, streak, tasks, focus. A tab of
             their own because they are a different kind of goal rather than a
-            second view of the same ones — see components/Goals/SystemGoals. */}
+            second view of the same ones — see components/Goals/SystemGoals.
+
+            The band carries no hint, unlike every other one here: `SystemGoals`
+            opens with the sentence saying what one of these is, and a subtitle
+            above it making the same point more briefly would be the page
+            saying it twice and landing it neither time. */}
         {on('system') && (
-          <Band
-            title="System Goals"
-            hint="You set the target, Summit keeps the count"
-          >
+          <Band title="System Goals">
             <SystemGoals
               counters={counters}
               onEdit={(goal) => {

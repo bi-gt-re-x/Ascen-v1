@@ -19,7 +19,7 @@ export {
   CATEGORIES,
   GoalInsights,
   GoalTile,
-  GoalTimeline,
+  GoalChain,
   GoalsCta,
   HealthChip,
   HealthRing,

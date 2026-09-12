@@ -333,134 +333,91 @@ export function OverviewStrip({
 // Section 3 — the timeline
 // --------------------------------------------------------------------------
 /**
- * Everything that has happened and everything queued, down one rail.
+ * One goal's checkpoints, in the order they are meant to happen.
  *
- * The one view on the page that crosses goals. A reader with four goals does
- * not experience them as four lists — they experience one next few months —
- * and this is what says what is actually in it. Reached checkpoints are above
- * the line and unreached below, so the rail reads as a path rather than as a
- * backlog, which is the whole difference between a timeline and a to-do list.
+ *     Foundation → Algebra → Geometry → Counting → Full tests → AIME
+ *
+ * ## Why this is not a timeline any more
+ *
+ * It was one: the rows were sorted by date, split by a "Today" marker, and
+ * each carried "in 12d" or "3d late" and a date picker. That is a calendar
+ * with one row per checkpoint, and there is a calendar directly underneath it
+ * on the same tab — so the tab answered the same question twice, in two
+ * shapes, and the worse of the two shapes won the top of the page.
+ *
+ * What a goal's own rail can say that a calendar cannot is the *order*: this,
+ * then this, then this, and you are here. That is a property of the plan
+ * rather than of the month, it does not change when a date slips, and it is
+ * the thing somebody actually wants when they are looking at one goal rather
+ * than at their week. Dates went to the calendar, which is what a calendar is
+ * for.
+ *
+ * ## Order, and what it is not
+ *
+ * The checkpoints in the order the goal holds them, which is the reader's own
+ * — the detail view reorders them by hand. Explicitly *not* sorted by date
+ * here: a plan whose steps rearrange themselves because stage four acquired an
+ * earlier target than stage three is a plan that has stopped being a sequence,
+ * and the reader put them in that order on purpose.
+ *
+ * ## Setting dates
+ *
+ * Not here, and nothing is lost by that: the detail view has the date control
+ * for every checkpoint (see `onMilestoneDate` in ./GoalDetail), which is where
+ * the rest of planning already happens. A date picker on a rail whose job is
+ * to show shape was the clutter that made the shape hard to see.
  */
-export function GoalTimeline({
-  goals,
+export function GoalChain({
+  goal,
   onOpen,
-  onDate,
-  today = new Date(),
-  limit = 9,
+  limit = 12,
 }: {
-  goals: Goal[];
+  goal: Goal;
   onOpen: (goal: Goal) => void;
-  /**
-   * Set or clear when a checkpoint is meant to be reached.
-   *
-   * Optional, and the rail is read-only without it. `target_date` has been on
-   * the milestone model, in the API and on this page's own sort keys since the
-   * table existed — every view here reads it, sorts by it and prints "in 12d"
-   * off it — and nothing in the app ever let anyone write one. A rail whose
-   * order is a date the reader has no way to set is a rail that draws whatever
-   * order the rows happen to be in and calls it a timeline.
-   *
-   * An empty string clears the date, which is the value an emptied date input
-   * gives and what the backend reads as "no date".
-   */
-  onDate?: (milestone: Milestone, date: string) => void;
-  today?: Date;
+  /** How many links to draw before collapsing the rest into a count. */
   limit?: number;
 }) {
-  type Row = { goal: Goal; row: Milestone; at: number | null; done: boolean };
+  const stones = goal.milestones ?? [];
 
-  const all: Row[] = goals.flatMap((goal) =>
-    (goal.milestones ?? []).map((row) => {
-      const stamp = row.status === 'done' ? row.completed_at : row.target_date;
-      const at = stamp
-        ? new Date(`${String(stamp).slice(0, 10)}T00:00:00`).getTime()
-        : null;
-      return { goal, row, at: Number.isNaN(at) ? null : at, done: row.status === 'done' };
-    }),
-  );
-
-  // The last few that happened, then the next few that have not. Undated ones
-  // sort to the end of their own half: "at some point" is still information,
-  // but it is not a position on a rail.
-  const past = all
-    .filter((entry) => entry.done)
-    .sort((a, b) => (a.at ?? 0) - (b.at ?? 0))
-    .slice(-3);
-  const ahead = all
-    .filter((entry) => !entry.done)
-    .sort((a, b) => (a.at ?? Number.MAX_SAFE_INTEGER) - (b.at ?? Number.MAX_SAFE_INTEGER))
-    .slice(0, limit - past.length);
-
-  if (past.length === 0 && ahead.length === 0) {
-    return (
-      <p className="gx-empty">
-        Nothing on the rail yet. Break a goal into milestones.
-      </p>
-    );
+  if (stones.length === 0) {
+    return <p className="gx-empty">No checkpoints yet. Break this goal into stages.</p>;
   }
 
-  const render = (entry: Row, current: boolean) => {
-    const category = categoryOf(entry.goal);
-    const days = entry.at === null ? null : Math.round((entry.at - today.getTime()) / DAY);
-    return (
-      <li
-        className={`gx-tl-row tone-${category.tone}${entry.done ? ' is-done' : ''}${current ? ' is-now' : ''}`}
-        key={entry.row.id}
-      >
-        <span className="gx-tl-mark" aria-hidden="true">
-          {entry.done ? '✓' : current ? '→' : ''}
-        </span>
-        <button type="button" className="gx-tl-body" onClick={() => onOpen(entry.goal)}>
-          <span className="gx-tl-goal">{entry.goal.title}</span>
-          <span className="gx-tl-title">{entry.row.title}</span>
-        </button>
-        {/* Done is a fact and gets a date; anything ahead is a plan and gets
-            a control. A finished checkpoint prints when it was reached, which
-            is not a thing to edit. */}
-        {onDate && !entry.done ? (
-          <label className="gx-tl-set">
-            <span className={days !== null && days < 0 ? 'is-late' : undefined}>
-              {entry.at === null
-                ? 'Set a date'
-                : days !== null && days < 0
-                  ? `${Math.abs(days)}d late`
-                  : days === 0
-                    ? 'today'
-                    : `in ${days}d`}
-            </span>
-            <input
-              type="date"
-              value={entry.row.target_date ? String(entry.row.target_date).slice(0, 10) : ''}
-              aria-label={`When to finish ${entry.row.title}`}
-              onChange={(event) => onDate(entry.row, event.target.value)}
-            />
-          </label>
-        ) : (
-          <span className="gx-tl-when">
-            {entry.at === null
-              ? 'no date'
-              : entry.done
-                ? formatGoalDate(new Date(entry.at).toISOString())
-                : days !== null && days < 0
-                  ? `${Math.abs(days)}d late`
-                  : days === 0
-                    ? 'today'
-                    : `in ${days}d`}
-          </span>
-        )}
-      </li>
-    );
-  };
+  /* The one being worked on, by the same rule the card uses: the checkpoint
+     explicitly made active, else the first that is not done. Both places have
+     to agree or the page says a goal is on two different stages. */
+  const current =
+    stones.find((row) => row.status === 'active') ??
+    stones.find((row) => row.status !== 'done') ??
+    null;
+
+  const shown = stones.slice(0, limit);
+  const category = categoryOf(goal);
 
   return (
-    <ol className="gx-timeline">
-      {past.map((entry) => render(entry, false))}
-      {past.length > 0 && ahead.length > 0 && (
-        <li className="gx-tl-today" aria-hidden="true">
-          <span>Today</span>
+    <ol className={`gx-chain tone-${category.tone}`}>
+      {shown.map((row) => {
+        const done = row.status === 'done';
+        const now = row.id === current?.id;
+        return (
+          <li
+            key={row.id}
+            className={`gx-link${done ? ' is-done' : ''}${now ? ' is-now' : ''}`}
+          >
+            <button type="button" onClick={() => onOpen(goal)} title={row.title}>
+              <i aria-hidden="true">{done ? '✓' : ''}</i>
+              <span>{row.title}</span>
+            </button>
+          </li>
+        );
+      })}
+      {stones.length > shown.length && (
+        <li className="gx-link is-rest">
+          <button type="button" onClick={() => onOpen(goal)}>
+            <span>+{stones.length - shown.length} more</span>
+          </button>
         </li>
       )}
-      {ahead.map((entry, index) => render(entry, index === 0))}
     </ol>
   );
 }

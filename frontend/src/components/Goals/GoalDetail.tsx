@@ -245,8 +245,11 @@ export function GoalDetail(props: GoalDetailProps) {
                     ↓
                   </button>
                   {/* Done is a fact and gets a date printed; anything ahead
-                      is a plan and gets a control. The same split the goal
-                      timeline makes — see `gx-tl-set` in ./Outcome. */}
+                      is a plan and gets a control. This is the only date
+                      control for a checkpoint now — the rail on the Timeline
+                      tab carried one too, and gave it up when it stopped being
+                      a timeline and became the plan's order. See `GoalChain`
+                      in ./Outcome. */}
                   {row.status !== 'done' && (
                     <label className="gx-ms-date" title="When this checkpoint is meant to be reached">
                       <span aria-hidden="true">{row.target_date ? '📅' : '+'}</span>

@@ -11,11 +11,25 @@
  * its only two actions are the ones that genuinely belong to the reader —
  * changing the target and dropping the goal.
  *
- * A list rather than a grid of cards. Every row carries the same five things —
- * what, how far, of what, the bar, the percentage — and a list lines them up in
- * columns, so four targets read down the page as a comparison. Cards scattered
- * them across a wrapping grid where the second row's bar was nowhere near the
- * first's.
+ * ## A strip of figures, not a list of goals
+ *
+ * This was a list of rows, and the list was itself a correction: before that
+ * it was cards, scattered across a wrapping grid where the second card's bar
+ * was nowhere near the first's, so four targets could not be read as a
+ * comparison. The list fixed the alignment and kept the problem underneath —
+ * a row with a title, a bar and two buttons is the shape of an outcome goal,
+ * so the four counters went on looking like four more goals with a different
+ * icon.
+ *
+ * They are not. Nobody is doing these: the app counts, and the only decision
+ * in them is the number to stop at. So they are drawn as what they are — a
+ * metric each, headed by the thing being counted rather than by a title
+ * somebody wrote, with the figure the largest thing on it.
+ *
+ * The old objection to a grid does not apply to this one. It was about cards
+ * of different heights wrapping out of alignment; every column here has the
+ * same parts in the same order, so the four figures share a baseline and the
+ * four bars share a line, which is the comparison the list was protecting.
  *
  * New ones are made by SystemGoalWizard, not by the outcome wizard — see the
  * note there for what went wrong when they were.
@@ -23,6 +37,21 @@
 import { fmtGoalNumber, goalNumbers } from './numbers';
 import type { Goal, GoalType } from '@/types';
 import type { ReactNode } from 'react';
+
+/**
+ * What each counter is called, as a column head.
+ *
+ * The metric rather than `goal.title`: a system goal's title is "Earn 50,000
+ * XP", which repeats the target printed directly underneath it and buries the
+ * one word — XP — that says which of the four this is. The title is kept on
+ * the column as its tooltip, because the reader may have written their own.
+ */
+const METRIC: Record<GoalType, string> = {
+  xp: 'XP',
+  streak: 'Streak',
+  tasks: 'Tasks',
+  focus: 'Focus',
+};
 
 /** One glyph per counter, so the four are told apart before they are read. */
 export const COUNTER_ICON: Record<GoalType, ReactNode> = {
@@ -52,7 +81,7 @@ export const COUNTER_ICON: Record<GoalType, ReactNode> = {
 
 const pct = (value: number): number => Math.max(0, Math.min(100, Math.round(value)));
 
-function SystemRow({
+function SystemMetric({
   goal,
   onEdit,
   onDelete,
@@ -66,19 +95,22 @@ function SystemRow({
   const reached = done >= 100;
 
   return (
-    <li className={`gx-sys${reached ? ' is-done' : ''}`}>
-      <span className={`gx-sys-ico is-${n.goalType}`} aria-hidden="true">
-        {COUNTER_ICON[n.goalType]}
+    <li className={`gx-metric${reached ? ' is-done' : ''}`} title={goal.title}>
+      <span className="gx-metric-head">
+        <i className={`gx-metric-ico is-${n.goalType}`} aria-hidden="true">
+          {COUNTER_ICON[n.goalType]}
+        </i>
+        {METRIC[n.goalType]}
       </span>
-      <div className="gx-sys-name">
-        <strong>{goal.title}</strong>
-        <span className="gx-quiet">{n.label}</span>
-      </div>
 
-      <div className="gx-sys-figures">
-        <b>{fmtGoalNumber(n.current, n)}</b>
-        <span className="gx-quiet">of {fmtGoalNumber(n.target, n)}</span>
-      </div>
+      {/* The app's own count, and the largest thing on the column. It is the
+          only figure on this page nobody can type: editing it would be the
+          account rewriting its record of what it did. */}
+      <b className="gx-metric-now">{fmtGoalNumber(n.current, n)}</b>
+      <span className="gx-metric-of">
+        of {fmtGoalNumber(n.target, n)}
+        {n.label && n.goalType !== 'focus' ? ` ${n.label.toLowerCase()}` : ''}
+      </span>
 
       <div
         className="gx-sys-track"
@@ -90,13 +122,19 @@ function SystemRow({
       >
         <i className={`gx-sys-fill is-${n.goalType}`} style={{ width: `${done}%` }} />
       </div>
-      <span className={`gx-sys-pct${reached ? ' is-done' : ''}`}>{done}%</span>
+      <span className={`gx-metric-pct${reached ? ' is-done' : ''}`}>{done}%</span>
 
-      <div className="gx-sys-foot">
+      {/* The two things that are actually the reader's. */}
+      <div className="gx-metric-do">
         <button type="button" onClick={() => onEdit(goal)}>
           Change target
         </button>
-        <button type="button" className="is-bad" onClick={() => onDelete(goal)}>
+        <button
+          type="button"
+          className="is-bad"
+          aria-label={`Remove the ${METRIC[n.goalType]} target`}
+          onClick={() => onDelete(goal)}
+        >
           Remove
         </button>
       </div>
@@ -127,9 +165,18 @@ export function SystemGoals({ counters, onEdit, onDelete, onNew }: SystemGoalsPr
 
   return (
     <>
-      <ul className="gx-syslist" aria-label="System goals">
+      {/* Said outright, because the difference is the whole reason this tab
+          exists and nothing on the screen used to state it. An outcome goal is
+          work somebody is doing and its percentage follows checkpoints they
+          tick; these four are counts the app keeps, and the reader's only
+          decision in them is where to stop. */}
+      <p className="gx-sys-lead">
+        Counts Summit already keeps. You choose the target — the figure beside
+        it is the app&rsquo;s own record and nothing here can edit it.
+      </p>
+      <ul className="gx-metrics" aria-label="System goals">
         {counters.map((goal) => (
-          <SystemRow key={goal.id} goal={goal} onEdit={onEdit} onDelete={onDelete} />
+          <SystemMetric key={goal.id} goal={goal} onEdit={onEdit} onDelete={onDelete} />
         ))}
       </ul>
       <button type="button" className="gx-sys-add" onClick={onNew}>

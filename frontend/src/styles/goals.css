@@ -974,6 +974,89 @@ button.gx-state-attn.is-on {
     gap: 14px;
     align-items: start;
 }
+
+/* ---------- The chain: a goal's checkpoints, in order ---------------------
+   Foundation → Algebra → Geometry → Counting → Full tests → AIME
+
+   It replaced a vertical dated rail, and the shape is the argument: a wrapped
+   row of links reads as a sequence at a glance, where a column of rows reads
+   as a list and makes the reader supply the order themselves. Wrapping rather
+   than scrolling, because a plan with a scrollbar has a part of itself you
+   cannot see, and the whole point is the shape of the whole thing.
+
+   The arrows are drawn by the links rather than sitting between them as their
+   own elements, so a chain that wraps cannot leave an arrow pointing at the
+   end of a line. */
+.gx-chain {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 0;
+}
+.gx-link { display: flex; align-items: center; min-width: 0; }
+.gx-link:not(:first-child)::before {
+    content: '→';
+    flex: none;
+    padding: 0 5px;
+    font-size: 11px;
+    color: var(--gx-faint);
+}
+.gx-link button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 190px;
+    padding: 4px 9px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--gx-card-2);
+    color: var(--gx-muted);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .14s ease, color .14s ease;
+}
+.gx-link button > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gx-link button:hover { border-color: color-mix(in srgb, var(--tone) 45%, transparent); }
+.gx-link button > i {
+    flex: none;
+    font-style: normal;
+    font-size: 9px;
+    line-height: 1;
+}
+
+/* Reached: the tick carries it, and the text steps back rather than being
+   struck through — a plan is not a shopping list and the stages behind you are
+   still what got you here. */
+.gx-link.is-done button {
+    background: color-mix(in srgb, var(--gx-good) 13%, transparent);
+    color: var(--gx-good);
+}
+
+/* Where you are. The one link on the chain that is allowed to be loud, because
+   it is the only one that answers a question — everything else is context for
+   it. */
+.gx-link.is-now button {
+    background: color-mix(in srgb, var(--tone) 16%, transparent);
+    border-color: color-mix(in srgb, var(--tone) 48%, transparent);
+    color: var(--tone);
+    font-weight: 800;
+    max-width: 240px;
+}
+.gx-link.is-rest button {
+    background: none;
+    color: var(--gx-faint);
+    font-weight: 600;
+}
 .gx-rail {
     padding: 15px 18px 12px;
     background: var(--gx-card);
@@ -1013,7 +1096,7 @@ button.gx-state-attn.is-on {
    The exceptions are the ones that are already cards: the ladder stack, the
    rails, the counts, the priority grid and the overflow list under it would
    otherwise be cards inside a card. */
-.gx-band > :not(.gx-band-head):not(.gx-cards):not(.gx-rest):not(.gx-ladders):not(.gx-rails):not(.gx-counts):not(.gx-strip) {
+.gx-band > :not(.gx-band-head):not(.gx-cards):not(.gx-rest):not(.gx-ladders):not(.gx-rails):not(.gx-counts):not(.gx-strip):not(.gx-sys-lead) {
     padding: 16px 18px;
     background: var(--gx-card);
     border: 1px solid var(--gx-line);
@@ -1024,92 +1107,7 @@ button.gx-state-attn.is-on {
 .gx-band > .gx-empty { background: var(--gx-card-2); box-shadow: none; }
 
 /* ---------- The timeline rail -------------------------------------------- */
-.gx-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.gx-tl-row {
-    display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 11px;
-    padding: 8px 0;
-    position: relative;
-}
-/* The spine, on the mark rather than the row, so it stops at the last one. */
-.gx-tl-row:not(:last-child) .gx-tl-mark::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 100%;
-    width: 1px;
-    height: 17px;
-    background: var(--gx-line);
-}
-.gx-tl-mark {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 21px; height: 21px;
-    border-radius: 50%;
-    background: var(--gx-card-2);
-    border: 1px solid var(--gx-line);
-    color: var(--gx-faint);
-    font-size: 10px;
-    font-weight: 700;
-}
-.gx-tl-row.is-done .gx-tl-mark { background: var(--gx-good); border-color: var(--gx-good); color: #fff; }
-.gx-tl-row.is-now .gx-tl-mark {
-    border-color: var(--tone, var(--gx-violet));
-    color: var(--tone, var(--gx-violet));
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone, var(--gx-violet)) 18%, transparent);
-}
-.gx-tl-body {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    border: 0; background: none; padding: 0;
-    text-align: left;
-    cursor: pointer;
-    min-width: 0;
-    font: inherit;
-}
-.gx-tl-goal {
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: .03em;
-    color: var(--tone, var(--gx-muted));
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.gx-tl-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--gx-text);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.gx-tl-row.is-done .gx-tl-title { color: var(--gx-muted); }
-.gx-tl-body:hover .gx-tl-title { color: var(--tone, var(--gx-violet)); }
-.gx-tl-when { font-size: 11px; font-weight: 600; color: var(--gx-faint); white-space: nowrap; }
 
-/* Where the reader is standing. A rule across the rail rather than a row, so
-   it reads as a position in time and not as another checkpoint. */
-.gx-tl-today {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 6px 0;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    color: var(--gx-violet);
-}
-.gx-tl-today::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(to right, color-mix(in srgb, var(--gx-violet) 55%, transparent), transparent);
-}
-
-/* ---------- Next milestones ---------------------------------------------- */
-.gx-next { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .gx-next-row {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -2010,25 +2008,73 @@ button.gx-state-attn.is-on {
    of what, the bar, the percentage, the two things you can do — so the
    targets read down the page as a comparison rather than scattering across a
    wrapping grid of cards. See components/Goals/SystemGoals. */
-.gx-syslist {
+/* ---------- The counters, as metrics ---------------------------------------
+   A column each, not a row each. A row with a title, a bar and two buttons is
+   the shape of an outcome goal, and these are not goals — nobody is doing
+   them. The app counts, and the only decision in one is where to stop.
+
+   Every column carries the same parts in the same order, so the figures share
+   a baseline and the bars share a line across all four. That alignment is what
+   the list this replaced was protecting, and it survives the change; what does
+   not survive is four counters dressed as four more goals. */
+.gx-sys-lead {
+    margin: 0 0 12px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--gx-muted);
+    max-width: 64ch;
+}
+.gx-metrics {
     list-style: none;
     margin: 0;
     padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1px;
+    /* The hairline between columns is the gap over the line colour, the same
+       trick the goal card's two panels use, so there is no border to double up
+       at the outer edge. */
+    background: var(--gx-line);
     border: 1px solid var(--gx-line);
     border-radius: 13px;
-    background: var(--gx-card-2);
     overflow: hidden;
 }
-.gx-sys {
-    display: grid;
-    grid-template-columns: 30px minmax(0, 1.6fr) minmax(110px, auto) minmax(90px, 1fr) 42px auto;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
+.gx-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    padding: 14px 16px 13px;
+    background: var(--gx-card-2);
 }
-.gx-sys + .gx-sys { border-top: 1px solid var(--gx-line-soft); }
-.gx-sys.is-done { background: color-mix(in srgb, var(--gx-good) 6%, transparent); }
+.gx-metric.is-done { background: color-mix(in srgb, var(--gx-good) 7%, var(--gx-card-2)); }
 
+.gx-metric-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--gx-muted);
+}
+.gx-metric-ico {
+    width: 22px; height: 22px; flex: none;
+    display: grid; place-items: center;
+    border-radius: 7px;
+    background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.gx-metric-ico svg { width: 13px; height: 13px; }
+.gx-metric-ico.is-xp     { color: var(--gx-violet); }
+.gx-metric-ico.is-streak { color: var(--gx-amber); }
+.gx-metric-ico.is-tasks  { color: var(--gx-blue); }
+.gx-metric-ico.is-focus  { color: var(--gx-teal); }
+
+/* The same four glyphs, in the wizard that makes one of these. It borrowed the
+   list's icon rule and outlived it — the list is a strip of metrics now and
+   `.gx-metric-ico` is sized for a column head, which is smaller than a row in
+   a picker wants. See `gx-syspick-row` in components/Goals/SystemGoalWizard. */
 .gx-sys-ico {
     width: 30px; height: 30px; flex: none;
     display: grid; place-items: center;
@@ -2036,43 +2082,49 @@ button.gx-state-attn.is-on {
     background: color-mix(in srgb, currentColor 12%, transparent);
 }
 .gx-sys-ico svg { width: 16px; height: 16px; }
-/* One colour per counter, so the four read apart at a glance. */
 .gx-sys-ico.is-xp     { color: var(--gx-violet); }
 .gx-sys-ico.is-streak { color: var(--gx-amber); }
 .gx-sys-ico.is-tasks  { color: var(--gx-blue); }
 .gx-sys-ico.is-focus  { color: var(--gx-teal); }
 
-.gx-sys-name { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
-.gx-sys-name strong {
-    color: var(--gx-text); font-size: 12.5px; font-weight: 650;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.gx-sys-name .gx-quiet { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
-.gx-sys-pct { text-align: right; color: var(--gx-muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.gx-sys-pct.is-done { color: var(--gx-good); }
-
-.gx-sys-figures { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
-.gx-sys-figures b {
-    color: var(--gx-text); font-size: 16px; font-weight: 700; letter-spacing: -.02em; line-height: 1;
+/* The count, and the biggest thing in the column — it is the reason the column
+   exists, and it is the one figure on this page nobody can type. */
+.gx-metric-now {
+    font-size: 25px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    color: var(--gx-text);
     font-variant-numeric: tabular-nums;
 }
-.gx-sys-figures .gx-quiet { font-size: 11.5px; }
+.gx-metric-of {
+    font-size: 11.5px;
+    color: var(--gx-faint);
+    font-variant-numeric: tabular-nums;
+}
+.gx-metric-pct {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--gx-muted);
+    font-variant-numeric: tabular-nums;
+}
+.gx-metric-pct.is-done { color: var(--gx-good); }
 
-.gx-sys-track { height: 6px; border-radius: 999px; background: var(--gx-line-soft); overflow: hidden; }
+.gx-metric-do { display: flex; gap: 12px; margin-top: 2px; white-space: nowrap; }
+.gx-metric-do button {
+    border: 0; background: none; padding: 0;
+    color: var(--gx-muted); font: inherit; font-size: 11.5px; font-weight: 600;
+    cursor: pointer;
+}
+.gx-metric-do button:hover { color: var(--gx-text); text-decoration: underline; }
+.gx-metric-do button.is-bad:hover { color: var(--gx-bad); }
+
+.gx-sys-track { margin-top: 3px; height: 6px; border-radius: 999px; background: var(--gx-line-soft); overflow: hidden; }
 .gx-sys-fill { display: block; height: 100%; border-radius: 999px; transition: width .3s ease; }
 .gx-sys-fill.is-xp     { background: var(--gx-violet); }
 .gx-sys-fill.is-streak { background: var(--gx-amber); }
 .gx-sys-fill.is-tasks  { background: var(--gx-blue); }
 .gx-sys-fill.is-focus  { background: var(--gx-teal); }
-
-.gx-sys-foot { display: flex; gap: 14px; justify-content: flex-end; white-space: nowrap; }
-.gx-sys-foot button {
-    border: 0; background: none; padding: 0;
-    color: var(--gx-muted); font: inherit; font-size: 11.5px; font-weight: 600;
-    cursor: pointer;
-}
-.gx-sys-foot button:hover { color: var(--gx-text); text-decoration: underline; }
-.gx-sys-foot button.is-bad:hover { color: var(--gx-bad); }
 
 /* The way to another one, under the list rather than in the page header: the
    header's button makes the kind of goal the tab you are on is about. */
@@ -2092,26 +2144,6 @@ button.gx-state-attn.is-on {
 }
 .gx-page .gx-sys-add:hover { color: var(--gx-text); border-color: var(--gx-violet); }
 
-/* A row is too many columns for a phone. The name and the percentage keep the
-   top line, and the figures, the bar and the actions stack under them. */
-@media (max-width: 720px) {
-    .gx-sys {
-        grid-template-columns: 30px minmax(0, 1fr) auto;
-        grid-template-areas:
-            "ico name    pct"
-            "ico figures figures"
-            "track track track"
-            "foot  foot  foot";
-        row-gap: 8px;
-    }
-    .gx-sys-ico { grid-area: ico; }
-    .gx-sys-name { grid-area: name; }
-    .gx-sys-pct { grid-area: pct; }
-    .gx-sys-figures { grid-area: figures; }
-    .gx-sys-track { grid-area: track; }
-    .gx-sys-foot { grid-area: foot; justify-content: flex-start; }
-}
-
 /* The rail goes under the page on anything too narrow to hold both, at the
    same width the tasks page folds at. */
 @media (max-width: 1240px) {
@@ -2124,44 +2156,7 @@ button.gx-state-attn.is-on {
    it — the row is a timeline, not a form, and a page of date inputs in boxes
    would say the opposite. The native picker is the whole control: a `<label>`
    around it means the words are the hit target too. */
-.gx-tl-set {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 84px;
-    padding: 3px 7px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--gx-faint);
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background .15s ease, border-color .15s ease, color .15s ease;
-}
-.gx-tl-set:hover { background: var(--gx-card-2); border-color: var(--gx-line); color: var(--gx-text); }
-.gx-tl-set:focus-within { border-color: var(--gx-violet); color: var(--gx-text); }
-.gx-tl-set span.is-late { color: var(--gx-bad); }
-/* Over the label rather than beside it, so the row keeps the shape it has when
-   the date is only being read. */
-.gx-tl-set input {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    font: inherit;
-}
 
-/* Native controls follow the theme.
-   Date pickers, spinners and scrollbars are drawn by the browser, and without
-   this the dark page opened a white calendar. One declaration covers every
-   native widget on the page rather than a rule per control. */
-html[data-theme="dark"] .gx-page { color-scheme: dark; }
 .gx-page { color-scheme: light; }
 
 /* ---------- The wizard's advice line -------------------------------------- */
