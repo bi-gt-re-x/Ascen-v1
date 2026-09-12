@@ -116,6 +116,12 @@ ADDED_COLUMNS = (
     ('tasks', 'difficulty', 'INTEGER'),
     ('tasks', 'execution', 'INTEGER'),
 
+    # The one missed day a streak was forgiven, so the grace day in
+    # backend/tracking/xp.py can be rationed by date rather than by a counter
+    # that nothing resets. NULL on every account that predates it, which reads
+    # as "no grace spent" — the honest answer, since there was none to spend.
+    ('users', 'streak_grace_day', 'TEXT'),
+
     # What a note is about, and which shelf it is on. Both empty on every note
     # written before the notes page could say either, which is the honest
     # reading of a note nobody tagged. No NOT NULL and no DEFAULT: ALTER TABLE

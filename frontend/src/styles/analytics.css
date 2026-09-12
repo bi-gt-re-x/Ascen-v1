@@ -4711,6 +4711,36 @@ html[data-theme="dark"] .ax-page .peak-hero,
     margin-left: 1px;
 }
 
+/* "2 points to C" — the rung above, at the end of the same sentence.
+ *
+ * Quieter than the score and louder than nothing: it is the one part of this
+ * panel a reader can act on directly, but it is not the headline, and setting
+ * it at the sentence's own size keeps it a clause rather than a second figure
+ * competing with the first.
+ *
+ * The size reset is not decoration. `.ax-summary-lead strong` is 26px — that
+ * rule is what makes the score the thing the eye lands on — and the number
+ * here is a `strong` inside the same paragraph, so without this it inherits
+ * the headline treatment and "2" arrives the same size as the score it is
+ * measured against.
+ */
+.ax-summary-next {
+    color: var(--ax-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Two classes deep on purpose. `.ax-summary-lead strong` is set twice — 26px
+   here and 23px again inside the narrow-screen block far below — and both
+   match this number at the same specificity as a one-class rule would, so a
+   flatter selector would win on the wide page and quietly lose on the phone. */
+.ax-summary-lead .ax-summary-next strong {
+    font-size: inherit;
+    font-weight: 700;
+    letter-spacing: normal;
+    color: var(--ax-text);
+}
+
 /* ---------- The rows ------------------------------------------------------
    Hairline-separated rather than carded. Four cards here would read as four
    things to do; four rules read as one paragraph with the breaks marked. */

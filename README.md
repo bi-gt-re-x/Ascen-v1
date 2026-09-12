@@ -124,6 +124,7 @@ Users are rewarded for maintaining consistent habits.
 Features include:
 
 * Daily streak tracking
+* One forgiven day a month, once a run is a week old
 * Longest streak
 * Streak history
 * Consecutive productivity rewards

@@ -438,7 +438,7 @@ const PHILOSOPHY = [
     ico: 'lp-ico-teal',
     path: <path d="M3 12h4l3 8 4-16 3 8h4" />,
     title: 'Consistency over intensity',
-    body: 'A streak counts days you turned up, not hours you sat down. Miss one and it starts again.',
+    body: 'A streak counts days you turned up, not hours you sat down. Once it is a week old it survives one missed day a month.',
   },
   {
     ico: 'lp-ico-green',

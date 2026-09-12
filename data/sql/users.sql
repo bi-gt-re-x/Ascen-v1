@@ -39,13 +39,17 @@ CREATE TABLE IF NOT EXISTS users (
     tasks_completed   INTEGER DEFAULT 0,
     charge            INTEGER DEFAULT 0,
 
-    -- Streak. current_streak is lost after a full day with no completed task;
-    -- best_streak is the all-time record and is never lowered. day_state flips
-    -- to 'newday' at the start of a day and 'oldday' once a task lands.
+    -- Streak. current_streak survives a single missed day once the run has
+    -- reached GRACE_EARNED_AT, and is lost to two; best_streak is the all-time
+    -- record and is never lowered. day_state flips to 'newday' at the start of
+    -- a day and 'oldday' once a task lands. streak_grace_day is the date of
+    -- the one missed day this run was forgiven, which is what the refresh rate
+    -- is counted from -- see `_grace_available` in backend/tracking/xp.py.
     current_streak    INTEGER DEFAULT 0,
     best_streak       INTEGER DEFAULT 0,
     last_task_date    TEXT,
     day_state         TEXT CHECK (day_state IN ('newday', 'oldday')),
+    streak_grace_day  TEXT,
 
     created_at        TEXT
 );

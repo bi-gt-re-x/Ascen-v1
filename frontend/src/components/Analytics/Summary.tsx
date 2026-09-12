@@ -92,12 +92,16 @@ export interface SummaryProps {
   /**
    * How blunt the block is allowed to be about the five measures.
    *
-   * It reorders one pair of rows and adds one clause. Everything stated is
-   * stated at every setting — the score, the letter, the weakest measure and
-   * its figure are the same three sentences — but a reader who asked for a
-   * gentle page is told what is carrying the score before what is holding it
-   * back, and a reader who asked for a blunt one is told how far the weak
-   * measure is from the next grade. See utils/analyticsPrefs.
+   * It reorders one pair of rows, and that is now all it does. Everything
+   * stated is stated at every setting — the score, the letter, the distance to
+   * the next letter, the weakest measure and its figure — but a reader who
+   * asked for a gentle page is told what is carrying the score before what is
+   * holding it back. See utils/analyticsPrefs.
+   *
+   * It used to add a clause too: how far the weak measure was from the next
+   * grade, on the blunt page only. That is in the lead sentence now and every
+   * reader gets it, because a distance is arithmetic rather than a judgement
+   * and the gentle page is the one that needed it most.
    */
   tone?: AnalyticsTone;
 }
@@ -201,24 +205,15 @@ export function Summary({
   }
 
   if (weakest) {
-    /* The blunt page's one extra clause: how far the weak measure has to move
-       for the letter to change. It is arithmetic off the same band table the
-       letter came from, not a judgement — which is what makes it safe to print
-       at one tone and not another. */
-    const next = !leadWithStrength && value !== null ? toNextGrade(value) : null;
+    /* How far the letter is from the next one used to be a clause here, and
+       only on the blunt page. It is in the lead sentence now, at every tone —
+       see the note there. This row is the measure alone again. */
     rows.push({
       key: 'weakest',
       text: (
         <>
           The measure holding it back is <strong>{weakest.label.toLowerCase()}</strong>, at{' '}
           <strong>{Math.round(weakest.score)}</strong> out of 100 — {weakest.raw}.
-          {next && (
-            <>
-              {' '}
-              The score is <strong>{next.points}</strong>{' '}
-              {next.points === 1 ? 'point' : 'points'} below {next.grade}.
-            </>
-          )}
         </>
       ),
       href: '#trajectory',
@@ -279,6 +274,9 @@ export function Summary({
     });
   }
 
+  /* Null at S, where there is no band above to climb to. */
+  const next = value !== null ? toNextGrade(value) : null;
+
   return (
     <section className={`ax-panel ax-summary ${gradeClass(grade)}`}>
       <div className="ax-summary-head">
@@ -286,6 +284,20 @@ export function Summary({
           <span aria-hidden="true">{grade}</span>
           <span className="ax-sr">Grade {grade}</span>
         </div>
+        {/* The letter, and then the next one up and what it costs.
+
+            The sentence used to stop at the meaning, which made it a verdict
+            and nothing else: a reader shown "62/100 — two or three of the five
+            are low" has been told where they stand and given nowhere to go.
+            Every other line on this panel points somewhere; this one, the one
+            printed largest and read first, did not.
+
+            The distance existed already — it was a clause on the weakest row,
+            and only at the two blunter tones, which put it in front of exactly
+            the readers least in need of encouragement and hid it from the ones
+            who had asked for the gentle page. It is arithmetic off the same
+            band table the letter came from rather than a judgement, so there
+            was never a reason to ration it by tone. */}
         <p className="ax-summary-lead">
           Your analytical score is{' '}
           <strong>
@@ -293,6 +305,15 @@ export function Summary({
             <em>/100</em>
           </strong>{' '}
           — {GRADE_MEANING[grade].toLowerCase()}.
+          {next && (
+            <>
+              {' '}
+              <span className="ax-summary-next">
+                <strong>{next.points}</strong>{' '}
+                {next.points === 1 ? 'point' : 'points'} to {next.grade}.
+              </span>
+            </>
+          )}
         </p>
       </div>
 

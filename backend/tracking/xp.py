@@ -238,15 +238,60 @@ def parse_day(raw):
         return None
 
 
+#: How long a streak has to be before one missed day is forgiven.
+#:
+#: The forgiveness has to be *earned*, or it is not a streak — a grace day
+#: available from day one means working every other day for ever and being told
+#: it is a run. A week is long enough that somebody has shown the habit is real
+#: and short enough to reach before the first missed day, which is the one that
+#: does the damage.
+GRACE_EARNED_AT = 7
+
+#: How long before a spent grace day comes back, in days.
+#:
+#: One per streak was the first version and it is too mean at the long end: a
+#: 200-day run that forgave a missed day in March is unprotected for the rest
+#: of the year, which is the opposite of the point. One a month is a rate,
+#: so the protection scales with the run instead of being used up by it.
+GRACE_REFRESH_DAYS = 30
+
+
+def _grace_available(user, last_date, today):
+    """Whether the single day missed between these two dates is forgiven.
+
+    Three things have to hold. **Exactly one day was missed** — this forgives
+    an off day, not a fortnight away, and two missed days is a broken streak by
+    any reading. **The streak had reached `GRACE_EARNED_AT`**, so the
+    forgiveness was earned. And **no grace day has been spent recently**,
+    which is what stops it becoming a standing licence.
+
+    The last of those has a wrinkle: the day already recorded may be *this*
+    missed day, because `refresh_streak` records it on a page load and
+    `extend_streak` asks again when a task lands later the same day. That is
+    the same forgiveness being read twice, not a second one, so it is allowed
+    — which is what makes both callers idempotent.
+    """
+    if (today - last_date).days != 2:
+        return False
+    if (user.get('current_streak') or 0) < GRACE_EARNED_AT:
+        return False
+
+    missed = last_date + timedelta(days=1)
+    already = parse_day(user.get('streak_grace_day'))
+    if already is None or already == missed:
+        return True
+    return (today - already).days >= GRACE_REFRESH_DAYS
+
+
 def refresh_streak(user):
     """Decay a stale streak so every page reads the same live value.
 
     A streak counts consecutive days with at least one completed task. It stays
-    alive only while the last completed task was today or yesterday; once a
-    whole day passes with no completion (last task 2+ days ago) the current
-    streak is lost. best_streak is the all-time record and is never lowered. At
-    the start of a new day day_state flips back to 'newday' so the next
-    completion extends the streak.
+    alive while the last completed task was today or yesterday — and now also
+    across a single missed day, when the run had earned that. Two missed days,
+    or one that the account has no grace left for, ends it. best_streak is the
+    all-time record and is never lowered. At the start of a new day day_state
+    flips back to 'newday' so the next completion extends the streak.
 
     Returns True when the record changed, so the caller can persist it.
     """
@@ -254,11 +299,21 @@ def refresh_streak(user):
     if last_date is None:
         return False
 
-    gap = (date.today() - last_date).days
+    today = date.today()
+    gap = (today - last_date).days
     changed = False
     if gap >= 2:
-        # A full day went by with no completed task — the streak is broken.
-        if user.get('current_streak', 0) != 0:
+        if _grace_available(user, last_date, today):
+            # One day missed, and this run had a grace day to spend. The
+            # streak stands; the day it covered is written down so the rate in
+            # GRACE_REFRESH_DAYS can be counted from it, and so that the same
+            # day is not paid for twice.
+            missed = (last_date + timedelta(days=1)).isoformat()
+            if user.get('streak_grace_day') != missed:
+                user['streak_grace_day'] = missed
+                changed = True
+        elif user.get('current_streak', 0) != 0:
+            # Too long away, or nothing left to spend — the streak is broken.
             user['current_streak'] = 0
             changed = True
         if user.get('day_state') != 'newday':
@@ -276,7 +331,15 @@ def extend_streak(user):
     """Count today's completion toward the streak.
 
     Another task the same day leaves it unchanged, the first task the next day
-    extends it by one, and a gap of a full day restarts it at one.
+    extends it by one, a single missed day the run had earned forgiveness for
+    also extends it, and anything longer restarts it at one.
+
+    The grace is decided here rather than read off what `refresh_streak` left
+    behind, because nothing guarantees a page load happened in between — a task
+    finished from a screen that never called it would otherwise be scored by a
+    different rule than the same task finished a minute after opening the app.
+    Both ask `_grace_available`, and asking twice about one missed day is
+    allowed, so the two agree however they are interleaved.
     """
     today = date.today()
     last_date = parse_day(user.get('last_task_date'))
@@ -290,8 +353,14 @@ def extend_streak(user):
             new_streak = max(current, 1)
         elif gap == 1:
             new_streak = current + 1
+        elif _grace_available(user, last_date, today):
+            new_streak = current + 1
+            user['streak_grace_day'] = (last_date + timedelta(days=1)).isoformat()
         else:
             new_streak = 1
+            # A run that ended takes its spent grace with it: the next one is
+            # a new run and earns its own at GRACE_EARNED_AT.
+            user['streak_grace_day'] = None
 
     user['current_streak'] = new_streak
     user['best_streak'] = max(user.get('best_streak', 0) or 0, new_streak)

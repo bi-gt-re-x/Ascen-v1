@@ -275,7 +275,7 @@ export default function Homepage() {
           <section className="lp-section">
             <SectionHead
               title="Showing up, counted"
-              blurb="Every finished task earns XP toward the next level, and the streak counts consecutive days with at least one thing done. Miss a day and it goes back to zero — that is the whole point of it."
+              blurb="Every finished task earns XP toward the next level, and the streak counts consecutive days with at least one thing done. A run a week old survives one missed day a month — a bad Tuesday is not the end of it, and two in a row still are."
             />
             <StreakLevel />
           </section>
