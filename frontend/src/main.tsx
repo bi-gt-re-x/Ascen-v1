@@ -41,6 +41,27 @@ if (!container) {
   throw new Error('index.html is missing <div id="root">');
 }
 
+/* The service worker, which is what makes this installable on a phone.
+ *
+ * After load rather than during it: registering competes with the app's own
+ * first paint for the same connection, and the worker has nothing to do on
+ * this visit anyway — it controls the *next* one.
+ *
+ * Only in a real build. `import.meta.env.PROD` is false under `npm run dev`,
+ * where Vite serves unhashed modules it rewrites on every edit; a worker
+ * caching those is a worker serving yesterday's component after a save, and
+ * the hour lost to working out why is the reason this guard is here.
+ *
+ * Failure is silent on purpose. No worker means no offline and no install
+ * prompt; it does not mean a broken app, and there is nothing the reader
+ * could do about it if they were told.
+ */
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
 createRoot(container).render(
   <StrictMode>
     {/* Outside the providers, because a provider throwing is exactly the case

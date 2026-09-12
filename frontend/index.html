@@ -13,6 +13,24 @@
     <link rel="icon" href="/static/images/logo.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="manifest" href="/manifest.json" />
+    <!-- iOS reads neither of the two icons above. It wants a PNG at a name it
+         looks for whether or not the page mentions it, and it composites what
+         it finds onto black, so the file has to be opaque. That file is the
+         256px entry already inside favicon.ico, copied out by
+         scripts/extract_touch_icon.py rather than drawn a second time. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Opened from the home screen, iOS gives it the whole screen instead of
+         Safari's chrome; the status bar is then drawn over the page, so it is
+         told to match rather than sit as a white band above the rail. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Summit" />
+    <!-- The colour the browser paints its own surfaces, which is what stops an
+         installed window opening with a strip of white above a dark page. Two,
+         because the app has two themes and this is the one piece of chrome the
+         stylesheet cannot reach. -->
+    <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1420" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Summit — a gamified productivity tracker: tasks, XP, streaks, a calendar, goals and growth analytics." />
     <title>Summit</title>
 

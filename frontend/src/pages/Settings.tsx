@@ -1400,7 +1400,15 @@ export default function Settings() {
           {
             id: 'export-json',
             label: 'Export everything',
-            hint: 'Tasks, goals, records, notes and focus days, as one JSON file.',
+            /* It said "Tasks, goals, records, notes and focus days", which was
+               five of the seventeen tables the account owns — the calendar,
+               the XP ledger, the goal checkpoints, the subjects and the badges
+               were all things this app would delete and could not give back.
+               The endpoint sends every one of them now, so the word in the
+               label is true and the hint says what it means. */
+            hint: 'Every table this account owns — tasks, the calendar, goals and their '
+              + 'checkpoints, notes, records, subjects, badges and the XP ledger — as one '
+              + 'JSON file.',
             control: (
               <a
                 className="st-btn"

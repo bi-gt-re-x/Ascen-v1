@@ -105,6 +105,50 @@ for _path in SPA_ROUTES:
     router.api_route(_path, methods=['GET', 'HEAD'])(index)
 
 
+#: The bundle's root-level files, served from `/` under their own names.
+#:
+#: Vite copies frontend/public/ into the root of the build, and everything in
+#: there is a file some *other* program asks for by an exact path it will not
+#: negotiate: the browser reads /manifest.json because <link rel="manifest">
+#: named it, iOS reads /apple-touch-icon.png without being told at all, a
+#: crawler reads /robots.txt or assumes the worst, and a service worker at
+#: /sw.js may only claim the scope its own URL sits in.
+#:
+#: None of them were served. `/assets` was mounted and the root of the build
+#: was not, so on a built install every one of these 404'd — the manifest that
+#: index.html points at has never once been delivered by this server, and the
+#: app has therefore never been installable outside the Vite dev server, which
+#: serves public/ itself and hid the whole thing.
+#:
+#: Listed rather than mounted as a directory. A StaticFiles mount at '/' would
+#: sit in front of every route in the app and answer for paths that belong to
+#: the SPA; naming the files keeps the root a closed set, and a new one in
+#: public/ is a line here.
+ROOT_FILES = (
+    'manifest.json',
+    'favicon.ico',
+    'robots.txt',
+    'apple-touch-icon.png',
+    # The service worker. Its scope is the directory it is served from, so it
+    # has to be this path and not /assets/ — see frontend/public/sw.js.
+    'sw.js',
+)
+
+
+def _root_file(name):
+    """One handler per file in ROOT_FILES, bound to its name."""
+    def serve():
+        path = os.path.join(DIST_DIR, name)
+        if not os.path.isfile(path):
+            return HTMLResponse(MISSING_BUILD, status_code=503)
+        # The worker decides for itself how long the app is stale, so it is the
+        # one file that must never be served from cache — a service worker
+        # pinned by an intermediary is a build nobody can replace.
+        headers = {'Cache-Control': 'no-cache'} if name == 'sw.js' else {}
+        return FileResponse(path, headers=headers)
+    return serve
+
+
 def register(app):
     """Mount the bundle's own files.
 
@@ -115,7 +159,15 @@ def register(app):
 
     check_dir=False so a checkout that has not been built yet still starts;
     the routes above explain the situation better than a crash at boot.
+
+    The root files are added the same way the SPA routes are — one route each,
+    above the mount — so that the build's own names resolve without a catch-all
+    at '/' that would shadow the app.
     """
+    for _name in ROOT_FILES:
+        app.add_api_route('/' + _name, _root_file(_name),
+                          methods=['GET', 'HEAD'], include_in_schema=False)
+
     app.mount('/assets',
               StaticFiles(directory=os.path.join(DIST_DIR, 'assets'),
                           check_dir=False),

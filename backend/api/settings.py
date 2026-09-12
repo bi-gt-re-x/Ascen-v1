@@ -571,6 +571,26 @@ def _mine(table, username):
     return [row for row in db.read_table(table) if row.get('user_id') == username]
 
 
+def _rows_for(table, username):
+    """One table's rows, for the JSON export.
+
+    A table in `EXPORTS` is narrowed to the columns named there — that list is
+    a choice about what is worth reading, and it is the same shape the CSV of
+    that table has, so the two formats agree about what a task is.
+
+    Everything else goes out whole. Curating columns for the other twelve would
+    mean a second copy of each table's schema in this file, and a copy of a
+    schema is a thing that goes stale silently: the column added next year is
+    missing from the export and nobody finds out until somebody needs it. The
+    row as stored is the honest answer and it cannot drift.
+    """
+    rows = _mine(table, username)
+    columns = EXPORTS.get(table)
+    if not columns:
+        return rows
+    return [{column: row.get(column) for column in columns} for row in rows]
+
+
 def _csv_cell(value):
     text = '' if value is None else str(value)
     if any(ch in text for ch in ',"\n'):
@@ -586,13 +606,35 @@ def export_data(username: str = Depends(current_username), table: str = 'all', f
     a time, because a CSV file with five different row shapes in it is not a
     CSV file — asking for `all` as CSV therefore returns the tasks, which is
     the table anybody exporting a productivity app actually wants.
+
+    ## What "everything" covers, and what it used to
+
+    `EXPORTS` held five tables and this endpoint offered those five, under a
+    button that said "Export everything". The account owns seventeen —
+    `ACCOUNT_TABLES` below is the list, and it is authoritative because it is
+    what deleting an account clears. So the app would delete twelve tables of
+    somebody's work that it had no way of handing back: every calendar entry
+    and event, the XP ledger the level is counted from, the checkpoints under
+    each goal, the subjects, the badges, the analytics snapshots and the
+    preferences. A goal came out without its milestones, which is half a goal.
+
+    So `all` now means all of it. `ACCOUNT_TABLES` is read rather than a second
+    list kept beside it, because two lists disagree eventually and the way they
+    would disagree here is the failure this paragraph is about — a table added
+    to one and not the other is data that can be destroyed and not retrieved.
+    It is defined further down the module and resolved when this runs, which is
+    why the forward reference is fine.
+
+    The `users` row itself is not in that list and is not exported: it holds the
+    password hash and the verification token, and neither is the reader's data
+    in any sense worth handing them a copy of.
     """
     name = (username or '').strip()
     _, user = load_user(name)
     if not user:
         return fail('Account not found')
 
-    if table != 'all' and table not in EXPORTS:
+    if table != 'all' and table not in EXPORTS and table not in ACCOUNT_TABLES:
         return fail('Nothing here is called {}.'.format(table), status=400)
 
     if format == 'csv':
@@ -608,14 +650,10 @@ def export_data(username: str = Depends(current_username), table: str = 'all', f
                      'attachment; filename="summit-{}.csv"'.format(wanted)},
         )
 
-    names = EXPORTS.keys() if table == 'all' else (table,)
+    names = ACCOUNT_TABLES if table == 'all' else (table,)
     body = ok(export={
         'account': name,
-        'tables': {
-            key: [{column: row.get(column) for column in EXPORTS[key]}
-                  for row in _mine(key, name)]
-            for key in names
-        },
+        'tables': {key: _rows_for(key, name) for key in names},
     })
     # Named on the way out, the way the CSV branch above is. The link that
     # asks for this carries `download`, so the browser saves it either way —
