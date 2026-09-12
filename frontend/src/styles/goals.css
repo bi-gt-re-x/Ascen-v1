@@ -289,29 +289,114 @@ html[data-theme="dark"] .gx-page {
 .gx-head p { margin: 0; font-size: 13.5px; }
 .gx-head-tools { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 
-/* The Vision line, inside the masthead now rather than adrift under it. A
-   pill for the label and the sentence beside it, on one baseline — it used to
-   be an uppercase caption followed by prose with a paragraph's worth of space
-   above and below, which read as a section heading for the band underneath it
-   rather than as a summary of the page. */
-.gx-head .gx-vision {
-    display: flex;
-    align-items: baseline;
-    gap: 9px;
-    flex-wrap: wrap;
-    margin: 12px 0 0;
-    font-size: 13px;
+/* ---------- The state block, under the masthead title --------------------
+   Three lines, and the sizes are the whole argument. The count is the largest
+   thing in the header after the page name because it is the answer to the
+   first question anybody arrives with; the kinds sit under it at caption size
+   because they qualify the count rather than adding to it; and the third line
+   is the only one that is not type at all — it is a control, so it is drawn
+   as one.
+
+   It replaced a "Vision" pill and a greeting stacked on top of each other,
+   which between them spent four lines and two font sizes saying one number
+   twice. */
+.gx-state { margin: 13px 0 0; }
+.gx-state-count {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gx-text);
+}
+.gx-state-count strong {
+    font-size: 21px;
+    font-weight: 800;
+    /* Tabular, so the figure does not shuffle the words beside it when a goal
+       is completed and 10 becomes 9. */
+    font-variant-numeric: tabular-nums;
+    margin-right: 3px;
+}
+.gx-state-kinds {
+    margin: 2px 0 0;
+    font-size: 12.5px;
     color: var(--gx-muted);
 }
-.gx-head .gx-vision > span:first-child {
-    padding: 2px 9px;
+.gx-state-none {
+    margin: 13px 0 0;
+    font-size: 13.5px;
+    color: var(--gx-muted);
+}
+
+/* The third line. The dot carries the colour and the label carries the count,
+   and there is no verb on it: the pill is plainly pressable without one, and
+   the way back out is stated where the filtered list is rather than twice.
+   `aria-pressed` is what says which way it is set, so the accessible name
+   stays the same string whether the filter is on or off — a button that
+   renames itself when pressed reads to a screen reader as a different
+   control. */
+.gx-state-attn,
+.gx-state-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 7px 0 0;
+    padding: 4px 10px 4px 8px;
+    border: 1px solid transparent;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--gx-violet) 13%, transparent);
-    color: var(--gx-violet);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .07em;
-    text-transform: uppercase;
+    background: none;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--gx-watch);
+}
+.gx-state-attn > i,
+.gx-state-clear > i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+.gx-state-clear { color: var(--gx-good); padding-left: 8px; }
+
+button.gx-state-attn {
+    cursor: pointer;
+    background: color-mix(in srgb, var(--gx-watch) 10%, transparent);
+    border-color: color-mix(in srgb, var(--gx-watch) 22%, transparent);
+    transition: background .16s ease, border-color .16s ease;
+}
+button.gx-state-attn:hover,
+button.gx-state-attn:focus-visible {
+    background: color-mix(in srgb, var(--gx-watch) 18%, transparent);
+    border-color: color-mix(in srgb, var(--gx-watch) 40%, transparent);
+}
+button.gx-state-attn.is-on {
+    background: color-mix(in srgb, var(--gx-watch) 20%, transparent);
+    border-color: color-mix(in srgb, var(--gx-watch) 46%, transparent);
+}
+
+/* ---------- The filtered list -------------------------------------------
+   The bar above the cards when the header's attention filter is on. It states
+   what is being shown and carries the way out, because the control that turned
+   it on is a small pill above the tab strip and a reader who has scrolled to
+   the third card cannot see it any more. A list that is quietly missing rows
+   is the failure being avoided here. */
+.gx-filtered {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border: 1px solid color-mix(in srgb, var(--gx-watch) 30%, transparent);
+    border-radius: var(--gx-radius);
+    background: color-mix(in srgb, var(--gx-watch) 9%, var(--gx-card));
+}
+.gx-filtered-what { font-size: 13px; color: var(--gx-text); min-width: 0; }
+.gx-filtered-what strong {
+    color: var(--gx-watch);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Bands --------------------------------------------------------- */
@@ -450,24 +535,6 @@ html[data-theme="dark"] .gx-page {
 @keyframes gx-wipe {
     from { clip-path: inset(-8px 100% -8px -8px); }
     to   { clip-path: inset(-8px -8px -8px -8px); }
-}
-
-/* ---------- Vision -------------------------------------------------------- */
-.gx-vision {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin: 0;
-    font-size: 12.5px;
-    color: var(--gx-muted);
-}
-.gx-vision > span {
-    flex: none;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--gx-violet);
 }
 
 /* ---------- Tiles --------------------------------------------------------- */
@@ -2286,23 +2353,6 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
    parts inside it read `var(--tone)` rather than naming a colour.
    ========================================================================== */
 
-/* ---------- The opening line --------------------------------------------- */
-.gx-greet { margin-top: 12px; }
-.gx-greet-hi {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--gx-text);
-}
-.gx-greet-line {
-    margin: 3px 0 0;
-    font-size: 13.5px;
-    color: var(--gx-muted);
-}
-.gx-greet-line strong { color: var(--gx-text); font-weight: 700; }
-.gx-greet-split { margin-left: 10px; padding-left: 11px; border-left: 1px solid var(--gx-line); }
-.gx-greet-split em { font-style: normal; color: var(--gx-watch); font-weight: 600; }
-
 /* A pair of bands that are one thought. The second is narrower because it is a
    reading and the first is a list you work down. */
 .gx-two-wide { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
@@ -3054,6 +3104,25 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     min-height: 24px;
 }
 .ag-panel-head-tight { margin-top: 4px; }
+
+/* The health reason, printed rather than left in the chip's tooltip. Only
+   drawn when the attention filter put this card on screen — see `explain` in
+   components/Goals/ActiveGoalCard. It takes its colour from the state so the
+   sentence and the chip above it cannot read as two different verdicts. */
+.ag-why-here {
+    margin: 8px 0 0;
+    padding: 7px 10px;
+    border-left: 2px solid currentColor;
+    border-radius: 0 6px 6px 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.ag-why-here.is-at-risk { color: var(--gx-watch); }
+.ag-why-here.is-off-track { color: var(--gx-bad); }
+.ag-why-here.is-not-started,
+.ag-why-here.is-on-track { color: var(--gx-muted); }
+
 .ag-panel-head h4 {
     margin: 0;
     font-size: 10.5px;

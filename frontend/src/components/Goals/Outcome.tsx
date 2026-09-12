@@ -32,7 +32,7 @@
 import { useId, type ReactNode } from 'react';
 import { useCountUp } from '@/hooks';
 import { formatGoalDate } from './numbers';
-import { type GoalHealth, type HealthState } from '@/utils/goalHealth';
+import { goalHealth, type GoalHealth, type HealthState } from '@/utils/goalHealth';
 import { goalNotes, goalsOverview, type GoalNote } from '@/utils/goalAnalytics';
 import type { Goal, GoalCategory, Milestone, Task } from '@/types';
 
@@ -792,25 +792,101 @@ export function GoalsCta({ onNew }: { onNew: () => void }) {
 }
 
 /**
- * The line above everything — what the goals are all in service of.
+ * The three lines the page opens with — what you are carrying, right now.
  *
- * One sentence, editable nowhere yet, and deliberately not a feature: the
- * hierarchy the page is built on starts at a vision and it is worth naming
- * even when the app has nowhere to store one. It reads from the account's
- * goals rather than claiming to know: with goals set it says what they have in
- * common, and with none it says what the page is for.
+ * It replaced two things that said the same thing twice: a "Vision" line
+ * reading "4 goals in flight across Academic, Skill, Project" sitting directly
+ * above a greeting reading "Good afternoon. You are working toward 4 goals · 2
+ * on track · 2 need attention". Two counts of the same set, one of them behind
+ * a salutation. A header that narrates the page is a header the reader learns
+ * to skip, and the greeting was the part carrying no information at all — the
+ * time of day is on their own clock.
+ *
+ * So it states rather than narrates, in the order the reader needs:
+ *
+ *     4 goals in motion          how much am I carrying
+ *     Academic · Skill · Project  what kind
+ *     2 need attention            what do I look at first
+ *
+ * ## The third line is the only control in the header
+ *
+ * "2 need attention" was a count you could read and nothing else. It is a
+ * filter now — the one place on the page that answers "show me the problem"
+ * in a click — which is also what forces the count to be honest, because a
+ * number you can press is a number that has to produce exactly that many
+ * cards.
+ *
+ * That is why `goals` here is the *outcome* goals and not everything active.
+ * The old line counted the four system counters too, so an account with two
+ * outcome goals and four counters read "6 goals in flight" above a tab holding
+ * two cards. Nothing said so while the number was only a number; as a filter
+ * it would have been a button promising six things and delivering two.
+ *
+ * `on` is the filter's current state rather than something this component
+ * owns, because the page owns which goals are drawn and the header only asks.
  */
-export function VisionLine({ goals }: { goals: Goal[] }) {
-  const active = goals.filter((goal) => goal.status !== 'completed');
-  const kinds = new Set(active.map((goal) => categoryOf(goal).label));
-  if (active.length === 0) return null;
+export function GoalsState({
+  goals,
+  tasks,
+  today = new Date(),
+  on = false,
+  onAttention,
+}: {
+  /** The outcome goals — exactly the set the Active Goals tab draws. */
+  goals: Goal[];
+  tasks: Task[];
+  today?: Date;
+  /** Whether the attention filter is currently on. */
+  on?: boolean;
+  /** Toggle it. Absent, and the count is text rather than a button. */
+  onAttention?: () => void;
+}) {
+  const needs = goals.filter((goal) => {
+    const state = goalHealth(goal, tasks, today).state;
+    return state === 'at-risk' || state === 'off-track';
+  }).length;
+
+  if (goals.length === 0) {
+    return <p className="gx-state-none">Nothing on the go. The first goal is the hard one.</p>;
+  }
+
+  const kinds = [...new Set(goals.map((goal) => categoryOf(goal).label))];
+
   return (
-    <p className="gx-vision">
-      <span>Vision</span>
-      {active.length} goal{active.length === 1 ? '' : 's'} in flight across{' '}
-      {[...kinds].slice(0, 3).join(', ')}
-      {kinds.size > 3 ? ` and ${kinds.size - 3} more` : ''}.
-    </p>
+    <div className="gx-state">
+      <p className="gx-state-count">
+        <strong>{goals.length}</strong> {goals.length === 1 ? 'goal' : 'goals'} in motion
+      </p>
+      <p className="gx-state-kinds">
+        {kinds.slice(0, 3).join(' · ')}
+        {kinds.length > 3 && <span className="gx-quiet"> +{kinds.length - 3} more</span>}
+      </p>
+
+      {/* Nothing to press when there is nothing wrong, and the positive is
+          worth saying out loud rather than leaving the line blank — an empty
+          third line reads as a figure that failed to load. */}
+      {needs === 0 ? (
+        <p className="gx-state-clear">
+          <i aria-hidden="true" />
+          All on track
+        </p>
+      ) : onAttention ? (
+        <button
+          type="button"
+          className={`gx-state-attn${on ? ' is-on' : ''}`}
+          aria-pressed={on}
+          onClick={onAttention}
+        >
+          <i aria-hidden="true" />
+          {needs} {needs === 1 ? 'needs' : 'need'} attention
+        </button>
+      ) : (
+        <p className="gx-state-attn is-flat">
+          <i aria-hidden="true" />
+          {needs} {needs === 1 ? 'needs' : 'need'} attention
+        </p>
+      )}
+    </div>
   );
 }
 

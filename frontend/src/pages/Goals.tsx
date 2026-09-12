@@ -50,7 +50,6 @@ import {
   GoalDetail,
   GoalInsights,
   GoalModal,
-  GoalsGreeting,
   GrowthAreas,
   Trajectory,
   GoalStats,
@@ -67,7 +66,7 @@ import {
   RecentlyCompleted,
   SystemGoalWizard,
   SystemGoals,
-  VisionLine,
+  GoalsState,
   fillSteps,
   goalNumbers,
   isOverdue,
@@ -88,6 +87,7 @@ import {
 import { goals as goalService, tasks as taskService } from '@/services';
 import type { NewGoal } from '@/services/goals';
 import type { Goal, Milestone, MilestoneStatus, MilestoneStep, Task } from '@/types';
+import { goalHealth } from '@/utils/goalHealth';
 import type { TabId } from '@/components/Goals';
 import { fromTitles } from '@/utils/milestoneSteps';
 import '@/styles/goals.css';
@@ -581,8 +581,46 @@ export default function Goals() {
     () => active.filter((goal) => ['number', 'milestones'].includes(measureOf(goal))),
     [active],
   );
+  /**
+   * The goals the header's third line counts, and the ones it filters to.
+   *
+   * At risk or off track — not "not started". A goal with nothing against it
+   * yet is a goal nobody has begun, which is a different problem with a
+   * different answer, and putting it here would fill the reader's one
+   * "show me the problem" view with goals whose problem is that they have not
+   * happened. `goalHealth` says why each one is here; see `reasonFor` there.
+   */
+  const needsAttention = useMemo(
+    () =>
+      outcomes.filter((goal) => {
+        const state = goalHealth(goal, tasks).state;
+        return state === 'at-risk' || state === 'off-track';
+      }),
+    [outcomes, tasks],
+  );
+
+  /**
+   * Whether the header's filter is on.
+   *
+   * Not persisted, and deliberately: it is a way of looking at the page for
+   * the next thirty seconds, not a preference. A filter that survived a reload
+   * would be a reader coming back tomorrow to a Goals page that silently omits
+   * every goal that is going well.
+   */
+  const [attention, setAttention] = useState(false);
+
+  /* It clears itself when there is nothing left to show. Ticking the last
+     at-risk goal back into shape while filtered would otherwise leave an empty
+     tab under a header that had just stopped saying anything was wrong. */
+  useEffect(() => {
+    if (attention && needsAttention.length === 0) setAttention(false);
+  }, [attention, needsAttention.length]);
+
   /** The ones drawn as ladders and given their own rail. See LIST_GOALS. */
-  const shown = useMemo(() => outcomes.slice(0, LIST_GOALS), [outcomes]);
+  const shown = useMemo(
+    () => (attention ? needsAttention : outcomes.slice(0, LIST_GOALS)),
+    [attention, needsAttention, outcomes],
+  );
 
   /** The four counters the app feeds itself. Kept, not extended. */
   const counters = useMemo(
@@ -631,11 +669,22 @@ export default function Goals() {
                 </span>
                 Goals
               </h1>
-              <p className="gx-quiet">What you are working toward.</p>
-              <VisionLine goals={list} />
-              {/* What you are carrying, before anything is described. The counts
-                  come from the same `goalsOverview` the tiles below read. */}
-              <GoalsGreeting goals={list} tasks={tasks} />
+              {/* State, not narration. Three lines: how much, what kind, and
+                  what to look at first — and the third is the page's only
+                  header control. See `GoalsState` in components/Goals/Outcome. */}
+              <GoalsState
+                goals={outcomes}
+                tasks={tasks}
+                on={attention}
+                onAttention={() => {
+                  /* The cards it filters are on the Active tab, so pressing it
+                     from Stats or Timeline has to go there — a filter applied
+                     to a tab you are not looking at is a button that does
+                     nothing. */
+                  setTab('active');
+                  setAttention((was) => !was);
+                }}
+              />
             </div>
             <div className="gx-head-tools">
               <RefreshButton busy={busy} onRefresh={() => void load(true)} />
@@ -666,6 +715,25 @@ export default function Goals() {
             components/Goals/ActiveGoalCard. */}
         {on('active') && (
           <>
+            {/* What the reader is looking at, and the way back. A filtered list
+                that does not say it is filtered is a list with goals missing
+                from it, and the header button is small and above the tabs —
+                the state has to be stated where the cards are. */}
+            {attention && (
+              <div className="gx-filtered" role="status">
+                <span className="gx-filtered-what">
+                  <strong>{shown.length}</strong>{' '}
+                  {shown.length === 1 ? 'goal needs' : 'goals need'} attention
+                  <span className="gx-quiet">
+                    {' '}· behind pace, gone quiet, or past their date
+                  </span>
+                </span>
+                <button type="button" className="gx-btn" onClick={() => setAttention(false)}>
+                  Show all {outcomes.length}
+                </button>
+              </div>
+            )}
+
             {shown.length === 0 ? (
               <p className="gx-empty">
                 No outcome goals yet. Something you either reached or did not — reach USACO
@@ -693,6 +761,11 @@ export default function Goals() {
                       void linkTask(entry, task, milestoneId)
                     }
                     onSuggest={suggestMilestones}
+                    /* Only while filtered. The health chip carries its reason
+                       as a tooltip everywhere else, which is enough when the
+                       reader chose the goal; it is not enough when the page
+                       chose it for them and they are owed the because. */
+                    explain={attention}
                     /* The goal itself, or any checkpoint under it: the ladder
                        being drafted is the same ladder either way. */
                     planning={
@@ -711,8 +784,11 @@ export default function Goals() {
             )}
 
             {/* The eleventh goal onward. Still reachable, still counted — just
-                not drawn as something being actively pursued. */}
-            {outcomes.length > LIST_GOALS && (
+                not drawn as something being actively pursued. Not while the
+                filter is on: every goal it holds is one the filter just said
+                was fine, so listing them under the problem ones puts the
+                answer back on screen directly below the question. */}
+            {!attention && outcomes.length > LIST_GOALS && (
               <Band
                 title="Also carrying"
                 hint="Still counted, not drawn as cards"

@@ -29,7 +29,7 @@ export {
   ProgressBar,
   RecentlyCompleted,
   Ring,
-  VisionLine,
+  GoalsState,
   categoryOf,
 } from './Outcome';
 export { GoalDetail } from './GoalDetail';
@@ -63,7 +63,6 @@ export type { PlanResult } from './plan';
 export { GoalVisual } from './GoalVisual';
 export type { GoalVisualProps } from './GoalVisual';
 export {
-  GoalsGreeting,
   GrowthAreas,
   MOMENTUM_DAYS,
   Momentum,

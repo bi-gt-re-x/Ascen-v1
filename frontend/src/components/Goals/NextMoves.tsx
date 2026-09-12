@@ -9,10 +9,11 @@
  * act on. A goals page that stops at description is a Notion database with a
  * progress bar on it.
  *
- * So these three read the same rows the rest of the page does and answer a
- * different question. The greeting says what you are carrying. `NextMoves`
- * says which specific tasks move it, and lets you tick one off without
- * leaving. `Momentum` says whether the last week actually went anywhere.
+ * So these read the same rows the rest of the page does and answer a
+ * different question. `NextMoves` says which specific tasks move a goal, and
+ * lets you tick one off without leaving. `Momentum` says whether the last week
+ * actually went anywhere. What the reader is carrying is said once, in the
+ * header — see `GoalsState` in ./Outcome.
  *
  * ## Nothing here invents work
  *
@@ -25,8 +26,6 @@
 import { useMemo } from 'react';
 import { categoryOf } from './Outcome';
 import { goalNumbers } from './numbers';
-import { goalsOverview } from '@/utils/goalAnalytics';
-import { greeting as timeGreeting } from '@/utils/dates';
 import type { Goal, Task } from '@/types';
 
 const DAY = 86_400_000;
@@ -57,53 +56,6 @@ const at = (iso?: string): number | null => {
   const time = new Date(iso).getTime();
   return Number.isNaN(time) ? null : time;
 };
-
-// ---------------------------------------------------------------------------
-// The line the page opens with
-// ---------------------------------------------------------------------------
-/**
- * "Good afternoon. You are working toward four goals."
- *
- * The counts come from `goalsOverview`, which is what the rest of the page
- * already reads, so this cannot disagree with the tiles below it. It says
- * "needs attention" rather than "at risk" for the same reason the health chip
- * does not shout: the number is a prompt to look, not a verdict.
- */
-export function GoalsGreeting({
-  goals,
-  tasks,
-  today = new Date(),
-}: {
-  goals: Goal[];
-  tasks: Task[];
-  today?: Date;
-}) {
-  const overview = useMemo(() => goalsOverview(goals, tasks, today), [goals, tasks, today]);
-  const needs = overview.atRisk + overview.offTrack;
-
-  return (
-    <div className="gx-greet">
-      <p className="gx-greet-hi">{timeGreeting(today)}.</p>
-      {overview.active === 0 ? (
-        <p className="gx-greet-line">Nothing on the go. The first goal is the hard one.</p>
-      ) : (
-        <p className="gx-greet-line">
-          You are working toward <strong>{overview.active}</strong>{' '}
-          {overview.active === 1 ? 'goal' : 'goals'}
-          <span className="gx-greet-split">
-            {overview.onTrack > 0 && <>{overview.onTrack} on track</>}
-            {overview.onTrack > 0 && needs > 0 && ' · '}
-            {needs > 0 && (
-              <em>
-                {needs} {needs === 1 ? 'needs' : 'need'} attention
-              </em>
-            )}
-          </span>
-        </p>
-      )}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Next moves

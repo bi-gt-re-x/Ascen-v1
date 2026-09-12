@@ -159,6 +159,15 @@ export interface ActiveGoalCardProps {
   onCompleteGoal: (goal: Goal) => void;
   /** Turns a subject id into its name, for the charts that group by subject. */
   nameOf: (id: string) => string;
+  /**
+   * Print the health reason instead of hiding it in the chip's tooltip.
+   *
+   * Set by the header's attention filter, and by nothing else. A card the
+   * reader picked needs the colour and the label; a card the *page* picked
+   * needs to say what it was picked for, in words, where the reader is
+   * looking — otherwise the filter is a list of goals with no stated crime.
+   */
+  explain?: boolean;
 }
 
 export function ActiveGoalCard({
@@ -178,6 +187,7 @@ export function ActiveGoalCard({
   onMilestoneStatus,
   onCompleteGoal,
   nameOf,
+  explain = false,
 }: ActiveGoalCardProps) {
   /** Midnight today, so a step due today is not drawn as late. */
   const todayStart = new Date(new Date().toDateString()).getTime();
@@ -472,6 +482,8 @@ export function ActiveGoalCard({
             <h4>Current focus</h4>
             <HealthChip health={health} />
           </header>
+
+          {explain && <p className={`ag-why-here is-${health.state}`}>{health.reason}</p>}
 
           {focus ? (
             <>
