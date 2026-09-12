@@ -790,17 +790,34 @@ export default function Goals() {
                 answer back on screen directly below the question. */}
             {!attention && outcomes.length > LIST_GOALS && (
               <Band
-                title="Also carrying"
+                title={`Also carrying · ${outcomes.length - LIST_GOALS} ${
+                  outcomes.length - LIST_GOALS === 1 ? 'goal' : 'goals'
+                }`}
                 hint="Still counted, not drawn as cards"
               >
+                {/* Rows, not cards, and that is the whole point of the band:
+                    these are the goals that did not make the ladder, and a
+                    second card system underneath the first would put them back
+                    in competition with it. Each row carries the three things
+                    that decide whether you want to go and look — what it is,
+                    how far in, and whether it is in trouble — and nothing else.
+
+                    The health dot is the addition. Without it the list sorted
+                    by eye into nothing: fourteen goals at assorted percentages,
+                    with no way to tell the one that is quietly failing from the
+                    one that is simply long. It is the same reading and the same
+                    colours as the chip on a card, so the two cannot disagree. */}
                 <ul className="gx-rest">
                   {outcomes.slice(LIST_GOALS).map((goal) => {
                     const numbers = goalNumbers(goal);
+                    const health = goalHealth(goal, tasks);
                     return (
                       <li key={goal.id}>
                         <button type="button" onClick={() => setOpenId(goal.id)}>
                           <span className="gx-rest-title">{goal.title}</span>
-                          <span className="gx-quiet">{Math.round(numbers.progress)}%</span>
+                          <span className="gx-rest-pct">{Math.round(numbers.progress)}%</span>
+                          <i className={`gx-rest-dot is-${health.state}`} aria-hidden="true" />
+                          <span className="gx-sr">{health.label}</span>
                         </button>
                       </li>
                     );

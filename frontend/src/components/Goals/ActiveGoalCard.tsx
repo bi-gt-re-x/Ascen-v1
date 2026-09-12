@@ -279,6 +279,21 @@ export function ActiveGoalCard({
     return { from: window.from, steps: window.shown };
   }, [focus]);
 
+  /**
+   * The one step to do next: the first that is neither ticked nor unnamed.
+   *
+   * Named rather than left to the reader to find, because the checklist is
+   * windowed three at a time and a window opening on a half-done checkpoint
+   * shows a mix of ticked and unticked rows — "which of these is mine" is a
+   * question the panel can answer and was making the reader answer. A
+   * placeholder is skipped: "Next: Step 4" over a row nobody has written yet
+   * is an instruction to do something unnamed.
+   */
+  const nextStep = useMemo(
+    () => (focus ? focus.steps.find((step) => !step.done && !step.placeholder) ?? null : null),
+    [focus],
+  );
+
   /** Every named step ticked — the checkpoint has nothing left in it. */
   const readyToClose = Boolean(focus && focus.status !== 'done' && stepsComplete(focus.steps));
 
@@ -490,7 +505,7 @@ export function ActiveGoalCard({
 
         <section className="ag-panel">
           <header className="ag-panel-head">
-            <h4>Current focus</h4>
+            <h4>Current checkpoint</h4>
             <HealthChip health={health} />
           </header>
 
@@ -519,7 +534,22 @@ export function ActiveGoalCard({
                 </span>
                 <div className="ag-focus-text">
                   <strong>{focus.title}</strong>
-                  <span>{focus.note || health.reason}</span>
+                  {/* The count moved up here from the checklist's own header.
+                      It is the second thing anybody wants after the name —
+                      how far into this one am I — and it was a grey "3 of 5"
+                      two headings further down, under the title of a list you
+                      had to read to work out the same thing.
+
+                      What it replaced was `focus.note || health.reason`, and
+                      the fallback half of that was the reason already printed
+                      on the chip two lines above. The note is kept where it
+                      exists, because that is the reader's own sentence. */}
+                  <span>
+                    {focusSteps.total > 0
+                      ? `${focusSteps.done} / ${focusSteps.total} steps`
+                      : 'No steps yet'}
+                    {focus.note ? ` · ${focus.note}` : ''}
+                  </span>
                 </div>
                 <span className="ag-focus-when">{monthYear(focus.target_date)}</span>
               </button>
@@ -553,9 +583,6 @@ export function ActiveGoalCard({
                   so a checkpoint half done opens on what is left. */}
               <header className="ag-panel-head ag-panel-head-tight">
                 <h4>Checklist</h4>
-                <span className="ag-quiet">
-                  {focusSteps.done} of {focusSteps.total || focus.steps.length}
-                </span>
               </header>
 
               {/* `start` numbers a native marker; this list draws its own
@@ -681,6 +708,23 @@ export function ActiveGoalCard({
                   <button type="button" className="ag-link-btn" onClick={() => onOpen(goal)}>
                     open the details
                   </button>
+                </p>
+              )}
+
+              {/* The line the card is for. Everything above it describes: the
+                  chart says why this goal is going the way it is, the
+                  checkpoint says where in the plan you are, and this says what
+                  to do — which is the only one of the three that can be acted
+                  on without reading the other two.
+
+                  Not drawn when the checkpoint is finished: `readyToClose`
+                  puts its own button in this space, and "next" over a
+                  checkpoint with nothing left in it would be pointing at the
+                  work that is already done. */}
+              {nextStep && !readyToClose && (
+                <p className="ag-next">
+                  <span>Next</span>
+                  <strong title={nextStep.title}>{nextStep.title}</strong>
                 </p>
               )}
 

@@ -23,15 +23,33 @@ import { ActiveGoalCard } from './ActiveGoalCard';
 import type { ActiveGoalCardProps } from './ActiveGoalCard';
 import type { Goal, Milestone } from '@/types';
 
-const stone = (id: string, status: string): Milestone =>
+const step = (title: string, done: boolean, over: Record<string, unknown> = {}) =>
+  ({ id: `s-${title}`, title, done, placeholder: false, task_id: null, ...over }) as never;
+
+const stone = (id: string, status: string, steps: unknown[] = []): Milestone =>
   ({
     id,
     goal_id: 'g-1',
     title: `Stage ${id}`,
     status,
-    steps: [],
+    steps,
     completed_at: status === 'done' ? '2026-08-02T10:00:00' : null,
   }) as unknown as Milestone;
+
+/** A goal mid-checkpoint: two steps ticked, three to go. */
+const inFlight = () =>
+  goal({
+    milestones: [
+      stone('a', 'done'),
+      stone('b', 'active', [
+        step('Complete the 2023 set', true),
+        step('Review missed problems', true),
+        step('Complete the Level 4 set', false),
+        step('Timed practice', false),
+        step('Re-test', false),
+      ]),
+    ],
+  });
 
 /** A goal whose checkpoints are all reached — the only state that offers this. */
 function goal(over: Partial<Goal> = {}): Goal {
@@ -149,5 +167,84 @@ describe('marking a goal complete', () => {
   it('is not offered at all while a checkpoint is still open', () => {
     show({ goal: goal({ milestones: [stone('a', 'done'), stone('b', 'todo')] }) });
     expect(screen.queryByRole('button', { name: 'Mark complete' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The right-hand column, which is the half of the card that can be acted on.
+ *
+ * The two panels answer different questions and only one of them is a next
+ * move: the chart says why the goal is going the way it is, and this says
+ * where you are in the plan and what to do about it. It used to be the
+ * quieter of the two — a 13.5px checkpoint name beside a block of colour, with
+ * the progress figure two headings further down under a list you had to read
+ * to work the same thing out.
+ *
+ * The "Next" line is the piece that did not exist at all. The checklist is
+ * windowed three rows at a time and a window onto a half-done checkpoint is a
+ * mix of ticked and unticked rows, so "which of these is mine" was a question
+ * the panel could answer and was making the reader answer instead.
+ */
+describe('the current checkpoint', () => {
+  it('leads with the checkpoint and how far into it you are', () => {
+    show({ goal: inFlight() });
+
+    expect(screen.getByRole('heading', { name: 'Current checkpoint' })).toBeInTheDocument();
+    expect(screen.getByText('2 / 5 steps')).toBeInTheDocument();
+  });
+
+  /* It was `focus.note || health.reason`, and the fallback printed the chip's
+     own sentence two lines under the chip. */
+  it('keeps the note the reader wrote, beside the count', () => {
+    const one = inFlight();
+    (one.milestones as never as Array<Record<string, unknown>>)[1]!.note = 'Counting is the wall';
+    show({ goal: one });
+
+    expect(screen.getByText(/2 \/ 5 steps · Counting is the wall/)).toBeInTheDocument();
+  });
+
+  it('names the one step to do next', () => {
+    show({ goal: inFlight() });
+
+    const next = screen.getByText('Next').closest('p')!;
+    expect(next).toHaveTextContent('Complete the Level 4 set');
+  });
+
+  /* Not the ticked ones above it, and not an unwritten row below. A
+     placeholder is a step nobody has named, and "Next: Step 4" is an
+     instruction to go and do something that has no description. */
+  it('skips the steps already done and the ones not yet written', () => {
+    show({
+      goal: goal({
+        milestones: [
+          stone('a', 'active', [
+            step('Done already', true),
+            step('', false, { placeholder: true }),
+            step('The real next one', false),
+          ]),
+        ],
+      }),
+    });
+
+    expect(screen.getByText('Next').closest('p')).toHaveTextContent('The real next one');
+  });
+
+  it('says nothing about next when the checkpoint is finished', () => {
+    show({
+      goal: goal({
+        milestones: [stone('a', 'active', [step('Only step', true)])],
+      }),
+    });
+
+    // The space belongs to the button that closes the checkpoint instead.
+    expect(screen.queryByText('Next')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark checkpoint reached' })).toBeInTheDocument();
+  });
+
+  it('says so plainly when a checkpoint has no steps at all', () => {
+    show({ goal: goal({ milestones: [stone('a', 'active')] }) });
+
+    expect(screen.getByText(/No steps yet/)).toBeInTheDocument();
+    expect(screen.queryByText('Next')).not.toBeInTheDocument();
   });
 });

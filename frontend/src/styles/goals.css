@@ -730,16 +730,34 @@ button.gx-state-attn.is-on {
     text-align: left;
 }
 .gx-rest button:hover { background: color-mix(in srgb, var(--tone, var(--gx-card-2)) var(--gx-wash), var(--gx-card-2)); }
-/* A bullet in the goal's colour, so the list that carries the goals which did
-   not make the ladder is still sorted by eye. */
-.gx-rest button::before {
-    content: '';
-    flex: none;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--tone, var(--gx-faint));
-}
 .gx-rest-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-rest-pct {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--gx-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The health dot, on the right where the eye lands last.
+   It replaced a bullet on the left painted `var(--tone, var(--gx-faint))` — a
+   custom property no row on this list ever set, so every one of them drew the
+   same grey circle. A column of identical dots is furniture; this one is the
+   only mark here that separates a goal that is long from a goal that is
+   failing, and it is the same four states as the chip on a card. */
+.gx-rest-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gx-faint);
+}
+.gx-rest-dot.is-on-track { background: var(--gx-good); }
+.gx-rest-dot.is-at-risk { background: var(--gx-watch); }
+.gx-rest-dot.is-off-track { background: var(--gx-bad); }
+.gx-rest-dot.is-not-started {
+    background: none;
+    border: 1.5px solid var(--gx-faint);
+}
 
 /* ---------- The ladder: a goal and its five checkpoints -------------------- */
 /* One card per goal, stacked rather than gridded. A grid would put two plans
@@ -3084,7 +3102,17 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 /* ---------- Body ---------------------------------------------------------- */
 .ag-body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* Not halves. The two panels answer different questions and one of them is
+       the reason to open the card: the chart says why the goal is going the way
+       it is, and the right-hand column says where you are and what to do next.
+       At 50/50 the chart won on sheer area — it is a block of colour beside a
+       list of small text — and the card read as an analytics panel with a
+       to-do list stapled to it.
+
+       5/7 rather than something more dramatic because the chart still has to
+       be a chart. Past about 60% the bars start wrapping their labels, and a
+       chart nobody can read is worse than no chart at all. */
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     gap: 1px;
     /* One hairline between the panels, drawn by the gap over the card's line
        colour, so there is no border to double up at the card's own edge. */
@@ -3479,13 +3507,28 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 .ag-focus-ico .gx-tile { width: 30px; height: 30px; border-radius: 9px; }
 .ag-focus-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ag-focus-text strong {
-    font-size: 13.5px;
-    font-weight: 650;
+    /* The name of the thing being worked on, and the largest text in either
+       panel below the goal's own title. It was 13.5px — the same size as the
+       chart's heading opposite, which made the two columns read as a pair of
+       equal sections rather than as the answer and its explanation. */
+    font-size: 15.5px;
+    font-weight: 700;
+    letter-spacing: -.01em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.ag-focus-text span { font-size: 11.5px; color: var(--gx-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-focus-text span {
+    font-size: 12px;
+    color: var(--gx-muted);
+    /* The step count leads this line, so it is the one figure on the card that
+       changes every time a box is ticked. Tabular, or "3 / 5" and "4 / 5" set
+       the words after them a pixel apart. */
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .ag-focus-pct { font-size: 14px; font-weight: 800; color: var(--tone); letter-spacing: -.02em; }
 .ag-focus-when { font-size: 11.5px; color: var(--gx-muted); white-space: nowrap; }
 .ag-focus-bar {
@@ -3684,6 +3727,44 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
 .ag-step-link:disabled { opacity: 0; cursor: default; }
 
 .ag-steps-rest { margin: 7px 0 0; font-size: 11px; }
+
+/* ---------- The line the card is for -------------------------------------- */
+/* "Next · Complete the Level 4 set". The chart explains why, the checkpoint
+   explains where, and this is the only one of the three that can be acted on
+   without reading the other two — so it sits at the foot of the column, last
+   thing before the eye leaves the card, and it is the one line here allowed to
+   carry the goal's own colour.
+
+   `auto 1fr` rather than a flex row: the label is a fixed pill and the title
+   takes what is left and ellipsises, so a long step name cannot push the word
+   "Next" off its own line. */
+.ag-next {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 9px;
+    margin: 10px 0 0;
+    padding: 9px 11px;
+    border-radius: 10px;
+    border: 1px dashed color-mix(in srgb, var(--tone) 34%, transparent);
+    background: color-mix(in srgb, var(--tone) var(--gx-wash-soft), transparent);
+}
+.ag-next > span {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--tone);
+}
+.ag-next > strong {
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--gx-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .ag-link-btn {
     padding: 0;
     border: 0;
