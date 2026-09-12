@@ -184,9 +184,68 @@ const FITS: Record<VisualId, (context: VisualContext) => boolean> = {
 export interface Pick {
   id: VisualId;
   meta: VisualMeta;
-  /** Why this one and not another, for the panel's own tooltip. */
+  /** Why this one and not another, printed under the chart. */
   why: string;
 }
+
+/**
+ * The sentence under each chart saying why it is the one being drawn.
+ *
+ * Choosing a chart per goal is the most opinionated thing this page does, and
+ * it used to be invisible: every pick carried "Chosen for a math goal from
+ * what is recorded against it", which is true of all five charts a math goal
+ * could have got and therefore says nothing. Two cards side by side showing
+ * different charts looked like an inconsistency rather than a decision.
+ *
+ * So each one names the evidence that made it fit — the counts `FITS` actually
+ * tested. That turns the line into something the reader can act on: "18 rated
+ * attempts across 4 difficulties" tells somebody who wants the other chart
+ * what they have to record to get it, which "chosen for a math goal" never
+ * could.
+ *
+ * Keep these in step with `FITS`. A threshold that moves and a sentence that
+ * does not is a page explaining itself with the old rule.
+ */
+const WHY: Record<VisualId, (context: VisualContext) => string> = {
+  progress: (ctx) => {
+    const marked = (ctx.goal.milestones ?? []).filter(
+      (stone) => stone.status === 'done' && Boolean(stone.completed_at),
+    ).length;
+    return `${marked} checkpoints were reached on a recorded date, so the run has a real shape.`;
+  },
+
+  scale: (ctx) =>
+    `You set a target of ${ctx.goal.target_number} ${ctx.goal.unit || 'units'}, and the distance `
+    + 'to a figure you chose comes before anything this page could infer.',
+
+  difficulty: (ctx) => {
+    const marks = rated(ctx.done);
+    const levels = new Set(marks.map((task) => task.difficulty)).size;
+    return `${marks.length} finished tasks carry both ratings, across ${levels} difficulty `
+      + 'levels — enough to see where the work stops going well.';
+  },
+
+  skills: (ctx) => {
+    const filed = ctx.done.filter((task) => Boolean(task.subject));
+    const subjects = new Set(filed.map((task) => task.subject)).size;
+    return `${filed.length} finished tasks are filed across ${subjects} subjects, so where the `
+      + 'effort went is a real split rather than one subject with a rounding error.';
+  },
+
+  heatmap: (ctx) => {
+    const days = new Set(dated(ctx.done).map((task) => task.completed_at!.slice(0, 10))).size;
+    return `Work landed on ${days} separate days. For this kind of goal the question is `
+      + 'whether you sat down, not how hard it was.';
+  },
+
+  volume: (ctx) =>
+    `${dated(ctx.done).length} finished tasks carry a date, which is enough to say when in the `
+    + 'week the work actually happens.',
+
+  roadmap: (ctx) =>
+    `${(ctx.goal.milestones ?? []).length} checkpoints are set and there is not yet enough `
+    + 'finished work to chart. The plan is the most honest thing to show.',
+};
 
 /**
  * The one chart this goal gets.
@@ -205,11 +264,7 @@ export function pickVisual(context: VisualContext): Pick | null {
 
   for (const id of wanted) {
     if (!FITS[id](context)) continue;
-    return {
-      id,
-      meta: VISUALS[id],
-      why: `Chosen for a ${category} goal from what is recorded against it.`,
-    };
+    return { id, meta: VISUALS[id], why: WHY[id](context) };
   }
   return null;
 }

@@ -74,6 +74,20 @@ body:has(.gx-page) .app-main {
     --gx-watch: #b47b18;
     --gx-bad: #c0403c;
 
+    /* A filled green surface and the ink that goes on it.
+       `--gx-good` is chosen to read as a *colour* against a card — on a chip,
+       a dot, a bar — and neither theme's value works as a background for text:
+       the light one is 4.3:1 under white, just under the 4.5 a 12.5px label
+       needs, and the dark one is 2.2:1, which is a confirmation button nobody
+       with ordinary eyesight can read comfortably. So the fill is darkened in
+       light and the ink is flipped in dark, and both land above 5:1.
+
+       Only `.ag-confirm-yes` uses them. Every other filled surface on this page
+       still hard-codes `#fff` and several have the same problem in dark; that
+       is a sweep of its own rather than something to do inside a button. */
+    --gx-good-fill: #1a7647;
+    --gx-good-ink: #fff;
+
     /* How hard a goal's own colour is allowed to tint the surfaces carrying
        it. Variables rather than literals in twenty rules because light and
        dark want genuinely different numbers, not a shared one that is a
@@ -122,6 +136,11 @@ html[data-theme="dark"] .gx-page {
     --gx-good: #46c483;
     --gx-watch: #e0b23c;
     --gx-bad: #f0736d;
+
+    /* The same pair, the other way up: the light green is the readable
+       surface here and the ink goes dark on it. */
+    --gx-good-fill: #46c483;
+    --gx-good-ink: #06251a;
 
     --gx-wash: 16%;
     --gx-wash-soft: 7%;
@@ -3320,6 +3339,21 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     color: var(--gx-faint);
 }
 
+/* The line under the caption saying why this chart was the one chosen. Same
+   size and colour as the caption, separated by a rule rather than by weight:
+   the two answer different questions — what you are looking at, and why you
+   are looking at it rather than at one of the other six — but neither is
+   subordinate to the other, and making this one fainter than an already faint
+   caption would put it below the floor at which it is worth printing. */
+.ag-why-chart {
+    margin: 6px 0 0;
+    padding-top: 6px;
+    border-top: 1px dashed color-mix(in srgb, var(--gx-line) 80%, transparent);
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--gx-faint);
+}
+
 /* ---------- Labelled bars: difficulty, subjects, weekdays ----------------- */
 .ag-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
 .ag-bars li {
@@ -3697,15 +3731,68 @@ html[data-theme="dark"] .gx-page { color-scheme: dark; }
     transform: translateY(-1px);
 }
 .ag-finish:disabled { opacity: .55; cursor: default; }
-/* The goal is the bigger claim and is filled rather than tinted. */
+/* The goal's button is the *quieter* of the two, which is the opposite of
+   where it started. It was filled solid green and full width — the loudest
+   thing on the card, asking for the one action with a consequence, on a card
+   whose actual primary action is View Details. A reader arriving at a goal is
+   nearly always reading it.
+
+   So it is an outline, and the weight moved to the second step: the reader
+   confirms, and the confirm button is the filled one. Nothing is loud until
+   somebody has asked for it. */
 .ag-finish.is-goal {
-    border-color: var(--gx-good);
-    background: var(--gx-good);
-    color: #fff;
+    border-color: color-mix(in srgb, var(--gx-line) 100%, transparent);
+    background: none;
+    color: var(--gx-muted);
+    font-weight: 600;
 }
 .ag-finish.is-goal:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--gx-good) 88%, #000);
+    background: color-mix(in srgb, var(--gx-good) 10%, transparent);
+    border-color: color-mix(in srgb, var(--gx-good) 45%, transparent);
+    color: var(--gx-good);
 }
+
+/* ---------- and the step that follows it ---------------------------------- */
+.ag-confirm {
+    margin: 12px 0 0;
+    padding: 12px 13px;
+    border: 1px solid color-mix(in srgb, var(--gx-good) 38%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--gx-good) 8%, var(--gx-card));
+    animation: ag-finish-in .22s var(--gx-ease, ease) both;
+}
+.ag-confirm p {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--gx-text);
+}
+.ag-confirm strong { font-weight: 700; }
+.ag-confirm-do { display: flex; gap: 8px; }
+.ag-confirm-no,
+.ag-confirm-yes {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 9px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .14s ease;
+}
+.ag-confirm-no {
+    border: 1px solid var(--gx-line);
+    background: none;
+    color: var(--gx-muted);
+}
+.ag-confirm-no:hover { background: color-mix(in srgb, var(--gx-muted) 10%, transparent); }
+.ag-confirm-yes {
+    border: 1px solid var(--gx-good-fill);
+    background: var(--gx-good-fill);
+    color: var(--gx-good-ink);
+}
+.ag-confirm-yes:hover:not(:disabled) { filter: brightness(1.08); }
+.ag-confirm-yes:disabled { opacity: .55; cursor: default; }
 @keyframes ag-finish-in {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: none; }

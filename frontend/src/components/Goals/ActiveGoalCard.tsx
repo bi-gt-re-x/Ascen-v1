@@ -208,6 +208,17 @@ export function ActiveGoalCard({
   const [linkAt, setLinkAt] = useState<number | null>(null);
   /** The card's own celebration, cleared by a timer. See `.ag-cheer`. */
   const [cheer, setCheer] = useState<'milestone' | 'goal' | null>(null);
+  /**
+   * The reader has pressed "Mark complete" and is being asked to mean it.
+   *
+   * In the card rather than the page's `ConfirmModal`, which is what deleting
+   * uses. A modal is the right weight for a destructive action arriving from
+   * anywhere; this one is reversible, is offered only on a goal whose every
+   * checkpoint is already reached, and is answered in the same panel that
+   * raised it — throwing a dialog over the page to ask "did you mean to finish
+   * the thing you just finished" is a heavier interruption than the action.
+   */
+  const [finishing, setFinishing] = useState(false);
 
   /* It lets go on its own. The click that starts it is also a write, and the
      card re-renders under the reader when the reply lands — a banner that
@@ -793,7 +804,7 @@ export function ActiveGoalCard({
                     onMilestoneStatus(focus, 'done');
                   }}
                 >
-                  Complete Milestone?
+                  Mark checkpoint reached
                 </button>
               )}
             </>
@@ -812,20 +823,54 @@ export function ActiveGoalCard({
           {/* Every checkpoint reached and the goal still open. For a milestone
               goal the backend has already called it finished and this is the
               confirmation; for the rest it is the one thing arithmetic cannot
-              decide. See `completeGoal` in pages/Goals. */}
-          {readyToFinish && (
-            <button
-              type="button"
-              className="ag-finish is-goal"
-              disabled={busy}
-              onClick={() => {
-                setCheer('goal');
-                onCompleteGoal(goal);
-              }}
-            >
-              Complete Goal?
-            </button>
-          )}
+              decide. See `completeGoal` in pages/Goals.
+
+              Two steps, and quiet until the second. The card's own primary
+              action is View Details — a reader looking at a goal is usually
+              reading it, not finishing it — so a filled green full-width
+              button sitting under the checkpoint list was the loudest thing on
+              the card asking for the one action with a consequence. It is a
+              plain secondary control now, and the weight appears only after
+              the reader has asked for it. */}
+          {readyToFinish &&
+            (finishing ? (
+              <div className="ag-confirm" role="group" aria-label="Mark this goal complete">
+                <p>
+                  Mark <strong>{goal.title}</strong> complete? It moves out of your active
+                  goals and into Recently Completed. You can reopen it by editing it.
+                </p>
+                <div className="ag-confirm-do">
+                  <button
+                    type="button"
+                    className="ag-confirm-no"
+                    onClick={() => setFinishing(false)}
+                  >
+                    Not yet
+                  </button>
+                  <button
+                    type="button"
+                    className="ag-confirm-yes"
+                    disabled={busy}
+                    onClick={() => {
+                      setFinishing(false);
+                      setCheer('goal');
+                      onCompleteGoal(goal);
+                    }}
+                  >
+                    Mark complete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="ag-finish is-goal"
+                disabled={busy}
+                onClick={() => setFinishing(true)}
+              >
+                Mark complete
+              </button>
+            ))}
         </section>
       </div>
 

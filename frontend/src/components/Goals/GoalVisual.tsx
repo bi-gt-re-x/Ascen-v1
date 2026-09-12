@@ -315,9 +315,13 @@ export function GoalVisual({ goal, context, pick, nameOf, onOpen }: GoalVisualPr
       {pick.id === 'heatmap' && <Heat context={context} />}
       {pick.id === 'roadmap' && <Roadmap goal={goal} onOpen={onOpen} />}
 
-      <p className="ag-caption" title={pick.why}>
-        {meta.caption}
-      </p>
+      <p className="ag-caption">{meta.caption}</p>
+      {/* Why this chart and not one of the other six. It was a `title` on the
+          caption above — invisible on a touch screen, and the sentence it held
+          was the same one for every chart of a given category, which made it a
+          tooltip worth nothing. It names the evidence now, so a reader who
+          wants a different chart can see what it would take. */}
+      <p className="ag-why-chart">{pick.why}</p>
     </>
   );
 }
