@@ -32,7 +32,7 @@
 import { useId, type ReactNode } from 'react';
 import { useCountUp } from '@/hooks';
 import { formatGoalDate } from './numbers';
-import { goalHealth, type GoalHealth, type HealthState } from '@/utils/goalHealth';
+import { goalHealth, systemHealth, type GoalHealth, type HealthState } from '@/utils/goalHealth';
 import { goalNotes, goalsOverview, type GoalNote } from '@/utils/goalAnalytics';
 import type { Goal, GoalCategory, Milestone, Task } from '@/types';
 
@@ -508,6 +508,65 @@ export function NextMilestones({
 // --------------------------------------------------------------------------
 // Health, as a distribution
 // --------------------------------------------------------------------------
+/**
+ * The one answer the Stats tab opens with.
+ *
+ * That tab is seven analytics components stacked — where you stand, your
+ * trajectory, insights, health, growth areas, the table — and every one of
+ * them is a different cut of the same set. A reader arriving had to assemble
+ * the headline themselves out of six panels, which is the shape a page takes
+ * when it is built from the components that exist rather than from the
+ * question being asked.
+ *
+ * So one line at the top, before any of it: how is this going, and how many
+ * are fine. Everything below it is then the explanation of this sentence
+ * rather than six candidates for being the sentence.
+ *
+ * It is a reading and not a control. The filter in the page header is the
+ * thing that acts on "needs attention"; a second button doing the same job
+ * four sections apart is two places to learn for one action.
+ */
+export function SystemVerdict({
+  goals,
+  tasks,
+  today,
+}: {
+  goals: Goal[];
+  tasks: Task[];
+  today?: Date;
+}) {
+  const view = systemHealth(goals, tasks, today);
+
+  if (view.active === 0) {
+    return (
+      <p className="gx-verdict-none">
+        No active goals, so there is nothing to read yet.
+      </p>
+    );
+  }
+
+  /* The counts, as a sentence rather than as three tiles. Only the parts with
+     something in them: "0 need attention" is a reassurance the reader has to
+     parse a zero to get, and the ring below already draws every state. */
+  const parts = [
+    view.progressing > 0 && `${view.progressing} progressing`,
+    view.needsAttention > 0 && `${view.needsAttention} need${view.needsAttention === 1 ? 's' : ''} attention`,
+    view.notStarted > 0 && `${view.notStarted} not started`,
+  ].filter(Boolean) as string[];
+
+  return (
+    <div className={`gx-verdict is-${view.state}`}>
+      <span className="gx-verdict-label">Overall goal health</span>
+      <p className="gx-verdict-say">
+        <i aria-hidden="true" />
+        <strong>{view.label}</strong>
+        {view.state !== 'not-started' && <em>{view.score}</em>}
+      </p>
+      <p className="gx-verdict-counts">{parts.join(' · ')}</p>
+    </div>
+  );
+}
+
 /**
  * The four health states as one ring.
  *

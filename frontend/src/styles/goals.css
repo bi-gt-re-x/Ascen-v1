@@ -2840,6 +2840,58 @@ button.gx-state-attn.is-on {
    the question the ring provokes ("which three are off track?") and, in doing
    so, fills the half-column the short card used to leave empty beside the
    taller one next to it. */
+/* ---------- The verdict at the top of Stats -------------------------------
+   One answer, before the six panels that explain it. The state carries the
+   colour and the figure is deliberately secondary: "Healthy" is what somebody
+   takes away, and 72 is what they check it against — a page leading with the
+   number makes the reader do the mapping the word already did.
+
+   No card of its own. The band gives it a surface, and a second bordered box
+   inside that one would be the box-in-a-box the masthead was fixed for. */
+.gx-verdict { display: flex; flex-direction: column; gap: 2px; }
+.gx-verdict-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gx-faint);
+}
+.gx-verdict-say {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+}
+.gx-verdict-say > i {
+    width: 11px;
+    height: 11px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--gx-faint);
+}
+.gx-verdict-say > strong {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--gx-text);
+}
+.gx-verdict-say > em {
+    font-style: normal;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gx-muted);
+    font-variant-numeric: tabular-nums;
+}
+.gx-verdict-counts { margin: 0; font-size: 12.5px; color: var(--gx-muted); }
+.gx-verdict-none { margin: 0; font-size: 13px; color: var(--gx-muted); }
+
+/* The same four colours as the ring's arcs and the rows' dots, so one fact is
+   not three colour schemes. */
+.gx-verdict.is-on-track    .gx-verdict-say > i { background: var(--gx-good); }
+.gx-verdict.is-at-risk     .gx-verdict-say > i { background: var(--gx-watch); }
+.gx-verdict.is-off-track   .gx-verdict-say > i { background: var(--gx-bad); }
+.gx-verdict.is-not-started .gx-verdict-say > i { background: var(--gx-faint); }
+
 .gx-health-list {
     list-style: none;
     margin: 18px 0 0;
@@ -2852,7 +2904,11 @@ button.gx-state-attn.is-on {
 .gx-health-row > button {
     width: 100%;
     display: grid;
-    grid-template-columns: 9px minmax(0, auto) minmax(0, 1fr);
+    /* The name takes the room and the score sits at the end of the line. It
+       was dot / name / sentence, with the sentence ellipsised into nothing on
+       a narrow card — the sentence has its own block underneath now, where it
+       can be two of them and neither gets cut. */
+    grid-template-columns: 9px minmax(0, 1fr) auto;
     align-items: baseline;
     gap: 10px;
     padding: 7px 8px;
@@ -2886,13 +2942,66 @@ button.gx-state-attn.is-on {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.gx-health-score {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--gx-text);
+}
+.gx-health-score em {
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--gx-muted);
+}
+.gx-health-row.is-on-track .gx-health-score em { color: var(--gx-good); }
+.gx-health-row.is-at-risk .gx-health-score em { color: var(--gx-watch); }
+.gx-health-row.is-off-track .gx-health-score em { color: var(--gx-bad); }
+
+/* The working under the score. Two columns where there is room, because
+   "helping" and "holding it back" are a pair and reading one without the other
+   is how a goal that is 80% fine reads as a disaster. Holding-back comes first
+   in the source, so on a narrow card — where they stack — the reader meets the
+   actionable half first. */
 .gx-health-why {
-    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px 16px;
+    margin: 2px 0 10px;
+    padding: 9px 10px 9px 27px;
+}
+.gx-health-side h5 {
+    margin: 0 0 4px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+.gx-health-side.is-bad h5 { color: var(--gx-bad); }
+.gx-health-side.is-good h5 { color: var(--gx-good); }
+.gx-health-side ul { list-style: none; margin: 0; padding: 0; }
+.gx-health-side li {
+    position: relative;
+    padding-left: 11px;
     font-size: 11.5px;
-    color: var(--gx-faint);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.5;
+    color: var(--gx-muted);
+}
+.gx-health-side li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: .62em;
+    width: 5px;
+    height: 1.5px;
+    border-radius: 1px;
+    background: currentColor;
+    opacity: .5;
 }
 
 /* A short card beside a tall one left a hole under it. Two things are needed,

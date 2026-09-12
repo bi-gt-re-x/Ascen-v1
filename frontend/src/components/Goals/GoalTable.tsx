@@ -26,7 +26,7 @@
 import { useMemo } from 'react';
 import { categoryOf } from './Outcome';
 import { formatGoalDate, goalNumbers, isOverdue } from './numbers';
-import { goalHealth } from '@/utils/goalHealth';
+import { goalHealth, healthFactors } from '@/utils/goalHealth';
 import type { Goal, Task } from '@/types';
 
 const DAY = 86_400_000;
@@ -293,15 +293,57 @@ export function HealthBreakdown({
 
   return (
     <ul className="gx-health-list">
-      {rows.map(({ goal, health }) => (
-        <li key={goal.id} className={`gx-health-row is-${health.state}`}>
-          <button type="button" onClick={() => onOpen(goal)}>
-            <i aria-hidden="true" />
-            <span className="gx-health-name">{goal.title}</span>
-            <span className="gx-health-why">{health.reason}</span>
-          </button>
-        </li>
-      ))}
+      {rows.map(({ goal, health }) => {
+        /* Two of each at most. The blend has four signals and a goal in real
+           trouble fails most of them, so an uncapped list turns a diagnosis
+           into a wall — and the two heaviest are the two worth acting on,
+           which is what the ordering in `healthFactors` is for. */
+        const found = healthFactors(health);
+        const helping = found.filter((one) => one.good).slice(0, 2);
+        const holding = found.filter((one) => !one.good).slice(0, 2);
+
+        return (
+          <li key={goal.id} className={`gx-health-row is-${health.state}`}>
+            <button type="button" onClick={() => onOpen(goal)}>
+              <i aria-hidden="true" />
+              <span className="gx-health-name">{goal.title}</span>
+              <span className="gx-health-score">
+                {health.score}
+                <em>{health.label}</em>
+              </span>
+            </button>
+
+            {/* The working, not a second opinion. Everything here went into
+                the score printed above it — a reader who has come this far has
+                come to ask why, and one sentence about the weakest signal
+                leaves them guessing which of four things to change. */}
+            {(helping.length > 0 || holding.length > 0) && (
+              <div className="gx-health-why">
+                {holding.length > 0 && (
+                  <div className="gx-health-side is-bad">
+                    <h5>Holding it back</h5>
+                    <ul>
+                      {holding.map((one) => (
+                        <li key={one.key}>{one.note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {helping.length > 0 && (
+                  <div className="gx-health-side is-good">
+                    <h5>Helping</h5>
+                    <ul>
+                      {helping.map((one) => (
+                        <li key={one.key}>{one.note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

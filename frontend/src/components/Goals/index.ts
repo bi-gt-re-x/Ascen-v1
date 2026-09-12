@@ -28,6 +28,7 @@ export {
   OverviewStrip,
   ProgressBar,
   RecentlyCompleted,
+  SystemVerdict,
   Ring,
   GoalsState,
   categoryOf,

@@ -63,6 +63,7 @@ import {
   NewGoalWizard,
   NextMilestones,
   OverviewStrip,
+  SystemVerdict,
   RecentlyCompleted,
   SystemGoalWizard,
   SystemGoals,
@@ -907,6 +908,15 @@ export default function Goals() {
             them is going. */}
         {on('stats') && (
           <>
+            {/* The answer, before any of the analysis of it. Everything under
+                this is a different cut of the same set, and a reader arriving
+                at seven panels had to assemble the headline themselves —
+                which is the shape a page takes when it is built out of the
+                components that exist rather than from the question asked. */}
+            <Band title="How this is going">
+              <SystemVerdict goals={list} tasks={tasks} />
+            </Band>
+
             <Band
               title="Where you stand"
               hint="Counted off your goals"
@@ -927,7 +937,7 @@ export default function Goals() {
                 <GoalInsights goals={list} tasks={tasks} onOpen={(goal) => setOpenId(goal.id)} />
               </Band>
 
-              <Band title="Goal Health" hint="What is going to happen">
+              <Band title="Goal Health" hint="Goal by goal, and why">
                 <HealthRing goals={list} tasks={tasks} />
                 <HealthBreakdown
                   goals={outcomes}
