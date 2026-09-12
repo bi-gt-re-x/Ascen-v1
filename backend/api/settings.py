@@ -229,6 +229,13 @@ def _ambition_map(limit):
     return check
 
 
+#: How many subjects may hold a connected goal. Wider than the follow list,
+#: because a subject page opens for any subject in the catalogue and not only
+#: the four in the rail — and a connection has to survive a subject being
+#: unfollowed and followed again.
+SUBJECT_GOALS_MAX = 64
+
+
 _ISO_DAY = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
 
@@ -362,6 +369,21 @@ FIELDS: Dict[str, Any] = {
     #: putting it on the goals page would turn "get to Mathcounts Nationals"
     #: into a row with a progress bar nobody can honestly fill in.
     'analytics_ambitions': ({}, _ambition_map(ANALYTICS_SUBJECTS_MAX)),
+    #: The one goal each subject page is connected to. `{subject_id: goal_id}`.
+    #:
+    #: One per subject, by construction: a map holds one value per key, so
+    #: connecting a second goal *replaces* the first rather than adding to it.
+    #: That is the point — a subject page reads its milestones and its
+    #: completion chart off a single goal, and two would be two answers to
+    #: "what is this subject for".
+    #:
+    #: Absent is a real state and not an error. A subject with exactly one
+    #: active goal naming it is read as connected to that goal without an
+    #: entry here; this only records the reader's choice when there is one to
+    #: make. Nothing checks the goal still exists — goals are deleted on their
+    #: own page — so the reader joins against the live goal list and falls
+    #: back when the id no longer resolves.
+    'analytics_subject_goal': ({}, _id_map(SUBJECT_GOALS_MAX)),
 
     # Notifications.
     #

@@ -16,7 +16,7 @@
  * is held by the buttons rather than by silently dropping a pick, and the
  * order is the reader's own because the rail draws the menu in it.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AnalyticsSetup } from './Setup';
@@ -335,5 +335,146 @@ describe('the analytics question phase', () => {
     await user.click(screen.getByRole('button', { name: /open my analytics/i }));
 
     expect(onSave.mock.calls[0]![0].prefs.analytics_subjects).toEqual(['maths']);
+  });
+});
+
+/**
+ * The aims step, and the answers it refuses to carry forward.
+ *
+ * Its three fields are the only free text in this app that a model reads, and
+ * two different things can go wrong with them: text that cannot be read as
+ * language at all, which the write-up will reason from anyway, and readable
+ * text that a bounded store will silently cut. The step tells them apart —
+ * the first has no way past it, the second has an informed one — and that
+ * distinction is the thing worth a test, because getting it backwards is
+ * either a wizard that nags about nothing or one that saves a truncated list
+ * and says nothing.
+ *
+ * ./ambitionCheck.test.ts covers which text falls into which. This covers what
+ * the wizard does about it.
+ */
+describe('the aims step', () => {
+  /** Walk to the aims step and follow one subject on the way. */
+  async function toAims(user: ReturnType<typeof userEvent.setup>) {
+    for (let step = 0; step < 3; step += 1) {
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+    }
+    await user.click(screen.getByRole('button', { name: /Mathematics/ }));
+    // Past the subjects step and the branch step that following one adds.
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    return screen.getByRole('textbox', { name: /what are you chasing/i });
+  }
+
+  it('carries an ordinary aim through without saying anything', async () => {
+    const user = userEvent.setup();
+    const onSave = saver();
+    render(<AnalyticsSetup subjects={MANY} prefs={PREFS} onSave={onSave} />);
+
+    const aim = await toAims(user);
+    await user.type(aim, 'Qualify for Mathcounts Nationals');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+    expect(onSave.mock.calls[0]![0].prefs.analytics_ambitions.maths?.aim)
+      .toBe('Qualify for Mathcounts Nationals');
+  });
+
+  it('stops on an aim with no words in it, and does not move on', async () => {
+    const user = userEvent.setup();
+    render(<AnalyticsSetup subjects={MANY} prefs={PREFS} onSave={saver()} />);
+
+    const aim = await toAims(user);
+    await user.type(aim, '????');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByText(/cannot be read as an answer/i)).toBeInTheDocument();
+    // Still on the step, so the field is still there to be fixed.
+    expect(screen.getByRole('textbox', { name: /what are you chasing/i })).toBeInTheDocument();
+  });
+
+  it('offers no way past a blocking problem', async () => {
+    const user = userEvent.setup();
+    render(<AnalyticsSetup subjects={MANY} prefs={PREFS} onSave={saver()} />);
+
+    const aim = await toAims(user);
+    await user.type(aim, 'asdfghjkl');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.getByRole('button', { name: /let me fix that/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /anyway/i })).not.toBeInTheDocument();
+  });
+
+  it('lets a truncation through, once it has been said out loud', async () => {
+    const user = userEvent.setup();
+    const onSave = saver();
+    render(<AnalyticsSetup subjects={MANY} prefs={PREFS} onSave={onSave} />);
+
+    await toAims(user);
+    const lines = Array.from({ length: 14 }, (_, at) => `Stage ${at + 1}`).join('\n');
+    await user.type(screen.getByRole('textbox', { name: /checkpoints/i }), lines);
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    // A warning, not a refusal: it names what would be lost and then lets go.
+    expect(screen.getByText(/will be cut off/i)).toBeInTheDocument();
+    expect(screen.getByText(/the last 2 will not be saved/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /carry on anyway/i }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+    // And it is not asked a second time at the save. The check runs again
+    // there — see the test below — so without a remembered waiver this popup
+    // would reappear over an answer the reader has already stood behind.
+    await toTheEnd(user);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    // Sent whole. The truncation is the server's to do, and the reader was
+    // told it would happen rather than having it done to them quietly.
+    expect(onSave.mock.calls[0]![0].milestones.maths).toHaveLength(14);
+  });
+
+  it('asks again when the answer changes after a waiver', async () => {
+    const user = userEvent.setup();
+    render(<AnalyticsSetup subjects={MANY} prefs={PREFS} onSave={saver()} />);
+
+    await toAims(user);
+    const field = screen.getByRole('textbox', { name: /checkpoints/i });
+    await user.type(field, Array.from({ length: 14 }, (_, at) => `Stage ${at + 1}`).join('\n'));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: /carry on anyway/i }));
+
+    // Back to the step, and two more stages on the end. The waiver was for the
+    // fourteen; sixteen is a different answer and loses two more.
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await user.type(screen.getByRole('textbox', { name: /checkpoints/i }), '\nStage 15\nStage 16');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByText(/the last 4 will not be saved/i)).toBeInTheDocument();
+  });
+
+  /* The path the check exists for. The rail above the steps is clickable, so
+     an unreadable aim can reach the save without the Next button ever being
+     pressed — which is the ordinary path for somebody editing one answer. */
+  it('checks again at the save, not only on the way past the step', async () => {
+    const user = userEvent.setup();
+    const onSave = saver();
+    render(<AnalyticsSetup subjects={MANY} prefs={PREFS} onSave={onSave} />);
+
+    const aim = await toAims(user);
+    await user.type(aim, '????');
+
+    // Jump to the last step by its pip rather than by pressing Next. Read out
+    // of the rail rather than by title, so that reordering the steps moves
+    // this with them instead of quietly landing it on the wrong screen.
+    const rail = screen.getByRole('list', { name: /step \d+ of \d+/i });
+    const pips = within(rail).getAllByRole('button');
+    await user.click(pips[pips.length - 1]!);
+    await user.click(screen.getByRole('button', { name: /open my analytics/i }));
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 });

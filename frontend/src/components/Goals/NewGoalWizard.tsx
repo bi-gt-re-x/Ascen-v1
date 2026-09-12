@@ -129,6 +129,11 @@ export interface NewGoalWizardProps {
   onSave: (goal: NewGoal) => void;
   /** Draft the checkpoints. Absent, and the last step offers no button. */
   onSuggest?: (goal: MilestoneDraftRequest) => Promise<MilestoneDraft>;
+  /**
+   * The subject to start on, for a wizard opened from a subject's own page.
+   * Still changeable — it is where the picker starts, not a lock.
+   */
+  subjectId?: string;
 }
 
 export function NewGoalWizard({
@@ -138,12 +143,13 @@ export function NewGoalWizard({
   onClose,
   onSave,
   onSuggest,
+  subjectId: startSubject,
 }: NewGoalWizardProps) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<GoalCategory>('other');
-  const [subjectId, setSubjectId] = useState<string | null>(null);
+  const [subjectId, setSubjectId] = useState<string | null>(startSubject ?? null);
   const [why, setWhy] = useState('');
   const [deadline, setDeadline] = useState(defaultDeadline);
   const [priority, setPriority] = useState(5);

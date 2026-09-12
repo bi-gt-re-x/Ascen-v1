@@ -160,6 +160,20 @@ export interface Prefs {
    */
   analytics_ambitions: Record<string, { aim: string; level: string }>;
   /**
+   * The one goal each subject page is connected to. Keyed by subject id,
+   * valued by goal id.
+   *
+   * One per subject because a map holds one value per key: connecting another
+   * goal replaces the first. Absent means "not chosen", and the subject page
+   * then reads a subject with exactly one active goal as connected to it —
+   * the choice is only asked for when there is one to make. The id is not
+   * guaranteed to resolve (goals are deleted on their own page), so every
+   * reader of this map joins against the live goal list and falls back to the
+   * unconnected state when the id no longer names a goal. Storing it is not
+   * the same as it being true.
+   */
+  analytics_subject_goal: Record<string, string>;
+  /**
    * The notification switches. One master, one for the on-screen half, and one
    * per channel — the same six as `NotificationChannel` in
    * services/notifications.
@@ -244,6 +258,7 @@ export const DEFAULTS: Prefs = {
   analytics_subjects: [],
   analytics_subject_depth: {},
   analytics_ambitions: {},
+  analytics_subject_goal: {},
   /* Every channel on. The bell is quiet when the record is quiet — nothing is
      generated on a schedule (backend/tracking/notify.py) — so the honest
      default is on, and the switches are here for the reader who decides one

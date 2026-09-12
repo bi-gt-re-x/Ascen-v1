@@ -17,6 +17,13 @@ import type { Task } from '@/types';
 
 const completeTask = vi.fn();
 
+/* `tasks` is what this file is about; `goals` and `focus` are here because the
+   dashboard asks for both on mount and neither is stubbed by anything else.
+   Left real they reach the actual `fetch`, which has no base URL under jsdom
+   and so rejects — and `request` throws rather than returning a failed result,
+   so the rejection lands unhandled and is reported against whichever test
+   happened to be running. Answering them with the empty case keeps the noise
+   out and keeps this file's failures its own. */
 vi.mock('@/services', async (original) => {
   const real = await original<Record<string, unknown>>();
   return {
@@ -27,6 +34,8 @@ vi.mock('@/services', async (original) => {
       updateTask: () => Promise.resolve({ success: true }),
       createTask: () => Promise.resolve({ success: true }),
     },
+    goals: { ...(real.goals as object), getGoals: () => Promise.resolve({ success: true, goals: [] }) },
+    focus: { ...(real.focus as object), history: () => Promise.resolve({ success: true, days: {} }) },
   };
 });
 

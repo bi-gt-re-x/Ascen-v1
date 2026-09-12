@@ -5,6 +5,7 @@ asserting on the database rather than on the reply, so a handler that answers
 `{"success": true}` without writing anything cannot pass. These are the tests
 the goals and milestone refactor leans on.
 """
+from backend.api.settings import ANALYTICS_SUBJECTS_MAX, SUBJECT_GOALS_MAX
 from backend.database import connection as db
 
 
@@ -296,7 +297,11 @@ def test_the_followed_subjects_are_a_list_and_are_bounded(client):
 
 
 def test_the_subject_depth_map_is_bounded_and_refuses_the_wrong_shape(client):
-    """`analytics_subject_depth` is the only preference holding a map.
+    """`analytics_subject_depth` says which branch a subject opens on.
+
+    The first of the id-to-id maps, and the one `_id_map` was written for —
+    `analytics_subject_goal` below reuses it, so the rules proved here are the
+    rules that one inherits.
 
     It says which branch of a followed subject's skill tree that subject opens
     on. Absence is the answer for most subjects and means "the whole thing", so
@@ -331,6 +336,72 @@ def test_the_subject_depth_map_is_bounded_and_refuses_the_wrong_shape(client):
     assert client.post('/api/settings', json={
         'values': {'analytics_subject_depth': {'maths': 3}},
     }).status_code == 400
+
+
+def test_the_subject_goal_map_is_bounded_and_refuses_the_wrong_shape(client):
+    """`analytics_subject_goal` records which goal a subject page is about.
+
+    The same validator as the depth map above, on a wider cap, and the width is
+    the thing worth stating: a subject page opens for any subject in the
+    catalogue rather than only the four in the rail, so a connection made from
+    a subject that was later unfollowed is a connection somebody still meant.
+    Capping this at the follow list would delete it.
+    """
+    settings = lambda: client.get('/api/settings').json()['settings']
+
+    assert settings()['analytics_subject_goal'] == {}
+
+    client.post('/api/settings', json={'values': {
+        'analytics_subject_goal': {'maths': 'goal-7', 'coding': ''},
+    }})
+    # The empty one is a disconnection, stored as absence rather than as ''.
+    assert settings()['analytics_subject_goal'] == {'maths': 'goal-7'}
+
+    # One goal per subject by construction: the second connection replaces the
+    # first rather than joining it, because a subject page reading two goals
+    # would be two answers to what the subject is for.
+    client.post('/api/settings', json={'values': {
+        'analytics_subject_goal': {'maths': 'goal-9'},
+    }})
+    assert settings()['analytics_subject_goal'] == {'maths': 'goal-9'}
+
+    # Wider than the follow list, and wide enough that the whole catalogue
+    # could not overflow it in one save.
+    assert SUBJECT_GOALS_MAX > ANALYTICS_SUBJECTS_MAX
+    client.post('/api/settings', json={'values': {
+        'analytics_subject_goal': {
+            f'subject-{n}': f'goal-{n}' for n in range(SUBJECT_GOALS_MAX + 5)
+        },
+    }})
+    assert len(settings()['analytics_subject_goal']) == SUBJECT_GOALS_MAX
+
+    # A list where a map belongs, and a value that is not a string: both are
+    # client bugs, refused rather than coerced.
+    assert client.post('/api/settings', json={
+        'values': {'analytics_subject_goal': ['maths']},
+    }).status_code == 400
+    assert client.post('/api/settings', json={
+        'values': {'analytics_subject_goal': {'maths': 7}},
+    }).status_code == 400
+
+
+def test_a_connected_goal_outlives_the_subject_being_unfollowed(client):
+    """Nothing joins this map to the follow list, and that is deliberate.
+
+    Unfollowing a subject takes it out of the rail; it does not mean the reader
+    has changed their mind about which goal that subject is about. They follow
+    it again a fortnight later and the connection is still there — which is
+    only true while the validator refuses to cross-check the two answers.
+    """
+    client.post('/api/settings', json={'values': {
+        'analytics_subjects': ['maths'],
+        'analytics_subject_goal': {'maths': 'goal-7'},
+    }})
+
+    client.post('/api/settings', json={'values': {'analytics_subjects': []}})
+    settings = client.get('/api/settings').json()['settings']
+    assert settings['analytics_subjects'] == []
+    assert settings['analytics_subject_goal'] == {'maths': 'goal-7'}
 
 
 def test_a_default_is_not_shared_between_accounts(client, stranger):

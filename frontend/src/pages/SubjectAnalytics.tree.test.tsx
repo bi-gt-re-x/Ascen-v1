@@ -47,6 +47,19 @@ vi.mock('@/services/analytics', async (original) => {
     subjectMilestones: async () => ({ success: true, milestones: [] }),
     subjectBriefAvailable: async () => ({ success: true, available: false }),
     suggestSubjectGoal: async () => ({ success: true, draft: null }),
+    /* The three the page asks for on mount that nothing here is about. Left
+       real they reach `fetch`, which under jsdom has no base URL to resolve
+       `/api/...` against and rejects — and `request` throws on that rather
+       than returning a failed result, so it surfaces as an unhandled
+       rejection pinned to whichever test was running at the time. The empty
+       answer is the honest stub: none written, none asked for yet. */
+    subjectReadingAvailable: async () => ({ success: true, available: false }),
+    savedSubjectReading: async () => ({
+      success: true, reading: null, written_at: '', span: '',
+    }),
+    subjectRecommendations: async () => ({
+      success: true, recommendations: [], outcomes: [],
+    }),
   };
 });
 vi.mock('@/services/goals', async (original) => {

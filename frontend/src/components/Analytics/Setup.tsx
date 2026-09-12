@@ -71,8 +71,14 @@
  * step three with a tone but no baseline — half-configured, and no longer new
  * enough to be asked again. The whole set lands or none of it does.
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import {
+  anyHard,
+  checkAmbitions,
+  fieldLabel,
+  type AmbitionProblem,
+} from './ambitionCheck';
 import type { BaselineValues } from './Baseline';
 import { VIEWS } from './Header';
 import type { AnalyticsHomeTab, AnalyticsDetail, AnalyticsTone, LogStyle, Prefs } from '@/services/settings';
@@ -301,6 +307,16 @@ export function AnalyticsSetup({
   const [homeTab, setHomeTab] = useState<AnalyticsHomeTab>(prefs.analytics_home_tab);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  /* What the aims step said that cannot be used, and what to do once it is
+     dismissed. Null is "no popup". See ./ambitionCheck for what counts. */
+  const [problems, setProblems] = useState<AmbitionProblem[] | null>(null);
+  const [pending, setPending] = useState<'next' | 'save' | null>(null);
+  /* The answers a reader has already been warned about and kept anyway, as the
+     text they held at the time. A flag would not do: the check runs again at
+     the save, so a plain "they waived it" would carry a waiver granted over
+     twelve checkpoints onto the twenty they typed afterwards. Comparing the
+     text means changing anything asks again, and changing nothing does not. */
+  const [waived, setWaived] = useState('');
 
   const editing = Boolean(current);
 
@@ -763,6 +779,51 @@ export function AnalyticsSetup({
   const step = steps[index]!;
   const last = index === total - 1;
 
+  /**
+   * What the aims step holds, as the checker reads it.
+   *
+   * Narrowed to followed subjects for the same reason `save` narrows: an aim
+   * typed against a subject that was then unfollowed is never sent, so
+   * refusing to move on because of it would be refusing over nothing.
+   */
+  const ambitionEntries = useMemo(
+    () =>
+      followed.map((id) => ({
+        subject: pickable.find((entry) => entry.id === id)?.label ?? id,
+        aim: ambitions[id]?.aim ?? '',
+        level: ambitions[id]?.level ?? '',
+        checkpoints: checkpoints[id] ?? '',
+      })),
+    [ambitions, checkpoints, followed, pickable],
+  );
+
+  /**
+   * Raise the popup if there is anything to raise it for. True means "go on".
+   *
+   * Run on leaving the aims step *and* again on the final save, rather than
+   * only on the first. The rail above is clickable, so a reader can answer the
+   * aims step, jump forward four pips and press Update without the Next button
+   * ever being pressed — checking only on Next would let exactly that path
+   * through, and it is not a rare path once somebody is editing rather than
+   * setting up.
+   */
+  const signature = useMemo(() => JSON.stringify(ambitionEntries), [ambitionEntries]);
+
+  const cleared = useCallback(
+    (next: 'next' | 'save') => {
+      const found = checkAmbitions(ambitionEntries);
+      if (found.length === 0) return true;
+      /* Already said, already answered. A hard problem is never waived — there
+         is no button that grants one — so this only ever lets a truncation
+         past, and only the exact truncation that was described. */
+      if (!anyHard(found) && signature === waived) return true;
+      setProblems(found);
+      setPending(next);
+      return false;
+    },
+    [ambitionEntries, signature, waived],
+  );
+
   const save = async () => {
     setSaving(true);
     setFailed(false);
@@ -852,7 +913,10 @@ export function AnalyticsSetup({
             <button
               type="button"
               className="ax-btn ax-btn-primary"
-              onClick={save}
+              onClick={() => {
+                if (!cleared('save')) return;
+                void save();
+              }}
               disabled={saving}
             >
               {saving ? 'Saving…' : editing ? 'Update' : 'Open my analytics'}
@@ -861,7 +925,10 @@ export function AnalyticsSetup({
             <button
               type="button"
               className="ax-btn ax-btn-primary"
-              onClick={() => setAt(index + 1)}
+              onClick={() => {
+                if (step.key === 'aims' && !cleared('next')) return;
+                setAt(index + 1);
+              }}
             >
               Next
             </button>
@@ -876,6 +943,89 @@ export function AnalyticsSetup({
             </button>
           )}
         </footer>
+
+        {/* The popup. Raised over the step rather than printed under it,
+            because the thing it is stopping is a button press that already
+            happened: a message appearing below the fold while the wizard moves
+            on is a message nobody reads, and this one is about text that is
+            going to be quoted to a model or silently truncated. */}
+        {problems && (
+          <div
+            className="ax-setup-scrim"
+            role="presentation"
+            onClick={() => setProblems(null)}
+          >
+            <div
+              className="ax-setup-alert"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="ax-setup-alert-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3 id="ax-setup-alert-title">
+                {anyHard(problems)
+                  ? 'That cannot be read as an answer'
+                  : 'Some of that will be cut off'}
+              </h3>
+              <p className="ax-setup-alert-lead">
+                {anyHard(problems)
+                  ? 'These fields are quoted to the model that writes your subject '
+                    + 'read-out, and it reasons towards whatever they say. Fix them '
+                    + 'or clear them — blank is a real answer.'
+                  : 'Nothing here is wrong, but the stores behind these fields are '
+                    + 'bounded and they bound by truncating. This is what would be '
+                    + 'lost if you saved as it stands.'}
+              </p>
+              <ul className="ax-setup-alert-list">
+                {problems.map((problem, at) => (
+                  <li
+                    key={`${problem.subject}-${problem.field}-${at}`}
+                    className={problem.hard ? 'is-hard' : undefined}
+                  >
+                    <strong>
+                      {problem.subject} · {fieldLabel(problem.field)}
+                    </strong>
+                    <span>{problem.note}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="ax-setup-alert-actions">
+                <button
+                  type="button"
+                  className="ax-btn ax-btn-primary"
+                  onClick={() => {
+                    setProblems(null);
+                    /* Back to the step being complained about, wherever the
+                       reader pressed the button from. */
+                    const aims = steps.findIndex((entry) => entry.key === 'aims');
+                    if (aims >= 0) setAt(aims);
+                  }}
+                >
+                  Let me fix that
+                </button>
+                {/* Only when everything found is a truncation. A hard problem
+                    has nothing to lose by being fixed, so there is no honest
+                    button to put here for it. */}
+                {!anyHard(problems) && (
+                  <button
+                    type="button"
+                    className="ax-btn"
+                    onClick={() => {
+                      const go = pending;
+                      setProblems(null);
+                      setPending(null);
+                      setWaived(signature);
+                      if (go === 'save') void save();
+                      else setAt(Math.min(index + 1, total - 1));
+                    }}
+                  >
+                    {pending === 'save' ? 'Save it anyway' : 'Carry on anyway'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {editing && setOn && (
           <p className="ax-setup-set-on">

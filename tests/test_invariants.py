@@ -12,7 +12,11 @@ it still held rows for badges the catalogue had since renamed. The page said
 "71 Achievements Earned" over a wall with 68 badges on it, and the ring and the
 five category bars each gave a third and fourth answer.
 """
+import re
+from pathlib import Path
+
 from backend.api import achievements as wall
+from backend.api import settings, subjects
 from backend.database import connection as db
 
 
@@ -134,3 +138,43 @@ def test_reading_the_wall_never_awards_xp(client):
     for _ in range(3):
         client.get('/api/achievements')
     assert db.find_row('users', 'tester', key='username')['xp'] == before
+
+
+# --------------------------------------------------------------------------
+# The caps the wizard warns about
+# --------------------------------------------------------------------------
+#
+# frontend/src/components/Analytics/ambitionCheck.ts holds copies of three
+# server-side caps. It has to: it is the warning that says what the server is
+# about to truncate, so it cannot ask the server at the moment it needs to
+# know, and a warning that names the wrong number is worse than no warning —
+# "only the first twelve are kept" over a server that keeps ten is a sentence
+# somebody will act on and lose two stages to.
+#
+# The copies are commented as copies and its own tests name the constants they
+# stand in for, but nothing so far compares the two halves. Both sides pass
+# happily while disagreeing, which is the exact failure this file exists for.
+def _exported_number(name):
+    """Read `export const <name> = <n>;` out of the wizard's checker."""
+    source = (Path(__file__).resolve().parent.parent / 'frontend' / 'src'
+              / 'components' / 'Analytics' / 'ambitionCheck.ts').read_text()
+    found = re.search(r'export const %s = (\d+);' % name, source)
+    # A miss is a failure rather than a skip: the constant being renamed or
+    # dropped is the same silence this test is here to break.
+    assert found, '%s is no longer exported from ambitionCheck.ts' % name
+    return int(found.group(1))
+
+
+def test_the_wizard_warns_with_the_length_the_server_truncates_at():
+    """`AIM_MAX` against `AMBITION_TEXT_MAX`, backend/api/settings.py."""
+    assert _exported_number('AIM_MAX') == settings.AMBITION_TEXT_MAX
+
+
+def test_the_wizard_warns_with_the_number_of_checkpoints_the_server_keeps():
+    """`CHECKPOINTS_MAX` against `MILESTONES_PER_SUBJECT`, backend/api/subjects.py."""
+    assert _exported_number('CHECKPOINTS_MAX') == subjects.MILESTONES_PER_SUBJECT
+
+
+def test_the_wizard_warns_with_the_title_length_the_server_keeps():
+    """`CHECKPOINT_MAX` against `MILESTONE_TITLE_MAX`, backend/api/subjects.py."""
+    assert _exported_number('CHECKPOINT_MAX') == subjects.MILESTONE_TITLE_MAX
